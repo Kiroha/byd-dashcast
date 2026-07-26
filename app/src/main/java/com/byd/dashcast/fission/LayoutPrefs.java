@@ -2,6 +2,7 @@ package com.byd.dashcast.fission;
 
 import android.content.Context;
 import org.json.JSONArray;
+import com.byd.dashcast.util.AppLogger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,5 +52,21 @@ public class LayoutPrefs {
             if (id.equals(p.id)) return p;
         }
         return null;
+    }
+
+    /**
+     * Resolves a launchable automatic layout. Existing users who saved exactly one layout with
+     * bound apps but never tapped "Favourite" are repaired automatically; multiple candidates
+     * remain explicit to avoid launching an arbitrary layout.
+     */
+    public static LayoutPreset getAutoStartLayout(Context ctx) {
+        String favoriteId = getFavoriteId(ctx);
+        LayoutPreset selected = LayoutAutoStartPolicy.chooseLayout(favoriteId, load(ctx));
+        if (selected != null && !selected.id.equals(favoriteId)) {
+            setFavoriteId(ctx, selected.id);
+            AppLogger.i("LayoutPrefs", "auto-start repaired sole usable layout as favourite: "
+                    + selected.name + " (" + selected.id + ")");
+        }
+        return selected;
     }
 }

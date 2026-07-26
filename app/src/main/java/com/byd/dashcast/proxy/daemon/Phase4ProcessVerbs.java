@@ -185,6 +185,16 @@ public final class Phase4ProcessVerbs {
      * BYD Seal EU with descriptor {@code android.os.IAutoContainer}.
      */
     public static void autoContainerSendInfo(int type, int info, String str) throws Throwable {
+        transactAutoContainerSendInfo(type, info, str, false);
+    }
+
+    /** Same transaction as {@link #autoContainerSendInfo}, preserving the native result code. */
+    public static int autoContainerSendInfoResult(int type, int info, String str) throws Throwable {
+        return transactAutoContainerSendInfo(type, info, str, true);
+    }
+
+    private static int transactAutoContainerSendInfo(int type, int info, String str,
+                                                     boolean readResult) throws Throwable {
         IBinder b = autoContainerBinder();
         String descr = sAutoContainerDescriptor;
         Parcel data = Parcel.obtain();
@@ -194,8 +204,15 @@ public final class Phase4ProcessVerbs {
             data.writeInt(type);
             data.writeInt(info);
             data.writeString(str == null ? "" : str);
-            b.transact(TXN_SEND_INFO, data, reply, 0);
+            if (!b.transact(TXN_SEND_INFO, data, reply, 0)) {
+                throw new IllegalStateException("AutoContainer sendInfo transaction not handled");
+            }
             reply.readException();
+            if (!readResult) return 0;
+            if (reply.dataAvail() < Integer.BYTES) {
+                throw new IllegalStateException("AutoContainer sendInfo returned no result code");
+            }
+            return reply.readInt();
         } finally {
             reply.recycle();
             data.recycle();

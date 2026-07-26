@@ -5,6 +5,9 @@ import android.os.Parcel;
 import android.os.RemoteException;
 
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
+import com.byd.dashcast.system.CanBatchOperation;
+
+import java.util.List;
 
 /**
  * Verb group: BYD CAN bus write operations via daemon uid=2000.
@@ -94,6 +97,173 @@ final class ProxyCanVerbs {
             b.transact(ProxyDaemonContract.TXN_CAN_SETTING_INT, data, reply, 0);
             reply.readException();
             return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static int canBatch(List<CanBatchOperation> operations)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        if (operations == null || operations.isEmpty()
+                || operations.size() > CanBatchOperation.MAX_BATCH_SIZE) {
+            throw new ProxyClient.ProxyException("invalid CAN batch size");
+        }
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(operations.size());
+            for (CanBatchOperation operation : operations) {
+                data.writeInt(operation.getType());
+                data.writeInt(operation.getFeatureId());
+                data.writeInt(operation.getIntValue());
+                data.writeByteArray(operation.getBytes());
+            }
+            b.transact(ProxyDaemonContract.TXN_CAN_BATCH, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static int canInstrumentGet(int featureId)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(featureId);
+            b.transact(ProxyDaemonContract.TXN_CAN_INSTRUMENT_GET, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static int canSettingDouble(int featureId, double value)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(featureId);
+            data.writeDouble(value);
+            b.transact(ProxyDaemonContract.TXN_CAN_SETTING_DOUBLE, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static int canSettingGet(int featureId)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(featureId);
+            b.transact(ProxyDaemonContract.TXN_CAN_SETTING_GET, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static String canListenStart()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_START, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static String canListenDrain()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_DRAIN, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static String aaosHalProbe()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_AAOS_HAL_PROBE, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static void canListenClear()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_CLEAR, data, reply, 0);
+            reply.readException();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static void canListenMark(String label)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeString(label == null ? "" : label);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_MARK, data, reply, 0);
+            reply.readException();
         } finally {
             reply.recycle();
             data.recycle();

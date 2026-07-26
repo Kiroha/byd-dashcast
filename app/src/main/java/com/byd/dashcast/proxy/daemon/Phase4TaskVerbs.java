@@ -1,4 +1,5 @@
 package com.byd.dashcast.proxy.daemon;
+import com.byd.dashcast.infrastructure.task.TaskLocation;
 import java.util.Locale;
 
 import java.lang.reflect.Method;
@@ -29,9 +30,8 @@ public final class Phase4TaskVerbs {
     private static volatile Method sMoveTaskToDisplay;
     private static volatile Method sResizeTask;
 
-    /** Prevents spawning multiple fission-watchdog threads concurrently. */
-    private static final java.util.concurrent.atomic.AtomicBoolean sWatchdogActive =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
+    /** One current guardian generation per package; different Layout slots run independently. */
+    private static final FissionWatchdogRegistry sWatchdogs = new FissionWatchdogRegistry();
 
     // ─── Reflection helper ────────────────────────────────────────────────
 
@@ -45,7 +45,348 @@ public final class Phase4TaskVerbs {
         }
     }
 
+    // ─── Android 12 / RootTask compatibility (DiLink 5) ──────────────────
+
+    /**
+     * Returns the stack/root-task list from ATM.
+     * Tries getAllStackInfos() (Android ≤11, DiLink 3) first, then falls back to
+     * getAllRootTaskInfos() (Android 12+, DiLink 5) when the former is absent.
+     */
+    private static java.util.List<?> getAtmTaskList(Object iAtm) throws Throwable {
+        Object res;
+        try {
+            res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
+        } catch (NoSuchMethodException e) {
+            // Android 12+ (DiLink 5): getAllStackInfos was renamed to getAllRootTaskInfos
+            res = iAtm.getClass().getMethod("getAllRootTaskInfos").invoke(iAtm);
+        }
+        if (res instanceof java.util.List) return (java.util.List<?>) res;
+        if (res != null && res.getClass().isArray())
+            return java.util.Arrays.asList((Object[]) res);
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Returns the "stack / root-task" ID from a StackInfo or RootTaskInfo object.
+     * Tries stackId (StackInfo, Android ≤11, DiLink 3) then taskId (RootTaskInfo, Android 12+, DiLink 5).
+     */
+    private static int getStackOrRootTaskId(Object info) {
+        Object v = readFieldNoThrow(info, "stackId");
+        if (v instanceof Integer) return (Integer) v;
+        v = readFieldNoThrow(info, "taskId");
+        if (v instanceof Integer) return (Integer) v;
+        return -1;
+    }
+
+    /**
+     * Returns child task IDs from a StackInfo or RootTaskInfo.
+     * Tries taskIds (Android ≤11, DiLink 3) then childTaskIds (Android 12+, DiLink 5).
+     */
+    private static int[] getChildTaskIds(Object info) {
+        Object v = readFieldNoThrow(info, "taskIds");
+        if (v instanceof int[]) return (int[]) v;
+        v = readFieldNoThrow(info, "childTaskIds");
+        if (v instanceof int[]) return (int[]) v;
+        return null;
+    }
+
+    // WindowConfiguration constants (android.app.WindowConfiguration, @hide).
+    private static final int WM_FULLSCREEN             = 1;
+    private static final int WM_SPLIT_SCREEN_PRIMARY   = 3;
+    private static final int WM_SPLIT_SCREEN_SECONDARY = 4;
+    private static final int AT_HOME                   = 2;
+
+    /**
+     * Windowing mode / activity type of a StackInfo (Android ≤11, DiLink 3) or a
+     * RootTaskInfo (Android 12+, DiLink 5).
+     *
+     * <p>Neither class exposes these as public fields — they live inside
+     * {@code configuration.windowConfiguration}. Reading them with
+     * {@link #readFieldNoThrow} (what cleanFissionStacks did before 1.6.112) therefore
+     * ALWAYS returned null on every ROM: every stack was classified "unreadable" and
+     * defensively kept, so the zombie-stack cleanup never removed anything, ever
+     * (confirmed across 17 on-car bug reports: {@code removed=0} in 100% of them).
+     * That let a stale split-screen-primary stack survive on the fission display, which
+     * makes the next FREEFORM stack creation NPE inside WindowManager and the launch
+     * fail silently (INC-20260714-215700, DiLink 3.0).
+     *
+     * <p>Four routes, most direct first, so a ROM that shifts the class shape again still
+     * resolves: (1) getter on the info object, (2) configuration.windowConfiguration
+     * getter, (3) the textual {@code mWindowingMode=…} of the configuration's toString,
+     * (4) the legacy public field. Returns -1 when every route fails.
+     */
+    private static int readWindowConfigInt(Object info, String getter, String legacyField,
+                                           String[] names) {
+        // 1. Direct getter on the info object (TaskInfo.getWindowingMode(), Android 12+).
+        try {
+            Object v = info.getClass().getMethod(getter).invoke(info);
+            if (v instanceof Integer) return (Integer) v;
+        } catch (Throwable ignore) { /* not on this ROM — next route */ }
+
+        Object cfg = readFieldNoThrow(info, "configuration");
+        Object wc  = (cfg == null) ? null : readFieldNoThrow(cfg, "windowConfiguration");
+
+        // 2. configuration.windowConfiguration.<getter>() — StackInfo (A10) and TaskInfo (A12).
+        if (wc != null) {
+            try {
+                Object v = wc.getClass().getMethod(getter).invoke(wc);
+                if (v instanceof Integer) return (Integer) v;
+            } catch (Throwable ignore) { /* next route */ }
+        }
+
+        // 3. Textual fallback: WindowConfiguration.toString() prints "mWindowingMode=freeform".
+        String dump = (wc != null) ? String.valueOf(wc)
+                    : (cfg != null) ? String.valueOf(cfg) : null;
+        if (dump != null) {
+            String key = getter.equals("getWindowingMode") ? "mWindowingMode=" : "mActivityType=";
+            int at = dump.indexOf(key);
+            if (at >= 0) {
+                String tail = dump.substring(at + key.length());
+                // Longest name first: "split-screen-secondary" must not match "split-screen-p…".
+                int best = -1;
+                for (int i = 0; i < names.length; i++) {
+                    if (tail.startsWith(names[i])
+                            && (best < 0 || names[i].length() > names[best].length())) {
+                        best = i;
+                    }
+                }
+                if (best >= 0) return best;
+            }
+        }
+
+        // 4. Legacy public field (kept in case some ROM does expose it).
+        Object v = readFieldNoThrow(info, legacyField);
+        if (v instanceof Integer) return (Integer) v;
+        return -1;
+    }
+
+    /** Windowing mode of a StackInfo / RootTaskInfo, or -1 when unreadable. */
+    private static int readWindowingMode(Object info) {
+        return readWindowConfigInt(info, "getWindowingMode", "windowingMode", new String[]{
+                "undefined", "fullscreen", "pinned",
+                "split-screen-primary", "split-screen-secondary", "freeform",
+        });
+    }
+
+    /** Activity type of a StackInfo / RootTaskInfo, or -1 when unreadable. */
+    private static int readActivityType(Object info) {
+        return readWindowConfigInt(info, "getActivityType", "activityType", new String[]{
+                "undefined", "standard", "home", "recents", "assistant",
+        });
+    }
+
+    /**
+     * True when an {@code am start-activity} transcript is a FAILED start.
+     *
+     * <p>Beyond the usual "Error:" line, system_server can throw straight through the shell
+     * command: am then prints "Starting: Intent {…}" (which looks like success) followed by
+     * "Exception occurred while executing:" and a stack trace — and no activity ever starts.
+     * DiLink 3.0 does exactly that when a FREEFORM stack cannot be created on the fission
+     * display. Testing only for "Error:" declared that start a success, so the bare-MAIN
+     * fallback was never tried (INC-20260714-215700).
+     *
+     * <p>A null transcript keeps its historical meaning: no output ⇒ assume started.
+     */
+    private static boolean amStartFailed(String out) {
+        return TaskLaunchRecovery.isStartFailure(out);
+    }
+
+    /** Polls up to ~5 s for {@code packageName}'s task id to appear. Returns -1 if none. */
+    private static int pollForTaskId(String packageName) {
+        int taskId = -1;
+        for (int i = 1; i <= 16 && taskId <= 0; i++) {
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            taskId = findTaskIdForPackage(packageName);
+        }
+        return taskId;
+    }
+
+    /** Starts the app on {@code displayId} WITHOUT --windowingMode (default = fullscreen stack),
+     *  the last-resort that avoids the FREEFORM-stack WindowManager NPE on some DiLink 3 ROMs. */
+    private static void startPlainOnDisplay(StringBuilder log, int displayId,
+                                            String cmpFlat, String packageName) {
+        String target = (cmpFlat != null)
+                ? "-n " + cmpFlat
+                : "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p " + packageName;
+        String cmd = "am start-activity -S -W"
+                + " --display " + displayId
+                + " --activity-no-animation"
+                + " " + target;
+        android.util.Log.w("Phase4TaskVerbs",
+                "FISSION retrying without --windowingMode (freeform landed no task)");
+        log.append("(retrying without --windowingMode)\n$ ").append(cmd).append('\n');
+        String out = execShell(cmd, 5000);
+        log.append(out == null ? "(no output)" : out).append('\n');
+    }
+
+    /** A failed FREEFORM creation leaves a new empty split stack, so clean again before plain. */
+    private static int retryPlainOnCleanDisplay(StringBuilder log, int displayId,
+                                                 String cmpFlat, String packageName) {
+        return TaskLaunchRecovery.retryOnCleanDisplay(new TaskLaunchRecovery.Operations() {
+            @Override public String cleanDisplay() {
+                String cleanup = cleanFissionStacks(displayId);
+                log.append("(re-clean after FREEFORM failure)\n").append(cleanup);
+                return cleanup;
+            }
+
+            @Override public void launchPlain() {
+                startPlainOnDisplay(log, displayId, cmpFlat, packageName);
+            }
+
+            @Override public int pollTask() {
+                return pollForTaskId(packageName);
+            }
+        });
+    }
+
+    /**
+     * Moves a stack/root task to the target display.
+     * Tries moveStackToDisplay (Android ≤11, DiLink 3) then
+     * moveRootTaskToDisplay (Android 12+, DiLink 5).
+     */
+    private static String moveStackOrRootTask(Object iAtm, int stackOrTaskId, int displayId) {
+        try {
+            iAtm.getClass().getMethod("moveStackToDisplay", int.class, int.class)
+                    .invoke(iAtm, stackOrTaskId, displayId);
+            return "OK moveStackToDisplay(" + stackOrTaskId + "," + displayId + ")";
+        } catch (NoSuchMethodException e) {
+            try {
+                iAtm.getClass().getMethod("moveRootTaskToDisplay", int.class, int.class)
+                        .invoke(iAtm, stackOrTaskId, displayId);
+                return "OK moveRootTaskToDisplay(" + stackOrTaskId + "," + displayId + ")";
+            } catch (Throwable t2) {
+                Throwable c = (t2 instanceof java.lang.reflect.InvocationTargetException
+                        && t2.getCause() != null) ? t2.getCause() : t2;
+                return "ERR moveRootTaskToDisplay: " + c.getClass().getSimpleName()
+                        + " — " + c.getMessage();
+            }
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR moveStackToDisplay: " + c.getClass().getSimpleName()
+                    + " — " + c.getMessage();
+        }
+    }
+
     // ─── Task query ───────────────────────────────────────────────────────
+
+    /** Resolve the display containing {@code taskId} from StackInfo/RootTaskInfo. */
+    private static int findDisplayIdForTask(Object iAtm, int taskId) {
+        try {
+            for (Object info : getAtmTaskList(iAtm)) {
+                if (info == null) continue;
+                boolean containsTask = getStackOrRootTaskId(info) == taskId;
+                int[] taskIds = getChildTaskIds(info);
+                if (!containsTask && taskIds != null) {
+                    for (int id : taskIds) {
+                        if (id == taskId) {
+                            containsTask = true;
+                            break;
+                        }
+                    }
+                }
+                if (!containsTask) continue;
+                Object displayId = readFieldNoThrow(info, "displayId");
+                if (displayId instanceof Integer) return (Integer) displayId;
+            }
+        } catch (Throwable ignore) {
+            // FOUND with an unreadable display maps to UNKNOWN on the app side.
+        }
+        return TaskLocation.UNKNOWN_DISPLAY_ID;
+    }
+
+    /**
+     * Locate a package task and its current display. A completed ATM query with no matching task
+     * returns ABSENT; inability to query or determine the task identity returns UNKNOWN.
+     */
+    public static TaskLocation findTaskLocationForPackage(String packageName) {
+        if (packageName == null || packageName.isEmpty()) return TaskLocation.unknown();
+        try {
+            java.util.List<TaskLocation> locations = queryTaskLocationsForPackage(packageName);
+            return locations.isEmpty() ? TaskLocation.absent() : locations.get(0);
+        } catch (Throwable t) {
+            android.util.Log.w("Phase4TaskVerbs",
+                    "findTaskLocationForPackage(" + packageName + ") failed: " + t);
+            return TaskLocation.unknown();
+        }
+    }
+
+    private static TaskLocation findWatchdogTaskLocation(String packageName,
+                                                         int targetDisplayId) {
+        try {
+            return FissionWatchdogPolicy.selectTask(
+                    queryTaskLocationsForPackage(packageName), targetDisplayId);
+        } catch (Throwable error) {
+            android.util.Log.w("Phase4TaskVerbs",
+                    "WATCHDOG task query failed pkg=" + packageName + ": " + error);
+            return TaskLocation.unknown();
+        }
+    }
+
+    private static java.util.List<TaskLocation> queryTaskLocationsForPackage(String packageName)
+            throws Throwable {
+        Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+        Object iAtm = atmCls.getMethod("getService").invoke(null);
+        Method getTasks = sGetTasks;
+        if (getTasks == null) {
+            for (Method candidate : iAtm.getClass().getMethods()) {
+                if ("getTasks".equals(candidate.getName())) {
+                    getTasks = candidate;
+                    break;
+                }
+            }
+            sGetTasks = getTasks;
+        }
+        if (getTasks == null) throw new NoSuchMethodException("getTasks");
+
+        Class<?>[] parameterTypes = getTasks.getParameterTypes();
+        Object[] args = new Object[parameterTypes.length];
+        for (int index = 0; index < parameterTypes.length; index++) {
+            if (parameterTypes[index] == int.class) args[index] = (index == 0 ? 64 : 0);
+            else if (parameterTypes[index] == boolean.class) args[index] = false;
+            else args[index] = null;
+        }
+        Object rawTasks = getTasks.invoke(iAtm, args);
+        if (!(rawTasks instanceof java.util.List)) {
+            throw new IllegalStateException("getTasks returned "
+                    + (rawTasks == null ? "null" : rawTasks.getClass().getName()));
+        }
+
+        java.util.List<TaskLocation> locations = new java.util.ArrayList<>();
+        boolean identityUnknown = false;
+        for (Object task : (java.util.List<?>) rawTasks) {
+            if (task == null) continue;
+            android.content.ComponentName topActivity =
+                    (android.content.ComponentName) readFieldNoThrow(task, "topActivity");
+            android.content.ComponentName baseActivity =
+                    (android.content.ComponentName) readFieldNoThrow(task, "baseActivity");
+            boolean packageMatches = topActivity != null
+                    && packageName.equals(topActivity.getPackageName());
+            packageMatches |= baseActivity != null
+                    && packageName.equals(baseActivity.getPackageName());
+            if (!packageMatches) continue;
+
+            Object rawTaskId = readFieldNoThrow(task, "taskId");
+            if (rawTaskId == null) rawTaskId = readFieldNoThrow(task, "id");
+            if (!(rawTaskId instanceof Integer)) {
+                identityUnknown = true;
+                continue;
+            }
+            int taskId = (Integer) rawTaskId;
+            Object rawDisplayId = readFieldNoThrow(task, "displayId");
+            int displayId = rawDisplayId instanceof Integer
+                    ? (Integer) rawDisplayId
+                    : findDisplayIdForTask(iAtm, taskId);
+            locations.add(TaskLocation.found(taskId, displayId));
+        }
+        if (identityUnknown) locations.add(TaskLocation.unknown());
+        return locations;
+    }
 
     /**
      * Lookup the taskId hosting {@code packageName} (any activity).
@@ -55,47 +396,9 @@ public final class Phase4TaskVerbs {
      * {@code getTasks} to handle BYD-specific signature variants.
      */
     public static int findTaskIdForPackage(String packageName) {
-        try {
-            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
-            Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Method getTasks = sGetTasks;
-            if (getTasks == null) {
-                for (Method cand : iAtm.getClass().getMethods()) {
-                    if ("getTasks".equals(cand.getName())) { getTasks = cand; break; }
-                }
-                sGetTasks = getTasks;
-            }
-            if (getTasks == null) {
-                android.util.Log.w("Phase4TaskVerbs", "findTaskIdForPackage: no getTasks on " + iAtm.getClass());
-                return -1;
-            }
-            Class<?>[] pt = getTasks.getParameterTypes();
-            Object[] args = new Object[pt.length];
-            for (int i = 0; i < pt.length; i++) {
-                if (pt[i] == int.class)          args[i] = (i == 0 ? 64 : 0);
-                else if (pt[i] == boolean.class) args[i] = false;
-                else                              args[i] = null;
-            }
-            Object res = getTasks.invoke(iAtm, args);
-            if (!(res instanceof java.util.List)) return -1;
-            for (Object task : (java.util.List<?>) res) {
-                if (task == null) continue;
-                android.content.ComponentName topActivity =
-                        (android.content.ComponentName) readFieldNoThrow(task, "topActivity");
-                android.content.ComponentName baseActivity =
-                        (android.content.ComponentName) readFieldNoThrow(task, "baseActivity");
-                String pkg = (topActivity != null ? topActivity.getPackageName()
-                            : baseActivity != null ? baseActivity.getPackageName() : null);
-                if (packageName.equals(pkg)) {
-                    Object id = readFieldNoThrow(task, "taskId");
-                    if (id == null) id = readFieldNoThrow(task, "id");
-                    if (id instanceof Integer) return (Integer) id;
-                }
-            }
-        } catch (Throwable t) {
-            android.util.Log.w("Phase4TaskVerbs", "findTaskIdForPackage(" + packageName + ") failed: " + t);
-        }
-        return -1;
+        TaskLocation location = findTaskLocationForPackage(packageName);
+        return location.getStatus() == TaskLocation.Status.FOUND
+                ? location.getTaskId() : -1;
     }
 
     // ─── Task removal ─────────────────────────────────────────────────────
@@ -195,6 +498,17 @@ public final class Phase4TaskVerbs {
     }
 
     /**
+     * Moves a task using the direct task API when available, then falls back to the containing
+     * stack/root-task API used by DiLink 3/Android 10. The incident ROM exposes
+     * {@code moveStackToDisplay(int,int)} but no direct {@code moveTaskToDisplay(int,int)}.
+     */
+    public static String moveTaskToDisplayCompatible(int taskId, int displayId) {
+        return TaskMoveResult.runWithFallback(
+                () -> moveTaskToDisplay(taskId, displayId),
+                () -> moveTaskToDisplayViaStack(taskId, displayId));
+    }
+
+    /**
      * BYD Seal EU / Android 10 stack-based move:
      * 1) flip task to FREEFORM via AOSP setTaskWindowingMode (also flips the containing
      *    stack — required for subsequent resizeTask to be accepted).
@@ -231,44 +545,26 @@ public final class Phase4TaskVerbs {
             log.append(" ; ");
 
             // Step B: find stackId AND its current displayId.
+            // Tries getAllStackInfos (DiLink 3) then getAllRootTaskInfos (DiLink 5 / Android 12).
             int stackId = -1, currentDisplayId = -1;
             try {
-                Method getAll = iAtm.getClass().getMethod("getAllStackInfos");
-                Object res = getAll.invoke(iAtm);
-                java.util.List<?> stacks;
-                if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
-                else if (res != null && res.getClass().isArray())
-                    stacks = java.util.Arrays.asList((Object[]) res);
-                else stacks = java.util.Collections.emptyList();
+                java.util.List<?> stacks = getAtmTaskList(iAtm);
                 for (Object si : stacks) {
                     if (si == null) continue;
-                    int sid = -1, did = -1;
-                    int[] tids = null;
-                    try {
-                        java.lang.reflect.Field fStack = si.getClass().getField("stackId");
-                        sid = fStack.getInt(si);
-                    } catch (NoSuchFieldException ignore) {}
-                    try {
-                        java.lang.reflect.Field fDid = si.getClass().getField("displayId");
-                        did = fDid.getInt(si);
-                    } catch (NoSuchFieldException ignore) {}
-                    try {
-                        java.lang.reflect.Field fTaskIds = si.getClass().getField("taskIds");
-                        tids = (int[]) fTaskIds.get(si);
-                    } catch (NoSuchFieldException ignore) {}
-                    if (tids != null) {
-                        for (int t : tids) {
-                            if (t == taskId) {
-                                stackId = sid;
-                                currentDisplayId = did;
-                                break;
-                            }
+                    int[] tids = getChildTaskIds(si);
+                    if (tids == null) continue;
+                    for (int t : tids) {
+                        if (t == taskId) {
+                            stackId = getStackOrRootTaskId(si);
+                            Object did = readFieldNoThrow(si, "displayId");
+                            if (did instanceof Integer) currentDisplayId = (Integer) did;
+                            break;
                         }
                     }
                     if (stackId != -1) break;
                 }
             } catch (Throwable lookupEx) {
-                log.append("WARN getAllStackInfos: ").append(lookupEx.getClass().getSimpleName())
+                log.append("WARN getAtmTaskList: ").append(lookupEx.getClass().getSimpleName())
                    .append(" — ").append(lookupEx.getMessage()).append(" ; ");
             }
             log.append("stackId=").append(stackId).append(" currentDisplay=")
@@ -278,17 +574,12 @@ public final class Phase4TaskVerbs {
                 return log.toString();
             }
 
-            // Step C: moveStackToDisplay — only if not already on target.
+            // Step C: moveStackToDisplay (DiLink 3) or moveRootTaskToDisplay (DiLink 5 / Android 12).
             if (currentDisplayId == displayId) {
-                log.append("SKIP moveStackToDisplay (already on display ")
-                   .append(displayId).append(')');
+                log.append("SKIP move (already on display ").append(displayId).append(')');
                 return log.toString();
             }
-            Method mv = iAtm.getClass().getMethod(
-                    "moveStackToDisplay", int.class, int.class);
-            mv.invoke(iAtm, stackId, displayId);
-            log.append("OK moveStackToDisplay(").append(stackId).append(',')
-               .append(displayId).append(')');
+            log.append(moveStackOrRootTask(iAtm, stackId, displayId));
             return log.toString();
         } catch (Throwable t) {
             Throwable cause = (t instanceof java.lang.reflect.InvocationTargetException
@@ -494,6 +785,7 @@ public final class Phase4TaskVerbs {
             }
 
             boolean started = false;
+            boolean freeformStackFailure = false;
 
             // Dilink5 Dashboard pattern: -S -W --windowingMode 5 --display N pkg/cls.
             if (cmpFlat != null) {
@@ -506,11 +798,14 @@ public final class Phase4TaskVerbs {
                 log.append("$ ").append(cmd).append('\n');
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
-                started = (out == null || !out.contains("Error:"));
+                started = !amStartFailed(out);
+                freeformStackFailure = TaskLaunchRecovery.isFreeformStackFailure(out);
             }
 
             // Fallback: bare MAIN with -p when component resolution failed.
-            if (!started) {
+            // Do not repeat the same --windowingMode launch after the known BYD framework NPE:
+            // it only recreates another poisoned split stack. Re-clean and go plain instead.
+            if (!started && !freeformStackFailure) {
                 String cmd = "am start-activity -S -W"
                         + " --windowingMode 5"
                         + " --display " + displayId
@@ -521,19 +816,35 @@ public final class Phase4TaskVerbs {
                 log.append("$ ").append(cmd).append('\n');
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
-                started = (out == null || !out.contains("Error:"));
+                started = !amStartFailed(out);
+                freeformStackFailure = TaskLaunchRecovery.isFreeformStackFailure(out);
             }
 
-            // Poll up to ~5 s for the task to appear.
-            int taskId = -1;
-            for (int i = 1; i <= 16 && taskId <= 0; i++) {
-                try { Thread.sleep(300); } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-                taskId = findTaskIdForPackage(packageName);
+            // Last-resort (no --windowingMode): on some DiLink 3.0 ROMs, creating a FREEFORM
+            // stack on the fission display throws inside WindowManager (NPE in
+            // ActivityStack.onConfigurationChanged) so NO activity starts. Dropping the windowing
+            // mode lets the activity land in the display's default (fullscreen) stack — visible on
+            // the cluster at full size — and the FREEFORM flip further down still gets its chance.
+            // EARLY trigger: both --windowingMode 5 attempts clearly threw (am printed the error).
+            boolean triedPlain = false;
+            int taskId;
+            if (!started) {
+                taskId = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName);
+                triedPlain = true;
+            } else {
+                // Poll up to ~5 s for the task to appear.
+                taskId = pollForTaskId(packageName);
             }
             log.append("findTask(post-poll) = ").append(taskId).append('\n');
+
+            // LATE trigger: the freeform attempt reported "started" (no am error text) yet landed
+            // NO task — the FREEFORM stack creation failed silently on this ROM (INC-20260716-091016,
+            // where started=true skipped the old !started-gated last-resort). Retry once without the
+            // windowing mode, keyed on the ACTUAL outcome (no task) rather than the am exit text.
+            if (taskId <= 0 && !triedPlain) {
+                taskId = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName);
+                log.append("findTask(post-fallback) = ").append(taskId).append('\n');
+            }
 
             if (taskId <= 0) {
                 log.append("FAIL: no task discovered for ").append(packageName).append('\n');
@@ -545,53 +856,41 @@ public final class Phase4TaskVerbs {
             log.append("  ").append(Phase4DisplayVerbs.setDisplayToSingleTaskInstance(displayId)).append('\n');
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
 
-            // Resolve real stackId via getAllStackInfos (same as DevTool Step 3b).
+            // Resolve real stackId via getAllStackInfos (DiLink 3) or getAllRootTaskInfos (DiLink 5 / Android 12).
             int stackId = -1;
             try {
                 Class<?> ac = Class.forName("android.app.ActivityTaskManager");
                 Object ia = ac.getMethod("getService").invoke(null);
-                Object res = ia.getClass().getMethod("getAllStackInfos").invoke(ia);
-                java.util.List<?> ss;
-                if (res instanceof java.util.List) ss = (java.util.List<?>) res;
-                else if (res != null && res.getClass().isArray())
-                    ss = java.util.Arrays.asList((Object[]) res);
-                else ss = java.util.Collections.emptyList();
+                java.util.List<?> ss = getAtmTaskList(ia);
                 outer2:
                 for (Object si : ss) {
-                    int[] tids;
-                    try { tids = (int[]) si.getClass().getField("taskIds").get(si); }
-                    catch (Exception ignore) { continue; }
+                    int[] tids = getChildTaskIds(si);
                     if (tids == null) continue;
                     for (int t : tids) {
                         if (t == taskId) {
-                            try { stackId = si.getClass().getField("stackId").getInt(si); }
-                            catch (Exception ignore) {}
+                            stackId = getStackOrRootTaskId(si);
                             break outer2;
                         }
                     }
                 }
                 log.append("  stackId=").append(stackId).append('\n');
             } catch (Throwable ex) {
-                log.append("  WARN getAllStackInfos: ").append(ex.getMessage()).append('\n');
+                log.append("  WARN getAtmTaskList: ").append(ex.getMessage()).append('\n');
             }
 
             // FREEFORM pre-move: flip task+stack to FREEFORM before the move.
             log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n');
 
-            // moveStackToDisplay: creates the FREEFORM stack context that allows resizeTask.
+            // moveStackToDisplay (DiLink 3) or moveRootTaskToDisplay (DiLink 5 / Android 12).
             if (stackId >= 0) {
                 try {
                     Class<?> ac = Class.forName("android.app.ActivityTaskManager");
                     Object ia = ac.getMethod("getService").invoke(null);
-                    java.lang.reflect.Method mv = ia.getClass().getMethod(
-                            "moveStackToDisplay", int.class, int.class);
-                    mv.invoke(ia, stackId, displayId);
-                    log.append("  OK moveStackToDisplay(").append(stackId).append(',')
-                       .append(displayId).append(")\n");
+                    log.append("  ").append(moveStackOrRootTask(ia, stackId, displayId)).append('\n');
                 } catch (Throwable ex) {
                     Throwable c = (ex instanceof java.lang.reflect.InvocationTargetException
                             && ex.getCause() != null) ? ex.getCause() : ex;
-                    log.append("  moveStackToDisplay: ").append(c.getClass().getSimpleName())
+                    log.append("  moveStackOrRootTask: ").append(c.getClass().getSimpleName())
                        .append(" — ").append(c.getMessage()).append('\n');
                 }
             }
@@ -602,81 +901,13 @@ public final class Phase4TaskVerbs {
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
 
-            // Async watchdog: polls getAllStackInfos() every 500 ms for 10 s.
-            // Re-anchors if Waze's FLAG_ACTIVITY_LAUNCH_ADJACENT bounces the task to display 0.
-            final int wTaskId = taskId;
-            if (sWatchdogActive.compareAndSet(false, true)) {
-                new Thread(() -> {
-                try {
-                    int stableCount = 0;
-                    for (int iter = 0; iter < 20; iter++) {
-                        try { Thread.sleep(500); }
-                        catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt(); return;
-                        }
-                        if (iter < 4) continue; // skip first 2 s, let app settle
-                        int curDisplay = -1;
-                        try {
-                            Class<?> ac = Class.forName("android.app.ActivityTaskManager");
-                            Object ia = ac.getMethod("getService").invoke(null);
-                            Object res = ia.getClass().getMethod("getAllStackInfos").invoke(ia);
-                            java.util.List<?> ss;
-                            if (res instanceof java.util.List) ss = (java.util.List<?>) res;
-                            else if (res != null && res.getClass().isArray())
-                                ss = java.util.Arrays.asList((Object[]) res);
-                            else ss = java.util.Collections.emptyList();
-                            outer:
-                            for (Object si : ss) {
-                                int[] tids;
-                                try { tids = (int[]) si.getClass().getField("taskIds").get(si); }
-                                catch (Exception ignore) { continue; }
-                                if (tids == null) continue;
-                                for (int t : tids) {
-                                    if (t == wTaskId) {
-                                        try { curDisplay = si.getClass()
-                                                .getField("displayId").getInt(si); }
-                                        catch (Exception ignore) {}
-                                        break outer;
-                                    }
-                                }
-                            }
-                        } catch (Throwable pollEx) {
-                            android.util.Log.w("Phase4TaskVerbs",
-                                    "WATCHDOG poll err: " + pollEx.getMessage());
-                            continue;
-                        }
-                        if (curDisplay < 0) return; // task gone
-                        if (curDisplay == displayId) {
-                            if (++stableCount >= 3) {
-                                android.util.Log.d("Phase4TaskVerbs", "WATCHDOG: stable, done");
-                                return;
-                            }
-                            continue;
-                        }
-                        stableCount = 0;
-                        android.util.Log.i("Phase4TaskVerbs",
-                                "WATCHDOG: task " + wTaskId + " on display " + curDisplay
-                                + " — re-anchoring to " + displayId);
-                        moveTaskToDisplayViaStack(wTaskId, displayId);
-                        setTaskWindowingModeFreeform(wTaskId);
-                        resizeTaskRect(wTaskId, 0, 0, width, height);
-                        setFocusedRootTask(wTaskId);
-                        android.util.Log.i("Phase4TaskVerbs", "WATCHDOG: re-anchor done");
-                        return;
-                    }
-                    android.util.Log.d("Phase4TaskVerbs", "WATCHDOG: ended without bounce");
-                } catch (Throwable t) {
-                    android.util.Log.w("Phase4TaskVerbs",
-                            "WATCHDOG unexpected: " + t.getMessage());
-                } finally {
-                    sWatchdogActive.set(false);
-                }
-                }, "fission-watchdog").start();
-            }
-            log.append("WATCHDOG started (20×500ms, detects from T+2s)\n");
+            String watchdogStatus = startFissionWatchdog(
+                    packageName, taskId, displayId, width, height);
+            log.append(watchdogStatus).append('\n');
             log.append("FINISH: launchAndForce complete.\n");
             android.util.Log.i("Phase4TaskVerbs", "FISSION launchAndForce DONE pkg=" + packageName
-                    + " taskId=" + taskId + " displayId=" + displayId + " watchdog=running");
+                    + " taskId=" + taskId + " displayId=" + displayId
+                    + " watchdog=" + watchdogStatus);
         } catch (Throwable t) {
             log.append("EXCEPTION: ").append(t).append('\n');
             android.util.Log.e("Phase4TaskVerbs", "FISSION launchAndForce EXCEPTION: " + t);
@@ -684,65 +915,316 @@ public final class Phase4TaskVerbs {
         return log.toString();
     }
 
+    private static String startFissionWatchdog(String packageName, int initialTaskId,
+                                               int targetDisplayId, int width, int height) {
+        final long generation = sWatchdogs.start(packageName);
+        final FissionWatchdogPolicy policy = new FissionWatchdogPolicy();
+        Thread watchdog = new Thread(() -> {
+            int currentTaskId = initialTaskId;
+            int reanchorCount = 0;
+            try {
+                for (int poll = 1; poll <= FissionWatchdogPolicy.MAX_POLLS; poll++) {
+                    try {
+                        Thread.sleep(FissionWatchdogPolicy.POLL_INTERVAL_MS);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    if (!sWatchdogs.isCurrent(packageName, generation)) {
+                        android.util.Log.d("Phase4TaskVerbs",
+                                "WATCHDOG superseded pkg=" + packageName
+                                        + " generation=" + generation);
+                        return;
+                    }
+
+                        TaskLocation location = findWatchdogTaskLocation(
+                            packageName, targetDisplayId);
+                    TaskLocation.DisplayMatch match = location.matchDisplay(targetDisplayId);
+                    if (location.getStatus() == TaskLocation.Status.FOUND
+                            && location.getTaskId() != currentTaskId) {
+                        android.util.Log.i("Phase4TaskVerbs",
+                                "WATCHDOG adopted new task pkg=" + packageName
+                                        + " oldTask=" + currentTaskId
+                                        + " newTask=" + location.getTaskId());
+                        currentTaskId = location.getTaskId();
+                    }
+
+                    FissionWatchdogPolicy.Action action = policy.onPoll(poll, match);
+                    if (action == FissionWatchdogPolicy.Action.COMPLETE) {
+                        android.util.Log.d("Phase4TaskVerbs",
+                                "WATCHDOG complete pkg=" + packageName
+                                        + " task=" + currentTaskId
+                                        + " polls=" + poll
+                                        + " reanchors=" + reanchorCount
+                                        + " final=" + match);
+                        return;
+                    }
+                    if (action != FissionWatchdogPolicy.Action.REANCHOR
+                            || currentTaskId <= 0) {
+                        continue;
+                    }
+
+                    reanchorCount++;
+                    String move = moveTaskToDisplayViaStack(currentTaskId, targetDisplayId);
+                    String mode = setTaskWindowingModeFreeform(currentTaskId);
+                    String resize = resizeTaskRect(currentTaskId, 0, 0, width, height);
+                    String focus = setFocusedRootTask(currentTaskId);
+                    android.util.Log.i("Phase4TaskVerbs",
+                            "WATCHDOG re-anchor pkg=" + packageName
+                                    + " task=" + currentTaskId
+                                    + " from=" + location.getDisplayId()
+                                    + " to=" + targetDisplayId
+                                    + " poll=" + poll
+                                    + " move=[" + move + "]"
+                                    + " mode=[" + mode + "]"
+                                    + " resize=[" + resize + "]"
+                                    + " focus=[" + focus + "]");
+                }
+            } catch (Throwable error) {
+                android.util.Log.w("Phase4TaskVerbs",
+                        "WATCHDOG unexpected pkg=" + packageName + ": " + error);
+            } finally {
+                sWatchdogs.finish(packageName, generation);
+            }
+        }, "fission-watchdog-" + initialTaskId);
+        watchdog.setDaemon(true);
+        try {
+            watchdog.start();
+            return "WATCHDOG started pkg=" + packageName
+                    + " task=" + initialTaskId
+                    + " display=" + targetDisplayId
+                    + " guard=" + FissionWatchdogPolicy.INITIAL_GUARD_POLLS
+                    * FissionWatchdogPolicy.POLL_INTERVAL_MS / 1000 + "s"
+                    + " max=" + FissionWatchdogPolicy.MAX_POLLS
+                    * FissionWatchdogPolicy.POLL_INTERVAL_MS / 1000 + "s";
+        } catch (Throwable startError) {
+            sWatchdogs.finish(packageName, generation);
+            android.util.Log.w("Phase4TaskVerbs",
+                    "WATCHDOG start failed pkg=" + packageName + ": " + startError);
+            return "WATCHDOG failed pkg=" + packageName
+                    + " error=" + startError.getClass().getSimpleName();
+        }
+    }
+
+    /** Cancels the latest guardian before an intentional move/release during Layout teardown. */
+    public static boolean cancelFissionWatchdog(String packageName) {
+        return packageName == null
+                ? sWatchdogs.cancelAll() > 0
+                : sWatchdogs.cancel(packageName);
+    }
+
     // ─── Stack management ─────────────────────────────────────────────────
 
     /**
-     * Destroy every non-fullscreen, non-home stack on {@code displayId}.
-     * Recovery verb for the fission display when a prior session left a zombie
-     * stack in split-screen-primary mode, causing
-     * "Can only have one child on stack…mode=split-screen-primary" on the next launch.
+     * Destroy the zombie stacks on {@code displayId} (the fission/cluster display).
+     * Recovery verb for when a prior session left a stack in split-screen-primary mode,
+     * causing "Can only have one child on stack…mode=split-screen-primary" — or, on
+     * DiLink 3.0, a WindowManager NPE while creating the next FREEFORM stack — on the
+     * next launch.
+     *
+     * <p>Removes: any non-fullscreen, non-home stack that holds NO task (a stale
+     * split-screen one included). Keeps fullscreen stacks, home stacks, and EVERY
+     * task-holding stack — so it can never tear down the running projection, which on
+     * DiLink 3 legitimately sits in a split-screen-primary stack after a resize.
+     * Every call site is a pre-launch cleanup.
      *
      * <p>Safe to call repeatedly — on a clean display the loop finds nothing to remove.
      *
      * @return multi-line log of every stack inspected and removed.
      */
+    /** {@link #getAtmTaskList} that never throws; {@code null} means "could not be read". */
+    private static java.util.List<?> getAtmTaskListNoThrow(Object iAtm) {
+        try {
+            return getAtmTaskList(iAtm);
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    /**
+     * Re-reads the stack list and reports whether {@code sid} is STILL there.
+     *
+     * <p>{@code IActivityTaskManager.removeStack(int)} does NOT delete the stack object: it
+     * finishes the tasks <em>inside</em> the stack. On an already-empty orphan it is therefore
+     * a silent no-op that returns normally, and cleanFissionStacks used to count that as a
+     * removal — on-car it logged {@code removed=1} eleven consecutive times while the orphaned
+     * split-screen-primary stack survived every pass, and the survivor kept NPE-ing
+     * WindowManager ({@code ActivityStack.getBounds()} → {@code onConfigurationChanged:663})
+     * on the next FREEFORM cluster launch. Nothing may be counted as removed until the stack
+     * list itself confirms the disappearance.
+     *
+     * @return {@code TRUE} still present, {@code FALSE} gone, {@code null} list unreadable.
+     */
+    private static Boolean stackStillPresent(Object iAtm, int sid) {
+        java.util.List<?> fresh = getAtmTaskListNoThrow(iAtm);
+        if (fresh == null) return null;
+        for (Object si : fresh) {
+            if (si == null) continue;
+            if (getStackOrRootTaskId(si) == sid) return Boolean.TRUE;
+        }
+        return Boolean.FALSE;
+    }
+
+    /**
+     * MANDATORY SAFETY GUARD for the {@code removeStacksInWindowingModes} escalation: that verb
+     * is display-agnostic and dissolves EVERY split-screen stack of the system. A live cluster
+     * projection legitimately sits in a SPLIT_SCREEN_PRIMARY stack on DiLink 3
+     * ({@link #moveAndResize} → setTaskWindowingModeWithBounds drives BYD's
+     * setCustomTaskWindowingModeSplitScreenPrimary with modes {5,3,0}), so escalating while any
+     * split stack still holds a task would kill the user's running projection.
+     *
+     * <p>Checks EVERY display, not just the fission one. A split stack whose child-task array
+     * cannot be read counts as NON-empty (defensive), exactly like the per-stack keep below.
+     *
+     * @return {@code true} only when every split-screen stack in the system is task-less.
+     */
+    private static boolean allSplitStacksEmpty(java.util.List<?> stacks) {
+        if (stacks == null || stacks.isEmpty()) return false;
+        for (Object si : stacks) {
+            if (si == null) continue;
+            int wm = readWindowingMode(si);
+            if (wm != WM_SPLIT_SCREEN_PRIMARY && wm != WM_SPLIT_SCREEN_SECONDARY) continue;
+            int[] tids = getChildTaskIds(si);
+            if (tids == null || tids.length != 0) return false;   // unreadable ⇒ assume live
+        }
+        return true;
+    }
+
+    /**
+     * Reflective, never-throwing call to {@code removeStacksInWindowingModes(int[])}
+     * (Android ≤11 / DiLink 3) or its Android-12+ name {@code removeRootTasksInWindowingModes}
+     * (DiLink 5). Unlike {@code removeStack(int)} this routes to
+     * {@code ActivityStackSupervisor.removeStack(stack)} and destroys the stack OBJECT — the
+     * only Q-surface verb that can dissolve a 0-task stack.
+     *
+     * <p>Callers MUST gate this on {@link #allSplitStacksEmpty}.
+     *
+     * @return the verb actually invoked, or {@code null} when absent / it threw.
+     */
+    private static String removeStacksInWindowingModesNoThrow(Object iAtm, int[] modes,
+                                                              StringBuilder log) {
+        for (String verb : new String[]{
+                "removeStacksInWindowingModes", "removeRootTasksInWindowingModes"}) {
+            for (Method cand : iAtm.getClass().getMethods()) {
+                if (!verb.equals(cand.getName())) continue;
+                Class<?>[] pt = cand.getParameterTypes();
+                if (pt.length != 1 || pt[0] != int[].class) continue;
+                try {
+                    cand.invoke(iAtm, (Object) modes);
+                    return verb;
+                } catch (Throwable rex) {
+                    Throwable c = (rex instanceof java.lang.reflect.InvocationTargetException
+                            && rex.getCause() != null) ? rex.getCause() : rex;
+                    log.append("  ERR    ").append(verb).append(": ")
+                       .append(c.getClass().getSimpleName())
+                       .append(": ").append(c.getMessage()).append('\n');
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     public static String cleanFissionStacks(int displayId) {
         StringBuilder log = new StringBuilder();
         log.append("== cleanFissionStacks display=").append(displayId).append(" ==\n");
         try {
             Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
             Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Object res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
-            java.util.List<?> stacks;
-            if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
-            else if (res != null && res.getClass().isArray())
-                stacks = java.util.Arrays.asList((Object[]) res);
-            else { log.append("no stacks returned\n"); return log.toString(); }
+            // DiLink 3: getAllStackInfos / DiLink 5 Android 12: getAllRootTaskInfos
+            java.util.List<?> stacks = getAtmTaskList(iAtm);
+            if (stacks.isEmpty()) { log.append("no stacks returned\n"); return log.toString(); }
 
+            // DiLink 3: removeStack(int) / DiLink 5 Android 12: removeTask(int)
             Method removeStack = null;
-            for (Method cand : iAtm.getClass().getMethods()) {
-                if (!"removeStack".equals(cand.getName())) continue;
-                Class<?>[] pt = cand.getParameterTypes();
-                if (pt.length == 1 && pt[0] == int.class) { removeStack = cand; break; }
+            outer:
+            for (String verb : new String[]{"removeStack", "removeTask"}) {
+                for (Method cand : iAtm.getClass().getMethods()) {
+                    if (!verb.equals(cand.getName())) continue;
+                    Class<?>[] pt = cand.getParameterTypes();
+                    if (pt.length == 1 && pt[0] == int.class) { removeStack = cand; break outer; }
+                }
             }
             if (removeStack == null) {
-                log.append("WARN: no removeStack(int) on ATM proxy\n");
+                log.append("WARN: no removeStack/removeTask(int) on ATM proxy\n");
             }
 
             int removed = 0, kept = 0;
+            // removeStacksInWindowingModes is system-wide: one escalation per pass is enough
+            // (it dissolves every empty split stack at once) and keeps the blast radius minimal.
+            boolean escalated = false;
             for (Object si : stacks) {
                 if (si == null) continue;
-                Integer sid = (Integer) readFieldNoThrow(si, "stackId");
+                // DiLink 3: stackId field / DiLink 5 Android 12: taskId field
+                Integer sid = null;
+                {
+                    Object v = readFieldNoThrow(si, "stackId");
+                    if (v == null) v = readFieldNoThrow(si, "taskId");
+                    if (v instanceof Integer) sid = (Integer) v;
+                }
                 Integer did = (Integer) readFieldNoThrow(si, "displayId");
-                Integer wm  = (Integer) readFieldNoThrow(si, "windowingMode");
-                Integer at  = (Integer) readFieldNoThrow(si, "activityType");
                 if (sid == null || did == null) continue;
                 if (did != displayId) continue;
-                int wmV = wm != null ? wm : -1;
-                int atV = at != null ? at : -1;
-                // FULLSCREEN=1: leave (normal projection lives here).
-                // HOME=2: leave (default fallback Activity).
-                if (wmV == 1 || atV == 2) {
-                    log.append("  keep   stackId=").append(sid)
-                       .append(" wm=").append(wmV).append(" at=").append(atV).append('\n');
+                int wmV = readWindowingMode(si);
+                int atV = readActivityType(si);
+                int[] tids = getChildTaskIds(si);
+                // tids==null means the child-task-id read FAILED (a ROM whose task-array field
+                // is not named as expected, or a transient reflection failure) — NOT that the
+                // stack is empty. Treating it as "0 tasks → removable" could blank a LIVE
+                // cluster/HUD projection whose tasks we simply couldn't read, so keep it
+                // defensively (mirrors the wm/at unreadable keep below). Only a readable,
+                // genuinely task-less stack reaches removeStack().
+                if (tids == null) {
+                    log.append("  keep?  stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" (task list unreadable, defensive keep)\n");
                     kept++;
                     continue;
                 }
-                // If both fields are unreadable (-1/-1) the StackInfo class shape differs
-                // on this ROM — cannot safely classify. Keep to avoid emptying the display.
+                int nTasks = tids.length;
+
+                // FULLSCREEN: leave (a normal projection lives here).
+                // HOME: leave (the display's fallback Activity).
+                if (wmV == WM_FULLSCREEN || atV == AT_HOME) {
+                    log.append("  keep   stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" tasks=").append(nTasks).append('\n');
+                    kept++;
+                    continue;
+                }
+                // Both unreadable: the class shape differs on this ROM — cannot safely
+                // classify, so keep (never blind-empty the display). Should no longer
+                // happen now that readWindowConfigInt() looks inside configuration.
                 if (wmV == -1 && atV == -1) {
                     log.append("  keep?  stackId=").append(sid)
                        .append(" wm=-1 at=-1 (unreadable, defensive keep)\n");
+                    kept++;
+                    continue;
+                }
+                // A TASK-LESS, non-fullscreen, non-home stack on the fission display is a
+                // zombie: it can never be the live projection, and a stale split-screen-primary
+                // one poisons the display's split bookkeeping, so creating the next FREEFORM
+                // stack throws NPE inside WindowManager and the launch fails silently
+                // (INC-20260714-215700 — dump: stackId=5 mode=split-screen-primary
+                // visible=false, 0 tasks). That is the zombie this verb exists to destroy.
+                boolean splitStack = (wmV == WM_SPLIT_SCREEN_PRIMARY
+                                   || wmV == WM_SPLIT_SCREEN_SECONDARY);
+                // A stack that STILL HOLDS A TASK is NEVER removed — not even a split-screen
+                // one. removeStack() finishes every activity in the stack, and on DiLink 3 the
+                // live projection legitimately sits in a SPLIT_SCREEN_PRIMARY stack:
+                // moveAndResize() → setTaskWindowingModeWithBounds() drives BYD's
+                // setCustomTaskWindowingModeSplitScreenPrimary with modes {5,3,0}, and mode 3
+                // IS split-screen-primary. Split mode also launches the 2nd app while the 1st
+                // stays live (MainActivity → launchOnDashboardWithBounds → this verb), so
+                // removing task-holding split stacks would kill the running app. If a live
+                // split stack ever has to be dissolved, move the task out
+                // (setTaskWindowingModeFreeform + moveStackOrRootTask) — never removeStack().
+                if (nTasks != 0) {
+                    log.append("  keep   stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" tasks=").append(nTasks)
+                       .append(splitStack ? " (live split-screen — task-holding, kept)\n"
+                                          : " (live)\n");
                     kept++;
                     continue;
                 }
@@ -754,8 +1236,54 @@ public final class Phase4TaskVerbs {
                 try {
                     removeStack.invoke(iAtm, (int) sid);
                     log.append("  REMOVE stackId=").append(sid)
-                       .append(" wm=").append(wmV).append(" at=").append(atV).append('\n');
-                    removed++;
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" tasks=0")
+                       .append(splitStack ? " (empty split-screen zombie)" : " (empty zombie)")
+                       .append('\n');
+                    // removeStack(int) finishes the tasks IN a stack — on a 0-task orphan it is
+                    // a silent no-op, so the invoke returning normally proves NOTHING. Verify
+                    // against the live stack list before claiming (or counting) a removal.
+                    Boolean present = stackStillPresent(iAtm, sid);
+                    if (Boolean.FALSE.equals(present)) {
+                        log.append("  REMOVE-VERIFIED stackId=").append(sid).append('\n');
+                        removed++;
+                    } else if (present == null) {
+                        log.append("  REMOVE-UNVERIFIED stackId=").append(sid)
+                           .append(" (stack list unreadable — not counted)\n");
+                    } else {
+                        // Still there. Escalate ONCE to the only Q-surface verb that destroys
+                        // the stack OBJECT instead of its tasks — hard-gated on "no split-screen
+                        // stack anywhere holds a task" so a live projection can never be killed.
+                        if (!escalated) {
+                            escalated = true;
+                            if (allSplitStacksEmpty(getAtmTaskListNoThrow(iAtm))) {
+                                log.append("  ESCALATE removeStacksInWindowingModes{")
+                                   .append(WM_SPLIT_SCREEN_PRIMARY).append(',')
+                                   .append(WM_SPLIT_SCREEN_SECONDARY)
+                                   .append("} (all split stacks task-less)\n");
+                                String verb = removeStacksInWindowingModesNoThrow(iAtm,
+                                        new int[]{WM_SPLIT_SCREEN_PRIMARY,
+                                                  WM_SPLIT_SCREEN_SECONDARY}, log);
+                                if (verb == null) {
+                                    log.append("  ESCALATE-UNAVAILABLE (no "
+                                             + "removeStacksInWindowingModes(int[]) on ATM)\n");
+                                } else {
+                                    present = stackStillPresent(iAtm, sid);
+                                }
+                            } else {
+                                log.append("  ESCALATE-SKIPPED stackId=").append(sid)
+                                   .append(" (a split-screen stack still holds tasks — refusing"
+                                         + " to dissolve a live projection)\n");
+                            }
+                        }
+                        if (Boolean.FALSE.equals(present)) {
+                            log.append("  REMOVE-VERIFIED stackId=").append(sid)
+                               .append(" (escalated)\n");
+                            removed++;
+                        } else {
+                            log.append("  REMOVE-INEFFECTIVE stackId=").append(sid).append('\n');
+                        }
+                    }
                 } catch (Throwable rex) {
                     Throwable c = (rex instanceof java.lang.reflect.InvocationTargetException
                             && rex.getCause() != null) ? rex.getCause() : rex;
@@ -771,27 +1299,20 @@ public final class Phase4TaskVerbs {
         return log.toString();
     }
 
-    /** Look up the stackId containing {@code taskId} via getAllStackInfos(). Returns -1 if not found. */
+    /**
+     * Look up the stack/root-task ID containing {@code taskId}.
+     * Tries getAllStackInfos (DiLink 3) then getAllRootTaskInfos (DiLink 5 / Android 12).
+     * Returns -1 if not found.
+     */
     public static int findStackIdForTask(int taskId) {
         try {
             Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
             Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Object res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
-            java.util.List<?> stacks;
-            if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
-            else if (res != null && res.getClass().isArray())
-                stacks = java.util.Arrays.asList((Object[]) res);
-            else return -1;
-            for (Object si : stacks) {
+            for (Object si : getAtmTaskList(iAtm)) {
                 if (si == null) continue;
-                int sid;
-                int[] tids;
-                try {
-                    sid = si.getClass().getField("stackId").getInt(si);
-                    tids = (int[]) si.getClass().getField("taskIds").get(si);
-                } catch (NoSuchFieldException e) { continue; }
+                int[] tids = getChildTaskIds(si);
                 if (tids == null) continue;
-                for (int t : tids) if (t == taskId) return sid;
+                for (int t : tids) if (t == taskId) return getStackOrRootTaskId(si);
             }
         } catch (Throwable ignore) {}
         return -1;
@@ -1050,16 +1571,23 @@ public final class Phase4TaskVerbs {
     private static String execShell(String command, int timeoutMs) {
         Process p = null;
         try {
-            p = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
+            // redirectErrorStream(true): stderr is merged into stdout so a single reader
+            // drains ONE stream. The previous code read stdout fully THEN stderr, so a
+            // child that filled its 64KB stderr pipe before closing stdout deadlocked the
+            // reader (and stalled this binder thread until the waitFor timeout).
+            ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
+            pb.redirectErrorStream(true);
+            p = pb.start();
             final Process proc = p;
-            StringBuilder out = new StringBuilder();
+            // StringBuffer (not StringBuilder): the reader thread appends while the caller
+            // reads out.toString() after a BOUNDED join, so the buffer is touched from two
+            // threads — StringBuffer's synchronized append/toString removes that data race.
+            final StringBuffer out = new StringBuffer();
             Thread reader = new Thread(() -> {
                 byte[] buf = new byte[4096];
-                try (java.io.InputStream is = proc.getInputStream();
-                     java.io.InputStream es = proc.getErrorStream()) {
+                try (java.io.InputStream is = proc.getInputStream()) {
                     int n;
                     while ((n = is.read(buf)) > 0) out.append(new String(buf, 0, n));
-                    while ((n = es.read(buf)) > 0) out.append("[err] ").append(new String(buf, 0, n));
                 } catch (Throwable ignore) {}
             });
             reader.start();

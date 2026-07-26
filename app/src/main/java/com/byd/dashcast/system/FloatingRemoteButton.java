@@ -105,6 +105,11 @@ public class FloatingRemoteButton extends Service {
     private WindowManager mWindowManager;
     private View          mFloatView;
     private boolean       mGrantAttempted = false;
+    // F29 (perf audit #8): set in onDestroy() so a late ADB grant onSuccess (running
+    // on the AdbLocalClient background executor) short-circuits instead of re-posting
+    // createOverlay() and addView()-ing a TYPE_APPLICATION_OVERLAY window on a dead
+    // Service. volatile: written on the main thread, read on the ADB executor thread.
+    private volatile boolean mDestroyed = false;
     // v1.2.74 — track FG status so we can toggle the notification along with the badge.
     private boolean       mIsForeground = false;
     // M19: cached once to avoid PendingIntent.getActivity() IPC on every show().
@@ -136,6 +141,7 @@ public class FloatingRemoteButton extends Service {
 
     @Override
     public void onDestroy() {
+        mDestroyed = true;
         if (mSnapAnimator != null) { mSnapAnimator.cancel(); mSnapAnimator = null; }
         mDimHandler.removeCallbacksAndMessages(null);
         sInstance = null;
@@ -158,6 +164,7 @@ public class FloatingRemoteButton extends Service {
     // ── Overlay ───────────────────────────────────────────────────────────────
 
     private void createOverlay() {
+        if (mDestroyed) return;
         if (!android.provider.Settings.canDrawOverlays(this)) {
             if (mGrantAttempted) {
                 AppLogger.e(TAG, "SYSTEM_ALERT_WINDOW still denied after ADB attempt — badge not shown");
@@ -168,9 +175,13 @@ public class FloatingRemoteButton extends Service {
             AdbLocalClient.grantOverlayPermission(this, new AdbLocalClient.Callback() {
                 @Override
                 public void onSuccess(String report) {
+                    if (mDestroyed) return;
                     AppLogger.i(TAG, "SYSTEM_ALERT_WINDOW granted via ADB ✓");
                     mDimHandler.post(new Runnable() {
-                        @Override public void run() { createOverlay(); }
+                        @Override public void run() {
+                            if (mDestroyed) return;
+                            createOverlay();
+                        }
                     });
                 }
                 @Override

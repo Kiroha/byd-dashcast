@@ -82,6 +82,9 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
     private FissionOrchestrator mOrchestrator;
     private boolean             mDestroyed;
     private final Handler       mUiHandler = new Handler(Looper.getMainLooper());
+    /** Shared single-thread executor for the off-main-thread app-picker query.
+     *  Created once (matching the sibling fission activities) and shut down in {@link #onDestroy()}. */
+    private final ExecutorService mExec = Executors.newSingleThreadExecutor();
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -128,6 +131,10 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
         btnAdd.setOnClickListener(v -> pickApp());
         btnStopAll.setOnClickListener(v -> mOrchestrator.stopAll());
 
+        // Stop any headless auto-start orchestrator so its apps are moved back to display 0
+        // and killed before we create a fresh interactive orchestrator.
+        FissionOrchestrator.stopAutoOrchestrator();
+
         // Build the projection-state provider from the live ClusterService, or a safe default.
         ProjectionStateProvider psp = buildProjectionStateProvider();
 
@@ -158,6 +165,7 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
         super.onDestroy();
         mDestroyed = true;
         mUiHandler.removeCallbacksAndMessages(null);
+        mExec.shutdown();
         if (mOrchestrator != null) mOrchestrator.destroy(isFinishing());
     }
 
@@ -207,8 +215,7 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
     private void pickApp() {
         if (!mSurfaceReady) return;
         btnAdd.setEnabled(false);
-        ExecutorService tmpExec = Executors.newSingleThreadExecutor();
-        tmpExec.execute(() -> {
+        mExec.execute(() -> {
             PackageManager pm = getPackageManager();
             Intent main = new Intent(Intent.ACTION_MAIN);
             main.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -275,7 +282,6 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
                         .show();
             });
         });
-        tmpExec.shutdown();
     }
 
     private void showLayoutOrFreePicker(String pkg, String appLabel, List<LayoutPreset> presets) {

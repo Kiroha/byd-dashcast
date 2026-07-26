@@ -3,7 +3,10 @@ package com.byd.dashcast.fission;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.view.Surface;
+import android.view.MotionEvent;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.proxy.MirrorResourceOwner;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 
 public class FissionClient {
@@ -43,14 +46,40 @@ public class FissionClient {
             binder.transact(MirrorDaemon.TRANSACT_ATTACH_SLOT, data, reply, 0);
             reply.readException();
             if (reply.readInt() != 1) return -1;
-            reply.readParcelable(Surface.class.getClassLoader()); // daemon-owned surface, advance parcel
+            Surface surface = reply.readParcelable(Surface.class.getClassLoader());
+            // Wire-compatible legacy field: the daemon owns the SurfaceView/VD. This client-side
+            // Parcel wrapper is unused and must release its native reference immediately.
+            if (surface != null) surface.release();
             int displayId = reply.readInt();
             AppLogger.d(TAG, "ATTACH_SLOT pkg=" + pkg + " → displayId=" + displayId);
             return displayId;
         } finally { data.recycle(); reply.recycle(); }
     }
 
+    /** Move {@code pkg}'s task back to display 0 before teardown so the app relaunches cleanly. */
+    public static String moveToDisplay0(IBinder binder, String pkg) {
+        boolean guardianCancelled = ProxyClient.cancelFissionWatchdog(pkg);
+        AppLogger.d(TAG, "MOVE_TO_DISPLAY0 watchdog cancelled=" + guardianCancelled
+            + " pkg=" + pkg);
+        Parcel data = Parcel.obtain(), reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
+            data.writeString(pkg);
+            binder.transact(MirrorDaemon.TRANSACT_MOVE_TO_DISPLAY0, data, reply, 0);
+            reply.readException();
+            String result = reply.readString();
+            AppLogger.d(TAG, "MOVE_TO_DISPLAY0 pkg=" + pkg + " result=" + result);
+            return result;
+        } catch (Throwable e) {
+            AppLogger.w(TAG, "MOVE_TO_DISPLAY0 pkg=" + pkg + " error: " + e.getMessage());
+            return "ERR transact: " + e.getClass().getSimpleName() + ": " + e.getMessage();
+        } finally { data.recycle(); reply.recycle(); }
+    }
+
     public static void releaseSlot(IBinder binder, String pkg) throws Exception {
+        boolean guardianCancelled = ProxyClient.cancelFissionWatchdog(pkg);
+        AppLogger.d(TAG, "RELEASE_SLOT watchdog cancelled=" + guardianCancelled
+            + " pkg=" + pkg);
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
@@ -109,6 +138,8 @@ public class FissionClient {
     }
 
     public static void deactivateLayout(IBinder binder) throws Exception {
+        boolean guardiansCancelled = ProxyClient.cancelAllFissionWatchdogs();
+        AppLogger.d(TAG, "DEACTIVATE_LAYOUT watchdogs cancelled=" + guardiansCancelled);
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
@@ -138,6 +169,7 @@ public class FissionClient {
             data.writeInt(svW);
             data.writeInt(svH);
             data.writeParcelable(surface, 0);
+            data.writeStrongBinder(MirrorResourceOwner.token());
             binder.transact(MirrorDaemon.TRANSACT_MIRROR_START, data, reply, 0);
             reply.readException();
             boolean ok = (reply.readInt() == 1);
@@ -172,5 +204,33 @@ public class FissionClient {
         } catch (Exception e) {
             AppLogger.w(TAG, "MIRROR_STOP error: " + e.getMessage());
         } finally { data.recycle(); }
+    }
+
+    public static void injectMotion(IBinder binder, MotionEvent event) throws Exception {
+        if (binder == null || event == null) return;
+        Parcel data = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
+            data.writeParcelable(event, 0);
+            binder.transact(MirrorDaemon.TRANSACT_INJECT_MOTION,
+                    data, null, IBinder.FLAG_ONEWAY);
+        } finally {
+            data.recycle();
+        }
+    }
+
+    public static String focusSlot(IBinder binder, String pkg) throws Exception {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
+            data.writeString(pkg);
+            binder.transact(MirrorDaemon.TRANSACT_FOCUS_SLOT, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            data.recycle();
+            reply.recycle();
+        }
     }
 }

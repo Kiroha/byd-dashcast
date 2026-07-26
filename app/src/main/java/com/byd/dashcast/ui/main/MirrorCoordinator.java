@@ -5,6 +5,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.display.DisplayManager;
 import android.os.IBinder;
 import android.view.Display;
+import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
@@ -16,6 +17,7 @@ import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
+import com.byd.dashcast.fission.FissionOrchestrator;
 import com.byd.dashcast.ime.ClusterImeWatcherService;
 import com.byd.dashcast.platform.Platform;
 
@@ -34,6 +36,10 @@ public final class MirrorCoordinator {
     private final int[]   mFwdPointerIds = new int[MAX_FWD_POINTERS];
     private final float[] mFwdClusterXs  = new float[MAX_FWD_POINTERS];
     private final float[] mFwdClusterYs  = new float[MAX_FWD_POINTERS];
+        private final MotionEvent.PointerProperties[] mLayoutPointerProperties =
+            new MotionEvent.PointerProperties[MAX_FWD_POINTERS];
+        private final MotionEvent.PointerCoords[] mLayoutPointerCoords =
+            new MotionEvent.PointerCoords[MAX_FWD_POINTERS];
 
     public interface Host {
         Context getContext();
@@ -48,6 +54,9 @@ public final class MirrorCoordinator {
     private final Host         mHost;
 
     private Surface mMirrorSurface;
+    private boolean mLayoutMirrorActive;
+    private String mLayoutMirrorPackage;
+    private MirrorProjection mLayoutProjection;
 
     public MirrorCoordinator(TextureView textureView, FrameLayout frameMirror,
                               TextView placeholder, Host host) {
@@ -55,6 +64,10 @@ public final class MirrorCoordinator {
         mFrameMirror = frameMirror;
         mPlaceholder = placeholder;
         mHost        = host;
+        for (int i = 0; i < MAX_FWD_POINTERS; i++) {
+            mLayoutPointerProperties[i] = new MotionEvent.PointerProperties();
+            mLayoutPointerCoords[i] = new MotionEvent.PointerCoords();
+        }
         setup();
     }
 
@@ -74,6 +87,12 @@ public final class MirrorCoordinator {
                 if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
                 mMirrorSurface = new Surface(st);
                 AppLogger.d(TAG, "SurfaceTexture size changed " + w + "x" + h);
+                // Stop the active mirror (if any) so attemptStart() below is not
+                // short-circuited by isMirrorActive(). Without this the mirror keeps
+                // projecting at the stale size (e.g. 349px on DL5 cold start) because
+                // the weighted-card layout emits a wrong first pass before settling.
+                // Bypass stopMirror() to avoid flashing the placeholder during resize.
+                stopMirrorForRestart();
                 attemptStart();
             }
 
@@ -136,23 +155,77 @@ public final class MirrorCoordinator {
         }
     }
 
+    /** Rebinds the existing TextureView when the selected headless Layout slot changes. */
+    public void onLayoutTargetChanged() {
+        FissionOrchestrator.LayoutMirrorTarget target =
+                FissionOrchestrator.getSelectedLayoutMirrorTarget();
+        String nextPackage = target != null ? target.pkg : null;
+        if (mLayoutMirrorActive && java.util.Objects.equals(nextPackage, mLayoutMirrorPackage)) {
+            return;
+        }
+        if (!mLayoutMirrorActive && nextPackage == null) return;
+        stopMirrorForRestart();
+        if (mMirrorSurface != null && mMirrorSurface.isValid()
+                && mFrameMirror.getVisibility() == View.VISIBLE) {
+            attemptStart();
+        }
+    }
+
     /** Attempts to start the mirror using whichever path is available. */
     public void attemptStart() {
+        if (mMirrorSurface == null || !mMirrorSurface.isValid()) return;
+
+        int viewW = mTextureView.getWidth();
+        int viewH = mTextureView.getHeight();
+        if (viewW <= 0 || viewH <= 0) {
+            AppLogger.d(TAG, "attemptStart: view not yet measured " + viewW + "x" + viewH);
+            return;
+        }
+
+        FissionOrchestrator.LayoutMirrorTarget layoutTarget =
+                FissionOrchestrator.getSelectedLayoutMirrorTarget();
+        if (layoutTarget != null) {
+            if (mLayoutMirrorActive && layoutTarget.pkg.equals(mLayoutMirrorPackage)) {
+                mTextureView.setVisibility(View.VISIBLE);
+                setPlaceholderVisible(false);
+                return;
+            }
+            stopNormalMirror();
+            FissionOrchestrator.LayoutMirrorTarget started =
+                    FissionOrchestrator.startSelectedLayoutMirror(mMirrorSurface, viewW, viewH);
+            MirrorProjection projection = started != null
+                    ? MirrorProjection.create(started.width, started.height, viewW, viewH) : null;
+            if (started != null && projection != null) {
+                mLayoutMirrorActive = true;
+                mLayoutMirrorPackage = started.pkg;
+                mLayoutProjection = projection;
+                mTextureView.setVisibility(View.VISIBLE);
+                setPlaceholderVisible(false);
+                AppLogger.i(TAG, "Layout mirror active pkg=" + started.pkg
+                        + " displayId=" + started.displayId
+                        + " content=" + started.width + "x" + started.height);
+            } else {
+                clearLayoutMirrorState();
+                mTextureView.setVisibility(View.GONE);
+                if (mPlaceholder != null) mPlaceholder.setText(R.string.mirror_unavailable);
+                setPlaceholderVisible(true);
+            }
+            return;
+        }
+
+        if (mLayoutMirrorActive) {
+            FissionOrchestrator.stopSelectedLayoutMirror();
+            clearLayoutMirrorState();
+        }
+
         ClusterService svc = mHost.getClusterServiceIfBound();
-        if (svc == null || mMirrorSurface == null || !mMirrorSurface.isValid()) return;
+        if (svc == null) return;
 
         ClusterMirrorManager mm = svc.getMirrorManager();
         if (mm.isMirrorActive()) {
             AppLogger.d(TAG, "attemptStart: mirror already active");
             mTextureView.setVisibility(View.VISIBLE);
             setPlaceholderVisible(false);
-            return;
-        }
-
-        int viewW = mTextureView.getWidth();
-        int viewH = mTextureView.getHeight();
-        if (viewW <= 0 || viewH <= 0) {
-            AppLogger.d(TAG, "attemptStart: view not yet measured " + viewW + "x" + viewH);
             return;
         }
 
@@ -185,9 +258,34 @@ public final class MirrorCoordinator {
     }
 
     public void stopMirror() {
-        ClusterService svc = mHost.getClusterServiceIfBound();
-        if (svc != null) svc.getMirrorManager().stopMirror();
+        if (mLayoutMirrorActive) {
+            FissionOrchestrator.stopSelectedLayoutMirror();
+            clearLayoutMirrorState();
+        }
+        stopNormalMirror();
         setPlaceholderVisible(true);
+    }
+
+    private void stopMirrorForRestart() {
+        if (mLayoutMirrorActive) {
+            FissionOrchestrator.stopSelectedLayoutMirror();
+            clearLayoutMirrorState();
+        }
+        stopNormalMirror();
+    }
+
+    private void stopNormalMirror() {
+        ClusterService svc = mHost.getClusterServiceIfBound();
+        if (svc == null) return;
+        ClusterMirrorManager mirror = svc.getMirrorManager();
+        if (mirror.isMirrorViaDaemon()) mirror.stopMirrorViaDaemon(mHost.getDaemonBinder());
+        mirror.stopMirror();
+    }
+
+    private void clearLayoutMirrorState() {
+        mLayoutMirrorActive = false;
+        mLayoutMirrorPackage = null;
+        mLayoutProjection = null;
     }
 
     public void showPreview() {
@@ -229,6 +327,10 @@ public final class MirrorCoordinator {
      * the offset the same way setDisplayProjection did.
      */
     private void forwardTouchFromMirror(MotionEvent event) {
+        if (mLayoutMirrorActive && mLayoutProjection != null) {
+            forwardTouchToLayout(event);
+            return;
+        }
         ClusterService svc = mHost.getClusterServiceIfBound();
         if (svc == null) return;
         com.byd.dashcast.cluster.mirror.ClusterInputForwarder forwarder = svc.getInputForwarder();
@@ -241,7 +343,10 @@ public final class MirrorCoordinator {
         // This guarantees the touch offset/scale matches the actual rendered projection,
         // even if the view was resized since mirror start (avoids touch offset bugs).
         float scale   = mirror.getProjScale();
-        if (scale <= 0f) return;  // Mirror not yet fully initialized
+        // Reject non-finite scale too: a degenerate projection (e.g. a transient
+        // 0-size cluster display) can leave scale = Infinity/NaN, which "scale <= 0f"
+        // does not catch — it would map every touch to the clamp boundary.
+        if (!Float.isFinite(scale) || scale <= 0f) return;  // Mirror not yet fully initialized
 
         float offsetX = mirror.getProjOffsetX();
         float offsetY = mirror.getProjOffsetY();
@@ -311,6 +416,42 @@ public final class MirrorCoordinator {
             } catch (Throwable t) {
                 AppLogger.e(TAG, "auto-keyboard DL5 guard check failed", t);
             }
+        }
+    }
+
+    private void forwardTouchToLayout(MotionEvent event) {
+        MirrorProjection projection = mLayoutProjection;
+        if (projection == null) return;
+        int pointerCount = Math.min(event.getPointerCount(), MAX_FWD_POINTERS);
+        if (pointerCount <= 0) return;
+
+        for (int i = 0; i < pointerCount; i++) {
+            event.getPointerProperties(i, mLayoutPointerProperties[i]);
+            event.getPointerCoords(i, mLayoutPointerCoords[i]);
+            mLayoutPointerCoords[i].x = projection.mapX(event.getX(i));
+            mLayoutPointerCoords[i].y = projection.mapY(event.getY(i));
+        }
+
+        MotionEvent mapped = null;
+        try {
+            mapped = MotionEvent.obtain(event.getDownTime(), event.getEventTime(),
+                    event.getAction(), pointerCount,
+                    mLayoutPointerProperties, mLayoutPointerCoords,
+                    event.getMetaState(), event.getButtonState(),
+                    event.getXPrecision(), event.getYPrecision(),
+                    event.getDeviceId(), event.getEdgeFlags(),
+                    InputDevice.SOURCE_TOUCHSCREEN, event.getFlags());
+            FissionOrchestrator.injectSelectedLayoutMotion(mapped);
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                AppLogger.d(TAG, "Layout touch pkg=" + mLayoutMirrorPackage
+                        + " view=(" + (int) event.getX() + "," + (int) event.getY() + ")"
+                        + " slot=(" + (int) mLayoutPointerCoords[0].x + ","
+                        + (int) mLayoutPointerCoords[0].y + ")");
+            }
+        } catch (Exception error) {
+            AppLogger.e(TAG, "Layout touch injection failed", error);
+        } finally {
+            if (mapped != null) mapped.recycle();
         }
     }
 

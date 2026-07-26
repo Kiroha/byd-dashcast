@@ -122,4 +122,74 @@ public final class ProxyDaemonContract {
      *  which activates the navigation lane on the instrument cluster display;
      *  that feature lives on the SettingDevice, not InstrumentDevice. */
     public static final int TXN_CAN_SETTING_INT         = IBinder.FIRST_CALL_TRANSACTION + 18; // 19
+
+    /** {@code int featureId} → {@code int value}.
+     *  Read an integer from a CAN <em>instrument</em> feature via
+     *  {@code BYDAutoInstrumentDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
+     *  In-app reads are rejected by the SDK; only the daemon's privileged context works. */
+    public static final int TXN_CAN_INSTRUMENT_GET      = IBinder.FIRST_CALL_TRANSACTION + 19; // 20
+
+    /** {@code int featureId} → {@code int value}.
+     *  Read an integer from a CAN <em>setting</em> feature via
+     *  {@code BYDAutoSettingDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
+     *  Used to read e.g. {@code SET_HUD_MODE_FEEDBACK} while the OEM nav drives the HUD. */
+    public static final int TXN_CAN_SETTING_GET         = IBinder.FIRST_CALL_TRANSACTION + 20; // 21
+
+    /** No args → {@code String status}.
+     *  Register a BYD setting feedback listener inside the daemon (privileged context) to capture
+     *  PUSH feedback (the HUD/nav feature values are push-only — not gettable). Idempotent. */
+    public static final int TXN_CAN_LISTEN_START        = IBinder.FIRST_CALL_TRANSACTION + 21; // 22
+
+    /** No args → {@code String events}.
+     *  Drain (return + clear) the push events captured since the last drain. */
+    public static final int TXN_CAN_LISTEN_DRAIN        = IBinder.FIRST_CALL_TRANSACTION + 22; // 23
+
+    /** No args → {@code String report}.
+     *  AAOS-only: probe the automotive display proxy HAL (IAutomotiveDisplayProxyService) from
+     *  the daemon (uid 2000) to test whether app windows can be drawn to the cluster panel. */
+    public static final int TXN_AAOS_HAL_PROBE          = IBinder.FIRST_CALL_TRANSACTION + 23; // 24
+
+    /** No args → {@code void}.
+     *  Clear the push-feedback event log + persistent last-known map (fresh, uncontaminated read). */
+    public static final int TXN_CAN_LISTEN_CLEAR        = IBinder.FIRST_CALL_TRANSACTION + 24; // 25
+
+    /** {@code String label} → {@code void}.
+     *  Append a timestamped user ground-truth marker (the maneuver shown on the HUD) to the log,
+     *  so a driving capture can correlate the tapped arrow with the CAN events at that instant. */
+    public static final int TXN_CAN_LISTEN_MARK         = IBinder.FIRST_CALL_TRANSACTION + 25; // 26
+
+    /** {@code int featureId, double value} → {@code int resultCode}.
+     *  Write a DOUBLE value to a CAN <em>setting</em> feature via
+     *  {@code BYDAutoSettingDevice.set(int[], BYDAutoEventValue)} with the {@code doubleValue}
+     *  field set. Required for the HUD ANGLE (0x4C10E02C), which the OEM CarSettings app writes
+     *  as a double (proven from the OEM HalSetter logcat). Returns the SDK result code. */
+    public static final int TXN_CAN_SETTING_DOUBLE      = IBinder.FIRST_CALL_TRANSACTION + 26; // 27
+
+    /** {@code String path, long offset, int maxLen} → {@code byte[] chunk}.
+     *  Read up to {@code maxLen} bytes of {@code path} at {@code offset} from inside the daemon
+     *  (uid 2000 = shell), which can read {@code /data/local/tmp} files that SELinux hides from
+     *  the app uid. Returns an empty array at EOF. Lets the app pull an arbitrarily large raw
+     *  logcat capture in bounded chunks without overflowing a single Binder parcel. */
+    public static final int TXN_READ_FILE_CHUNK         = IBinder.FIRST_CALL_TRANSACTION + 27; // 28
+
+    /** {@code String packageName} → {@code int status, int taskId, int displayId}.
+     *  Status values are defined by {@code TaskLocation.Status.wireCode}. Unlike the legacy
+     *  task-id lookup, ABSENT and UNKNOWN are distinct so a daemon/reflection failure cannot be
+     *  treated as proof that a running navigation task disappeared. */
+    public static final int TXN_FIND_TASK_LOCATION      = IBinder.FIRST_CALL_TRANSACTION + 28; // 29
+
+    /** Ordered list of {@code CanBatchOperation} records → {@code int appliedCount}.
+     *  The daemon executes records sequentially and stops at the first thrown SDK error. */
+    public static final int TXN_CAN_BATCH               = IBinder.FIRST_CALL_TRANSACTION + 29; // 30
+
+    /** {@code int type, int info, String str} → {@code int nativeResult}.
+     *  Result-preserving AutoContainer call used to distinguish an accepted command ({@code 0})
+     *  from the D50F native rejection ({@code -1}). */
+    public static final int TXN_AUTOCONTAINER_SEND_INFO_RESULT =
+            IBinder.FIRST_CALL_TRANSACTION + 30; // 31
+
+    /** {@code nullable String packageName} → {@code boolean cancelled}.
+     *  Stops one package guardian, or all guardians when packageName is null. */
+    public static final int TXN_CANCEL_FISSION_WATCHDOG =
+            IBinder.FIRST_CALL_TRANSACTION + 31; // 32
 }

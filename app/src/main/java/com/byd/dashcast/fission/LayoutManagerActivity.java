@@ -464,6 +464,9 @@ public class LayoutManagerActivity extends Activity {
                 boolean ok = FissionClient.activateLayout(binder, preset);
                 mActiveId = preset.id;
                 LayoutPrefs.setFavoriteId(LayoutManagerActivity.this, mActiveId);
+                // Launch bound apps into the newly created VDs so the cluster
+                // shows live content instead of a frozen/blank slot.
+                FissionOrchestrator.launchAppsIntoPreset(LayoutManagerActivity.this, preset);
                 runOnUiThread(() -> {
                     mAdapter.update(mPresets, mActiveId);
                     Toast.makeText(this,

@@ -2,6 +2,8 @@ package com.byd.dashcast.proxy.daemon;
 
 import android.os.IBinder;
 
+import com.byd.dashcast.util.concurrent.DeathLease;
+
 import java.lang.reflect.Method;
 
 /**
@@ -75,8 +77,39 @@ public final class Phase4DisplayVerbs {
 
     // ─── VirtualDisplay map ───────────────────────────────────────────────
 
-    private static final java.util.concurrent.ConcurrentHashMap<Integer, android.hardware.display.VirtualDisplay>
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, VirtualDisplayRecord>
             sVirtualDisplays = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final class VirtualDisplayRecord {
+        private android.hardware.display.VirtualDisplay display;
+        private DeathLease ownerLease;
+        private boolean released;
+
+        VirtualDisplayRecord(android.hardware.display.VirtualDisplay display) {
+            this.display = display;
+        }
+
+        synchronized void setOwnerLease(DeathLease lease) {
+            if (released) {
+                lease.close();
+            } else {
+                ownerLease = lease;
+            }
+        }
+
+        synchronized void release() {
+            if (released) return;
+            released = true;
+            DeathLease lease = ownerLease;
+            ownerLease = null;
+            if (lease != null) lease.close();
+            android.hardware.display.VirtualDisplay current = display;
+            display = null;
+            if (current != null) {
+                try { current.release(); } catch (Throwable ignore) {}
+            }
+        }
+    }
 
     // ─── Verbs ────────────────────────────────────────────────────────────
 
@@ -101,7 +134,8 @@ public final class Phase4DisplayVerbs {
      */
     public static int createVirtualDisplay(android.content.Context sysCtx,
                                            String name, int width, int height, int dpi,
-                                           android.view.Surface surface, int flags) {
+                                           android.view.Surface surface, int flags,
+                                           IBinder owner) {
         if (sysCtx == null) throw new IllegalStateException("system context null");
         if (name == null || name.isEmpty()) name = "DashCast_VD";
         if (width <= 0 || height <= 0 || dpi <= 0) {
@@ -131,25 +165,36 @@ public final class Phase4DisplayVerbs {
             throw new IllegalStateException("VirtualDisplay.getDisplay() null");
         }
         int id = d.getDisplayId();
-        sVirtualDisplays.put(id, vd);
+        VirtualDisplayRecord record = new VirtualDisplayRecord(vd);
+        VirtualDisplayRecord replaced = sVirtualDisplays.put(id, record);
+        if (replaced != null) replaced.release();
+        if (owner != null) {
+            try {
+                DeathLease lease = DeathLease.attach(new BinderDeathOwner(owner), () -> {
+                    if (sVirtualDisplays.remove(id, record)) record.release();
+                });
+                record.setOwnerLease(lease);
+            } catch (Throwable t) {
+                sVirtualDisplays.remove(id, record);
+                record.release();
+                throw new IllegalStateException("cannot link VirtualDisplay owner", t);
+            }
+        }
         return id;
     }
 
     /** Release a VD previously created via {@link #createVirtualDisplay}. No-op if unknown. */
     public static void releaseVirtualDisplay(int displayId) {
-        android.hardware.display.VirtualDisplay vd = sVirtualDisplays.remove(displayId);
-        if (vd != null) {
-            try { vd.release(); } catch (Throwable ignore) {}
-        }
+        VirtualDisplayRecord record = sVirtualDisplays.remove(displayId);
+        if (record != null) record.release();
     }
 
     /** Release every VD held by the daemon. Best-effort cleanup. */
     public static void releaseAllVirtualDisplays() {
-        for (java.util.Map.Entry<Integer, android.hardware.display.VirtualDisplay> e
+        for (java.util.Map.Entry<Integer, VirtualDisplayRecord> e
                 : sVirtualDisplays.entrySet()) {
-            try { e.getValue().release(); } catch (Throwable ignore) {}
+            if (sVirtualDisplays.remove(e.getKey(), e.getValue())) e.getValue().release();
         }
-        sVirtualDisplays.clear();
     }
 
     /**

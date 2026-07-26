@@ -28,7 +28,7 @@
     <string name="status_restoring_origin">استعادة العنقود الأصلي…</string>
     <string name="status_dashboard_byd">العرض جاهز — اختر تطبيقًا</string>
     <string name="status_dashboard_app">اللوحة: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: غير مثبت أو غير متوافق مع الشاشات المتعددة</string>
+    <string name="toast_app_launch_failed">%1$s: فشل التشغيل على لوحة العدادات (راجع السجل)</string>
     <string name="toast_app_already_cluster">التطبيق موجود بالفعل على العنقود</string>
     <string name="toast_restore_failed">فشل الاستعادة: %1$s</string>
     <string name="toast_origin_failed">فشل استعادة العنقود الأصلي: %1$s</string>
@@ -152,6 +152,7 @@
     <string name="main_preview_section">معاينة مباشرة</string>
     <string name="main_btn_full_preview">العرض المرآة بملء الشاشة</string>
     <string name="main_btn_stop_mirror">إيقاف العرض</string>
+    <string name="main_btn_launch_layout_apps">تشغيل تطبيقات التخطيط</string>
     <string name="main_section_favorites">المفضلة</string>
     <string name="main_section_all_apps">كل التطبيقات</string>
     <string name="sheet_auto_launch">تشغيل تلقائي عند البدء</string>
@@ -201,8 +202,8 @@
     <string name="sysinfo_svc_stopped">متوقف</string>
     <string name="sysinfo_svc_adb_unreachable">5555 غير متاح</string>
     <string name="sysinfo_svc_conn">CONN</string>
-    <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
-    <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="sysinfo_tile_dashcast_platform_signed">موقَّع بالمنصة</string>
+    <string name="sysinfo_tile_dashcast_user_signed">موقَّع بالمستخدم</string>
     <string name="log_chip_all">الكل (%1$d)</string>
     <string name="log_chip_info">Info (%1$d)</string>
     <string name="log_chip_warn">Warn (%1$d)</string>
@@ -221,39 +222,10 @@
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
     <string name="settings_section_advanced">Advanced</string>
-    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
-    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
-    <string name="diag_tab_cluster">العداد</string>
-    <string name="diag_tab_display">العرض</string>
-    <string name="diag_tab_adb_local">ADB محلي</string>
-    <string name="diag_tab_system">النظام</string>
-    <string name="diag_tab_beta_engine">Beta Engine</string>
-    <string name="diag_coming_soon_title">قريبًا</string>
-    <string name="diag_coming_soon_subtitle">سيُضاف هذا القسم في إصدار قادم. راجع علامة التبويب «Beta Engine» للاختبارات الحالية.</string>
-    <string name="diag_beta_header_title">محرك تجريبي</string>
-    <string name="diag_beta_header_subtitle">اختبارات Component A (الخفي) وComponent B (سياق النظام). المرحلة 1.</string>
-    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
-    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
-    <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_counters_idle">اضغط «تشغيل الكل» للبدء</string>
-    <string name="diag_beta_counters_running">قيد التنفيذ…</string>
-    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
-    <string name="diag_beta_run_all">تشغيل الكل</string>
-    <string name="diag_beta_copy_report">إرسال (.log)</string>
+    <string name="settings_legacy_path">الوكيل الخفي لا يعمل. استخدم المسار القديم</string>
+    <string name="settings_legacy_path_support">يوجّه جميع الأوامر المميزة عبر صدفة ADB القديمة بدلاً من الوكيل الخفي. فعّله إذا كان الخفي لا يستجيب أو يسبب مشاكل.</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
-    <string name="diag_tab_dilink5">DiLink 5</string>
-    <string name="diag_dl5_header_title">منصة DiLink 5</string>
-    <string name="diag_dl5_header_subtitle">اختبارات مخصصة لـ DiLink 5.0 / Android 12.</string>
-    <string name="diag_dl5_header_subtitle_fmt">المنتج: %1$s · API %2$d</string>
-    <string name="diag_dl5_pill_mode_auto_on">الوضع: تلقائي = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_auto_off">الوضع: تلقائي = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_forced_on">الوضع: مفروض = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_forced_off">الوضع: مفروض = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_unknown">الوضع: —</string>
-    <string name="diag_dl5_d8_target_label">التطبيق المستهدف (اختبار D8 — العنقود)</string>
-    <string name="diag_dl5_d8_running_toast">اختبار D8 على %1$s — سيُعاد تشغيل التطبيق ثم استدعاؤه إلى الشاشة الرئيسية.</string>
-    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">لوحة المفاتيح التلقائية للعنقود (DashCast)</string>
     <string name="a11y_ime_watcher_summary">تعرض لوحة المفاتيح الجسرية عند لمس حقل نص على العنقود.</string>
@@ -272,145 +244,30 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">لوحة المفاتيح</string>
     <string name="keyboard_bridge_title">لوحة مفاتيح عن بعد</string>
-    <string name="diag_tab_adas">ADAS</string>
-    <string name="diag_tab_dilink2">DiLink 2</string>
-    <string name="diag_tab_mirror">Mirror</string>
-    <string name="diag_dl2_header_title">منصة DiLink 2 — استطلاع</string>
-    <string name="diag_dl2_header_subtitle">حزمة تعرّف عبر reflection فقط (بدون ADB محلي).</string>
-    <string name="diag_dl2_header_subtitle_fmt">المنتج: %1$s · العلامة: %2$s · API %3$d</string>
-    <string name="diag_dl2_pill_unknown">التوقيع: —</string>
-    <string name="diag_dl2_pill_detected">التوقيع: تم اكتشاف DL2</string>
-    <string name="diag_dl2_pill_other">التوقيع: ليس DL2</string>
-    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="diag_mirror_header_title">Mirror — التشخيص</string>
-    <string name="diag_mirror_header_subtitle">طوبولوجيا SurfaceFlinger، حالة خادم mirror، شاشة لوحة العدادات.</string>
-    <string name="diag_mirror_header_subtitle_fmt">المنتج: %1$s · API %2$d</string>
-    <string name="diag_mirror_pill_unknown">المنصة: —</string>
-    <string name="diag_mirror_pill_dl5">المنصة: DiLink 5</string>
-    <string name="diag_mirror_pill_other">المنصة: أخرى</string>
-    <string name="diag_mirror_hint">ابدأ mirror من التطبيق مرة واحدة على الأقل قبل تشغيل الحزمة، ثم اضغط « إرسال (.log) » لمشاركة التقرير عبر Telegram.</string>
-    <string name="diag_mirror_send_log">إرسال (.log)</string>
 
     <!-- DiLink 4 — تشخيص مخصص (v1.2.28) -->
-    <string name="diag_tab_dilink4">DiLink 4</string>
-    <string name="diag_dl4_header_title">منصة DiLink 4 — BYD-AUTO</string>
-    <string name="diag_dl4_header_subtitle">اختبارات مخصصة لـ DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + مسار DL3).</string>
-    <string name="diag_dl4_header_subtitle_fmt">المنتج: %1$s · العلامة: %2$s · API %3$d</string>
-    <string name="diag_dl4_pill_unknown">التوقيع: —</string>
-    <string name="diag_dl4_pill_detected">التوقيع: تم اكتشاف DL4</string>
-    <string name="diag_dl4_pill_other">التوقيع: ليس DL4</string>
-    <string name="diag_dl4_warning_d_tier">⚠ يرسل المستوى D1–D10 أوامر sendInfo حقيقية إلى AutoContainer ثم يشغّل clusterdebug على شاشة الكلاستر. تأثير مرئي على السيارة.</string>
-    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="diag_tab_sniffer">السنيفر</string>
-    <string name="diag_adas_title">ADAS — نافذة الكلاستر</string>
-    <string name="diag_adas_description">يعرض أو يخفي نافذة ADAS لكلاستر Qt (رموز AutoContainer 12 / 13، عام DiLink)</string>
-    <string name="diag_adas_btn_show">عرض ADAS (12)</string>
-    <string name="diag_adas_btn_hide">إخفاء ADAS (13)</string>
-    <string name="diag_adas_last_result">آخر نتيجة</string>
-    <string name="diag_adas_no_test">لم يتم تنفيذ أي اختبار.\nاضغط على عرض ADAS أو إخفاء ADAS لإرسال الأمر إلى الكلاستر.</string>
-    <string name="diag_adas_technical_details">تفاصيل تقنية</string>
-    <string name="diag_adas_sending_fmt">$ %1$s\n…جارٍ الإرسال…</string>
-    <string name="diag_adas_error_fmt">$ %1$s\nخطأ: %2$s</string>
-    <string name="diag_sniffer_description">التقاط logcat مستمر + لقطات dumpsys إلى ملف قابل للتصدير</string>
-    <string name="diag_sniffer_pill_active">نشط</string>
-    <string name="diag_sniffer_pill_inactive">غير نشط</string>
-    <string name="diag_sniffer_idle_text">لا يوجد التقاط جارٍ.\nاضغط على بدء لإطلاق ملف جديد BYD_RE_Sniffer_*.txt.</string>
-    <string name="diag_sniffer_btn_start">بدء</string>
-    <string name="diag_sniffer_btn_stop">إيقاف</string>
-    <string name="diag_sniffer_btn_snapshot">لقطة</string>
-    <string name="diag_sniffer_btn_export">تصدير</string>
-    <string name="diag_sniffer_btn_clean">تنظيف</string>
-    <string name="diag_sniffer_content_title">المحتوى الملتقط</string>
-    <string name="diag_sniffer_procedure_title">الإجراء النموذجي</string>
-    <string name="diag_sniffer_initializing">جارٍ التهيئة…</string>
-    <string name="diag_sniffer_active_fmt">نشط → %1$s\nالالتقاط جارٍ (logcat + لقطات تلقائية / 10 ث)</string>
-    <string name="diag_sniffer_init_fail_fmt">❌ فشل التهيئة: %1$s</string>
-    <string name="diag_sniffer_stopped_fmt">متوقف → %1$s\nجاهز للتصدير.</string>
-    <string name="diag_sniffer_none">(لا شيء)</string>
-    <string name="diag_sniffer_previous_stopped_fmt">تم إيقاف الالتقاط السابق → %1$s\n(%2$d KB) — قابل للتصدير.</string>
-    <string name="diag_sniffer_previous_no_adb_fmt">الالتقاط السابق: %1$s (%2$d KB، ADB المحلي غير متاح — قابل للتصدير)</string>
-    <string name="diag_sniffer_active_detail_fmt">نشط → %1$s\n(%2$d KB ملتقطة)</string>
-    <string name="diag_sniffer_toast_started_fmt">تم بدء السنيفر → %1$s</string>
-    <string name="diag_sniffer_toast_stopped">تم إيقاف السنيفر.</string>
-    <string name="diag_sniffer_toast_need_start">ابدأ السنيفر أولاً.</string>
-    <string name="diag_sniffer_toast_snapshot_added">تمت إضافة اللقطة.</string>
-    <string name="diag_sniffer_toast_no_file">لا يوجد ملف سنيفر للتصدير.</string>
-    <string name="diag_sniffer_toast_export_error_fmt">خطأ في التصدير: %1$s</string>
-    <string name="diag_sniffer_chooser_title">تصدير سنيفر RE</string>
-    <string name="diag_sniffer_cleanup_busy">أوقف السنيفر قبل التنظيف (الالتقاط يكتب في ملف).</string>
-    <string name="diag_sniffer_cleanup_dialog_title">تنظيف ملفات DashCast</string>
-    <string name="diag_sniffer_cleanup_dialog_msg">يحذف جميع السجلات والالتقاطات (byd_log_*، byd_report_*، BYD_RE_Sniffer_*، cluster_live.png) من تخزين التطبيق.\n\nيتم الحفاظ على مفاتيح ADB والتفضيلات.</string>
-    <string name="diag_sniffer_cleanup_dialog_confirm">تنظيف</string>
-    <string name="diag_sniffer_cleanup_status_fmt">التنظيف: تم حذف %1$d ملف · المتبقي: %2$s</string>
-    <string name="diag_sniffer_cleanup_toast_fmt">تم حذف %1$d ملف — المتبقي: %2$s</string>
     <string name="settings_warn_dl2_no_margins">⚠️ تم تعطيل الهوامش على DiLink 2 (شاشة واحدة).</string>
     <string name="settings_warn_no_cluster">⚠️ لم يتم اكتشاف الكلاستر — تم تجاهل الهوامش (DL2؟).</string>
     <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">لا يوجد متصفح متاح لفتح %1$s</string>
-    <string name="diag_adas_doc_help">• أمر shell: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• الخدمة: Auto_container على DL3/Di4 (PascalCase)، auto_container على DL5+ (snake_case)\n• الكود 12 = 显示Adas (إظهار ADAS) — يُولَّد بواسطة clusterdebug.SecondActivity.infoListInit()\n• الكود 13 = 关闭Adas (إخفاء ADAS) — نفس الشيء\n• متغيرات متطابقة: DL3 (infoListInit) و Di4 (infoListInit) و DL5 (infoListInit_Di5)\n• سلسلة R: الكودان 12/13 محذوفان (فتحات فارغة) — غير مدعوم هنا</string>
-    <string name="diag_sniffer_doc_content">• الترويسة الأولية: ro.product.model، fingerprint، dumpsys display، dumpsys SurfaceFlinger، ps -A\n• البث المباشر: logcat threadtime كامل + مخزن events (دون تصفية، لا شيء يضيع)\n• لقطات تلقائية كل 10 ث: displays، SurfaceFlinger، عمليات BYD/xdja/qt/cluster\n• لقطة يدوية: تضيف dumpsys window + سجل broadcasts\n• الاستمرارية: التسجيل ينجو من دوران/تدمير Activity (عملية setsid)</string>
-    <string name="diag_sniffer_doc_workflow">1. ابدأ ← يعمل التسجيل في الخلفية (setsid، ينجو من Activity)\n2. أعد إنتاج الخلل / السيناريو قيد الدراسة\n3. لقطة يدوية في اللحظات الرئيسية (مثلاً قبل/بعد التعطل مباشرة)\n4. أوقف\n5. صدّر ← اختر Telegram لمشاركة الملف</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">إعادة التشغيل</string>
     <string name="sysinfo_restart_started">جارٍ إعادة التشغيل…</string>
     <string name="sysinfo_restart_failed">فشل إعادة التشغيل</string>
     <string name="sysinfo_svc_projection">الإسقاط</string>
     <string name="sysinfo_svc_projection_sub">اضغط: 30→3ث→16→3ث→0</string>
-    <string name="sysinfo_svc_force_resizable">Force Resizable</string>
+    <string name="sysinfo_svc_force_resizable">فرض قابلية تغيير الحجم</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · القيمة %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · جارٍ التحقق…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-    <string name="diag_dl5_cluster_test_vd">اختبار VD Pipeline</string>
-    <string name="diag_dl5_cluster_test_vd_hint">يتحقق من مسار VirtualDisplay → MirrorDaemon في 7 خطوات: إنشاء VD، تشغيل التطبيق على VD، عكس الصورة على سطح الكتلة. لـ DiLink 5 فقط.</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_title">اختبار VD Pipeline</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_msg">الهدف: %1$s\n\nستقوم هذه المجموعة بـ:\n\n• V01: تفعيل إسقاط الكتلة (auto_container)\n• V02: التحقق من إمكانية تشغيل التطبيق\n• V03: إنشاء VirtualDisplay 1920×720\n• V04: تشغيل التطبيق على VD\n• V05: بدء النسخ المرآوي عبر MirrorDaemon\n• V06: التحقق البصري من عرض الكتلة\n• V07: التنظيف (إيقاف المرآة، حذف VD، force-stop)\n\nلـ DiLink 5 فقط. سيتم إيقاف التطبيق المستهدف قسرًا خلال الاختبار.\nهل تريد المتابعة؟</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_ok">تشغيل الاختبار</string>
-    <string name="diag_dl5_cluster_test_vd_only_dl5">اختبار VD Pipeline مخصص لـ DiLink 5 فقط.</string>
-    <string name="diag_dl5_cluster_test_vd_pick_title">اختر التطبيق للاختبار</string>
-    <string name="diag_dl5_cluster_test_vd_pick_empty">لم يتم العثور على تطبيقات قابلة للتشغيل.</string>
-    <string name="diag_dl5_fission_prompt_title">التحقق من شاشة العنقود</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">هل %1$s مرئي على شاشة العنقود؟\n\n(اختبار الشاشة %2$d)</string>
-    <string name="diag_dl5_fission_prompt_yes">نعم</string>
-    <string name="diag_dl5_fission_prompt_no">لا</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
-    <string name="diag_tab_export_apk">تصدير APK من BYD</string>
-    <string name="diag_export_apk_header_title">تصدير APK من BYD</string>
-    <string name="diag_export_apk_header_subtitle">يسرد حزم BYD / XDJA / DiLink / cluster المثبتة، ويستخرج التطبيق المحدد ويُرسله عبر تيليجرام.</string>
-    <string name="diag_export_apk_refresh">تحديث</string>
-    <string name="diag_export_apk_counters_idle">جاهز — اضغط تحديث للفحص.</string>
-    <string name="diag_export_apk_counters_scanning">جاري الفحص…</string>
-    <string name="diag_export_apk_counters_fmt">%1$d APK مكتشف • %2$s على القرص</string>
-    <string name="diag_export_apk_hint">يُنسخ ملف APK إلى ذاكرة التخزين المؤقتة للتطبيق، ثم يُشارك عبر تيليجرام، ثم يُحذف تلقائيًا بعد 5 دقائق. لا شيء يبقى محفوظًا في ذاكرة السيارة.</string>
-    <string name="diag_export_apk_btn_export">تصدير</string>
-    <string name="diag_export_apk_btn_exporting">…</string>
-    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
-    <string name="diag_export_apk_sent_fmt">تم إرسال APK: %1$s</string>
-    <string name="diag_export_apk_chooser_title">إرسال APK %1$s</string>
-    <string name="diag_export_apk_err_fmt">فشل تصدير APK: %1$s</string>
-    <string name="diag_export_apk_err_no_source">لم يُعثر على مسار APK لهذه الحزمة.</string>
 
     <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_tab_voice">صوت (تجريبي)</string>
-    <string name="diag_voice_header_title">التحكم الصوتي — اختبار سلسلة الصوت</string>
-    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">الخطوة 1/3: التحقق من وصول الميكروفون إلى التطبيق على هذا الجهاز. لم يتم تحميل أي نموذج ML بعد.</string>
-    <string name="diag_voice_btn_start">بدء الاستماع</string>
-    <string name="diag_voice_btn_stop">إيقاف</string>
-    <string name="diag_voice_state_idle">الخدمة متوقفة</string>
-    <string name="diag_voice_state_running">جارٍ الاستماع…</string>
-    <string name="diag_voice_state_error_fmt">خطأ: %1$s</string>
-    <string name="diag_voice_perm_denied">تم رفض إذن الميكروفون — فعّله من إعدادات النظام لتشغيل الاختبار.</string>
-    <string name="diag_voice_meter_label">مقياس VU مباشر</string>
-    <string name="diag_voice_meter_rms">RMS (المستوى المتوسط)</string>
-    <string name="diag_voice_meter_peak">الذروة الفورية</string>
-    <string name="diag_voice_stats_fmt">RMS %1$d • ذروة %2$d • قص %3$d • إطارات %4$d</string>
-    <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">يفتح هذا الاختبار خدمة foreground تقرأ الميكروفون بـ 16 kHz mono 16-bit وتعرض مستوى الصوت محليًا. لا يتم تسجيل أو إرسال أو تحليل أي بيانات. ستتم إضافة كلمة التنبيه «Ok DashCast» في v1.2.44 (openWakeWord)، والتعرّف على الكلام في v1.2.45 (Vosk).</string>
-    <string name="diag_voice_sample_rate_fmt">معدل العينة: %1$d Hz mono 16-bit • المصدر VOICE_RECOGNITION</string>
     <string name="diag_voice_notif_channel">DashCast — اختبار الصوت</string>
     <string name="diag_voice_notif_title">DashCast — استماع الميكروفون (PoC)</string>
     <string name="diag_voice_notif_text">تحليل مستوى الصوت محليًا، لا يتم تسجيل أي شيء.</string>
@@ -418,103 +275,52 @@
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
 
     <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <string name="diag_voice_commands_title">الأوامر الصوتية (Vosk)</string>
-    <string name="diag_voice_commands_switch">تفعيل</string>
-    <string name="diag_voice_commands_hint">قل "Hey Jarvis" ثم أمرك: "الكتلة"، "إغلاق الكتلة"، "تشغيل YouTube"، "التشخيص"، "السجلات".</string>
 
     <!-- v1.4.2-beta — LLM API key -->
-    <string name="diag_voice_apikey_label">مفتاح OpenAI API (اختياري — يُفعّل Jarvis الذكاء الاصطناعي)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
     <!-- v1.4.3-beta — ASR model selection -->
-    <string name="diag_voice_model_card_title">نموذج التعرف على الصوت</string>
-    <string name="diag_voice_model_small_label">نموذج صغير (~40 ميغابايت)</string>
-    <string name="diag_voice_model_small_desc">تنزيل سريع، دقة جيدة للأوامر القصيرة.</string>
-    <string name="diag_voice_model_large_label">نموذج كبير (~1.3 جيجابايت) — دقة عالية</string>
-    <string name="diag_voice_model_large_desc">تعرف أفضل، يوصى به عند الاتصال بالواي فاي.</string>
-    <string name="diag_voice_model_storage_fmt">%1$d ميغابايت متاح</string>
-    <string name="diag_voice_model_download_btn">تنزيل</string>
-    <string name="diag_voice_model_delete_btn">حذف</string>
-    <string name="diag_voice_model_status_downloaded">✓ النموذج مثبّت</string>
-    <string name="diag_voice_model_status_not_downloaded">غير مثبّت</string>
-    <string name="diag_voice_model_progress_fmt">%1$d ميغابايت / %2$d ميغابايت (%3$d%%)</string>
-    <string name="diag_voice_model_unzipping">جار الاستخراج…</string>
-    <string name="diag_voice_wakeword_switch">تفعيل</string>
-    <string name="diag_voice_wakeword_score_label">درجة السيجمويد (عتبة 0٫5)</string>
-    <string name="diag_voice_wakeword_model_fmt">النموذج: hey_jarvis_v0.1 (نائب لـ «Ok DashCast»)</string>
-    <string name="diag_voice_wakeword_last_fmt">آخر اكتشاف: —</string>
-    <string name="diag_voice_wakeword_unavailable">ONNX Runtime غير متوفر — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
-    <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
+    <string name="mirror_unavailable">المعاينة المحلية غير متاحة — شاشة العنقود لا تزال نشطة</string>
+    <string name="layout_mirror_previous">تطبيق التخطيط السابق</string>
+    <string name="layout_mirror_next">تطبيق التخطيط التالي</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
-    <string name="hotspot_hero_title">4G hotspot via TetherFi</string>
-    <string name="hotspot_hero_subtitle">Share your mobile data in a couple of taps</string>
-    <string name="hotspot_intro">The built-in hotspot is not reachable on DiLink 3. DashCast instead drives TetherFi (open-source) which creates a Wi-Fi Direct access point + SOCKS5 proxy — no system permission required, and your vehicle SIM is used as upstream.</string>
+    <string name="hotspot_hero_title">نقطة اتصال 4G عبر TetherFi</string>
+    <string name="hotspot_hero_subtitle">شارك بياناتك المحمولة بنقرتين</string>
+    <string name="hotspot_intro">نقطة الاتصال المدمجة غير متاحة على DiLink 3. بدلاً من ذلك، يقود DashCast تطبيق TetherFi (مفتوح المصدر) الذي ينشئ نقطة وصول Wi-Fi Direct + وكيل SOCKS5 — دون الحاجة إلى إذن النظام، وتُستخدم شريحة SIM الخاصة بمركبتك كوصلة صاعدة.</string>
     <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
-    <string name="hotspot_tf_status_installed">🟢 TetherFi installed — version %1$s</string>
-    <string name="hotspot_tf_status_missing">🔴 TetherFi is not installed. Tap “Install” to fetch the latest release.</string>
+    <string name="hotspot_tf_status_installed">🟢 TetherFi مثبَّت — الإصدار %1$s</string>
+    <string name="hotspot_tf_status_missing">🔴 TetherFi غير مثبَّت. اضغط «تثبيت» لجلب أحدث إصدار.</string>
     <string name="hotspot_tf_start">Start</string>
     <string name="hotspot_tf_stop">Stop</string>
     <string name="hotspot_tf_toggle">Toggle</string>
-    <string name="hotspot_tf_open">Open TetherFi</string>
-    <string name="hotspot_tf_install">Install TetherFi</string>
-    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — dispatched</string>
+    <string name="hotspot_tf_open">فتح TetherFi</string>
+    <string name="hotspot_tf_install">تثبيت TetherFi</string>
+    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — تم الإرسال</string>
     <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
-    <string name="hotspot_tf_open_failed">Open TetherFi: %1$s</string>
-    <string name="hotspot_watchdog_title">Auto watchdog</string>
-    <string name="hotspot_watchdog_hint">Automatically restarts the hotspot if it drops (probes every 20 s).</string>
+    <string name="hotspot_tf_open_failed">فتح TetherFi: %1$s</string>
+    <string name="hotspot_watchdog_title">مراقبة تلقائية</string>
+    <string name="hotspot_watchdog_hint">يعيد تشغيل نقطة الاتصال تلقائيًا إذا انقطعت (يفحص كل 30 ث).</string>
     <string name="hotspot_watchdog_idle">Off</string>
     <string name="hotspot_watchdog_probing">⏳ probing…</string>
-    <string name="hotspot_watchdog_tf_gone">⛔ TetherFi uninstalled — watchdog stopped</string>
+    <string name="hotspot_watchdog_tf_gone">⛔ تم إلغاء تثبيت TetherFi — توقّفت المراقبة</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
-    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot UP (restarts=%3$d)</string>
-    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 DOWN — cooldown %3$d s</string>
-    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 DOWN → restart #%3$d</string>
-    <string name="hotspot_autostart_boot_title">Auto-start at vehicle boot</string>
-    <string name="hotspot_autostart_boot_hint">Automatically launches TetherFi a few seconds after the vehicle starts.</string>
-    <string name="hotspot_tf_update_available">🆕 TetherFi update: v%1$d → v%2$d (tap to download)</string>
-    <string name="hotspot_clients_title">Connected clients</string>
-    <string name="hotspot_clients_empty">No connected clients</string>
+    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 نقطة الاتصال تعمل (عمليات إعادة التشغيل=%3$d)</string>
+    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 متوقف — فترة انتظار %3$d ث</string>
+    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 متوقف → إعادة تشغيل #%3$d</string>
+    <string name="hotspot_autostart_boot_title">التشغيل التلقائي عند تشغيل المركبة</string>
+    <string name="hotspot_autostart_boot_hint">يشغّل TetherFi تلقائيًا بعد بضع ثوانٍ من تشغيل المركبة.</string>
+    <string name="hotspot_tf_update_available">🆕 تحديث TetherFi: v%1$d → v%2$d (اضغط للتنزيل)</string>
+    <string name="hotspot_clients_title">العملاء المتصلون</string>
+    <string name="hotspot_clients_empty">لا يوجد عملاء متصلون</string>
     <string name="hotspot_client_default_name">جهاز %1$s</string>
     <string name="hotspot_stat_uptime">Uptime</string>
     <string name="hotspot_stat_rx">Received</string>
     <string name="hotspot_stat_tx">Sent</string>
-    <string name="settings_use_own_sim">I use my own SIM card</string>
-    <string name="settings_use_own_sim_support">Shows the “Hotspot” button in the navigation rail so you can share your mobile data via TetherFi (DiLink 3 only).</string>
-    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
-    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
-    <string name="diag_dl5_cluster_header_subtitle">Non-destructive probe: detects shell commands, compat flags and services available for cluster resize on DiLink 5.</string>
-    <string name="diag_dl5_cluster_run_all">Run recon</string>
-    <string name="diag_dl5_cluster_copy_report">Copy report</string>
-    <string name="diag_dl5_cluster_send_telegram">Send via Telegram</string>
-    <string name="diag_dl5_cluster_counters_idle">Idle — no probe run yet</string>
-    <string name="diag_dl5_cluster_pill_unknown">Platform: unknown</string>
-    <string name="diag_dl5_cluster_pill_dl5">Platform: DiLink 5</string>
-    <string name="diag_dl5_cluster_pill_other">Platform: other</string>
-    <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
-    <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
-    <string name="diag_cluster_poc_title">Cluster Move/Resize — Fission display</string>
-    <string name="diag_cluster_poc_subtitle">Interactive control of an app (Waze, Maps, …) on the trusted xdja « fission_* » display as done by WindowManagement / Dilink5 Dashboard. Local VD is abandoned: we piggyback on the system display (uid 1000) to avoid the « secondary screen » toast and the rebound on display 0.</string>
-    <string name="diag_cluster_poc_btn_enumerate">📋 Enumerate displays</string>
-    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Restart daemon</string>
-    <string name="diag_cluster_poc_btn_share">📤 Share report</string>
-    <string name="diag_cluster_poc_section_app">Target</string>
-    <string name="diag_cluster_poc_label_pkg">package:</string>
-    <string name="diag_cluster_poc_btn_launch">▶ Launch on fission</string>
-    <string name="diag_cluster_poc_btn_stop">⏹ Force-stop</string>
-    <string name="diag_cluster_poc_section_rect">Position &amp; size (px of fission display)</string>
-    <string name="diag_cluster_poc_slider_x">X (left)</string>
-    <string name="diag_cluster_poc_slider_y">Y (top)</string>
-    <string name="diag_cluster_poc_slider_w">W (width)</string>
-    <string name="diag_cluster_poc_slider_h">H (height)</string>
-    <string name="diag_cluster_poc_btn_apply">✅ Apply rect</string>
-    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
-    <string name="diag_cluster_poc_chooser_title">Share Cluster Report</string>
-    <string name="diag_cluster_poc_toast_no_report">No report. First tap « Enumerate displays ».</string>
-    <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
+    <string name="settings_use_own_sim">أستخدم شريحة SIM الخاصة بي</string>
+    <string name="settings_use_own_sim_support">يُظهر زر «نقطة الاتصال» في شريط التنقل حتى تتمكن من مشاركة بياناتك المحمولة عبر TetherFi (DiLink 3 فقط).</string>
     <string name="proxy_keeper_channel_name">عفريت البروكسي</string>
     <string name="proxy_keeper_channel_desc">يبقي عفريت البروكسي متاحًا في الخلفية</string>
     <string name="proxy_keeper_notif_title">DashCast — البروكسي نشط</string>
@@ -536,7 +342,7 @@
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">سيُطبَّق عند الإطلاق التالي</string>
     <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
-    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix">إصلاح نافذة ADAS</string>
     <string name="settings_adas_window_fix_support">يرسل sendInfo(30) قبل الإسقاط — يصلح تمدد ADAS في بعض المركبات. قم بالتعطيل إذا تغير شكل المجموعة عند البدء.</string>
     <string name="settings_fission_mode">وضع Layouts</string>
     <string name="settings_fission_mode_support">إسقاط تطبيقات متعددة على المجموعة بمناطق مخصصة. يتطلب خادم الوكيل.</string>
@@ -598,6 +404,10 @@
     <string name="fo_err_attach_fmt">تعذّر إنشاء الفتحة لـ %1$s</string>
     <string name="fo_err_daemon">الخادم غير متاح</string>
     <string name="fo_err_proxy">Proxy ADB Daemon غير متصل. فعّله من الإعدادات.</string>
+    <string name="adb_transport_unresponsive">يقبل ADB الاتصال لكنه لا يستجيب للأوامر. أعد تشغيل تصحيح أخطاء Android ‏(adbd)، ثم أعد فتح DashCast.</string>
+    <string name="adb_transport_key_unauthorized">يمكن الوصول إلى ADB، لكن مفتاح DashCast غير مصرح به. وافق على طلب «السماح بتصحيح أخطاء USB» مع «السماح دائمًا»، ثم أعد فتح DashCast.</string>
+    <string name="adb_transport_unreachable">لا يمكن الوصول إلى ADB عبر TCP في هذه السيارة. فعّل تصحيح أخطاء Android عبر TCP على المنفذ 5555، ثم أعد فتح DashCast.</string>
+    <string name="adb_transport_handshake">فشل تأكيد اتصال ADB مؤقتًا. سيعيد DashCast المحاولة تلقائيًا.</string>
     <string name="fo_status_autoactivate">جارٍ التفعيل التلقائي للتخطيط…</string>
     <string name="fo_status_autolayout_err_fmt">خطأ التخطيط التلقائي: %1$s</string>
     <string name="fo_status_create_fmt">جارٍ إنشاء الفتحة لـ %1$s…</string>
@@ -666,12 +476,21 @@
     <string name="bug_wizard_no_app">لا يوجد تطبيق محدد</string>
     <string name="bug_wizard_other_app">تطبيق آخر / غير معروف</string>
     <string name="bug_wizard_back">← رجوع</string>
+    <string name="bug_tg_title">معرّفك على تيليغرام</string>
+    <string name="bug_tg_message">عندما يتوفر إصلاح لمشكلتك، سنتواصل معك مباشرة عبر تيليغرام لنطلب منك تجربته أولاً.\n\n⚠️ تأكد من إدخال المعرّف الصحيح (مثال: @john_doe). بدونه لن نتمكن من التواصل معك.\n\nيُخزَّن معرّفك على هذا الجهاز فقط ولا يُشارَك أبداً.</string>
+    <string name="bug_tg_hint">@معرفك</string>
+    <string name="bug_tg_confirm">تأكيد</string>
+    <string name="bug_tg_skip">لاحقاً</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ لم يتم تحديد معرّف تيليغرام — اضغط للتحديد</string>
     <string-array name="bug_categories">
+        <item>ملاحة HUD</item>
         <item>مرآة</item>
         <item>عرض التطبيق</item>
         <item>الصوت</item>
         <item>الاتصال</item>
         <item>تجمد/تعطل</item>
+        <item>وضع الكلاستر البسيط</item>
         <item>أخرى</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -680,6 +499,9 @@
         <item>التطبيق لا يظهر</item>
         <item>انقطع الاتصال</item>
         <item>وميض</item>
+        <item>اللمس لا يعمل</item>
+        <item>إزاحة اللمس</item>
+        <item>تأخر / تقطيع</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>التطبيق متجمد</item>
@@ -687,6 +509,9 @@
         <item>موضع خاطئ</item>
         <item>تعطل التطبيق</item>
         <item>محتوى مفقود</item>
+        <item>DPI / نص خاطئ</item>
+        <item>تقسيم شاشة غير مرغوب</item>
+        <item>الحجم غير محفوظ</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>لا يوجد صوت</item>
@@ -701,6 +526,7 @@
         <item>بطيء جداً</item>
         <item>لا يوجد عرض كلاستر</item>
         <item>مشكلة WiFi</item>
+        <item>Daemon / بروكسي غير متاح</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>تعطل التطبيق</item>
@@ -708,12 +534,85 @@
         <item>تعطل DashCast</item>
         <item>شاشة السيارة سوداء</item>
         <item>اضطررت للإعادة</item>
+        <item>بطيء بعد إيقاف العرض</item>
+        <item>الجهاز اللوحي بطيء</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>مجمّد</item>
+        <item>شاشة سوداء</item>
+        <item>محتوى خاطئ</item>
+        <item>معلومات مفقودة</item>
+        <item>غير معروض</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>مشكلة أداء</item>
+        <item>بطيء / الجهاز اللوحي بطيء</item>
+        <item>التشغيل التلقائي لا يعمل</item>
+        <item>Layout / Fission</item>
         <item>استنزاف البطارية</item>
         <item>إعدادات العرض</item>
         <item>اقتراح</item>
         <item>شيء آخر</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">تفاصيل (اختياري)</string>
+    <string name="bug_wizard_details_hint">ماذا كنت تفعل؟ ماذا توقعت؟ أضف أي تفاصيل مفيدة.</string>
+    <string name="bug_wizard_send">إرسال التقرير</string>
+    <string name="bug_wizard_pick_issue">اختر مشكلة من الأعلى</string>
+    <string name="bug_wizard_selected_fmt">محدد: %1$s</string>
+    <string name="toast_adb_port_refused">ADB غير قابل للوصول (المنفذ 5555) — المرآة غير متوفرة على هذا الجهاز</string>
+    <string name="hud_visual_title">فحص HUD البصري</string>
+    <string name="hud_visual_yes">نعم</string>
+    <string name="hud_visual_no">لا</string>
+    <string name="hud_visual_unsure">غير متأكد</string>
+    <string name="aaos_cluster_unsupported_title">تعذّر العرض على لوحة العدادات</string>
+    <string name="aaos_cluster_unsupported_msg">تستخدم سيارتك نظام أندرويد أوتوموتيف من BYD (DX_BYD_AUTO). في هذه الوحدة، تكون لوحة العدادات مقفلة من قِبل الشركة المصنّعة: تحجزها BYD للملاحة المدمجة وتمنع عرض التطبيقات عليها. هذا قيد من السيارة (وليس قيدًا من DashCast) — ولا يوجد حل بديل.</string>
+    <string name="dl3_singleos_cluster_unsupported_title">عرض لوحة العدادات غير متاح</string>
+    <string name="dl3_singleos_cluster_unsupported_msg">في هذه السيارة، تستخدم لوحة العدادات تخطيطًا بنظام تشغيل واحد (single-OS): تُرسم مباشرةً بواسطة السيارة، دون شاشة منفصلة يمكن عرض التطبيقات عليها. لذلك لا يمكن عرض التطبيقات على لوحة العدادات هنا — هذه خاصية في لوحة عدادات سيارتك، وليست قيدًا من DashCast.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">نتيجة HUD — ماذا رأيت على الزجاج الأمامي؟</string>
+    <string name="hud_bench_opt_ok">✅ ظهر السهم — الاتجاه صحيح</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ ظهر السهم — اتجاه خاطئ</string>
+    <string name="hud_bench_opt_partial">⚠️ ظهرت المسافة/النص — لكن دون سهم واضح</string>
+    <string name="hud_bench_opt_nothing">❌ لا شيء على HUD</string>
+    <string name="hud_bench_opt_other">❓ غير ذلك / لست متأكداً…</string>
+    <string name="hud_bench_note_title">ماذا رأيت؟</string>
+    <string name="hud_bench_note_hint">صف ما ظهر على HUD (اختياري)</string>
+    <string name="hud_report_send">إرسال</string>
+    <string name="hud_confirm_yes">✓ نعم</string>
+    <string name="hud_confirm_no">✗ لا</string>
+    <string name="hud_confirm_skip">تخطّي</string>
+    <string-array name="bug_issues_hud">
+        <item>لا يوجد سهم على HUD</item>
+        <item>اتجاه خاطئ</item>
+        <item>مسافة / طريق خطأ</item>
+        <item>HUD يبقى مطفأ</item>
+        <item>السهم متجمّد</item>
+        <item>مشكلة HUD أخرى</item>
+    </string-array>
+    <string name="bug_shots_consent_title">تضمين لقطات الشاشة؟</string>
+    <string name="bug_shots_consent_msg">يمكن أن يتضمن التقرير أحدث لقطات شاشة لعدّاد القيادة والشاشة الرئيسية. قد تُظهر محتوى الشاشة (الخريطة، الوجهة، معلومات شخصية). هل تريد إرفاقها؟</string>
+    <string name="bug_shots_consent_yes">تضمين</string>
+    <string name="bug_shots_consent_no">بدون لقطات</string>
+    <string name="settings_capture_shots">التقاط لقطات شاشة لتقارير الأخطاء</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ أصبحت ملاحة HUD الآن مُفعّلة في الإنتاج. للمساعدة، قُد باستخدام Google Maps / Waze وأبلغ عبر زر 🐞 (شريط التنقل). الأدوات أدناه (①②③) مخصّصة للبحث والتطوير — استخدمها فقط عند الطلب.</string>
+    <string name="hud_prod_nudge">✅ تم الإرسال. لكن الاختبار الحقيقي الآن هو التنقل باستخدام Google Maps / Waze والإبلاغ عبر زر 🐞 «الإبلاغ عن خطأ».</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">أسهم HUD</string>
+    <string name="bug_hud_gate_msg">قبل الإبلاغ: هل يعرض نظام الملاحة الأصلي المدمج في سيارتك بالفعل أسهم الاتجاه على شاشة HUD في الزجاج الأمامي؟</string>
+    <string name="bug_hud_gate_yes">✅ نعم، يعرض الأسهم</string>
+    <string name="bug_hud_gate_no">❌ لا، أبداً</string>
+    <string name="bug_hud_gate_unknown">❓ لا أعرف</string>
+    <string name="bug_hud_no_arrows_msg">إذن فإن برنامج HUD الثابت لا يستطيع عرض أسهم الاتجاه على الإطلاق — ولا يستطيع DashCast إضافتها أيضاً. لا يوجد شيء يمكننا إصلاحه من جانبنا، لذا لا داعي لإرسال هذا التقرير. شكراً لك على أي حال!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">أي تطبيق تستخدمه للملاحة؟</string>
+    <string name="bug_hud_nav_oem">نظام الملاحة الأصلي لسيارتي</string>
+    <string name="bug_hud_nav_unsupported_msg">لا يستطيع DashCast عرض أسهم الاتجاهات على الـ HUD إلا من Google Maps أو Waze. أما نظام الملاحة الأصلي لسيارتك (Telenav…) فيُرسل بياناته بصيغة لا يستطيع DashCast قراءتها — لكنه يعرض أسهمه الخاصة على الـ HUD بالفعل. وللحصول على الأسهم عبر DashCast، ابدأ التوجيه باستخدام Google Maps أو Waze.</string>
+    <string name="bug_hud_nav_understood">فهمت، سأستخدم Maps أو Waze</string>
+    <string name="bug_hud_nav_report_anyway">إرسال التقرير على أي حال</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">لا يوجد أي مسار نشط حاليًا. لا يتلقّى DashCast تعليمات الانعطاف إلا أثناء التنقّل النشط: مجرّد فتح Google Maps أو Waze لا يكفي. ابدأ مسارًا إلى وجهة ما، ثم انظر إلى HUD — من المفترض أن يظهر السهم.</string>
+    <string name="bug_hud_no_route_understood">فهمت، سأبدأ مسارًا</string>
+    <string name="bug_hud_no_notif_access_msg">‏DashCast لا يملك إذن الوصول إلى الإشعارات، وهذا ضروري: فالاتجاهات تُقرأ من إشعار Google Maps أو Waze. افتح إعدادات أندرويد → الإشعارات → الوصول إلى الإشعارات، وامنح الإذن لـ DashCast، ثم ابدأ مسارك من جديد.</string>
 </resources>

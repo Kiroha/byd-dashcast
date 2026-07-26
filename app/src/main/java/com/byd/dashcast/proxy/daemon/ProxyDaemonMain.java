@@ -58,8 +58,18 @@ public final class ProxyDaemonMain {
      *  v8 (v1.2.70-beta): daemon hardening (OOM protection, atomic PID lock, self-heal).
      *  v10 (v1.4.7-beta): adds TXN_CAN_NAVI_STATUS / TXN_CAN_INSTRUMENT_INT / TXN_CAN_INSTRUMENT_BYTES.
      *  v11 (v1.4.11-beta): adds TXN_CAN_SETTING_INT (BYDAutoSettingDevice, required for HUD activation).
+     *  v12 (v1.6.69-beta): adds TXN_CAN_INSTRUMENT_GET / TXN_CAN_SETTING_GET (privileged HUD/nav reads).
+     *  v13 (v1.6.73-beta): adds TXN_CAN_LISTEN_START / TXN_CAN_LISTEN_DRAIN (BYD setting push-feedback listener).
+     *  v14 (v1.6.74-beta): adds TXN_AAOS_HAL_PROBE (automotive display proxy HAL reachability test).
+     *  v15 (v1.6.89-beta): adds TXN_CAN_LISTEN_CLEAR (reset push-feedback log + last-known map).
+     *  v16 (v1.6.97-beta): adds TXN_CAN_LISTEN_MARK (timestamped user ground-truth marker) + timestamps.
+    *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
+    *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
+    *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
+    *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
+    *  v21: adds TXN_CANCEL_FISSION_WATCHDOG (teardown cannot race post-launch re-anchoring).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "11";
+    private static final String PROTOCOL_VERSION = "21";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -105,6 +115,48 @@ public final class ProxyDaemonMain {
      *  style rebroadcast does not need to rebuild any state. */
     private static volatile ProxyBinder sBinder;
 
+    /** ServiceManager name under which the proxy binder is (best-effort) registered so the app can
+     *  authenticate the PROXY_CONNECTED broadcast binder against it — only uid-2000/system can
+     *  addService (SELinux blocks untrusted apps). Public so ProxyClient can cross-check. */
+    public static final String SERVICE_NAME = "byd_proxy_daemon";
+
+    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
+     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    private static volatile int sAppUid = -1;
+
+    /** True if {@code uid} may drive the privileged ProxyBinder verbs. Falls OPEN when the app uid
+     *  could not be resolved, so it can never block the legitimate app→daemon path. */
+    private static boolean isAllowedCaller(int uid) {
+        if (sAppUid == -1) return true;              // unresolved → fall open, never break
+        if (uid == 1000) return true;                // system
+        if (uid == Process.myUid()) return true;     // the daemon's own uid (shell 2000)
+        return (uid % 100000) == (sAppUid % 100000); // our app (user-agnostic appId match)
+    }
+
+    /** Best-effort registration of the proxy binder in the global ServiceManager (uid-2000/system
+     *  only). Enables the app-side authenticity cross-check; broadcast delivery is unaffected, so
+     *  a failure here is harmless (the app falls back to the broadcast binder). */
+    private static void registerInServiceManager(android.os.IBinder binder) {
+        if (binder == null) return;
+        try {
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            try {
+                java.lang.reflect.Method add = sm.getDeclaredMethod("addService",
+                        String.class, android.os.IBinder.class, boolean.class, int.class);
+                add.setAccessible(true);
+                add.invoke(null, SERVICE_NAME, binder, false, 0);
+            } catch (NoSuchMethodException nsme) {
+                java.lang.reflect.Method add = sm.getDeclaredMethod("addService",
+                        String.class, android.os.IBinder.class);
+                add.setAccessible(true);
+                add.invoke(null, SERVICE_NAME, binder);
+            }
+            log("ServiceManager.addService(" + SERVICE_NAME + ") OK");
+        } catch (Throwable t) {
+            log("ServiceManager.addService failed (broadcast only): " + t);
+        }
+    }
+
     private ProxyDaemonMain() {}
 
     public static void main(String[] args) {
@@ -148,6 +200,18 @@ public final class ProxyDaemonMain {
             // SystemContext.get(). Falls back to a plain permission-bypass wrap if
             // createPackageContext is unavailable.
             sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.adoptIdentity(systemContext);
+
+            // Resolve our app's uid once so the ProxyBinder caller-gate can reject untrusted callers
+            // (the binder is registered in ServiceManager just below). Fall open on any failure.
+            try {
+                sAppUid = systemContext.getPackageManager()
+                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+                log("app uid resolved: " + sAppUid);
+            } catch (Throwable t) {
+                log("app uid resolution failed (fall open): " + t);
+            }
+            // Best-effort ServiceManager registration for the app-side authenticity cross-check.
+            registerInServiceManager(sBinder);
 
             emitBroadcast();
             installTriggerObserver();
@@ -281,6 +345,15 @@ public final class ProxyDaemonMain {
         try {
             Runtime.getRuntime().addShutdownHook(new Thread("pid-cleanup") {
                 @Override public void run() {
+                    // Only clean up if THIS process still owns the lock. A duplicate daemon
+                    // that lost the race and suicided (healPidLock -> System.exit) must NOT
+                    // delete the SURVIVOR's PID file — otherwise a fresh bootstrap sees no
+                    // lock and spawns a spurious third daemon during the ~10s until the
+                    // survivor rewrites it.
+                    int owner = -1;
+                    try { owner = Integer.parseInt(readSmallFile(new File(PID_FILE)).trim()); }
+                    catch (Throwable ignore) {}
+                    if (owner != Process.myPid()) return;
                     try { new File(PID_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(TRIGGER_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(VERSION_FILE).delete(); } catch (Throwable ignore) {}
@@ -451,6 +524,18 @@ public final class ProxyDaemonMain {
         @Override
         protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
                 throws RemoteException {
+            // Caller-identity gate: the binder is now discoverable via ServiceManager (for the
+            // app-side authenticity cross-check) and TXN_EXEC runs arbitrary shell as uid 2000, so
+            // only the app (+ system / the daemon's own uid) may drive any verb. The per-case
+            // enforceInterface below is NOT authentication. Falls OPEN if the app uid is unresolved
+            // → can never block the legitimate app→daemon path.
+            int callingUid = Binder.getCallingUid();
+            if (!isAllowedCaller(callingUid)) {
+                log("ProxyBinder: rejected transact code=" + code + " from uid=" + callingUid);
+                if (reply != null) reply.writeException(
+                        new SecurityException("caller uid " + callingUid + " not permitted"));
+                return true;
+            }
             switch (code) {
                 case TXN_PING: {
                     data.enforceInterface(DESCRIPTOR);
@@ -574,6 +659,31 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_AUTOCONTAINER_SEND_INFO_RESULT: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int type = data.readInt();
+                    int info = data.readInt();
+                    String str = data.readString();
+                    try {
+                        int result = Phase4ProcessVerbs.autoContainerSendInfoResult(type, info, str);
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeInt(result);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
                 case TXN_FORCE_STOP_PACKAGE: {
                     data.enforceInterface(DESCRIPTOR);
                     String pkg = data.readString();
@@ -607,9 +717,11 @@ public final class ProxyDaemonMain {
                     android.view.Surface surface = data.readInt() != 0
                             ? android.view.Surface.CREATOR.createFromParcel(data)
                             : null;
+                        android.os.IBinder owner = data.dataAvail() > 0
+                            ? data.readStrongBinder() : null;
                     try {
                         int displayId = Phase4DisplayVerbs.createVirtualDisplay(
-                                sSystemContext, name, w, h, dpi, surface, vflag);
+                            sSystemContext, name, w, h, dpi, surface, vflag, owner);
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeInt(displayId);
@@ -625,6 +737,10 @@ public final class ProxyDaemonMain {
                                     : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
                             reply.writeException(wrap);
                         }
+                    } finally {
+                        // CREATOR produced a daemon-local wrapper. DisplayManagerService/VD now
+                        // owns the producer reference; release this temporary Java/native handle.
+                        if (surface != null) surface.release();
                     }
                     return true;
                 }
@@ -738,6 +854,29 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_FIND_TASK_LOCATION: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    com.byd.dashcast.infrastructure.task.TaskLocation location =
+                            Phase4TaskVerbs.findTaskLocationForPackage(pkg);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(location.getStatus().getWireCode());
+                        reply.writeInt(location.getTaskId());
+                        reply.writeInt(location.getDisplayId());
+                    }
+                    return true;
+                }
+                case TXN_CANCEL_FISSION_WATCHDOG: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    boolean cancelled = Phase4TaskVerbs.cancelFissionWatchdog(pkg);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(cancelled ? 1 : 0);
+                    }
+                    return true;
+                }
                 case TXN_REMOVE_TASK: {
                     data.enforceInterface(DESCRIPTOR);
                     int taskId = data.readInt();
@@ -815,6 +954,158 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_CAN_BATCH: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int count = data.readInt();
+                    try {
+                        if (count <= 0 || count > com.byd.dashcast.system.CanBatchOperation.MAX_BATCH_SIZE) {
+                            throw new IllegalArgumentException("invalid CAN batch size " + count);
+                        }
+                        final Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        com.byd.dashcast.system.CanBatchOperation.Writer writer =
+                                new com.byd.dashcast.system.CanBatchOperation.Writer() {
+                            @Override public void setNaviStatus(int status) throws Throwable {
+                                CanWriteVerbs.setInt(ctx,
+                                        CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, status);
+                            }
+                            @Override public void setInstrumentInt(int featureId, int value)
+                                    throws Throwable {
+                                CanWriteVerbs.setInt(ctx, featureId, value);
+                            }
+                            @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+                                    throws Throwable {
+                                CanWriteVerbs.setBytes(ctx, featureId,
+                                        bytes == null ? new byte[0] : bytes);
+                            }
+                            @Override public void setSettingInt(int featureId, int value)
+                                    throws Throwable {
+                                CanWriteVerbs.settingSetInt(ctx, featureId, value);
+                            }
+                        };
+                        for (int i = 0; i < count; i++) {
+                            int type = data.readInt();
+                            int featureId = data.readInt();
+                            int intValue = data.readInt();
+                            byte[] bytes = data.createByteArray();
+                            com.byd.dashcast.system.CanBatchOperation.fromWire(
+                                    type, featureId, intValue, bytes).execute(writer);
+                        }
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeInt(count);
+                        }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_INSTRUMENT_GET: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int v = CanWriteVerbs.getInt(ctx, featureId);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(v); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_SETTING_GET: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int v = CanWriteVerbs.settingGetInt(ctx, featureId);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(v); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_START: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        String r = CanFeedbackListener.startSetting(ctx);
+                        if (reply != null) { reply.writeNoException(); reply.writeString(r); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_DRAIN: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String r = CanFeedbackListener.drain();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(r); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_AAOS_HAL_PROBE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String r = AaosDisplayHalProbe.probe();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(r); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_CLEAR: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        CanFeedbackListener.clear();
+                        if (reply != null) reply.writeNoException();
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_MARK: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String label = data.readString();
+                    try {
+                        CanFeedbackListener.mark(label == null ? "" : label);
+                        if (reply != null) reply.writeNoException();
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_SETTING_DOUBLE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    double value  = data.readDouble();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int rc = CanWriteVerbs.settingSetDouble(ctx, featureId, value);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_READ_FILE_CHUNK: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String path  = data.readString();
+                    long   off   = data.readLong();
+                    int    maxLen = data.readInt();
+                    try {
+                        byte[] chunk = readFileChunk(path, off, maxLen);
+                        if (reply != null) { reply.writeNoException(); reply.writeByteArray(chunk); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
                 case INTERFACE_TRANSACTION: {
                     if (reply != null) reply.writeString(DESCRIPTOR);
                     return true;
@@ -823,6 +1114,29 @@ public final class ProxyDaemonMain {
                     return super.onTransact(code, data, reply, flags);
             }
         }
+    }
+
+    /**
+     * Read up to {@code maxLen} bytes of {@code path} starting at {@code offset}. Runs in the
+     * daemon (uid 2000 = shell), which can read {@code /data/local/tmp} files that SELinux hides
+     * from the app uid. Returns an empty array at/after EOF so the caller's pull loop terminates.
+     * {@code maxLen} is clamped to a Binder-safe ceiling.
+     */
+    private static byte[] readFileChunk(String path, long offset, int maxLen) throws java.io.IOException {
+        if (path == null) throw new java.io.FileNotFoundException("null path");
+        final int CEIL = 512 * 1024; // keep well under the ~1 MB Binder transaction limit
+        if (maxLen <= 0) return new byte[0];
+        if (maxLen > CEIL) maxLen = CEIL;
+        File f = new File(path);
+        long size = f.length();
+        if (offset < 0 || offset >= size) return new byte[0];
+        int toRead = (int) Math.min((long) maxLen, size - offset);
+        byte[] buf = new byte[toRead];
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(f, "r")) {
+            raf.seek(offset);
+            raf.readFully(buf);
+        }
+        return buf;
     }
 
     /** Unwrap InvocationTargetException and ensure we always hand a real Exception to
