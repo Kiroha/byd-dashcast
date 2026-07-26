@@ -18,17 +18,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  * daemon.
  *
  * <p>Polls {@link ProxyClient#isConnected()} every {@link #PING_INTERVAL_MS}
- * while the app is in the foreground. If the cached binder is dead (daemon
- * crashed, killed, OOM), triggers {@link ProxyClient#connect(Context)}
- * synchronously on the watchdog thread so the next user-initiated typed verb
- * is instant instead of paying the ~1 s bootstrap cost on its first call.
+ * while the app is in the foreground and {@link ProxyKeeperService} is not
+ * active. If the cached binder is dead (daemon crashed, killed, OOM), triggers
+ * {@link ProxyClient#connect(Context)} synchronously on the watchdog thread so
+ * the next user-initiated typed verb is instant instead of paying the ~1 s
+ * bootstrap cost on its first call.
  *
  * <p>The check is intentionally lock-free and IPC-free: {@code isConnected()}
  * reads a {@code volatile IBinder} and calls {@code isBinderAlive()} (≈ 5 µs).
  * Cost while the daemon is healthy is therefore one volatile read every
  * 30 s — strictly invisible.
  *
- * <p>Foreground tracking uses
+ * <p>The keeper normally owns daemon monitoring with a stronger real Binder
+ * ping every 10 seconds. Once it starts, this class releases its HandlerThread;
+ * if the keeper stops, foreground polling resumes automatically. Foreground
+ * tracking uses
  * {@link Application#registerActivityLifecycleCallbacks(Application.ActivityLifecycleCallbacks)}
  * (zero deps, available since API 14) — no {@code androidx.lifecycle:process}
  * needed. The watchdog stops as soon as the last activity is paused, so
@@ -69,6 +73,10 @@ public final class ProxyWatchdog {
      *  callbacks, so a second install attempt no-ops. */
     private static boolean sInstalled = false;
 
+    /** True while {@link ProxyKeeperService} owns the stronger 10 s real Binder heartbeat.
+     *  The foreground watchdog remains installed as a fallback but releases its HandlerThread. */
+    private static volatile boolean sKeeperActive = false;
+
     /** Last time we successfully observed a live binder, for debug. */
     private static volatile long sLastSeenAliveMs = 0L;
 
@@ -100,8 +108,21 @@ public final class ProxyWatchdog {
         AppLogger.i(TAG, "installed (interval=" + PING_INTERVAL_MS + "ms)");
     }
 
+    /**
+     * True while at least one DashCast Activity is resumed.
+     *
+     * <p>Read by {@code HotspotKeeper}: a resumed window is a background-activity-start
+     * exemption in its own right, so the in-app TetherFi launch route stays usable while the
+     * Hotspot page is open even when the "display over other apps" permission was never
+     * granted. Cheap and lock-free — the counter is already maintained by {@link #install}.
+     */
+    public static boolean isAppForeground() {
+        return sForegroundCount.get() > 0;
+    }
+
     /** Start the periodic ping on the background handler thread. */
     private static synchronized void startPolling() {
+        if (!shouldPoll(sKeeperActive, sForegroundCount.get())) return;
         if (sThread == null) {
             sThread = new HandlerThread("proxy-watchdog");
             sThread.start();
@@ -120,6 +141,28 @@ public final class ProxyWatchdog {
         AppLogger.d(TAG, "polling stopped");
     }
 
+    /** Called after the keeper has fully started its own heartbeat. */
+    static synchronized void noteKeeperStarted() {
+        sKeeperActive = true;
+        Handler handler = sHandler;
+        HandlerThread thread = sThread;
+        sHandler = null;
+        sThread = null;
+        if (handler != null) handler.removeCallbacksAndMessages(null);
+        if (thread != null) thread.quitSafely();
+        AppLogger.d(TAG, "keeper active — foreground watchdog thread released");
+    }
+
+    /** Restores foreground-only monitoring if the always-on keeper stops. */
+    static synchronized void noteKeeperStopped() {
+        sKeeperActive = false;
+        if (shouldPoll(false, sForegroundCount.get())) startPolling();
+    }
+
+    static boolean shouldPoll(boolean keeperActive, int foregroundCount) {
+        return !keeperActive && foregroundCount > 0;
+    }
+
     private static final Runnable sTick = new Runnable() {
         @Override public void run() {
             try {
@@ -129,9 +172,10 @@ public final class ProxyWatchdog {
                 AppLogger.w(TAG, "tick threw: " + t.getClass().getSimpleName()
                         + ": " + t.getMessage());
             } finally {
-                // Only re-arm while still foreground.
-                if (sForegroundCount.get() > 0 && sHandler != null) {
-                    sHandler.postDelayed(this, PING_INTERVAL_MS);
+                // Only re-arm while foreground and not superseded by the keeper.
+                Handler handler = sHandler;
+                if (shouldPoll(sKeeperActive, sForegroundCount.get()) && handler != null) {
+                    handler.postDelayed(this, PING_INTERVAL_MS);
                 }
             }
         }
@@ -173,4 +217,7 @@ public final class ProxyWatchdog {
 
     /** Test helper (Diag) : current foreground activity count. */
     public static int getForegroundCount() { return sForegroundCount.get(); }
+
+    /** Test helper (Diag): true while ProxyKeeperService owns daemon monitoring. */
+    public static boolean isKeeperActive() { return sKeeperActive; }
 }

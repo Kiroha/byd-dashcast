@@ -1,16 +1,27 @@
 package com.byd.dashcast.hud;
 
 import android.app.Notification;
+import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import com.byd.dashcast.system.CanBusController;
+import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.PackagePseudonymizer;
+import com.byd.dashcast.util.concurrent.LatestValueDispatcher;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.security.SecureRandom;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,21 +53,149 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     private static final String TAG = "MapNavListener";
 
+    // ─── HUD write offloading ─────────────────────────────────────────────
+    // All ProxyClient/CAN writes (HudController.updateNavigation/closeNavigation
+    // → CanBusController.send* → ProxyClient binder round-trips + sendBroadcast)
+    // run on this single-thread SERIAL executor so the system notification
+    // dispatch thread never blocks on the daemon. Serial (not pooled) preserves
+    // guidance-frame order → CAN frames are never reordered. LatestValueDispatcher
+    // keeps at most one drain task and one pending state during notification bursts.
+    // appContext is the process-scoped application context (safe to retain — not
+    // the service instance, so no leak).
+    private LatestValueDispatcher<HudNavigationData> hudDispatcher;
+    private volatile Context appContext;
+
     // Notification-level deduplication — avoid reprocessing identical notification content
     // (same pattern as OpenBYD MapNotificationListenerService lastNotification* fields).
     private String lastTitle   = "";
     private String lastText    = "";
     private String lastSubText = "";
 
+    // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
+    // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
+    private String lastLoggedNav = "";
+
+    // Throttle for the "unsupported nav app" diagnostic — the same app is logged at most once per
+    // ~30 s so a "no arrow" bug report always carries a RECENT line explaining why (e.g. Telenav).
+    private String lastUnsupportedNavPkg = "";
+    private long   lastUnsupportedLogMs;
+    private byte[] packageMarkerKey;
+
+    private static final String PACKAGE_MARKER_KEY_FILE = "nav_package_marker.key";
+    private static final int PACKAGE_MARKER_KEY_BYTES = 32;
+
+    // Cache of per-source-package Resources (Maps/Waze/ReVanced). A nav app's resources
+    // don't change at runtime, so build the Context + AssetManager once per package instead
+    // of on every notification (createPackageContext().getResources() is a PM lookup + asset
+    // load that previously ran per nav frame on the dispatch thread).
+    private final java.util.concurrent.ConcurrentHashMap<String, Resources> mResCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private static final String PKG_MAPS          = "com.google.android.apps.maps";
     private static final String PKG_MAPS_REVANCED  = "app.revanced.android.apps.maps";
     private static final String PKG_WAZE           = "com.waze";
 
+    /**
+     * How recently a supported nav app must have been active for the bug reporter to accept that a
+     * route was running. Deliberately generous: the wizard is normally used AFTER the drive, so a
+     * tight window would wrongly accuse a driver who has just parked. A window (rather than a
+     * latch-forever flag) also stops one route from making every later report claim a route was live.
+     */
+    private static final long NAV_RECENT_MS = 30L * 60L * 1000L;
+
+    /**
+     * Per supported nav package: {@code {last guidance notification POSTED, last frame fully PARSED}}
+     * as {@code elapsedRealtime}.
+     *
+     * <p>Two separate timestamps because they answer different questions, and conflating them is
+     * exactly what made the first version of this gate harmful:
+     * <ul>
+     *   <li><b>posted</b> — the nav app IS guiding (it only posts turn-by-turn while a route runs).</li>
+     *   <li><b>parsed</b> — and DashCast understood it well enough to drive the HUD.</li>
+     * </ul>
+     * "posted but never parsed" is a DashCast <em>parser</em> bug — the single most valuable "no
+     * arrow" report there is — so it must never be gated away as "you did not start a route".
+     * Tracked per package so a Waze parse failure is not masked by an earlier Google Maps route.
+     *
+     * <p>Everything runs in one app process (no {@code android:process} in the manifest), so this is
+     * shared with {@link com.byd.dashcast.report.BugWizardActivity}.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> sNavActivity =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** A supported nav app recently posted AND we parsed it — a route is (or just was) running. */
+    public static final String NAV_PARSED     = "parsed";
+    /** It posted guidance but nothing parsed — a real DashCast parser bug; never gate this away. */
+    public static final String NAV_PARSE_FAIL = "parse-fail";
+    /** Nothing recent at all — most likely no route was ever started. */
+    public static final String NAV_NONE       = "none";
+
+    /** Records that {@code pkg} posted a guidance notification, and whether we fully parsed it. */
+    private static void noteNavActivity(String pkg, boolean parsed) {
+        if (pkg == null) return;
+        long[] slot = sNavActivity.computeIfAbsent(pkg, k -> new long[2]);
+        slot[parsed ? 1 : 0] = SystemClock.elapsedRealtime();
+    }
+
+    /** Whether {@code pkg} is the app the driver named in the wizard ("maps"/"waze"; empty = any). */
+    private static boolean matchesNavKey(String navAppKey, String pkg) {
+        if (navAppKey == null || navAppKey.isEmpty()) return true;
+        if ("waze".equals(navAppKey)) return PKG_WAZE.equals(pkg);
+        if ("maps".equals(navAppKey)) return PKG_MAPS.equals(pkg) || PKG_MAPS_REVANCED.equals(pkg);
+        return true;
+    }
+
+    /** Newest {posted, parsed} pair across the packages matching {@code navAppKey}. */
+    private static long[] newestFor(String navAppKey) {
+        long posted = 0L, parsed = 0L;
+        for (java.util.Map.Entry<String, long[]> e : sNavActivity.entrySet()) {
+            if (!matchesNavKey(navAppKey, e.getKey())) continue;
+            posted = Math.max(posted, e.getValue()[0]);
+            parsed = Math.max(parsed, e.getValue()[1]);
+        }
+        return new long[] { posted, parsed };
+    }
+
+    /**
+     * What we have recently seen from the nav app the driver says they use — {@link #NAV_PARSED},
+     * {@link #NAV_PARSE_FAIL} or {@link #NAV_NONE}. Only {@code NAV_NONE} means "no route running".
+     */
+    public static String recentNavStatus(String navAppKey) {
+        long now = SystemClock.elapsedRealtime();
+        long[] t = newestFor(navAppKey);
+        if (t[1] != 0L && now - t[1] <= NAV_RECENT_MS) return NAV_PARSED;
+        if (t[0] != 0L && now - t[0] <= NAV_RECENT_MS) return NAV_PARSE_FAIL;
+        return NAV_NONE;
+    }
+
+    /** Compact caption line for triage, e.g. {@code "yes (3m ago)"} / {@code "parse-fail (12s ago)"}. */
+    public static String navSeenSummary(String navAppKey) {
+        long now = SystemClock.elapsedRealtime();
+        long[] t = newestFor(navAppKey);
+        if (t[1] != 0L && now - t[1] <= NAV_RECENT_MS) return "yes (" + ago(now - t[1]) + ")";
+        if (t[0] != 0L && now - t[0] <= NAV_RECENT_MS) return "parse-fail (" + ago(now - t[0]) + ")";
+        long newest = Math.max(t[0], t[1]);
+        // "stale" ≠ "never": tells triage a route ran, just not recently enough to explain this report.
+        if (newest != 0L) return "stale (" + ago(now - newest) + ")";
+        return "no";
+    }
+
+    private static String ago(long ms) {
+        long s = ms / 1000L;
+        return s < 90L ? (s + "s ago") : ((s / 60L) + "m ago");
+    }
+
     // ─── Distance: "300 m", "1.2 km", "1,2 km", "500 m", "3 км" ─
     // Mirrors OpenBYD regex: \b(\d+[.,]?\d*)[\s ]*(km|км|m|м)\b
     // Handles ASCII and Cyrillic unit suffixes, optional decimal, optional NBSP.
+    // IMPERIAL + "mt" added 1.6.144: the metric-only pattern meant that in a UK/US locale (Maps and
+    // Waze post "in 500 ft" / "0.5 mi") NO frame of an entire route could ever parse, so the HUD arrow
+    // never worked there at all — and the 1.6.143 gate then told those drivers they had not started a
+    // route. Italian "300 mt" failed the same way. Alternation is longest-first so "mi"/"mt" are tried
+    // before "m"; "25 min" still cannot match (the trailing \b fails on "min" for every alternative),
+    // so remaining-time text is never misread as a distance.
     private static final Pattern RX_DIST =
-            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|m|м)\\b",
+            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|mi|ft|yd|mt|m|м)\\b",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Road name: "onto X", "sur X", "on X" ────────────────────────────
@@ -73,6 +212,20 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern RX_MINS =
             Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин)\\b",
+                    Pattern.CASE_INSENSITIVE);
+
+    // ─── Arrival wall-clock ETA — "· 14:32", "2:05 pm" (OEM EXPECTED_ARRIVE_*) ─
+    // Best-effort: a bare HH:MM in a nav notification is the arrival clock — remaining DURATION here
+    // is always word-unit ("25 min", "1 hr"), never colon-separated. g1=hour, g2=minute, g3=am/pm.
+    private static final Pattern RX_ETA_CLOCK =
+            Pattern.compile("\\b([01]?\\d|2[0-3]):([0-5]\\d)\\s*(am|pm)?\\b",
+                    Pattern.CASE_INSENSITIVE);
+
+    // ─── Roundabout exit number — "3rd exit", "take the 2nd exit", "sortie 3" ─
+    private static final Pattern RX_ROUNDABOUT_EXIT =
+            Pattern.compile(
+                    "(?:(\\d+)(?:st|nd|rd|th|er|e|ème)?[\\s\\u00A0]+(?:exit|sortie)"
+                            + "|(?:exit|sortie)[\\s\\u00A0]+(\\d+))",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Noise-notification skip strings (from OpenBYD smali) ────────────
@@ -371,18 +524,72 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // ─── NotificationListenerService callbacks ────────────────────────────
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        final Context processContext = getApplicationContext();
+        appContext = processContext;
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "hud-nav-writer");
+            t.setDaemon(true);
+            return t;
+        });
+        hudDispatcher = new LatestValueDispatcher<>(executor,
+            data -> HudController.INSTANCE.updateNavigation(processContext, data));
+    }
+
+    @Override
+    public void onDestroy() {
+        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        hudDispatcher = null;
+        Context ctx = appContext;
+        appContext = null;
+        if (dispatcher != null && ctx != null) {
+            // close() drops queued guidance, waits behind any update already executing, then
+            // clears the HUD before gracefully terminating the writer. The Runnable captures
+            // only application Context, not this service instance.
+            dispatcher.close(() -> HudController.INSTANCE.closeNavigation(ctx));
+        }
+        super.onDestroy();
+    }
+
+    @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        // The system (re)bound us — possibly mid-route, after a process restart or a rebind.
+        // onNotificationPosted only fires on NEW posts, so an ALREADY-posted ongoing nav notification
+        // stays invisible until the nav app next changes its content: the HUD would not resume, and
+        // the bug reporter would wrongly conclude "no route is running". Replay what is already on
+        // screen through the normal pipeline. Guarded — a listener callback must never crash.
+        try {
+            StatusBarNotification[] active = getActiveNotifications();
+            if (active == null) return;
+            for (StatusBarNotification sbn : active) {
+                if (sbn != null && isNavPackage(sbn.getPackageName())) {
+                    onNotificationPosted(sbn);
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "onListenerConnected rescan failed: " + t.getMessage());
+        }
+    }
+
+    @Override
     public void onListenerDisconnected() {
         super.onListenerDisconnected();
         // System unbound the listener (e.g. permission revoked, system crash).
         // Close the HUD so the cluster doesn't stay frozen on the last nav state.
-        HudController.INSTANCE.closeNavigation(getApplicationContext());
+        postNavClose();
     }
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        if (sbn == null || !isNavPackage(sbn.getPackageName())) return;
+        if (sbn == null) return;
 
         Notification n = sbn.getNotification();
+        if (!isNavPackage(sbn.getPackageName())) {
+            maybeLogUnsupportedNav(sbn.getPackageName(), n);
+            return;
+        }
         if (n == null) return;
 
         // Only process ongoing navigation notifications.
@@ -390,6 +597,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                 && !Notification.CATEGORY_NAVIGATION.equals(n.category)) {
             return;
         }
+
+        // A supported nav app is posting GUIDANCE — i.e. a route IS running. Recorded here, BEFORE
+        // any parse step can bail out, so the bug reporter can tell "no route started" from "route
+        // running but DashCast failed to parse it". The latter is a real parser bug and must never be
+        // gated away as user error (it is exactly what the imperial-unit regex gap used to cause).
+        noteNavActivity(sbn.getPackageName(), false);
 
         Bundle extras = n.extras;
         if (extras == null) return;
@@ -419,12 +632,36 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
         if (combined.isEmpty()) return;
 
-        // 1. Turn icon — try icon resource name first, then text.
+        // 1. Turn icon — try icon resource name first, then text; track WHICH source resolved it so
+        //    the NAV PARSE diagnostic shows whether we read the direction from the small-icon
+        //    resource, a text keyword, or fell back to the straight default.
+        String iconResName = smallIconResName(sbn.getPackageName(), n.getSmallIcon());
         int iconId = resolveIconFromResource(sbn.getPackageName(), n.getSmallIcon());
-        if (iconId <= 0) {
+        String iconSrc;
+        if (iconId > 0) {
+            iconSrc = "resource";
+        } else {
             iconId = resolveIconFromText(lower);
+            if (iconId > 0) {
+                iconSrc = "text";
+            } else {
+                iconId = CanBusController.ICON_STRAIGHT_SOLID; // safe default
+                iconSrc = "default";
+            }
         }
-        if (iconId <= 0) iconId = CanBusController.ICON_STRAIGHT_SOLID; // safe default
+
+        // 1b. Roundabout exit number (OEM parity): a generic roundabout icon carries no exit count.
+        //     If the instruction names an exit ("3rd exit" / "sortie 3"), promote it to the OEM
+        //     exit-numbered icon — CCW 25-34 / CW 35-44 (exit N = base+N). Handedness comes from the
+        //     resolved generic icon (CW is the parser's default); a notification doesn't expose it.
+        if (iconId == CanBusController.ICON_ROUNDABOUT_CW_1_LAP
+                || iconId == CanBusController.ICON_ROUNDABOUT_CCW_1_LAP) {
+            int exit = parseRoundaboutExit(lower);
+            if (exit > 0) {
+                int base = (iconId == CanBusController.ICON_ROUNDABOUT_CCW_1_LAP) ? 24 : 34;
+                iconId = base + exit;
+            }
+        }
 
         // 2. Distance to next turn — scan title then text then combined.
         int distance = parseFirstDistance(combined);
@@ -441,14 +678,42 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         Integer remainSec  = parseRemainingSeconds(routeSrc);
         Integer remainDist = parseRemainingMeters(routeSrc);
 
-        HudNavigationData data = new HudNavigationData(
-                iconId, distance, roadName, remainDist, remainSec);
+        // 5. Arrival wall-clock ETA (OEM EXPECTED_ARRIVE_* family) — best-effort from the summary
+        //    line; distinct from the remaining DURATION above. A notification carries no day-code.
+        int[] eta = parseEtaClock(routeSrc);
+        Integer etaHour   = eta != null ? eta[0] : null;
+        Integer etaMinute = eta != null ? eta[1] : null;
 
+        HudNavigationData data = new HudNavigationData(
+                iconId, distance, roadName, remainDist, remainSec, etaHour, etaMinute);
+
+        // NAV PARSE diagnostic (raw notification → parsed icon), written to the DashCast journal so
+        // every bug report shows GROUND TRUTH: what the nav app's notification actually said vs the
+        // arrow we produced — the way to verify the direction mapping on real Maps/Waze notifications.
+        // Deduped per distinct (icon|road) maneuver so it never floods the ~1 Hz distance ticks.
+        String navKey = iconId + "|" + roadName;
+        if (!navKey.equals(lastLoggedNav)) {
+            lastLoggedNav = navKey;
+            // The raw notification title/text/bigText and the parsed road name are location PII
+            // (destination / current road / ETA / upcoming street) and this journal line flows
+            // into every bug report. Log only what the icon-mapping diagnostic needs — the icon
+            // source + resource name + distance — plus non-PII length/found flags.
+            AppLogger.i(TAG, "NAV PARSE icon=" + iconId + " src=" + iconSrc
+                    + " smallIcon='" + iconResName + "'"
+                    + " titleLen=" + title.length() + " textLen=" + text.length()
+                    + (bigText.isEmpty() ? "" : " bigLen=" + bigText.length())
+                    + " -> dist=" + distance + " road=" + (roadName.isEmpty() ? "no" : "yes")
+                    + " eta=" + (eta != null ? "yes" : "no"));
+        }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
-                + " road='" + roadName + "'"
+                + " road=" + (roadName.isEmpty() ? "no" : "yes")
                 + " remDist=" + remainDist + " remSec=" + remainSec);
 
-        HudController.INSTANCE.updateNavigation(this, data);
+        // Fully parsed into a HudNavigationData ⇒ we understood the frame, not just received it.
+        noteNavActivity(sbn.getPackageName(), true);
+
+        // Offload the ProxyClient/CAN write off the notification dispatch thread.
+        postNavUpdate(data);
     }
 
     @Override
@@ -457,10 +722,42 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         Notification n = sbn.getNotification();
         if (n != null && (n.flags & Notification.FLAG_ONGOING_EVENT) != 0) {
             Log.d(TAG, "nav notification removed → closeNavigation");
-            HudController.INSTANCE.closeNavigation(this);
+            postNavClose();
             lastTitle   = "";
             lastText    = "";
             lastSubText = "";
+        }
+    }
+
+    // ─── HUD write dispatch (serial writer thread) ────────────────────────
+
+    /**
+     * Queue a nav update on the serial HUD writer thread. If updates arrive faster than the daemon
+     * drains them, only the newest pending state survives and at most one drain task stays queued.
+     */
+    private void postNavUpdate(HudNavigationData data) {
+        if (data == null) return;
+        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        if (dispatcher != null) dispatcher.submit(data);
+    }
+
+    /**
+     * Queue a HUD close on the serial writer thread. Cancels any queued-but-unrun
+     * guidance frame first so a stale update cannot re-open the HUD after removal.
+     * Falls back to a synchronous close ONLY when the executor is already gone or
+     * rejects (service teardown) so the cluster never freezes on the last nav state.
+     */
+    private void postNavClose() {
+        final Context ctx = appContext;
+        if (ctx == null) return;
+        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        if (dispatcher == null) {
+            HudController.INSTANCE.closeNavigation(ctx);
+            return;
+        }
+        if (!dispatcher.cancelPendingAndExecute(
+                () -> HudController.INSTANCE.closeNavigation(ctx))) {
+            HudController.INSTANCE.closeNavigation(ctx);
         }
     }
 
@@ -473,7 +770,11 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private int resolveIconFromResource(String pkg, Icon icon) {
         if (icon == null || icon.getType() != Icon.TYPE_RESOURCE) return -1;
         try {
-            Resources res = createPackageContext(pkg, 0).getResources();
+            Resources res = mResCache.get(pkg);
+            if (res == null) {
+                res = createPackageContext(pkg, 0).getResources();
+                mResCache.put(pkg, res);
+            }
             int resId = icon.getResId();
             if (resId == 0) return -1;
             String name = res.getResourceEntryName(resId).toLowerCase(Locale.ROOT);
@@ -484,6 +785,26 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             Log.d(TAG, "icon res lookup failed: " + t.getMessage());
         }
         return -1;
+    }
+
+    /**
+     * The small-icon resource entry name (e.g. {@code ic_maneuver_turn_right}) or {@code ""} — for
+     * the NAV PARSE diagnostic, so on a real car we can see what the nav app's small icon actually is
+     * (and whether it carries the maneuver at all, or is generic → we must rely on text parsing).
+     */
+    private String smallIconResName(String pkg, Icon icon) {
+        if (icon == null || icon.getType() != Icon.TYPE_RESOURCE) return "";
+        try {
+            Resources res = mResCache.get(pkg);
+            if (res == null) {
+                res = createPackageContext(pkg, 0).getResources();
+                mResCache.put(pkg, res);
+            }
+            int resId = icon.getResId();
+            return resId == 0 ? "" : res.getResourceEntryName(resId);
+        } catch (Throwable t) {
+            return "";
+        }
     }
 
     private static int resolveIconFromText(String lower) {
@@ -518,9 +839,13 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String unit = m.group(2).toLowerCase(Locale.ROOT);
         try {
             float val = Float.parseFloat(m.group(1).replace(',', '.'));
-            return (unit.equals("km") || unit.equals("км"))
-                    ? Math.round(val * 1000f)
-                    : Math.round(val);
+            switch (unit) {
+                case "km": case "км": return Math.round(val * 1000f);
+                case "mi":            return Math.round(val * 1609.344f);   // statute mile
+                case "ft":            return Math.round(val * 0.3048f);
+                case "yd":            return Math.round(val * 0.9144f);
+                default:              return Math.round(val);               // m / м / mt
+            }
         } catch (NumberFormatException ignore) {
             return notFound;
         }
@@ -559,13 +884,189 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         return "";
     }
 
+    // ─── Arrival ETA clock ────────────────────────────────────────────────
+
+    /** Parses an arrival wall-clock "HH:MM" (optionally am/pm) → {hour24, minute}, or null. */
+    private static int[] parseEtaClock(String text) {
+        if (text == null) return null;
+        Matcher m = RX_ETA_CLOCK.matcher(text);
+        if (!m.find()) return null;
+        try {
+            int h   = Integer.parseInt(m.group(1));
+            int min = Integer.parseInt(m.group(2));
+            String ap = m.group(3);
+            if (ap != null) {
+                ap = ap.toLowerCase(Locale.ROOT);
+                if (ap.equals("pm") && h < 12) h += 12;
+                else if (ap.equals("am") && h == 12) h = 0;
+            }
+            if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+            return new int[] { h, min };
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    // ─── Roundabout exit ──────────────────────────────────────────────────
+
+    /** Parses a roundabout exit number (1-10) from the instruction text, or 0 if none/out of range. */
+    private static int parseRoundaboutExit(String lower) {
+        if (lower == null) return 0;
+        Matcher m = RX_ROUNDABOUT_EXIT.matcher(lower);
+        if (!m.find()) return 0;
+        String g = m.group(1) != null ? m.group(1) : m.group(2);
+        try {
+            int n = Integer.parseInt(g);
+            return (n >= 1 && n <= 10) ? n : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────
 
     private static boolean isNavPackage(String pkg) {
         return PKG_MAPS.equals(pkg) || PKG_MAPS_REVANCED.equals(pkg) || PKG_WAZE.equals(pkg);
     }
 
+    // Known navigation apps we do NOT support: their guidance is not exposed as a parseable
+    // notification (e.g. Telenav delivers binary NaviInfo AIDL, not text). Prefix match on the pkg.
+    // Public + single source of truth so the bug reporter can also probe the running-process list and
+    // self-diagnose a "no arrow on HUD" report even when the unsupported nav posts NO notification at
+    // all — Telenav is the archetype: it never triggers the notification-driven maybeLogUnsupportedNav
+    // below, so before the presence probe such reports were mute about the real culprit
+    // (INC-20260718-114114).
+    public static final String[] KNOWN_UNSUPPORTED_NAV = {
+        "com.telenav",              // Telenav (EU OEM nav: .app.arp / .app.isa)
+        "com.sealnav",              // BYD Seal nav
+        "com.autonavi", "com.amap", // AMap / AutoNavi
+        "com.baidu.baidumaps",      // Baidu Maps
+        "ru.yandex.yandexnavi", "ru.yandex.yandexmaps",  // Yandex
+    };
+
+    /**
+     * Scans a {@code ps -A}-style process listing and returns the first running process whose name
+     * matches a {@link #KNOWN_UNSUPPORTED_NAV} prefix, or {@code null} if none is running. Lets the
+     * bug reporter record which unsupported OEM nav (if any) is live when a HUD "no arrow" report is
+     * filed — because such navs post no notification, this presence probe is the only way the report
+     * can name the culprit. Matches whole whitespace-delimited tokens so a substring can't false-hit.
+     */
+    public static String firstUnsupportedNavProcess(String procListing) {
+        if (procListing == null) return null;
+        for (String line : procListing.split("\\R")) {
+            for (String tok : line.trim().split("\\s+")) {
+                for (String p : KNOWN_UNSUPPORTED_NAV) {
+                    if (tok.startsWith(p)) return tok;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Logs (throttled, once per ~30 s per app) when a notification comes from a KNOWN unsupported
+     * nav app, or any app whose notification is {@code category=navigation}. This makes a
+     * "no arrow in HUD" bug report self-explanatory — DashCast only reads Google Maps / Maps
+     * ReVanced / Waze notifications, so an EU Telenav user gets no arrow and, before this, no clue
+     * why (field report INC-20260715-161802). Written to the DashCast journal → into every report.
+     */
+    private void maybeLogUnsupportedNav(String pkg, Notification n) {
+        if (pkg == null || n == null) return;
+        boolean navCategory = Notification.CATEGORY_NAVIGATION.equals(n.category);
+        boolean knownNav = false;
+        for (String p : KNOWN_UNSUPPORTED_NAV) {
+            if (pkg.startsWith(p)) { knownNav = true; break; }
+        }
+        if (!navCategory && !knownNav) return;
+        long now = SystemClock.elapsedRealtime();
+        if (pkg.equals(lastUnsupportedNavPkg) && now - lastUnsupportedLogMs < 30_000L) return;
+        lastUnsupportedNavPkg = pkg;
+        lastUnsupportedLogMs = now;
+        // Privacy: the package name is written to the DashCast journal → every bug report → Telegram.
+        // For a KNOWN unsupported nav app the package comes from our own hardcoded list (below), so
+        // naming it discloses nothing new and is diagnostically essential (e.g. the EU Telenav "no
+        // arrow" field report). But the category=navigation branch fires for ANY installed app, so
+        // logging its raw package would leak the driver's app inventory off-device. Emit a keyed,
+        // per-install marker instead — enough to correlate recurring reports from this installation
+        // without enabling a global package-name dictionary lookup.
+        String who = knownNav ? ("app=" + pkg + " (known nav app)")
+                              : ("pkgHash=" + coarsePkgMarker(pkg) + " (category=navigation)");
+        AppLogger.i(TAG, "NAV UNSUPPORTED " + who
+                + " — DashCast HUD nav only reads Google Maps / Maps ReVanced / Waze");
+    }
+
+    /** Per-install HMAC marker for an unknown package. Falls back to a fixed token on any failure. */
+    private String coarsePkgMarker(String pkg) {
+        if (pkg == null) return "?";
+        try {
+            return PackagePseudonymizer.marker(getOrCreatePackageMarkerKey(), pkg);
+        } catch (Exception e) {
+            AppLogger.w(TAG, "Package marker unavailable: " + e.getClass().getSimpleName());
+            return "marker-na";
+        }
+    }
+
+    /** Loads or atomically creates a non-backed-up 256-bit key scoped to this installation. */
+    private synchronized byte[] getOrCreatePackageMarkerKey() throws java.io.IOException {
+        if (packageMarkerKey != null) return packageMarkerKey;
+        File dir = getNoBackupFilesDir();
+        File keyFile = new File(dir, PACKAGE_MARKER_KEY_FILE);
+        byte[] existing = readPackageMarkerKey(keyFile);
+        if (existing != null) {
+            packageMarkerKey = existing;
+            return existing;
+        }
+        if (keyFile.exists() && !keyFile.delete()) {
+            throw new java.io.IOException("cannot replace invalid package marker key");
+        }
+
+        byte[] generated = new byte[PACKAGE_MARKER_KEY_BYTES];
+        new SecureRandom().nextBytes(generated);
+        File temp = File.createTempFile("nav_package_marker_", ".tmp", dir);
+        boolean published = false;
+        try {
+            try (FileOutputStream out = new FileOutputStream(temp)) {
+                out.write(generated);
+                out.flush();
+                out.getFD().sync();
+            }
+            published = temp.renameTo(keyFile);
+            if (!published) {
+                byte[] raced = readPackageMarkerKey(keyFile);
+                if (raced == null) throw new java.io.IOException("cannot publish package marker key");
+                generated = raced;
+            }
+        } finally {
+            if (!published) temp.delete();
+        }
+        packageMarkerKey = generated;
+        return generated;
+    }
+
+    private static byte[] readPackageMarkerKey(File keyFile) {
+        if (!keyFile.isFile() || keyFile.length() != PACKAGE_MARKER_KEY_BYTES) return null;
+        byte[] key = new byte[PACKAGE_MARKER_KEY_BYTES];
+        try (FileInputStream in = new FileInputStream(keyFile)) {
+            int offset = 0;
+            while (offset < key.length) {
+                int read = in.read(key, offset, key.length - offset);
+                if (read < 0) return null;
+                offset += read;
+            }
+            return in.read() == -1 ? key : null;
+        } catch (java.io.IOException e) {
+            return null;
+        }
+    }
+
     private static String charSeqToString(CharSequence cs) {
         return cs != null ? cs.toString() : "";
+    }
+
+    /** One-line, length-bounded form of a notification string for the NAV PARSE diagnostic. */
+    private static String clip(String s) {
+        if (s == null) return "";
+        s = s.replace('\n', ' ').trim();
+        return s.length() > 80 ? s.substring(0, 80) + "…" : s;
     }
 }

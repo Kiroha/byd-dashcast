@@ -28,15 +28,25 @@ public final class HudNavigationData {
     /** Total remaining route time in seconds, or {@code null} if unknown. */
     public final Integer remainingTimeSeconds;
 
+    /** Arrival wall-clock hour (0-23), or {@code null} if the notification carried no ETA time. */
+    public final Integer etaHour;
+
+    /** Arrival wall-clock minute (0-59), or {@code null} if the notification carried no ETA time. */
+    public final Integer etaMinute;
+
     public HudNavigationData(int iconId,
                               int distanceMeters,
                               String roadName,
                               Integer remainingDistanceMeters,
-                              Integer remainingTimeSeconds) {
+                              Integer remainingTimeSeconds,
+                              Integer etaHour,
+                              Integer etaMinute) {
         this.iconId = iconId;
         this.distanceMeters = distanceMeters;
         this.roadName = roadName != null ? roadName : "";
         this.remainingDistanceMeters = remainingDistanceMeters;
         this.remainingTimeSeconds = remainingTimeSeconds;
+        this.etaHour = etaHour;
+        this.etaMinute = etaMinute;
     }
 }

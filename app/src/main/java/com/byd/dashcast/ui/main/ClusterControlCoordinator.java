@@ -165,11 +165,14 @@ public final class ClusterControlCoordinator {
         final int w = mSbResizeW != null ? mSbResizeW.getProgress() : 0;
         final int h = mSbResizeH != null ? mSbResizeH.getProgress() : 0;
 
-        // Persist inset values immediately on the main thread.
+        // Persist inset values immediately on the main thread. Also drop any hand-drawn
+        // rectangle for this app: the seekbar is now the source of truth (last tool wins),
+        // so InsetAutoApplicator re-applies these symmetric insets and not a stale rect.
         mHost.getContext().getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
                 .putInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, w)
                 .putInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, h)
+                .remove(SettingsActivity.PREF_CLUSTER_RECT_PREFIX + pkg)
                 .apply();
 
         AppLogger.i(TAG, "applyResize " + w + "/" + h + " for " + pkg);

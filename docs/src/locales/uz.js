@@ -4,26 +4,29 @@ export default {
   name: "O'zbekcha",
   title: "DashCast — Foydalanuvchi qo'llanmasi",
   manualName: "Foydalanuvchi qo'llanmasi",
-  meta: 'v1.4.x · BYD Seal EU · DiLink 3.0 · Android 10',
+  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Mundarija',
 
   intro: {
     title: '0. Kirish',
     lead:
-      "DashCast BYD markaziy ekranidagi istalgan Android ilovasini asboblar paneliga (raqamli klasterga) chiqaradi. Maps, Waze, Spotify yoki ABRP to'g'ridan-to'g'ri rul ortida — «Tartiblar» rejimi bilan esa bir vaqtda bir nechta ilova, har biri o'z zonasida. Bularning barchasi tizimni o'zgartirmasdan.",
+      "DashCast BYD markaziy ekranidagi istalgan Android ilovasini asboblar paneliga (rul ortidagi raqamli klaster displeyiga) chiqaradi. Maps, Waze, Spotify yoki ABRP to'g'ridan-to'g'ri ko'z oldingizda — «Tartiblar» rejimi bilan esa bir vaqtda bir nechta ilova, har biri o'z zonasida. U oddiy ilova kabi o'rnatiladi va tizimda hech narsani o'zgartirmaydi.",
     bullets: [
-      '✅ BYD Seal EU bilan mos (DiLink 3.0, proshivka Di3.0 / 6125F).',
-      "✅ Tizim o'zgartirilmaydi: DashCast oddiy ilova kabi o'rnatiladi.",
+      '✅ DiLink 3 (Seal EU / 6125F) va DiLink 5 (yangiroq BYD bosh qurilmalari) bilan ishlaydi.',
+      "✅ Tizim o'zgartirilmaydi: DashCast boshqa har qanday ilova kabi o'rnatiladi.",
       '✅ TCP orqali mahalliy ADB — birinchi avtorizatsiyadan keyin kompyuter kerak emas.',
-      '✅ 13 ta interfeys tili, birinchi ishga tushirishda tanlanadi.',
+      "✅ 13 ta interfeys tili, birinchi ishga tushirishda tanlanadi, istalgan vaqtda o'zgartiriladi.",
       '✅ Real vaqtdagi sensorli oyna: klasterni markaziy ekrandan boshqaring.',
       "✅ «Tartiblar» rejimi: klasterda yonma-yon bir nechta ilova, zonalar barmoq bilan chiziladi.",
       '✅ Avtoishga tushirish: DashCast ochilishi bilan proyeksiya + ilova (yoki sevimli tartib).',
       '✅ Chetlar (overscan) har bir ilova uchun saqlanadi.',
-      "✅ O'rnatilgan OTA yangilanishlari (ixtiyoriy beta-kanal).",
+      "✅ DiLink 3 old oyna HUD'ida burilishlar bo'yicha o'qlar (qo'llab-quvvatlanadigan proshivkada).",
+      "✅ DiLink 3 uchun o'rnatilgan Wi-Fi hotspot yordamchisi (o'z SIM'ingizdan foydalaning).",
+      "✅ Klaviatorasiz xato haqida xabar beruvchi, diagnostikani qo'llab-quvvatlashga bir teginishda yuboradi.",
+      "✅ Avtomatik OTA yangilanishlari — jimgina o'rnatiladi va ilovani qayta ishga tushiradi.",
     ],
     note:
-      "💡 Yagona talab: BYD Sozlamalar → Dasturchi bo'limida simsiz ADB nosozliklarni tuzatishni yoqish. Birinchi ishga tushirishda «Tuzatishga ruxsat berilsinmi?» dialogi paydo bo'ladi — «Har doim ruxsat berish» belgilang va tasdiqlang. Buni hech qachon takrorlash kerak bo'lmaydi.",
+      "💡 Yagona talab: BYD Sozlamalar → Dasturchi bo'limida simsiz ADB nosozliklarni tuzatishni yoqing. Birinchi ishga tushirishda «Tuzatishga ruxsat berilsinmi?» dialogi paydo bo'ladi — «Ushbu kompyuterdan har doim ruxsat berish» belgilang va tasdiqlang. Buni hech qachon takrorlash kerak bo'lmaydi.",
   },
 
   sections: [
@@ -67,7 +70,7 @@ export default {
       screen: 'screen-2',
       title: '2. Bosh ekran — Ilovalar va Klaster',
       lead:
-        "DashCast markaziy ekrani. Chapda: qidiruv, filtrlar va sevimlilar bilan barcha ilovalaringiz. O'ngda: klasterning real vaqtdagi ko'rinishi, «To'liq ekranli oyna» / «Proyeksiyani to'xtatish» tugmalari va sevimli ko'p ilovali joylashuvni tanlash uchun tartiblar karuseli.",
+        "DashCast bosh ekrani. Chapda: qidiruv, filtrlar va sevimlilar bilan barcha ilovalaringiz, hamda yon navigatsiya paneli. O'ngda: klasterning real vaqtdagi ko'rinishi, «To'liq ekranli oyna» / «Proyeksiyani to'xtatish» tugmalari va — «Tartiblar» rejimida — yig'iladigan «Klaster tartibi» tanlagichi.",
       mockupLabel: "2-ekranni ko'rish (Bosh)",
       featuresTitle: 'Qila oladigan hamma narsangiz',
       features: [
@@ -89,7 +92,7 @@ export default {
         {
           title: "🚦 Real vaqtdagi klaster ko'rinishi",
           text:
-            "O'ng panel klasterni jonli aks ettiradi. Ko'rinishga teginishlaringiz proyeksiyalangan ilovaga uzatiladi — aylantirish, kattalashtirish, klaviatura, hammasi ishlaydi.",
+            "O'ng panel klasterda nima borligini jonli aks ettiradi. Ko'rinishga teginishlaringiz proyeksiyalangan ilovaga uzatiladi — aylantirish, kattalashtirish, klaviatura, hammasi ishlaydi.",
         },
         {
           title: "👁️ To'liq ekranli oyna",
@@ -102,20 +105,25 @@ export default {
             "Proyeksiyani toza yakunlaydi va asl BYD panelini (tezlik, asboblar, ADAS) Sozlamalarda belgilangan o'lcham bilan tiklaydi.",
         },
         {
-          title: '🗂️ Tartiblar karuseli',
+          title: "🗂️ Klaster tartibi tanlagichi (standart holatda yig'ilgan)",
           text:
-            "Tugmalar ostida har bir karta tartib zonalarining mini-ko'rinishini ko'rsatadi. Kartaga tegib, uni sevimli tartib qiling (yulduz + ko'k hoshiya). «Erkin rejim» tartiblarni o'chiradi; «＋ Boshqarish» muharrirni ochadi.",
+            "«Tartiblar» rejimida tugmalar ostida ixcham «KLASTER TARTIBI» sarlavhasi turadi. Uni yoyish uchun teging: «Tartib ilovalarini ishga tushirish», hamda har bir saqlangan tartib uchun karta (Erkin rejim / sizning shablonlaringiz / ＋ Boshqarish). Jonli ko'rinish to'liq balandligini saqlashi uchun u standart holatda yig'ilgan.",
         },
         {
           title: '📺 Suzuvchi tugma',
           text:
             "📺 tugmasi boshqa ilovalar ustida qoladi: teginish = oynani ochish, uzoq bosish = oxirgi proyeksiyalangan ilovalar o'rtasida tez almashish.",
         },
+        {
+          title: '🧭 Yon navigatsiya paneli',
+          text:
+            "Ilovalar, Sozlamalar, Tizim, Jurnal, xato haqida xabar beruvchi va — o'z SIM'ingiz bilan DiLink 3'da — Hotspot yordamchisiga tez kirish.",
+        },
       ],
       howTo: {
         title: 'Ilovani klasterga qanday proyeksiyalash',
         steps: [
-          'Kerakli ilovani toping (mas. Maps) — kerak bo‘lsa qidiruv yoki filtrlar.',
+          "Kerakli ilovani toping (mas. Maps) — kerak bo'lsa qidiruv yoki filtrlar.",
           "Belgisiga teging → proyeksiya boshlanadi, klaster ~2 s ichida ilovaga o'tadi.",
           "O'ngdagi ko'rinish klasterdagini jonli ko'rsatadi.",
           "Matn kiritish uchun: «To'liq ekranli oyna» → manzilingizni yozing → hammasi ko'chiriladi.",
@@ -125,7 +133,7 @@ export default {
       tipsTitle: 'Maslahatlar',
       tips: [
         "💡 Avtoishga tushirish: ilovani tanlang (uzoq bosish → Avtoishga tushirish), har DashCast ochilishida avtomatik proyeksiyalansin — proyeksiya o'zi faollashadi.",
-        "💡 Sevimli tartib: karuselda tanlangan karta — avtoishga tushirish faollashtiradigan karta («Tartiblar» bo'limiga qarang).",
+        "💡 Sevimli tartib: «Klaster tartibi» tanlagichida tanlangan karta — avtoishga tushirish faollashtiradigan karta («Tartiblar» bo'limiga qarang).",
         '💡 Chetlar: ilova klasterdan chiqsa, Sozlamalar → Chetlar, gorizontal/vertikal slayderlar. Har bir ilova uchun saqlanadi.',
       ],
     },
@@ -152,12 +160,12 @@ export default {
         {
           title: '🚗 Avtomobil bilan ishga tushirish',
           text:
-            "Yoqilgan bo'lsa, DashCast mashina bilan ishga tushadi va oxirgi proyeksiyalangan ilovani tiklaydi. Aks holda uni BYD ro'yxatidan ishga tushiring.",
+            "Yoqilgan bo'lsa, DashCast mashina bilan ishga tushadi va oxirgi proyeksiyalangan ilovani (yoki sevimli tartibni) tiklaydi. Aks holda uni BYD ro'yxatidan ishga tushiring.",
         },
         {
           title: '🗂️ «Tartiblar» rejimi',
           text:
-            "Maxsus zonalar bilan ko'p ilovali proyeksiyani yoqadi (avtomatik boshqariladigan Proxy ADB Daemon talab qilinadi). Bosh ekranda karuselni va «Tartiblar» yorlig'ini ko'rsatadi.",
+            "Maxsus zonalar bilan ko'p ilovali proyeksiyani yoqadi (avtomatik boshqariladigan Proxy ADB Daemon talab qilinadi). Bosh ekranda «Klaster tartibi» tanlagichini va «Tartiblar» yorlig'ini ko'rsatadi.",
         },
         {
           title: '⭐ Avtomatik sevimli tartib',
@@ -170,13 +178,18 @@ export default {
             "Ochilganda sevimli tartibning virtual ekranlarini tayyorlaydi (ilovalarni ochmasdan) — tartibni faollashtirish keyin deyarli oniy bo'ladi.",
         },
         {
+          title: "📶 O'z SIM'imdan foydalanish (DiLink 3)",
+          text:
+            "Hotspot yordamchisi navigatsiya panelida ko'rinishini boshqaradi. Avtomobilni o'z telefoningiz/SIM ma'lumotlaringiz orqali ulasangiz, uni yoqilgan qoldiring. «Hotspot» bo'limiga qarang.",
+        },
+        {
           title: '📦 OTA yangilanishlari',
           text:
-            "DashCast har ishga tushirishda GitHub'ni tekshiradi. Beta-kanal uchun «Oldindan versiyalarni qo'shish» belgilang (yangiliklar ertaroq, barqarorlik pastroq).",
+            "DashCast har ishga tushirishda GitHub'da yangi versiyalarni tekshiradi. Yangilanishlar endi jimgina o'rnatiladi va ilovani o'zi qayta ishga tushiradi («Yangilanishlar» bo'limiga qarang). Beta-kanal uchun «Oldindan versiyalarni qo'shish» belgilang.",
         },
         {
           title: '🌐 Til',
-          text: "13 til — almashish oniy.",
+          text: '13 til — almashish oniy.',
         },
       ],
       howTo: {
@@ -205,12 +218,12 @@ export default {
         {
           title: '✏️ Zona chizish',
           text:
-            "Kanvasda (1920×720 klaster nusxasi) to'rtburchak chizish uchun barmog'ingizni torting. Dialog ochiladi: nom, pikselgacha aniq pozitsiya/o'lchamlar va bog'lanadigan ilova.",
+            "Kanvasda (klaster nusxasi) to'rtburchak chizish uchun barmog'ingizni torting. Dialog ochiladi: nom, pikselgacha aniq pozitsiya/o'lchamlar va bog'lanadigan ilova.",
         },
         {
           title: "🔗 Ilova bog'lash",
           text:
-            "Har bir zonani ilovaga bog'lash mumkin: tartib faollashganda ilova o'z zonasida avtomatik ochiladi. Ilovasiz zona bo'sh qoladi.",
+            "Har bir zonani ilovaga bog'lash mumkin: tartib faollashganda ilova o'z zonasida avtomatik ochiladi. Ilovasiz zona bo'sh qoladi — keyinroq u yerga istalgan narsani joylashtiring.",
         },
         {
           title: "✋ Ko'chirish va o'lchamini o'zgartirish",
@@ -230,7 +243,7 @@ export default {
         {
           title: '⭐ Sevimli va avtoishga tushirish',
           text:
-            "«Sevimli» tugmasi (yoki bosh ekran karuseli kartasiga teginish) «Avtomatik sevimli tartib» DashCast ishga tushganda faollashtiradigan tartibni belgilaydi — proyeksiya bilan birga.",
+            "«Sevimli» tugmasi (yoki bosh ekran tanlagich kartasiga teginish) «Avtomatik sevimli tartib» DashCast ishga tushganda faollashtiradigan tartibni belgilaydi — proyeksiya bilan birga.",
         },
       ],
       howTo: {
@@ -248,7 +261,7 @@ export default {
       tipsTitle: 'Maslahatlar',
       tips: [
         "💡 «Avtomatik sevimli tartib» (Sozlamalar) bilan birga to'liq ko'p ilovali konfiguratsiyangiz har DashCast ishga tushishida o'zi quriladi.",
-        "💡 Har bir karusel kartasining mini-ko'rinishi tartibning haqiqiy zonalarini ko'rsatadi — bir qarashda taniladi.",
+        "💡 Har bir tanlagich kartasining mini-ko'rinishi tartibning haqiqiy zonalarini ko'rsatadi — bir qarashda taniladi.",
         "💡 Ilova o'z zonasida ko'rinishdan bosh tortadimi? Ba'zi ilovalar nisbatni talab qiladi; 16:9 ga yaqinroq zonani sinab ko'ring.",
       ],
       note:
@@ -256,45 +269,139 @@ export default {
     },
 
     {
-      id: 'diagnostics',
-      screen: 'screen-4',
-      title: '5. Diagnostika',
+      id: 'hud',
+      screen: 'screen-2',
+      title: "5. HUD navigatsiya o'qlari (DiLink 3)",
       lead:
-        "Proyeksiya kutilganidek ishlamaydigan holatlar uchun ichki panel. Ko'pchilik foydalanuvchilarga u hech qachon kerak bo'lmaydi — qo'llab-quvvatlash va nosozliklarni tuzatish uchun mavjud.",
-      mockupLabel: "4-ekranni ko'rish (Diagnostika)",
-      featuresTitle: 'Mavjud vositalar',
+        "Old oyna Head-Up Display'i burilish o'qlarini qo'llab-quvvatlaydigan DiLink 3 avtomobillarida DashCast navigatsiya ilovangizdan HUD'ga burilishlar bo'yicha yo'l ko'rsatmasini chizishi mumkin — manevr o'qi va unga qadar masofa to'g'ridan-to'g'ri old oynada.",
+      mockupLabel: "2-ekranni ko'rish (Bosh)",
+      featuresTitle: 'Qanday ishlaydi',
       features: [
         {
-          title: 'Ulanish testlari',
+          title: "🧭 Maps / Waze'dan yo'l ko'rsatma",
           text:
-            'Mahalliy ADB tunnelini (localhost:5555), ClusterService holatini va klasterning virtual ekrani mavjudligini tekshiradi.',
+            "DashCast navigatsiya ilovangiz allaqachon chiqaradigan burilishlar bildirishnomasini (Google Maps, Waze) o'qiydi va manevr + masofani avtomobilning CAN shinasi orqali HUD'ga uzatadi. Qo'shimcha ilova kerak emas.",
         },
         {
-          title: 'Platforma zondlari',
+          title: "🚗 Proshivkaga bog'liq",
           text:
-            'DiLink aniqlash (2/3/4/5), displeylar inventarizatsiyasi, BYD avtomobil API instansiyalash (tezlik, energiya) va BYDAUTO ruxsatlari holati.',
+            "Faqat yangiroq DiLink 3 HUD proshivkalari o'qlarni chiza oladi. Agar sizniki chiza olmasa, o'qlar shunchaki ko'rinmaydi — DashCast HUD apparati ega bo'lmagan imkoniyatni qo'sha olmaydi.",
         },
         {
-          title: 'Ulashiladigan hisobot',
+          title: "➡️ To'g'ri yo'nalish belgilari",
           text:
-            "Qo'llab-quvvatlash uchun matn sifatida eksport qilinadigan to'liq hisobot yaratadi (tizim, displeylar, xizmatlar, ruxsatlar, demon ko'rsatkichlari).",
+            "To'g'ri / chap / o'ng manevrlar mos HUD belgisiga moslashtiriladi, burilishga qadar masofaning jonli teskari hisobi bilan.",
         },
       ],
       howTo: {
-        title: "Bu yorliqni qachon ishlatish kerak",
+        title: "HUD'da o'qlarni qanday olish kerak",
         steps: [
-          'Ilovaga tekkandan keyin klaster qora qoladi → ClusterService va virtual ekranni tekshiring.',
-          '«ADB mavjud emas» xabari → «ADB testi» tugmasi.',
-          "Qo'llab-quvvatlash hisobot so'raydi → yarating va ulashing.",
+          "DashCast'ga bildirishnomalarga kirish berilganiga ishonch hosil qiling (u birinchi foydalanishda so'raydi).",
+          "Old oyna HUD'ini yoqing va BYD HUD menyusida uni navigatsiya ko'rsatish rejimiga sozlang.",
+          "Google Maps yoki Waze'da marshrutni boshlang.",
+          "Har bir burilishga yaqinlashganingizda manevr o'qi va masofa HUD'da paydo bo'ladi.",
         ],
       },
-      note: "ℹ️ Tugmalar — aniq ko'rsatilmasa, faqat o'qish uchun testlar.",
+      note:
+        "ℹ️ HUD o'qlari DiLink 3 xususiyati va HUD proshivkangizga bog'liq. Agar hech narsa ko'rinmasa, sizning HUD'ingiz o'qlarni qo'llab-quvvatlashdan oldin chiqqan bo'lishi mumkin — bu apparat cheklovi, DashCast xatosi emas.",
     },
 
     {
-      id: 'sysinfo',
+      id: 'hotspot',
+      screen: 'screen-3',
+      title: '6. Wi-Fi Hotspot yordamchisi (DiLink 3)',
+      lead:
+        "DiLink 3'da, agar avtomobilni internetga o'z SIM'ingiz/telefoningiz orqali ulasangiz, Hotspot yordamchisi shu ulanishni faol saqlaydi, shunda navigatsiya va striming ishlashda davom etadi. U navigatsiya panelida faqat sizga tegishli bo'lganda ko'rinadi.",
+      mockupLabel: "3-ekranni ko'rish (Sozlamalar)",
+      featuresTitle: 'Imkoniyatlar',
+      features: [
+        {
+          title: '📶 Faol saqlash',
+          text:
+            "Avtomobil uyg'onganda (mas. ACC yoqilgandan keyin) Wi-Fi ulanishni qayta yoqadi, shunda uni har safar qo'lda yoqishingiz shart emas.",
+        },
+        {
+          title: '👁️ Jonli holat',
+          text:
+            "Hotspot yoqilganini va nechta mijoz ulanganini ko'rsatadi, shunda avtomobil haqiqatan ham onlayn ekanini tasdiqlashingiz mumkin.",
+        },
+        {
+          title: "⚙️ Faqat foydali bo'lganda ko'rinadi",
+          text:
+            "Hotspot bandi faqat DiLink 3'da va faqat Sozlamalarda «O'z SIM'imdan foydalanish» yoqilganda ko'rinadi. Boshqa konfiguratsiyalarda u yashirin qoladi.",
+        },
+      ],
+      howTo: {
+        title: 'Undan qanday foydalanish kerak',
+        steps: [
+          "Sozlamalar → «O'z SIM'imdan foydalanish» yoqilganiga ishonch hosil qiling.",
+          "Navigatsiya panelidan «Hotspot»ni oching.",
+          "Ulanishni boshlang / tasdiqlang — holat uning yoqilganini ko'rsatadi.",
+          "Avtomobil keyingi safar uyg'onganda u o'zini qayta yoqadi.",
+        ],
+      },
+      note:
+        "ℹ️ Bu yordamchi o'z ma'lumotlaringiz orqali ulangan DiLink 3 avtomobillari uchun. Agar avtomobilingizda o'zining o'rnatilgan ma'lumotlar tarifi bo'lsa, u sizga kerak emas.",
+    },
+
+    {
+      id: 'bugreport',
+      screen: 'screen-6',
+      title: '7. Muammo haqida xabar berish (xato haqida xabar beruvchi)',
+      lead:
+        "Klaviatorasiz, avtomobil ichidagi xato haqida xabar beruvchi. Uch teginishda nima noto'g'ri ketganini tanlaysiz; DashCast chegaralangan diagnostik suratni (jurnallar + tizim holati) oladi va uni to'g'ridan-to'g'ri qo'llab-quvvatlash kanaliga yuboradi — yozishsiz, kabellarsiz.",
+      mockupLabel: "6-ekranni ko'rish (Xabar)",
+      featuresTitle: 'Qanday ishlaydi',
+      features: [
+        {
+          title: '1️⃣ Toifa',
+          text:
+            "Qaysi soha zararlanganini tanlang: oyna, ilova, ovoz, ulanish, muzlash, HUD… Oltita katta plitka, faqat teginish.",
+        },
+        {
+          title: '2️⃣ Ilova',
+          text:
+            "DashCast hozir klasterdagi ilovani avtomatik aniqlaydi va uni taklif qiladi, shuningdek «Aniq ilova yo'q» va «Boshqa».",
+        },
+        {
+          title: '3️⃣ Muammo',
+          text:
+            "Qisqa ro'yxatdan eng yaqin alomatni tanlang. Ixtiyoriy erkin matn maydoni xohlasangiz tafsilot qo'shishga imkon beradi — lekin u hech qachon talab qilinmaydi.",
+        },
+        {
+          title: '📎 Avtomatik diagnostika',
+          text:
+            "Hisobot so'nggi jurnallarni va muammo paytidagi tizim/klaster holatini birlashtiradi — aynan qo'llab-quvvatlashga kerak bo'lgan narsa, siz uchun olib qo'yilgan.",
+        },
+        {
+          title: '🚀 Bir teginishda yuborish',
+          text:
+            "Agar qo'llab-quvvatlash kanali sozlangan bo'lsa, hisobot to'g'ridan-to'g'ri yuklanadi; aks holda DashCast Android ulashish menyusini ochadi, shunda uni Telegram, e-mail yoki GitHub orqali yuborishingiz mumkin.",
+        },
+        {
+          title: '📺 Istalgan joydan',
+          text:
+            "Suzuvchi 📺 tugmasi va navigatsiya paneli ikkalasi ham xabar beruvchini ochadi, shunda boshqa ilova proyeksiyalangan paytda ham hisobot yuborishingiz mumkin.",
+        },
+      ],
+      howTo: {
+        title: 'Hisobotni qanday yuborish kerak',
+        steps: [
+          'Xato haqida xabar beruvchini oching (navigatsiya paneli yoki suzuvchi tugma).',
+          'Muammoga mos toifaga teging.',
+          "Ilovani tasdiqlang (yoki «Aniq ilova yo'q» tanlang).",
+          "Eng yaqin muammoni tanlang; foydali bo'lsa izoh qo'shing.",
+          "«Yuborish»ga teging — diagnostika avtomatik ravishda qo'llab-quvvatlashga jo'naydi.",
+        ],
+      },
+      note:
+        "🔒 Hisobot faqat DashCast jurnallarini va texnik qurilma/klaster holatini o'z ichiga oladi — kontaktlarsiz, GPS pozitsiyasisiz, ilova mazmunisiz.",
+    },
+
+    {
+      id: 'system',
       screen: 'screen-5',
-      title: '6. Tizim hisoboti',
+      title: '8. Tizim hisoboti',
       lead:
         "Faqat o'qish uchun panel: versiyalar, aniqlangan displeylar va DashCast xizmatlarining jonli holati. Biror narsa noto'g'ri ko'ringanda tekshiriladigan birinchi ekran.",
       mockupLabel: "5-ekranni ko'rish (Tizim)",
@@ -303,12 +410,12 @@ export default {
         {
           title: '🖥️ Displeylar',
           text:
-            'Bosh ekran (ruxsat, zichlik) va klasterning virtual displeyi (1920×720) real vaqtdagi holati bilan.',
+            "Bosh ekran (ruxsat, zichlik) va klasterning virtual displeyi real vaqtdagi holati bilan.",
         },
         {
           title: '⚙️ Xizmatlar',
           text:
-            "ClusterService (proyeksiya), MirrorDaemon (oyna), Proxy ADB Daemon (imtiyozli operatsiyalar), AdbLocalClient (ADB tunneli) — har biri yashil/qizil nuqta va qayta ishga tushirish tugmasi bilan.",
+            "ClusterService (proyeksiya), MirrorDaemon (oyna), Proxy ADB Daemon (imtiyozli operatsiyalar), AdbLocalClient (ADB tunneli) — har biri yashil/qizil nuqta va to'xtaganda qayta ishga tushirish tugmasi bilan.",
         },
         {
           title: '📱 Versiyalar',
@@ -324,16 +431,16 @@ export default {
       tipsTitle: 'Maslahatlar',
       tips: [
         "💡 «Tartiblar» rejimi uchun «Proxy ADB Daemon» yashil (RUN) bo'lishi kerak — aks holda qayta ishga tushirish uchun qatoriga teging.",
-        "💡 To'liq hisobotni shu ekrandan eksport qilib, xato haqidagi xabarga qo'shish mumkin.",
+        "💡 Biror narsa noto'g'ri ko'rinsa, avval shu ekranni tekshiring, keyin xato haqida xabar beruvchidan hisobot yuboring.",
       ],
     },
 
     {
       id: 'journal',
       screen: 'screen-6',
-      title: '7. Jurnal',
+      title: '9. Jurnal',
       lead:
-        "DashCast ichki jurnali: barcha muhim amallar (proyeksiyalar, tiklashlar, ADB xatolari, yangilanishlar) uzluksiz qayd etiladi. Kutilmagan xatti-harakatni tushunish yoki qo'llab-quvvatlashga hisobot berish uchun foydali.",
+        "DashCast ichki jurnali: barcha muhim amallar (proyeksiyalar, tiklashlar, ADB xatolari, yangilanishlar) uzluksiz qayd etiladi. Kutilmagan xatti-harakatni tushunish uchun foydali; shuningdek bu xato haqida xabar beruvchi siz uchun biriktiradigan ma'lumotdir.",
       mockupLabel: "6-ekranni ko'rish (Jurnal)",
       featuresTitle: 'Imkoniyatlar',
       features: [
@@ -359,12 +466,10 @@ export default {
         },
       ],
       howTo: {
-        title: 'Xato haqida xabar yuborish',
+        title: "Xato haqida xabar beruvchini afzal ko'ring",
         steps: [
-          'Muammoni takrorlang.',
-          'Jurnal → «Ulashish»ni oching.',
-          'Kanalingizni tanlang (Telegram, e-mail, GitHub Issues).',
-          "Biriktirilgan fayl izni va kontekstni o'z ichiga oladi (versiya, model, proshivka).",
+          "Ko'pchilik muammolar uchun xato haqida xabar beruvchidan foydalaning (7-bo'lim) — u jurnalni va tizim holatini avtomatik oladi.",
+          "Jurnal ekrani izni o'zingiz o'qishni yoki faqat xom jurnalni ulashishni xohlaganingizda shu yerda.",
         ],
       },
       note:
@@ -373,12 +478,12 @@ export default {
   ],
 
   faq: {
-    title: "8. FAQ — Ko'p so'raladigan savollar",
+    title: "10. FAQ — Ko'p so'raladigan savollar",
     items: [
       {
         question: '❓ Ilovaga tekkanimda klaster qora qoladi',
         answer:
-          "Uchta mumkin sabab: (1) simsiz ADB o'chirilgan — BYD Sozlamalar → Dasturchi tekshiring. (2) To'xtagan xizmat — «Tizim» yorlig'i, qizil qatorni qayta ishga tushiring. (3) Ilova hozirgina qulagan — belgisiga qayta teging.",
+          "Uchta mumkin sabab: (1) simsiz ADB o'chirilgan — BYD Sozlamalar → Dasturchi tekshiring. (2) To'xtagan xizmat — «Tizim» ekrani, qizil qatorni qayta ishga tushiring. (3) Ilova hozirgina qulagan — belgisiga qayta teging. Hali ham qotib turibdimi? Xato haqida xabar beruvchidan hisobot yuboring.",
       },
       {
         question: '❓ Tasvir klasterdan chiqadi / kesilgan',
@@ -393,7 +498,22 @@ export default {
       {
         question: '❓ Sevimli tartibim ishga tushganda ochilmaydi',
         answer:
-          "Sozlamalardagi uch shartni tekshiring: «Tartiblar rejimi» yoqilgan, «Avtomatik sevimli tartib» yoqilgan va tartib ⭐ sevimli deb belgilangan (bosh ekran karuseli yoki «Tartiblar» yorlig'idagi «Sevimli» tugmasi). Sovuq ishga tushirishda 6–8 s kuting.",
+          "Sozlamalardagi uch shartni tekshiring: «Tartiblar rejimi» yoqilgan, «Avtomatik sevimli tartib» yoqilgan va tartib ⭐ sevimli deb belgilangan (bosh ekran tanlagichi yoki «Tartiblar» yorlig'idagi «Sevimli» tugmasi). Sovuq ishga tushirishda 6–8 s kuting.",
+      },
+      {
+        question: "❓ HUD'imda navigatsiya o'qlari yo'q",
+        answer:
+          "HUD o'qlari DiLink 3 xususiyati va ularni chiza oladigan HUD proshivkasini talab qiladi. Bildirishnomalarga kirish berilganiga, HUD navigatsiya ko'rsatish rejimida yoqilganiga va Maps/Waze'da marshrut ishlab turganiga ishonch hosil qiling. Agar hech narsa ko'rinmasa, HUD proshivkangiz o'qlarni qo'llab-quvvatlashdan oldin chiqqan bo'lishi mumkin — bu apparat cheklovi, xato emas.",
+      },
+      {
+        question: '❓ Menga Hotspot yordamchisi kerakmi?',
+        answer:
+          "Faqat DiLink 3'da, agar avtomobilni o'z SIM'ingiz/telefon ulanishingiz orqali onlayn qilsangiz. U shu ulanishni uyg'onishlar davomida faol saqlaydi. Agar avtomobilingizda o'zining ma'lumotlar tarifi bo'lsa, e'tibor bermang — «O'z SIM'imdan foydalanish» yoqilmagan bo'lsa, u yashirin qoladi.",
+      },
+      {
+        question: "❓ Yangilanishlar endi qanday o'rnatiladi?",
+        answer:
+          "DashCast har ishga tushirishda GitHub'ni tekshiradi. Yangilanish yuklab olinganda u jimgina o'rnatiladi va ilovani o'zi qayta ishga tushiradi — «O'rnatilsinmi?» so'rovi yo'q. Bu mumkin bo'lmagan avtomobilda u odatdagi tizim o'rnatuvchisiga qaytadi. Bu xususiyatga ega versiyaga o'tganingizdan keyingi eng birinchi yangilanish hali ham bir marta so'rashi mumkin.",
       },
       {
         question: "❓ DashCast 12 V akkumulyatorni o'tirg'izadimi?",
@@ -403,7 +523,7 @@ export default {
       {
         question: '❓ Klasterda qaysi ilovalar ishlaydi?',
         items: [
-          '✅ Navigatsiya: Google Maps, Waze, OsmAnd, ABRP, Magic Earth.',
+          '✅ Navigatsiya: Google Maps, Waze, Yandex Navi, OsmAnd, ABRP, Magic Earth.',
           "✅ Media: Spotify, YouTube, YouTube Music (gorizontal afzal).",
           '✅ Tizim: kamera, ob-havo, kalendar.',
           "⚠️ DRM ilovalari (Netflix, Disney+, Prime Video): virtual ekranda ko'rsatishdan bosh tortishi mumkin — Android cheklovi, DashCast emas.",
@@ -415,13 +535,13 @@ export default {
           "Barqaror kanal (standart) nashrdan oldin avtomobilda sinaladi. Beta-kanal (Sozlamalar → Yangilanishlar → «Oldindan versiyalarni qo'shish») yangiliklarni kompilyatsiya qilinishi bilanoq oladi — erta sinash uchun foydali, vaqtinchalik regressiyalar xavfi bilan.",
       },
       {
-        question: '❓ Hissa qo\'shmoqchiman yoki xato haqida xabar bermoqchiman',
+        question: "❓ Hissa qo'shmoqchiman yoki xato haqida xabar bermoqchiman",
         answer:
-          "GitHub: https://github.com/Kiroha/byd-dashcast — xatolar uchun Issues, savollar uchun Discussions. Diagnostikani tezlashtirish uchun Jurnal eksportini qo'shing.",
+          "Eng tez yo'l uchun ilova ichidagi xato haqida xabar beruvchidan foydalaning (u siz uchun diagnostikani biriktiradi). Kod va xususiyat so'rovlari uchun: GitHub https://github.com/Kiroha/byd-dashcast — xatolar uchun Issues, savollar uchun Discussions.",
       },
     ],
   },
 
   footer:
-    'DashCast — MIT litsenziyasi ostida tarqatiladigan ochiq kodli loyiha. BYD Auto Co., Ltd. bilan aloqasi yo\'q.',
+    "DashCast — MIT litsenziyasi ostida tarqatiladigan ochiq kodli loyiha. BYD Auto Co., Ltd. bilan aloqasi yo'q.",
 };

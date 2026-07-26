@@ -4,26 +4,29 @@ export default {
   name: 'Türkçe',
   title: 'DashCast — Kullanım Kılavuzu',
   manualName: 'Kullanım Kılavuzu',
-  meta: 'v1.4.x · BYD Seal EU · DiLink 3.0 · Android 10',
+  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 ve DiLink 5 · Android 10–13',
   tocTitle: '📋 İçindekiler',
 
   intro: {
     title: '0. Giriş',
     lead:
-      'DashCast, BYD merkez ekranınızdaki herhangi bir Android uygulamasını gösterge paneline (dijital kümeye) yansıtır. Maps, Waze, Spotify veya ABRP doğrudan direksiyonun arkasında — Düzenler modu ile aynı anda birden fazla uygulama, her biri kendi bölgesinde. Hepsi sistemi değiştirmeden.',
+      'DashCast, BYD merkez ekranınızdaki herhangi bir Android uygulamasını gösterge paneline (direksiyonun arkasındaki dijital gösterge ekranı) gösterir. Maps, Waze, Spotify veya ABRP tam önünüzde — ve Düzenler modu ile aynı anda birden fazla uygulama, her biri kendi bölgesinde. Normal bir uygulama gibi kurulur ve sistemde hiçbir şeyi değiştirmez.',
     bullets: [
-      '✅ BYD Seal EU ile uyumlu (DiLink 3.0, firmware Di3.0 / 6125F).',
-      '✅ Sistem değişikliği yok: DashCast normal bir uygulama gibi kurulur.',
+      '✅ DiLink 3 (Seal EU / 6125F) ve DiLink 5 (daha yeni BYD ünitelerinde) çalışır.',
+      '✅ Sistem değişikliği yok: DashCast diğer uygulamalar gibi kurulur.',
       '✅ TCP üzerinden yerel ADB — ilk yetkilendirmeden sonra bilgisayar gerekmez.',
-      '✅ 13 arayüz dili, ilk açılışta seçilir.',
-      '✅ Gerçek zamanlı dokunmatik ayna: kümeyi merkez ekrandan kontrol edin.',
+      '✅ 13 arayüz dili, ilk açılışta seçilir, istediğiniz zaman değiştirilir.',
+      '✅ Gerçek zamanlı dokunmatik ayna: kümeyi merkez ekrandan yönetin.',
       '✅ Düzenler modu: kümede yan yana birden fazla uygulama, parmakla çizilen bölgeler.',
       '✅ Otomatik başlatma: DashCast açılır açılmaz projeksiyon + uygulama (veya favori düzen).',
       '✅ Kenar boşlukları (overscan) uygulama başına kaydedilir.',
-      '✅ Yerleşik OTA güncellemeleri (isteğe bağlı beta kanalı).',
+      '✅ DiLink 3 ön cam HUD\'unda adım adım dönüş okları (desteklenen firmware).',
+      '✅ DiLink 3 için yerleşik Wi-Fi hotspot yardımcısı (kendi SIM\'inizi kullanın).',
+      '✅ Klavyesiz hata bildirici, tanılamayı desteğe göndermek için tek dokunuş.',
+      '✅ Sessizce kurulan ve uygulamayı yeniden başlatan otomatik OTA güncellemeleri.',
     ],
     note:
-      '💡 Tek önkoşul: BYD Ayarlar → Geliştirici bölümünde kablosuz ADB hata ayıklamayı etkinleştirin. İlk açılışta «Hata ayıklamaya izin verilsin mi?» penceresi görünür — «Her zaman izin ver» işaretleyin ve onaylayın. Bunu bir daha asla yapmanız gerekmez.',
+      '💡 Tek önkoşul: BYD Ayarlar → Geliştirici bölümünde kablosuz ADB hata ayıklamayı etkinleştirin. İlk açılışta «Hata ayıklamaya izin verilsin mi?» penceresi görünür — «Bu bilgisayardan her zaman izin ver» işaretleyin ve onaylayın. Bunu bir daha asla yapmanız gerekmez.',
   },
 
   sections: [
@@ -67,7 +70,7 @@ export default {
       screen: 'screen-2',
       title: '2. Ana ekran — Uygulamalar ve Küme',
       lead:
-        'DashCast\'in merkez ekranı. Solda: arama, filtreler ve favorilerle tüm uygulamalarınız. Sağda: kümenin gerçek zamanlı önizlemesi, Tam ekran ayna / Projeksiyonu durdur düğmeleri ve favori çoklu uygulama düzeninizi seçmek için düzen karuseli.',
+        'DashCast\'in ana ekranı. Solda: arama, filtreler ve favorilerle tüm uygulamalarınız, ayrıca yan gezinme çubuğu. Sağda: gerçek zamanlı küme önizlemesi, Tam ekran ayna / Projeksiyonu durdur düğmeleri ve — Düzenler modunda — daraltılabilir «Küme düzeni» seçici.',
       mockupLabel: 'Ekran 2\'yi gör (Ana)',
       featuresTitle: 'Yapabileceğiniz her şey',
       features: [
@@ -89,7 +92,7 @@ export default {
         {
           title: '🚦 Gerçek zamanlı küme önizlemesi',
           text:
-            'Sağ panel kümeyi canlı yansıtır. Önizlemedeki dokunuşlarınız yansıtılan uygulamaya iletilir — kaydırma, yakınlaştırma, klavye, her şey çalışır.',
+            'Sağ panel, gösterge panelinde olanı canlı yansıtır. Önizlemedeki dokunuşlarınız yansıtılan uygulamaya iletilir — kaydırma, yakınlaştırma, klavye, her şey çalışır.',
         },
         {
           title: '👁️ Tam ekran ayna',
@@ -102,14 +105,19 @@ export default {
             'Projeksiyonu temizce sonlandırır ve orijinal BYD panelini (hız, göstergeler, ADAS) Ayarlarda tanımlanan boyutla geri yükler.',
         },
         {
-          title: '🗂️ Düzen karuseli',
+          title: '🗂️ Küme düzeni seçici (varsayılan olarak daraltılmış)',
           text:
-            'Düğmelerin altında her kart, bir düzenin bölgelerinin mini önizlemesini gösterir. Bir karta dokunarak favori düzen yapın (yıldız + mavi kenarlık). «Serbest mod» düzenleri devre dışı bırakır; «＋ Yönet» düzenleyiciyi açar.',
+            'Düzenler modunda düğmelerin altında kompakt bir «KÜME DÜZENİ» başlığı bulunur. Genişletmek için dokunun: «Düzen uygulamalarını başlat», ayrıca kaydedilen her düzen için bir kart (Serbest mod / hazır ayarlarınız / ＋ Yönet). Canlı önizleme tam yüksekliğini koruması için varsayılan olarak daraltılmıştır.',
         },
         {
           title: '📺 Yüzen düğme',
           text:
             'Bir 📺 düğmesi diğer uygulamaların üzerinde kalır: dokunma = aynayı aç, uzun basma = son yansıtılan uygulamalar arasında hızlı geçiş.',
+        },
+        {
+          title: '🧭 Yan gezinme çubuğu',
+          text:
+            'Uygulamalar, Ayarlar, Sistem, Günlük, hata bildirici ve — kendi SIM\'inizle DiLink 3\'te — Hotspot yardımcısına hızlı erişim.',
         },
       ],
       howTo: {
@@ -125,7 +133,7 @@ export default {
       tipsTitle: 'İpuçları',
       tips: [
         '💡 Otomatik başlatma: bir uygulama seçin (uzun basma → Otomatik başlatma), her DashCast açılışında otomatik yansıtılsın — projeksiyon kendiliğinden etkinleşir.',
-        '💡 Favori düzen: karuselde seçilen kart, otomatik başlatmanın etkinleştireceği karttır (Düzenler bölümüne bakın).',
+        '💡 Favori düzen: «Küme düzeni» seçicide seçilen kart, otomatik başlatmanın etkinleştireceği karttır (Düzenler bölümüne bakın).',
         '💡 Kenar boşlukları: uygulama kümeden taşıyorsa, Ayarlar → Kenar boşlukları, yatay/dikey kaydırıcılar. Uygulama başına kaydedilir.',
       ],
     },
@@ -152,12 +160,12 @@ export default {
         {
           title: '🚗 Araçla başlat',
           text:
-            'Etkinse, DashCast arabayla başlar ve son yansıtılan uygulamayı geri yükler. Aksi halde BYD çekmecesinden başlatın.',
+            'Etkinse, DashCast arabayla başlar ve son yansıtılan uygulamayı (veya favori düzeni) geri yükler. Aksi halde BYD çekmecesinden başlatın.',
         },
         {
           title: '🗂️ Düzenler modu',
           text:
-            'Özel bölgelerle çoklu uygulama projeksiyonunu etkinleştirir (otomatik yönetilen Proxy ADB Daemon gerektirir). Ana ekranda karuseli ve Düzenler sekmesini gösterir.',
+            'Özel bölgelerle çoklu uygulama projeksiyonunu etkinleştirir (otomatik yönetilen Proxy ADB Daemon gerektirir). Ana ekranda «Küme düzeni» seçiciyi ve Düzenler sekmesini gösterir.',
         },
         {
           title: '⭐ Otomatik favori düzen',
@@ -170,9 +178,14 @@ export default {
             'Favori düzenin sanal ekranlarını açılışta hazırlar (uygulamaları başlatmadan) — düzenin etkinleştirilmesi sonra neredeyse anlıktır.',
         },
         {
+          title: '📶 Kendi SIM\'imi kullan (DiLink 3)',
+          text:
+            'Hotspot yardımcısının gezinme çubuğunda görünüp görünmeyeceğini kontrol eder. Arabayı kendi telefon/SIM verinizle bağlıyorsanız açık bırakın. Hotspot bölümüne bakın.',
+        },
+        {
           title: '📦 OTA güncellemeleri',
           text:
-            'DashCast her açılışta GitHub\'ı kontrol eder. Beta kanalı için «Ön sürümleri dahil et» işaretleyin (yenilikler daha erken, daha az kararlılık).',
+            'DashCast her açılışta yeni sürümler için GitHub\'ı kontrol eder. Güncellemeler artık sessizce kurulur ve uygulamayı kendiliğinden yeniden başlatır (Güncellemeler bölümüne bakın). Beta kanalı için «Ön sürümleri dahil et» işaretleyin.',
         },
         {
           title: '🌐 Dil',
@@ -205,12 +218,12 @@ export default {
         {
           title: '✏️ Bölge çizme',
           text:
-            'Tuval üzerinde (1920×720 kümenin kopyası) parmağınızı sürükleyerek bir dikdörtgen çizin. Bir pencere açılır: ad, piksel hassasiyetinde konum/boyutlar ve bağlanacak uygulama.',
+            'Tuval üzerinde (kümenin bir kopyası) parmağınızı sürükleyerek bir dikdörtgen çizin. Bir pencere açılır: ad, piksel hassasiyetinde konum/boyutlar ve bağlanacak uygulama.',
         },
         {
           title: '🔗 Uygulama bağlama',
           text:
-            'Her bölge bir uygulamaya bağlanabilir: düzen etkinleştiğinde uygulama kendi bölgesinde otomatik başlar. Uygulamasız bölge serbest kalır.',
+            'Her bölge bir uygulamaya bağlanabilir: düzen etkinleştiğinde uygulama kendi bölgesinde otomatik başlar. Uygulamasız bir bölge serbest kalır — sonra oraya istediğinizi yerleştirin.',
         },
         {
           title: '✋ Taşıma ve yeniden boyutlandırma',
@@ -220,7 +233,7 @@ export default {
         {
           title: '✏️ Mevcut bölgeyi düzenleme',
           text:
-            'Bir bölgeye dokunun (tuvalde veya alttaki çipinde): yeniden adlandırın, geometrisini ayarlayın, bağlı uygulamayı değiştirin veya silin. Uzun basma = hızlı silme.',
+            'Bir bölgeye dokunun (tuvalde veya alttaki çipinde): yeniden adlandırın, geometrisini ayarlayın, bağlı uygulamayı değiştirin veya silin. Bir bölgeye uzun basma = hızlı silme.',
         },
         {
           title: '💾 Kaydedilen düzenler',
@@ -230,7 +243,7 @@ export default {
         {
           title: '⭐ Favori ve otomatik başlatma',
           text:
-            '«Favori» düğmesi (veya ana ekran karuselindeki karta dokunma), «Otomatik favori düzen»in DashCast açılışında etkinleştireceği düzeni belirler — projeksiyon dahil.',
+            '«Favori» düğmesi (veya ana ekran seçici kartına dokunma), «Otomatik favori düzen»in DashCast açılışında etkinleştireceği düzeni belirler — projeksiyon dahil.',
         },
       ],
       howTo: {
@@ -248,7 +261,7 @@ export default {
       tipsTitle: 'İpuçları',
       tips: [
         '💡 «Otomatik favori düzen» (Ayarlar) ile birlikte, eksiksiz çoklu uygulama kurulumunuz her DashCast açılışında kendiliğinden kurulur.',
-        '💡 Her karusel kartının mini önizlemesi düzenin gerçek bölgelerini gösterir — bir bakışta tanınır.',
+        '💡 Her seçici kartındaki mini önizleme düzenin gerçek bölgelerini gösterir — bir bakışta tanınır.',
         '💡 Bir uygulama bölgesinde görünmeyi reddediyor mu? Bazı uygulamalar en-boy oranını dayatır; 16:9\'a daha yakın bir bölge deneyin.',
       ],
       note:
@@ -256,45 +269,139 @@ export default {
     },
 
     {
-      id: 'diagnostics',
-      screen: 'screen-4',
-      title: '5. Tanılama',
+      id: 'hud',
+      screen: 'screen-2',
+      title: '5. HUD navigasyon okları (DiLink 3)',
       lead:
-        'Projeksiyonun beklendiği gibi çalışmadığı durumlar için dahili panel. Çoğu kullanıcının asla ihtiyacı olmayacak — destek ve hata ayıklama için var.',
-      mockupLabel: 'Ekran 4\'ü gör (Tanılama)',
-      featuresTitle: 'Mevcut araçlar',
+        'Ön cam Head-Up Display\'i dönüş oklarını destekleyen DiLink 3 araçlarında DashCast, navigasyon uygulamanızdan adım adım yönlendirmeyi HUD üzerinde çizebilir — manevra oku ve ona olan mesafe, doğrudan ön camda.',
+      mockupLabel: 'Ekran 2\'yi gör (Ana)',
+      featuresTitle: 'Nasıl çalışır',
       features: [
         {
-          title: 'Bağlantı testleri',
+          title: '🧭 Maps / Waze\'den yönlendirme',
           text:
-            'Yerel ADB tünelini (localhost:5555), ClusterService durumunu ve kümenin sanal ekranının varlığını kontrol eder.',
+            'DashCast, navigasyon uygulamanızın zaten gönderdiği adım adım bildirimi okur (Google Maps, Waze) ve manevra + mesafeyi arabanın CAN veri yolu üzerinden HUD\'a iletir. Ek bir uygulama gerekmez.',
         },
         {
-          title: 'Platform sondaları',
+          title: '🚗 Firmware bağımlı',
           text:
-            'DiLink algılama (2/3/4/5), ekran envanteri, BYD araç API örnekleme (hız, enerji) ve BYDAUTO izin durumu.',
+            'Yalnızca daha yeni DiLink 3 HUD firmware\'leri ok çizebilir. Sizinki çizemiyorsa oklar basitçe görünmez — DashCast, HUD donanımının sahip olmadığı bir yeteneği ekleyemez.',
         },
         {
-          title: 'Paylaşılabilir rapor',
+          title: '➡️ Doğru yön simgeleri',
           text:
-            'Destek için metin olarak dışa aktarılabilir eksiksiz bir rapor üretir (sistem, ekranlar, hizmetler, izinler, daemon metrikleri).',
+            'Düz / sol / sağ manevralar, dönüşe kalan canlı geri sayım mesafesiyle birlikte eşleşen HUD simgesine karşılık gelir.',
         },
       ],
       howTo: {
-        title: 'Bu sekme ne zaman kullanılır',
+        title: 'HUD\'da oklar nasıl elde edilir',
         steps: [
-          'Uygulamaya dokunduktan sonra küme siyah kalıyor → ClusterService ve sanal ekranı kontrol edin.',
-          'Uygulama «ADB kullanılamıyor» bildiriyor → «ADB testi» düğmesi.',
-          'Destek rapor istiyor → oluşturun ve paylaşın.',
+          'DashCast\'e bildirim erişiminin verildiğinden emin olun (ilk kullanımda ister).',
+          'Ön cam HUD\'unu açın ve BYD HUD menüsünde bir navigasyon görüntüleme moduna ayarlayın.',
+          'Google Maps veya Waze\'de bir rota başlatın.',
+          'Her dönüşe yaklaştıkça manevra oku ve mesafe HUD\'da görünür.',
         ],
       },
-      note: 'ℹ️ Düğmeler, açıkça belirtilmedikçe salt okunur testlerdir.',
+      note:
+        'ℹ️ HUD okları bir DiLink 3 özelliğidir ve HUD firmware\'inize bağlıdır. Hiçbir şey görünmüyorsa HUD\'unuz ok desteğinden daha eski olabilir — bu bir donanım sınırıdır, DashCast hatası değil.',
     },
 
     {
-      id: 'sysinfo',
+      id: 'hotspot',
+      screen: 'screen-3',
+      title: '6. Wi-Fi Hotspot yardımcısı (DiLink 3)',
+      lead:
+        'DiLink 3\'te, arabayı internete kendi SIM\'iniz/telefonunuz üzerinden bağlıyorsanız, Hotspot yardımcısı navigasyon ve akışın çalışmaya devam etmesi için bu bağlantıyı canlı tutar. Yalnızca sizin için ilgili olduğunda gezinme çubuğunda görünür.',
+      mockupLabel: 'Ekran 3\'ü gör (Ayarlar)',
+      featuresTitle: 'Özellikler',
+      features: [
+        {
+          title: '📶 Canlı tutma',
+          text:
+            'Araba uyandığında (örn. ACC açıldıktan sonra) Wi-Fi bağlantısını yeniden etkinleştirir, böylece her sürüşte manuel olarak yeniden açmanız gerekmez.',
+        },
+        {
+          title: '👁️ Canlı durum',
+          text:
+            'Hotspot\'un açık olup olmadığını ve kaç istemcinin bağlı olduğunu gösterir, böylece arabanın gerçekten çevrimiçi olduğunu doğrulayabilirsiniz.',
+        },
+        {
+          title: '⚙️ Yalnızca yararlı olduğunda gösterilir',
+          text:
+            'Hotspot girişi yalnızca DiLink 3\'te ve yalnızca Ayarlarda «Kendi SIM\'imi kullan» etkinken görünür. Diğer kurulumlarda gizli kalır.',
+        },
+      ],
+      howTo: {
+        title: 'Nasıl kullanılır',
+        steps: [
+          'Ayarlar → «Kendi SIM\'imi kullan»ın etkin olduğundan emin olun.',
+          'Gezinme çubuğundan «Hotspot»u açın.',
+          'Bağlantıyı başlatın / onaylayın — durum açık olduğunu gösterir.',
+          'Araba bir sonraki uyanışında kendini yeniden etkinleştirir.',
+        ],
+      },
+      note:
+        'ℹ️ Bu yardımcı, kendi verinizle bağlanan DiLink 3 araçları içindir. Arabanızın kendi yerleşik veri planı varsa buna ihtiyacınız yoktur.',
+    },
+
+    {
+      id: 'bugreport',
+      screen: 'screen-6',
+      title: '7. Bir sorun bildir (hata bildirici)',
+      lead:
+        'Klavyesiz, araç içi bir hata bildirici. Üç dokunuşta neyin yanlış gittiğini seçersiniz; DashCast sınırlı bir tanılama anlık görüntüsü (günlükler + sistem durumu) yakalar ve doğrudan destek kanalına gönderir — yazmak yok, kablo yok.',
+      mockupLabel: 'Ekran 6\'yı gör (Rapor)',
+      featuresTitle: 'Nasıl çalışır',
+      features: [
+        {
+          title: '1️⃣ Kategori',
+          text:
+            'Hangi alanın etkilendiğini seçin: ayna, bir uygulama, ses, bağlantı, donma, HUD… Altı büyük kutu, yalnızca dokunma.',
+        },
+        {
+          title: '2️⃣ Uygulama',
+          text:
+            'DashCast, kümede o anda bulunan uygulamayı otomatik algılar ve sunar, ayrıca «Belirli bir uygulama yok» ve «Diğer».',
+        },
+        {
+          title: '3️⃣ Sorun',
+          text:
+            'Kısa bir listeden en yakın belirtiyi seçin. İsteğe bağlı bir serbest metin kutusu, isterseniz ayrıntı eklemenize olanak tanır — ama asla zorunlu değildir.',
+        },
+        {
+          title: '📎 Otomatik tanılama',
+          text:
+            'Rapor, son günlükleri ve sorun anındaki sistem/küme durumunu bir araya getirir — desteğin tam olarak ihtiyaç duyduğu şey, sizin için yakalanır.',
+        },
+        {
+          title: '🚀 Tek dokunuşla gönder',
+          text:
+            'Bir destek kanalı yapılandırılmışsa rapor doğrudan yüklenir; aksi halde DashCast, Telegram, e-posta veya GitHub ile göndermeniz için Android paylaşım menüsünü açar.',
+        },
+        {
+          title: '📺 Her yerden',
+          text:
+            'Yüzen 📺 düğmesi ve gezinme çubuğu bildiriciyi açar, böylece başka bir uygulama yansıtılırken bile rapor gönderebilirsiniz.',
+        },
+      ],
+      howTo: {
+        title: 'Nasıl rapor gönderilir',
+        steps: [
+          'Hata bildiriciyi açın (gezinme çubuğu veya yüzen düğme).',
+          'Soruna uyan kategoriye dokunun.',
+          'Uygulamayı onaylayın (veya «Belirli bir uygulama yok»u seçin).',
+          'En yakın sorunu seçin; yararlıysa bir not ekleyin.',
+          'Gönder\'e dokunun — tanılama otomatik olarak desteğe gider.',
+        ],
+      },
+      note:
+        '🔒 Rapor yalnızca DashCast günlüklerini ve teknik cihaz/küme durumunu içerir — kişiler yok, GPS konumu yok, uygulama içeriği yok.',
+    },
+
+    {
+      id: 'system',
       screen: 'screen-5',
-      title: '6. Sistem raporu',
+      title: '8. Sistem raporu',
       lead:
         'Salt okunur panel: sürümler, algılanan ekranlar ve DashCast hizmetlerinin canlı durumu. Bir şey anormal göründüğünde bakılacak ilk ekran.',
       mockupLabel: 'Ekran 5\'i gör (Sistem)',
@@ -303,7 +410,7 @@ export default {
         {
           title: '🖥️ Ekranlar',
           text:
-            'Ana ekran (çözünürlük, yoğunluk) ve kümenin sanal ekranı (1920×720), gerçek zamanlı durumla.',
+            'Ana ekran (çözünürlük, yoğunluk) ve kümenin sanal ekranı, gerçek zamanlı durumuyla.',
         },
         {
           title: '⚙️ Hizmetler',
@@ -324,16 +431,16 @@ export default {
       tipsTitle: 'İpuçları',
       tips: [
         '💡 Düzenler modu için «Proxy ADB Daemon» yeşil (RUN) olmalı — değilse satırına dokunarak yeniden başlatın.',
-        '💡 Tam rapor, bir hata bildirimini desteklemek için bu ekrandan dışa aktarılabilir.',
+        '💡 Bir şey anormal görünüyorsa önce bu ekranı kontrol edin, sonra hata bildiriciden bir rapor gönderin.',
       ],
     },
 
     {
       id: 'journal',
       screen: 'screen-6',
-      title: '7. Günlük',
+      title: '9. Günlük',
       lead:
-        'DashCast\'in dahili günlüğü: tüm önemli eylemler (projeksiyonlar, geri yüklemeler, ADB hataları, güncellemeler) sürekli izlenir. Beklenmedik davranışı anlamak veya desteğe rapor sağlamak için kullanışlı.',
+        'DashCast\'in dahili günlüğü: her önemli eylem (projeksiyonlar, geri yüklemeler, ADB hataları, güncellemeler) sürekli izlenir. Beklenmedik davranışı anlamak için kullanışlı; ayrıca hata bildiricinin sizin için eklediği veridir.',
       mockupLabel: 'Ekran 6\'yı gör (Günlük)',
       featuresTitle: 'Özellikler',
       features: [
@@ -359,12 +466,10 @@ export default {
         },
       ],
       howTo: {
-        title: 'Hata raporu gönderme',
+        title: 'Hata bildiriciyi tercih edin',
         steps: [
-          'Sorunu yeniden oluşturun.',
-          'Günlük → «Paylaş»ı açın.',
-          'Kanalınızı seçin (Telegram, e-posta, GitHub Issues).',
-          'Ekli dosya izi ve bağlamı içerir (sürüm, model, firmware).',
+          'Çoğu sorun için hata bildiriciyi (bölüm 7) kullanın — günlüğü ve sistem durumunu otomatik olarak yakalar.',
+          'Günlük ekranı, izi kendiniz okumak veya yalnızca ham günlüğü paylaşmak istediğinizde buradadır.',
         ],
       },
       note:
@@ -373,12 +478,12 @@ export default {
   ],
 
   faq: {
-    title: '8. SSS — Sık sorulan sorular',
+    title: '10. SSS — Sık sorulan sorular',
     items: [
       {
         question: '❓ Bir uygulamaya dokunduğumda küme siyah kalıyor',
         answer:
-          'Üç olası neden: (1) kablosuz ADB devre dışı — BYD Ayarlar → Geliştirici kontrol edin. (2) Durmuş bir hizmet — Sistem sekmesi, kırmızı satırı yeniden başlatın. (3) Uygulama az önce çöktü — simgesine tekrar dokunun.',
+          'Üç olası neden: (1) kablosuz ADB devre dışı — BYD Ayarlar → Geliştirici kontrol edin. (2) Durmuş bir hizmet — Sistem ekranı, kırmızı satırı yeniden başlatın. (3) Uygulama az önce çöktü — simgesine tekrar dokunun. Hâlâ takılı mı? Hata bildiriciden bir rapor gönderin.',
       },
       {
         question: '❓ Görüntü kümeden taşıyor / kırpılıyor',
@@ -393,7 +498,22 @@ export default {
       {
         question: '❓ Favori düzenim açılışta başlamıyor',
         answer:
-          'Ayarlardaki üç koşulu kontrol edin: «Düzenler modu» etkin, «Otomatik favori düzen» etkin ve bir düzen ⭐ favori olarak işaretli (ana ekran karuseli veya Düzenler sekmesindeki Favori düğmesi). Soğuk başlatmada 6–8 sn bekleyin.',
+          'Ayarlardaki üç koşulu kontrol edin: «Düzenler modu» etkin, «Otomatik favori düzen» etkin ve bir düzen ⭐ favori olarak işaretli (ana ekran seçici veya Düzenler sekmesindeki Favori düğmesi). Soğuk başlatmada 6–8 sn bekleyin.',
+      },
+      {
+        question: '❓ HUD\'umda navigasyon oku yok',
+        answer:
+          'HUD okları bir DiLink 3 özelliğidir ve bunları çizebilen bir HUD firmware\'i gerektirir. Bildirim erişiminin verildiğinden, HUD\'un bir navigasyon görüntüleme modunda açık olduğundan ve Maps/Waze\'de bir rotanın çalıştığından emin olun. Hiçbir şey görünmüyorsa HUD firmware\'iniz muhtemelen ok desteğinden daha eskidir — bir donanım sınırı, hata değil.',
+      },
+      {
+        question: '❓ Hotspot yardımcısına ihtiyacım var mı?',
+        answer:
+          'Yalnızca DiLink 3\'te, arabayı kendi SIM\'iniz/telefon bağlantınız üzerinden çevrimiçi yapıyorsanız. Bu bağlantıyı uyanışlar boyunca canlı tutar. Arabanızın kendi veri planı varsa yok sayın — «Kendi SIM\'imi kullan» açık olmadıkça gizli kalır.',
+      },
+      {
+        question: '❓ Güncellemeler artık nasıl kurulur?',
+        answer:
+          'DashCast her açılışta GitHub\'ı kontrol eder. Bir güncelleme indirildiğinde sessizce kurulur ve uygulamayı kendisi yeniden başlatır — «Kur?» istemi yok. Bunun mümkün olmadığı bir arabada normal sistem yükleyicisine geri döner. Bu özelliğe sahip bir sürüme geçtikten sonraki ilk güncelleme yine de bir kez sorabilir.',
       },
       {
         question: '❓ DashCast 12 V aküyü boşaltır mı?',
@@ -417,7 +537,7 @@ export default {
       {
         question: '❓ Katkıda bulunmak veya hata bildirmek istiyorum',
         answer:
-          'GitHub: https://github.com/Kiroha/byd-dashcast — hatalar için Issues, sorular için Discussions. Tanıyı hızlandırmak için bir Günlük dışa aktarımı ekleyin.',
+          'En hızlı yol için uygulama içi hata bildiriciyi kullanın (tanılamayı sizin için ekler). Kod ve özellik istekleri için: GitHub https://github.com/Kiroha/byd-dashcast — hatalar için Issues, sorular için Discussions.',
       },
     ],
   },

@@ -31,7 +31,7 @@
     <string name="status_restoring_origin">Orijinal küme geri yükleniyor…</string>
     <string name="status_dashboard_byd">Projeksiyon hazır — bir uygulama seçin</string>
     <string name="status_dashboard_app">Gösterge paneli: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: yüklü değil veya çoklu ekranla uyumsuz</string>
+    <string name="toast_app_launch_failed">%1$s: kümede başlatılamadı (Günlüğe bakın)</string>
     <string name="toast_app_already_cluster">Uygulama zaten kümede</string>
     <string name="toast_restore_failed">Geri yükleme başarısız: %1$s</string>
     <string name="toast_origin_failed">Orijinal küme geri yüklemesi başarısız: %1$s</string>
@@ -152,6 +152,7 @@
     <string name="main_preview_section">Canlı önizleme</string>
     <string name="main_btn_full_preview">Tam ekran yansıtma</string>
     <string name="main_btn_stop_mirror">Yansıtmayı durdur</string>
+    <string name="main_btn_launch_layout_apps">Düzen uygulamalarını başlat</string>
     <string name="main_section_favorites">FAVORİLER</string>
     <string name="main_section_all_apps">Tüm uygulamalar</string>
     <string name="sheet_auto_launch">Başlangıçta otomatik aç</string>
@@ -201,8 +202,8 @@
     <string name="sysinfo_svc_stopped">Durduruldu</string>
     <string name="sysinfo_svc_adb_unreachable">5555 ulaşılamıyor</string>
     <string name="sysinfo_svc_conn">CONN</string>
-    <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
-    <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="sysinfo_tile_dashcast_platform_signed">platform imzalı</string>
+    <string name="sysinfo_tile_dashcast_user_signed">kullanıcı imzalı</string>
     <string name="log_chip_all">Tümü (%1$d)</string>
     <string name="log_chip_info">Info (%1$d)</string>
     <string name="log_chip_warn">Warn (%1$d)</string>
@@ -221,39 +222,10 @@
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
     <string name="settings_section_advanced">Advanced</string>
-    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
-    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
-    <string name="diag_tab_cluster">Cluster</string>
-    <string name="diag_tab_display">Display</string>
-    <string name="diag_tab_adb_local">Yerel ADB</string>
-    <string name="diag_tab_system">Sistem</string>
-    <string name="diag_tab_beta_engine">Beta Engine</string>
-    <string name="diag_coming_soon_title">Yakında</string>
-    <string name="diag_coming_soon_subtitle">Bu bölüm bir sonraki sürümde uygulanacaktır. Mevcut testler için «Beta Engine» sekmesine bakın.</string>
-    <string name="diag_beta_header_title">Deneysel motor</string>
-    <string name="diag_beta_header_subtitle">Component A (daemon) ve Component B (sistem context) testleri. Aşama 1.</string>
-    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
-    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
-    <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_counters_idle">Başlatmak için «Tümünü çalıştır»a basın</string>
-    <string name="diag_beta_counters_running">Çalışıyor…</string>
-    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
-    <string name="diag_beta_run_all">Tümünü çalıştır</string>
-    <string name="diag_beta_copy_report">Gönder (.log)</string>
+    <string name="settings_legacy_path">Proxy daemon çalışmıyor. Eski yolu kullan</string>
+    <string name="settings_legacy_path_support">Tüm ayrıcalıklı komutları proxy daemon yerine eski ADB kabuğu üzerinden yönlendirir. Daemon yanıt vermiyorsa veya sorun çıkarıyorsa etkinleştirin.</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
-    <string name="diag_tab_dilink5">DiLink 5</string>
-    <string name="diag_dl5_header_title">DiLink 5 platformu</string>
-    <string name="diag_dl5_header_subtitle">DiLink 5.0 / Android 12 için özel testler.</string>
-    <string name="diag_dl5_header_subtitle_fmt">Ürün: %1$s · API %2$d</string>
-    <string name="diag_dl5_pill_mode_auto_on">Mod: AUTO = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_auto_off">Mod: AUTO = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_forced_on">Mod: ZORLAMALI = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_forced_off">Mod: ZORLAMALI = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_unknown">Mod: —</string>
-    <string name="diag_dl5_d8_target_label">Hedef uygulama (D8 testi — kümeleme)</string>
-    <string name="diag_dl5_d8_running_toast">%1$s üzerinde D8 testi — uygulama yeniden başlatılacak ve ana ekrana geri çağrılacak.</string>
-    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Küme otomatik klavyesi (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Küme ekranındaki bir metin alanına dokunduğunuzda köprü klavyesini gösterir.</string>
@@ -272,249 +244,83 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klavye</string>
     <string name="keyboard_bridge_title">Uzaktan klavye</string>
-    <string name="diag_tab_adas">ADAS</string>
-    <string name="diag_tab_dilink2">DiLink 2</string>
-    <string name="diag_tab_mirror">Mirror</string>
-    <string name="diag_dl2_header_title">DiLink 2 platformu — Tanıma</string>
-    <string name="diag_dl2_header_subtitle">Yalnızca reflection ile tanıma paketi (yerel ADB yok).</string>
-    <string name="diag_dl2_header_subtitle_fmt">Ürün: %1$s · marka: %2$s · API %3$d</string>
-    <string name="diag_dl2_pill_unknown">İmza: —</string>
-    <string name="diag_dl2_pill_detected">İmza: DL2 algılandı</string>
-    <string name="diag_dl2_pill_other">İmza: DL2 değil</string>
-    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="diag_mirror_header_title">Mirror — Tanılama</string>
-    <string name="diag_mirror_header_subtitle">SurfaceFlinger topolojisi, mirror daemon durumu, küme ekranı.</string>
-    <string name="diag_mirror_header_subtitle_fmt">Ürün: %1$s · API %2$d</string>
-    <string name="diag_mirror_pill_unknown">Platform: —</string>
-    <string name="diag_mirror_pill_dl5">Platform: DiLink 5</string>
-    <string name="diag_mirror_pill_other">Platform: diğer</string>
-    <string name="diag_mirror_hint">Paketi çalıştırmadan önce mirror\'ı uygulamadan en az bir kez başlatın, ardından raporu Telegram üzerinden paylaşmak için « Gönder (.log) » düğmesine dokunun.</string>
-    <string name="diag_mirror_send_log">Gönder (.log)</string>
 
     <!-- DiLink 4 — Özel tanılama (v1.2.28) -->
-    <string name="diag_tab_dilink4">DiLink 4</string>
-    <string name="diag_dl4_header_title">DiLink 4 platformu — BYD-AUTO</string>
-    <string name="diag_dl4_header_subtitle">DiLink 4.0 / Android 10 / API 29 için özel testler (AutoContainer PascalCase + DL3 yolu).</string>
-    <string name="diag_dl4_header_subtitle_fmt">Ürün: %1$s · marka: %2$s · API %3$d</string>
-    <string name="diag_dl4_pill_unknown">İmza: —</string>
-    <string name="diag_dl4_pill_detected">İmza: DL4 algılandı</string>
-    <string name="diag_dl4_pill_other">İmza: DL4 değil</string>
-    <string name="diag_dl4_warning_d_tier">⚠ D1–D10 katmanı AutoContainer\'a gerçek sendInfo komutları gönderir ve ardından cluster ekranında clusterdebug uygulamasını başlatır. Araçta görünür etki.</string>
-    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="diag_tab_sniffer">Sniffer</string>
-    <string name="diag_adas_title">ADAS — küme penceresi</string>
-    <string name="diag_adas_description">Qt küme ADAS penceresini gösterir veya gizler (AutoContainer kodları 12 / 13, genel DiLink)</string>
-    <string name="diag_adas_btn_show">ADAS\'ı göster (12)</string>
-    <string name="diag_adas_btn_hide">ADAS\'ı gizle (13)</string>
-    <string name="diag_adas_last_result">Son sonuç</string>
-    <string name="diag_adas_no_test">Hiçbir test yürütülmedi.\nKümeye komut göndermek için ADAS\'ı göster veya ADAS\'ı gizle\'ye dokunun.</string>
-    <string name="diag_adas_technical_details">Teknik ayrıntılar</string>
-    <string name="diag_adas_sending_fmt">$ %1$s\n…gönderiliyor…</string>
-    <string name="diag_adas_error_fmt">$ %1$s\nHATA: %2$s</string>
-    <string name="diag_sniffer_description">Sürekli logcat yakalama + dışa aktarılabilir bir dosyaya dumpsys anlık görüntüleri</string>
-    <string name="diag_sniffer_pill_active">ETKİN</string>
-    <string name="diag_sniffer_pill_inactive">PASİF</string>
-    <string name="diag_sniffer_idle_text">Devam eden yakalama yok.\nYeni bir BYD_RE_Sniffer_*.txt dosyası başlatmak için Başlat\'a dokunun.</string>
-    <string name="diag_sniffer_btn_start">Başlat</string>
-    <string name="diag_sniffer_btn_stop">Durdur</string>
-    <string name="diag_sniffer_btn_snapshot">Anlık görüntü</string>
-    <string name="diag_sniffer_btn_export">Dışa aktar</string>
-    <string name="diag_sniffer_btn_clean">Temizle</string>
-    <string name="diag_sniffer_content_title">Yakalanan içerik</string>
-    <string name="diag_sniffer_procedure_title">Tipik prosedür</string>
-    <string name="diag_sniffer_initializing">Başlatılıyor…</string>
-    <string name="diag_sniffer_active_fmt">ETKİN → %1$s\nYakalama devam ediyor (logcat + otomatik anlık görüntüler / 10 sn)</string>
-    <string name="diag_sniffer_init_fail_fmt">❌ Başlatma başarısız: %1$s</string>
-    <string name="diag_sniffer_stopped_fmt">Durduruldu → %1$s\nDışa aktarmaya hazır.</string>
-    <string name="diag_sniffer_none">(yok)</string>
-    <string name="diag_sniffer_previous_stopped_fmt">Önceki yakalama durduruldu → %1$s\n(%2$d KB) — dışa aktarılabilir.</string>
-    <string name="diag_sniffer_previous_no_adb_fmt">Önceki yakalama: %1$s (%2$d KB, yerel ADB kullanılamıyor — dışa aktarılabilir)</string>
-    <string name="diag_sniffer_active_detail_fmt">ETKİN → %1$s\n(%2$d KB yakalandı)</string>
-    <string name="diag_sniffer_toast_started_fmt">Sniffer başlatıldı → %1$s</string>
-    <string name="diag_sniffer_toast_stopped">Sniffer durduruldu.</string>
-    <string name="diag_sniffer_toast_need_start">Önce sniffer\'ı başlatın.</string>
-    <string name="diag_sniffer_toast_snapshot_added">Anlık görüntü eklendi.</string>
-    <string name="diag_sniffer_toast_no_file">Dışa aktarılacak sniffer dosyası yok.</string>
-    <string name="diag_sniffer_toast_export_error_fmt">Dışa aktarma hatası: %1$s</string>
-    <string name="diag_sniffer_chooser_title">RE Sniffer\'ı dışa aktar</string>
-    <string name="diag_sniffer_cleanup_busy">Temizlemeden önce sniffer\'ı durdurun (yakalama bir dosyaya yazıyor).</string>
-    <string name="diag_sniffer_cleanup_dialog_title">DashCast dosyalarını temizle</string>
-    <string name="diag_sniffer_cleanup_dialog_msg">Tüm logları ve yakalamaları (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) uygulama depolama alanından siler.\n\nADB anahtarları ve tercihler korunur.</string>
-    <string name="diag_sniffer_cleanup_dialog_confirm">Temizle</string>
-    <string name="diag_sniffer_cleanup_status_fmt">Temizlik: %1$d dosya silindi · kalan: %2$s</string>
-    <string name="diag_sniffer_cleanup_toast_fmt">%1$d dosya silindi — kalan: %2$s</string>
     <string name="settings_warn_dl2_no_margins">⚠️ Kenar boşlukları DiLink 2\'de devre dışı (tek ekran).</string>
     <string name="settings_warn_no_cluster">⚠️ Küme algılanmadı — kenar boşlukları yok sayıldı (DL2?).</string>
     <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">%1$s\'yi açacak tarayıcı yok</string>
-    <string name="diag_adas_doc_help">• Kabuk komutu: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Servis: DL3/Di4 üzerinde Auto_container (PascalCase), DL5+ üzerinde auto_container (snake_case)\n• Kod 12 = 显示Adas (ADAS göster) — clusterdebug.SecondActivity.infoListInit() tarafından üretilir\n• Kod 13 = 关闭Adas (ADAS gizle) — aynısı\n• Aynı varyantlar: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-serisi: 12/13 kodları çıkarılmış (boş slotlar) — burada desteklenmiyor</string>
-    <string name="diag_sniffer_doc_content">• İlk başlık: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Canlı: tam logcat threadtime + events tamponu (filtresiz, hiçbir şey kaçırılmaz)\n• 10 s’de bir otomatik anlık görüntüler: displays, SurfaceFlinger, BYD/xdja/qt/cluster süreçleri\n• Manuel anlık görüntü: dumpsys window + broadcasts geçmişini ekler\n• Kalıcılık: kayıt Activity dönmesi/yok edilmesinden sağ çıkar (setsid süreci)</string>
-    <string name="diag_sniffer_doc_workflow">1. Başlat → kayıt arka planda çalışır (setsid, Activity\u2019den sağ çıkar)\n2. Hatayı / incelenen senaryoyu yeniden üret\n3. Kritik anlarda manuel anlık görüntü (örn. çökmeden hemen önce/sonra)\n4. Durdur\n5. Dışa aktar → dosyayı paylaşmak için Telegram seç</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Yeniden başlat</string>
     <string name="sysinfo_restart_started">Yeniden başlatılıyor…</string>
     <string name="sysinfo_restart_failed">Yeniden başlatma başarısız</string>
     <string name="sysinfo_svc_projection">Yansıtma</string>
     <string name="sysinfo_svc_projection_sub">dokun: 30→3s→16→3s→0</string>
-    <string name="sysinfo_svc_force_resizable">Force Resizable</string>
+    <string name="sysinfo_svc_force_resizable">Yeniden boyutlandırmayı zorla</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · değer %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · kontrol…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-    <string name="diag_dl5_cluster_test_vd">VD Pipeline Testi</string>
-    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon hattını 7 adımda doğrular: VD oluşturma, VD üzerinde uygulama başlatma, küme yüzeyine yansıtma. Yalnızca DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline Testi</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_msg">Hedef: %1$s\n\nBu paket:\n\n• V01: küme projeksiyonunu etkinleştir (auto_container)\n• V02: uygulamanın başlatılabilir olduğunu doğrula\n• V03: 1920×720 VirtualDisplay oluştur\n• V04: uygulamayı VD üzerinde başlat\n• V05: MirrorDaemon aracılığıyla yansıtmayı başlat\n• V06: küme oluşturma işlemini görsel olarak doğrula\n• V07: temizle (yansıtmayı durdur, VD\'yi sil, force-stop)\n\nYalnızca DiLink 5. Hedef uygulama test sırasında zorla durdurulacak.\nDevam edilsin mi?</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_ok">Testi başlat</string>
-    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline Testi yalnızca DiLink 5 içindir.</string>
-    <string name="diag_dl5_cluster_test_vd_pick_title">Test edilecek uygulamayı seçin</string>
-    <string name="diag_dl5_cluster_test_vd_pick_empty">Başlatılabilir uygulama bulunamadı.</string>
-    <string name="diag_dl5_fission_prompt_title">Cluster doğrulama</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s cluster ekranında görünüyor mu?\n\n(ekran %2$d testi)</string>
-    <string name="diag_dl5_fission_prompt_yes">Evet</string>
-    <string name="diag_dl5_fission_prompt_no">Hayır</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
-    <string name="diag_tab_export_apk">BYD APK dışa aktar</string>
-    <string name="diag_export_apk_header_title">BYD APK dışa aktar</string>
-    <string name="diag_export_apk_header_subtitle">Yüklü BYD / XDJA / DiLink / cluster paketlerini listeler, seçilen APK\'yı çıkarır ve Telegram üzerinden gönderir.</string>
-    <string name="diag_export_apk_refresh">Yenile</string>
-    <string name="diag_export_apk_counters_idle">Hazır — taramak için Yenile\'ye dokun.</string>
-    <string name="diag_export_apk_counters_scanning">Taranıyor…</string>
-    <string name="diag_export_apk_counters_fmt">%1$d APK bulundu • diskte %2$s</string>
-    <string name="diag_export_apk_hint">APK uygulama önbelleğine kopyalanır, Telegram ile paylaşılır ve ardından 5 dakika sonra otomatik olarak silinir. Aracın belleğinde hiçbir şey kalmaz.</string>
-    <string name="diag_export_apk_btn_export">Dışa aktar</string>
-    <string name="diag_export_apk_btn_exporting">…</string>
-    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
-    <string name="diag_export_apk_sent_fmt">APK gönderildi: %1$s</string>
-    <string name="diag_export_apk_chooser_title">%1$s APK\'yı gönder</string>
-    <string name="diag_export_apk_err_fmt">APK dışa aktarımı başarısız: %1$s</string>
-    <string name="diag_export_apk_err_no_source">Bu paket için APK yolu bulunamadı.</string>
 
     <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_tab_voice">Ses (alpha)</string>
-    <string name="diag_voice_header_title">Sesli kontrol — ses zinciri PoC</string>
-    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Adım 1/3: mikrofonun bu platformda uygulamaya ulaştığını doğrular. Henüz hiçbir ML modeli yüklenmedi.</string>
-    <string name="diag_voice_btn_start">Dinlemeyi başlat</string>
-    <string name="diag_voice_btn_stop">Durdur</string>
-    <string name="diag_voice_state_idle">Servis durdu</string>
-    <string name="diag_voice_state_running">Dinleniyor…</string>
-    <string name="diag_voice_state_error_fmt">Hata: %1$s</string>
-    <string name="diag_voice_perm_denied">Mikrofon izni reddedildi — PoC’yi etkinleştirmek için sistem ayarlarından izin verin.</string>
-    <string name="diag_voice_meter_label">Canlı VU-metre</string>
-    <string name="diag_voice_meter_rms">RMS (ortalama seviye)</string>
-    <string name="diag_voice_meter_peak">Anlık tepe</string>
-    <string name="diag_voice_stats_fmt">RMS %1$d • tepe %2$d • clip %3$d • kare %4$d</string>
-    <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">Bu PoC, mikrofonu 16 kHz mono 16-bit okuyan bir foreground servis başlatır ve ses seviyesini yerel olarak gösterir. Hiçbir veri kaydedilmez, iletilmez veya analiz edilmez. “Ok DashCast” uyandırma kelimesi v1.2.44’te (openWakeWord), konuşma tanıma v1.2.45’te (Vosk) eklenecek.</string>
-    <string name="diag_voice_sample_rate_fmt">Örnekleme: %1$d Hz mono 16-bit • kaynak VOICE_RECOGNITION</string>
-    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_channel">DashCast — Sesli PoC</string>
     <string name="diag_voice_notif_title">DashCast — mikrofon dinleniyor (PoC)</string>
     <string name="diag_voice_notif_text">Ses seviyesi yerel olarak analiz ediliyor, hiçbir şey kaydedilmiyor.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
 
     <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <string name="diag_voice_commands_title">Sesli komutlar (Vosk)</string>
-    <string name="diag_voice_commands_switch">Etkinleştir</string>
-    <string name="diag_voice_commands_hint">"Hey Jarvis" deyin, ardından komutunuzu: "küme", "kümeyi kapat", "YouTube başlat", "tanılama", "günlükler".</string>
 
     <!-- v1.4.2-beta — LLM API key -->
-    <string name="diag_voice_apikey_label">OpenAI API anahtarı (isteğe bağlı — Jarvis Yapay Zekasını etkinleştirir)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
     <!-- v1.4.3-beta — ASR model selection -->
-    <string name="diag_voice_model_card_title">Ses tanıma modeli</string>
-    <string name="diag_voice_model_small_label">Küçük model (~40 MB)</string>
-    <string name="diag_voice_model_small_desc">Hızlı indirme, kısa komutlar için iyi doğruluk.</string>
-    <string name="diag_voice_model_large_label">Büyük model (~1,3 GB) — yüksek doğruluk</string>
-    <string name="diag_voice_model_large_desc">Daha iyi tanıma, Wi-Fi bağlantısında önerilir.</string>
-    <string name="diag_voice_model_storage_fmt">%1$d MB kullanılabilir</string>
-    <string name="diag_voice_model_download_btn">İndir</string>
-    <string name="diag_voice_model_delete_btn">Sil</string>
-    <string name="diag_voice_model_status_downloaded">✓ Model kuruldu</string>
-    <string name="diag_voice_model_status_not_downloaded">Kurulu değil</string>
-    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
-    <string name="diag_voice_model_unzipping">Çıkarılıyor…</string>
-    <string name="diag_voice_wakeword_switch">Etkinleştir</string>
-    <string name="diag_voice_wakeword_score_label">Sigmoid puanı (eşik 0,5)</string>
-    <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (“Ok DashCast” için yer tutucu)</string>
-    <string name="diag_voice_wakeword_last_fmt">Son algılama: —</string>
-    <string name="diag_voice_wakeword_unavailable">ONNX Runtime kullanılamıyor — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
-    <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
+    <string name="mirror_unavailable">Yerel önizleme kullanılamıyor — küme ekranı hâlâ etkin</string>
+    <string name="layout_mirror_previous">Önceki düzen uygulaması</string>
+    <string name="layout_mirror_next">Sonraki düzen uygulaması</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
-    <string name="hotspot_hero_title">4G hotspot via TetherFi</string>
-    <string name="hotspot_hero_subtitle">Share your mobile data in a couple of taps</string>
-    <string name="hotspot_intro">The built-in hotspot is not reachable on DiLink 3. DashCast instead drives TetherFi (open-source) which creates a Wi-Fi Direct access point + SOCKS5 proxy — no system permission required, and your vehicle SIM is used as upstream.</string>
+    <string name="hotspot_hero_title">TetherFi ile 4G ortak erişim noktası</string>
+    <string name="hotspot_hero_subtitle">Mobil verinizi birkaç dokunuşla paylaşın</string>
+    <string name="hotspot_intro">Yerleşik ortak erişim noktası DiLink 3\'te erişilebilir değil. Bunun yerine DashCast, sistem izni gerektirmeden Wi-Fi Direct erişim noktası + SOCKS5 proxy oluşturan TetherFi\'yi (açık kaynak) kullanır ve aracınızın SIM kartı üst bağlantı olarak kullanılır.</string>
     <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
-    <string name="hotspot_tf_status_installed">🟢 TetherFi installed — version %1$s</string>
-    <string name="hotspot_tf_status_missing">🔴 TetherFi is not installed. Tap “Install” to fetch the latest release.</string>
+    <string name="hotspot_tf_status_installed">🟢 TetherFi yüklü — sürüm %1$s</string>
+    <string name="hotspot_tf_status_missing">🔴 TetherFi yüklü değil. En son sürümü almak için «Yükle» öğesine dokunun.</string>
     <string name="hotspot_tf_start">Start</string>
     <string name="hotspot_tf_stop">Stop</string>
     <string name="hotspot_tf_toggle">Toggle</string>
-    <string name="hotspot_tf_open">Open TetherFi</string>
-    <string name="hotspot_tf_install">Install TetherFi</string>
-    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — dispatched</string>
+    <string name="hotspot_tf_open">TetherFi\'yi aç</string>
+    <string name="hotspot_tf_install">TetherFi\'yi yükle</string>
+    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — gönderildi</string>
     <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
-    <string name="hotspot_tf_open_failed">Open TetherFi: %1$s</string>
-    <string name="hotspot_watchdog_title">Auto watchdog</string>
-    <string name="hotspot_watchdog_hint">Automatically restarts the hotspot if it drops (probes every 20 s).</string>
+    <string name="hotspot_tf_open_failed">TetherFi\'yi aç: %1$s</string>
+    <string name="hotspot_watchdog_title">Otomatik gözetim</string>
+    <string name="hotspot_watchdog_hint">Düşerse ortak erişim noktasını otomatik olarak yeniden başlatır (her 30 sn\'de bir sınar).</string>
     <string name="hotspot_watchdog_idle">Off</string>
     <string name="hotspot_watchdog_probing">⏳ probing…</string>
-    <string name="hotspot_watchdog_tf_gone">⛔ TetherFi uninstalled — watchdog stopped</string>
+    <string name="hotspot_watchdog_tf_gone">⛔ TetherFi kaldırıldı — gözetim durduruldu</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
-    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot UP (restarts=%3$d)</string>
-    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 DOWN — cooldown %3$d s</string>
-    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 DOWN → restart #%3$d</string>
-    <string name="hotspot_autostart_boot_title">Auto-start at vehicle boot</string>
-    <string name="hotspot_autostart_boot_hint">Automatically launches TetherFi a few seconds after the vehicle starts.</string>
-    <string name="hotspot_tf_update_available">🆕 TetherFi update: v%1$d → v%2$d (tap to download)</string>
-    <string name="hotspot_clients_title">Connected clients</string>
-    <string name="hotspot_clients_empty">No connected clients</string>
+    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 ortak erişim noktası AÇIK (yeniden başlatma=%3$d)</string>
+    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 KAPALI — bekleme %3$d sn</string>
+    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 KAPALI → yeniden başlatma #%3$d</string>
+    <string name="hotspot_autostart_boot_title">Araç açılışında otomatik başlat</string>
+    <string name="hotspot_autostart_boot_hint">Araç çalıştıktan birkaç saniye sonra TetherFi\'yi otomatik olarak başlatır.</string>
+    <string name="hotspot_tf_update_available">🆕 TetherFi güncellemesi: v%1$d → v%2$d (indirmek için dokunun)</string>
+    <string name="hotspot_clients_title">Bağlı istemciler</string>
+    <string name="hotspot_clients_empty">Bağlı istemci yok</string>
     <string name="hotspot_client_default_name">Cihaz %1$s</string>
     <string name="hotspot_stat_uptime">Uptime</string>
     <string name="hotspot_stat_rx">Received</string>
     <string name="hotspot_stat_tx">Sent</string>
-    <string name="settings_use_own_sim">I use my own SIM card</string>
-    <string name="settings_use_own_sim_support">Shows the “Hotspot” button in the navigation rail so you can share your mobile data via TetherFi (DiLink 3 only).</string>
-    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
-    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
-    <string name="diag_dl5_cluster_header_subtitle">Non-destructive probe: detects shell commands, compat flags and services available for cluster resize on DiLink 5.</string>
-    <string name="diag_dl5_cluster_run_all">Run recon</string>
-    <string name="diag_dl5_cluster_copy_report">Copy report</string>
-    <string name="diag_dl5_cluster_send_telegram">Send via Telegram</string>
-    <string name="diag_dl5_cluster_counters_idle">Idle — no probe run yet</string>
-    <string name="diag_dl5_cluster_pill_unknown">Platform: unknown</string>
-    <string name="diag_dl5_cluster_pill_dl5">Platform: DiLink 5</string>
-    <string name="diag_dl5_cluster_pill_other">Platform: other</string>
-    <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
-    <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
-    <string name="diag_cluster_poc_title">Cluster Move/Resize — Fission display</string>
-    <string name="diag_cluster_poc_subtitle">Interactive control of an app (Waze, Maps, …) on the trusted xdja « fission_* » display as done by WindowManagement / Dilink5 Dashboard. Local VD is abandoned: we piggyback on the system display (uid 1000) to avoid the « secondary screen » toast and the rebound on display 0.</string>
-    <string name="diag_cluster_poc_btn_enumerate">📋 Enumerate displays</string>
-    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Restart daemon</string>
-    <string name="diag_cluster_poc_btn_share">📤 Share report</string>
-    <string name="diag_cluster_poc_section_app">Target</string>
-    <string name="diag_cluster_poc_label_pkg">package:</string>
-    <string name="diag_cluster_poc_btn_launch">▶ Launch on fission</string>
-    <string name="diag_cluster_poc_btn_stop">⏹ Force-stop</string>
-    <string name="diag_cluster_poc_section_rect">Position &amp; size (px of fission display)</string>
-    <string name="diag_cluster_poc_slider_x">X (left)</string>
-    <string name="diag_cluster_poc_slider_y">Y (top)</string>
-    <string name="diag_cluster_poc_slider_w">W (width)</string>
-    <string name="diag_cluster_poc_slider_h">H (height)</string>
-    <string name="diag_cluster_poc_btn_apply">✅ Apply rect</string>
-    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
-    <string name="diag_cluster_poc_chooser_title">Share Cluster Report</string>
-    <string name="diag_cluster_poc_toast_no_report">No report. First tap « Enumerate displays ».</string>
-    <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
+    <string name="settings_use_own_sim">Kendi SIM kartımı kullanıyorum</string>
+    <string name="settings_use_own_sim_support">Mobil verinizi TetherFi ile paylaşabilmeniz için gezinme çubuğunda «Ortak erişim» düğmesini gösterir (yalnızca DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Proxy daemon</string>
     <string name="proxy_keeper_channel_desc">Proxy daemon\'ı arka planda kullanılabilir tutar</string>
     <string name="proxy_keeper_notif_title">DashCast — proxy aktif</string>
@@ -530,13 +336,13 @@
     <!-- v1.2.81 — Cluster per-app DPI override -->
     <string name="sheet_cluster_dpi">Ekran yoğunluğu</string>
     <string name="sheet_dpi_value_default">Vars.</string>
-    <string name="dpi_dialog_title">Cluster DPI — %1$s</string>
+    <string name="dpi_dialog_title">Küme DPI — %1$s</string>
     <string name="dpi_default">Sistem varsayılanı</string>
     <string name="dpi_custom">Özel…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Sonraki başlatmada uygulanacak</string>
     <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
-    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix">ADAS Pencere Düzeltmesi</string>
     <string name="settings_adas_window_fix_support">Projeksiyon öncesinde sendInfo(30) gönderir — bazı araçlarda ADAS bozulmasını düzeltir. Küme şekli başlangıçta değişirse devre dışı bırakın.</string>
     <string name="settings_fission_mode">Layouts modu</string>
     <string name="settings_fission_mode_support">Özel bölgelerle kümede çoklu uygulama projeksiyonu. Proxy daemon gerektirir.</string>
@@ -598,6 +404,10 @@
     <string name="fo_err_attach_fmt">%1$s için slot oluşturulamadı</string>
     <string name="fo_err_daemon">Daemon kullanılamıyor</string>
     <string name="fo_err_proxy">Proxy ADB Daemon bağlı değil. Ayarlardan etkinleştirin.</string>
+    <string name="adb_transport_unresponsive">ADB bağlantıyı kabul ediyor ancak komutlara yanıt vermiyor. Android hata ayıklamayı (adbd) yeniden başlatın ve DashCast’i tekrar açın.</string>
+    <string name="adb_transport_key_unauthorized">ADB erişilebilir, ancak DashCast anahtarı yetkilendirilmemiş. «USB hata ayıklamasına izin ver» istemini «Her zaman izin ver» ile kabul edin ve DashCast’i yeniden açın.</string>
+    <string name="adb_transport_unreachable">Bu araçta TCP üzerinden ADB erişilebilir değil. 5555 bağlantı noktasında TCP üzerinden Android hata ayıklamayı etkinleştirin ve DashCast’i yeniden açın.</string>
+    <string name="adb_transport_handshake">ADB el sıkışması geçici olarak başarısız oldu. DashCast otomatik olarak yeniden deneyecek.</string>
     <string name="fo_status_autoactivate">Düzen otomatik etkinleştiriliyor…</string>
     <string name="fo_status_autolayout_err_fmt">Otomatik düzen hatası: %1$s</string>
     <string name="fo_status_create_fmt">%1$s için slot oluşturuluyor…</string>
@@ -666,12 +476,21 @@
     <string name="bug_wizard_no_app">Belirli bir uygulama yok</string>
     <string name="bug_wizard_other_app">Diğer / Bilinmeyen uygulama</string>
     <string name="bug_wizard_back">← Geri</string>
+    <string name="bug_tg_title">Telegram kullanıcı adın</string>
+    <string name="bug_tg_message">Sorunun için bir düzeltme hazır olduğunda, onu ilk test etmeni istemek için seni doğrudan Telegram\'dan arayacağız.\n\n⚠️ Doğru kullanıcı adını girdiğinden emin ol (örnek: @john_doe). Onsuz sana ulaşamayız.\n\nKullanıcı adın yalnızca bu cihazda saklanır ve asla paylaşılmaz.</string>
+    <string name="bug_tg_hint">@kullanici_adin</string>
+    <string name="bug_tg_confirm">Onayla</string>
+    <string name="bug_tg_skip">Sonra</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Telegram kullanıcı adı belirtilmedi — tanımlamak için dokunun</string>
     <string-array name="bug_categories">
+        <item>HUD navigasyonu</item>
         <item>Yansıtma</item>
         <item>Uygulama görünümü</item>
         <item>Ses</item>
         <item>Bağlantı</item>
         <item>Donma/Çökme</item>
+        <item>Küme basit modu</item>
         <item>Diğer</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -680,6 +499,9 @@
         <item>Uygulama görünmüyor</item>
         <item>Bağlantı kesildi</item>
         <item>Titreme</item>
+        <item>Dokunma çalışmıyor</item>
+        <item>Dokunma kaymış</item>
+        <item>Gecikme / takılma</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Uygulama dondu</item>
@@ -687,6 +509,9 @@
         <item>Yanlış konum</item>
         <item>Uygulama çöktü</item>
         <item>İçerik eksik</item>
+        <item>Yanlış DPI / metin</item>
+        <item>İstenmeyen bölünmüş ekran</item>
+        <item>Boyut korunmadı</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Ses yok</item>
@@ -701,6 +526,7 @@
         <item>Çok yavaş</item>
         <item>Küme ekranı yok</item>
         <item>WiFi sorunu</item>
+        <item>Daemon / proxy kapalı</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Uygulama çöktü</item>
@@ -708,12 +534,85 @@
         <item>DashCast çöktü</item>
         <item>Araba ekranı siyah</item>
         <item>Yeniden başlatmak zorunda kaldı</item>
+        <item>Projeksiyon durunca yavaş</item>
+        <item>Tablet yavaşlıyor</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Donmuş</item>
+        <item>Siyah ekran</item>
+        <item>Yanlış içerik</item>
+        <item>Eksik bilgi</item>
+        <item>Gösterilmiyor</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>Performans sorunu</item>
+        <item>Yavaş / tablet yavaş</item>
+        <item>Otomatik başlatma çalışmıyor</item>
+        <item>Layout / Fission</item>
         <item>Batarya tüketimi</item>
         <item>Görüntü ayarları</item>
         <item>Öneri</item>
         <item>Başka bir şey</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Ayrıntılar (isteğe bağlı)</string>
+    <string name="bug_wizard_details_hint">Ne yapıyordun? Ne bekliyordun? Faydalı bilgi ekle.</string>
+    <string name="bug_wizard_send">Raporu gönder</string>
+    <string name="bug_wizard_pick_issue">Yukarıdan bir sorun seç</string>
+    <string name="bug_wizard_selected_fmt">Seçildi: %1$s</string>
+    <string name="toast_adb_port_refused">ADB\'ye erişilemiyor (bağlantı noktası 5555) — bu cihazda ayna kullanılamıyor</string>
+    <string name="hud_visual_title">HUD görsel kontrolü</string>
+    <string name="hud_visual_yes">Evet</string>
+    <string name="hud_visual_no">Hayır</string>
+    <string name="hud_visual_unsure">Emin değilim</string>
+    <string name="aaos_cluster_unsupported_title">Gösterge paneli yansıtması engellendi</string>
+    <string name="aaos_cluster_unsupported_msg">Aracınız BYD\'nin Android Automotive sistemini (DX_BYD_AUTO) kullanıyor. Bu ünitede gösterge paneli üretici tarafından kilitlenmiştir: BYD bunu yerleşik navigasyona ayırır ve uygulama yansıtmasını engeller. Bu, aracın bir kısıtlamasıdır (DashCast\'in değil) — bir geçici çözüm yoktur.</string>
+    <string name="dl3_singleos_cluster_unsupported_title">Gösterge paneli yansıtması kullanılamıyor</string>
+    <string name="dl3_singleos_cluster_unsupported_msg">Bu araçta gösterge paneli tek ekranlı (single-OS) bir düzen kullanır: doğrudan araç tarafından çizilir ve uygulamaların yansıtılabileceği ayrı bir ekran yoktur. Gösterge paneline uygulama yansıtma burada mümkün değildir — bu, aracınızın gösterge panelinin bir özelliğidir, DashCast\'in bir kısıtlaması değildir.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">HUD sonucu — ön camda ne gördün?</string>
+    <string name="hud_bench_opt_ok">✅ Ok göründü — doğru yön</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ Ok göründü — yanlış yön</string>
+    <string name="hud_bench_opt_partial">⚠️ Mesafe/yazı göründü — ama net bir ok yok</string>
+    <string name="hud_bench_opt_nothing">❌ HUD\'da hiçbir şey yok</string>
+    <string name="hud_bench_opt_other">❓ Diğer / emin değilim…</string>
+    <string name="hud_bench_note_title">Ne gördün?</string>
+    <string name="hud_bench_note_hint">HUD\'da ne göründüğünü yaz (isteğe bağlı)</string>
+    <string name="hud_report_send">Gönder</string>
+    <string name="hud_confirm_yes">✓ Evet</string>
+    <string name="hud_confirm_no">✗ Hayır</string>
+    <string name="hud_confirm_skip">Atla</string>
+    <string-array name="bug_issues_hud">
+        <item>HUD\'da ok yok</item>
+        <item>Yanlış yön</item>
+        <item>Yanlış mesafe / yol</item>
+        <item>HUD açılmıyor</item>
+        <item>Ok donmuş</item>
+        <item>Diğer HUD sorunu</item>
+    </string-array>
+    <string name="bug_shots_consent_title">Ekran görüntüleri eklensin mi?</string>
+    <string name="bug_shots_consent_msg">Rapor, gösterge paneli ve ana ekranın son ekran görüntülerini içerebilir. Ekrandakileri gösterebilir (harita, hedef, kişisel bilgiler). Eklensin mi?</string>
+    <string name="bug_shots_consent_yes">Ekle</string>
+    <string name="bug_shots_consent_no">Görüntüsüz</string>
+    <string name="settings_capture_shots">Hata raporları için ekran görüntüsü al</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ HUD navigasyonu artık üretimde aktif. Yardımcı olmak için Google Maps / Waze ile sürüş yapın ve 🐞 düğmesi (navigasyon çubuğu) ile bildirin. Aşağıdaki araçlar (①②③) Ar-Ge içindir — yalnızca istendiğinde kullanın.</string>
+    <string name="hud_prod_nudge">✅ Gönderildi. Ama asıl test şimdi: Google Maps / Waze ile navigasyon yapın ve 🐞 Hata bildir düğmesiyle bildirin.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">HUD okları</string>
+    <string name="bug_hud_gate_msg">Bildirmeden önce: aracının kendi dahili navigasyonu ön cam HUD\'unda dönüş oklarını zaten gösteriyor mu?</string>
+    <string name="bug_hud_gate_yes">✅ Evet, okları gösteriyor</string>
+    <string name="bug_hud_gate_no">❌ Hayır, asla</string>
+    <string name="bug_hud_gate_unknown">❓ Bilmiyorum</string>
+    <string name="bug_hud_no_arrows_msg">O halde HUD\'unun ürün yazılımı dönüş oklarını hiç gösteremiyor demektir — DashCast da onları ekleyemez. Bizim tarafımızda düzeltebileceğimiz bir şey yok, bu yüzden bu raporu göndermene gerek yok. Yine de teşekkürler!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Navigasyon için hangi uygulamayı kullanıyorsun?</string>
+    <string name="bug_hud_nav_oem">Arabamın orijinal navigasyonu</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast, HUD\'daki okları yalnızca Google Maps veya Waze\'den yansıtabilir. Arabanın orijinal navigasyonu (Telenav…) verilerini DashCast\'in okuyamadığı bir formatta gönderiyor — ama zaten HUD\'da kendi oklarını gösteriyor. DashCast üzerinden ok görmek için Google Maps veya Waze ile yol tarifi başlat.</string>
+    <string name="bug_hud_nav_understood">Anladım, Maps veya Waze kullanacağım</string>
+    <string name="bug_hud_nav_report_anyway">Raporu yine de gönder</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Şu anda aktif bir rota yok. DashCast dönüş yönlerini yalnızca navigasyon aktif olarak yol tarifi verirken alır; Google Maps veya Waze\'i açmış olman yeterli değil. Bir hedefe rota başlat, sonra HUD\'a bak — okun belirmesi gerekir.</string>
+    <string name="bug_hud_no_route_understood">Anladım, bir rota başlatacağım</string>
+    <string name="bug_hud_no_notif_access_msg">DashCast\'ın bildirim erişimi yok. Bu şart: dönüş yönleri Google Maps veya Waze bildiriminden okunuyor. Android Ayarlar → Bildirimler → Bildirim erişimi bölümüne gidip DashCast\'a izin ver, sonra rotayı yeniden başlat.</string>
 </resources>

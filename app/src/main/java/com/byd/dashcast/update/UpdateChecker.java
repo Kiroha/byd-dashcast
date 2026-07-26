@@ -5,9 +5,13 @@ import android.app.PendingIntent;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.app.InstallResultReceiver;
 import com.byd.dashcast.ui.settings.SettingsActivity;
+import com.byd.dashcast.proxy.ProxyClient;
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInstaller;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -27,10 +31,15 @@ import java.net.URL;
  * OTA update checker.
  *
  * On every fresh app launch, queries the GitHub releases API for the latest release.
- * If a newer version is found, downloads the APK and installs it via PackageInstaller.
+ * If a newer version is found, downloads the APK and prefers a uid-2000 daemon install.
  *
- * With platform.keystore (INSTALL_PACKAGES permission), the install is silent.
- * Without it, InstallResultReceiver handles the STATUS_PENDING_USER_ACTION fallback.
+ * Install strategy (see {@link #installApk}):
+ *   1. Preferred: fully silent + auto-relaunch via the proxy daemon (uid 2000 =
+ *      shell) — {@code pm install -r <apk> && am start <launcher>}. No user tap.
+ *   2. Fallback: PackageInstaller. Silent if the app effectively holds
+ *      INSTALL_PACKAGES (platform.keystore); otherwise InstallResultReceiver shows
+ *      the system install dialog (STATUS_PENDING_USER_ACTION). Used when the daemon
+ *      is unreachable (e.g. DL5.1 signing wall) so no car ever loses the update path.
  */
 public class UpdateChecker {
 
@@ -53,7 +62,7 @@ public class UpdateChecker {
         void onUpdateFound(String version, String changelog, String downloadUrl);
         /** Download progress, 0-100. -1 = indeterminate (Content-Length unknown). */
         void onDownloadProgress(int percent);
-        /** Download complete; PackageInstaller session started. */
+        /** Download complete; installation is starting. */
         void onInstalling();
         /** No update available. */
         void onUpToDate();
@@ -75,14 +84,15 @@ public class UpdateChecker {
         final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
-                File apkFile = new File(context.getCacheDir(), APK_CACHE_NAME);
+                File apkFile = resolveApkFile(context);
                 downloadToFile(apkUrl, apkFile, listener, ui);
                 AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
                 if (listener != null) ui.post(listener::onInstalling);
                 installApk(context, apkFile);
-                // Do NOT delete apkFile here — PackageInstaller reads it asynchronously.
+                // Do NOT delete apkFile here — PackageInstaller / pm read it asynchronously.
                 // The cached file will be overwritten on the next OTA download.
             } catch (Exception e) {
+                OtaRelaunchCoordinator.clearPending(context);
                 AppLogger.e(TAG, "OTA download failed", e);
                 if (listener != null) {
                     String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -198,50 +208,7 @@ public class UpdateChecker {
      * </ol>
      */
     static boolean isNewer(String latest, String currentName, int currentCode) {
-        int latestBuild = extractBuild(latest);     // -1 if no "-buildN" suffix
-        String latestBase = stripSuffix(latest);    // "1.1.9-build170" → "1.1.9"
-        // v1.2.38 fix: also strip the suffix from currentName, otherwise the
-        // last numeric segment of e.g. "1.2.37-beta" becomes 0 (parseInt fails
-        // on "37-beta") and the comparison against latest base "1.2.37" wrongly
-        // reports the latest as newer than itself. Symptom v1.2.37-beta: the
-        // OTA banner re-proposes installing v1.2.37-beta on top of v1.2.37-beta
-        // in a loop. See log/byd_report_20260525_105105.log feedback.
-        String currentBase = stripSuffix(currentName);
-        int[] l = parseVer(latestBase);
-        int[] c = parseVer(currentBase);
-        for (int i = 0; i < Math.max(l.length, c.length); i++) {
-            int lv = i < l.length ? l[i] : 0;
-            int cv = i < c.length ? c[i] : 0;
-            if (lv != cv) return lv > cv;
-        }
-        // Base versions are equal — fall back to the build number when available.
-        return latestBuild > 0 && latestBuild > currentCode;
-    }
-
-    /** Returns the integer N from a "-buildN" / "-bN" suffix, or {@code -1}. */
-    private static int extractBuild(String tag) {
-        int dash = tag.indexOf('-');
-        if (dash < 0 || dash + 1 >= tag.length()) return -1;
-        String suffix = tag.substring(dash + 1);
-        if (suffix.startsWith("build")) suffix = suffix.substring(5);
-        else if (suffix.startsWith("b") && suffix.length() > 1
-                && Character.isDigit(suffix.charAt(1))) suffix = suffix.substring(1);
-        try { return Integer.parseInt(suffix); } catch (NumberFormatException e) { return -1; }
-    }
-
-    /** Strips anything from the first '-' onwards. */
-    private static String stripSuffix(String v) {
-        int dash = v.indexOf('-');
-        return dash < 0 ? v : v.substring(0, dash);
-    }
-
-    private static int[] parseVer(String v) {
-        String[] parts = v.split("\\.");
-        int[] nums = new int[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            try { nums[i] = Integer.parseInt(parts[i]); } catch (NumberFormatException ignored) {}
-        }
-        return nums;
+        return OtaVersionPolicy.isNewer(latest, currentName, currentCode);
     }
 
     // ── HTTP ─────────────────────────────────────────────────────────────────
@@ -328,11 +295,108 @@ public class UpdateChecker {
 
     // ── Install ───────────────────────────────────────────────────────────────
 
+    /**
+     * Where to download the APK. Prefers the external files dir so the proxy
+     * daemon (uid 2000 = shell) can read it for a silent {@code pm install};
+     * falls back to the app-private cache when external storage is unavailable
+     * (e.g. the DL5.1/A13 getExternalFilesDir SecurityException). The
+     * PackageInstaller path can read either location.
+     */
+    private static File resolveApkFile(Context context) {
+        try {
+            File ext = context.getExternalFilesDir(null);
+            if (ext != null) {
+                //noinspection ResultOfMethodCallIgnored
+                ext.mkdirs();
+                return new File(ext, APK_CACHE_NAME);
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "getExternalFilesDir unavailable, using cache: " + t);
+        }
+        return new File(context.getCacheDir(), APK_CACHE_NAME);
+    }
+
+    /**
+     * Installs the freshly-downloaded APK.
+     *
+     * <p>Preferred path — <b>fully silent + auto-relaunch via the proxy daemon</b>:
+     * the daemon runs as uid 2000 (shell), so {@code pm install -r} needs no user
+    * confirmation, exactly like {@code adb install}. The command stages the APK
+    * in {@code /data/local/tmp} and chains a launcher start after replacement.
+    * Because the daemon executes the command in its <em>own</em> process, it
+    * survives this app being killed mid-install and completes the relaunch.
+     *
+     * <p>Fallback path — {@link PackageInstaller}: used when the daemon is not
+     * reachable (e.g. the DL5.1 signing wall leaves it down) or when {@code pm}
+    * reports a failure. This preserves the system confirmation fallback where
+    * required; the result/replacement receivers still relaunch DashCast afterward.
+     */
     private static void installApk(Context context, File apkFile) throws Exception {
+        OtaRelaunchCoordinator.markPending(context);
+        try {
+            if (tryDaemonSilentInstall(context, apkFile)) {
+                return;
+            }
+            installViaPackageInstaller(context, apkFile);
+        } catch (Exception e) {
+            OtaRelaunchCoordinator.clearPending(context);
+            throw e;
+        }
+    }
+
+    /**
+     * Attempts the silent daemon install from the existing OTA worker. A missing
+     * Binder is reconnected here instead of immediately forcing the interactive
+    * PackageInstaller path. The shell command stages the APK in /data/local/tmp;
+    * it tries direct shell read first and run-as for debuggable builds, then lets
+    * PackageInstaller handle devices where neither source path is shell-readable.
+     */
+    private static boolean tryDaemonSilentInstall(final Context context, final File apkFile) {
+        Context app = context.getApplicationContext();
+        try {
+            if (!ProxyClient.isConnected()) {
+                AppLogger.i(TAG, "daemon not connected — attempting OTA reconnect");
+                if (!ProxyClient.connect(app)) {
+                    AppLogger.i(TAG, "daemon OTA reconnect failed — PackageInstaller path");
+                    return false;
+                }
+            }
+            Intent launch = context.getPackageManager()
+                    .getLaunchIntentForPackage(context.getPackageName());
+            String component = launch != null && launch.getComponent() != null
+                    ? launch.getComponent().flattenToShortString() : null;
+            String cmd = OtaInstallCommand.build(
+                    apkFile.getAbsolutePath(), apkFile.length(),
+                    context.getPackageName(), component);
+            AppLogger.i(TAG, "daemon silent install: staging " + apkFile.length() + " bytes");
+            String out = ProxyClient.runShell(cmd);
+            if (out != null && out.contains("Success")) {
+                AppLogger.i(TAG, "daemon install reported Success");
+                return true;
+            }
+            AppLogger.w(TAG, "daemon install did not report Success, falling back: " + out);
+        } catch (Throwable t) {
+            if (t instanceof InterruptedException) Thread.currentThread().interrupt();
+            AppLogger.w(TAG, "daemon install unavailable, falling back: " + t);
+        }
+        return false;
+    }
+
+    private static void installViaPackageInstaller(Context context, File apkFile) throws Exception {
         PackageInstaller installer = context.getPackageManager().getPackageInstaller();
         PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
                 PackageInstaller.SessionParams.MODE_FULL_INSTALL);
         params.setAppPackageName(context.getPackageName());
+        params.setSize(apkFile.length());
+        params.setInstallReason(PackageManager.INSTALL_REASON_USER);
+        if (Build.VERSION.SDK_INT >= 31) {
+            params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+        }
+        boolean installPackagesGranted = context.checkSelfPermission(
+                Manifest.permission.INSTALL_PACKAGES) == PackageManager.PERMISSION_GRANTED;
+        AppLogger.i(TAG, "PackageInstaller fallback: INSTALL_PACKAGES="
+                + installPackagesGranted + " requestNoUserAction="
+                + (Build.VERSION.SDK_INT >= 31));
 
         int sessionId = -1;
         PackageInstaller.Session session = null;

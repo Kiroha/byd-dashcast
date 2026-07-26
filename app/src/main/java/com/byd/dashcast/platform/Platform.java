@@ -55,6 +55,20 @@ public final class Platform {
     private static volatile Platform INSTANCE;
     private static volatile Boolean sCachedIsDiLink5 = null;
     private static volatile Boolean sCachedClusterResizeSupported = null;
+    // Runtime/persisted single-OS verdict — set when the app can't read the prop in-process
+    // (SELinux prop context) but the shell can, or when AutoContainer reports "no
+    // AutoContainerNative". null = unknown; TRUE = confirmed single-OS. See isClusterSingleOs().
+    private static volatile Boolean sClusterSingleOsRuntime = null;
+    private static final String PREF_CLUSTER_SINGLE_OS = "cluster_single_os_detected";
+
+    /**
+     * Guards the one-shot cluster-resize probe so the shell is forked (and the
+     * sticky pref written) at most once, even when the startup prime worker and a
+     * UI read race on a cold cache. A dedicated monitor — <b>not</b>
+     * {@code Platform.class} — so the sub-1.5s shell block can never stall a
+     * concurrent {@link #isDiLink5(Context)} cache-fill.
+     */
+    private static final Object sResizeProbeLock = new Object();
 
     /** Cached reflection handle for android.os.SystemProperties#get — resolved once. */
     private static volatile Method sCachedSysPropGet = null;
@@ -66,6 +80,7 @@ public final class Platform {
     private final int     androidApi;        // Build.VERSION.SDK_INT
     private final boolean autoDiLink5;       // pure auto-detection result
     private final boolean autoDiLink4;       // pure auto-detection result (BYD-AUTO/DiLink4.0, API 29)
+    private final boolean autoDiLink3;       // explicit DL3 product-name detection (DiLink3.0, API 29)
     private final boolean autoDiLink2;       // pure auto-detection result (alps/MT6765/API 28)
 
     private Platform() {
@@ -76,6 +91,7 @@ public final class Platform {
         this.androidApi     = Build.VERSION.SDK_INT;
         this.autoDiLink5    = detectDiLink5(rawProductName, rawModel, rawFingerprint, androidApi);
         this.autoDiLink4    = detectDiLink4(rawProductName, rawModel, rawFingerprint, androidApi);
+        this.autoDiLink3    = detectDiLink3(rawProductName, rawModel, rawFingerprint);
         this.autoDiLink2    = detectDiLink2(rawBrand, rawProductName, androidApi);
     }
 
@@ -102,6 +118,14 @@ public final class Platform {
         String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
         if (p.contains("dilink5") || m.contains("dilink5") || f.contains("dilink5")) return true;
         if (p.contains("dilink_5") || m.contains("dilink 5") || f.contains("dilink 5")) return true;
+        // DX_BYD_AUTO: BYD's DiLink 5.0 variant whose ro.product.name is "DX_BYD_AUTO"
+        // (not "DiLink5"). It ships Android 11 (API 30), so the api>=31 heuristic below
+        // misses it — without this signal it auto-detects as DL3 and the whole DL5 launch
+        // path (daemon launchAndForce, overscan skip) is disabled. Confirmed DiLink 5.0 by
+        // the user and by field reports INC-20260620-191420 / -205757 / INC-20260621-073318
+        // / -201303 / -210703. Build.MODEL is the generic "BYD AUTO" (shared with DL3), so
+        // we match the product-name signature "dx_byd" only.
+        if (p.contains("dx_byd") || m.contains("dx_byd") || f.contains("dx_byd")) return true;
         // Secondary signal: Android 12+ on BYD device strongly implies DiLink 5
         if (api >= 31 && (m.contains("byd") || f.contains("byd-auto") || f.contains("/dilink"))) {
             return true;
@@ -131,6 +155,29 @@ public final class Platform {
     }
 
     /**
+     * DiLink 3 explicit name detection.
+     *
+     * <p>Returns true when the product name, model, or fingerprint explicitly contains
+     * "DiLink3" (case-insensitive). Used only as a hard guard inside
+     * {@link #isDiLink5(Context)} to prevent a user-forced FORCE_ON from routing a
+     * genuine DL3 device onto the {@code auto_container} (snake_case) activation path
+     * that does not exist on DL3. See INC-20260613-175043 (DiLink3.0, Android 10):
+     * same symptom as the DL4 incident (BYD_RE_Sniffer_20260523_173033) — user had
+     * FORCE_ON set, sendInfo(16) via auto_container returned "Service does not exist",
+     * VD creation timed out, projection appeared at wrong size/position.
+     *
+     * <p>Conservative: only fires when the product explicitly announces "dilink3".
+     * Generic Android 10 devices that DashCast cannot identify as any generation are
+     * unaffected and may still use the FORCE_ON override.
+     */
+    private static boolean detectDiLink3(String product, String model, String fingerprint) {
+        String p = (product     == null ? "" : product).toLowerCase(Locale.ROOT);
+        String m = (model       == null ? "" : model).toLowerCase(Locale.ROOT);
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
+        return p.contains("dilink3") || m.contains("dilink3") || f.contains("dilink3");
+    }
+
+    /**
      * DiLink 2 auto-detection — based on the alps / k65v1_64_bsp / MT6765 / Android 9
      * signature confirmed by two field reports (21/05/2026):
      *   Build.BRAND = "alps", ro.product.name contains "k65v1", Build.VERSION.SDK_INT == 28.
@@ -154,6 +201,7 @@ public final class Platform {
     public int     androidApi()      { return androidApi; }
     public boolean isAutoDetectedDiLink5() { return autoDiLink5; }
     public boolean isAutoDetectedDiLink4() { return autoDiLink4; }
+    public boolean isAutoDetectedDiLink3() { return autoDiLink3; }
     public boolean isAutoDetectedDiLink2() { return autoDiLink2; }
 
     /**
@@ -162,7 +210,8 @@ public final class Platform {
      * neutralises any FORCE_ON DL5 override when {@code autoDiLink4} is true, so a
      * mis-flipped switch in Settings does not push a DL4 device onto the DL5
      * activation path (which calls the snake_case {@code auto_container} binder
-     * that does not exist on the DL3/DL4 service namespace).
+     * that does not exist on the DL3/DL4 service namespace). The same guard now
+     * applies to explicitly-named DL3 products via the {@code autoDiLink3} field.
      */
     public boolean isDiLink4(Context ctx) {
         return autoDiLink4;
@@ -205,6 +254,11 @@ public final class Platform {
         // attempt at the non-existent snake_case binder. This guard absorbs the
         // mistake transparently so misconfigured Settings cannot break DL4 cars.
         if (autoDiLink4) return false;
+        // Same guard for explicitly-named DiLink 3 products. INC-20260613-175043
+        // caught a DL3 user (product=DiLink3.0, Android 10) with FORCE_ON set:
+        // sendInfo(16) via auto_container returned "Service does not exist", VD
+        // creation timed out, and projection appeared at wrong size/position.
+        if (autoDiLink3) return false;
         Boolean cached = sCachedIsDiLink5;
         if (cached != null) return cached;
         synchronized (Platform.class) {
@@ -230,6 +284,11 @@ public final class Platform {
             String ov = readOverride(ctx);
             if (OV_FORCE_ON.equals(ov)) return "AUTO=off (DL4 detected — DL5 FORCE_ON ignored)";
             return "AUTO=off (DL4 detected)";
+        }
+        if (autoDiLink3) {
+            String ov = readOverride(ctx);
+            if (OV_FORCE_ON.equals(ov)) return "AUTO=off (DL3 detected — DL5 FORCE_ON ignored)";
+            return "AUTO=off (DL3 detected)";
         }
         String ov = readOverride(ctx);
         if (OV_FORCE_ON.equals(ov))  return "FORCED on";
@@ -282,14 +341,22 @@ public final class Platform {
         if (!isDiLink5(ctx)) return true;
         Boolean cached = sCachedClusterResizeSupported;
         if (cached != null) return cached.booleanValue();
-        // Sticky pref takes precedence over a fresh probe (consistent across cold starts).
-        String sticky = prefs(ctx).getString(PREF_CLUSTER_RESIZE_SUPPORTED, null);
-        if ("yes".equals(sticky)) { sCachedClusterResizeSupported = Boolean.TRUE; return true; }
-        if ("no".equals(sticky))  { sCachedClusterResizeSupported = Boolean.FALSE; return false; }
-        boolean supported = probeSetTaskWindowingMode();
-        sCachedClusterResizeSupported = Boolean.valueOf(supported);
-        prefs(ctx).edit().putString(PREF_CLUSTER_RESIZE_SUPPORTED, supported ? "yes" : "no").apply();
-        return supported;
+        // Serialise the cache-miss path. Without this, two callers on a cold cache
+        // (the startup prime worker and a UI read) can BOTH fork the shell probe
+        // and BOTH write the sticky pref. Double-checked under a dedicated lock so
+        // only one shell is spawned and one prefs write occurs per process.
+        synchronized (sResizeProbeLock) {
+            cached = sCachedClusterResizeSupported;
+            if (cached != null) return cached.booleanValue();
+            // Sticky pref takes precedence over a fresh probe (consistent across cold starts).
+            String sticky = prefs(ctx).getString(PREF_CLUSTER_RESIZE_SUPPORTED, null);
+            if ("yes".equals(sticky)) { sCachedClusterResizeSupported = Boolean.TRUE; return true; }
+            if ("no".equals(sticky))  { sCachedClusterResizeSupported = Boolean.FALSE; return false; }
+            boolean supported = probeSetTaskWindowingMode();
+            sCachedClusterResizeSupported = Boolean.valueOf(supported);
+            prefs(ctx).edit().putString(PREF_CLUSTER_RESIZE_SUPPORTED, supported ? "yes" : "no").apply();
+            return supported;
+        }
     }
 
     /**
@@ -321,17 +388,24 @@ public final class Platform {
      */
     private static boolean probeSetTaskWindowingMode() {
         Process p = null;
+        Thread reader = null;
         try {
             // No taskId arg — we only care whether the verb itself is known.
             // The command will fail with "Bad arg" or similar on a healthy ROM
             // (which is exactly what we want — verb known ⇒ supported).
-            p = Runtime.getRuntime().exec(new String[]{
+            // redirectErrorStream(true) folds stderr into stdout so there is no
+            // second pipe fd to leak, and "cmd" prints "Unknown command" to stderr.
+            ProcessBuilder pb = new ProcessBuilder(
                 "sh", "-c",
-                "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?"
-            });
+                "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?");
+            pb.redirectErrorStream(true);
+            p = pb.start();
+            // stdin is unused — close the write-end immediately so we neither hold
+            // the fd open nor let the child block waiting on input.
+            try { p.getOutputStream().close(); } catch (Throwable ignore) {}
             final Process proc = p;
-            final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            Thread r = new Thread(new Runnable() {
+            final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream(256);
+            reader = new Thread(new Runnable() {
                 @Override public void run() {
                     byte[] buf = new byte[1024];
                     try (java.io.InputStream is = proc.getInputStream()) {
@@ -343,14 +417,15 @@ public final class Platform {
                     } catch (Throwable ignore) {}
                 }
             }, "platform-probe-reader");
-            r.setDaemon(true);
-            r.start();
+            reader.setDaemon(true);
+            reader.start();
             boolean finished = p.waitFor(1500, java.util.concurrent.TimeUnit.MILLISECONDS);
             if (!finished) {
-                try { p.destroyForcibly(); } catch (Throwable ignore) {}
-                return true;  // timeout → assume supported, don't downgrade UX
+                // timeout → assume supported, don't downgrade UX.
+                // Process kill + reader join happen in finally, so nothing leaks.
+                return true;
             }
-            r.join(200);
+            reader.join(200);
             // Decode only after join() — reader thread has stopped writing.
             String s = baos.toString();
             if (s.contains("Unknown command")) return false;
@@ -361,7 +436,18 @@ public final class Platform {
         } catch (Throwable t) {
             return true;
         } finally {
-            if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
+            if (p != null) {
+                // destroyForcibly() closes the process streams, which unblocks the
+                // reader's is.read() so its bounded join() below returns promptly.
+                try { p.destroyForcibly(); } catch (Throwable ignore) {}
+            }
+            if (reader != null) {
+                // Bounded join so a wedged reader can never outlive the probe; it is
+                // a daemon, so even a missed join cannot keep the process alive.
+                try { reader.join(200); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
     }
 
@@ -383,4 +469,69 @@ public final class Platform {
     }
 
     private static String safe(String s) { return s == null ? "" : s; }
+
+    /**
+     * True iff the cluster runs in <b>single-OS fission</b> mode
+     * ({@code ro.build.system.fission_single_os == "1"}). On a DL3 product this means the
+     * instrument cluster is rendered natively (Qt/fission), with NO projectable Android
+     * display — AutoContainer app projection is impossible there (proven on-car: the working
+     * 1-for-2 car has {@code =0} + a cluster VirtualDisplay; the single-OS car has {@code =1},
+     * only Display 0, and "no AutoContainerNative"). Read-only prop, immutable after boot.
+     *
+     * <p><b>Fail-open:</b> returns {@code false} if the prop can't be read (never gate a car we
+     * can't classify). Note {@code =1} alone is NOT enough to gate — combine with
+     * {@link #isDiLink3(Context)} so a real DL5.1 (also single-OS) is unaffected.
+     *
+     * <p>The in-process {@link #readProp} often returns "" for this prop on the very cars that
+     * are single-OS (the app's SELinux domain can't read the vendor prop, though the uid-2000
+     * shell can — INC-20260715-140107). So this also honours a runtime verdict recorded by
+     * {@link #noteClusterSingleOsDetected} (from a shell {@code getprop} the app ran as uid 2000)
+     * and persisted across restarts by {@link #primeClusterSingleOs}.
+     */
+    public static boolean isClusterSingleOs() {
+        if ("1".equals(readProp("ro.build.system.fission_single_os"))) return true;
+        Boolean rt = sClusterSingleOsRuntime;
+        return rt != null && rt;
+    }
+
+    /**
+     * Records — and persists — that this device's cluster is single-OS (no projectable
+     * VirtualDisplay). Call ONLY once single-OS is confirmed on a DL3 via the AUTHORITATIVE,
+     * race-free read of {@code ro.build.system.fission_single_os == "1"} (in-process or a shell
+     * {@code getprop}); the caller is responsible for the {@link #isDiLink3(Context)} check so
+     * DL5.1 (also single-OS) is never marked. Do NOT call this from a transient signal such as a
+     * boot-race "no AutoContainerNative" reply — that could permanently disable a working 1-for-2.
+     */
+    public static void noteClusterSingleOsDetected(Context ctx) {
+        sClusterSingleOsRuntime = Boolean.TRUE;
+        try { prefs(ctx).edit().putBoolean(PREF_CLUSTER_SINGLE_OS, true).apply(); }
+        catch (Throwable ignore) { /* best-effort persistence */ }
+    }
+
+    /**
+     * Loads the persisted single-OS verdict into the in-memory cache. Call once at startup
+     * (ClusterService.onCreate) so the guards fire immediately on a car already known to be
+     * single-OS, without wasting an activation cycle first.
+     */
+    public static void primeClusterSingleOs(Context ctx) {
+        try {
+            if (prefs(ctx).getBoolean(PREF_CLUSTER_SINGLE_OS, false)) {
+                sClusterSingleOsRuntime = Boolean.TRUE;
+            }
+        } catch (Throwable ignore) { /* fail-open: stay unknown */ }
+    }
+
+    /**
+     * Raw HUD/MCU firmware id — {@code apps.setting.product.inswver}, e.g.
+     * {@code "6125f_1for2_USER_SIGN_SX326_202602032334_Q2700"}. Empty if unreadable.
+     *
+     * <p>On DL3 the embedded {@code SX<NNN>} revision code + build date discriminate the
+     * instrument-MCU firmware, which (per the on-car RE) decides whether the windshield HUD
+     * can draw turn-by-turn nav arrows at all (older firmware cannot; a newer one can). Read-only
+     * system property, readable without any permission — used by the HUD bench to report the
+     * firmware alongside the tester's arrow observation so the capability threshold can be pinned.
+     */
+    public static String hudFirmwareVersion() {
+        return readProp("apps.setting.product.inswver");
+    }
 }

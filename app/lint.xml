@@ -77,4 +77,31 @@
     <issue id="SetTextI18n">
         <ignore path="**/ui/diag/DiagActivity.java" />
     </issue>
+
+    <!-- ── New checks introduced by the AGP 8.10 lint (switch-kotlin). ──── -->
+
+    <!-- Fixed landscape orientation is intentional: the app runs on a single
+         known 1920x720 BYD head unit (Android 10, never Android 16+), never
+         on phones/foldables. The regexp covers both the old and the new
+         (lint 8.13+) wording of the warning. -->
+    <issue id="DiscouragedApi">
+        <ignore regexp="fixed orientation|Fixed screen orientations" />
+    </issue>
+
+    <!-- onnxruntime/vosk/jna .so are EXCLUDED from the APK (packagingOptions)
+         and side-loaded at runtime by VoiceLibsManager; DiLink hardware runs
+         Android 10 with 4 KB pages — the 16 KB page-size rollout does not
+         apply to this platform. -->
+    <issue id="Aligned16KB" severity="ignore" />
+
+    <!-- RECEIVER_EXPORTED/NOT_EXPORTED flags only take effect on API 33+;
+         targetSdk is 29 and DiLink hardware tops out at API 29. Do NOT
+         "fix" blindly: MIRROR_DAEMON_READY / PROXY_CONNECTED are sent by the
+         out-of-process root daemon, so RECEIVER_NOT_EXPORTED would break the
+         contract. Revisit if targetSdk is ever bumped to 33+. -->
+    <issue id="UnspecifiedRegisterReceiverFlag" severity="ignore" />
+
+    <!-- AGP/Gradle are pinned to the Kotlin 2.2.0 tested support window
+         (AGP <= 8.10); upgrade noise is tracked manually like GradleDependency. -->
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
 </lint>

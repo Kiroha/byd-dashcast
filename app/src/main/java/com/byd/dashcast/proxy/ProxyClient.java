@@ -13,6 +13,7 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.concurrent.SingleFlight;
 import com.byd.dashcast.proxy.daemon.BinderParcelable;
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
 
@@ -160,7 +161,8 @@ public final class ProxyClient {
     /** Fetched after a connect() failure to surface the daemon's first error line(s). */
     private static final String READ_LOG_CMD = "tail -n 20 " + DAEMON_LOG + " 2>/dev/null";
 
-    private static final int  BOOTSTRAP_TIMEOUT_MS = 8000;
+    /** Covers dadb's first-command authorization window (15 s) plus callback delivery. */
+    private static final int  BOOTSTRAP_TIMEOUT_MS = 16_000;
     /**
      * The daemon's {@code ActivityThread.systemMain()} call takes 5–8 s cold on
      * a DiLink 3.0 SoC (it brings up the framework runtime inside app_process),
@@ -169,8 +171,20 @@ public final class ProxyClient {
      * making failure cases painfully slow.
      */
     private static final int  BROADCAST_WAIT_MS    = 15000;
+    /** A timed-out/refused ADB command may still have spawned the daemon just before transport
+     *  failure; keep a small grace window for its already-armed Binder broadcast. */
+    private static final int  TRANSPORT_FAILURE_BINDER_GRACE_MS = 2_000;
+    private static final long CONNECT_JOIN_TIMEOUT_MS =
+            BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS + 1_000L;
 
     private static final Object LOCK = new Object();
+
+    /** Re-probe interval for a transport classified as permanently unreachable (v1.6.102). */
+    private static final long XPORT_RECHECK_MS = 60_000L;
+    /** Authorization may become healthy immediately after the driver accepts the popup. */
+    private static final long XPORT_AUTH_RECHECK_MS = 2_000L;
+    /** Last time the dead-transport circuit-breaker allowed a real bootstrap attempt. */
+    private static volatile long sLastDeadXportAttemptMs = 0L;
 
     /**
      * The live binder reference, or {@code null} when the daemon is unreachable.
@@ -191,6 +205,8 @@ public final class ProxyClient {
     private static BroadcastReceiver sReceiver;
     /** Set just before bootstrap; counted-down by {@link #sReceiver} on arrival. */
     private static volatile CountDownLatch sBinderLatch;
+    /** Exactly one caller owns a cold daemon bootstrap; concurrent callers join its result. */
+    private static final SingleFlight<Boolean> sConnectSingleFlight = new SingleFlight<>();
 
     // Volatile (build 195 / P1) so the public getters below stay lockless.
     private static volatile int    sDaemonUid = -1;
@@ -328,113 +344,183 @@ public final class ProxyClient {
      * @return {@code true} on success.
      */
     public static boolean connect(Context ctx) {
+        if (ctx == null) return false;
         // Cache the application context the very first time we are called from
         // any thread/site, so attemptReconnect() can bootstrap silently from
         // inside a typed verb (which has no Context parameter). Application
         // context is process-scoped → safe to hold statically.
-        if (ctx != null && sAppCtx == null) {
+        if (sAppCtx == null) {
             sAppCtx = ctx.getApplicationContext();
         }
         // Fast path: an already-live binder is reused without touching the daemon
         // process — critical to avoid the cascade of kill-and-respawn cycles that
         // froze the head unit in v1.1.6 (each respawn triggers a full
         // ActivityThread.systemMain() in app_process which is very heavy).
+        SingleFlight.Ticket<Boolean> ticket;
+        CountDownLatch binderSignal = null;
         synchronized (LOCK) {
             if (isConnected()) {
                 if (sDaemonUid < 0) handshake();
                 return true;
             }
-            // Arm the latch BEFORE registering the receiver so that a broadcast
-            // arriving immediately after registration (daemon already alive) finds
-            // a non-null latch and can count it down rather than being silently
-            // dropped. Both operations are inside LOCK so onReceive() cannot
-            // interleave, but creating the latch first is the safer ordering.
-            sBinderLatch = new CountDownLatch(1);
-            ensureReceiverRegistered(ctx);
-        }
-
-        AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
-        String bootMsg = bootstrap(ctx);
-        AppLogger.d(TAG, "bootstrap result: " + bootMsg);
-
-        // v1.2.78 — Couche 4: metric instrumentation + ERR_NO_APK fast-path.
-        // The bootstrap script returns one of:
-        //   "REBROADCAST <pid>"  → live daemon, trigger file touched
-        //   <nothing>            → cold spawn launched (app_process detached)
-        //   "ERR_NO_APK"         → PM has not indexed our APK yet (post-OTA race)
-        //   "ERR ..."            → ADB transport error
-        // The actual success/fail will be decided by the latch below, but the
-        // bootstrap-side outcome tells us WHY we are about to wait.
-        String upper = bootMsg == null ? "" : bootMsg.trim();
-        if (upper.startsWith("REBROADCAST")) {
-            ProxyMetrics.inc(ctx, ProxyMetrics.K_REBROADCASTS);
-        } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
-            ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_NO_APK);
-            // Force the next attemptReconnect to bypass cooldown — the PM
-            // race window is sub-second and a 1s+ wait wastes UX.
-            synchronized (LOCK) {
-                sLastReconnectAttemptMs = 0L;
-                sBackoffStep = 0;
+            ticket = sConnectSingleFlight.join();
+            if (!ticket.isLeader()) {
+                // The leader already owns receiver setup, bootstrap, metrics, and Binder wait.
+                // Drop LOCK before waiting so the broadcast receiver can publish the Binder.
+            } else {
+                // v1.6.102 — circuit-breaker for a permanently-dead self-ADB transport
+                // (e.g. D50F_LC: ADB-over-TCP off / app unprivileged). The keeper (10 s) and
+                // watchdog (30 s) both call connect(); without this each would pay a full
+                // blocking bootstrap every cycle, forever. When AdbLocalClient has classified
+                // the transport as unreachable, bail fast without bootstrapping — but still
+                // allow ONE real attempt every XPORT_RECHECK_MS so it self-heals if ADB-TCP
+                // is enabled later without restarting the app.
+                if (AdbLocalClient.isAdbTransportUnreachable()) {
+                    long now = SystemClock.elapsedRealtime();
+                    long recheckMs = ProxyTransportRetryPolicy.recheckMs(
+                            AdbLocalClient.adbTransportState(),
+                            XPORT_RECHECK_MS,
+                            XPORT_AUTH_RECHECK_MS);
+                    if (now - sLastDeadXportAttemptMs < recheckMs) {
+                        ticket.complete(false);
+                        return false;
+                    }
+                    sLastDeadXportAttemptMs = now;
+                }
+                // Arm the latch BEFORE registering the receiver so that a broadcast
+                // arriving immediately after registration (daemon already alive) finds
+                // a non-null latch and can count it down rather than being silently
+                // dropped. Both operations are inside LOCK so onReceive() cannot
+                // interleave, but creating the latch first is the safer ordering.
+                binderSignal = new CountDownLatch(1);
+                sBinderLatch = binderSignal;
+                try {
+                    ensureReceiverRegistered(ctx);
+                } catch (Throwable registrationError) {
+                    sBinderLatch = null;
+                    ticket.complete(false);
+                    AppLogger.e(TAG, "proxy receiver registration failed", registrationError);
+                    return false;
+                }
             }
         }
 
-        // CRITICAL: await() must NOT be called while holding LOCK. The broadcast
-        // arrives on the main thread, onReceive() tries to take LOCK to set
-        // sBinder, and would block until our await() times out. v1.1.7 hit
-        // exactly this deadlock: the broadcast was always 0 ms late because the
-        // receiver was blocked on us. CountDownLatch.await() does not release
-        // monitors the way Object.wait() does, so we have to drop LOCK manually.
-        //
-        // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
-        // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
-        // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
-        // the fallback am-start triggers quickly rather than blocking 15s.
-        // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
-        // on DiLink SoCs).
-        long waitMs = upper.startsWith("REBROADCAST") ? 5_000L : BROADCAST_WAIT_MS;
-        CountDownLatch latch;
-        synchronized (LOCK) { latch = sBinderLatch; }
-        try {
-            latch.await(waitMs, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
-
-        synchronized (LOCK) {
-            // Late-arrival recovery: the receiver may have signalled just after
-            // the latch timed out — re-check rather than failing hard.
-            // 1.2.31 — isBinderAlive() (local check, 0 IPC) instead of
-            // pingBinder() (Binder roundtrip): the live binder cache is hooked
-            // via linkToDeath in the receiver above, so isBinderAlive is
-            // strictly equivalent here and avoids one IPC while holding LOCK.
-            if (sBinder == null || !sBinder.isBinderAlive()) {
-                AppLogger.w(TAG, "no live binder after " + waitMs
-                        + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
-                sBinder = null;
-                // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
-                if (upper.startsWith("REBROADCAST") || upper.isEmpty()) {
-                    ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_TIMEOUT);
-                } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
-                    ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_OTHER);
-                }
+        if (!ticket.isLeader()) {
+            try {
+                return Boolean.TRUE.equals(ticket.await(CONNECT_JOIN_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            } catch (java.util.concurrent.TimeoutException timeout) {
+                AppLogger.w(TAG, "timed out joining in-flight daemon connect");
                 return false;
             }
-            handshake();
-            boolean ok = isConnected();
-            if (ok) {
-                AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
-                        + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
-                // v1.2.78 — Couche 4: count cold spawn (REBROADCAST already
-                // counted above and we shouldn't double-count it as a cold one).
-                if (!upper.startsWith("REBROADCAST")) {
-                    ProxyMetrics.inc(ctx, ProxyMetrics.K_COLD_SPAWNS);
-                }
-                // v1.2.78 — reset backoff on success so the next failure starts
-                // at step 0 (1s) instead of inheriting the previous run's state.
-                sBackoffStep = 0;
+        }
+
+        boolean result = false;
+        try {
+            AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
+            String bootMsg = bootstrap(ctx);
+            AppLogger.d(TAG, "bootstrap result: " + bootMsg);
+
+            // v1.2.78 — Couche 4: metric instrumentation + ERR_NO_APK fast-path.
+            // The bootstrap script returns one of:
+            //   "REBROADCAST <pid>"  → live daemon, trigger file touched
+            //   <nothing>            → cold spawn launched (app_process detached)
+            //   "ERR_NO_APK"         → PM has not indexed our APK yet (post-OTA race)
+            //   "ERR ..."            → ADB transport error
+            // The actual success/fail will be decided by the latch below, but the
+            // bootstrap-side outcome tells us WHY we are about to wait.
+            String upper = bootMsg == null ? "" : bootMsg.trim();
+            if (AdbLocalClient.isAdbTransportUnreachable()) {
+                // The first failure entered connect() while transport state was still null, so
+                // the entry circuit-breaker could not timestamp it. Arm the recheck window now;
+                // otherwise the very next 10 s keeper heartbeat performs a second full attempt.
+                sLastDeadXportAttemptMs = SystemClock.elapsedRealtime();
             }
-            return ok;
+            if (upper.startsWith("REBROADCAST")) {
+                ProxyMetrics.inc(ctx, ProxyMetrics.K_REBROADCASTS);
+            } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
+                ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_NO_APK);
+                // Force the next attemptReconnect to bypass cooldown — the PM
+                // race window is sub-second and a 1s+ wait wastes UX.
+                synchronized (LOCK) {
+                    sLastReconnectAttemptMs = 0L;
+                    sBackoffStep = 0;
+                }
+            }
+
+            // CRITICAL: await() must NOT be called while holding LOCK. The broadcast
+            // arrives on the main thread, onReceive() tries to take LOCK to set
+            // sBinder, and would block until our await() times out. v1.1.7 hit
+            // exactly this deadlock: the broadcast was always 0 ms late because the
+            // receiver was blocked on us. CountDownLatch.await() does not release
+            // monitors the way Object.wait() does, so we have to drop LOCK manually.
+            //
+            // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
+            // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
+            // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
+            // the fallback am-start triggers quickly rather than blocking 15s.
+            // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
+            // on DiLink SoCs). A classified transport failure gets only a 2s grace
+            // in case the detached daemon started just before the socket failed.
+            long waitMs = ProxyBootstrapPolicy.binderWaitMs(
+                    upper,
+                    AdbLocalClient.isAdbTransportUnreachable(),
+                    5_000L,
+                    TRANSPORT_FAILURE_BINDER_GRACE_MS,
+                    BROADCAST_WAIT_MS);
+            try {
+                binderSignal.await(waitMs, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+
+            synchronized (LOCK) {
+                // Late-arrival recovery: the receiver may have signalled just after
+                // the latch timed out — re-check rather than failing hard.
+                // 1.2.31 — isBinderAlive() (local check, 0 IPC) instead of
+                // pingBinder() (Binder roundtrip): the live binder cache is hooked
+                // via linkToDeath in the receiver above, so isBinderAlive is
+                // strictly equivalent here and avoids one IPC while holding LOCK.
+                if (sBinder == null || !sBinder.isBinderAlive()) {
+                    AppLogger.w(TAG, "no live binder after " + waitMs
+                            + "ms (latch=" + (binderSignal.getCount() == 0
+                            ? "signalled" : "timed-out") + ")");
+                    sBinder = null;
+                    // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
+                    String transportState = AdbLocalClient.adbTransportState();
+                    if (AdbLocalClient.XPORT_UNRESPONSIVE.equals(transportState)
+                            || upper.contains("timed out")
+                            || upper.startsWith("REBROADCAST") || upper.isEmpty()) {
+                        ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_TIMEOUT);
+                    } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
+                        ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_OTHER);
+                    }
+                    return false;
+                }
+                handshake();
+                result = isConnected();
+                if (result) {
+                    AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
+                            + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
+                    // v1.2.78 — Couche 4: count cold spawn (REBROADCAST already
+                    // counted above and we shouldn't double-count it as a cold one).
+                    if (!upper.startsWith("REBROADCAST")) {
+                        ProxyMetrics.inc(ctx, ProxyMetrics.K_COLD_SPAWNS);
+                    }
+                    // v1.2.78 — reset backoff on success so the next failure starts
+                    // at step 0 (1s) instead of inheriting the previous run's state.
+                    sBackoffStep = 0;
+                }
+                return result;
+            }
+        } finally {
+            synchronized (LOCK) {
+                if (sBinderLatch == binderSignal) sBinderLatch = null;
+            }
+            ticket.complete(result);
         }
     }
 
@@ -516,6 +602,14 @@ public final class ProxyClient {
 
     /** Protocol version reported by the daemon, or {@code null} if never handshook. */
     public static String getProtocolVersion() { return sDaemonVer; }
+
+    /** True when the connected daemon reports a numeric protocol at least {@code minimum}. */
+    public static boolean supportsProtocol(int minimum) {
+        String version = sDaemonVer;
+        if (version == null) return false;
+        try { return Integer.parseInt(version) >= minimum; }
+        catch (NumberFormatException ignored) { return false; }
+    }
 
     /**
      * Run a shell command on the daemon and return its combined stdout/stderr.
@@ -610,6 +704,17 @@ public final class ProxyClient {
         final String safeStr = str == null ? "" : str;
         callWithRetry("autoContainerSendInfo",
                 () -> { ProxyProcessVerbs.autoContainerSendInfo(type, info, safeStr); return null; });
+    }
+
+    /** AutoContainer sendInfo preserving the OEM/native integer result code. */
+    public static int autoContainerSendInfoResult(int type, int info, String str)
+            throws ProxyException {
+        if (!supportsProtocol(20)) {
+            throw new ProxyException("AutoContainer result codes unsupported by daemon");
+        }
+        final String safeStr = str == null ? "" : str;
+        return callWithRetry("autoContainerSendInfoResult",
+                () -> ProxyProcessVerbs.autoContainerSendInfoResult(type, info, safeStr));
     }
 
     /**
@@ -724,6 +829,25 @@ public final class ProxyClient {
                 () -> ProxyFissionVerbs.launchAndForce(pkg, activityCls, displayId, width, height));
     }
 
+    /** Best-effort teardown guard; never reconnects or blocks teardown on an old daemon. */
+    public static boolean cancelFissionWatchdog(String packageName) {
+        if (packageName != null && packageName.isEmpty()) return false;
+        if (!isConnected() || !supportsProtocol(21)) {
+            return false;
+        }
+        try {
+            return ProxyFissionVerbs.cancelFissionWatchdog(packageName);
+        } catch (Throwable error) {
+            AppLogger.w(TAG, "cancelFissionWatchdog failed for " + packageName
+                    + ": " + error.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean cancelAllFissionWatchdogs() {
+        return cancelFissionWatchdog(null);
+    }
+
     /**
      * Phase 6 — Move an existing task to {@code displayId} and resize it to
      * the given rect (in destination-display pixels). No am-start, no
@@ -772,6 +896,14 @@ public final class ProxyClient {
         final String pkg = packageName == null ? "" : packageName;
         return callWithRetry("findTaskIdForPackage",
                 () -> ProxyProcessVerbs.findTaskIdForPackage(pkg));
+    }
+
+    /** Locate a package task and the display that currently owns it. */
+    public static com.byd.dashcast.infrastructure.task.TaskLocation findTaskLocationForPackage(
+            String packageName) throws ProxyException {
+        final String pkg = packageName == null ? "" : packageName;
+        return callWithRetry("findTaskLocationForPackage",
+                () -> ProxyProcessVerbs.findTaskLocationForPackage(pkg));
     }
 
     /**
@@ -845,6 +977,114 @@ public final class ProxyClient {
     public static int canSettingInt(int featureId, int value) throws ProxyException {
         return callWithRetry("canSettingInt",
                 () -> ProxyCanVerbs.canSettingInt(featureId, value));
+    }
+
+    /** Executes an ordered CAN write group in one Binder transaction (protocol v19+). */
+    public static int canBatch(java.util.List<com.byd.dashcast.system.CanBatchOperation> operations)
+            throws ProxyException {
+        if (!supportsProtocol(19)) throw new ProxyException("CAN batch unsupported by daemon");
+        try {
+            // Do not use callWithRetry here: a RemoteException can arrive after the daemon applied
+            // a prefix of the group. Replaying the whole batch would violate exactly-once grouping.
+            return ProxyCanVerbs.canBatch(operations);
+        } catch (RemoteException transportError) {
+            invalidateBinder("canBatch");
+            throw new ProxyException("canBatch transact: " + transportError.getMessage(),
+                    transportError);
+        }
+    }
+
+    /**
+     * Read an integer from a CAN <em>instrument</em> feature via
+     * {@code BYDAutoInstrumentDevice.get(int[])} inside the daemon (privileged context).
+     *
+     * <p>In-app reads are rejected by the SDK ({@code InvocationTargetException}); the
+     * daemon's permission-bypass context is the only path that the SDK accepts.
+     *
+     * @param featureId raw BYD CAN instrument feature constant (e.g. a {@code *_FEEDBACK} id)
+     * @return the feature's current integer value
+     */
+    public static int canInstrumentGet(int featureId) throws ProxyException {
+        return callWithRetry("canInstrumentGet",
+                () -> ProxyCanVerbs.canInstrumentGet(featureId));
+    }
+
+    /**
+     * Read an integer from a CAN <em>setting</em> feature via
+     * {@code BYDAutoSettingDevice.get(int[])} inside the daemon (privileged context).
+     * Used to read e.g. {@code SET_HUD_MODE_FEEDBACK} while the OEM nav drives the HUD.
+     *
+     * @param featureId raw BYD CAN setting feature constant
+     * @return the feature's current integer value
+     */
+    public static int canSettingGet(int featureId) throws ProxyException {
+        return callWithRetry("canSettingGet",
+                () -> ProxyCanVerbs.canSettingGet(featureId));
+    }
+
+    /**
+     * Write a DOUBLE value to a CAN <em>setting</em> feature via {@code BYDAutoSettingDevice}
+     * inside the daemon. Required for the HUD angle ({@code CanWriteVerbs.SET_HUD_ANGLE}), which
+     * the OEM CarSettings app writes as a double.
+     *
+     * @param featureId raw BYD CAN setting feature constant
+     * @param value     double to write
+     * @return SDK result code (0 = success).
+     */
+    public static int canSettingDouble(int featureId, double value) throws ProxyException {
+        return callWithRetry("canSettingDouble",
+                () -> ProxyCanVerbs.canSettingDouble(featureId, value));
+    }
+
+    /**
+     * Read up to {@code maxLen} bytes of {@code path} at {@code offset} from inside the daemon
+     * (uid 2000 = shell), which can read {@code /data/local/tmp} files SELinux hides from the app
+     * uid. Returns an empty array at EOF. Loop, advancing {@code offset} by each chunk's length,
+     * to pull an arbitrarily large file without overflowing a single Binder parcel.
+     *
+     * @param path   absolute path on the device
+     * @param offset byte offset to read from
+     * @param maxLen max bytes to read (daemon clamps to a Binder-safe ceiling)
+     * @return the bytes read (length 0 at EOF)
+     */
+    public static byte[] readFileChunk(String path, long offset, int maxLen) throws ProxyException {
+        return callWithRetry("readFileChunk",
+                () -> ProxyFileVerbs.readFileChunk(path, offset, maxLen));
+    }
+
+    /**
+     * Register a BYD setting feedback listener inside the daemon to capture PUSH feedback
+     * (the HUD/nav feature values are push-only — not gettable). Idempotent.
+     *
+     * @return a short status string ("registered…" / "already-registered")
+     */
+    public static String canListenStart() throws ProxyException {
+        return callWithRetry("canListenStart", ProxyCanVerbs::canListenStart);
+    }
+
+    /** Drain (return + clear) the push events captured by the daemon listener. */
+    public static String canListenDrain() throws ProxyException {
+        return callWithRetry("canListenDrain", ProxyCanVerbs::canListenDrain);
+    }
+
+    /**
+     * AAOS-only: probe the automotive display proxy HAL (IAutomotiveDisplayProxyService) from the
+     * daemon (uid 2000) — tests whether app windows can be drawn to the cluster panel.
+     *
+     * @return the probe report (HAL reachability + getHGraphicBufferProducer result)
+     */
+    public static String aaosHalProbe() throws ProxyException {
+        return callWithRetry("aaosHalProbe", ProxyCanVerbs::aaosHalProbe);
+    }
+
+    /** Clear the push-feedback log + persistent last-known map (for a fresh, uncontaminated read). */
+    public static void canListenClear() throws ProxyException {
+        callWithRetry("canListenClear", () -> { ProxyCanVerbs.canListenClear(); return null; });
+    }
+
+    /** Append a timestamped user ground-truth marker (e.g. the HUD maneuver just seen) to the log. */
+    public static void canListenMark(String label) throws ProxyException {
+        callWithRetry("canListenMark", () -> { ProxyCanVerbs.canListenMark(label); return null; });
     }
 
     /**
@@ -960,6 +1200,67 @@ public final class ProxyClient {
         return ok;
     }
 
+    // ─── Main-thread ANR guard for the reconnect bootstrap ───────────────────
+    // connect() blocks the caller for up to BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS
+    // (~23s) bootstrapping a cold uid-2000 daemon. That MUST never run on the UI
+    // looper (frozen instrument cluster = ANR). This single-thread executor runs the
+    // blocking bootstrap off-thread when a verb is (defensively) called on main.
+    private static final java.util.concurrent.ExecutorService sReconnectExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "proxy-reconnect");
+                t.setDaemon(true);
+                return t;
+            });
+    private static final java.util.concurrent.atomic.AtomicBoolean sAsyncReconnectPending =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    // Threads that own their own transport fallback (e.g. the ShellGateway serial
+    // executor, which routes to AdbLocalClient on any failure) can opt out of the
+    // blocking bootstrap: a binder that dies mid-transact would otherwise stall that
+    // single worker ~23s before the fallback runs. When set, callWithRetry's reconnect
+    // is kicked async (daemon still revives) and the verb fails fast instead.
+    private static final ThreadLocal<Boolean> sNonBlockingReconnect =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /**
+     * Opt the CURRENT thread out of the blocking daemon bootstrap inside
+     * {@link #callWithRetry}. Intended for dedicated worker threads that have their
+     * own legacy fallback and must not be stalled by a cold-daemon reconnect.
+     */
+    public static void setNonBlockingReconnect(boolean enabled) {
+        sNonBlockingReconnect.set(enabled);
+    }
+
+    /**
+     * Reconnect policy that never blocks the main thread. On a background thread this
+     * runs the (cooldown-gated) blocking bootstrap synchronously — unchanged behaviour.
+     * On the main thread it kicks the bootstrap onto the dedicated "proxy-reconnect"
+     * thread (coalesced — at most one in flight) and returns {@code false} immediately,
+     * so a cold daemon can never ANR the UI: the caller's {@code op.run()} throws
+     * "not connected" (handled by existing AdbLocalClient fallbacks) and the daemon
+     * still revives in the background for the next call.
+     *
+     * @return {@code true} only when a synchronous reconnect ran AND a live binder is
+     *         now held; {@code false} on the main thread (kicked async) or on failure.
+     */
+    private static boolean reconnectUnlessMainThread() {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+                || Boolean.TRUE.equals(sNonBlockingReconnect.get())) {
+            if (sAsyncReconnectPending.compareAndSet(false, true)) {
+                try {
+                    sReconnectExecutor.execute(() -> {
+                        try { attemptReconnect(); }
+                        finally { sAsyncReconnectPending.set(false); }
+                    });
+                } catch (java.util.concurrent.RejectedExecutionException ree) {
+                    sAsyncReconnectPending.set(false);
+                }
+            }
+            return false;
+        }
+        return attemptReconnect();
+    }
+
     /**
      * Wrap a typed-verb body in single-shot auto-recovery: pre-check live
      * binder (best-effort silent reconnect if dead), run the body, retry once
@@ -983,7 +1284,7 @@ public final class ProxyClient {
         // the legacy fallback (e.g. AdbLocalClient.sendInfo) catch and route.
         IBinder pre = sBinder;
         if (pre == null || !pre.isBinderAlive()) {
-            attemptReconnect();
+            reconnectUnlessMainThread();
         }
         try {
             return op.run();
@@ -999,7 +1300,7 @@ public final class ProxyClient {
             }
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
                     + " — attempting reconnect");
-            if (!attemptReconnect()) {
+            if (!reconnectUnlessMainThread()) {
                 throw new ProxyException(tag + ": " + e.getMessage(), e);
             }
             try {
@@ -1054,6 +1355,17 @@ public final class ProxyClient {
                     AppLogger.d(TAG, "ignoring stale PROXY_CONNECTED (binder already dead)");
                     return;
                 }
+                // Authenticate the daemon: adopt the broadcast binder only if it matches the one the
+                // real daemon registered in the global ServiceManager (only uid-2000/system can
+                // addService — SELinux blocks apps). A spoofed broadcast carries a fake binder that
+                // won't match. If there is NO entry (older daemon / addService failed on this ROM),
+                // fall back to the broadcast binder (prior behaviour) so this can never break the
+                // daemon path — including across the update where a pre-S2 daemon is still running.
+                IBinder registered = lookupRegisteredProxyBinder();
+                if (registered != null && registered != bp.binder) {
+                    AppLogger.w(TAG, "PROXY_CONNECTED binder ≠ ServiceManager entry — ignoring (spoofed?)");
+                    return;
+                }
                 synchronized (LOCK) {
                     // If we already hold a live binder, prefer it (avoid spurious
                     // handshake/state churn from late duplicate broadcasts).
@@ -1097,6 +1409,20 @@ public final class ProxyClient {
         AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonContract.ACTION_PROXY_CONNECTED);
     }
 
+    /** Reflective {@code ServiceManager.getService(ProxyDaemonMain.SERVICE_NAME)} — the trusted
+     *  anchor for authenticating a PROXY_CONNECTED broadcast binder. null if absent or on error. */
+    private static IBinder lookupRegisteredProxyBinder() {
+        try {
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            java.lang.reflect.Method getService = sm.getDeclaredMethod("getService", String.class);
+            getService.setAccessible(true);
+            return (IBinder) getService.invoke(null,
+                    com.byd.dashcast.proxy.daemon.ProxyDaemonMain.SERVICE_NAME);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     /** Issue the WHOAMI transaction to populate uid/pid/version caches. */
     private static void handshake() {
         if (sBinder == null) return;
@@ -1125,7 +1451,7 @@ public final class ProxyClient {
         AdbLocalClient.executeShellWithResult(ctx, BOOTSTRAP_CMD, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String report) { out.set(report); latch.countDown(); }
             @Override public void onError(String error)    { out.set("ERR " + error); latch.countDown(); }
-        });
+        }, AdbLocalClient.BOOTSTRAP_IDLE_TIMEOUT_MS);
         try {
             if (!latch.await(BOOTSTRAP_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 return "ERR bootstrap timed out";

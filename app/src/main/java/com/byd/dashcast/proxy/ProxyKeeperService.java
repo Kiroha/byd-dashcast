@@ -85,6 +85,7 @@ public final class ProxyKeeperService extends Service {
         mHandler = new Handler(mThread.getLooper());
         mRunning = true;
         mHandler.post(mTick);
+        ProxyWatchdog.noteKeeperStarted();
         AppLogger.i(TAG, "started (heartbeat=" + HEARTBEAT_MS + "ms)");
     }
 
@@ -100,6 +101,8 @@ public final class ProxyKeeperService extends Service {
         mRunning = false;
         if (mHandler != null) mHandler.removeCallbacksAndMessages(null);
         if (mThread != null) mThread.quitSafely();
+        mArmExecutor.shutdownNow();
+        ProxyWatchdog.noteKeeperStopped();
         AppLogger.i(TAG, "stopped");
         super.onDestroy();
     }
@@ -125,6 +128,15 @@ public final class ProxyKeeperService extends Service {
 
     private void tickInternal() {
         Context ctx = getApplicationContext();
+        // v1.6.x — app-wide persistent hotspot keep-alive rides this always-on FG
+        // heartbeat so the hotspot "always on" survives HotspotActivity being closed
+        // (INC-20260705-195419: the in-Activity watchdog stopped on onPause). No-op
+        // unless the user enabled it; internally throttled to ~20 s.
+        try {
+            com.byd.dashcast.ui.hotspot.HotspotKeeper.maybeKeepAlive(ctx);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "hotspot keep-alive threw: " + t.getMessage());
+        }
         // v1.3.3 — Defense in depth against silent binder deaths seen on
         // DiLink 3 / Android 10: do a real pingBinder() round-trip (cheap,
         // ~1 ms) rather than only the local isBinderAlive() check.
@@ -140,6 +152,15 @@ public final class ProxyKeeperService extends Service {
 
         if (alive) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
+            armHudListener();   // keep the HUD push-feedback listener registered app-wide
+            // Rolling screenshot recorder for the bug reporter — no-op unless projection is
+            // active AND the feature is enabled; internally throttled to ~15 s and self-cleaning.
+            // Rides this always-on heartbeat so it needs no timer of its own (like HotspotKeeper).
+            try {
+                com.byd.dashcast.report.ClusterShotRecorder.maybeCapture(ctx);
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "shot recorder threw: " + t.getMessage());
+            }
             return;
         }
         long downForMs = mLastSeenAliveMs == 0 ? -1
@@ -150,11 +171,52 @@ public final class ProxyKeeperService extends Service {
         boolean ok = ProxyClient.connect(ctx);
         if (ok) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
+            mHudListenerArmed = false;   // fresh daemon → re-arm the HUD listener on the next tick
             AppLogger.i(TAG, "keeper reconnect ✅ pid="
                     + ProxyClient.getDaemonPid());
         } else {
             AppLogger.w(TAG, "keeper reconnect ❌ — retrying in "
                     + (HEARTBEAT_MS / 1000) + "s");
+        }
+    }
+
+    /** Set once we've registered the daemon HUD push-feedback listener for the current daemon
+     *  connection; reset on reconnect / respawn so it re-arms against the fresh daemon. */
+    private volatile boolean mHudListenerArmed = false;
+
+    /** Serial executor for arming the HUD listener — reused across heartbeats instead of
+     *  spawning a new "hud-listener-arm" Thread per arm (which churned one thread per heartbeat
+     *  under persistent canListenStart failure). Shut down in onDestroy. */
+    private final java.util.concurrent.ExecutorService mArmExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "hud-listener-arm");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /**
+     * Keep the BYDAuto HUD push-feedback listener registered app-wide (off-thread, guarded) so the
+     * bug report / diag can read the HUD's ACTUAL switch + display-mode. That state is push-only
+     * (get() returns 0) and the OEM nav pushes it once at nav-start — capturing it reliably needs
+     * the listener already registered, which this guarantees. Idempotent daemon-side; armed once
+     * per connection, re-armed after a reconnect / respawn.
+     */
+    private void armHudListener() {
+        if (mHudListenerArmed) return;
+        mHudListenerArmed = true;
+        try {
+            mArmExecutor.execute(() -> {
+                // Fail fast on a cold daemon instead of blocking this worker ~23s (mirrors F6).
+                ProxyClient.setNonBlockingReconnect(true);
+                try {
+                    ProxyClient.canListenStart();
+                } catch (Throwable t) {
+                    mHudListenerArmed = false;   // allow a retry on the next alive tick
+                    AppLogger.w(TAG, "HUD listener arm failed: " + t.getMessage());
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ree) {
+            mHudListenerArmed = false;   // executor shut down (service stopping) — allow a retry
         }
     }
 

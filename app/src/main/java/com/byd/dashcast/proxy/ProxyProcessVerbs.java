@@ -5,6 +5,7 @@ import android.os.Parcel;
 import android.os.RemoteException;
 
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
+import com.byd.dashcast.infrastructure.task.TaskLocation;
 
 /**
  * Verb group: process management and task discovery.
@@ -85,6 +86,26 @@ final class ProxyProcessVerbs {
         }
     }
 
+    static int autoContainerSendInfoResult(int type, int info, String str)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(type);
+            data.writeInt(info);
+            data.writeString(str);
+            b.transact(ProxyDaemonContract.TXN_AUTOCONTAINER_SEND_INFO_RESULT, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
     static void forceStopPackage(String packageName, int userId)
             throws RemoteException, ProxyClient.ProxyException {
         IBinder b = ProxyClient.sBinder;
@@ -115,6 +136,24 @@ final class ProxyProcessVerbs {
             b.transact(ProxyDaemonContract.TXN_FIND_TASK_FOR_PACKAGE, data, reply, 0);
             reply.readException();
             return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static TaskLocation findTaskLocationForPackage(String packageName)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeString(packageName == null ? "" : packageName);
+            b.transact(ProxyDaemonContract.TXN_FIND_TASK_LOCATION, data, reply, 0);
+            reply.readException();
+            return TaskLocation.fromWire(reply.readInt(), reply.readInt(), reply.readInt());
         } finally {
             reply.recycle();
             data.recycle();

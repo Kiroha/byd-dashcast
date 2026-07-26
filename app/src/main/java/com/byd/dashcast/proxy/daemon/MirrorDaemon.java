@@ -2,7 +2,11 @@ package com.byd.dashcast.proxy.daemon;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -22,10 +26,16 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import com.byd.dashcast.util.concurrent.DeathLease;
+import com.byd.dashcast.util.concurrent.BoundedSerialExecutor;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import android.annotation.SuppressLint;
 import java.util.concurrent.atomic.AtomicReference;
@@ -47,6 +57,19 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MirrorDaemon {
 
     private static final String TAG = "MirrorDaemon";
+
+    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
+     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    private static volatile int sAppUid = -1;
+
+    /** True if {@code uid} may drive the privileged MirrorBinder verbs. Falls OPEN when the app
+     *  uid could not be resolved, so it can never block the legitimate app→daemon path. */
+    private static boolean isAllowedCaller(int uid) {
+        if (sAppUid == -1) return true;                     // unresolved → fall open, never break
+        if (uid == 1000) return true;                       // system
+        if (uid == android.os.Process.myUid()) return true; // the daemon's own uid (shell 2000)
+        return (uid % 100000) == (sAppUid % 100000);        // our app (user-agnostic appId match)
+    }
 
     // Actions broadcast
     public static final String ACTION_DAEMON_READY  = "com.byd.dashcast.MIRROR_DAEMON_READY";
@@ -76,9 +99,22 @@ public class MirrorDaemon {
     public static final int TRANSACT_DEACTIVATE_LAYOUT = 13;
     /** TRANSACT 14 — query the displayId for a named slot; returns -1 if not alive. */
     public static final int TRANSACT_QUERY_SLOT        = 14;
+    /** TRANSACT 15 — move a package's task back to display 0 (teardown repatriation). */
+    public static final int TRANSACT_MOVE_TO_DISPLAY0  = 15;
+    /** Capture one frame of a layerStack (0=main, cluster stack=2/1) to a JPEG on disk.
+     *  Params: int layerStack, int width, int height, int quality, String outPath.
+     *  Reply: String status ("OK <path>" / "FAIL …"). Used by the bug-report screenshot recorder. */
+    public static final int TRANSACT_CAPTURE_DISPLAY   = 16;
+    /** TRANSACT 17 — focus the task belonging to a selected tactile Layout slot. */
+    public static final int TRANSACT_FOCUS_SLOT        = 17;
+
+        /** PID-bound build marker used by the bounded dadb startup preflight. */
+        public static final String VERSION_FILE =
+            "/data/local/tmp/dashcast_mirrordaemon_ver";
 
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
+    private static DeathLease       sMirrorOwnerLease = null;
     private static volatile int     sClusterDisplayId = 2;
     /** v1.2.7 — first-event trace flag; reset on each setupMirror to log once per session. */
     private static volatile boolean sMotionFirstLogged = false;
@@ -128,6 +164,14 @@ public class MirrorDaemon {
     private static volatile Method  sInjectMethod    = null;
     private static volatile Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
     private static volatile Method  sSetDisplayIdKey = null;  // KeyEvent.setDisplayId    — may be null (v1.2.11)
+
+    /** Keeps the M7 SurfaceFlinger evidence without blocking mirror startup or queuing stale dumps. */
+    private static final BoundedSerialExecutor sMirrorAuditExecutor =
+            new BoundedSerialExecutor(1, runnable -> {
+                Thread thread = new Thread(runnable, "mirror-sf-audit");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -203,6 +247,19 @@ public class MirrorDaemon {
             final IBinder daemonBinder = new MirrorBinder();
             out("MirrorBinder created");
 
+            // Resolve our app's uid once so onTransact can reject untrusted callers (the binder is
+            // also discoverable via ServiceManager). Fall open on any failure (sAppUid stays -1),
+            // so this can never break the legitimate app→daemon path.
+            try {
+                sAppUid = context.getPackageManager()
+                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+                out("app uid resolved: " + sAppUid);
+            } catch (Throwable t) {
+                out("app uid resolution failed (fall open): " + t.getMessage());
+            }
+
+            writeVersionFile();
+
             // Enregistrer dans ServiceManager (accessible par uid=2000) :
             // Remplace registerReceiver (interdit depuis systemMain() — AMS rejette
             // the unregistered IApplicationThread → SecurityException).
@@ -258,6 +315,16 @@ public class MirrorDaemon {
         protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
                 throws android.os.RemoteException {
             data.enforceInterface(DESCRIPTOR);
+            // Caller-identity gate: the binder is published in the global ServiceManager and can be
+            // obtained by any process, but only the app (+ system/self) may drive these privileged
+            // input-injection / trusted-display / task verbs. enforceInterface alone is NOT auth.
+            int callingUid = Binder.getCallingUid();
+            if (!isAllowedCaller(callingUid)) {
+                Log.w(TAG, "MirrorBinder: rejected transact code=" + code + " from uid=" + callingUid);
+                if (reply != null) reply.writeException(
+                        new SecurityException("caller uid " + callingUid + " not permitted"));
+                return true; // consumed (rejected) — do not run the privileged verb
+            }
             switch (code) {
                 case TRANSACT_MIRROR_START: {
                     int layerStack    = data.readInt();
@@ -267,7 +334,21 @@ public class MirrorDaemon {
                     int viewW         = data.readInt();
                     int viewH         = data.readInt();
                     Surface surface   = data.readParcelable(Surface.class.getClassLoader());
-                    boolean ok = setupMirror(layerStack, clusterW, clusterH, viewW, viewH, surface);
+                    // Additive wire field: old clients omit it; current clients provide a
+                    // process-owned token so an app crash cannot orphan the mirror display.
+                    IBinder owner = data.dataAvail() > 0 ? data.readStrongBinder() : null;
+                    boolean ok;
+                    try {
+                        stopMirror();
+                        boolean ownerAttached = attachMirrorOwner(owner);
+                        ok = ownerAttached && setupMirror(layerStack, clusterW, clusterH,
+                                viewW, viewH, surface, owner != null);
+                        if (!ok) stopMirror();
+                    } finally {
+                        // readParcelable created a daemon-local wrapper. SurfaceFlinger acquired
+                        // the producer reference during setupMirror; this wrapper is no longer owned.
+                        if (surface != null) surface.release();
+                    }
                     // Reply to the client (synchronous call, not oneway)
                     if (reply != null) {
                         reply.writeNoException();
@@ -300,9 +381,37 @@ public class MirrorDaemon {
                 case TRANSACT_ACTIVATE_LAYOUT:   return handleActivateLayout(data, reply);
                 case TRANSACT_DEACTIVATE_LAYOUT: return handleDeactivateLayout(data, reply);
                 case TRANSACT_QUERY_SLOT:        return handleQuerySlot(data, reply);
+                case TRANSACT_MOVE_TO_DISPLAY0:  return handleMoveToDisplay0(data, reply);
+                case TRANSACT_FOCUS_SLOT:        return handleFocusSlot(data, reply);
+                case TRANSACT_CAPTURE_DISPLAY: {
+                    int layerStack = data.readInt();
+                    int w          = data.readInt();
+                    int h          = data.readInt();
+                    int quality    = data.readInt();
+                    String outPath = data.readString();
+                    int maxFiles   = data.readInt();
+                    int maxAgeMin  = data.readInt();
+                    String status  = captureLayerStackToJpeg(layerStack, w, h, quality, outPath,
+                            maxFiles, maxAgeMin);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeString(status);
+                    }
+                    return true;
+                }
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
+        }
+    }
+
+    private static void writeVersionFile() {
+        try (FileOutputStream fos = new FileOutputStream(new File(VERSION_FILE))) {
+            String identity = android.os.Process.myPid() + ":"
+                    + com.byd.dashcast.BuildConfig.VERSION_CODE;
+            fos.write(identity.getBytes());
+        } catch (Throwable t) {
+            out("version marker write failed (startup remains available): " + t.getMessage());
         }
     }
 
@@ -317,8 +426,12 @@ public class MirrorDaemon {
      */
     @SuppressLint("NewApi")
     private static synchronized boolean setupMirror(int layerStack, int clusterW, int clusterH,
-                                                    int viewW, int viewH, Surface surface) {
-        stopMirror();
+                                                    int viewW, int viewH, Surface surface,
+                                                    boolean ownerRequired) {
+        if (ownerRequired && (sMirrorOwnerLease == null || !sMirrorOwnerLease.isActive())) {
+            out("setupMirror refused: client owner already dead");
+            return false;
+        }
         // v1.2.7 — reset per-session first-event trace so M7 captures the next injection chain.
         sMotionFirstLogged = false;
         sKeyFirstLogged    = false;
@@ -331,6 +444,7 @@ public class MirrorDaemon {
             out("setupMirror FAIL surface invalide");
             return false;
         }
+        SurfaceControl.Transaction tx = null;
         try {
             Class<?> scClass = Class.forName("android.view.SurfaceControl");
 
@@ -363,7 +477,7 @@ public class MirrorDaemon {
             //    what worked in v2.43. Static methods (openTransaction/
             //    closeTransaction) are available on this ROM but produce a black
             //    screen with no error — behavior observed in v2.45.
-            SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
+            tx = new SurfaceControl.Transaction();
             Class<?> txClass = tx.getClass();
 
             Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack",
@@ -386,34 +500,7 @@ public class MirrorDaemon {
 
             tx.apply();
             Log.i(TAG, "setupMirror : tx.apply() OK");
-
-            // 4. Post-setup verification via dumpsys SurfaceFlinger
-            Process p = null;
-            try {
-                p = Runtime.getRuntime().exec(
-                        new String[]{"sh", "-c",
-                                "dumpsys SurfaceFlinger 2>/dev/null"
-                                + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
-                StringBuilder sb = new StringBuilder();
-                try (java.io.BufferedReader br = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(p.getInputStream()))) {
-                    String line;
-                    while ((line = br.readLine()) != null) sb.append(line).append('\n');
-                }
-                // Audit batch 1 — also close stderr/stdin so the Process doesn't
-                // keep file descriptors open until GC (previously leaked one FD per setupMirror).
-                try { p.getErrorStream().close(); } catch (Exception ignored) { }
-                try { p.getOutputStream().close(); } catch (Exception ignored) { }
-                p.waitFor();
-                Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
-                out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
-                        + (sb.length() == 0 ? "(empty — token NOT in SurfaceFlinger!)" : sb.toString().trim()));
-            } catch (Exception e) {
-                Log.d(TAG, "SF dump read failed: " + e.getMessage());
-                out("setupMirror SF dump read failed: " + e.getMessage());
-            } finally {
-                if (p != null) { try { p.destroy(); } catch (Exception ignored) { } }
-            }
+            scheduleSurfaceFlingerAudit(layerStack);
 
             Log.i(TAG, "setupMirror ✓ (Transaction) layerStack=" + layerStack
                     + " src=" + clusterW + "×" + clusterH
@@ -431,24 +518,240 @@ public class MirrorDaemon {
             // null case and clears sMirrorToken atomically.
             stopMirror();
             return false;
+        } finally {
+            // Safe after apply(): close releases only this native transaction builder. Keeping it
+            // in finally also covers reflection failures between construction and apply().
+            if (tx != null) try { tx.close(); } catch (Throwable ignored) {}
         }
     }
 
-    private static synchronized void stopMirror() {
-        IBinder token = sMirrorToken;
-        if (token == null) return;
-        sMirrorToken = null;
+    private static void scheduleSurfaceFlingerAudit(int layerStack) {
         try {
-            Class<?> scClass = Class.forName("android.view.SurfaceControl");
-            Method destroyDisplay = scClass.getDeclaredMethod("destroyDisplay", IBinder.class);
-            destroyDisplay.setAccessible(true);
-            destroyDisplay.invoke(null, token);
-            Log.i(TAG, "stopMirror ✓");
-        } catch (Exception e) {
-            Log.w(TAG, "stopMirror: destroyDisplay failed: " + e.getMessage());
+            sMirrorAuditExecutor.execute(() -> auditMirrorInSurfaceFlinger(layerStack));
+        } catch (RejectedExecutionException queueFull) {
+            out("setupMirror SF dump skipped: previous audit still queued");
         }
-        for (SlotInfo slot : sSlots.values()) slot.release();
-        sSlots.clear();
+    }
+
+    private static void auditMirrorInSurfaceFlinger(int layerStack) {
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(
+                    new String[]{"sh", "-c",
+                            "dumpsys SurfaceFlinger 2>/dev/null"
+                            + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
+            StringBuilder output = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) output.append(line).append('\n');
+            }
+            try { process.getErrorStream().close(); } catch (Exception ignored) { }
+            try { process.getOutputStream().close(); } catch (Exception ignored) { }
+            process.waitFor();
+            Log.i(TAG, "setupMirror SF dump :\n" + output.toString().trim());
+            out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
+                    + (output.length() == 0
+                    ? "(empty — token NOT in SurfaceFlinger!)" : output.toString().trim()));
+        } catch (Exception error) {
+            if (error instanceof InterruptedException) Thread.currentThread().interrupt();
+            Log.d(TAG, "SF dump read failed: " + error.getMessage());
+            out("setupMirror SF dump read failed: " + error.getMessage());
+        } finally {
+            if (process != null) {
+                try { process.destroy(); } catch (Exception ignored) { }
+            }
+        }
+    }
+
+    // ── One-shot layerStack capture (bug-report screenshot recorder) ──────────
+
+    /**
+     * Captures ONE frame of {@code layerStack} into a JPEG at {@code outPath}, using the exact
+     * same SurfaceControl mirror primitives as {@link #setupMirror} (the only path proven to work
+     * on these BYD ROMs) but pointed at an {@link ImageReader} surface so the daemon can read the
+     * pixels back. `screencap -d N` cannot be used for the cluster: it silently falls back to
+     * display 0 on a virtual display. Runs entirely inside the uid-2000 daemon (the only process
+     * that may call SurfaceControl.createDisplay); writes to /data/local/tmp (uid-2000-writable,
+     * A13-safe). The capture display is torn down in finally, so nothing leaks.
+     *
+     * @return "OK &lt;path&gt; &lt;bytes&gt;B" on success, or "FAIL …" / "EXCEPTION …".
+     */
+    /** Serializes captures against each other WITHOUT sharing the mirror's monitor — a slow/failed
+     *  capture (up to ~1.5s waiting for a frame) must never block a visible mirror START/STOP. */
+    private static final Object sCaptureLock = new Object();
+
+    @SuppressLint({"NewApi", "WrongConstant"}) // RGBA_8888 is a PixelFormat, correct for display capture
+    private static String captureLayerStackToJpeg(int layerStack, int w, int h,
+                                                  int quality, String outPath,
+                                                  int maxFiles, int maxAgeMin) {
+      synchronized (sCaptureLock) {
+        if (w <= 0 || h <= 0 || outPath == null) return "FAIL bad-args";
+        IBinder token = null;
+        ImageReader reader = null;
+        Image image = null;
+        Bitmap bmp = null;
+        SurfaceControl.Transaction tx = null;
+        try {
+            reader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2);
+            Surface surface = reader.getSurface();
+
+            Class<?> scClass = Class.forName("android.view.SurfaceControl");
+            Method createDisplay = scClass.getDeclaredMethod("createDisplay", String.class, boolean.class);
+            createDisplay.setAccessible(true);
+            token = (IBinder) createDisplay.invoke(null, "byd_shot_capture", false);
+            if (token == null) return "FAIL createDisplay-null";
+
+            tx = new SurfaceControl.Transaction();
+            Class<?> txClass = tx.getClass();
+            Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack", IBinder.class, int.class);
+            setLayerStack.setAccessible(true);
+            setLayerStack.invoke(tx, token, layerStack);
+            Method setSurface = txClass.getDeclaredMethod("setDisplaySurface", IBinder.class, Surface.class);
+            setSurface.setAccessible(true);
+            setSurface.invoke(tx, token, surface);
+            Method setProjection = txClass.getDeclaredMethod("setDisplayProjection",
+                    IBinder.class, int.class, Rect.class, Rect.class);
+            setProjection.setAccessible(true);
+            Rect full = new Rect(0, 0, w, h);
+            setProjection.invoke(tx, token, 0, full, full);
+            tx.apply();
+
+            // Wait for SurfaceFlinger to composite one frame into the reader (up to ~1.5s).
+            for (int i = 0; i < 30 && image == null; i++) {
+                Thread.sleep(50);
+                image = reader.acquireLatestImage();
+            }
+            if (image == null) return "FAIL no-frame";
+
+            bmp = imageToBitmap(image, w, h);
+            if (bmp == null) return "FAIL decode-null";
+
+            File out = new File(outPath);
+            File dir = out.getParentFile();
+            if (dir != null && !dir.exists()) { //noinspection ResultOfMethodCallIgnored
+                dir.mkdirs(); }
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                bmp.compress(Bitmap.CompressFormat.JPEG, Math.max(1, Math.min(100, quality)), fos);
+            }
+            long bytes = out.length();
+            // Enforce the ring buffer HERE, in-process, right after the write — same channel that
+            // produced the file. (The app-side shell prune uses ADB-TCP, which can drop while this
+            // binder path keeps writing; pruning here makes the bound transport-independent, so the
+            // shots can never grow without limit — the user's hard constraint.)
+            pruneShotDir(dir, maxFiles, maxAgeMin);
+            out("captureLayerStack ok stack=" + layerStack + " " + w + "x" + h
+                    + " -> " + outPath + " (" + bytes + "B)");
+            return "OK " + outPath + " " + bytes + "B";
+        } catch (Throwable t) {
+            out("captureLayerStack EXCEPTION stack=" + layerStack + ": " + t);
+            return "EXCEPTION " + t.getClass().getSimpleName() + ": " + t.getMessage();
+        } finally {
+            if (image != null) { try { image.close(); } catch (Throwable ignore) {} }
+            if (bmp != null)   { try { bmp.recycle(); } catch (Throwable ignore) {} }
+            if (reader != null){ try { reader.close(); } catch (Throwable ignore) {} }
+            // Close the SurfaceControl.Transaction deterministically (it holds a native
+            // SurfaceComposerClient transaction freed only on GC otherwise); this runs on a 15s cadence.
+            if (tx != null)    { try { tx.close(); } catch (Throwable ignore) {} }
+            if (token != null) {
+                try {
+                    Method destroy = Class.forName("android.view.SurfaceControl")
+                            .getDeclaredMethod("destroyDisplay", IBinder.class);
+                    destroy.setAccessible(true);
+                    destroy.invoke(null, token);
+                } catch (Throwable e) {
+                    Log.w(TAG, "captureLayerStack: destroyDisplay failed: " + e.getMessage());
+                }
+            }
+        }
+      }
+    }
+
+    /**
+     * Ring-buffer prune of the shots dir: keep at most {@code maxFiles} newest JPEGs and drop any
+     * older than {@code maxAgeMin} minutes. Pure java.io in the uid-2000 daemon (no shell), so it
+     * runs on the same channel as the write and can never lag behind it.
+     */
+    private static void pruneShotDir(File dir, int maxFiles, int maxAgeMin) {
+        if (dir == null) return;
+        try {
+            File[] files = dir.listFiles((d, name) ->
+                    name.startsWith("shot_") && name.endsWith(".jpg"));
+            if (files == null || files.length == 0) return;
+            long cutoff = maxAgeMin > 0
+                    ? System.currentTimeMillis() - maxAgeMin * 60_000L : Long.MIN_VALUE;
+            // Newest first.
+            java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            for (int i = 0; i < files.length; i++) {
+                boolean overCount = maxFiles > 0 && i >= maxFiles;
+                boolean tooOld    = files[i].lastModified() < cutoff;
+                if (overCount || tooOld) { //noinspection ResultOfMethodCallIgnored
+                    files[i].delete(); }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "pruneShotDir failed: " + t.getMessage());
+        }
+    }
+
+    /** RGBA_8888 {@link Image} → {@link Bitmap}, handling the plane's row-stride padding. */
+    private static Bitmap imageToBitmap(Image image, int w, int h) {
+        Image.Plane[] planes = image.getPlanes();
+        if (planes == null || planes.length == 0) return null;
+        ByteBuffer buffer = planes[0].getBuffer();
+        int pixelStride = planes[0].getPixelStride();
+        int rowStride   = planes[0].getRowStride();
+        int rowPadding  = rowStride - pixelStride * w;
+        int stridePx    = w + (pixelStride == 0 ? 0 : rowPadding / pixelStride);
+        Bitmap padded = Bitmap.createBitmap(stridePx, h, Bitmap.Config.ARGB_8888);
+        padded.copyPixelsFromBuffer(buffer);
+        if (stridePx == w) return padded;
+        // Crop away the stride padding on the right edge.
+        Bitmap cropped = Bitmap.createBitmap(padded, 0, 0, w, h);
+        padded.recycle();
+        return cropped;
+    }
+
+    private static synchronized boolean attachMirrorOwner(IBinder owner) {
+        clearMirrorOwnerLease();
+        if (owner == null) {
+            out("setupMirror legacy client: no death lease");
+            return true;
+        }
+        try {
+            DeathLease lease = DeathLease.attach(new BinderDeathOwner(owner), () -> {
+                out("mirror owner died — releasing transient mirror");
+                stopMirror();
+            });
+            sMirrorOwnerLease = lease;
+            return lease.isActive();
+        } catch (Throwable t) {
+            out("setupMirror owner link failed: " + t.getClass().getSimpleName()
+                    + ": " + t.getMessage());
+            return false;
+        }
+    }
+
+    private static void clearMirrorOwnerLease() {
+        DeathLease lease = sMirrorOwnerLease;
+        sMirrorOwnerLease = null;
+        if (lease != null) lease.close();
+    }
+
+    private static synchronized void stopMirror() {
+        clearMirrorOwnerLease();
+        IBinder token = sMirrorToken;
+        sMirrorToken = null;
+        if (token != null) {
+            try {
+                Class<?> scClass = Class.forName("android.view.SurfaceControl");
+                Method destroyDisplay = scClass.getDeclaredMethod("destroyDisplay", IBinder.class);
+                destroyDisplay.setAccessible(true);
+                destroyDisplay.invoke(null, token);
+                Log.i(TAG, "stopMirror ✓");
+            } catch (Exception e) {
+                Log.w(TAG, "stopMirror: destroyDisplay failed: " + e.getMessage());
+            }
+        }
     }
 
     // ── Input injection ───────────────────────────────────────────────────────
@@ -684,6 +987,34 @@ public class MirrorDaemon {
         return true;
     }
 
+    private static boolean handleMoveToDisplay0(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        out("[Fission] MOVE_TO_DISPLAY0 pkg=" + pkg);
+        int taskId = Phase4TaskVerbs.findTaskIdForPackage(pkg);
+        String result;
+        if (taskId <= 0) {
+            result = "no task for " + pkg;
+        } else {
+            result = Phase4TaskVerbs.moveTaskToDisplayCompatible(taskId, 0);
+        }
+        out("[Fission] MOVE_TO_DISPLAY0 result: " + result);
+        reply.writeNoException();
+        reply.writeString(result);
+        return true;
+    }
+
+    private static boolean handleFocusSlot(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        int taskId = Phase4TaskVerbs.findTaskIdForPackage(pkg);
+        String result = taskId > 0
+                ? Phase4TaskVerbs.setFocusedRootTask(taskId)
+                : "ERR no task for " + pkg;
+        out("[Fission] FOCUS_SLOT pkg=" + pkg + " taskId=" + taskId + " result=" + result);
+        reply.writeNoException();
+        reply.writeString(result);
+        return true;
+    }
+
     private static boolean handleDeactivateLayout(Parcel data, Parcel reply) {
         out("[Fission] DEACTIVATE_LAYOUT");
         for (String key : new java.util.ArrayList<>(sSlots.keySet())) {
@@ -740,10 +1071,18 @@ public class MirrorDaemon {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Surface> surfaceRef = new AtomicReference<>();
             final AtomicReference<String>  errorRef   = new AtomicReference<>();
+            // Set true when the binder thread gives up (timeout / invalid surface). The
+            // attach runnable checks it under the slot monitor after wm.addView so a
+            // late-running attach removes its own window instead of leaking it.
+            final java.util.concurrent.atomic.AtomicBoolean aborted =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
 
             Runnable attach = () -> {
                 try {
-                    Context base = (sSysContext != null) ? sSysContext : sContext;
+                    // Use the shell-identity context (pkg="com.android.shell", uid=2000).
+                    // On Android 12 (DL5) WMS strictly checks context.getPackageName() against
+                    // the calling uid — sSysContext has pkg="android" (uid=1000) which fails.
+                    Context base = (sContext != null) ? sContext : sSysContext;
                     Context displayCtx = null;
                     try { displayCtx = base.createDisplayContext(target); }
                     catch (Exception e) {
@@ -803,8 +1142,19 @@ public class MirrorDaemon {
                     out("[ATTACH_SLOT] step4: wm.addView display=" + target.getDisplayId()
                             + " pos=" + lp.x + "," + lp.y + " size=" + slot.w + "x" + slot.h);
                     wm.addView(sv, lp);
-                    slot.overlayView = sv;
-                    slot.overlayWM = wm;
+                    // Publish under the slot monitor and re-check the abort flag: if the
+                    // binder thread already timed out, remove this just-added window here
+                    // (we are on the main looper — the correct thread for removeView) rather
+                    // than leak an orphaned TYPE_SYSTEM_OVERLAY in the permanent daemon.
+                    synchronized (slot) {
+                        if (aborted.get()) {
+                            try { wm.removeViewImmediate(sv); }
+                            catch (Exception ignore) {}
+                        } else {
+                            slot.overlayView = sv;
+                            slot.overlayWM = wm;
+                        }
+                    }
                 } catch (Exception e) {
                     out("[ATTACH_SLOT] error: " + e.getClass().getSimpleName()
                             + ": " + e.getMessage());
@@ -816,14 +1166,17 @@ public class MirrorDaemon {
             else new android.os.Handler(Looper.getMainLooper()).post(attach);
 
             if (!latch.await(2, TimeUnit.SECONDS)) {
-                out("[ATTACH_SLOT] TIMEOUT 2s pkg=" + slot.pkg); return null;
+                out("[ATTACH_SLOT] TIMEOUT 2s pkg=" + slot.pkg);
+                abortOverlayAttach(slot, aborted); return null;
             }
             if (errorRef.get() != null) {
-                out("[ATTACH_SLOT] FAIL: " + errorRef.get()); return null;
+                out("[ATTACH_SLOT] FAIL: " + errorRef.get());
+                abortOverlayAttach(slot, aborted); return null;
             }
             Surface surface = surfaceRef.get();
             if (surface == null || !surface.isValid()) {
-                out("[ATTACH_SLOT] FAIL: no valid surface pkg=" + slot.pkg); return null;
+                out("[ATTACH_SLOT] FAIL: no valid surface pkg=" + slot.pkg);
+                abortOverlayAttach(slot, aborted); return null;
             }
             out("[ATTACH_SLOT] OK surface valid pkg=" + slot.pkg
                     + " display=" + target.getDisplayId());
@@ -833,6 +1186,21 @@ public class MirrorDaemon {
                     + ": " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Abort an in-flight overlay attach after a failure: mark the attach runnable to
+     * self-remove if it runs late, then release any window it already added. Prevents an
+     * orphaned TYPE_SYSTEM_OVERLAY window (+ Surface) accumulating in this permanent daemon
+     * on every slow/failed attach. The slot monitor orders this against the runnable's
+     * publish so the window is removed exactly once (here, or by the late runnable).
+     */
+    private static void abortOverlayAttach(SlotInfo slot,
+            java.util.concurrent.atomic.AtomicBoolean aborted) {
+        synchronized (slot) {
+            aborted.set(true);
+        }
+        slot.release();
     }
 
     /** Creates a TRUSTED VirtualDisplay for the given slot. Never returns display id=0. */

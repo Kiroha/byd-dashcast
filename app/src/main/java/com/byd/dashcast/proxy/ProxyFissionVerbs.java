@@ -91,4 +91,24 @@ final class ProxyFissionVerbs {
             data.recycle();
         }
     }
+
+    static boolean cancelFissionWatchdog(String packageName)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder binder = ProxyClient.sBinder;
+        if (binder == null || !binder.isBinderAlive()) {
+            throw new ProxyClient.ProxyException("not connected");
+        }
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeString(packageName);
+            binder.transact(ProxyDaemonContract.TXN_CANCEL_FISSION_WATCHDOG, data, reply, 0);
+            reply.readException();
+            return reply.readInt() == 1;
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
 }
