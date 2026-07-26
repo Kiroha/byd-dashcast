@@ -635,8 +635,9 @@ android {
         //     id, never a hardcoded 1 (a fission VD has been seen as display 3) and never display 0.
         // Net -1074 lines; 195 strings dropped across 13 locales. No daemon protocol change; DL5 is
         // untouched (wm overscan is gone from API 30+, so those units never had the defect).
-        versionCode 592
-        versionName "1.8.2-beta"
+        // 593 = 1.8.3-beta (Kotlin migration continues on the beta channel: 12 more classes converted Java→Kotlin since 1.8.2, each validated by its unit test (full suite 324 tests green). util/concurrent is now 100% Kotlin (batch #3: WorkerLifecycleController, BoundedSerialExecutor, DeathLease, SingleFlight, CloseableResourceSlot, LatestValueDispatcher); + system/CanBatchOperation and ui/main/DashboardSelectionTracker; + 4 proxy/daemon pure-logic helpers (TaskMoveResult, TaskLaunchRecovery, FissionWatchdogRegistry, FissionWatchdogPolicy). Concurrency preserved verbatim (@Synchronized, @Volatile, Atomic*, CountDownLatch) and Java-facing interop preserved for the sensitive consumers ProxyClient/MirrorDaemon/MapNotificationListenerService/Phase4TaskVerbs/VoskTranscriber (fun interfaces for Kotlin SAM, boolean is-properties, defensive-copy getters, @Throws). NO functional change; no daemon protocol change; DL3/DL5 unaffected; lint 0/0. Pre-release from switch-kotlin — NOT merged to main, NOT Latest.)
+        versionCode 593
+        versionName "1.8.3-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
