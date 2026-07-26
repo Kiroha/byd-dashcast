@@ -666,8 +666,11 @@ android {
             // Platform signature is mandatory even in debug builds for BYD permissions
             signingConfig signingConfigs.bydPlatform
         }
+            // R8 enabled (issue #78 hardening). Keep rules in proguard-rules.pro
+            // are conservative (whole proxy.** kept) because the daemon is launched
+            // by name via app_process. MUST be on-car validated before shipping.
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.bydPlatform
         }
