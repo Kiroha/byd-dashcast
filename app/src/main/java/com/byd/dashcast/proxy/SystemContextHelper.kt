@@ -1,14 +1,15 @@
-package com.byd.dashcast.proxy;
+package com.byd.dashcast.proxy
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.ContextWrapper;
-import android.content.pm.PackageManager;
-import android.os.Looper;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Looper
 
-import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.AppLogger
 
-import java.lang.reflect.Method;
+import java.lang.reflect.Method
 
 /**
  * SystemContextHelper — Component B of the Beta Engine.
@@ -36,20 +37,25 @@ import java.lang.reflect.Method;
  *
  * @see <a href="file:../../../external_code/BydAgent.java">BydAgent.java</a> — original pattern
  */
-public final class SystemContextHelper {
+// The cached system Context is a deliberate process-lifetime singleton (reflection is
+// expensive and the system context never changes within a process); it is the system
+// server's context, not an Activity, so there is no Activity/View leak. Suppression sits
+// on the object because lint anchors StaticFieldLeak to the enclosing static holder.
+@SuppressLint("StaticFieldLeak")
+object SystemContextHelper {
 
-    private SystemContextHelper() {}
-
-    private static final String TAG = "SystemContextHelper";
+    private const val TAG = "SystemContextHelper"
 
     /** Our own package. Used to make the wrapped context report the app's
      *  identity to the BYD SDK (see {@link #adoptIdentity}). */
-    public static final String SELF_PKG = "com.byd.dashcast";
+    const val SELF_PKG = "com.byd.dashcast"
 
     /** Singleton cache — reflection is expensive, the system context never changes within a process. */
-    @SuppressLint("StaticFieldLeak")
-    private static volatile Context sCached = null;
-    private static volatile Throwable sLastError = null;
+    @Volatile
+    private var sCached: Context? = null
+
+    @Volatile
+    private var sLastError: Throwable? = null
 
     /**
      * Returns a {@link Context} representing the system server, wrapped so that
@@ -60,38 +66,41 @@ public final class SystemContextHelper {
      *                   reflection fails. The caller is responsible for
      *                   catching and falling back.
      */
-    public static Context get() throws Exception {
-        Context c = sCached;
-        if (c != null) return c;
-        synchronized (SystemContextHelper.class) {
-            if (sCached != null) return sCached;
+    @JvmStatic
+    @Throws(Exception::class)
+    fun get(): Context {
+        val cached = sCached
+        if (cached != null) return cached
+        synchronized(SystemContextHelper::class.java) {
+            sCached?.let { return it }
             // ActivityThread.systemMain() instantiates an internal Handler, which
             // requires a Looper on the current thread. Match the BydAgent
             // reference pattern (external_code/BydAgent.java) and prepare one if
             // the caller is a background thread without a Looper.
             if (Looper.myLooper() == null) {
-                try { Looper.prepare(); }
-                catch (Throwable ignore) { /* another thread or already prepared */ }
+                try { Looper.prepare() }
+                catch (ignore: Throwable) { /* another thread or already prepared */ }
             }
             try {
-                Class<?> at = Class.forName("android.app.ActivityThread");
-                Method   m1 = at.getMethod("systemMain");
-                Object   thread = m1.invoke(null);
-                Method   m2 = at.getMethod("getSystemContext");
-                Context  sys = (Context) m2.invoke(thread);
+                val at: Class<*> = Class.forName("android.app.ActivityThread")
+                val m1: Method = at.getMethod("systemMain")
+                val thread = m1.invoke(null)
+                val m2: Method = at.getMethod("getSystemContext")
+                val sys = m2.invoke(thread) as Context?
                 if (sys == null) {
-                    throw new IllegalStateException("ActivityThread.getSystemContext() returned null");
+                    throw IllegalStateException("ActivityThread.getSystemContext() returned null")
                 }
-                sCached = adoptIdentity(sys);
-                sLastError = null;
-                AppLogger.i(TAG, "system context acquired: pkg=" + sys.getPackageName()
-                        + " → wrapped identity=" + sCached.getPackageName());
-                return sCached;
-            } catch (Throwable t) {
-                sLastError = t;
-                AppLogger.e(TAG, "failed to acquire system context", t instanceof Exception ? (Exception) t : new Exception(t));
-                if (t instanceof Exception) throw (Exception) t;
-                throw new Exception(t);
+                val wrapped = adoptIdentity(sys)
+                sCached = wrapped
+                sLastError = null
+                AppLogger.i(TAG, "system context acquired: pkg=" + sys.packageName
+                        + " → wrapped identity=" + wrapped.packageName)
+                return wrapped
+            } catch (t: Throwable) {
+                sLastError = t
+                AppLogger.e(TAG, "failed to acquire system context", if (t is Exception) t else Exception(t))
+                if (t is Exception) throw t
+                throw Exception(t)
             }
         }
     }
@@ -100,20 +109,23 @@ public final class SystemContextHelper {
      * Quick test: returns true if the system context can be obtained, without
      * caching on failure and without raising — used by the Diag tests.
      */
-    public static boolean isAvailable() {
-        try { get(); return sCached != null; }
-        catch (Throwable t) { return false; }
+    @JvmStatic
+    fun isAvailable(): Boolean {
+        return try { get(); sCached != null }
+        catch (t: Throwable) { false }
     }
 
     /** Last error encountered while trying to obtain the system context, or {@code null}. */
-    public static Throwable getLastError() { return sLastError; }
+    @JvmStatic
+    fun getLastError(): Throwable? = sLastError
 
     /**
      * Wrap the given Context so that every permission check returns GRANTED.
      * Used internally; exposed for tests that want to wrap an arbitrary base.
      */
-    public static Context wrap(Context base) {
-        return wrap(base, null);
+    @JvmStatic
+    fun wrap(base: Context): Context {
+        return wrap(base, null)
     }
 
     /**
@@ -131,31 +143,32 @@ public final class SystemContextHelper {
      * @param spoofPkg package name to report from {@link Context#getPackageName()},
      *                 or {@code null} to delegate to {@code base}
      */
-    public static Context wrap(Context base, final String spoofPkg) {
-        return new ContextWrapper(base) {
-            @Override public int checkSelfPermission(String p)              { return PackageManager.PERMISSION_GRANTED; }
-            @Override public int checkPermission(String p, int pid, int uid) { return PackageManager.PERMISSION_GRANTED; }
-            @Override public int checkCallingPermission(String p)           { return PackageManager.PERMISSION_GRANTED; }
-            @Override public int checkCallingOrSelfPermission(String p)     { return PackageManager.PERMISSION_GRANTED; }
-            @Override public void enforceCallingOrSelfPermission(String p, String m) {}
-            @Override public void enforceCallingPermission(String p, String m)       {}
-            @Override public void enforcePermission(String p, int pid, int uid, String m) {}
-            @Override public void enforceUriPermission(android.net.Uri u, int pid, int uid, int mod, String m) {}
-            @Override public void enforceUriPermission(android.net.Uri u, String r, String w, int pid, int uid, int mod, String m) {}
+    @JvmStatic
+    fun wrap(base: Context, spoofPkg: String?): Context {
+        return object : ContextWrapper(base) {
+            override fun checkSelfPermission(p: String): Int = PackageManager.PERMISSION_GRANTED
+            override fun checkPermission(p: String, pid: Int, uid: Int): Int = PackageManager.PERMISSION_GRANTED
+            override fun checkCallingPermission(p: String): Int = PackageManager.PERMISSION_GRANTED
+            override fun checkCallingOrSelfPermission(p: String): Int = PackageManager.PERMISSION_GRANTED
+            override fun enforceCallingOrSelfPermission(p: String, m: String?) {}
+            override fun enforceCallingPermission(p: String, m: String?) {}
+            override fun enforcePermission(p: String, pid: Int, uid: Int, m: String?) {}
+            override fun enforceUriPermission(u: Uri?, pid: Int, uid: Int, mod: Int, m: String?) {}
+            override fun enforceUriPermission(u: Uri?, r: String?, w: String?, pid: Int, uid: Int, mod: Int, m: String?) {}
             // Report the app's package identity to any SDK code that keys off
             // getPackageName() (defensive: also covers the fallback path where
             // createPackageContext failed and base is the raw system context).
-            @Override public String getPackageName() {
-                return spoofPkg != null ? spoofPkg : super.getPackageName();
+            override fun getPackageName(): String {
+                return spoofPkg ?: super.getPackageName()
             }
             // Propagate the wrapper to derived contexts: the BYD SDK sometimes calls
             // context.getApplicationContext().checkXxx() rather than context.checkXxx() directly.
             // Without this override the bypass would not apply to that second-hop call.
-            @Override public Context getApplicationContext() {
-                Context appCtx = super.getApplicationContext();
-                return appCtx == null ? this : SystemContextHelper.wrap(appCtx, spoofPkg);
+            override fun getApplicationContext(): Context {
+                val appCtx = super.getApplicationContext()
+                return if (appCtx == null) this else SystemContextHelper.wrap(appCtx, spoofPkg)
             }
-        };
+        }
     }
 
     /**
@@ -180,25 +193,27 @@ public final class SystemContextHelper {
      * @param systemContext the raw system context from {@code getSystemContext()}
      * @return a non-null wrapped, identity-adopting context
      */
-    public static Context adoptIdentity(Context systemContext) {
-        Context base = systemContext;
+    @JvmStatic
+    fun adoptIdentity(systemContext: Context): Context {
+        var base = systemContext
         try {
             base = systemContext.createPackageContext(
                     SELF_PKG,
-                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
-            AppLogger.i(TAG, "adoptIdentity: createPackageContext(" + SELF_PKG + ") ok");
-        } catch (Throwable t) {
+                    Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY)
+            AppLogger.i(TAG, "adoptIdentity: createPackageContext(" + SELF_PKG + ") ok")
+        } catch (t: Throwable) {
             AppLogger.w(TAG, "adoptIdentity: createPackageContext(" + SELF_PKG
-                    + ") failed, using raw system context — " + t);
+                    + ") failed, using raw system context — " + t)
         }
-        return wrap(base, SELF_PKG);
+        return wrap(base, SELF_PKG)
     }
 
     /** Clear the cache — used by tests that want to re-run the reflection from scratch. */
-    public static void clearCache() {
-        synchronized (SystemContextHelper.class) {
-            sCached = null;
-            sLastError = null;
+    @JvmStatic
+    fun clearCache() {
+        synchronized(SystemContextHelper::class.java) {
+            sCached = null
+            sLastError = null
         }
     }
 }
