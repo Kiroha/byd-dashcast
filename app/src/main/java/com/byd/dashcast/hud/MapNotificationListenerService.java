@@ -598,11 +598,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             return;
         }
 
-        // A supported nav app is posting GUIDANCE — i.e. a route IS running. Recorded here, BEFORE
-        // any parse step can bail out, so the bug reporter can tell "no route started" from "route
-        // running but DashCast failed to parse it". The latter is a real parser bug and must never be
-        // gated away as user error (it is exactly what the imperial-unit regex gap used to cause).
-        noteNavActivity(sbn.getPackageName(), false);
+        // NOTE: whether this counts as nav activity is decided LOWER DOWN, once we know if it looks
+        // like guidance (a resolved maneuver or a real distance) — see the guidance-signal gate after
+        // distance parsing. A nav app's NON-guidance ongoing notification (e.g. Waze's
+        // CLOSE_WAZE_CHANNEL foreground/close prompt) must NOT be recorded as a nav frame.
 
         Bundle extras = n.extras;
         if (extras == null) return;
@@ -665,9 +664,25 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
         // 2. Distance to next turn — scan title then text then combined.
         int distance = parseFirstDistance(combined);
+
+        // GUIDANCE-SIGNAL GATE: only treat this as a navigation frame if it actually looks like
+        // guidance — a resolved maneuver icon OR a real forward distance (> 0). This rejects a nav
+        // app's NON-guidance ongoing notifications (e.g. Waze's CLOSE_WAZE_CHANNEL foreground/close
+        // prompt: unresolved icon + no distance), which otherwise (a) were pushed to the HUD as a
+        // bogus "straight, 0 m" arrow and (b) recorded as a false "parse-fail" that mislabelled a
+        // no-route case as a parser bug (INC-20260726-140441). Nothing recorded here ⇒ NavSeen stays
+        // "no", so the reporter correctly tells the driver to start a route.
+        boolean looksLikeGuidance = distance > 0 || !"default".equals(iconSrc);
+        if (!looksLikeGuidance) return;
+
+        // A supported nav app posted a GUIDANCE frame ⇒ a route IS running. Recorded now (before the
+        // parse below can still bail) so the reporter can tell "no route" from "route running but we
+        // could not fully parse it" — the latter is a real parser bug, never gated away as user error.
+        noteNavActivity(sbn.getPackageName(), false);
+
         if (distance < 0) {
             Log.d(TAG, "no distance found in: " + combined);
-            return; // cannot update HUD without a valid distance
+            return; // guidance-looking but no usable distance → recorded above as parse-fail
         }
 
         // 3. Road name — look for "onto X" / "sur X" pattern.
