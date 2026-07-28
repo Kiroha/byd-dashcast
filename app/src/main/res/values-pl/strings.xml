@@ -338,15 +338,6 @@
     <string name="settings_adas_window_fix_support">Wysyła sendInfo(30) przed projekcją — naprawia rozciąganie ADAS na niektórych pojazdach. Wyłącz, jeśli kształt klastra zmienia się przy uruchomieniu.</string>
     <string name="settings_fission_mode">Tryb Layouts</string>
     <string name="settings_fission_mode_support">Wieloaplikacyjna projekcja na klastrze z niestandardowymi strefami. Wymaga demona proxy.</string>
-    <string name="fission_title">Fission — Klaster wieloaplikacyjny</string>
-    <string name="fission_status_idle">Naciśnij +, aby wyświetlić aplikację</string>
-    <string name="fission_btn_add">+ Dodaj aplikację</string>
-    <string name="fission_btn_stop">Zatrzymaj wszystko</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">Edytor układów</string>
-    <string name="fission_editor_clear">Wyczyść</string>
-    <string name="fission_editor_save">Zapisz</string>
     <string name="fission_editor_edit">Edytuj</string>
     <string name="fission_editor_delete">Usuń</string>
     <!-- v1.4 Voice commands + VD pipeline test (missing from pl) -->
@@ -356,31 +347,9 @@
     <string name="layout_canvas_hint">Przeciągnij, aby narysować strefę</string>
 
     <!-- Fission — multi-app cluster -->
-    <string name="fission_active_count">Aktywne aplikacje: %1$d</string>
-    <string name="fission_all_projected">Wszystkie aplikacje są już wyświetlane</string>
-    <string name="fission_close_slot_confirm">Zamknij</string>
-    <string name="fission_close_slot_title">Zamknąć %1$s?</string>
-    <string name="fission_conflict_message">Projekcja jest już aktywna. Zatrzymać ją, aby kontynuować?</string>
-    <string name="fission_conflict_stop">Zatrzymaj</string>
     <string name="fission_conflict_title">Konflikt projekcji</string>
-    <string name="fission_idle_hint">Naciśnij +, aby wyświetlić aplikację</string>
-    <string name="fission_launch_in">Uruchom %1$s w…</string>
-    <string name="fission_layout_active_fmt">Układ: %1$s</string>
     <string name="fission_layout_favorite_set_toast">Ustawiono ulubiony układ ✓</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Tryb swobodny</string>
-    <string name="fission_layout_switch">Zmień</string>
-    <string name="fission_mode_free">Tryb swobodny</string>
-    <string name="fission_no_apps">Brak dostępnych aplikacji</string>
-    <string name="fission_pick_app_title">Wybierz aplikację</string>
-    <string name="fission_place_in">Umieść %1$s w…</string>
-    <string name="fission_resize_full">Pełny ekran</string>
-    <string name="fission_resize_left_3q">Lewa ¾</string>
-    <string name="fission_resize_left_half">Lewa ½</string>
-    <string name="fission_resize_right_3q">Prawa ¾</string>
-    <string name="fission_resize_right_half">Prawa ½</string>
-    <string name="fission_resize_title">Zmień rozmiar %1$s</string>
-    <string name="fission_slot_error">Slot %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Powiąż aplikację…</string>
     <string name="fission_slot_pkg_none">Brak — wolna strefa</string>
     <string name="fission_slot_zone_bound_fmt">Powiązana aplikacja: %1$s</string>
@@ -418,10 +387,9 @@
     <string name="lm_activated_ok_fmt">%1$s aktywowano ✓</string>
     <string name="lm_activated_partial_fmt">%1$s aktywowano (niektóre sloty zawiodły)</string>
     <string name="lm_activating_fmt">Aktywowanie %1$s…</string>
-    <string name="lm_daemon_not_connected">Demon niepołączony — najpierw uruchom projekcję Fission</string>
+    <string name="lm_layout_mode_disabled">Najpierw włącz „Tryb Layouts” w ustawieniach.</string>
     <string name="lm_delete_confirm_fmt">Usunąć „%1$s”?</string>
     <string name="lm_draw_zone_first">Narysuj co najmniej jedną strefę</string>
-    <string name="lm_edit_zones_hint">Edytuj strefy, a następnie zapisz</string>
     <string name="lm_error_fmt">Błąd: %1$s</string>
     <string name="lm_free_mode_toast">Tryb wolny włączony</string>
     <string name="lm_layout_default_name_fmt">Layout %1$d</string>
@@ -430,9 +398,7 @@
     <string name="lm_layout_saved_toast">Layout zapisany ✓</string>
     <string name="lm_new_layout_name">Nowy layout</string>
     <string name="lm_no_layout_loaded">Nie załadowano layoutu</string>
-    <string name="lm_no_saved_layouts">Brak zapisanych layoutów\nNarysuj strefy powyżej i zapisz.</string>
     <string name="lm_save_before_favorite">Najpierw zapisz layout, zanim ustawisz go jako ulubiony</string>
-    <string name="lm_zone_delete_title">Usunąć strefę?</string>
     <string name="lm_zone_edit_title_fmt">Edytuj „%1$s”</string>
     <string name="lm_zone_height">Wysokość (px)</string>
     <string name="lm_zone_name_hint">Nazwa strefy</string>

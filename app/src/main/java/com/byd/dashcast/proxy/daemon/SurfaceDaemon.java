@@ -227,7 +227,14 @@ public class SurfaceDaemon {
     }
 
     public static void main(String[] args) {
-        out("main() start uid=" + android.os.Process.myUid());
+        // Print the build FIRST. This daemon is a separate uid-2000 process that survives an
+        // APK reinstall, and it is reused whenever its marker build matches the app's — so a
+        // capture can contain perfectly plausible log lines emitted by a daemon several
+        // versions old. Without this line a triager cannot tell, and has twice drawn
+        // conclusions from a stale daemon's output.
+        out("main() start uid=" + android.os.Process.myUid()
+                + " build=" + com.byd.dashcast.BuildConfig.VERSION_CODE
+                + " (" + com.byd.dashcast.BuildConfig.VERSION_NAME + ")");
         try {
             // WIRE IDENTIFIER — do NOT rename with the class: AdbLocalClient.DAEMON_GREP matches
             // this exact runtime process name when deciding to reuse or kill the daemon.
@@ -941,7 +948,12 @@ public class SurfaceDaemon {
         String pkg = data.readString();
         int x = data.readInt(), y = data.readInt();
         int w = data.readInt(), h = data.readInt();
-        out("[Fission] ATTACH_SLOT pkg=" + pkg + " (" + x + "," + y + "," + w + "×" + h + ")");
+        // build= on the BLOCK HEADER, not only in main(): the startup line is the first line of
+        // the daemon log and the report ships the LAST 400, so on a long-lived daemon it is
+        // always out of frame — which is exactly the reused-stale-daemon case it was added for.
+        // Here it costs one field and travels with the block a triager actually reads.
+        out("[Fission] ATTACH_SLOT pkg=" + pkg + " (" + x + "," + y + "," + w + "×" + h + ")"
+                + " build=" + com.byd.dashcast.BuildConfig.VERSION_CODE);
         SlotInfo existing = sSlots.remove(pkg);
         if (existing != null) existing.release();
         SlotInfo slot = new SlotInfo(pkg, x, y, w, h);
@@ -996,6 +1008,16 @@ public class SurfaceDaemon {
         return true;
     }
 
+    /**
+     * Batch layout activation — <b>no app client sends this any more</b>.
+     *
+     * <p>It keys its slots {@code layout_<label>_<i>} and the package name never crosses the
+     * wire, so nothing it creates can be found again by {@link #handleQuerySlot},
+     * {@link #handleReleaseSlot} or {@link #handleResizeSlot} — all three look up by package.
+     * The app now sends one {@code ATTACH_SLOT} per zone instead. Kept (and still answered) so
+     * a daemon that outlives an app update cannot fail an old transaction; do not add a new
+     * client without fixing the keyspace first.
+     */
     private static boolean handleActivateLayout(Parcel data, Parcel reply) {
         int n = data.readInt();
         out("[Fission] ACTIVATE_LAYOUT n=" + n);
@@ -1061,12 +1083,19 @@ public class SurfaceDaemon {
         return true;
     }
 
+    /**
+     * Releases EVERY slot, not only the {@code layout_}-prefixed ones.
+     *
+     * <p>Since the app activates a layout with per-package {@code ATTACH_SLOT} calls, a prefix
+     * filter here would match nothing and leave every overlay of the active layout on the
+     * cluster when the user picks "free mode". {@code sSlots} is Layout-exclusive — the
+     * standard projection path (MIRROR_START/STOP, INJECT_*, CAPTURE_DISPLAY) never touches it.
+     */
     private static boolean handleDeactivateLayout(Parcel data, Parcel reply) {
-        out("[Fission] DEACTIVATE_LAYOUT");
+        out("[Fission] DEACTIVATE_LAYOUT slots=" + sSlots.size());
         for (String key : new java.util.ArrayList<>(sSlots.keySet())) {
-            if (key.startsWith("layout_")) {
-                SlotInfo s = sSlots.remove(key); if (s != null) s.release();
-            }
+            SlotInfo s = sSlots.remove(key);
+            if (s != null) s.release();
         }
         reply.writeNoException(); reply.writeInt(1);
         return true;
@@ -1110,13 +1139,44 @@ public class SurfaceDaemon {
             Display target = resolveClusterDisplay();
             if (target == null) {
                 out("[ATTACH_SLOT] FAIL: cluster display not found");
+                // Layout has never produced a single trace on DL4 / DL5.1 / DX_BYD_AUTO
+                // (29 of 149 field captures). A bare "not found" cannot tell "this platform
+                // has no cluster display at all" from "the daemon looked too early", so dump
+                // what the daemon DID see. Failure path only — costs nothing when it works.
+                dumpDisplaysForDiagnostics();
                 return null;
             }
+            // step1..step4 keep their exact existing wording so a new capture still diffs
+            // line-for-line against the DiLink 3 successes and the 2 DL5.0 failures;
+            // everything added below is a NEW sub-step, never a renumbering.
+            //
+            // The descriptor goes on the SUCCESS line, not only on the "not found" branch:
+            // resolveClusterDisplay() tries getDisplay(1) first and every known platform HAS
+            // a display 1 — DL3 the real cluster, DL4 the OEM's own virtual
+            // "fission_bg_xdjaVirtualSurface" (owned by com.xdja.containerservice),
+            // DX_BYD_AUTO an external "HDMI Screen". So a bare id + name cannot distinguish
+            // "found the cluster" from "found something else and will now paint into it".
+            // flags/type are exactly what separates those three cases.
             out("[ATTACH_SLOT] step2: targetDisplay=" + target.getDisplayId()
+                    + " " + describeDisplay(target)
                     + " latch setup pkg=" + slot.pkg);
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Surface> surfaceRef = new AtomicReference<>();
             final AtomicReference<String>  errorRef   = new AtomicReference<>();
+            // Localises a mid-attach throw. On DiLink 5.0 both captures
+            // (INC-20260615-160735, INC-20260622-080346) stop after step3 +
+            // "OP_SYSTEM_ALERT_WINDOW granted" with
+            //   SecurityException: Given calling package android does not match caller's uid 2000
+            // and step4 never prints — i.e. the throw is in the statements between the two log
+            // lines and nothing recorded which one. This ref names the statement in flight.
+            //
+            // NOT "step2": step2 already succeeded, on the binder thread. And not a real stage
+            // either until the runnable actually starts — the 2 s timeout below reports this
+            // value, and a main-looper stall means the runnable NEVER RAN, which is precisely
+            // the case the stage ref exists to tell apart from "threw inside a statement".
+            // Naming a real stage here would assert the opposite of what happened.
+            final AtomicReference<String> stageRef =
+                    new AtomicReference<>("queued-never-dispatched");
             // Set true when the binder thread gives up (timeout / invalid surface). The
             // attach runnable checks it under the slot monitor after wm.addView so a
             // late-running attach removes its own window instead of leaking it.
@@ -1124,6 +1184,10 @@ public class SurfaceDaemon {
                     new java.util.concurrent.atomic.AtomicBoolean(false);
 
             Runnable attach = () -> {
+                // First statement: the runnable IS running, so the timeout can no longer be
+                // reported as "never dispatched". getResources() below is unguarded, so this
+                // stage has to be named before it, not after.
+                stageRef.set("step3-displayCtx/getResources");
                 try {
                     // Use the shell-identity context (pkg="com.android.shell", uid=2000).
                     // On Android 12 (DL5) WMS strictly checks context.getPackageName() against
@@ -1139,7 +1203,23 @@ public class SurfaceDaemon {
                     out("[ATTACH_SLOT] step3: displayCtx=" + (displayCtx != null ? "ok" : "null")
                             + " resources=" + (hasRes ? "ok" : "null") + " pkg=" + slot.pkg);
 
+                    // The DL5.0 SecurityException names package "android" while the daemon is
+                    // uid 2000 (shell) — so print which identity each context actually carries.
+                    // getOpPackageName() is the field WMS/AppOps validate and it is NOT
+                    // getPackageName() once createPackageContext("com.android.shell") is used.
+                    // displayCtx is printed as well as base/view: wm.addView is performed by the
+                    // WindowManager obtained from displayCtx, so displayCtx's op-package is the
+                    // identity WMS actually validates. When getResources() fails, viewCtx falls
+                    // back to base and the other two fields would both show base — hiding the
+                    // one that matters.
+                    stageRef.set("step3a-identity");
+                    out("[ATTACH_SLOT] step3a: uid=" + android.os.Process.myUid()
+                            + " base=" + contextIdentity(base)
+                            + " view=" + contextIdentity(viewCtx)
+                            + " displayCtx=" + contextIdentity(displayCtx));
+
                     // Grant OP_SYSTEM_ALERT_WINDOW (op=24) to our uid via AppOps
+                    stageRef.set("step3b-appops");
                     if (sContext != null) {
                         try {
                             Object appOps = sContext.getSystemService(Context.APP_OPS_SERVICE);
@@ -1154,7 +1234,10 @@ public class SurfaceDaemon {
                         }
                     }
 
+                    stageRef.set("step3c-new-SurfaceView");
                     SurfaceView sv = new SurfaceView(viewCtx);
+                    out("[ATTACH_SLOT] step3c: SurfaceView created pkg=" + slot.pkg);
+                    stageRef.set("step3d-holder");
                     sv.getHolder().setFixedSize(slot.w, slot.h);
                     sv.getHolder().addCallback(new SurfaceHolder.Callback() {
                         @Override public void surfaceCreated(SurfaceHolder h) {
@@ -1177,17 +1260,30 @@ public class SurfaceDaemon {
                         }
                     });
 
+                    out("[ATTACH_SLOT] step3d: holder fixed=" + slot.w + "x" + slot.h
+                            + " callback attached pkg=" + slot.pkg);
+                    stageRef.set("step3e-getSystemService(WindowManager)");
                     WindowManager wm = (displayCtx != null)
                             ? displayCtx.getSystemService(WindowManager.class) : null;
                     if (wm == null) {
-                        errorRef.set("WM null for display " + target.getDisplayId());
+                        errorRef.set("step3e-getSystemService(WindowManager): WM null for display "
+                                + target.getDisplayId());
                         latch.countDown(); return;
                     }
+                    out("[ATTACH_SLOT] step3e: wm=ok pkg=" + slot.pkg);
+                    stageRef.set("step3f-createOverlayLayoutParams");
                     WindowManager.LayoutParams lp = createOverlayLayoutParams(target, slot.w, slot.h);
                     lp.x = slot.x; lp.y = slot.y;
+                    out("[ATTACH_SLOT] step3f: lp ready type=" + lp.type + " lpPkg=" + lp.packageName);
+                    stageRef.set("step4-wm.addView");
                     out("[ATTACH_SLOT] step4: wm.addView display=" + target.getDisplayId()
                             + " pos=" + lp.x + "," + lp.y + " size=" + slot.w + "x" + slot.h);
                     wm.addView(sv, lp);
+                    // step5 separates "addView threw" from "addView returned but no surface
+                    // ever became valid" — two different platform failures that used to look
+                    // identical in a capture.
+                    stageRef.set("step5-publish");
+                    out("[ATTACH_SLOT] step5: wm.addView returned pkg=" + slot.pkg);
                     // Publish under the slot monitor and re-check the abort flag: if the
                     // binder thread already timed out, remove this just-added window here
                     // (we are on the main looper — the correct thread for removeView) rather
@@ -1202,9 +1298,21 @@ public class SurfaceDaemon {
                         }
                     }
                 } catch (Exception e) {
-                    out("[ATTACH_SLOT] error: " + e.getClass().getSimpleName()
-                            + ": " + e.getMessage());
-                    errorRef.set(e.getMessage()); latch.countDown();
+                    // Name the stage: a SecurityException here used to be un-attributable.
+                    String reason = stageRef.get() + ": " + e.getClass().getSimpleName()
+                            + ": " + e.getMessage();
+                    out("[ATTACH_SLOT] error at " + reason);
+                    // ...and the frames, which is the difference between a hypothesis and a
+                    // fact. The DL5.0 wording ("Given calling package android does not match
+                    // caller's uid 2000") is AMS.enforceCallingPackage — the stack says which
+                    // framework call under this statement reached it. err() already routes to
+                    // stderr, which the launcher redirects into the SAME daemon log file, so
+                    // this needs no new plumbing.
+                    err("[ATTACH_SLOT] " + reason, e);
+                    // Never store a bare getMessage(): a null message left errorRef null and the
+                    // caller then logged the misleading "FAIL: no valid surface" instead of the
+                    // real exception.
+                    errorRef.set(reason); latch.countDown();
                 }
             };
 
@@ -1212,7 +1320,9 @@ public class SurfaceDaemon {
             else new android.os.Handler(Looper.getMainLooper()).post(attach);
 
             if (!latch.await(2, TimeUnit.SECONDS)) {
-                out("[ATTACH_SLOT] TIMEOUT 2s pkg=" + slot.pkg);
+                // Report the stage the attach runnable was stuck in — a main-looper stall and
+                // a blocking framework call inside addView look the same without it.
+                out("[ATTACH_SLOT] TIMEOUT 2s at " + stageRef.get() + " pkg=" + slot.pkg);
                 abortOverlayAttach(slot, aborted); return null;
             }
             if (errorRef.get() != null) {
@@ -1231,6 +1341,86 @@ public class SurfaceDaemon {
             out("[ATTACH_SLOT] exception: " + e.getClass().getSimpleName()
                     + ": " + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * {@code "<packageName>/<opPackageName>"} for a daemon context, or a marker when unavailable.
+     *
+     * <p>The DiLink 5.0 failure reads "Given calling package android does not match caller's
+     * uid 2000" — but the daemon builds its view context from
+     * {@code createPackageContext("com.android.shell")}, whose {@code getPackageName()} is
+     * "com.android.shell". {@code getOpPackageName()} is the identity AppOps/WMS actually
+     * validate and it can still be the inherited system one ("android"). Reflection because
+     * that getter is not public API; failure is non-fatal (diagnostics only).
+     */
+    private static String contextIdentity(Context c) {
+        if (c == null) return "null";
+        String pkg = "?";
+        String op  = "?";
+        try { pkg = String.valueOf(c.getPackageName()); } catch (Exception ignored) {}
+        try {
+            Method m = Context.class.getMethod("getOpPackageName");
+            op = String.valueOf(m.invoke(c));
+        } catch (Exception ignored) {}
+        return pkg + "/" + op;
+    }
+
+    /**
+     * One-line descriptor of a logical display: name, state, flags, physical size and — when
+     * the platform lets us read them — the owner package and display type.
+     *
+     * <p>Owner and type are the fields that actually separate the known platforms: DiLink 3's
+     * display 1 is the real cluster, DiLink 4's is the OEM's own VIRTUAL
+     * {@code fission_bg_xdjaVirtualSurface} owned by {@code com.xdja.containerservice}, and
+     * DX_BYD_AUTO's is an EXTERNAL "HDMI Screen". Both getters are non-public, so they are
+     * read reflectively and degrade to {@code ?} — this is diagnostics, never a hard failure.
+     */
+    private static String describeDisplay(Display d) {
+        if (d == null) return "null";
+        StringBuilder sb = new StringBuilder();
+        try { sb.append("name=").append(d.getName()); } catch (Exception ignored) { sb.append("name=?"); }
+        try { sb.append(" state=").append(d.getState()); } catch (Exception ignored) {}
+        try { sb.append(" flags=0x").append(Integer.toHexString(d.getFlags())); } catch (Exception ignored) {}
+        try {
+            Display.Mode mode = d.getMode();
+            if (mode != null) {
+                sb.append(" size=").append(mode.getPhysicalWidth())
+                  .append('x').append(mode.getPhysicalHeight());
+            }
+        } catch (Exception ignored) {}
+        try {
+            Object type = Display.class.getMethod("getType").invoke(d);
+            sb.append(" type=").append(type);
+        } catch (Exception ignored) { sb.append(" type=?"); }
+        try {
+            Object owner = Display.class.getMethod("getOwnerPackageName").invoke(d);
+            sb.append(" owner=").append(owner);
+        } catch (Exception ignored) { sb.append(" owner=?"); }
+        return sb.toString();
+    }
+
+    /**
+     * Logs every logical display the daemon can see. Called only when
+     * {@link #resolveClusterDisplay()} returns {@code null}, so it is free on the happy path.
+     *
+     * <p>Layout is proven working on DiLink 3 only; DL4, DL5.1 and DX_BYD_AUTO have never
+     * produced one Layout trace. Whether the daemon can even see a cluster display there is
+     * the first question a capture must answer, and "not found" alone does not answer it.
+     */
+    private static void dumpDisplaysForDiagnostics() {
+        try {
+            Context dmCtx = (sSysContext != null) ? sSysContext : sContext;
+            DisplayManager dm = (dmCtx != null) ? dmCtx.getSystemService(DisplayManager.class) : null;
+            if (dm == null) { out("[ATTACH_SLOT] displays: DisplayManager unavailable"); return; }
+            Display[] all = dm.getDisplays();
+            out("[ATTACH_SLOT] displays: count=" + (all != null ? all.length : 0));
+            if (all == null) return;
+            for (Display d : all) {
+                out("[ATTACH_SLOT] display id=" + d.getDisplayId() + " " + describeDisplay(d));
+            }
+        } catch (Exception e) {
+            out("[ATTACH_SLOT] displays: enumeration failed: " + e.getMessage());
         }
     }
 

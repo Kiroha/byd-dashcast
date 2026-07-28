@@ -260,22 +260,9 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
-        <!-- v1.3.30-beta — Fission multi-app projection (gated by PREF_FISSION_MODE) -->
-        <activity
-            android:name=".fission.FissionActivity"
-            android:label="@string/fission_title"
-            android:screenOrientation="landscape"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="false"/>
-
-        <activity
-            android:name=".fission.FissionLayoutEditorActivity"
-            android:label="@string/fission_editor_title"
-            android:screenOrientation="landscape"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="false"/>
-
-        <!-- v1.4.9-beta — Global layout manager accessible from navRail -->
+        <!-- v1.4.9-beta — Global layout manager accessible from navRail
+             (it replaced FissionActivity + FissionLayoutEditorActivity, both removed:
+             nothing started them and it is a strict superset of the editor) -->
         <activity
             android:name=".fission.LayoutManagerActivity"
             android:label="@string/layout_manager_title"

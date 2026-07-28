@@ -717,8 +717,57 @@ android {
         // editor keeps today's behaviour and the code documents the correct implementation.
         // Two adversarial review rounds; the second caught that regression. Build + lint 0/0, 177
         // unit tests green. No daemon protocol change; DL3/DL4/DL5 behaviour identical.
-        versionCode 595
-        versionName "1.8.5-beta"
+        // 596 = 1.8.6-beta (Layout soundness pass + the DL4/DL5 diagnostic that step two depends on.
+        // FOUR REAL DEFECTS, all on the Layout Manager's own Activate button, which is the only way
+        // to start a layout other than auto-start: (1) it never ran ensureClusterProjectionThen, so
+        // slots were created while Qt still scanned out the OEM's native view — invisible; (2) it
+        // never started the SurfaceDaemon, it only probed the binder and gave up with "daemon not
+        // connected", so it was a no-op toast on a cold cluster; (3) it used the batch
+        // ACTIVATE_LAYOUT verb, which keys slots "layout_<label>_<i>" and never puts the package on
+        // the wire, so nothing it created could be found again by QUERY/RESIZE/RELEASE_SLOT (all
+        // three look up by package) — the manual button now sends one ATTACH_SLOT per zone, keyed by
+        // package, and FissionClient.activateLayout is gone (the daemon still ANSWERS the verb: it
+        // outlives an app update); (4) handleDeactivateLayout filtered on the "layout_" prefix, which
+        // with per-package keys matches nothing — it now releases every slot (sSlots is
+        // Layout-exclusive; the standard path uses MIRROR_START/STOP, INJECT_*, CAPTURE_DISPLAY and
+        // never touches it). Free zones (no app bound) still paint — re-created via attachSlot keyed
+        // "zone<i>_<label>", index-disambiguated because nextSlotLabel() is "Zone "+(size+1) and is
+        // NOT unique, and the daemon's attach does remove+release on a same-key slot.
+        // DEAD CODE REMOVED: FissionActivity + FissionLayoutEditorActivity (719 lines, 5 layouts, 35
+        // strings x 13 locales). Proven unreachable: manifest declarations with no intent-filter,
+        // zero startActivity, zero Intent(...class), zero setClassName/Class.forName route; the live
+        // editor is LayoutManagerActivity, a strict superset (it also binds packages).
+        // THE DIAGNOSTIC: Layout has never produced one trace on DL4/DL5.1/DX_BYD_AUTO, and the two
+        // DL5.0 captures die between step3 and step4 on "SecurityException: Given calling package
+        // android does not match caller's uid 2000" with nothing recording which statement threw.
+        // ATTACH_SLOT now carries a stage ref (step3a..step5) naming the statement in flight, a full
+        // STACK TRACE via err() into the same daemon log, step3a printing packageName/opPackageName
+        // of both contexts (the DL5.0 wording is AMS.enforceCallingPackage — this one line separates
+        // "unfixable A12 gate" from "wrong op-package, fixable"), and the display descriptor
+        // (flags/type/owner) on the step2 SUCCESS line, because every platform HAS a display 1:
+        // DL3's is the real cluster, DL4's is the OEM's VIRTUAL fission_bg_xdjaVirtualSurface owned
+        // by com.xdja.containerservice, DX's an EXTERNAL HDMI Screen — id+name cannot tell them
+        // apart. Daemon log tail 200 -> 400 (two captures already sat at exactly 200) and the daemon
+        // now prints its own build at startup, because it is reused across an APK reinstall when the
+        // marker build matches, so a capture can contain plausible lines from a daemon several
+        // versions old. THIS versionCode bump is what forces the respawn — without it none of the
+        // above executes on a tester already running 595.
+        // REVIEW CAUGHT (fixed here, not shipped): a main-thread RejectedExecutionException crash —
+        // Activate preset B then Deactivate preset A during the multi-second cluster sequence shuts
+        // the executor down, and onDisplayReady then calls execute() on it with no try/catch; the
+        // same shape pre-existed on the auto-start path and is closed too. Plus: the Activate button
+        // is now gated on the Layouts-mode setting (this screen is reachable from the nav rail with
+        // no runtime gate, and the button went from a no-op toast to driving the cluster and spawning
+        // a uid-2000 daemon); a re-entrancy guard (a second tap built a second ClusterManager whose
+        // cancel() cannot unregister the first instance's DisplayListener — the 1.2.29 listener leak);
+        // failure codes kept ENGLISH for the bug-report journal and mapped to R.string only for the
+        // toast; free-zone displayId cleared before a retry so a failed attach is not reported as
+        // success. Also corrected a false claim in the implementation notes: the batch path HAS been
+        // observed working (18 "OK surface valid pkg=layout_Zone_*" lines across INC-20260614-131051
+        // and -131118, both DiLink 3) — the platform is the differentiator, not the verb.
+        // Standard projection path untouched; no daemon protocol change; DL3/DL4/DL5 identical.)
+        versionCode 596
+        versionName "1.8.6-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
