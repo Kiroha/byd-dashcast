@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.core.content.edit
 
 import com.byd.dashcast.R
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.proxy.ProxyClient
@@ -212,12 +213,20 @@ class ClusterResizeActivity : Activity(),
         val daemon = ProxyClient.getDaemonBinder()
         if (daemon != null) {
             try {
-                ok = mMirror.startMirrorViaDaemon(this, daemon, clusterDisplay, surface, w, h)
+                ok = mMirror.startMirrorViaDaemon(
+                        this, daemon, clusterDisplay, mDisplayId, surface, w, h)
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "startMirrorViaDaemon threw: " + t.message)
             }
         }
-        if (!ok) {
+        // Same guard as MirrorCoordinator.attemptStart: without a cluster display the in-app
+        // SurfaceControl path cannot succeed (no ACCESS_SURFACE_FLINGER) and only emits a bogus
+        // "fallback layerStack=2" + ACCESS_SURFACE_FLINGER [ERROR] that reads like a permission
+        // regression. On DL4 the Display object is null even though the display exists, so the
+        // existence test goes through the registry; null on DL3/DL5 → behaviour unchanged there.
+        val haveClusterDisplay = clusterDisplay != null ||
+                (mDisplayId > 0 && ClusterDisplayRegistry.forDisplayId(mDisplayId) != null)
+        if (!ok && haveClusterDisplay) {
             try {
                 ok = mMirror.startMirror(this, clusterDisplay, surface, w, h)
             } catch (t: Throwable) {

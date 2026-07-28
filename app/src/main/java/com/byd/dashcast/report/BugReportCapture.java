@@ -2,6 +2,8 @@ package com.byd.dashcast.report;
 
 import android.content.Context;
 import android.os.Build;
+import android.os.Process;
+import android.os.SystemClock;
 
 import com.byd.dashcast.BuildConfig;
 import com.byd.dashcast.infrastructure.AdbLocalClient;
@@ -25,13 +27,38 @@ import java.util.Locale;
  *
  * <p>The shell dump (uid=2000) writes logcat + dumpsys snapshots to the app's
  * external files dir; the in-memory DashCast journal and a header are appended
- * on the Java side. Total size stays well under ~1 MB thanks to {@code logcat -t}.
+ * on the Java side. The logcat sections are bounded by `-t`, and are written BEFORE the
+ * {@code tail} line ceiling — so the file stays a few MB even on a log-spamming unit.
+ *
+ * <p>SECTION ORDER IS LOAD-BEARING, and so is the size budget that protects it. The dump is read
+ * back with a hard byte cap taken from the START of the file ({@link #readFile}), so whatever is
+ * written LAST is what a size overflow deletes. Logcat stays first and dumpsys second on purpose:
+ * the logcat sections are ordered oldest→newest, so truncating them would eat the most RECENT
+ * lines — the very moments being reported. The {@code -t} bounds keep the file well under the cap,
+ * and {@link #readFile} shouts if it is ever reached. Do not "fix" this by swapping the order;
+ * fix it by lowering the {@code -t} bounds.
  */
 public final class BugReportCapture {
 
     private static final String TAG       = "BugReportCapture";
     private static final String PREFIX    = "byd_bugreport_";
-    private static final int    LOGCAT_LINES = 5000;
+
+    /**
+     * Line-count cap kept ONLY as the fallback for a ROM whose logcat refuses {@code -t <time>}.
+     */
+    private static final int    LOGCAT_FALLBACK_LINES = 5000;
+
+    /**
+     * Hard byte cap applied when the shell dump is read back, taken from the START of the file.
+     * The {@code -t} bounds on the logcat sections keep a real report an order of magnitude below
+     * this, so it is a last-resort guard rather than a working limit — but it cuts at the END of
+     * the file, so if it ever bites it removes the dumpsys sections. {@link #readFile} therefore
+     * says so out loud instead of letting a truncated report look like a device that produced
+     * nothing (which is exactly how INC-20260727-203241 nearly went undiagnosed).
+     */
+    private static final long   REPORT_BODY_MAX_BYTES = 4L * 1024L * 1024L;
+
+
 
     public interface Callback {
         /** Called on the main thread with the finished file (never null on success). */
@@ -115,16 +142,39 @@ public final class BugReportCapture {
             + " ; { settings get secure enabled_notification_listeners 2>/dev/null"
             + "     | grep -q com.byd.dashcast && echo granted || echo NOT-granted ; } >> " + p
             // ── LOGS ──
-            + " ; echo '--- LOGCAT (last " + LOGCAT_LINES + " lines) ---' >> " + p
-            + " ; logcat -d -t " + LOGCAT_LINES + " -v threadtime >> " + p + " 2>&1"
+            // TIME-ANCHORED, not line-counted. `logcat -t <N lines>` is worthless on a unit with
+            // a log-spamming third party: on the DL4 car com.andrerinas.headunitrevived sprays
+            // MediaCodec stack traces continuously, so `-t 5000` captured 3.2 SECONDS while the
+            // activation being investigated had happened ~100 s earlier (INC-20260727-203241) —
+            // the evidence had been evicted from our window even though it was still in the ring
+            // buffer. `-t '<MM-DD HH:MM:SS.mmm>'` takes everything the buffer still holds since
+            // that instant, so a spammer can no longer squeeze the window; the buffer size caps
+            // the report either way, so this cannot blow the file up. `|| ` falls back to the old
+            // line count if a ROM rejects the time form.
+            // `tail` (not `head`) applies the safety ceiling from the RECENT end, so the cap can
+            // only ever discard the oldest lines of the window, never the incident itself.
+            //
+            // The fallback is triggered by an EMPTY result, not by a non-zero exit. `||` alone
+            // was strictly worse than the fixed window it replaced: a logcat that ACCEPTS
+            // `-t <time>` but retains nothing newer than the anchor exits 0 with no output, so
+            // the section came out empty and the fallback never ran. Staging into a temp file
+            // (uid 2000 owns /data/local/tmp on every supported unit — it is where the daemon
+            // logs read below already live) makes `[ -s ]` cover BOTH failure shapes with one
+            // test, and is idempotent if the shell layer replays the command.
+            + " ; echo '--- LOGCAT (last " + LOGCAT_FALLBACK_LINES + " lines) ---' >> " + p
+            + " ; logcat -d -t " + LOGCAT_FALLBACK_LINES + " -v threadtime >> " + p + " 2>&1"
             + " ; echo '--- LOGCAT EVENTS (last 500) ---' >> " + p
             + " ; logcat -b events -d -t 500 -v threadtime >> " + p + " 2>&1"
-            // Tag-filtered logcat on window/launch/cluster/car events. The main buffer floods
-            // fast (the prior DX_BYD_AUTO report had no 'waze'/'neusoft' line left), so a -t
-            // window over only these tags is far more likely to still hold the moment a
-            // third-party app was launched on the cluster and (not) shown.
-            + " ; echo '--- LOGCAT (window/cluster/car tags) ---' >> " + p
-            + " ; logcat -d -t 1500 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:I '*:S' >> " + p + " 2>&1"
+            // Tag-filtered logcat on window/launch/cluster/display/car events, over the SAME time
+            // window. DisplayManagerService is at :V, not :I: the OEM DL4 whitelist refusals that
+            // proved the root cause ("getDisplayIdsInternal isPermittedApp:false", "forbid
+            // for:<uid>", "reject for:<uid> to get id") are all logged at DEBUG level, so the old
+            // :I threshold dropped exactly the lines that mattered. ClusterManager:V adds our own
+            // activation trace so both sides of the story are in one section.
+            // Bounded by `-t`, exactly as before: this section is written BEFORE the dumpsys
+            // sections, so any unbounded growth here is what would evict them.
+            + " ; echo '--- LOGCAT (window/cluster/display/car tags) ---' >> " + p
+            + " ; logcat -d -t 1500 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:V ClusterManager:V '*:S' >> " + p + " 2>&1"
             // ── CLUSTER / DISPLAY STATE ──
             + " ; echo '--- DISPLAYS ---' >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p
@@ -383,12 +433,35 @@ public final class BugReportCapture {
         return new File(dir, PREFIX + ts + ".txt");
     }
 
+    /**
+     * Reads the shell dump back, capped at {@value #REPORT_BODY_MAX_BYTES} bytes FROM THE START.
+     *
+     * <p>The cap is a last-resort guard — the {@code -t} bounds keep the report well under it, so
+     * it should never be reached. If it ever is, the cut lands at the END of the file, i.e. it
+     * silently removes the
+     * dumpsys sections (DISPLAYS, WINDOW STACKS, SURFACEFLINGER, CAR SERVICE, daemon logs), which
+     * is indistinguishable from "the device produced nothing" when triaging. So a truncation now
+     * says so, in the report and in the journal.
+     */
     private static String readFile(File f) throws IOException {
-        byte[] buf = new byte[(int) Math.min(f.length(), 4L * 1024 * 1024)];
+        final long len = f.length();
+        byte[] buf = new byte[(int) Math.min(len, REPORT_BODY_MAX_BYTES)];
         try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
             int off = 0, n;
             while (off < buf.length && (n = in.read(buf, off, buf.length - off)) > 0) off += n;
-            return new String(buf, 0, off);
+            String body = new String(buf, 0, off);
+            if (len <= REPORT_BODY_MAX_BYTES) return body;
+            AppLogger.w(TAG, "shell dump truncated: " + len + " B on disk, cap "
+                    + REPORT_BODY_MAX_BYTES + " B — the trailing dumpsys sections are MISSING");
+            return body
+                    + "\n\n!!!!!!!! REPORT TRUNCATED !!!!!!!!\n"
+                    + "The shell dump was " + len + " bytes; only the first "
+                    + REPORT_BODY_MAX_BYTES + " were kept.\n"
+                    + "Everything after this point (the remaining dumpsys sections: DISPLAYS, "
+                    + "WINDOW STACKS, SURFACEFLINGER, CAR SERVICE, daemon logs) IS MISSING — it "
+                    + "was NOT absent on the device.\n"
+                    + "Lower the logcat -t bounds in BugReportCapture.\n"
+                    + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
         }
     }
 

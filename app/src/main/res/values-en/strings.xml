@@ -567,6 +567,8 @@
     <string name="aaos_cluster_unsupported_msg">Your car runs BYD\'s Android Automotive system (DX_BYD_AUTO), where the instrument cluster is locked by the manufacturer: BYD reserves it for the built-in navigation and blocks app projection. This is a vehicle restriction (not a DashCast limitation) — there is no workaround.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Cluster projection not available</string>
     <string name="dl3_singleos_cluster_unsupported_msg">On this vehicle the instrument cluster uses a single-display (single-OS) layout: it\'s drawn directly by the car, with no separate screen that apps can be projected onto. App projection to the cluster isn\'t possible here — this is a property of your vehicle\'s cluster, not a DashCast limitation.</string>
+    <string name="dl4_cluster_unsupported_title">Cluster projection blocked by the firmware</string>
+    <string name="dl4_cluster_unsupported_msg">On this vehicle the firmware does not allow DashCast to see the instrument-cluster screen: the app is not on the manufacturer\'s list of programs permitted to enumerate displays. DashCast also asked through its privileged helper, which found no cluster screen either. App projection to the cluster is therefore not possible on this firmware version — this is a manufacturer restriction, not a DashCast limitation.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
     <string name="hud_bench_result_title">HUD result — what did you see on the windshield?</string>
     <string name="hud_bench_opt_ok">✅ Arrow shown — correct direction</string>

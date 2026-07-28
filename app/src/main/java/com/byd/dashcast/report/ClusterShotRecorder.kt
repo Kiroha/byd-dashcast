@@ -8,6 +8,7 @@ import android.os.SystemClock
 import android.view.Display
 import androidx.core.content.edit
 import com.byd.dashcast.cluster.ClusterService
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.hud.HudCaptureSupport
 import com.byd.dashcast.infrastructure.AdbLocalClient
@@ -119,13 +120,26 @@ object ClusterShotRecorder {
                     binder, 0, w, h, "$SHOTS_DIR/shot_d0_$stamp.jpg", "d0"
                 ) || daemonPruned
             }
-            // Cluster display (its own layerStack — 2 on DL5.1, 1 on DL3 1for2).
+            // Cluster display (its own layerStack — 2 on DL5.1, 1 on DL3 1for2 and DL4).
             val cluster = dm.getDisplay(clusterId)
             if (cluster != null) {
                 val sz = sizeOf(dm, clusterId)
                 if (sz != null) {
                     daemonPruned = capture(
                         binder, layerStackOf(cluster, clusterId), sz.first, sz.second,
+                        "$SHOTS_DIR/shot_cluster_$stamp.jpg", "cluster"
+                    ) || daemonPruned
+                }
+            } else {
+                // DL4: dm.getDisplay() is refused by the OEM DisplayManagerService whitelist, so
+                // the CLUSTER screenshot — the single most useful artefact for a projection bug —
+                // was silently skipped while the main-display one still went through. The daemon
+                // capture verb only ever needed ints, and ClusterManager already resolved them.
+                // Registry is null on DL3/DL5 → those keep skipping exactly as before.
+                val info = ClusterDisplayRegistry.forDisplayId(clusterId)
+                if (info != null && info.width > 0 && info.height > 0) {
+                    daemonPruned = capture(
+                        binder, info.layerStack, info.width, info.height,
                         "$SHOTS_DIR/shot_cluster_$stamp.jpg", "cluster"
                     ) || daemonPruned
                 }

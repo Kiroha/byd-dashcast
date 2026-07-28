@@ -636,8 +636,47 @@ android {
         // Net -1074 lines; 195 strings dropped across 13 locales. No daemon protocol change; DL5 is
         // untouched (wm overscan is gone from API 30+, so those units never had the defect).
         // 593 = 1.8.3-beta (Kotlin migration continues on the beta channel: 12 more classes converted Java→Kotlin since 1.8.2, each validated by its unit test (full suite 324 tests green). util/concurrent is now 100% Kotlin (batch #3: WorkerLifecycleController, BoundedSerialExecutor, DeathLease, SingleFlight, CloseableResourceSlot, LatestValueDispatcher); + system/CanBatchOperation and ui/main/DashboardSelectionTracker; + 4 proxy/daemon pure-logic helpers (TaskMoveResult, TaskLaunchRecovery, FissionWatchdogRegistry, FissionWatchdogPolicy). Concurrency preserved verbatim (@Synchronized, @Volatile, Atomic*, CountDownLatch) and Java-facing interop preserved for the sensitive consumers ProxyClient/MirrorDaemon/MapNotificationListenerService/Phase4TaskVerbs/VoskTranscriber (fun interfaces for Kotlin SAM, boolean is-properties, defensive-copy getters, @Throws). NO functional change; no daemon protocol change; DL3/DL5 unaffected; lint 0/0. Pre-release from switch-kotlin — NOT merged to main, NOT Latest.)
-        versionCode 593
-        versionName "1.8.3-beta"
+        // 594 = 1.8.4-beta (DiLink 4: reach the cluster through the uid-2000 daemon, because the
+        // firmware hides it from us — INC-20260727-203241, and four earlier DL4 reports.
+        // ROOT CAUSE, proven. On DL4 the cluster VirtualDisplay EXISTS and sits idle and ready
+        // (`Display 1: fission_bg_xdjaVirtualSurface, 1920x720, layerStack 1, owner
+        // com.xdja.containerservice, state ON` in every DL4 capture, and ActivityTaskManager lists
+        // it) — but the OEM patched DisplayManagerService.getDisplayIdsInternal with an app
+        // whitelist that refuses our uid the display-id list. From INC-20260713-180803, the one DL4
+        // capture whose logcat still covered an activation: 378x "forbid for:10167", 252x
+        // "getDisplayIdsInternal isPermittedApp:false" (never once true), 126x "reject for:10167 to
+        // get id" — uid 10167 IS DashCast. That gate does not exist in AOSP and does not appear on
+        // DL3. So DashCast polled DisplayManager ~68 times over 80 s, logged ZERO candidates, and
+        // timed out, while a uid-2000 shell dump 29 s later listed the display plainly.
+        // Two corollaries the evidence forces: the DL4 display PRE-EXISTS the activation sequence
+        // (the set DMS iterated never changed across 54.6 s, before and after cmd 16/35), so the
+        // old comment claiming cmd 35 creates it ~8-9 s later was a mis-inference and the 12->20 s
+        // timeout bump rested on it; and DL4 has NEVER worked — 5 reports, 3 app generations
+        // including pre-Kotlin 1.6.109, with ADAS-window-fix ON already tested 5 times. Raising the
+        // timeout is proven pointless: the display is not late, it is hidden.
+        // THE FIX. The daemon can see what the app cannot, and already launches and mirrors, so on
+        // DL4 ONLY the cluster is now discovered by parsing `dumpsys display` through the uid-2000
+        // shell, and the whole pipeline was made to work from injected values (id/width/height/
+        // layerStack) since the app can never hold a real Display object there. Every touched site
+        // is gated on Platform.isDiLink4(); DL3/DL5 are provably untouched (isDiLink3 is DEFINED as
+        // !DL2 && !DL4 && !DL5, and the new registry's single writer sits behind the DL4 gate).
+        // The enumerator refuses displays it may not drive — FLAG_PRIVATE or owned by a third-party
+        // uid — because `dumpsys` as uid 2000 lists EVERY logical display, unlike the app API: a
+        // foreign `dudu-auto-ui-pip` private display (present in 4 tester reports) would otherwise
+        // have been driven, mirrored and launched onto. When nothing drivable is found the user is
+        // told projection is unavailable on this firmware instead of the generic "disconnected".
+        // Also: the bug report's tag-filtered logcat now keeps DisplayManagerService at :V (the one
+        // character that had hidden the proof) plus ClusterManager:V, and a truncated report says
+        // so out loud; the activation log no longer claims to send "30->16->35" while sending
+        // "16->35"; the in-app SurfaceControl mirror is no longer attempted with no display, which
+        // was emitting ERROR-level "ACCESS_SURFACE_FLINGER?" noise that reads like a security
+        // regression; and the post-OTA daemon bootstrap stops printing two contradictory verdicts.
+        // HONEST LIMIT: it remains UNPROVEN whether the firmware also blocks cross-display activity
+        // launches for our uid. This ships to LEARN as much as to fix — the new one-line
+        // "display resolution — app=[…] daemon=[…] shellOk=…" trace is designed to settle it from
+        // the next capture. No daemon protocol change. 176 unit tests, lint 0/0.
+        versionCode 594
+        versionName "1.8.4-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

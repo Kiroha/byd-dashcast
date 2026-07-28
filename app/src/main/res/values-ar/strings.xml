@@ -554,6 +554,8 @@
     <string name="aaos_cluster_unsupported_msg">تستخدم سيارتك نظام أندرويد أوتوموتيف من BYD (DX_BYD_AUTO). في هذه الوحدة، تكون لوحة العدادات مقفلة من قِبل الشركة المصنّعة: تحجزها BYD للملاحة المدمجة وتمنع عرض التطبيقات عليها. هذا قيد من السيارة (وليس قيدًا من DashCast) — ولا يوجد حل بديل.</string>
     <string name="dl3_singleos_cluster_unsupported_title">عرض لوحة العدادات غير متاح</string>
     <string name="dl3_singleos_cluster_unsupported_msg">في هذه السيارة، تستخدم لوحة العدادات تخطيطًا بنظام تشغيل واحد (single-OS): تُرسم مباشرةً بواسطة السيارة، دون شاشة منفصلة يمكن عرض التطبيقات عليها. لذلك لا يمكن عرض التطبيقات على لوحة العدادات هنا — هذه خاصية في لوحة عدادات سيارتك، وليست قيدًا من DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">إسقاط لوحة العدادات محظور بواسطة البرنامج الثابت</string>
+    <string name="dl4_cluster_unsupported_msg">في هذه السيارة، لا يسمح البرنامج الثابت لـ DashCast برؤية شاشة لوحة العدادات: التطبيق ليس ضمن قائمة البرامج المسموح لها من الشركة المصنّعة بتعداد الشاشات. كما استعلم DashCast عبر مساعده ذي الامتيازات، ولم يعثر هو الآخر على أي شاشة للوحة العدادات. لذلك فإن إسقاط التطبيقات على لوحة العدادات غير ممكن مع هذا الإصدار من البرنامج الثابت — وهذا قيد من الشركة المصنّعة وليس قيدًا في DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
     <string name="hud_bench_result_title">نتيجة HUD — ماذا رأيت على الزجاج الأمامي؟</string>
     <string name="hud_bench_opt_ok">✅ ظهر السهم — الاتجاه صحيح</string>

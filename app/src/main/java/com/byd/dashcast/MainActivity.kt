@@ -864,6 +864,23 @@ class MainActivity : AppCompatActivity(),
                 .show()
             return
         }
+        // DiLink 4.0 whose firmware hides the cluster display from BOTH the app process and the
+        // uid-2000 daemon. On DL4 the OEM patched DisplayManagerService.getDisplayIdsInternal
+        // with an app whitelist we are not on, so an empty app-side enumeration proves nothing —
+        // this only fires once a SUCCESSFUL daemon `dumpsys display` also listed no cluster
+        // display (ClusterManager records the verdict at the activation timeout; a shell that
+        // merely failed to answer leaves it false). Without this the tester just re-triggers a
+        // 20 s activation that cannot succeed. STRICT: isDiLink4() is false on DL3 and DL5.
+        if (com.byd.dashcast.platform.Platform.get().isDiLink4(this)
+                && com.byd.dashcast.cluster.display.ClusterManager.isDl4ProjectionUnavailable()) {
+            AppLogger.i(TAG, "onSendToDashboard: DL4 — cluster display invisible to app AND daemon, informing user")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dl4_cluster_unsupported_title)
+                .setMessage(R.string.dl4_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
         val svc = mClusterService
         if (svc == null) {
             // v1.2.76 — auto-trigger activateCluster() and replay the app once the service is up.

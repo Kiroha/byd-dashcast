@@ -554,6 +554,8 @@
     <string name="aaos_cluster_unsupported_msg">Il tuo veicolo usa il sistema Android Automotive di BYD (DX_BYD_AUTO). Su questa unità il quadro strumenti è bloccato dal produttore: BYD lo riserva alla navigazione integrata e blocca la proiezione delle app. È una restrizione del veicolo (non un limite di DashCast) — non esiste alcuna soluzione.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Proiezione sul quadro non disponibile</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Su questo veicolo il quadro strumenti usa una configurazione a schermo singolo (single-OS): è disegnato direttamente dall\'auto, senza uno schermo separato su cui proiettare le app. La proiezione delle app sul quadro non è possibile qui — è una caratteristica del quadro del tuo veicolo, non un limite di DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">Proiezione sul quadro bloccata dal firmware</string>
+    <string name="dl4_cluster_unsupported_msg">Su questo veicolo il firmware non consente a DashCast di vedere lo schermo del quadro strumenti: l\'app non è nell\'elenco dei programmi autorizzati dal costruttore a enumerare gli schermi. DashCast ha interrogato anche il proprio assistente privilegiato, che non ha trovato alcuno schermo del quadro. La proiezione di app sul quadro non è quindi possibile con questa versione del firmware — è una restrizione del costruttore, non un limite di DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
     <string name="hud_bench_result_title">Risultato HUD — cosa hai visto sul parabrezza?</string>
     <string name="hud_bench_opt_ok">✅ Freccia mostrata — direzione corretta</string>

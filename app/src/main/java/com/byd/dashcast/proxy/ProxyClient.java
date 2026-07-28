@@ -118,6 +118,13 @@ public final class ProxyClient {
             +     "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
             +   "fi; "
             +   "echo \"[diag] proxy stale ver=${DAEMON_VER:-?} expected=" + com.byd.dashcast.BuildConfig.VERSION_CODE + "\" >&2; "
+            // The "no daemon at all" diagnostic belongs to the ELSE of the aliveness test. It
+            // used to be emitted unconditionally right after this block, so a stale-but-ALIVE
+            // daemon printed "[diag] proxy stale ver=588 expected=593" and then "[diag] no_alive
+            // ps_empty" in the same breath — the second line falsely asserting `ps` had found
+            // nothing. Every post-OTA triage had to work out which of the two was lying.
+            + "else "
+            +   "echo \"[diag] no_alive ps_empty\" >&2; "
             + "fi; "
             // ── flock guard ── REMOVED in v1.2.69 ──────────────────────────
             // v1.2.68 tried to gate the flock on its availability, but
@@ -133,7 +140,6 @@ public final class ProxyClient {
             // Worst case: two near-simultaneous bootstraps spawn two
             // daemons; the second one's stale-kill terminates the first
             // and only one survives. Acceptable.
-            + "echo \"[diag] no_alive ps_empty\" >&2; "
             // ── full bootstrap ─────────────────────────────────────────────
             + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "

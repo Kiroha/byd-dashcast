@@ -23,6 +23,9 @@ import android.view.Display;
 
 import com.byd.dashcast.cluster.mirror.ClusterInputForwarder;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
+import com.byd.dashcast.cluster.display.ClusterDisplayInfo;
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry;
+import com.byd.dashcast.cluster.display.ClusterManager;
 import com.byd.dashcast.cluster.display.DashboardDisplayHelper;
 import com.byd.dashcast.cluster.display.DashboardLauncher;
 import com.byd.dashcast.domain.cluster.ProjectionStateProvider;
@@ -317,6 +320,10 @@ public class ClusterService extends Service
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
+        // Same reason as stopProjectionNoAdb: the registry is process-wide and outlives this
+        // service, so a geometry left behind here would be picked up by the next mirror attempt
+        // even though no projection is running. No-op on DL3/DL5.
+        ClusterDisplayRegistry.clear();
         AppLogger.log(TAG, "ClusterService destroyed");
     }
 
@@ -356,6 +363,21 @@ public class ClusterService extends Service
         return Platform.get().isDiLink3(this) && Platform.isClusterSingleOs();
     }
 
+    /**
+     * DiLink 4.0 where the cluster display is invisible to BOTH the app process and the
+     * uid-2000 daemon. The OEM patched {@code DisplayManagerService.getDisplayIdsInternal} with
+     * an app whitelist DashCast is not on, which is why the app process alone proves nothing —
+     * so this is only true once {@link ClusterManager} recorded that a SUCCESSFUL daemon
+     * {@code dumpsys display} also listed no cluster display. A shell that merely failed to
+     * answer leaves this false and the generic "disconnected" message stands.
+     *
+     * <p>STRICT: gated on {@link Platform#isDiLink4}, and {@code isDiLink3()} is defined as
+     * "not DL2/DL4/DL5" — DL3 and DL5 can never reach this branch.
+     */
+    private boolean isDl4ProjectionBlocked() {
+        return Platform.get().isDiLink4(this) && ClusterManager.isDl4ProjectionUnavailable();
+    }
+
     private void startNativeProjection() {
         if (isDl3SingleOsFission()) {
             AppLogger.w(TAG, "DL3 single-OS fission (fission_single_os=1) — no projectable cluster display; skipping AutoContainer activation");
@@ -378,7 +400,19 @@ public class ClusterService extends Service
             } catch (Exception e) {
                 AppLogger.w(TAG, "getDisplay(" + knownId + ") failed: " + e.getMessage());
             }
-            if (d != null) mListener.onClusterDisplayConnected(d, knownId);
+            if (d != null) {
+                mListener.onClusterDisplayConnected(d, knownId);
+            } else if (ClusterDisplayRegistry.forDisplayId(knownId) != null) {
+                // DiLink 4.0: dm.getDisplay(knownId) is blocked by the same OEM whitelist that
+                // hides the id list, so this branch used to DROP the callback and MainActivity
+                // never learned the cluster was up after an Activity re-create (rotation, back
+                // from another app) — the mirror and the green state stayed off for the rest of
+                // the session. The id IS valid (the daemon resolved it) and Listener already
+                // declares Display as nullable, so deliver it. Registry is null on DL3/DL5.
+                AppLogger.i(TAG, "setListener: no Display object for id=" + knownId
+                        + " (daemon-resolved cluster) — notifying with null Display");
+                mListener.onClusterDisplayConnected(null, knownId);
+            }
         }
     }
 
@@ -692,17 +726,27 @@ public class ClusterService extends Service
                             iamThrew = true;
                         }
                         if (!operation.isValid()) return;
-                        if (!iamOk && !daemonTried && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                            // DL5 app-side DENIED (cross-user) and the daemon was not tried yet
+                        // DL4 joins DL5 here for the same structural reason: on DL4 the app process
+                        // is not allowed to see the cluster display at all (OEM
+                        // DisplayManagerService whitelist), so an app-side setLaunchDisplayId is
+                        // at best unverifiable — the daemon is the only path with a proven view of
+                        // that display. Whether DL4 ALSO blocks cross-display launches for our uid
+                        // is unproven; routing through the daemon removes the question either way.
+                        // isDiLink4() is false on DL3 and on DL5, so neither changes.
+                        boolean daemonOnlyLaunch = AdbLocalClient.isDiLink5Safe(ClusterService.this)
+                                || Platform.get().isDiLink4(ClusterService.this);
+                        if (!iamOk && !daemonTried && daemonOnlyLaunch) {
+                            // App-side DENIED / unverifiable and the daemon was not tried yet
                             // (use_legacy_path ON, or daemon was down at decision time) — the daemon
                             // HOLDS the cross-user permission, so it is the only path that can land it.
-                            AppLogger.w(TAG, "DL5: app-side launch failed — routing via proxy daemon launchAndForce");
+                            AppLogger.w(TAG, "app-side launch failed — routing via proxy daemon launchAndForce");
                                 boolean ok = daemonLaunchSync(
                                     packageName, displayId, clW, clH, operation);
                             AppLogger.i(TAG, "launchOnDashboard → daemon force path (ok=" + ok + ") → " + packageName);
                                 postLaunchResult(callback, ok, operation);
                         } else if (iamThrew) {
-                            // Non-DL5 (DL3) and EVERY app-side attempt threw — a genuine failure.
+                            // Neither DL5 nor DL4 (i.e. DL3) and EVERY app-side attempt threw —
+                            // a genuine failure.
                             AppLogger.e(TAG, "launchOnDashboard failed (app-side) → " + packageName);
                             postLaunchResult(callback, false, operation);
                         } else {
@@ -876,7 +920,18 @@ public class ClusterService extends Service
             android.hardware.display.DisplayManager dm =
                     (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
             android.view.Display d = (dm != null) ? dm.getDisplay(displayId) : null;
-            if (d != null) d.getRealSize(sz);
+            if (d != null) {
+                d.getRealSize(sz);
+            } else {
+                // DL4: no Display object obtainable (OEM whitelist). Use the geometry the
+                // uid-2000 daemon read from `dumpsys display` rather than the 1920x720 literal,
+                // so a DL4 variant with a different panel still gets correct launch bounds.
+                // Null on DL3/DL5 → the literal above stands, exactly as before.
+                ClusterDisplayInfo info = ClusterDisplayRegistry.forDisplayId(displayId);
+                if (info != null && info.getWidth() > 0 && info.getHeight() > 0) {
+                    sz.set(info.getWidth(), info.getHeight());
+                }
+            }
         } catch (Exception e) {
             AppLogger.w(TAG, "getRealSize: " + e.getMessage());
         }
@@ -1223,6 +1278,12 @@ public class ClusterService extends Service
         }
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
+        // The projection session is over: drop the daemon-resolved geometry so nothing downstream
+        // can start a mirror / inject touch on a display that is no longer projected. This used to
+        // be cleared ONLY from onDashboardDisplayDisconnected, which on DL4 essentially never
+        // fires (its producers need the app process to observe the display — the very thing the
+        // OEM whitelist forbids). No-op on DL3/DL5, where the registry is never populated.
+        ClusterDisplayRegistry.clear();
         // Tear down the mirror NOW (local token + daemon SurfaceControl via stopPreview) so
         // SurfaceFlinger stops compositing the cluster immediately on a real stop, instead of
         // waiting for the async stopSelf()→onDestroy()→release(). Background keepalive is not
@@ -1249,6 +1310,18 @@ public class ClusterService extends Service
         mLauncher.setDashboardDisplayId(displayId);
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
+        // DiLink 4.0 has no Display object to hand around (the OEM DisplayManagerService
+        // whitelist hides the id from our uid, so dm.getDisplay() returns null): the call above
+        // no-ops and the forwarder would keep its 1920x720 compile-time defaults. Feed it the
+        // geometry the uid-2000 daemon read out of `dumpsys display` instead. Double-gated —
+        // display==null never happens on DL3/DL5, and only the DL4 activation path writes
+        // ClusterDisplayRegistry, so both platforms skip this entirely.
+        if (display == null) {
+            ClusterDisplayInfo info = ClusterDisplayRegistry.forDisplayId(displayId);
+            if (info != null) {
+                mInputForwarder.setClusterGeometry(displayId, info.getWidth(), info.getHeight());
+            }
+        }
         updateNotification(getString(R.string.notif_cluster_active, displayId));
         // v1.8.2 — the global overscan is gone: the cluster is always driven full-screen and
         // only a per-app hand-drawn rectangle (ClusterResizeActivity) may shrink it afterwards.
@@ -1288,12 +1361,22 @@ public class ClusterService extends Service
         // Projection ended — the boot-launched app is no longer on the cluster, so drop the latch
         // (defensive: the consume-once in MainActivity is the primary clear).
         sBootLaunchedPkg = null;
+        // Nothing downstream may keep using a dead display's geometry. No-op on DL3/DL5.
+        ClusterDisplayRegistry.clear();
         // On a DL3 single-OS car the "disconnect" is really "activation timed out because no
         // VirtualDisplay can exist" — tell the user projection is unavailable rather than the
         // generic "disconnected" (which reads like a transient glitch they should retry).
-        updateNotification(getString(isDl3SingleOsFission()
-                ? R.string.dl3_singleos_cluster_unsupported_title
-                : R.string.notif_cluster_disconnected));
+        // Same treatment on a DL4 whose firmware hides the display from BOTH the app process and
+        // the uid-2000 daemon: there is nothing the user can retry.
+        final int titleRes;
+        if (isDl3SingleOsFission()) {
+            titleRes = R.string.dl3_singleos_cluster_unsupported_title;
+        } else if (isDl4ProjectionBlocked()) {
+            titleRes = R.string.dl4_cluster_unsupported_title;
+        } else {
+            titleRes = R.string.notif_cluster_disconnected;
+        }
+        updateNotification(getString(titleRes));
         if (mListener != null) mListener.onClusterDisplayDisconnected();
     }
 
