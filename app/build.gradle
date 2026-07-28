@@ -675,8 +675,50 @@ android {
         // launches for our uid. This ships to LEARN as much as to fix — the new one-line
         // "display resolution — app=[…] daemon=[…] shellOk=…" trace is designed to settle it from
         // the next capture. No daemon protocol change. 176 unit tests, lint 0/0.
-        versionCode 594
-        versionName "1.8.4-beta"
+        // 595 = 1.8.5-beta (name the two uid-2000 daemons apart, and stop pairing one's binder with
+        // the other's DESCRIPTOR. Structural clarification + one leak fix; NO user-visible change.
+        // WHY. DashCast drives the cluster through TWO uid-2000 processes and the code never said
+        // which does what: ProxyDaemon "DOES" things (shell + one-shot verbs: activation, launch,
+        // resize, force-stop; if it dies you retry the command), SurfaceDaemon "HOLDS" things
+        // (the preview mirror, and on the cluster the Layout slot overlay windows and their TRUSTED
+        // VirtualDisplays, plus touch injection; if it dies the graphical state is lost). The name
+        // "MirrorDaemon" hid the second half — it owns CLUSTER surfaces, not just the preview — and
+        // that misunderstanding had already produced a real defect twice.
+        // THE DEFECT, in two places. ClusterMirrorManager.stopPreview and ClusterResizeActivity both
+        // wrote SurfaceDaemon.DESCRIPTOR onto ProxyClient.getDaemonBinder(), which is the PROXY
+        // daemon's binder; the receiving enforceInterface rejects it and the transact silently does
+        // nothing. Consequence of the first: on stopProjectionNoAdb / onDestroy the surface daemon
+        // was never told to drop its SurfaceControl token, so it kept compositing after a stop.
+        // Consequence of the second: the resize editor's live preview has never worked.
+        // WHAT WAS DONE. The class was renamed MirrorDaemon -> SurfaceDaemon (CODE identity only —
+        // every wire/persisted identity is byte-identical: ServiceManager name byd_mirror_daemon,
+        // the DESCRIPTOR, transaction codes, both process names, /data/local/tmp paths, broadcast
+        // action/extra/permission, the "--- MIRRORDAEMON LOG ---" report section and the MirrorDaemon
+        // log TAG, because a daemon spawned by an older APK keeps running across an update and
+        // because triagers grep historical reports). Verified against the release APK's dex.
+        // More important than the class name: three accessors called getDaemonBinder() returned TWO
+        // different daemons, and that is the identifier through which the mistake was actually made.
+        // They are now getProxyDaemonBinder() / getSurfaceDaemonBinder(), so a missed call site is a
+        // compile error. FissionClient's duplicate ServiceManager lookup now delegates to the single
+        // resolver, and the boundary docs were corrected to be TRUE — the previous wording asserted
+        // a "single accessor" invariant that did not hold and would have made an auditor miss the
+        // entire Layout subsystem plus the main preview and every touch.
+        // The dead in-app fallbacks (SurfaceControl mirror, InputManager injection — 235 failures
+        // and 0 successes across the report corpus) are now attempted ONCE per process and then
+        // skipped, at WARN instead of ERROR: an unprivileged app can never hold
+        // ACCESS_SURFACE_FLINGER, so the old ERROR read like a security regression and misled
+        // several triages. They are NOT deleted: there is no formal proof the permission is denied,
+        // only 235/0, and deleting would break any unit where it does work.
+        // NOT DONE, deliberately: pointing the resize editor at the correct binder was implemented,
+        // reviewed, and REVERTED — the surface daemon owns exactly ONE mirror, so a working call
+        // there re-targets it away from MainActivity's preview and nothing restores it on close
+        // (MirrorCoordinator.attemptStart short-circuits on a stale mMirrorActive), leaving the main
+        // preview frozen. Trading a preview nobody has ever had for a broken one is a bad deal; the
+        // editor keeps today's behaviour and the code documents the correct implementation.
+        // Two adversarial review rounds; the second caught that regression. Build + lint 0/0, 177
+        // unit tests green. No daemon protocol change; DL3/DL4/DL5 behaviour identical.
+        versionCode 595
+        versionName "1.8.5-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

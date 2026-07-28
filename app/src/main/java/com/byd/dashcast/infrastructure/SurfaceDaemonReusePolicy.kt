@@ -1,7 +1,14 @@
 package com.byd.dashcast.infrastructure
 
-/** Decides whether an existing MirrorDaemon is safe to keep across app lifecycle changes. */
-object MirrorDaemonReusePolicy {
+/**
+ * Decides whether an existing [com.byd.dashcast.proxy.daemon.SurfaceDaemon] is safe to keep across
+ * app lifecycle changes.
+ *
+ * Reusing matters precisely because that daemon HOLDS state (cluster slot overlays, trusted
+ * VirtualDisplays, the mirror token): killing it throws all of it away. See the two-daemon boundary
+ * documented on [com.byd.dashcast.proxy.daemon.SurfaceDaemon].
+ */
+object SurfaceDaemonReusePolicy {
     @JvmStatic
     fun singleProcessPid(psOutput: String?): Int {
         if (psOutput == null || psOutput.trim().isEmpty()) return -1

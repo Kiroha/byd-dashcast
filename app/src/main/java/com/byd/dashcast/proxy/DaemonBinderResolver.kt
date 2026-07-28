@@ -10,8 +10,36 @@ import android.os.Looper
 import com.byd.dashcast.util.AppLogger
 
 /**
- * Retrieves the MirrorDaemon Binder from ServiceManager via reflection.
- * Used in onStart() when the daemon was already running before MainActivity launched.
+ * Retrieves the [com.byd.dashcast.proxy.daemon.SurfaceDaemon] Binder from ServiceManager via
+ * reflection. Used in onStart() when the daemon was already running before MainActivity launched.
+ *
+ * **This is the one place the surface daemon's binder is looked up.** DashCast runs TWO uid-2000
+ * daemons (see the boundary documented on [com.byd.dashcast.proxy.daemon.SurfaceDaemon] and
+ * [com.byd.dashcast.proxy.daemon.ProxyDaemonMain]):
+ *  - `ProxyClient.getProxyDaemonBinder()` → the PROXY daemon, which **DOES** things (shell +
+ *    one-shot verbs) and enforces `ProxyDaemonContract.DESCRIPTOR`;
+ *  - [surfaceDaemonBinder] (here) → the SURFACE daemon, which **HOLDS** things (the preview mirror,
+ *    the cluster slot overlay windows and their trusted VirtualDisplays, touch injection) and
+ *    enforces `SurfaceDaemon.DESCRIPTOR`.
+ *
+ * They are different processes with different binders. Never send one daemon's DESCRIPTOR to the
+ * other's binder: the receiving `enforceInterface` rejects it and the transaction silently does
+ * nothing.
+ *
+ * **The lookup lives here, but the binder REACHES callers under several names — grep them all.**
+ * This file is the only place the service name and the reflection exist, yet a grep for
+ * [surfaceDaemonBinder] alone finds a minority of the call sites, because the binder is also
+ * passed around after being obtained once:
+ *  - `FissionClient.getBinderFromServiceManager()` — an alias that delegates straight here; used by
+ *    the whole Layout / Fission subsystem (`FissionOrchestrator`, `LayoutManagerActivity`);
+ *  - `MainActivity.getSurfaceDaemonBinder()` — the cached `mDaemonBinder`, populated from the
+ *    `ACTION_DAEMON_READY` broadcast extra, NOT from this file. It backs the **main preview**
+ *    (`MirrorCoordinator` start/stop) — the app's most-used surface-daemon path;
+ *  - `ClusterInputForwarder.setDaemonBinder(...)` — the field behind **every cluster touch and key**;
+ *  - `FissionLayoutEditorActivity` — receives it as a `BinderParcelable` Intent extra.
+ * So: to enumerate every surface-daemon call site, grep `surfaceDaemonBinder`,
+ * `getBinderFromServiceManager`, `getSurfaceDaemonBinder`, `setDaemonBinder` and `EXTRA_DAEMON_BINDER`
+ * — or, more reliably, grep the one thing they all end in: `SurfaceDaemon.DESCRIPTOR`.
  *
  * Call [fetch] from the main thread; the callback fires on the main
  * thread if and only if the binder is found.
@@ -19,6 +47,9 @@ import com.byd.dashcast.util.AppLogger
 object DaemonBinderResolver {
 
     private const val TAG         = "DaemonBinderResolver"
+
+    /** WIRE IDENTIFIER — the ServiceManager name the daemon registers under. Must stay byte-equal
+     *  to the literal in `SurfaceDaemon.main()`; a daemon spawned by an older APK already used it. */
     private const val SERVICE_KEY = "byd_mirror_daemon"
 
     fun interface Callback {
@@ -26,7 +57,7 @@ object DaemonBinderResolver {
     }
 
     /**
-     * Returns a [BroadcastReceiver] for `MirrorDaemon.ACTION_DAEMON_READY`.
+     * Returns a [BroadcastReceiver] for `SurfaceDaemon.ACTION_DAEMON_READY`.
      * Extracts the Binder from the intent extras and fires `callback.onFound()` if present.
      * Register/unregister this receiver in onCreate/onDestroy via `registerReceiver`.
      */
@@ -59,12 +90,16 @@ object DaemonBinderResolver {
     }
 
     /**
-     * Synchronous, non-throwing lookup of the registered mirror-daemon Binder (or null).
-     * For background callers that already run off the main thread (e.g. the screenshot
-     * recorder) and want the binder without the async [fetch] callback.
+     * Synchronous, non-throwing lookup of the registered SURFACE daemon Binder (or null).
+     *
+     * The single implementation behind every sanctioned source of the binder that
+     * `SurfaceDaemon.DESCRIPTOR` may be paired with; `FissionClient.getBinderFromServiceManager()`
+     * is an alias that calls straight into it — see the object doc. Safe from any thread
+     * (reflection + a ServiceManager lookup, no IPC to the daemon), so background callers such as
+     * the screenshot recorder can use it directly without the async [fetch] callback.
      */
     @JvmStatic
-    fun getRegisteredBinderOrNull(): IBinder? {
+    fun surfaceDaemonBinder(): IBinder? {
         return lookupRegisteredBinder()
     }
 

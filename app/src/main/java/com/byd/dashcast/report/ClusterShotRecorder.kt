@@ -13,7 +13,7 @@ import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.hud.HudCaptureSupport
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.proxy.DaemonBinderResolver
-import com.byd.dashcast.proxy.daemon.MirrorDaemon
+import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.util.AppLogger
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit
  *    periodic app-side pruning additionally keeps only [KEEP_PER_TAG] shots per display.
  *  - **Cluster-correct.** The cluster is a virtual display; `screencap -d N` silently falls back to
  *    display 0 on it, so the cluster frame is grabbed through the uid-2000 daemon
- *    ([MirrorDaemon.TRANSACT_CAPTURE_DISPLAY], ImageReader on the cluster layerStack).
+ *    ([SurfaceDaemon.TRANSACT_CAPTURE_DISPLAY], ImageReader on the cluster layerStack).
  *  - **A13-safe.** Shots are written by the daemon into /data/local/tmp (uid-2000-owned); the app
  *    can't read that path on A13, so they are pulled back through the daemon only at send time.
  *  - **Privacy.** Captures stay device-local and auto-clean; they only leave the device if the
@@ -105,7 +105,7 @@ object ClusterShotRecorder {
 
     private fun captureRound(ctx: Context, clusterId: Int) {
         try {
-            val binder = DaemonBinderResolver.getRegisteredBinderOrNull()
+            val binder = DaemonBinderResolver.surfaceDaemonBinder()
             if (binder == null) {
                 AppLogger.d(TAG, "capture skipped — mirror daemon binder not available")
                 return
@@ -155,7 +155,7 @@ object ClusterShotRecorder {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         try {
-            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
+            data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR)
             data.writeInt(layerStack)
             data.writeInt(w)
             data.writeInt(h)
@@ -165,7 +165,7 @@ object ClusterShotRecorder {
             // most both tags' worth of shots + drop anything older than MAX_AGE_MIN.
             data.writeInt(KEEP_PER_TAG * 2)
             data.writeInt(MAX_AGE_MIN)
-            binder.transact(MirrorDaemon.TRANSACT_CAPTURE_DISPLAY, data, reply, 0)
+            binder.transact(SurfaceDaemon.TRANSACT_CAPTURE_DISPLAY, data, reply, 0)
             reply.readException()
             val result = reply.readString()
             AppLogger.d(TAG, "capture $tag ls=$layerStack ${w}x$h -> $result")

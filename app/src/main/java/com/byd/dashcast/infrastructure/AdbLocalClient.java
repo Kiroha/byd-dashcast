@@ -336,6 +336,14 @@ public class AdbLocalClient {
     private static final AtomicBoolean sMirrorDaemonStartInFlight = new AtomicBoolean(false);
     public static long getLastDaemonStartMs() { return sLastDaemonStartMs; }
 
+    /**
+     * Spawns (or reuses) {@link com.byd.dashcast.proxy.daemon.SurfaceDaemon} — the uid-2000 daemon
+     * that HOLDS the mirror/cluster surfaces; see the two-daemon boundary on that class.
+     *
+     * <p>The method name and every log line below deliberately keep saying "MirrorDaemon": they are
+     * the daemon's runtime identity in logcat and in {@code mirrordaemon_latest.log}, which the
+     * bug-report tooling pastes into every report and triagers grep across historical reports.
+     */
     public static void startMirrorDaemon(final Context context) {
         if (!sMirrorDaemonStartInFlight.compareAndSet(false, true)) {
             AppLogger.d(TAG, "MirrorDaemon start already in flight — joining existing attempt");
@@ -349,15 +357,15 @@ public class AdbLocalClient {
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
                     String psOut = dadb.shell(
                             "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
-                int daemonPid = MirrorDaemonReusePolicy.singleProcessPid(psOut);
+                int daemonPid = SurfaceDaemonReusePolicy.singleProcessPid(psOut);
                 String versionMarker = daemonPid > 0
                     ? dadb.shell("cat "
-                        + com.byd.dashcast.proxy.daemon.MirrorDaemon.VERSION_FILE
+                        + com.byd.dashcast.proxy.daemon.SurfaceDaemon.VERSION_FILE
                         + " 2>/dev/null").getAllOutput().trim()
                     : "";
-                    IBinder knownBinder = DaemonBinderResolver.getRegisteredBinderOrNull();
+                    IBinder knownBinder = DaemonBinderResolver.surfaceDaemonBinder();
                 boolean binderAlive = knownBinder != null && knownBinder.isBinderAlive();
-                if (MirrorDaemonReusePolicy.shouldReuse(binderAlive, daemonPid,
+                if (SurfaceDaemonReusePolicy.shouldReuse(binderAlive, daemonPid,
                     versionMarker, com.byd.dashcast.BuildConfig.VERSION_CODE)) {
                 AppLogger.i(TAG, "MirrorDaemon already active for build "
                     + com.byd.dashcast.BuildConfig.VERSION_CODE + " pid=" + daemonPid
@@ -376,7 +384,7 @@ public class AdbLocalClient {
                         Thread.sleep(500);
                     }
                 dadb.shell("rm -f "
-                    + com.byd.dashcast.proxy.daemon.MirrorDaemon.VERSION_FILE);
+                    + com.byd.dashcast.proxy.daemon.SurfaceDaemon.VERSION_FILE);
                     String apkPath = context.getPackageCodePath();
                     // Prune old per-launch daemon logs, keeping the 5 most recent:
                     // one file is created per daemon start and nothing ever deleted
@@ -394,7 +402,7 @@ public class AdbLocalClient {
                     // → survives dadb connection close (otherwise SIGHUP possible)
                     // CLASSPATH inline (no export &&) as Commander APK does it
                     // -Xnoimage-dex2oat: avoids AOT crash at startup
-                        String cmd = MirrorDaemonStartCommand.build(apkPath, logPath, latestLink);
+                        String cmd = SurfaceDaemonStartCommand.build(apkPath, logPath, latestLink);
                     dadb.shell(cmd);
                     AppLogger.i(TAG, "MirrorDaemon launched → " + logPath);
 
@@ -611,7 +619,7 @@ public class AdbLocalClient {
 
     private static boolean isMirrorDaemonBinderAlive() {
         try {
-            IBinder binder = DaemonBinderResolver.getRegisteredBinderOrNull();
+            IBinder binder = DaemonBinderResolver.surfaceDaemonBinder();
             return binder != null && binder.isBinderAlive();
         } catch (Throwable ignore) {
             return false;

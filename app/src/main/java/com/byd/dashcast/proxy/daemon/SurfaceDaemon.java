@@ -41,21 +41,54 @@ import android.annotation.SuppressLint;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Daemon MirrorDaemon — started via app_process (uid=2000 shell).
+ * SurfaceDaemon — the uid=2000 daemon that <b>HOLDS</b> graphical state, started via app_process.
  *
- * Exposes a Binder (IMirrorDaemon) for:
+ * <h3>The two-daemon boundary (read this before touching either daemon)</h3>
+ * DashCast drives the instrument cluster through <b>two</b> uid-2000 helper processes. They are
+ * not interchangeable and they do not share a binder:
+ * <ul>
+ *   <li><b>{@link ProxyDaemonMain} — "DOES things".</b> A stateless command executor: shell
+ *       (TXN_EXEC) plus typed one-shot verbs (launchAndForce, moveAndResize, setOverscan,
+ *       autoContainerSendInfo…). It owns no long-lived state, so if it dies you simply retry the
+ *       command. Reached from the app via {@code ProxyClient} /
+ *       {@code ProxyClient.getProxyDaemonBinder()}.</li>
+ *   <li><b>{@code SurfaceDaemon} (this class) — "HOLDS things".</b> A stateful surface/window
+ *       owner. It holds the in-app preview mirror <em>and</em>, in Layout mode, the per-slot
+ *       {@code TYPE_SYSTEM_OVERLAY} windows <b>ON THE CLUSTER</b>, the trusted VirtualDisplays
+ *       created from those windows' Surfaces, the slot geometry, and touch injection. If it dies,
+ *       the graphical state is lost and must be rebuilt — retrying a command is not enough.
+ *       Reached from the app via {@code FissionClient} / {@code ClusterMirrorManager}, whose binder
+ *       comes from {@code DaemonBinderResolver.surfaceDaemonBinder()}.</li>
+ * </ul>
+ * Practical triage rule: <b>a failed command → ProxyDaemon; a black or frozen surface →
+ * SurfaceDaemon</b>.
+ *
+ * <p>The class was called {@code MirrorDaemon} until 1.8.x. That name implied "the in-app preview
+ * mirror" and hid the second half of the job — it also owns CLUSTER surfaces (Layout slot overlays
+ * and their VirtualDisplays), not only the main-screen preview. Misreading that produced a real
+ * defect (a teardown that sent this daemon's DESCRIPTOR to the ProxyDaemon's binder, so the cluster
+ * SurfaceControl token was never released). <b>Only the Java identity was renamed</b>: every
+ * on-the-wire / on-disk identifier below still says "mirror" and MUST NOT be renamed with the
+ * class — a daemon spawned by an older APK keeps running across app updates, and the bug-report
+ * tooling greps these strings in historical reports.
+ *
+ * <p>Exposes a Binder (IMirrorDaemon) for:
  *   - TRANSACT_MIRROR_START  (1) : configure a SurfaceControl mirror of the cluster display
  *   - TRANSACT_INJECT_MOTION (2) : inject a MotionEvent on the cluster display
  *   - TRANSACT_INJECT_KEY    (3) : inject a KeyEvent
  *   - TRANSACT_MIRROR_STOP   (4) : destroy the mirror
+ *   - TRANSACT 5 / 9-17           : cluster slot overlays, VirtualDisplays, capture (see below)
  *
- * The Binder is broadcast via ACTION_DAEMON_READY at startup and on demand
- * ACTION_REQUEST_BINDER. Only uid=2000 can call SurfaceControl.createDisplay()
+ * <p>The Binder is broadcast via ACTION_DAEMON_READY at startup and registered in ServiceManager
+ * under "byd_mirror_daemon". Only uid=2000 can call SurfaceControl.createDisplay()
  * and InputManager.injectInputEvent() without additional permission.
  */
 @SuppressWarnings("deprecation")
-public class MirrorDaemon {
+public class SurfaceDaemon {
 
+    /** WIRE IDENTIFIER — do NOT rename with the class. Emitted to logcat and, via {@link #out},
+     *  as the literal "[MirrorDaemon] " prefix in /data/local/tmp/mirrordaemon_latest.log, whose
+     *  tail is pasted into every bug report. Triagers grep it across historical reports. */
     private static final String TAG = "MirrorDaemon";
 
     /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
@@ -72,11 +105,13 @@ public class MirrorDaemon {
     }
 
     // Actions broadcast
+    /** WIRE IDENTIFIER — do NOT rename with the class (registered receiver in MainActivity, and
+     *  emitted by daemons built from older APKs). */
     public static final String ACTION_DAEMON_READY  = "com.byd.dashcast.MIRROR_DAEMON_READY";
 
     // Interface Binder — wire-protocol ID, must stay stable across package moves:
     // a daemon spawned by an older APK build keeps running across app updates and
-    // enforces this exact token in onTransact().
+    // enforces this exact token in onTransact(). WIRE IDENTIFIER — do NOT rename with the class.
     public static final String DESCRIPTOR            = "com.byd.dashcast.daemon.IMirrorDaemon";
     public static final int    TRANSACT_MIRROR_START  = 1;
     public static final int    TRANSACT_INJECT_MOTION = 2;
@@ -108,7 +143,10 @@ public class MirrorDaemon {
     /** TRANSACT 17 — focus the task belonging to a selected tactile Layout slot. */
     public static final int TRANSACT_FOCUS_SLOT        = 17;
 
-        /** PID-bound build marker used by the bounded dadb startup preflight. */
+        /** PID-bound build marker used by the bounded dadb startup preflight.
+         *  ON-DISK IDENTIFIER — do NOT rename with the class: a renamed marker path makes
+         *  {@code SurfaceDaemonReusePolicy.shouldReuse} return false forever, so the daemon would
+         *  be killed and respawned on every app launch. */
         public static final String VERSION_FILE =
             "/data/local/tmp/dashcast_mirrordaemon_ver";
 
@@ -191,6 +229,8 @@ public class MirrorDaemon {
     public static void main(String[] args) {
         out("main() start uid=" + android.os.Process.myUid());
         try {
+            // WIRE IDENTIFIER — do NOT rename with the class: AdbLocalClient.DAEMON_GREP matches
+            // this exact runtime process name when deciding to reuse or kill the daemon.
             android.os.Process.class.getMethod("setArgV0", String.class)
                     .invoke(null, "com.byd.dashcast.mirrordaemon");
             out("setArgV0 OK");
@@ -263,6 +303,9 @@ public class MirrorDaemon {
             // Enregistrer dans ServiceManager (accessible par uid=2000) :
             // Remplace registerReceiver (interdit depuis systemMain() — AMS rejette
             // the unregistered IApplicationThread → SecurityException).
+            // WIRE IDENTIFIER — the service name "byd_mirror_daemon" below must NOT be renamed
+            // with the class: FissionClient / DaemonBinderResolver look it up by this exact string,
+            // and a daemon spawned by an older APK already registered under it.
             out("ServiceManager.addService(byd_mirror_daemon)...");
             try {
                 Class<?> smClass = Class.forName("android.os.ServiceManager");
@@ -838,10 +881,13 @@ public class MirrorDaemon {
     // this APK (= our own app) hold the permission and can receive the binder.
     // The fallback ServiceManager.getService("byd_mirror_daemon") path still
     // works for ROMs where receiverPermission filtering misbehaves.
+    // WIRE IDENTIFIER — must match AndroidManifest.xml's <permission>/<uses-permission>; do NOT
+    // rename with the class.
     public static final String PERM_DAEMON_READY = "com.byd.dashcast.permission.DAEMON_READY";
 
     private static void broadcastBinder(Context context, IBinder binder) {
         Bundle extras = new Bundle();
+        // WIRE IDENTIFIER — read back by DaemonBinderResolver; do NOT rename with the class.
         extras.putBinder("daemon_binder", binder);
         Intent intent = new Intent(ACTION_DAEMON_READY);
         intent.putExtras(extras);

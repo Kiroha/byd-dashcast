@@ -63,7 +63,7 @@ public final class ProxyClient {
     private static final String DAEMON_LOCK = "/data/local/tmp/dashcast_proxy.lock";
 
     /**
-     * Bootstrap script run via local ADB. Mirrors the proven {@code MirrorDaemon}
+     * Bootstrap script run via local ADB. Mirrors the proven {@code SurfaceDaemon}
      * recipe and preserves every hard-won fix from 1.1.3–1.1.5:
      * <ul>
      *   <li>{@code setsid} detaches from the ADB session group (survives SIGHUP);</li>
@@ -296,13 +296,34 @@ public final class ProxyClient {
     }
 
     /**
-     * v1.2.71 — Exposes the cached daemon binder so callers (e.g.
-     * {@code ClusterResizeActivity}) can pass it to
-     * {@code ClusterMirrorManager.startMirrorViaDaemon()} without binding
-     * to {@code ClusterService}. Returns {@code null} if the daemon is not
-     * currently connected.
+     * Returns the cached binder of the <b>PROXY</b> daemon
+     * ({@link com.byd.dashcast.proxy.daemon.ProxyDaemonMain}, ServiceManager name
+     * {@code byd_proxy_daemon}), or {@code null} when it is not currently connected.
+     *
+     * <p><b>This is NOT the surface daemon.</b> DashCast runs two uid-2000 daemons:
+     * <ul>
+     *   <li>the PROXY daemon (this one) <b>DOES</b> things — shell commands and one-shot verbs —
+     *       and enforces {@link com.byd.dashcast.proxy.daemon.ProxyDaemonContract#DESCRIPTOR};</li>
+     *   <li>the SURFACE daemon ({@link com.byd.dashcast.proxy.daemon.SurfaceDaemon}) <b>HOLDS</b>
+     *       things — the preview mirror, the cluster slot overlay windows and their trusted
+     *       VirtualDisplays, touch injection — and enforces
+     *       {@link com.byd.dashcast.proxy.daemon.SurfaceDaemon#DESCRIPTOR}.</li>
+     * </ul>
+     *
+     * <p>Do <b>not</b> pass this binder to mirror / slot / injection APIs such as
+     * {@code ClusterMirrorManager.startMirrorViaDaemon()}, {@code FissionClient.*} or
+     * {@code ClusterInputForwarder}: writing the surface daemon's interface token onto this binder
+     * makes the receiving {@code enforceInterface} reject the transaction, which then silently does
+     * nothing. For those, use {@link DaemonBinderResolver#surfaceDaemonBinder()}.
+     *
+     * <p>Triage rule: a failed <i>command</i> → proxy daemon; a black or frozen <i>surface</i> →
+     * surface daemon.
+     *
+     * <p>Callers of this accessor are the ones that legitimately need the proxy binder itself
+     * (liveness ping, DESCRIPTOR-crossing guard). Every other proxy operation should go through the
+     * typed verbs on this class instead of transacting on the raw binder.
      */
-    public static IBinder getDaemonBinder() {
+    public static IBinder getProxyDaemonBinder() {
         IBinder b = sBinder;
         return (b != null && b.isBinderAlive()) ? b : null;
     }

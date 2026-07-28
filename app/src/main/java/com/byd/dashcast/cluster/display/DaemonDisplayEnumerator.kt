@@ -43,7 +43,7 @@ object DaemonDisplayEnumerator {
     /** `, real 1920 x 720` — anchored on ", real " so `app`/`largest app` sizes are not matched. */
     private val REAL_SIZE = Regex(", real (\\d+) x (\\d+)")
 
-    /** `, layerStack 1` — the value MirrorDaemon needs to composite this display. */
+    /** `, layerStack 1` — the value SurfaceDaemon needs to composite this display. */
     private val LAYER_STACK = Regex(", layerStack (\\d+)")
 
     /** `, state ON` / `, state OFF` — DMS power state of the logical display. */

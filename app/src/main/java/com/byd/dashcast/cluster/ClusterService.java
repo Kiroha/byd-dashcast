@@ -57,6 +57,16 @@ import java.util.concurrent.Executors;
  *
  * Zero regression: all runtime logic (IATM reflection, shell commands, timing, DPI settle,
  * DL5 guards, wm overscan, cleanFissionStacks, enforceTaskOnDisplay) is preserved verbatim.
+ *
+ * <h3>Both daemons run through here</h3>
+ * Besides the ProxyDaemon commands above, this service drives the <b>SURFACE</b> daemon
+ * ({@link com.byd.dashcast.proxy.daemon.SurfaceDaemon}): it owns the {@link ClusterMirrorManager}
+ * and the {@link com.byd.dashcast.cluster.mirror.ClusterInputForwarder}, and
+ * {@link #stopProjectionNoAdb()} / {@link #onDestroy()} are the two paths that tear the mirror
+ * down. Their binder comes from
+ * {@link com.byd.dashcast.proxy.DaemonBinderResolver#surfaceDaemonBinder()} — never from
+ * {@code ProxyClient.getProxyDaemonBinder()}; see the boundary rule on
+ * {@link com.byd.dashcast.proxy.daemon.SurfaceDaemon}.
  */
 @SuppressWarnings("deprecation")
 public class ClusterService extends Service
@@ -172,14 +182,14 @@ public class ClusterService extends Service
         mInputForwarder = new ClusterInputForwarder(this);
 
         // v1.6.147 — PULL the daemon Binder instead of waiting to be pushed one.
-        // When the MirrorDaemon survives an ACC off/on cycle it is REUSED, so it is already
+        // When the SurfaceDaemon survives an ACC off/on cycle it is REUSED, so it is already
         // registered in ServiceManager before MainActivity binds this service. The push path in
         // MainActivity resolves the binder first, finds mClusterService still null and drops it,
         // and no ACTION_DAEMON_READY broadcast follows a reused (never re-spawned) daemon — so
         // setDaemonBinder was never called and every touch fell back to the unprivileged direct
         // path, silently reaching nothing (INC-20260724-102136). Pulling here removes the
         // Activity-ordering dependency entirely; it is a cheap local ServiceManager lookup.
-        IBinder reusedDaemon = com.byd.dashcast.proxy.DaemonBinderResolver.getRegisteredBinderOrNull();
+        IBinder reusedDaemon = com.byd.dashcast.proxy.DaemonBinderResolver.surfaceDaemonBinder();
         if (reusedDaemon != null) {
             mInputForwarder.setDaemonBinder(reusedDaemon);
         }

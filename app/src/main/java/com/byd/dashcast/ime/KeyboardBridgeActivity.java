@@ -27,7 +27,7 @@ import com.byd.dashcast.proxy.ShellGateway;
  * IME cannot render natively on the cluster display.
  *
  * <p>v1.2.12 — Forwarding pivot. The original v1.2.8 design injected synthetic
- * {@link KeyEvent}s through {@code MirrorDaemon.injectKey()} routed via
+ * {@link KeyEvent}s through {@code SurfaceDaemon.injectKey()} routed via
  * {@code KeyEvent.setDisplayId(clusterId)}. Field testing showed two problems:
  * <ul>
  *   <li>v1.2.11 made the EditText 1×1 to remove visual chrome — but at that

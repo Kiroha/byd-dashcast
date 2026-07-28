@@ -123,18 +123,19 @@ app/src/main/java/com/byd/dashcast/
 │   ├── VoiceCommandRouter.java    — Routes intents to app actions
 │   └── VoiceLibsManager.java      — Runtime model download & management
 │
-├── proxy/                         — Beta Proxy Daemon client interface
-│   ├── ProxyClient.java           — All Binder calls to the daemon
-│   ├── ProxyKeeperService.java    — Keeps the daemon alive (10 s heartbeat)
+├── proxy/                         — Clients of the two uid-2000 daemons (see note below)
+│   ├── ProxyClient.java           — Binder calls to the PROXY daemon (getProxyDaemonBinder)
+│   ├── DaemonBinderResolver.kt    — Looks up the SURFACE daemon binder (surfaceDaemonBinder)
+│   ├── ProxyKeeperService.java    — Keeps the proxy daemon alive (10 s heartbeat)
 │   ├── ProxyWatchdog.java         — Periodic connectivity check
 │   ├── ShellGateway.java          — Fire-and-forget / result shell dispatcher
 │   ├── ProxyFissionVerbs.java     — launchAndForce, moveAndResize, cleanStacks
 │   ├── ProxyDisplayVerbs.java     — Overscan, display size
 │   ├── ProxyCanVerbs.java         — CAN bus write verbs
-│   └── daemon/                    — Daemon process (runs as uid=2000)
-│       ├── ProxyDaemonMain.java   — Entry point, Binder onTransact()
+│   └── daemon/                    — TWO separate uid=2000 processes (see note below)
+│       ├── ProxyDaemonMain.java   — PROXY daemon entry point, Binder onTransact()
 │       ├── ProxyDaemonContract.java — TXN constants
-│       ├── MirrorDaemon.java      — SurfaceControl mirror transactions
+│       ├── SurfaceDaemon.java     — SURFACE daemon entry point, SurfaceControl / slot windows
 │       ├── Phase4TaskVerbs.java   — FREEFORM mode, task resize, move
 │       ├── Phase4DisplayVerbs.java
 │       ├── Phase4ProcessVerbs.java
@@ -174,6 +175,25 @@ app/src/main/java/com/byd/dashcast/
     ├── AppLogger.java             — Circular log buffer (3000 entries, share)
     └── LocaleHelper.java
 ```
+
+### Two uid-2000 daemons, not one
+
+`proxy/daemon/` builds **two separate processes**, each with its own ServiceManager name, its own
+binder and its own interface DESCRIPTOR:
+
+| | **ProxyDaemon** (`ProxyDaemonMain`) | **SurfaceDaemon** (`SurfaceDaemon`) |
+|---|---|---|
+| Role | **DOES** things — stateless command executor: shell + one-shot verbs | **HOLDS** things — stateful owner of surfaces, cluster slot overlay windows, trusted VirtualDisplays, touch injection |
+| ServiceManager | `byd_proxy_daemon` | `byd_mirror_daemon` |
+| Get its binder | `ProxyClient.getProxyDaemonBinder()` | `DaemonBinderResolver.surfaceDaemonBinder()` (alias: `FissionClient.getBinderFromServiceManager()`) |
+| If it dies | retry the command | the graphical state is lost and must be rebuilt |
+
+Never pair one daemon's DESCRIPTOR with the other's binder: the receiving `enforceInterface`
+rejects the transaction, which then **silently does nothing**. Triage rule: a failed *command* →
+ProxyDaemon; a black or frozen *surface* → SurfaceDaemon.
+
+`SurfaceDaemon` was named `MirrorDaemon` until 1.8.x; only the Java class was renamed — the wire
+name, the DESCRIPTOR, the runtime process names and the log TAG still say "mirror" on purpose.
 
 ---
 

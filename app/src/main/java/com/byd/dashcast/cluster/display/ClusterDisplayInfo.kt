@@ -19,7 +19,7 @@ import java.util.Locale
  * The uid-2000 daemon is NOT subject to that whitelist — it produces the whole
  * `dumpsys display` section of every bug report. So on DL4 the cluster is described by these
  * four numbers, read through the daemon, and every consumer downstream works from them
- * (MirrorDaemon, the daemon launch verb and the input forwarder all take plain ints anyway).
+ * (SurfaceDaemon, the daemon launch verb and the input forwarder all take plain ints anyway).
  *
  * Never populated on DL3/DL5: there the real [android.view.Display] is always obtainable.
  */
@@ -32,7 +32,7 @@ data class ClusterDisplayInfo(
     val width: Int,
     /** `real` height in px. 0 when the dump did not carry one. */
     val height: Int,
-    /** SurfaceFlinger layer stack — what MirrorDaemon needs to composite this display. */
+    /** SurfaceFlinger layer stack — what SurfaceDaemon needs to composite this display. */
     val layerStack: Int,
     /**
      * `FLAG_PRIVATE` was present on the `DisplayInfo{…}` line.

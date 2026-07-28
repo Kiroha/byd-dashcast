@@ -210,15 +210,21 @@ class ClusterResizeActivity : Activity(),
         val surface = Surface(st)
         mActiveSurface = surface
         var ok = false
-        val daemon = ProxyClient.getDaemonBinder()
-        if (daemon != null) {
-            try {
-                ok = mMirror.startMirrorViaDaemon(
-                        this, daemon, clusterDisplay, mDisplayId, surface, w, h)
-            } catch (t: Throwable) {
-                AppLogger.w(TAG, "startMirrorViaDaemon threw: " + t.message)
-            }
-        }
+        // NO daemon mirror here, deliberately. Until 1.8.x this asked ProxyClient.getDaemonBinder()
+        // — the PROXY daemon — so startMirrorViaDaemon wrote SurfaceDaemon.DESCRIPTOR onto a binder
+        // enforcing the proxy DESCRIPTOR: rejected every time. That is why this editor's live
+        // preview has never come up, and it is also why simply pointing it at the right binder is
+        // NOT the fix: the surface daemon owns exactly ONE mirror (SurfaceDaemon.TRANSACT_MIRROR_START
+        // calls stopMirror() first), so a working call here would re-target it away from
+        // MainActivity's preview, and on close nothing restores it — MirrorCoordinator.attemptStart
+        // short-circuits on ClusterService's ClusterMirrorManager still reporting mMirrorActive,
+        // leaving the main preview frozen on its last frame. Trading a preview nobody has ever had
+        // for a broken one is a bad deal.
+        // To implement it properly: drive the mirror through the BOUND ClusterService's
+        // ClusterMirrorManager (the same instance MirrorCoordinator consults) instead of this
+        // Activity's private one, so the shared mMirrorActive state stays consistent and the main
+        // preview restarts on return. Until then the editor draws on the placeholder, exactly as it
+        // always has.
         // Same guard as MirrorCoordinator.attemptStart: without a cluster display the in-app
         // SurfaceControl path cannot succeed (no ACCESS_SURFACE_FLINGER) and only emits a bogus
         // "fallback layerStack=2" + ACCESS_SURFACE_FLINGER [ERROR] that reads like a permission
@@ -248,9 +254,12 @@ class ClusterResizeActivity : Activity(),
 
     private fun stopMirrorSafely() {
         if (mMirrorStarted) {
-            val daemon = ProxyClient.getDaemonBinder()
+            // Only the in-app path can have started here (see onSurfaceTextureAvailable: no daemon
+            // mirror is taken), so stop only that one. Sending TRANSACT_MIRROR_STOP to the surface
+            // daemon from this Activity would tear down MainActivity's preview, which this editor
+            // never started and does not own.
             try {
-                if (daemon != null) mMirror.stopMirrorViaDaemon(daemon) else mMirror.stopMirror()
+                mMirror.stopMirror()
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "stopMirror threw: " + t.message)
             }
