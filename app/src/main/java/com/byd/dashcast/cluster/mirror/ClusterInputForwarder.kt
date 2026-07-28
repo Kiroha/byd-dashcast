@@ -121,6 +121,26 @@ class ClusterInputForwarder(context: Context) {
     }
 
     /**
+     * Injects the cluster geometry when NO [Display] object can be obtained.
+     *
+     * DiLink 4.0 only: the OEM patched DisplayManagerService with an app whitelist, so
+     * `dm.getDisplay(1)` returns null for our uid even though the display exists and is ON.
+     * [setClusterDisplay] then no-ops on the null and the forwarder silently keeps its
+     * 1920x720 compile-time defaults — i.e. every touch would be scaled against a guess that
+     * merely happens to be right on the units seen so far. The uid-2000 daemon reads the real
+     * geometry out of `dumpsys display`; this is how it gets in.
+     *
+     * Never called on DL3/DL5 (the Display object is always available there).
+     */
+    fun setClusterGeometry(displayId: Int, width: Int, height: Int) {
+        if (width > 0) mClusterWidth = width
+        if (height > 0) mClusterHeight = height
+        mClusterDisplayId = displayId
+        AppLogger.i(TAG, "Cluster geometry injected (no Display object): "
+                + "${mClusterWidth}x$mClusterHeight displayId=$mClusterDisplayId")
+    }
+
+    /**
      * Passes the MirrorDaemon Binder to this forwarder. When non-null, touch/key injection is
      * routed through the daemon (uid=2000) which holds android.permission.INJECT_EVENTS.
      */

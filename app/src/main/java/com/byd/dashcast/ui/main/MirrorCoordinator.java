@@ -16,6 +16,7 @@ import android.widget.TextView;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
 import com.byd.dashcast.fission.FissionOrchestrator;
 import com.byd.dashcast.ime.ClusterImeWatcherService;
@@ -237,14 +238,38 @@ public final class MirrorCoordinator {
             if (dm != null) clusterDisplay = dm.getDisplay(displayId);
         }
 
+        // "Do we have a cluster to mirror?" must be answered from the ID, not from the Display
+        // object: on DiLink 4.0 the display exists and the daemon can drive it, but the OEM
+        // DisplayManagerService whitelist means dm.getDisplay() above always returns null for
+        // our uid. ClusterDisplayRegistry is only ever populated by the DL4 activation path, so
+        // on DL3/DL5 this is exactly "clusterDisplay != null" as before.
+        boolean haveClusterDisplay = clusterDisplay != null
+                || (displayId > 0 && ClusterDisplayRegistry.forDisplayId(displayId) != null);
+
         boolean mirrorOk = false;
         IBinder daemonBinder = mHost.getDaemonBinder();
         if (daemonBinder != null) {
             mirrorOk = mm.startMirrorViaDaemon(
-                    ctx, daemonBinder, clusterDisplay, mMirrorSurface, viewW, viewH);
+                    ctx, daemonBinder, clusterDisplay, displayId, mMirrorSurface, viewW, viewH);
         }
-        if (!mirrorOk) {
+        // Only attempt the unprivileged in-app SurfaceControl path when a cluster display
+        // ACTUALLY EXISTS. With none, startMirror() cannot possibly succeed — yet it used to be
+        // called anyway (startMirrorViaDaemon returns false both for "daemon failed" and for
+        // "no display yet"), inventing a layerStack from a null Display
+        // ("getLayerStack failed -> fallback layerStack=2") and then dying on
+        // SurfaceControl.createDisplay -> null with an [ERROR] naming ACCESS_SURFACE_FLINGER —
+        // three times in 0.9 s in INC-20260727-203241. An unprivileged app can NEVER hold that
+        // permission (that is the whole reason MirrorDaemon exists), so the line reads like a
+        // security regression and has repeatedly sent triage down a phantom path. When there is
+        // no display the WARN already emitted by startMirrorViaDaemon says everything, and the
+        // user-visible outcome is unchanged: mirrorOk stays false → placeholder.
+        if (!mirrorOk && haveClusterDisplay) {
             mirrorOk = mm.startMirror(ctx, clusterDisplay, mMirrorSurface, viewW, viewH);
+        } else if (!mirrorOk) {
+            // Keep one quiet breadcrumb: with no daemon binder AND no display, nothing else
+            // would have logged the skip at all.
+            AppLogger.d(TAG, "attemptStart: no cluster display (id=" + displayId
+                    + ") — in-app SurfaceControl fallback skipped");
         }
 
         if (mirrorOk) {

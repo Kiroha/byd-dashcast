@@ -562,6 +562,8 @@
     <string name="aaos_cluster_unsupported_msg">Twój pojazd korzysta z systemu Android Automotive firmy BYD (DX_BYD_AUTO). W tym urządzeniu zestaw wskaźników jest zablokowany przez producenta: BYD rezerwuje go dla wbudowanej nawigacji i blokuje projekcję aplikacji. To ograniczenie pojazdu (nie ograniczenie DashCast) — nie ma obejścia.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Projekcja na zegarach niedostępna</string>
     <string name="dl3_singleos_cluster_unsupported_msg">W tym pojeździe zestaw wskaźników używa układu jednoekranowego (single-OS): jest rysowany bezpośrednio przez samochód, bez osobnego ekranu, na który można rzutować aplikacje. Projekcja aplikacji na zegary nie jest tu możliwa — to cecha zestawu wskaźników Twojego pojazdu, a nie ograniczenie DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">Projekcja na zestaw wskaźników zablokowana przez oprogramowanie układowe</string>
+    <string name="dl4_cluster_unsupported_msg">W tym pojeździe oprogramowanie układowe nie pozwala aplikacji DashCast zobaczyć ekranu zestawu wskaźników: aplikacja nie znajduje się na liście programów, którym producent zezwala na wyliczanie ekranów. DashCast zapytał również przez swojego uprzywilejowanego pomocnika, który także nie znalazł żadnego ekranu zestawu. Projekcja aplikacji na zestaw wskaźników nie jest więc możliwa w tej wersji oprogramowania układowego — to ograniczenie producenta, a nie DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
     <string name="hud_bench_result_title">Wynik HUD — co widziałeś na szybie?</string>
     <string name="hud_bench_opt_ok">✅ Strzałka widoczna — poprawny kierunek</string>

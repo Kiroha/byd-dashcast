@@ -9,6 +9,8 @@ import android.os.Parcel
 import android.view.Display
 import android.view.Surface
 import android.view.SurfaceControl
+import com.byd.dashcast.cluster.display.ClusterDisplayInfo
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.daemon.MirrorDaemon
 import com.byd.dashcast.util.AppLogger
@@ -184,22 +186,45 @@ class ClusterMirrorManager {
      * reality, which allows the screencap fallback if the daemon fails.
      */
     fun startMirrorViaDaemon(ctx: Context?, daemonBinder: IBinder?, clusterDisplay: Display?,
-                             targetSurface: Surface?, viewW: Int, viewH: Int): Boolean {
+                             requestedDisplayId: Int, targetSurface: Surface?,
+                             viewW: Int, viewH: Int): Boolean {
         if (mMirrorActive) return true
         if (daemonBinder == null || targetSurface == null || !targetSurface.isValid) return false
-        if (clusterDisplay == null) {
+
+        // DiLink 4.0: the cluster display exists (1920x720, layerStack 1, state ON in every
+        // uid-2000 dump) but our uid can never obtain a Display object for it — the OEM
+        // DisplayManagerService whitelist withholds the id list, so dm.getDisplay(1) is null.
+        // The DAEMON does not need the object: TRANSACT_MIRROR_START takes plain ints
+        // (layerStack, w, h, displayId), which ClusterManager already resolved for us. On
+        // DL3/DL5 nothing ever populates ClusterDisplayRegistry, so this stays null and the
+        // original "defer until display is ready" behaviour is preserved bit-for-bit.
+        //
+        // forDisplayId, NOT get(): the registry is a process-wide singleton, so a bare get()
+        // hands back the geometry of a projection that may already have been stopped (the caller
+        // then passes displayId=-1, meaning "no cluster"). That started a daemon mirror of a dead
+        // layerStack with touch injection armed on it, and the UI showed an "active" mirror of a
+        // stopped projection. Every other consumer of the registry already cross-checks the id —
+        // this was the only one that did not.
+        val injected: ClusterDisplayInfo? = if (clusterDisplay == null && requestedDisplayId > 0)
+                ClusterDisplayRegistry.forDisplayId(requestedDisplayId) else null
+        if (clusterDisplay == null && injected == null) {
             AppLogger.w(TAG, "startMirrorViaDaemon: clusterDisplay null — mirror deferred until display is ready")
             return false
         }
 
         // Cluster dimensions — only accept a strictly-positive size (see startMirror).
-        val sz = Point(1920, 720)
-        clusterDisplay.getRealSize(sz)
-        if (sz.x > 0 && sz.y > 0) {
-            mClusterW = sz.x
-            mClusterH = sz.y
-        } else {
-            AppLogger.w(TAG, "startMirrorViaDaemon: getRealSize returned ${sz.x}×${sz.y} — keeping ${mClusterW}×${mClusterH}")
+        if (clusterDisplay != null) {
+            val sz = Point(1920, 720)
+            clusterDisplay.getRealSize(sz)
+            if (sz.x > 0 && sz.y > 0) {
+                mClusterW = sz.x
+                mClusterH = sz.y
+            } else {
+                AppLogger.w(TAG, "startMirrorViaDaemon: getRealSize returned ${sz.x}×${sz.y} — keeping ${mClusterW}×${mClusterH}")
+            }
+        } else if (injected != null && injected.width > 0 && injected.height > 0) {
+            mClusterW = injected.width
+            mClusterH = injected.height
         }
 
         // Pre-compute projection params (identical formula to MirrorDaemon.setupMirror).
@@ -213,14 +238,21 @@ class ClusterMirrorManager {
             mProjScale = scale
         }
 
-        var clusterDisplayId = clusterDisplay.displayId
+        var clusterDisplayId = clusterDisplay?.displayId ?: injected!!.id
         var layerStack: Int
-        try {
-            ensureMirrorMethodsCached()
-            layerStack = sCachedGetLayerStack!!.invoke(clusterDisplay) as Int
-        } catch (e: Exception) {
-            layerStack = clusterDisplayId
-            AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=$layerStack")
+        if (clusterDisplay == null) {
+            // Daemon-resolved: the layerStack comes straight from `dumpsys display`
+            // ("layerStack 1" for fission_bg_xdjaVirtualSurface on DL4), so no reflection and
+            // no invented value. injected is non-null here — the guard above returned otherwise.
+            layerStack = injected!!.layerStack
+        } else {
+            try {
+                ensureMirrorMethodsCached()
+                layerStack = sCachedGetLayerStack!!.invoke(clusterDisplay) as Int
+            } catch (e: Exception) {
+                layerStack = clusterDisplayId
+                AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=$layerStack")
+            }
         }
         layerStack = applyDl5LayerStackOverride(ctx, layerStack)
         // v1.2.7 — On DL5 the daemon must inject touch on displayId=2 (composed fission output),
