@@ -979,7 +979,9 @@ class SysInfoActivity : AppCompatActivity() {
                 }, 1500L)
             })
 
-        // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
+        // SurfaceDaemon — separate process started via ADB (uid=2000); pid via pgrep.
+        // The row label stays "MirrorDaemon": it is the runtime identity a triager sees in logcat
+        // and in mirrordaemon_latest.log, which the class rename deliberately did not touch.
         val mirrorRow = addServiceRow(
             inf, container, "MirrorDaemon",
             if (clusterRunning) getString(R.string.sysinfo_svc_mirror_sub)
@@ -1008,8 +1010,22 @@ class SysInfoActivity : AppCompatActivity() {
             })
         if (clusterRunning) {
             // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
+            //
+            // Match the RUNTIME process name, never the entry-point class name. `pgrep -f` tests
+            // /proc/<pid>/cmdline, and the daemon overwrites its whole arg block with
+            // setArgV0("com.byd.dashcast.mirrordaemon") (see SurfaceDaemon.main) — the FQCN
+            // app_process was invoked with is gone from the cmdline by the time anyone can look.
+            // So "MirrorDaemon" (used until 1.8.x) and "SurfaceDaemon" alike could never match and
+            // this row has always fallen back to the generic subtitle; the class rename did not
+            // break it, it was already dead. Same shape as the BetaProxy row below, which greps
+            // its own runtime name "dashcast_proxy", and as AdbLocalClient.DAEMON_GREP.
+            // Still shows the generic subtitle when the lookup yields nothing (e.g. if /proc does
+            // not expose a uid-2000 process to our uid) — the row's on/off state comes from
+            // clusterRunning, not from this pid.
+            // NOTE: pidOf() interpolates the pattern into `sh -c`, so it must stay free of shell
+            // metacharacters — hence one literal token, not the DAEMON_GREP alternation.
             Thread({
-                val pid = pidOf("MirrorDaemon")
+                val pid = pidOf("com.byd.dashcast.mirrordaemon")
                 runOnUiThread {
                     if (mDestroyed) return@runOnUiThread
                     val sub = if (pid > 0) "pid $pid · poll 500 ms" else getString(R.string.sysinfo_svc_mirror_sub)

@@ -763,7 +763,8 @@ public final class FissionOrchestrator {
     public java.util.Collection<SlotState> getSlots()  { return mSlots.values(); }
     public boolean                          isProjecting() { return mProjecting; }
     public LayoutPreset                     getActiveLayout() { return mActiveLayout; }
-    public IBinder                          getDaemonBinder() { return mDaemonBinder; }
+    /** The SURFACE daemon's binder (see {@link FissionClient}), or {@code null} if not resolved. */
+    public IBinder                          getSurfaceDaemonBinder() { return mDaemonBinder; }
 
     // ── Background logic ───────────────────────────────────────────────────────
 

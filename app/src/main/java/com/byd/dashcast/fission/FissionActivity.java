@@ -361,7 +361,7 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
     // ── Layout selector ────────────────────────────────────────────────────────────
 
     private void openLayoutEditor() {
-        IBinder binder = (mOrchestrator != null) ? mOrchestrator.getDaemonBinder() : null;
+        IBinder binder = (mOrchestrator != null) ? mOrchestrator.getSurfaceDaemonBinder() : null;
         Intent intent = new Intent(this, FissionLayoutEditorActivity.class);
         if (binder != null) {
             // Pass binder via Intent extras — eliminates the static field coupling.

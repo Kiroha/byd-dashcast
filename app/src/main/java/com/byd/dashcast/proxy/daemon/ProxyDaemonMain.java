@@ -19,7 +19,29 @@ import java.lang.reflect.Method;
 import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
 
 /**
- * ProxyDaemonMain — entry point for the Beta Engine Component A daemon (v1.1.6+).
+ * ProxyDaemonMain — the uid=2000 daemon that <b>DOES</b> things; entry point for the Beta Engine
+ * Component A daemon (v1.1.6+).
+ *
+ * <h3>The two-daemon boundary (read this before touching either daemon)</h3>
+ * DashCast drives the instrument cluster through <b>two</b> uid-2000 helper processes. They are
+ * not interchangeable and they do not share a binder:
+ * <ul>
+ *   <li><b>{@code ProxyDaemonMain} (this class) — "DOES things".</b> A stateless command executor:
+ *       shell ({@link #TXN_EXEC}) plus typed one-shot verbs (launchAndForce, moveAndResize,
+ *       setOverscan, autoContainerSendInfo…). It owns no long-lived state, so if it dies you simply
+ *       retry the command. Its binder is {@code ProxyClient.getProxyDaemonBinder()}, registered in
+ *       ServiceManager as {@link #SERVICE_NAME}, and it enforces
+ *       {@link ProxyDaemonContract#DESCRIPTOR}.</li>
+ *   <li><b>{@link SurfaceDaemon} — "HOLDS things".</b> A stateful surface/window owner: the in-app
+ *       preview mirror <em>and</em>, in Layout mode, the per-slot {@code TYPE_SYSTEM_OVERLAY}
+ *       windows <b>ON THE CLUSTER</b>, the trusted VirtualDisplays built from their Surfaces, the
+ *       slot geometry, and touch injection. If it dies, the graphical state is lost and must be
+ *       rebuilt. Its binder comes from {@code DaemonBinderResolver.surfaceDaemonBinder()}
+ *       (ServiceManager name {@code byd_mirror_daemon}) and it enforces a different DESCRIPTOR.</li>
+ * </ul>
+ * Practical triage rule: <b>a failed command → ProxyDaemon; a black or frozen surface →
+ * SurfaceDaemon</b>. Never pair one daemon's DESCRIPTOR with the other's binder — the receiving
+ * {@code enforceInterface} rejects it and the transaction silently does nothing.
  *
  * <p>Started by {@link com.byd.dashcast.proxy.ProxyClient} via {@code app_process64}
  * over a local-ADB pairing session, so the JVM inherits the {@code shell} UID
@@ -28,7 +50,7 @@ import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
  * <p>Since Android 10+ SELinux denies {@code untrusted_app}→{@code shell}
  * {@code unix_stream_socket connectto} (the 1.1.5 failure mode), this version
  * does NOT expose a {@link android.net.LocalServerSocket}. Instead it follows
- * the pattern used by OpenBYD and our own {@code MirrorDaemon}:
+ * the pattern used by OpenBYD and our own {@link SurfaceDaemon}:
  * <ol>
  *   <li>Acquire a system {@link Context} via reflective
  *       {@code ActivityThread.systemMain().getSystemContext()}.</li>

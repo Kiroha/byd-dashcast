@@ -45,7 +45,13 @@ public final class MirrorCoordinator {
     public interface Host {
         Context getContext();
         ClusterService getClusterServiceIfBound();
-        IBinder getDaemonBinder();
+        /**
+         * The <b>SURFACE</b> daemon's binder ({@link com.byd.dashcast.proxy.daemon.SurfaceDaemon},
+         * ServiceManager name {@code byd_mirror_daemon}), or {@code null} if not resolved yet.
+         * Never {@code ProxyClient.getProxyDaemonBinder()} — that is the other daemon and the
+         * mirror transactions below would be rejected silently.
+         */
+        IBinder getSurfaceDaemonBinder();
         void onPreviewClicked();
     }
 
@@ -247,7 +253,7 @@ public final class MirrorCoordinator {
                 || (displayId > 0 && ClusterDisplayRegistry.forDisplayId(displayId) != null);
 
         boolean mirrorOk = false;
-        IBinder daemonBinder = mHost.getDaemonBinder();
+        IBinder daemonBinder = mHost.getSurfaceDaemonBinder();
         if (daemonBinder != null) {
             mirrorOk = mm.startMirrorViaDaemon(
                     ctx, daemonBinder, clusterDisplay, displayId, mMirrorSurface, viewW, viewH);
@@ -259,7 +265,7 @@ public final class MirrorCoordinator {
         // ("getLayerStack failed -> fallback layerStack=2") and then dying on
         // SurfaceControl.createDisplay -> null with an [ERROR] naming ACCESS_SURFACE_FLINGER —
         // three times in 0.9 s in INC-20260727-203241. An unprivileged app can NEVER hold that
-        // permission (that is the whole reason MirrorDaemon exists), so the line reads like a
+        // permission (that is the whole reason the uid-2000 SurfaceDaemon exists), so the line reads like a
         // security regression and has repeatedly sent triage down a phantom path. When there is
         // no display the WARN already emitted by startMirrorViaDaemon says everything, and the
         // user-visible outcome is unchanged: mirrorOk stays false → placeholder.
@@ -303,7 +309,7 @@ public final class MirrorCoordinator {
         ClusterService svc = mHost.getClusterServiceIfBound();
         if (svc == null) return;
         ClusterMirrorManager mirror = svc.getMirrorManager();
-        if (mirror.isMirrorViaDaemon()) mirror.stopMirrorViaDaemon(mHost.getDaemonBinder());
+        if (mirror.isMirrorViaDaemon()) mirror.stopMirrorViaDaemon(mHost.getSurfaceDaemonBinder());
         mirror.stopMirror();
     }
 

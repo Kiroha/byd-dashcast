@@ -14,6 +14,20 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.5-beta (versionCode 595)
+
+**Names the two uid-2000 daemons apart, and stops one's binder being paired with the other's DESCRIPTOR.** Structural clarification plus one leak fix; **no user-visible change**.
+
+**Why.** DashCast drives the cluster through TWO uid-2000 processes and the code never said which does what: the **ProxyDaemon "DOES"** things (shell + one-shot verbs — activation, launch, resize, force-stop; if it dies you retry the command), the **SurfaceDaemon "HOLDS"** things (the preview mirror, and on the cluster the Layout slot overlay windows with their TRUSTED VirtualDisplays, plus touch injection; if it dies the graphical state is lost). The name `MirrorDaemon` hid the second half — it owns **cluster** surfaces, not just the preview — and that misunderstanding had already produced the same defect **twice**: `ClusterMirrorManager.stopPreview` and `ClusterResizeActivity` both wrote `SurfaceDaemon.DESCRIPTOR` onto `ProxyClient.getDaemonBinder()`, the **proxy** daemon's binder, where `enforceInterface` rejects it and the transact silently does nothing. Consequences: on `stopProjectionNoAdb` / `onDestroy` the surface daemon was never told to drop its SurfaceControl token, so it kept compositing after a stop; and the resize editor's live preview has never worked.
+
+**What changed.** The class is renamed `MirrorDaemon` → `SurfaceDaemon` — **CODE identity only**. Every wire/persisted identity is byte-identical (ServiceManager name `byd_mirror_daemon`, the DESCRIPTOR, transaction codes, both process names, `/data/local/tmp` paths, broadcast action/extra/permission, the `--- MIRRORDAEMON LOG ---` report section, the `MirrorDaemon` log TAG), because a daemon spawned by an older APK keeps running across an update and because triage greps historical reports; verified against the release APK's dex. **More important than the class name**: three accessors called `getDaemonBinder()` returned two different daemons — that is the identifier through which the mistake was actually made. They are now `getProxyDaemonBinder()` / `getSurfaceDaemonBinder()`, so a missed call site is a compile error. `FissionClient`'s duplicate `ServiceManager` lookup now delegates to the single resolver, and the boundary docs were corrected to be **true**: the first wording asserted a "single accessor" invariant that did not hold, and an auditor trusting it would have missed the entire Layout subsystem, the main preview and every touch.
+
+**Noise removed.** The in-app mirror and in-app injection fallbacks (**235 failures / 0 successes** across the report corpus — an unprivileged app cannot hold `ACCESS_SURFACE_FLINGER`, which is why the daemon exists) now run **once per process** then skip, at WARN instead of ERROR; the old ERROR named a permission and read like a security regression, misleading several triages. They are **not deleted**: there is no formal proof the permission is denied, only 235/0, and deleting would break any unit where it does work.
+
+**Deliberately reverted.** Pointing the resize editor at the correct binder was implemented, reviewed and taken back out: the surface daemon owns exactly **one** mirror, so a working call there re-targets it away from MainActivity's preview and nothing restores it on close (`MirrorCoordinator.attemptStart` short-circuits on a stale `mMirrorActive`), leaving the main preview frozen. Trading a preview nobody has ever had for a broken one is a bad deal — the editor keeps today's behaviour, the wrong pairing is gone from the tree, and the correct implementation is documented.
+
+Two adversarial review rounds (the second caught that regression). No daemon protocol change; DL3/DL4/DL5 identical. Build + lint 0/0, 177 unit tests green.
+
 ### 1.8.4-beta (versionCode 594)
 
 **DiLink 4.0: reach the cluster through the uid-2000 daemon, because the firmware hides it from the app process** (`INC-20260727-203241`, plus four earlier DL4 reports).

@@ -12,7 +12,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 
 import com.byd.dashcast.proxy.ProxyClient
-import com.byd.dashcast.proxy.daemon.MirrorDaemon
+import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.util.AppLogger
 
 import java.lang.reflect.Method
@@ -29,6 +29,12 @@ import java.lang.reflect.Method
  *
  * On BYD DiLink 3.0 (Android 10), events injected with setDisplayId() reach windows on
  * that display if the InputDispatcher supports multi-display.
+ *
+ * The preferred path is [SurfaceDaemon] — the uid-2000 daemon that HOLDS the cluster surfaces and
+ * also owns input injection into them. Its binder arrives through [setDaemonBinder] and is
+ * resolved by [com.byd.dashcast.proxy.DaemonBinderResolver.surfaceDaemonBinder], never from
+ * `ProxyClient.getProxyDaemonBinder()` (that is the *other*, command-executing daemon). The in-app
+ * reflective path below is only a fallback for when no daemon binder is available.
  */
 @Suppress("DEPRECATION")
 class ClusterInputForwarder(context: Context) {
@@ -41,7 +47,7 @@ class ClusterInputForwarder(context: Context) {
     @Volatile private var mClusterHeight = 720 // cluster VirtualDisplay is 1920×720 (dumpsys window 03/05/2026)
     @Volatile private var mClusterDisplayId = 1 // Cluster display ID (routing for API 29)
 
-    /** MirrorDaemon Binder — if non-null, events are routed through uid=2000. */
+    /** SurfaceDaemon Binder — if non-null, events are routed through uid=2000. */
     @Volatile private var mDaemonBinder: IBinder? = null
 
     private var mInputManager: Any? = null
@@ -55,6 +61,20 @@ class ClusterInputForwarder(context: Context) {
     // per process instead of staying silent. INC-20260724-102136 was hard to diagnose precisely
     // because every touch took this path and logged nothing at all.
     @Volatile private var mDirectInjectLogged = false
+
+    /**
+     * Latched when the framework REFUSES a direct injection with a SecurityException, i.e.
+     * INJECT_EVENTS (a signature permission an unprivileged app can never obtain) is denied to
+     * this process. From then on the direct path is skipped silently instead of throwing — and
+     * logging an ERROR — on every single touch event.
+     *
+     * CANNOT MIS-LATCH: only a SecurityException sets it, and that verdict is permanent for the
+     * life of the process. A plain `false` return from injectInputEvent, a recycled MotionEvent,
+     * or "no focused window on the cluster yet" are all transient and deliberately leave the path
+     * enabled — they keep today's per-event ERROR. The preferred daemon path is checked before
+     * this flag is even read, so a daemon binder arriving later is unaffected.
+     */
+    @Volatile private var mDirectInjectDenied = false
 
     // 1.2.31 — pre-allocated pointer arrays reused across touch events. MotionEvent.obtain(...)
     // only reads the first `pointerCount` entries (AOSP copies the data → safe to reuse). Access
@@ -141,7 +161,7 @@ class ClusterInputForwarder(context: Context) {
     }
 
     /**
-     * Passes the MirrorDaemon Binder to this forwarder. When non-null, touch/key injection is
+     * Passes the SurfaceDaemon Binder to this forwarder. When non-null, touch/key injection is
      * routed through the daemon (uid=2000) which holds android.permission.INJECT_EVENTS.
      */
     fun setDaemonBinder(binder: IBinder?) {
@@ -228,10 +248,10 @@ class ClusterInputForwarder(context: Context) {
                             0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0
                         )
                         data = Parcel.obtain()
-                        data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
+                        data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR)
                         data.writeParcelable(ev, 0)
                         binder.transact(
-                            MirrorDaemon.TRANSACT_INJECT_MOTION, data, null, IBinder.FLAG_ONEWAY
+                            SurfaceDaemon.TRANSACT_INJECT_MOTION, data, null, IBinder.FLAG_ONEWAY
                         )
                     } catch (doe: android.os.DeadObjectException) {
                         // v1.3.3 — silent binder death seen on user devices; invalidate so
@@ -247,7 +267,7 @@ class ClusterInputForwarder(context: Context) {
                     return
                 }
 
-                if (!mAvailable) return
+                if (!mAvailable || mDirectInjectDenied) return
 
                 var ev: MotionEvent? = null
                 try {
@@ -274,7 +294,9 @@ class ClusterInputForwarder(context: Context) {
                                 + "${mSetDisplayIdMethod != null} — cluster touch likely inert")
                     }
                 } catch (e: Exception) {
-                    AppLogger.e(TAG, "injectTouchAtMulti failed action=$actionMasked ptrs=$n disp=$mClusterDisplayId", e)
+                    if (!latchDirectInjectDenied("injectTouchAtMulti", e)) {
+                        AppLogger.e(TAG, "injectTouchAtMulti failed action=$actionMasked ptrs=$n disp=$mClusterDisplayId", e)
+                    }
                 } finally {
                     ev?.recycle()
                 }
@@ -302,17 +324,17 @@ class ClusterInputForwarder(context: Context) {
                 val up = KeyEvent(now, now + 1, KeyEvent.ACTION_UP, keyCode, 0)
                 val dataDown = Parcel.obtain()
                 try {
-                    dataDown.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
+                    dataDown.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR)
                     dataDown.writeParcelable(down, 0)
-                    binder.transact(MirrorDaemon.TRANSACT_INJECT_KEY, dataDown, null, IBinder.FLAG_ONEWAY)
+                    binder.transact(SurfaceDaemon.TRANSACT_INJECT_KEY, dataDown, null, IBinder.FLAG_ONEWAY)
                 } finally {
                     dataDown.recycle()
                 }
                 val dataUp = Parcel.obtain()
                 try {
-                    dataUp.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
+                    dataUp.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR)
                     dataUp.writeParcelable(up, 0)
-                    binder.transact(MirrorDaemon.TRANSACT_INJECT_KEY, dataUp, null, IBinder.FLAG_ONEWAY)
+                    binder.transact(SurfaceDaemon.TRANSACT_INJECT_KEY, dataUp, null, IBinder.FLAG_ONEWAY)
                 } finally {
                     dataUp.recycle()
                 }
@@ -324,7 +346,7 @@ class ClusterInputForwarder(context: Context) {
             }
             return
         }
-        if (!mAvailable) return
+        if (!mAvailable || mDirectInjectDenied) return
         val now = SystemClock.uptimeMillis()
         try {
             val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0)
@@ -341,7 +363,9 @@ class ClusterInputForwarder(context: Context) {
             mInjectMethod?.invoke(mInputManager, down, INJECT_INPUT_EVENT_MODE_ASYNC)
             mInjectMethod?.invoke(mInputManager, up, INJECT_INPUT_EVENT_MODE_ASYNC)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Key inject failed", e)
+            if (!latchDirectInjectDenied("injectKey", e)) {
+                AppLogger.e(TAG, "Key inject failed", e)
+            }
         }
     }
 
@@ -359,9 +383,9 @@ class ClusterInputForwarder(context: Context) {
             try {
                 val data = Parcel.obtain()
                 try {
-                    data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
+                    data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR)
                     data.writeParcelable(kev, 0)
-                    binder.transact(MirrorDaemon.TRANSACT_INJECT_KEY, data, null, IBinder.FLAG_ONEWAY)
+                    binder.transact(SurfaceDaemon.TRANSACT_INJECT_KEY, data, null, IBinder.FLAG_ONEWAY)
                 } finally {
                     data.recycle()
                 }
@@ -373,7 +397,7 @@ class ClusterInputForwarder(context: Context) {
             }
             return
         }
-        if (!mAvailable) return
+        if (!mAvailable || mDirectInjectDenied) return
         try {
             // v1.2.11 — route to the cluster display so the cluster-side focused window gets the key.
             if (mSetDisplayIdKeyMethod != null) {
@@ -385,8 +409,36 @@ class ClusterInputForwarder(context: Context) {
             }
             mInjectMethod?.invoke(mInputManager, kev, INJECT_INPUT_EVENT_MODE_ASYNC)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "injectKeyEvent direct failed", e)
+            if (!latchDirectInjectDenied("injectKeyEvent", e)) {
+                AppLogger.e(TAG, "injectKeyEvent direct failed", e)
+            }
         }
+    }
+
+    /**
+     * If [e] is the framework refusing the injection (INJECT_EVENTS denied), latches
+     * [mDirectInjectDenied], logs exactly ONE line at WARN — an unprivileged app can never hold
+     * that signature permission, so this is an expected state, not the security regression the
+     * old per-event ERROR looked like — and returns true so the caller skips its ERROR.
+     *
+     * Returns false for every other failure, leaving today's behaviour untouched.
+     */
+    private fun latchDirectInjectDenied(where: String, e: Throwable): Boolean {
+        var cause: Throwable? = e
+        var depth = 0
+        var denied = false
+        while (cause != null && depth++ < 5) {
+            if (cause is SecurityException) { denied = true; break }
+            cause = cause.cause
+        }
+        if (!denied) return false
+        if (!mDirectInjectDenied) {
+            mDirectInjectDenied = true
+            AppLogger.w(TAG, "$where: INJECT_EVENTS denied to the app process — expected without "
+                    + "the platform signature. Direct-path injection disabled for this process; "
+                    + "cluster touch/keys need the uid=2000 surface daemon. (${cause?.message})")
+        }
+        return true
     }
 
     fun isAvailable(): Boolean = mAvailable

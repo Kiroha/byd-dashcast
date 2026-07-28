@@ -46,7 +46,7 @@ import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ShellGateway
-import com.byd.dashcast.proxy.daemon.MirrorDaemon
+import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.system.FloatingRemoteButton
 import com.byd.dashcast.ui.AppListAdapter
 import com.byd.dashcast.ui.InsetOverlayView
@@ -192,7 +192,7 @@ class MainActivity : AppCompatActivity(),
 
     private val mScreenshotHandler = Handler(Looper.getMainLooper())
 
-    // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
+    // SurfaceDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private var mDaemonBinder: IBinder? = null
     private val mDaemonReadyReceiver: BroadcastReceiver =
         DaemonBinderResolver.createActionReceiver { binder ->
@@ -259,8 +259,8 @@ class MainActivity : AppCompatActivity(),
         if (killOrphanSniffer) sOrphanSnifferKillDone = true
         AppStartupTasks.run(applicationContext, killOrphanSniffer)
 
-        // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
-        registerReceiver(mDaemonReadyReceiver, IntentFilter(MirrorDaemon.ACTION_DAEMON_READY))
+        // Receiver to retrieve the SurfaceDaemon Binder (uid=2000)
+        registerReceiver(mDaemonReadyReceiver, IntentFilter(SurfaceDaemon.ACTION_DAEMON_READY))
 
         // Floating mirror button — started once, visibility controlled by show()/hide().
         // Deferred to post-first-frame: FloatingRemoteButton.onStartCommand inflates a
@@ -1737,7 +1737,7 @@ class MainActivity : AppCompatActivity(),
 
     override fun getClusterServiceIfBound(): ClusterService? = if (mServiceBound) mClusterService else null
 
-    override fun getDaemonBinder(): IBinder? = mDaemonBinder
+    override fun getSurfaceDaemonBinder(): IBinder? = mDaemonBinder
 
     override fun onPreviewClicked() {
         // no-op: frameMirror touch is handled by clusterMirror.setOnTouchListener()

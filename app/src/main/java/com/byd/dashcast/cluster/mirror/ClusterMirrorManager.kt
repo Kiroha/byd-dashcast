@@ -12,7 +12,9 @@ import android.view.SurfaceControl
 import com.byd.dashcast.cluster.display.ClusterDisplayInfo
 import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
 import com.byd.dashcast.platform.Platform
-import com.byd.dashcast.proxy.daemon.MirrorDaemon
+import com.byd.dashcast.proxy.DaemonBinderResolver
+import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.util.AppLogger
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicBoolean
@@ -28,6 +30,18 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   → SurfaceFlinger composites the cluster into our surface. No VirtualDisplay needed.
  *
  * Requires: ACCESS_SURFACE_FLINGER (signature permission, granted with platform.keystore)
+ *
+ * ## Which daemon does this class talk to?
+ * [SurfaceDaemon] — the uid-2000 daemon that **HOLDS** graphical state (surfaces, cluster slot
+ * overlay windows, trusted VirtualDisplays). Its binder comes from
+ * [com.byd.dashcast.proxy.DaemonBinderResolver.surfaceDaemonBinder] and **never** from
+ * `ProxyClient.getProxyDaemonBinder()`, which is the *other* daemon — `ProxyDaemonMain`, the
+ * stateless command executor that **DOES** things (shell + one-shot verbs). Pairing
+ * [SurfaceDaemon.DESCRIPTOR] with the ProxyDaemon's binder makes the receiving
+ * `enforceInterface` throw a SecurityException
+ * that the code below used to swallow, so the transaction silently did nothing — that is exactly
+ * how the residual-compositing teardown bug happened. [writeSurfaceDaemonToken] now refuses that
+ * pairing. Triage rule: a failed command → ProxyDaemon; a black or frozen surface → SurfaceDaemon.
  */
 @Suppress("DEPRECATION")
 class ClusterMirrorManager {
@@ -84,6 +98,10 @@ class ClusterMirrorManager {
      * Requires ACCESS_SURFACE_FLINGER (signature permission).
      * Returns false on failure → caller falls back to screencap.
      *
+     * Attempted at most once per process when it fails for a permanent reason — see
+     * [sInAppMirrorDenied]. A unit that genuinely holds the permission keeps using this path
+     * exactly as before.
+     *
      * @param targetSurface  Surface of our local TextureView (in-app)
      * @param viewW / viewH  View dimensions (for projection mapping)
      */
@@ -95,6 +113,9 @@ class ClusterMirrorManager {
             return true
         }
         stopPreview()
+
+        // Placed AFTER stopPreview() so the teardown side effect callers rely on is unchanged.
+        if (sInAppMirrorDenied) return false
 
         if (targetSurface == null || !targetSurface.isValid) {
             AppLogger.e(TAG, "startMirror: targetSurface is invalid")
@@ -136,11 +157,13 @@ class ClusterMirrorManager {
             mMirrorDisplayToken = sCachedCreateDisplay!!.invoke(null,
                     "mybyd_preview_mirror", false) as IBinder?
             if (mMirrorDisplayToken == null) {
-                throw RuntimeException("SurfaceControl.createDisplay → null")
+                // SurfaceFlinger returns a null token (no exception) when the caller lacks
+                // ACCESS_SURFACE_FLINGER — this is THE observed signature of the denial.
+                throw InAppMirrorUnavailable("SurfaceControl.createDisplay → null")
             }
 
             // 3. Projection: preserve aspect ratio (letterbox)
-            // Use integer arithmetic to match MirrorDaemon.setupMirror() exactly.
+            // Use integer arithmetic to match SurfaceDaemon.setupMirror() exactly.
             val scale = Math.min(viewW.toFloat() / mClusterW, viewH.toFloat() / mClusterH)
             val drawW = (mClusterW * scale).toInt()
             val drawH = (mClusterH * scale).toInt()
@@ -170,7 +193,17 @@ class ClusterMirrorManager {
                     + " dest=$drawW×$drawH offset=($offsetX,$offsetY)")
             true
         } catch (e: Exception) {
-            AppLogger.e(TAG, "SurfaceControl mirror FAILED (ACCESS_SURFACE_FLINGER?) — use startMirrorViaDaemon()", e)
+            if (isPermanentInAppMirrorDenial(e)) {
+                // Expected on every unit seen so far (see sInAppMirrorDenied): WARN once, then
+                // never attempt again for the life of this process.
+                sInAppMirrorDenied = true
+                AppLogger.w(TAG, "in-app SurfaceControl mirror unavailable to this process"
+                        + " (ACCESS_SURFACE_FLINGER is a signature permission an unprivileged app"
+                        + " cannot hold) — expected; the uid-2000 surface daemon does the"
+                        + " mirroring. Not retried again in this process. Cause: ${e.message}")
+            } else {
+                AppLogger.e(TAG, "SurfaceControl mirror FAILED — use startMirrorViaDaemon()", e)
+            }
             destroyMirrorToken()
             false
         } finally {
@@ -180,7 +213,7 @@ class ClusterMirrorManager {
     }
 
     /**
-     * Mirror via the MirrorDaemon (uid=2000) which holds ACCESS_SURFACE_FLINGER.
+     * Mirror via the SurfaceDaemon (uid=2000) which holds ACCESS_SURFACE_FLINGER.
      * The daemon receives the Surface via Binder and configures SurfaceControl (static methods).
      * SYNCHRONOUS call: the daemon replies 1 (success) or 0 (failure) → mMirrorActive reflects
      * reality, which allows the screencap fallback if the daemon fails.
@@ -227,7 +260,7 @@ class ClusterMirrorManager {
             mClusterH = injected.height
         }
 
-        // Pre-compute projection params (identical formula to MirrorDaemon.setupMirror).
+        // Pre-compute projection params (identical formula to SurfaceDaemon.setupMirror).
         // Stored here so touch mapping uses exact same offsets as the daemon's projection.
         run {
             val scale = Math.min(viewW.toFloat() / mClusterW, viewH.toFloat() / mClusterH)
@@ -264,7 +297,7 @@ class ClusterMirrorManager {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         try {
-            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
+            if (!writeSurfaceDaemonToken(daemonBinder, data)) return false
             data.writeInt(layerStack)
             data.writeInt(mClusterW)
             data.writeInt(mClusterH)
@@ -274,7 +307,7 @@ class ClusterMirrorManager {
             data.writeParcelable(targetSurface, 0)
             data.writeStrongBinder(com.byd.dashcast.proxy.MirrorResourceOwner.token())
             // Synchronous call (not FLAG_ONEWAY) → daemon reply in 'reply' parcel
-            daemonBinder.transact(MirrorDaemon.TRANSACT_MIRROR_START, data, reply, 0)
+            daemonBinder.transact(SurfaceDaemon.TRANSACT_MIRROR_START, data, reply, 0)
             reply.readException()
             val daemonOk = reply.readInt() == 1
             if (daemonOk) {
@@ -305,19 +338,25 @@ class ClusterMirrorManager {
     }
 
     /**
-     * Requests the daemon to stop the SurfaceControl mirror.
+     * Requests the surface daemon to stop the SurfaceControl mirror.
+     *
+     * [daemonBinder] MUST be the surface daemon's binder — see [writeSurfaceDaemonToken].
      */
     fun stopMirrorViaDaemon(daemonBinder: IBinder?) {
         if (daemonBinder == null) return
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         try {
-            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR)
-            // v0.9.77: SYNCHRONOUS stop (no FLAG_ONEWAY) so callers can immediately
-            // restart the mirror at a different size (e.g. fullscreen toggle) without
-            // a race where the daemon's stop is still queued behind the new start.
-            daemonBinder.transact(MirrorDaemon.TRANSACT_MIRROR_STOP, data, reply, 0)
-            try { reply.readException() } catch (ignored: Throwable) { /* daemon may not write reply */ }
+            // Skips the transact (not the state reset below) when the binder is provably the
+            // OTHER daemon's — exactly the outcome the transact itself used to produce, minus the
+            // pointless round-trip and the swallowed SecurityException.
+            if (writeSurfaceDaemonToken(daemonBinder, data)) {
+                // v0.9.77: SYNCHRONOUS stop (no FLAG_ONEWAY) so callers can immediately
+                // restart the mirror at a different size (e.g. fullscreen toggle) without
+                // a race where the daemon's stop is still queued behind the new start.
+                daemonBinder.transact(SurfaceDaemon.TRANSACT_MIRROR_STOP, data, reply, 0)
+                try { reply.readException() } catch (ignored: Throwable) { /* daemon may not write reply */ }
+            }
         } catch (doe: android.os.DeadObjectException) {
             // v1.3.3 — see comment in startMirrorViaDaemon.
             com.byd.dashcast.proxy.ProxyClient.invalidateBinder("MirrorStop")
@@ -354,7 +393,16 @@ class ClusterMirrorManager {
         // compositing the cluster after a stop → residual SurfaceFlinger/CPU load (sluggish tablet
         // after projection ends). Read the flag before stopMirrorViaDaemon() clears it.
         if (mMirrorViaDaemon) {
-            val daemon = com.byd.dashcast.proxy.ProxyClient.getDaemonBinder()
+            // Must be the SURFACE daemon's binder. Until 1.8.x this read
+            // ProxyClient.getDaemonBinder() (renamed getProxyDaemonBinder in 1.8.x) — the PROXY
+            // daemon — so the transact carried SurfaceDaemon.DESCRIPTOR to a binder that enforces
+            // the proxy DESCRIPTOR: rejected,
+            // the SecurityException swallowed by readException(), and the surface daemon never
+            // told to release its cluster SurfaceControl token. Masked on the UI teardown path
+            // (MirrorCoordinator.stopNormalMirror stops correctly first and clears the flag) but
+            // live on the service-driven paths ClusterService.stopProjectionNoAdb() and
+            // ClusterService.onDestroy() → residual compositing after a stop.
+            val daemon = DaemonBinderResolver.surfaceDaemonBinder()
             if (daemon != null) {
                 stopMirrorViaDaemon(daemon) // synchronous TRANSACT_MIRROR_STOP; clears the flags
             }
@@ -387,6 +435,83 @@ class ClusterMirrorManager {
 
         /** Guard to prevent repeated costly reflection calls if unlockHiddenApis is called more than once. */
         private val sHiddenApisUnlocked = AtomicBoolean(false)
+
+        /**
+         * Marks a failure of the in-app SurfaceControl path that can never resolve while this
+         * process lives (missing hidden API, or SurfaceFlinger refusing to create the display).
+         */
+        private class InAppMirrorUnavailable(message: String) : RuntimeException(message)
+
+        /**
+         * Latched once the in-app SurfaceControl path has failed for a permanent reason; further
+         * [startMirror] calls then return false immediately and log nothing.
+         *
+         * Field evidence over the bug-report corpus: 235 × "SurfaceControl mirror FAILED" and 0
+         * successes (54 of them on DiLink 3.0). The path is deliberately KEPT — no dump ever
+         * printed a `granted=` line for ACCESS_SURFACE_FLINGER, so "it never works" is an
+         * inference, and a unit that genuinely holds the permission must keep working unchanged.
+         * What is removed is only the repeated noise and the wasted work after the first failure.
+         *
+         * CANNOT MIS-LATCH: set only from [isPermanentInAppMirrorDenial], i.e. `createDisplay`
+         * returning null (SurfaceFlinger's refusal signature) or an explicit SecurityException.
+         * Every transient condition avoids it — "no cluster display yet" never reaches the catch
+         * (MirrorCoordinator/ClusterResizeActivity only call startMirror when a display exists,
+         * and a null/invalid target Surface returns before the try block), a plain transaction
+         * failure keeps today's ERROR + retry behaviour, and hidden-API reflection failures are
+         * excluded too because they depend on [unlockHiddenApis] having run first.
+         *
+         * Process-wide (companion) on purpose: ClusterService and ClusterResizeActivity each own
+         * their own ClusterMirrorManager, and the permission is a property of the process.
+         */
+        @Volatile private var sInAppMirrorDenied = false
+
+        /**
+         * True if [e] means SurfaceFlinger refused this process — the only verdict allowed to
+         * latch [sInAppMirrorDenied].
+         *
+         * Deliberately narrow: `createDisplay → null` (the observed refusal signature, wrapped in
+         * [InAppMirrorUnavailable]) and an explicit SecurityException. Reflection failures from
+         * [ensureMirrorMethodsCached] are NOT included even though they look permanent — hidden-API
+         * access depends on [unlockHiddenApis] having run first, so latching on them could disable
+         * the path over an ordering artefact rather than a real denial.
+         */
+        private fun isPermanentInAppMirrorDenial(e: Throwable): Boolean {
+            var cause: Throwable? = e
+            var depth = 0
+            while (cause != null && depth++ < 5) {
+                if (cause is InAppMirrorUnavailable) return true
+                if (cause is SecurityException) return true
+                cause = cause.cause
+            }
+            return false
+        }
+
+        /**
+         * Writes [SurfaceDaemon.DESCRIPTOR] into [data] — the ONLY place this class pairs that
+         * token with a binder.
+         *
+         * There are two uid-2000 daemons with two different binders and two different DESCRIPTORs
+         * (see the class doc). Sending this token to the proxy daemon's binder makes its
+         * `enforceInterface` throw a SecurityException that `reply.readException()` swallows, so
+         * the call silently does nothing — that is how the teardown bug survived unnoticed. The
+         * check below is deliberately NEGATIVE: it refuses only a binder that is provably the
+         * *other* daemon's, so it can never reject a legitimate surface-daemon binder (the two
+         * daemons are distinct processes; their binders can never be the same object).
+         *
+         * Obtain the right binder from [DaemonBinderResolver.surfaceDaemonBinder].
+         *
+         * @return true if the token was written and the caller may transact.
+         */
+        private fun writeSurfaceDaemonToken(daemonBinder: IBinder, data: Parcel): Boolean {
+            if (daemonBinder === ProxyClient.getProxyDaemonBinder()) {
+                AppLogger.w(TAG, "refusing to send the surface daemon's interface token to the"
+                        + " PROXY daemon's binder — it would be rejected silently."
+                        + " Use DaemonBinderResolver.surfaceDaemonBinder().")
+                return false
+            }
+            data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR)
+            return true
+        }
 
         // ── Cached reflection Methods — resolved once, reused on every mirror start ──────────────
         @Volatile private var sMirrorMethodsCached = false

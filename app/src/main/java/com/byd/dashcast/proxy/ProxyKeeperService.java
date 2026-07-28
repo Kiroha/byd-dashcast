@@ -144,7 +144,7 @@ public final class ProxyKeeperService extends Service {
         // even when the kernel's binderDied() notification was never
         // delivered to our DeathRecipient. This converts every "stuck
         // alive" case into a recoverable one within HEARTBEAT_MS.
-        android.os.IBinder b = ProxyClient.getDaemonBinder();
+        android.os.IBinder b = ProxyClient.getProxyDaemonBinder();
         boolean alive = (b != null) && b.pingBinder();
         if (b != null && !alive) {
             ProxyClient.invalidateBinder("KeeperPing");
