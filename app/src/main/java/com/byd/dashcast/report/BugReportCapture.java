@@ -291,8 +291,14 @@ public final class BugReportCapture {
             + " ; echo '--- SURFACEFLINGER (cluster/mirror layers) ---' >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'byd|mirror|xdja|fission|layerStack|displayId' | head -40 >> " + p
             // ── DAEMON LOGS ──
+            // 400, not 200: two captures (INC-20260614-131051/-131118) already contained
+            // exactly 200 lines, i.e. the window was full and the start of the session was
+            // gone. One layout attach now costs ~21 lines, so a 3-zone activation followed by
+            // a few mirror restarts on the way back to the main screen would push the
+            // [ATTACH_SLOT] block out entirely. ~32 KB — nowhere near the body cap that a
+            // previous over-raise of the LOGCAT depth blew through.
             + " ; echo '--- MIRRORDAEMON LOG ---' >> " + p
-            + " ; cat /data/local/tmp/mirrordaemon_latest.log 2>/dev/null | tail -200 >> " + p
+            + " ; cat /data/local/tmp/mirrordaemon_latest.log 2>/dev/null | tail -400 >> " + p
             + " ; echo '--- PROXYDAEMON LOG ---' >> " + p
             + " ; cat /data/local/tmp/dashcast_proxy.log 2>/dev/null | tail -200 >> " + p
             + " ; echo '=== END SHELL DUMP ===' >> " + p;

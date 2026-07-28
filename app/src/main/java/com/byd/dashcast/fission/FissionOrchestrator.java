@@ -132,6 +132,13 @@ public final class FissionOrchestrator {
     private volatile String mSelectedMirrorPackage = null;
     private volatile boolean mAutoStartAttempt = false;
 
+    /**
+     * Daemon slot keys of the layout zones that have NO app bound ("free zones"), created by
+     * the last manual activation. Deliberately kept out of {@link #mSlots}: those keys are
+     * package names and feed {@link #getActiveLayoutPackages()} and Main's mirror selector.
+     */
+    private final Set<String> mFreeZoneKeys = new java.util.LinkedHashSet<>();
+
     public FissionOrchestrator(Context context, ProjectionStateProvider projectionState,
                                 Callbacks callbacks) {
         mAppCtx          = context.getApplicationContext();
@@ -346,31 +353,8 @@ public final class FissionOrchestrator {
         sAutoStartFired = true;
         AppLogger.i(TAG, "auto-start on app launch: projection + layout « " + fav.name + " »");
 
-        ProjectionStateProvider psp = new ProjectionStateProvider() {
-            @Override public boolean isProjectionActive() {
-                return isClassicProjectionActive();
-            }
-            @Override public void stopProjectionIfActive(Runnable onStopped) {
-                com.byd.dashcast.cluster.ClusterService cs =
-                        com.byd.dashcast.cluster.ClusterService.getInstance();
-                if (cs != null) cs.stopProjectionNoAdb();
-                if (onStopped != null) new Handler(Looper.getMainLooper()).post(onStopped);
-            }
-        };
-        Callbacks headless = new Callbacks() {
-            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) { notifyLayoutChanged(); }
-            @Override public void onDaemonBinderAcquired(IBinder binder) {}
-            @Override public void onStatusMessage(String message) {
-                if (message != null) AppLogger.d(TAG, "auto-start: " + message);
-            }
-            @Override public void onSlotError(String pkg, String message) {
-                AppLogger.w(TAG, "auto-start slot error " + pkg + ": " + message);
-            }
-            @Override public void onProjectionConflict(Runnable proceedCallback) {
-                AppLogger.w(TAG, "auto-start: projection conflict — aborting (no UI to ask)");
-            }
-        };
-        FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        FissionOrchestrator orch = new FissionOrchestrator(appCtx,
+                headlessProjectionState(), headlessCallbacks("auto-start"));
         orch.mAutoStartAttempt = true;
         // Tear down any previous headless orchestrator before orphaning it, or its
         // fission-exec thread leaks (the static ref was overwritten without a stop()).
@@ -382,34 +366,170 @@ public final class FissionOrchestrator {
     }
 
     /**
-     * Launches the apps bound to layout slots into their VDs.
-     *
-     * <p>Call this after {@link FissionClient#activateLayout} succeeds and has filled
-     * {@code preset.slots[i].displayId}. Slots with a null/empty package name or
-     * {@code displayId ≤ 0} are skipped. Runs blocking shell commands — must be
-     * called from a background thread (e.g. LayoutManagerActivity's executor).
+     * Projection-state provider shared by every headless (no-Activity) orchestrator.
+     * Extracted so a new entry point cannot silently diverge from the auto-start path.
      */
-    public static void launchAppsIntoPreset(Context ctx, LayoutPreset preset) {
-        final Context appCtx = ctx.getApplicationContext();
-        for (LayoutPreset.SlotDef slot : preset.slots) {
-            final String pkg = slot.packageName;
-            if (pkg == null || pkg.isEmpty() || slot.displayId <= 0) continue;
-            if (!ProxyClient.isConnected()) {
-                boolean ok = ProxyClient.connect(appCtx);
-                if (!ok) {
-                    AppLogger.w(TAG, "launchAppsIntoPreset: proxy not connected for " + pkg);
-                    continue;
+    private static ProjectionStateProvider headlessProjectionState() {
+        return new ProjectionStateProvider() {
+            @Override public boolean isProjectionActive() {
+                return isClassicProjectionActive();
+            }
+            @Override public void stopProjectionIfActive(Runnable onStopped) {
+                com.byd.dashcast.cluster.ClusterService cs =
+                        com.byd.dashcast.cluster.ClusterService.getInstance();
+                if (cs != null) cs.stopProjectionNoAdb();
+                if (onStopped != null) new Handler(Looper.getMainLooper()).post(onStopped);
+            }
+        };
+    }
+
+    /** Log-only callbacks for a headless orchestrator; {@code logPrefix} names the entry point. */
+    private static Callbacks headlessCallbacks(String logPrefix) {
+        return new Callbacks() {
+            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) { notifyLayoutChanged(); }
+            @Override public void onDaemonBinderAcquired(IBinder binder) {}
+            @Override public void onStatusMessage(String message) {
+                if (message != null) AppLogger.d(TAG, logPrefix + ": " + message);
+            }
+            @Override public void onSlotError(String pkg, String message) {
+                AppLogger.w(TAG, logPrefix + " slot error " + pkg + ": " + message);
+            }
+            @Override public void onProjectionConflict(Runnable proceedCallback) {
+                AppLogger.w(TAG, logPrefix + ": projection conflict — aborting (no UI to ask)");
+            }
+        };
+    }
+
+    // ── Manual (user-triggered) layout activation ─────────────────────────────
+
+    /**
+     * Stable, <b>English</b> failure codes handed to {@link ActivationCallback}.
+     *
+     * <p>Deliberately not user text: this value is what {@code AppLogger.e} writes into the
+     * journal that ships inside every bug report, and triage greps the whole corpus for it. A
+     * localised message here would make a Turkish or Russian capture unsearchable. The UI maps
+     * these to an {@code R.string} for display — see {@code LayoutManagerActivity#activateLayout}.
+     */
+    public static final String ERR_CLUSTER_TIMEOUT = "cluster activation timeout";
+    /** @see #ERR_CLUSTER_TIMEOUT */
+    public static final String ERR_PROJECTION_CONFLICT = "classic projection already active";
+    /** @see #ERR_CLUSTER_TIMEOUT */
+    public static final String ERR_NO_DAEMON = "surface daemon unavailable";
+    /** @see #ERR_CLUSTER_TIMEOUT */
+    public static final String ERR_BUSY = "activation already in flight";
+    /** @see #ERR_CLUSTER_TIMEOUT */
+    public static final String ERR_ABANDONED = "layout stopped during cluster activation";
+
+    /** Guards against a second Activate tap starting a second cluster-activation sequence. */
+    private static final java.util.concurrent.atomic.AtomicBoolean sActivationInFlight =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * When {@link #sActivationInFlight} was taken, on the monotonic clock.
+     *
+     * <p>The guard is cleared from the activation callback, and that callback is only reached
+     * through {@link #deliver}. {@code ClusterManager} posts no deadline of its own on the warm
+     * and DiLink 5 paths: if the underlying {@code sendInfo} callback never arrives — a
+     * half-open ADB-TCP socket is the documented D50F_LC condition — NEITHER
+     * {@code onDisplayReady} nor {@code onDisplayTimeout} fires, nothing calls back, and the
+     * guard would stay taken for the life of the process, silently killing the Activate button.
+     * So the guard also expires: an attempt older than this bound is assumed lost and stolen.
+     * Generous on purpose — a real sequence is ~6.5 s (30 → 3 s → 16 → 3 s → 35) and the DiLink
+     * 4 daemon display probe is bounded at 13 s.
+     */
+    private static final long ACTIVATION_GUARD_MAX_MS = 60_000L;
+    private static volatile long sActivationStartedMs = 0L;
+
+    /**
+     * Set once {@link #ensureDaemon()} has let {@code AdbLocalClient.startMirrorDaemon} compare
+     * the running daemon's build marker against this APK's. Process-scoped on purpose: a daemon
+     * outlives an app update, so the check is needed once per app process, not once per layout.
+     */
+    private static volatile boolean sDaemonFreshnessChecked = false;
+
+    /** Outcome of {@link #activateLayoutManually}; always delivered on the main thread. */
+    public interface ActivationCallback {
+        /**
+         * @param ok    {@code true} when every zone of the preset got a live display
+         * @param error {@code null} when the activation ran to completion (check {@code ok} for
+         *              partial success), otherwise one of the {@code ERR_*} codes above, or a
+         *              raw exception message. Always English — see {@link #ERR_CLUSTER_TIMEOUT}.
+         */
+        void onActivationResult(boolean ok, String error);
+    }
+
+    /**
+     * Activates an explicit layout on user request (Layout Manager "Activate").
+     *
+     * <p>Runs the <b>same</b> sequence as the auto-start path, which the manual button never
+     * did: cluster projection first via {@link #ensureClusterProjectionThen} (without it the
+     * slots are created while Qt still scans out the OEM's native view and nothing is
+     * visible), then {@link #ensureDaemon} — which <em>starts</em> the SurfaceDaemon and polls
+     * for it instead of merely testing the binder and giving up — then one {@code ATTACH_SLOT}
+     * per zone, so every slot stays addressable by QUERY / RESIZE / RELEASE.
+     *
+     * <p>Reuses the process-wide headless orchestrator when one exists, so an already-running
+     * layout is <em>switched</em> (zones absent from the new preset released, shared ones kept
+     * alive) instead of being torn down and rebuilt.
+     *
+     * <p>Re-entrant taps are rejected with {@link #ERR_BUSY}: the cluster sequence takes
+     * seconds (30 → 3 s → 16 → 3 s → 35) with only a short toast for feedback, so a second tap
+     * is likely, and it would build a second {@code ClusterManager} whose {@code cancel()}
+     * cannot unregister the first instance's DisplayListener — the exact listener leak +
+     * double-launch fixed in 1.2.29.
+     */
+    public static synchronized void activateLayoutManually(Context context, LayoutPreset preset,
+                                                           ActivationCallback callback) {
+        final Context appCtx = context.getApplicationContext();
+        final long nowMs = android.os.SystemClock.elapsedRealtime();
+        if (!sActivationInFlight.compareAndSet(false, true)) {
+            long heldMs = nowMs - sActivationStartedMs;
+            if (heldMs < ACTIVATION_GUARD_MAX_MS) {
+                AppLogger.w(TAG, "activateLayoutManually: " + ERR_BUSY + " (held " + heldMs
+                        + "ms) — ignoring tap");
+                if (callback != null) {
+                    new Handler(Looper.getMainLooper())
+                            .post(() -> callback.onActivationResult(false, ERR_BUSY));
                 }
+                return;
             }
-            try {
-                String result = ProxyClient.launchAndForce(pkg, null, slot.displayId, slot.w, slot.h);
-                String firstLine = (result != null) ? result.split("\n")[0] : "null";
-                AppLogger.i(TAG, "launchAppsIntoPreset: " + pkg + "@" + slot.displayId
-                        + " → " + firstLine);
-            } catch (ProxyClient.ProxyException pe) {
-                AppLogger.w(TAG, "launchAppsIntoPreset: launch failed for " + pkg + ": " + pe.getMessage());
-            }
+            // Expired: the previous attempt never reported back (see ACTIVATION_GUARD_MAX_MS).
+            // Steal it rather than leave the button dead for the rest of the process.
+            AppLogger.w(TAG, "activateLayoutManually: previous activation never reported after "
+                    + heldMs + "ms — reclaiming the guard");
         }
+        sActivationStartedMs = nowMs;
+        FissionOrchestrator orch = sAutoStartOrchestrator;
+        // A shut-down executor would make activatePresetAsync throw RejectedExecutionException
+        // on the UI thread; replace such an orchestrator instead of reusing it.
+        final boolean fresh = (orch == null || !orch.isUsable());
+        if (fresh) {
+            orch = new FissionOrchestrator(appCtx,
+                    headlessProjectionState(), headlessCallbacks("activate-layout"));
+            sAutoStartOrchestrator = orch;
+        }
+        // This IS the layout start, so the launch-time auto-start has nothing left to do:
+        // without the latch, returning to MainActivity would fire maybeAutoStartOnAppLaunch,
+        // orphan this orchestrator and rebuild every slot. Restored on failure so a manual
+        // attempt that fails does not disable the automatic one.
+        final boolean previouslyFired = sAutoStartFired;
+        sAutoStartFired = true;
+        orch.activatePresetAsync(preset, fresh, (ok, error) -> {
+            sActivationInFlight.set(false);
+            // Under the SAME monitor markAutoStartFailed() uses. This is a read-modify-write on
+            // a static that the fission-exec thread also writes, and this lambda runs on the
+            // main thread: unsynchronised, a markAutoStartFailed() landing between the read and
+            // the write is clobbered, which pins sAutoStartFired true and permanently disables
+            // the auto-start this line exists to preserve.
+            //
+            // Only a hard failure re-arms, and only if nothing else already re-armed it. A
+            // PARTIAL activation must NOT re-arm: it still owns the cluster, and the next
+            // onResume would tear it down and rebuild it.
+            synchronized (FissionOrchestrator.class) {
+                if (error != null && sAutoStartFired) sAutoStartFired = previouslyFired;
+            }
+            if (callback != null) callback.onActivationResult(ok, error);
+        });
     }
 
     /**
@@ -428,46 +548,14 @@ public final class FissionOrchestrator {
         }
         AppLogger.i(TAG, "manual launch layout apps: « " + fav.name + " »");
 
-        ProjectionStateProvider psp = new ProjectionStateProvider() {
-            @Override public boolean isProjectionActive() {
-                return isClassicProjectionActive();
-            }
-            @Override public void stopProjectionIfActive(Runnable onStopped) {
-                com.byd.dashcast.cluster.ClusterService cs =
-                        com.byd.dashcast.cluster.ClusterService.getInstance();
-                if (cs != null) cs.stopProjectionNoAdb();
-                if (onStopped != null) new Handler(Looper.getMainLooper()).post(onStopped);
-            }
-        };
-        Callbacks headless = new Callbacks() {
-            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) { notifyLayoutChanged(); }
-            @Override public void onDaemonBinderAcquired(IBinder binder) {}
-            @Override public void onStatusMessage(String msg) {
-                if (msg != null) AppLogger.d(TAG, "launch-layout: " + msg);
-            }
-            @Override public void onSlotError(String pkg, String msg) {
-                AppLogger.w(TAG, "launch-layout slot error " + pkg + ": " + msg);
-            }
-            @Override public void onProjectionConflict(Runnable proceedCallback) {
-                AppLogger.w(TAG, "launch-layout: projection conflict — aborting");
-            }
-        };
-        FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        FissionOrchestrator orch = new FissionOrchestrator(appCtx,
+                headlessProjectionState(), headlessCallbacks("launch-layout"));
         // Tear down any previous headless orchestrator before orphaning it, or its
         // fission-exec thread leaks (the static ref was overwritten without a stop()).
         FissionOrchestrator prevAuto = sAutoStartOrchestrator;
         if (prevAuto != null) { prevAuto.stopAll(); prevAuto.shutdown(); }
         sAutoStartOrchestrator = orch;
         orch.initAsync(fav, true, false);
-    }
-
-    /**
-     * Stops and clears the headless auto-start orchestrator (if any).
-     * Called by FissionActivity on create so it starts with a clean slate and
-     * any apps started headlessly are properly moved back to display 0 and killed.
-     */
-    public static void stopAutoOrchestrator() {
-        stopAutoOrchestrator(null);
     }
 
     /**
@@ -538,7 +626,12 @@ public final class FissionOrchestrator {
                 post(() -> mCallbacks.onSlotsChanged(mSlots.values()));
                 if (autoLayout) {
                     post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autoactivate)));
-                    ensureClusterProjectionThen(() -> mExec.execute(this::activateFavoriteLayout));
+                    // submitOrFail, not mExec.execute: onDisplayReady runs on the main looper
+                    // seconds later, and Restore-BYD / a new auto-start can shut this executor
+                    // down in between (pre-existing crash on this path, same shape as the
+                    // manual one).
+                    ensureClusterProjectionThen(
+                            () -> submitOrFail(this::activateFavoriteLayout, null));
                 } else if (precreate) {
                     precreateSlots(favoriteLayout);
                 }
@@ -555,6 +648,17 @@ public final class FissionOrchestrator {
      * activation sequence (30→16→35 or warm path) must complete first.
      */
     private void ensureClusterProjectionThen(Runnable next) {
+        ensureClusterProjectionThen(next, null);
+    }
+
+    /**
+     * Same as {@link #ensureClusterProjectionThen(Runnable)} with an explicit failure hook.
+     *
+     * @param onFailure run when the cluster never reaches projection mode. {@code null} — the
+     *                  auto-start path — keeps the previous behaviour byte for byte; the
+     *                  user-triggered path passes one so the failure reaches the UI.
+     */
+    private void ensureClusterProjectionThen(Runnable next, Runnable onFailure) {
         if (com.byd.dashcast.cluster.display.ClusterManager.isQtInProjectionMode()) {
             next.run();
             return;
@@ -575,6 +679,7 @@ public final class FissionOrchestrator {
                             AppLogger.w(TAG, "auto-layout: cluster activation timed out — aborted");
                             post(() -> mCallbacks.onStatusMessage(null));
                             markAutoStartFailed("cluster activation timeout");
+                            if (onFailure != null) onFailure.run();
                         }
                         // No-op (matches the former Kotlin-interface default body): the auto-layout
                         // flow doesn't act on a late-arriving display. Explicit because the
@@ -627,6 +732,10 @@ public final class FissionOrchestrator {
     public void stopAll(Runnable onComplete) {
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)));
         mExec.execute(() -> {
+            // Free zones hold no app and are not in mSlots, so the teardown plan below never
+            // sees them — release them first or a stop leaves an orphaned overlay on the
+            // cluster. No-op unless a manual activation created some.
+            releaseFreeZones();
             final List<String> packages = new ArrayList<>(mSlots.keySet());
             if (!mProjecting && packages.isEmpty()) {
                 mMainHandler.post(() -> {
@@ -783,12 +892,33 @@ public final class FissionOrchestrator {
             return false;
         }
         IBinder b = FissionClient.getBinderFromServiceManager();
-        if (b != null) {
+        if (b != null && sDaemonFreshnessChecked) {
             mDaemonBinder = b;
             final IBinder fb0 = b;
             post(() -> mCallbacks.onDaemonBinderAcquired(fb0));
             return true;
         }
+        // A LIVE binder is not proof of a CURRENT daemon. The SurfaceDaemon is a separate
+        // uid-2000 process that survives an APK reinstall, and its ServiceManager registration
+        // survives with it — so after an app update the previous build's daemon answers every
+        // transaction while looking perfectly healthy. That is how a capture comes back full of
+        // plausible, useless log lines, and how a new per-package slot key meets an old
+        // handleDeactivateLayout that still filters on the "layout_" prefix and releases nothing.
+        //
+        // The build comparison lives in SurfaceDaemonReusePolicy.shouldReuse, which is only
+        // reached from AdbLocalClient.startMirrorDaemon — i.e. on the path this method used to
+        // skip entirely whenever a binder existed. So fall through to it ONCE per process: it
+        // reuses the daemon when the marker build matches (the binder survives, the poll below
+        // finds it on the first 500 ms tick) and kills + respawns it when it does not.
+        //
+        // Fail-safe: if ADB-local is unreachable, startMirrorDaemon cannot kill anything, the
+        // existing daemon stays registered and the poll finds it — we lose one tick, never the
+        // daemon. The flag is set BEFORE the call so a failure cannot make this repeat forever.
+        if (b != null) {
+            AppLogger.i(TAG, "daemon binder present but not yet build-checked this process — "
+                    + "validating against build " + com.byd.dashcast.BuildConfig.VERSION_CODE);
+        }
+        sDaemonFreshnessChecked = true;
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_daemon)));
         AdbLocalClient.startMirrorDaemon(mAppCtx);
         for (int i = 0; i < 16; i++) {
@@ -930,6 +1060,185 @@ public final class FissionOrchestrator {
         }
     }
 
+    /** True while this orchestrator can still accept work on its executor. */
+    private boolean isUsable() {
+        return !mDestroyed && !mExec.isShutdown();
+    }
+
+    /**
+     * Submits to the executor from a thread that is <b>not</b> the executor — currently the
+     * main looper, via {@code ClusterManager.DisplayReadyCallback}.
+     *
+     * <p>{@code mExec} is a single-thread executor with the default AbortPolicy, so
+     * {@code execute()} after {@code shutdown()} throws
+     * {@link java.util.concurrent.RejectedExecutionException}. {@code onDisplayReady} is
+     * invoked directly on the main looper with no try/catch, so that throw is a FATAL
+     * EXCEPTION on the main thread. It is reachable: Activate preset B, then Deactivate (or
+     * Delete) preset A during the multi-second cluster sequence — {@code stopAutoOrchestrator}
+     * shuts this executor down, and the display then arrives.
+     */
+    private void submitOrFail(Runnable task, ActivationCallback callback) {
+        try {
+            mExec.execute(task);
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            AppLogger.w(TAG, "activation abandoned: the orchestrator was stopped while the "
+                    + "cluster was activating");
+            deliver(callback, false, ERR_ABANDONED);
+        }
+    }
+
+    /**
+     * Instance half of {@link #activateLayoutManually}. Nothing runs on the caller's thread.
+     *
+     * @param purgeStaleDaemonSlots true when this orchestrator was just created, i.e. nothing
+     *                              in this process owns the slots the daemon may still hold
+     *                              from an earlier run — they must be dropped or the new layout
+     *                              inherits overlays nobody tracks.
+     */
+    private void activatePresetAsync(LayoutPreset preset, boolean purgeStaleDaemonSlots,
+                                     ActivationCallback callback) {
+        // submitOrFail even for the FIRST submit: isUsable() was checked on the caller's thread
+        // and another thread can shut this executor down before we get here. A raw execute()
+        // would then throw on the UI thread AND leave sActivationInFlight latched, disabling
+        // Activate for the rest of the process.
+        submitOrFail(() -> {
+            tryGetBinder();
+            mActiveLayout = preset;
+            post(() -> {
+                mCallbacks.onSlotsChanged(mSlots.values());
+                mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autoactivate));
+            });
+            ensureClusterProjectionThen(
+                    () -> submitOrFail(
+                            () -> doActivatePreset(preset, purgeStaleDaemonSlots, callback),
+                            callback),
+                    () -> deliver(callback, false, ERR_CLUSTER_TIMEOUT));
+        }, callback);
+    }
+
+    /** Executor-thread only. Cluster projection is already up when this runs. */
+    private void doActivatePreset(LayoutPreset preset, boolean purgeStaleDaemonSlots,
+                                  ActivationCallback callback) {
+        try {
+            if (mProjectionState.isProjectionActive()) {
+                // Classic projection owns the cluster; stacking Layout overlays on it is the
+                // conflict the orchestrator has always refused (ensureDaemon would refuse too,
+                // but would report it as a missing daemon).
+                post(() -> mCallbacks.onStatusMessage(null));
+                deliver(callback, false, ERR_PROJECTION_CONFLICT);
+                return;
+            }
+            if (!ensureDaemon()) {
+                post(() -> mCallbacks.onStatusMessage(null));
+                deliver(callback, false, ERR_NO_DAEMON);
+                return;
+            }
+            if (purgeStaleDaemonSlots) {
+                try { FissionClient.deactivateLayout(mDaemonBinder); } catch (Exception ignored) {}
+            }
+            // BEFORE doSwitchToLayout, not inside attachFreeZones: doSwitchToLayout throws on
+            // the first failing slot, and the previous activation's free-zone overlays would
+            // then stay on the cluster on top of the new layout until a full stop.
+            releaseFreeZones();
+            // One ATTACH_SLOT per bound app — keyed BY PACKAGE in the daemon, so the slot can
+            // afterwards be queried, resized and released. The batch ACTIVATE_LAYOUT this
+            // replaces keyed slots "layout_<label>_<i>" and never put the package on the wire,
+            // which made every slot it created unaddressable. doSwitchToLayout also launches
+            // each app itself, so no separate launch pass can target a slot that never existed.
+            doSwitchToLayout(preset, null);
+            attachFreeZones(preset);
+            boolean allOk = publishDisplayIds(preset);
+            post(() -> {
+                mCallbacks.onSlotsChanged(mSlots.values());
+                mCallbacks.onStatusMessage(null);
+            });
+            deliver(callback, allOk, null);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "manual layout activation failed", e);
+            post(() -> mCallbacks.onStatusMessage(null));
+            // NEVER deliver a bare getMessage(): it is null for DeadObjectException — the very
+            // exception a killed daemon throws from binder.transact — and a null error is the
+            // wire value BOTH consumers read as "the activation ran to completion". That would
+            // save a failed preset as the favourite, skip the auto-start re-arm, and toast
+            // "partially activated" over a cluster with nothing on it. Always carry the class
+            // name, which is also what makes this line greppable across the report corpus.
+            String reason = e.getClass().getSimpleName();
+            if (e.getMessage() != null) reason = reason + ": " + e.getMessage();
+            deliver(callback, false, reason);
+        }
+    }
+
+    /**
+     * Creates the overlay + VD of the zones with no app bound, so a manually activated layout
+     * still paints every zone it painted under the batch call.
+     *
+     * <p>Keyed {@code "zone<i>_<label>"} and NOT by label alone: the daemon keys {@code sSlots}
+     * by whatever string it receives and {@code handleAttachSlot} does
+     * {@code remove(key) + release()} first, so two zones sharing a label would silently
+     * destroy each other's overlay. Duplicate labels need no typing —
+     * {@code LayoutPreset.nextSlotLabel()} is {@code "Zone " + (size + 1)}, so drawing 1/2/3,
+     * deleting Zone 2 and drawing again yields a second "Zone 3". The index restores the
+     * uniqueness the replaced batch path got from its {@code layout_<label>_<i>} keys.
+     *
+     * <p>Free zones hold no app, so releasing and re-creating them on each activation is
+     * invisible.
+     */
+    private void attachFreeZones(LayoutPreset preset) {
+        if (mDaemonBinder == null) return;
+        for (int i = 0; i < preset.slots.size(); i++) {
+            LayoutPreset.SlotDef s = preset.slots.get(i);
+            if (s.packageName != null && !s.packageName.isEmpty()) continue;
+            // Clear first: on a retry a stale id from a previous activation would otherwise
+            // survive a failed attach and publishDisplayIds would report the layout as fully
+            // up while that zone has no overlay at all.
+            s.displayId = -1;
+            String key = "zone" + i + "_" + s.label;
+            try {
+                int id = FissionClient.attachSlot(mDaemonBinder, key, s.x, s.y, s.w, s.h);
+                if (id > 0) {
+                    s.displayId = id;
+                    mFreeZoneKeys.add(key);
+                    AppLogger.i(TAG, "FISSION FREE_ZONE slot=" + key + " displayId=" + id);
+                }
+            } catch (Exception e) {
+                AppLogger.w(TAG, "free zone attach failed for " + key + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /** Releases the free-zone slots of the previous activation (no app to move or kill). */
+    private void releaseFreeZones() {
+        if (mFreeZoneKeys.isEmpty()) return;
+        for (String key : new ArrayList<>(mFreeZoneKeys)) {
+            if (mDaemonBinder != null) {
+                try { FissionClient.releaseSlot(mDaemonBinder, key); } catch (Exception ignored) {}
+            }
+        }
+        mFreeZoneKeys.clear();
+    }
+
+    /**
+     * Copies the live display ids back into the preset (the Layout Manager renders them) and
+     * reports whether every zone came up.
+     */
+    private boolean publishDisplayIds(LayoutPreset preset) {
+        boolean allOk = !preset.slots.isEmpty();
+        for (LayoutPreset.SlotDef s : preset.slots) {
+            if (s.packageName != null && !s.packageName.isEmpty()) {
+                SlotState state = mSlots.get(s.packageName);
+                s.displayId = (state != null) ? state.displayId : -1;
+            }
+            if (s.displayId <= 0) allOk = false;
+        }
+        return allOk;
+    }
+
+    /** Delivers an activation outcome on the main thread (never suppressed — the UI waits). */
+    private void deliver(ActivationCallback callback, boolean ok, String error) {
+        if (callback == null) return;
+        mMainHandler.post(() -> callback.onActivationResult(ok, error));
+    }
+
     private void markAutoStartFailed(String reason) {
         if (!mAutoStartAttempt) return;
         synchronized (FissionOrchestrator.class) {
@@ -937,7 +1246,11 @@ public final class FissionOrchestrator {
             sAutoStartFired = false;
         }
         AppLogger.w(TAG, "auto-start re-armed after failure: " + reason);
-        if (!mSlots.isEmpty() || mProjecting) stopAll();
+        // mFreeZoneKeys counts too. Free zones are deliberately kept OUT of mSlots and never set
+        // mProjecting, so a layout made only of unbound zones satisfies neither condition below
+        // — and this method then drops the orchestrator and shuts its executor down, orphaning
+        // every free-zone overlay on the cluster with nothing left that could release it.
+        if (!mSlots.isEmpty() || mProjecting || !mFreeZoneKeys.isEmpty()) stopAll();
         shutdown();
         notifyLayoutChanged();
     }

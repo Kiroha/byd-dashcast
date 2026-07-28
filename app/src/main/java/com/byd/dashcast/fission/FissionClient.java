@@ -122,37 +122,24 @@ public class FissionClient {
 
     // ── Layout management ─────────────────────────────────────────────────────
 
-    /**
-     * Pre-creates all overlay+VD slots for a layout in one batch.
-     * Fills {@code preset.slots[i].displayId} with the returned VD ids.
-     * Returns true if all slots succeeded.
-     */
-    public static boolean activateLayout(IBinder binder, LayoutPreset preset) throws Exception {
-        Parcel data = Parcel.obtain(), reply = Parcel.obtain();
-        try {
-            data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR);
-            data.writeInt(preset.slots.size());
-            for (LayoutPreset.SlotDef s : preset.slots) {
-                data.writeString(s.label);
-                data.writeInt(s.x); data.writeInt(s.y);
-                data.writeInt(s.w); data.writeInt(s.h);
-            }
-            binder.transact(SurfaceDaemon.TRANSACT_ACTIVATE_LAYOUT, data, reply, 0);
-            reply.readException();
-            int n = reply.readInt();
-            boolean allOk = (n > 0);
-            for (int i = 0; i < n; i++) {
-                int did = (reply.dataAvail() > 0) ? reply.readInt() : -1;
-                if (i < preset.slots.size()) {
-                    preset.slots.get(i).displayId = did;
-                    if (did < 0) allOk = false;
-                }
-            }
-            AppLogger.d(TAG, "ACTIVATE_LAYOUT n=" + n + " allOk=" + allOk);
-            return allOk;
-        } finally { data.recycle(); reply.recycle(); }
-    }
+    // NOTE — there is deliberately no batch "activateLayout" call here any more.
+    // TRANSACT_ACTIVATE_LAYOUT keyed its slots "layout_<label>_<i>" and never put the package
+    // name on the wire, so nothing it created could be found again by QUERY_SLOT, RELEASE_SLOT
+    // or RESIZE_SLOT — all three look slots up by package. A layout is now activated with one
+    // {@link #attachSlot} per zone (see FissionOrchestrator#activateLayoutManually).
+    //
+    // Addressability is the WHOLE reason, and the field record is not an argument either way:
+    // the batch path has been observed working (18 "OK surface valid pkg=layout_Zone_*" lines
+    // across INC-20260614-131051 / -131118, both DiLink 3) and failing (INC-20260615-160735,
+    // INC-20260622-080346, both DiLink 5.0) — exactly like the per-slot path. The platform is
+    // the differentiator, not the verb. Do not cite "the batch path never worked".
+    //
+    // The daemon still answers the batch verb; no client sends it.
 
+    /**
+     * Releases every slot the surface daemon holds and cancels the layout watchdogs.
+     * Used by the Layout Manager's "free mode".
+     */
     public static void deactivateLayout(IBinder binder) throws Exception {
         boolean guardiansCancelled = ProxyClient.cancelAllFissionWatchdogs();
         AppLogger.d(TAG, "DEACTIVATE_LAYOUT watchdogs cancelled=" + guardiansCancelled);

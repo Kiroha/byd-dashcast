@@ -392,49 +392,18 @@
     <string name="dpi_value_fmt" translatable="false">%1$d dpi</string>
 
     <!-- Fission multi-app projection (v1.3.30-beta+) -->
-    <string name="fission_title">Fission — Multi-apps cluster</string>
-    <string name="fission_status_idle">Appuyez sur + pour projeter une application</string>
-    <string name="fission_btn_add">+ Ajouter une app</string>
-    <string name="fission_btn_stop">Tout arrêter</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">Éditeur de layouts</string>
-    <string name="fission_editor_clear">Effacer</string>
-    <string name="fission_editor_save">Enregistrer</string>
     <string name="fission_editor_edit">Modifier</string>
     <string name="fission_editor_delete">Supprimer</string>
 
     <!-- Fission layout selector + slot management (v1.4.17-beta+) -->
     <string name="fission_layout_mode_free">Mode libre</string>
-    <string name="fission_layout_active_fmt">Layout : %1$s</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
-    <string name="fission_layout_switch">Changer</string>
     <string name="fission_layout_favorite_set_toast">Layout favori défini ✓</string>
     <string name="fission_slot_zone_bound_fmt">App liée : %1$s</string>
     <string name="fission_slot_pick_pkg">Lier une application…</string>
     <string name="fission_slot_pkg_none">Aucune — zone libre</string>
 
-    <!-- FissionActivity runtime strings -->
-    <string name="fission_idle_hint">Appuyez sur + pour projeter une application</string>
-    <string name="fission_active_count">%1$d app(s) active(s)</string>
-    <string name="fission_no_apps">Aucune application disponible</string>
-    <string name="fission_all_projected">Toutes les apps sont déjà projetées</string>
-    <string name="fission_pick_app_title">Choisir une application</string>
-    <string name="fission_place_in">Placer %1$s dans…</string>
-    <string name="fission_launch_in">Lancer %1$s dans…</string>
-    <string name="fission_mode_free">Mode libre</string>
-    <string name="fission_slot_error">Slot %1$s : %2$s</string>
+    <!-- Layout (fission) runtime strings -->
     <string name="fission_conflict_title">Conflit de projection</string>
-    <string name="fission_conflict_message">Une projection est déjà active. La stopper pour continuer ?</string>
-    <string name="fission_conflict_stop">Stopper</string>
-    <string name="fission_resize_title">Redimensionner %1$s</string>
-    <string name="fission_resize_full">Plein écran</string>
-    <string name="fission_resize_left_half">Gauche ½</string>
-    <string name="fission_resize_right_half">Droite ½</string>
-    <string name="fission_resize_left_3q">Gauche ¾</string>
-    <string name="fission_resize_right_3q">Droite ¾</string>
-    <string name="fission_close_slot_title">Fermer %1$s ?</string>
-    <string name="fission_close_slot_confirm">Fermer</string>
     <string name="layout_preset_activate">Activer</string>
     <string name="layout_preset_active_badge">ACTIF</string>
     <string name="layout_preset_deactivate">Désactiver</string>
@@ -459,10 +428,9 @@
     <string name="lm_activated_ok_fmt">%1$s activé ✓</string>
     <string name="lm_activated_partial_fmt">%1$s activé (certains slots ont échoué)</string>
     <string name="lm_activating_fmt">Activation de %1$s…</string>
-    <string name="lm_daemon_not_connected">Daemon non connecté — lancez d\'abord une projection Fission</string>
+    <string name="lm_layout_mode_disabled">Activez d’abord « Mode Layouts » dans les paramètres.</string>
     <string name="lm_delete_confirm_fmt">Supprimer « %1$s » ?</string>
     <string name="lm_draw_zone_first">Dessinez au moins une zone</string>
-    <string name="lm_edit_zones_hint">Modifiez les zones puis enregistrez</string>
     <string name="lm_error_fmt">Erreur : %1$s</string>
     <string name="lm_free_mode_toast">Mode libre activé</string>
     <string name="lm_layout_default_name_fmt">Layout %1$d</string>
@@ -471,9 +439,7 @@
     <string name="lm_layout_saved_toast">Layout enregistré ✓</string>
     <string name="lm_new_layout_name">Nouveau layout</string>
     <string name="lm_no_layout_loaded">Aucun layout chargé</string>
-    <string name="lm_no_saved_layouts">Aucun layout sauvegardé\nDessinez des zones ci-dessus et enregistrez.</string>
     <string name="lm_save_before_favorite">Enregistrez d\'abord le layout avant de le définir en favori</string>
-    <string name="lm_zone_delete_title">Supprimer la zone ?</string>
     <string name="lm_zone_edit_title_fmt">Modifier « %1$s »</string>
     <string name="lm_zone_height">Hauteur (px)</string>
     <string name="lm_zone_name_hint">Nom de la zone</string>
