@@ -14,6 +14,20 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.7-beta (versionCode 597)
+
+**Stopping projection now waits for each evicted app to be OBSERVED back on display 0 before killing it — and records where it actually was.**
+
+**The report.** `INC-20260729-201204` (DiLink 3, 1.8.6-beta): after stopping projection, tapping NewPipe in the launcher on the **centre** screen re-opened it on the **cluster**. Captured verbatim — task `#42` on `Display #1`, `intent={act=MAIN cat=[LAUNCHER]}`, `launchedFromUid=10085 launchedFromPackage=com.lexwah.kinex` (the launcher), `mBounds=Rect(0, 0 - 1920, 720)` (cluster geometry) — against the same app in `INC-20260729-134202` with `launchedFromPackage=com.android.shell`, i.e. us. The owner reports it for **every** projected app, so the display affinity is remembered per component and our teardown never rewrote it.
+
+**What the teardown did.** On this ROM `IActivityTaskManager.moveTaskToDisplay` does not exist (`moveTaskToDisplay: method unavailable on ROM → fallback launch`), so the "move" is an asynchronous **relaunch**. `ClusterSessionTracker.evictNext` force-stopped inside the launch callback — i.e. **2 ms after `startActivity` returned**: `Context.startActivity OK display=0` at `20:11:46.196`, `forceStop` at `20:11:46.198`. Every conclusion about the destination was an assumption.
+
+**What changed.** New `awaitLandingThenForceStop` polls the typed daemon verb `ProxyClient.findTaskLocationForPackage(pkg).matchDisplay(0)` every 150 ms until `ON_EXPECTED_DISPLAY`, settles 250 ms, then force-stops. The decision is extracted to a pure `ClusterEvictionPolicy` (9 unit tests). Runs on a dedicated daemon thread — that verb is a blocking binder call to the uid-2000 daemon and must never touch the UI thread. Three deliberate constraints: the 2 s budget is **shared by the whole eviction**, not granted per package (`onAllDone` is what triggers `restoreBydOnCluster`, so a per-package budget would multiply the delay before the OEM cluster returns by the app count; worst case stays under 2.5 s, measured landing is ~110 ms); an **unconfirmed landing never skips the force-stop** (trading a display-affinity bug for an app left alive on the cluster would be worse); and a failed probe yields `UNKNOWN` and keeps waiting rather than concluding — which is precisely what the `TaskLocation` type was written to enforce.
+
+**Honest scope — NOT yet proven to fix the symptom.** Re-reading the capture line by line *after* writing the fix: `am_focused_stack: [0,0,37,31,reparentToDisplay]` at `20:11:46.088` shows task 41 **did** reach display 0 and was focused there ~110 ms before the kill. So "we killed it before it landed" was **wrong**; what is true is that we killed it ~110 ms after landing and then called `removeTask`. Either the record had not committed, or `removeTask` discarded it. This build closes the real hole — never conclude from a request — and adds the line that will settle it: the journal now carries `evict: <pkg> LANDED display=0 after <ms> (<n> probes)` or `NOT-LANDED after <ms> (<n> probes, shared budget spent) lastSeen[status=… task=… display=…]`. Nothing recorded that before, which is why the first analysis had to guess. **Leading hypothesis for the next build: `removeTask`, issued as part of the force-stop, is what erases the display-0 record.** Deliberately not acted on here — `removeTask` exists to stop orphan tasks reappearing, and swapping one regression for another without evidence is what this release refuses to do.
+
+No daemon protocol change; standard projection and Layout paths untouched; no user-facing string changed. Build + lint 0/0, 186 unit tests green.
+
 ### 1.8.6-beta (versionCode 596)
 
 **Layout soundness pass, plus the DL4/DL5 instrumentation that step two of the Layout-only architecture depends on.** The standard projection path is untouched.
