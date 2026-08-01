@@ -14,6 +14,24 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.8-beta (versionCode 598)
+
+**BYD APK Extraction — a Diagnostics tool for interoperability analysis of the OEM cluster.** No production path touched.
+
+**Why.** On DiLink 5.1 (`trinket` / D50F_LC) the cluster has never displayed anything, and `INC-20260731-214358` finally showed the app cannot tell because the Android side is flawless: the nav app IS composited into the virtual display `fission_bg_XDJAScreenProjection` (`owner com.xdja.containerservice (uid 1000)`, `FLAG_OWN_CONTENT_ONLY`, `toInternalDisplay=false`), which the OEM never routes to the physical panel — and our mirror reads the SAME `layerStack`, so the preview and screenshots look perfect while the driver sees nothing. Corpus-wide, `service call AutoContainer 2 i32 1000 i32 16` returns `0` on DiLink 3/4 and `1` on DiLink 5.0 but **`-1` (Parcel `ffffffff`) on trinket in 9 captures out of 9**. That return logic lives in the OEM's own `com.xdja.containerservice`; reading it is interoperability reverse engineering of software on the tester's own vehicle (lawful under the EU Software Directive, art. 6).
+
+**What.** The empty Kotlin-stub `DiagActivity` now hosts one button, **BYD APK Extraction**, that collects off the UI thread and sends via the already-configured report channel:
+- an **inventory** of every installed package (path / size / versionCode / signer);
+- **cluster context** — `dumpsys display`, the SurfaceFlinger virtual-display section, `service list`, an `AutoContainer` dump;
+- the **native backend** — `/system/bin` + `/vendor/bin` fission/container/cluster binaries, `init.svc` states, running processes (the projection backend is partly native — `AutoContainerNative` is not a dex);
+- the **OEM cluster APKs** themselves, zipped.
+
+**Selection** — `ApkExtractionPolicy` (pure, 14 unit tests): TIER1 names `com.xdja.containerservice` / `com.byd.launchermap` / `com.example.amapservice` explicitly and pulls them first (the primary target's package name has neither "byd" nor "cluster", so a keyword-only filter would MISS it); TIER2 sweeps `cluster|xdja|fission|instrument|meter|dilink|autocontainer|automap|byd` against the package name **and** the APK path, on **all** partitions (a "cluster" package under `/data` is caught too; partition is recorded in the manifest, never used to exclude). Budget 42 MB total / 26 MB per file / 14 max — solely Telegram's 50 MB `sendDocument` ceiling, not a policy limit. Every skip is written to the manifest so a reader distinguishes "excluded" from "absent on this ROM".
+
+**Robustness.** Each step is guarded — daemon down, shell unavailable, a `dumpsys` failing, an unreadable or mid-copy-changed APK — degrades to a written line in the bundle rather than crashing the app. The UI is touched only from the main thread; the cache working dir is cleaned in `onDestroy`. No hard-coded Telegram handle, chat id or token — the existing configured destination is reused as the AAOS diagnostic already does.
+
+Diagnostics-only, dev-facing, English-only by project rule. Production paths — cluster projection, Layout, HUD, mirror, boot, hotspot, daemon protocol — are all zero-diff. 3 files added/changed; build + lint 0/0; 187 → 201 unit tests green.
+
 ### 1.8.7-beta (versionCode 597)
 
 **Stopping projection now waits for each evicted app to be OBSERVED back on display 0 before killing it — and records where it actually was.**

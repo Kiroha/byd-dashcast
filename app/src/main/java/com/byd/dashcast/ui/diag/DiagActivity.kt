@@ -3,30 +3,121 @@ package com.byd.dashcast.ui.diag
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import com.byd.dashcast.report.TelegramBugReporter
+import com.byd.dashcast.util.AppLogger
+import java.io.File
 
 /**
- * Diagnostics host — intentionally EMPTIED.
+ * Diagnostics host — rebuilt in Kotlin, English-only by project rule (SetTextI18n exempt).
  *
- * The former ~3600-line Java screen and all its Java test runners (DiLink2/4/5,
- * Mirror, Daemon) were removed to be rebuilt cleanly in Kotlin rather than
- * migrated. This stub keeps the launcher entry and the manifest component
- * (`.ui.diag.DiagActivity`) valid so no navigation or production path breaks in
- * the meantime.
+ * Currently hosts one tool: **BYD APK Extraction**. It exists for interoperability analysis of the
+ * OEM cluster — specifically why the `AutoContainer` activation call returns -1 on DiLink 5.1 while
+ * returning 0/1 on the models where projection works (9/9 trinket captures). The answer is in the
+ * OEM's own `com.xdja.containerservice`, running on the tester's own vehicle.
  *
- * The removed diagnostics were dev-only and were never wired into any production
- * runtime path (cluster / HUD prod / mirror / boot / hotspot) — confirmed by a
- * full inbound-reference + manifest + type-usage audit before removal.
+ * One button, one flow: inventory + runtime context, select the OEM cluster APKs
+ * ([ApkExtractionPolicy]: firmware partitions, named targets first, budgeted under Telegram's
+ * 50 MB ceiling), zip, and upload via the already-configured report channel. Runs off the UI
+ * thread with a visible progress log.
  */
 class DiagActivity : Activity() {
 
-    @SuppressLint("SetTextI18n") // dev-only diagnostics screen (English, SetTextI18n exempt)
+    private lateinit var logView: TextView
+    private lateinit var runBtn: Button
+    @Volatile private var lastWork: File? = null
+
+    @SuppressLint("SetTextI18n")
     override fun onCreate(saved: Bundle?) {
         super.onCreate(saved)
-        val tv = TextView(this)
-        tv.text = "Diagnostics — being rebuilt in Kotlin."
-        tv.gravity = Gravity.CENTER
-        setContentView(tv)
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(32, 32, 32, 32)
+        }
+        root.addView(TextView(this).apply { text = "Diagnostics"; textSize = 20f })
+        runBtn = Button(this).apply {
+            text = "BYD APK Extraction"
+            setOnClickListener { start() }
+        }
+        root.addView(runBtn)
+
+        logView = TextView(this).apply {
+            textSize = 12f
+            movementMethod = ScrollingMovementMethod()
+            gravity = Gravity.TOP
+        }
+        root.addView(ScrollView(this).apply {
+            addView(logView)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        })
+
+        setContentView(root)
+        log("Ready. Extracts the OEM cluster APKs from this vehicle and sends them for analysis.")
+    }
+
+    private fun start() {
+        runBtn.isEnabled = false
+        runOnUiThread { logView.text = "" }
+        log("Collecting…")
+        Thread({
+            val zip: File = try {
+                val plan = BydApkExtractionBundle.plan(this) { line -> log(line) }
+                lastWork = plan.workDir
+                log("Selected ${plan.accepted.size} OEM APK(s), ${plan.payloadBytes / 1024} KB" +
+                    (if (plan.manifestSkips.isEmpty()) "" else " (${plan.manifestSkips.size} skipped — see manifest)"))
+                BydApkExtractionBundle.materialize(plan) { line -> log(line) }
+            } catch (t: Throwable) {
+                log("failed: ${t.javaClass.simpleName}: ${t.message}")
+                resetButton()
+                return@Thread
+            }
+            log("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
+
+            if (!TelegramBugReporter.isConfigured()) {
+                log("Telegram not configured — zip kept locally at:\n${zip.absolutePath}")
+                resetButton()
+                return@Thread
+            }
+            log("uploading…")
+            TelegramBugReporter.send(this, zip,
+                "BYD APK extraction — ${BydApkExtractionBundle.header(this)}",
+                object : TelegramBugReporter.Callback {
+                    override fun onSent() {
+                        log("✓ sent. Done — you can leave this screen.")
+                        BydApkExtractionBundle.cleanup(lastWork); lastWork = null
+                        resetButton()
+                    }
+                    override fun onFailed(message: String) {
+                        log("✗ upload failed: $message\nzip kept locally at:\n${zip.absolutePath}")
+                        resetButton()
+                    }
+                })
+        }, "byd-apk-extract").start()
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun log(line: String) = runOnUiThread {
+        AppLogger.i(TAG, line)
+        logView.append(line + "\n")
+    }
+
+    private fun resetButton() = runOnUiThread { runBtn.isEnabled = true }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Free cache if the tester left before the upload finished.
+        BydApkExtractionBundle.cleanup(lastWork)
+        lastWork = null
+    }
+
+    private companion object {
+        const val TAG = "DiagActivity"
     }
 }
