@@ -800,8 +800,35 @@ android {
         // tasks reappearing, and swapping one regression for another without evidence is exactly
         // what this release refuses to do.
         // No daemon protocol change; standard projection and Layout paths untouched.)
-        versionCode 597
-        versionName "1.8.7-beta"
+        // 598 = 1.8.8-beta (BYD APK Extraction — a tool for interoperability analysis of the OEM
+        // cluster. On DiLink 5.1 ("trinket"/D50F_LC) the cluster has NEVER displayed anything, and
+        // INC-20260731-214358 finally showed why the app cannot tell: the Android side is flawless.
+        // The nav app IS composited into the virtual display "fission_bg_XDJAScreenProjection"
+        // (owner com.xdja.containerservice, FLAG_OWN_CONTENT_ONLY, toInternalDisplay=false), which
+        // the OEM never routes to the panel; our mirror reads the SAME layerStack so the preview and
+        // screenshots look perfect while the driver sees nothing. Corpus-wide the activation call
+        // `service call AutoContainer 2 i32 1000 i32 16` returns 0 on DiLink 3/4 and 1 on DiLink 5.0
+        // but -1 (Parcel ffffffff) on trinket in 9 captures out of 9. That return logic lives in the
+        // OEM's own com.xdja.containerservice; reading it is interoperability RE of software on the
+        // tester's own vehicle (lawful under the EU Software Directive art.6). The empty Kotlin-stub
+        // DiagActivity now hosts one button, "BYD APK Extraction": inventory of every installed
+        // package (path/size/versionCode/signer) + cluster context (dumpsys display, SurfaceFlinger
+        // virtual displays, service list, AutoContainer dump) + native backend (fission/container
+        // bins, init.svc, ps — AutoContainerNative is native, not dex) + the OEM cluster APKs
+        // themselves, zipped and sent via the already-configured report channel. Selection =
+        // ApkExtractionPolicy (pure, 14 tests): TIER1 names com.xdja.containerservice /
+        // com.byd.launchermap / com.example.amapservice explicitly first (the primary target's name
+        // has neither "byd" nor "cluster", so a pattern-only filter would MISS it), TIER2 sweeps
+        // name-OR-path for cluster|xdja|fission|instrument|meter|dilink|autocontainer|automap|byd on
+        // ALL partitions (so a "cluster" app under /data is caught too; partition is recorded in the
+        // manifest, never used to exclude). Budget 42 MB total / 26 MB per file / 14 max — solely
+        // Telegram's 50 MB sendDocument ceiling, not a policy limit. Every skip is written to the
+        // manifest so a reader tells "excluded" from "absent on this ROM". Diagnostics-only, dev
+        // screen, English-only by project rule; NO production path touched — cluster projection,
+        // Layout, HUD, mirror, boot, hotspot, daemon protocol all zero-diff. 3 files; build + lint
+        // 0/0; 187 -> 201 unit tests.)
+        versionCode 598
+        versionName "1.8.8-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
