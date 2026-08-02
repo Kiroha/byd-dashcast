@@ -3,36 +3,43 @@ package com.byd.dashcast.ui.diag
 import java.util.Locale
 
 /**
- * Decides which packages the BYD extraction copies, and how much of them fits.
+ * Decides which packages and native files the BYD extraction copies, and how much of them fits.
  *
  * WHY THIS EXISTS. On DiLink 5.1 ("trinket" / D50F_LC) the cluster has never displayed anything,
  * and INC-20260731-214358 showed the Android side is flawless: the app IS composited into
- * `fission_bg_XDJAScreenProjection`, a VIRTUAL display owned by `com.xdja.containerservice` with
- * `toInternalDisplay=false`, which the OEM never routes to the panel. Across the whole capture
- * corpus the activation call returns 0 on DiLink 3/4 and 1 on DiLink 5.0, but **-1 on trinket in
- * 9 captures out of 9**. The semantics of that call live in the OEM's own code; studying it is
- * interoperability analysis of software running on the tester's own vehicle.
+ * `fission_bg_XDJAScreenProjection`, a VIRTUAL display owned by `com.xdja.containerservice` which
+ * the OEM never routes to the panel. RE of the extracted OEM APKs proved the OEM nav instead
+ * launches its map onto a NEW `shared_fission_bg_XDJAScreenProjection_0` display, and that the -1
+ * from `AutoContainer` is decided in the NATIVE fission stack. Studying this is interoperability
+ * analysis of software running on the tester's own vehicle.
  *
- * SELECTION.
- *  - [TIER1]: an explicit, evidence-derived list, pulled first. It exists because the primary
- *    target, `com.xdja.containerservice`, contains neither "byd" nor "cluster" — a pattern-only
- *    filter would have missed the one package that answers the question.
- *  - [TIER2_PATTERNS]: a name/path sweep — "cluster", "byd", "xdja", "fission"… — matched against
- *    BOTH the package name and its APK path, so a package whose PATH says "cluster" is caught even
- *    when its name does not, and wherever it is installed (`/system`, `/vendor`, `/data`, …).
- *
- * Partition is recorded, not used to exclude: the manifest labels each APK `[system]` or `[data]`
- * so the analyst knows the provenance, but a match under `/data` is pulled like any other.
+ * SCOPE — deliberately narrowed to the cluster/projection surface. Earlier builds swept every
+ * `com.byd.*` package; RE showed the rest (acquisitioncontrol, xcall, filemanager, androidauto, …)
+ * has nothing to do with projection, so it is no longer pulled. What is kept: the container service
+ * (`AutoContainer`), the OEM nav (amap and its projection-manager derivatives), `clusterdebug` (the
+ * reference client of the type=1000 channel) and its derivatives, and anything whose name/path
+ * contains a cluster/projection term. Plus the NATIVE binaries and .so libraries where the real
+ * routing lives.
  */
 object ApkExtractionPolicy {
 
-    /** Total bytes of APK payload. Telegram's bot API refuses documents over 50 MB. */
+    /** Whole-bundle ceiling (APKs + native). Telegram's bot API refuses documents over 50 MB. */
     const val BUDGET_TOTAL = 42L * 1024 * 1024
 
-    /** No single APK may eat the whole budget and starve the named targets. */
-    const val BUDGET_FILE = 26L * 1024 * 1024
+    /**
+     * Bytes reserved for the native binaries/.so libraries — the APK planning cannot spend into
+     * this, so a fat APK set can never starve the native pull (that starvation is exactly why 1.8.9
+     * came back with 40 MB of APKs and no room for the .so where the -1 actually lives).
+     */
+    const val NATIVE_RESERVE = 16L * 1024 * 1024
 
-    /** Backstop against a firmware with hundreds of matching packages. */
+    /** APKs are budgeted below the reserve; native draws from the rest up to [BUDGET_TOTAL]. */
+    const val APK_BUDGET = BUDGET_TOTAL - NATIVE_RESERVE
+
+    /** No single APK may eat the whole APK budget and starve the named targets. */
+    const val BUDGET_FILE = 22L * 1024 * 1024
+
+    /** Backstop against a firmware with many matching packages. */
     const val MAX_COUNT = 14
 
     /** Read-only firmware partitions — used only to LABEL provenance in the manifest. */
@@ -41,25 +48,32 @@ object ApkExtractionPolicy {
     )
 
     /**
-     * Named from hard evidence in the captures, highest value first:
-     *  - `com.xdja.containerservice` registers the `AutoContainer` service we call **and** owns
-     *    the cluster virtual display (`owner com.xdja.containerservice (uid 1000)`). The -1 comes
-     *    from here.
-     *  - `com.byd.launchermap` hosts `com.byd.automap.meter.MeterActivity`, the OEM cluster map
-     *    that re-takes the panel (INC-20260728-222626).
-     *  - `com.example.amapservice` emits `com.byd.automap.START_MAP_VIEW` and carries
-     *    `com.byd.cluster.projectionmanager`.
+     * Named from hard evidence, highest value first (a pattern-only filter would miss
+     * `com.xdja.containerservice` — its name has neither "byd" nor "cluster"):
+     *  - `com.xdja.containerservice` — registers `AutoContainer` and owns the cluster VD. The -1.
+     *  - `com.example.amapservice` — the OEM nav; carries `com.byd.cluster.projectionmanager` and
+     *    the `setLaunchDisplayId(shared_fission_bg_XDJAScreenProjection_0)` path.
+     *  - `com.byd.automap` — the running OEM nav process on trinket (`ps` shows `com.byd.automap`).
+     *  - `com.byd.clusterdebug` — the reference client of the type=1000 "clusterdebug" channel on
+     *    DiLink 3 (the platform where it works); does ONLY `sendInfo(1000, cmd, "")`.
+     *  - `com.byd.launchermap` — hosts `com.byd.automap.meter.MeterActivity`, the OEM cluster map.
      */
     val TIER1 = listOf(
         "com.xdja.containerservice",
-        "com.byd.launchermap",
-        "com.example.amapservice"
+        "com.example.amapservice",
+        "com.byd.automap",
+        "com.byd.clusterdebug",
+        "com.byd.launchermap"
     )
 
-    /** Name/path sweep for OEM cluster/projection surface area. "cluster" is a first-class term. */
+    /**
+     * Name/path sweep for the OEM cluster/projection surface. Deliberately does NOT include the
+     * generic "byd" / "dilink" — those matched dozens of unrelated system apps. Every term here is
+     * cluster/projection-specific.
+     */
     private val TIER2_PATTERNS = listOf(
-        "cluster", "xdja", "fission", "instrument", "meter",
-        "dilink", "autocontainer", "automap", "byd"
+        "cluster", "xdja", "fission", "autocontainer", "automap", "amap",
+        "projection", "instrument", "meter"
     )
 
     enum class Tier { TIER1, TIER2, EXCLUDED }
@@ -78,8 +92,7 @@ object ApkExtractionPolicy {
      * Classifies a package by name and APK path.
      *
      * [TIER1] is the named list. [TIER2] is any package whose name OR path contains a
-     * [TIER2_PATTERNS] term — so "cluster" is found wherever it appears, whatever the partition.
-     * Everything else is [EXCLUDED] (i.e. it simply doesn't match — unrelated apps are not swept).
+     * [TIER2_PATTERNS] term. Everything else is [EXCLUDED] — unrelated apps are not swept.
      */
     @JvmStatic
     fun classify(pkg: String?, apkPath: String?): Tier {
@@ -90,15 +103,14 @@ object ApkExtractionPolicy {
     }
 
     /**
-     * Budget check for one candidate, given what has already been accepted.
-     *
-     * @return [Skip.NONE] when it fits; otherwise the reason to record in the manifest.
+     * Budget check for one APK. APKs are capped at [APK_BUDGET] so they cannot spend into the
+     * [NATIVE_RESERVE].
      */
     @JvmStatic
     fun admit(sizeBytes: Long, acceptedBytes: Long, acceptedCount: Int): Skip = when {
         acceptedCount >= MAX_COUNT -> Skip.MAX_COUNT
         sizeBytes > BUDGET_FILE -> Skip.TOO_BIG
-        acceptedBytes + sizeBytes > BUDGET_TOTAL -> Skip.OVER_BUDGET
+        acceptedBytes + sizeBytes > APK_BUDGET -> Skip.OVER_BUDGET
         else -> Skip.NONE
     }
 
@@ -110,35 +122,57 @@ object ApkExtractionPolicy {
         Tier.EXCLUDED -> 2
     }
 
-    // ── Native binaries ─────────────────────────────────────────────────────────
+    // ── Native binaries and .so libraries ───────────────────────────────────────
     //
-    // The projection backend is partly NATIVE, and the -1 our activation gets from AutoContainer
-    // is decided there, not in any APK: the running process `fission_service[ivi]` registers the
-    // `AutoContainerNative` service that returns it. Those executables are ELF files under the
-    // firmware bin dirs, not packages — the APK sweep can never reach them. They are pulled through
-    // the uid-2000 daemon (the app process cannot read system_file under SELinux).
+    // The -1 our activation gets from AutoContainer is decided in NATIVE code, not any APK: the
+    // running `fission_service[ivi]` registers the `AutoContainerNative` binder service. RE of the
+    // DL3 native pull showed the /system/bin `fission_*` files are only thin CLI front-ends — the
+    // real logic is in the .so libraries they load (libfission_services.so, and the JNI bridge
+    // libxdjacontainerservice_jni.so). Both bins and libs are pulled through the uid-2000 daemon;
+    // the app process cannot read system_file under SELinux.
 
-    /** Firmware bin dirs the native cluster/projection executables live in. */
+    /** Firmware bin dirs (native executables). */
     val NATIVE_BIN_DIRS = listOf("/system/bin", "/vendor/bin", "/system_ext/bin", "/odm/bin")
 
-    /** Native executables named from the trinket capture's `03_native_backend.txt`, pulled first. */
+    /** Firmware lib dirs (.so). 64-bit first — the cluster stack is aarch64. */
+    val NATIVE_LIB_DIRS = listOf(
+        "/system/lib64", "/vendor/lib64", "/system_ext/lib64", "/odm/lib64",
+        "/system/lib", "/vendor/lib"
+    )
+
+    /**
+     * Native files named from evidence, pulled first. Bins from the trinket/DL3
+     * `03_native_backend.txt`; libs from the DL3 pull's DT_NEEDED (the projection logic lives in
+     * these, not in the CLI bins).
+     */
     val NATIVE_NAMED = listOf(
+        // executables
         "fission_service", "fission_screennproject", "BydClusterManager",
-        "fission_corebox", "fission_cbox_disp_mgr", "fissiond", "fissiontsrv"
+        "fission_corebox", "fission_cbox_disp_mgr", "fissiond", "fissiontsrv",
+        // libraries — where the actual routing / AutoContainerNative logic lives
+        "libxdjacontainerservice_jni.so", "libfission_services.so", "libfission_event.so"
     )
 
-    /** Name sweep for the rest of the native cluster/projection surface. */
+    /** Name sweep for the rest of the native cluster/projection surface (bins and .so alike). */
     private val NATIVE_PATTERNS = listOf(
-        "fission", "cluster", "container", "xdja", "autocontainer", "instrument", "meter"
+        "fission", "cluster", "container", "xdja", "autocontainer",
+        "instrument", "meter", "projection", "kanzi"
     )
 
-    /** Per-file cap for native binaries — skips the multi-MB Kanzi renderers, keeps the dispatchers. */
+    /**
+     * Shell pre-filter pattern for enumerating the bin/lib dirs — a SUPERSET of [NATIVE_PATTERNS]
+     * and every [NATIVE_NAMED] entry, so nothing [classifyNative] would accept is filtered out
+     * before it is seen.
+     */
+    const val NATIVE_GREP = "fission|cluster|container|xdja|autocontainer|instrument|meter|projection|kanzi"
+
+    /** Per-file cap for native files — skips the multi-MB Kanzi renderers, keeps the dispatchers/libs. */
     const val NATIVE_FILE_CAP = 4L * 1024 * 1024
 
     /** Native count backstop, separate from the APK one. */
-    const val NATIVE_MAX_COUNT = 24
+    const val NATIVE_MAX_COUNT = 40
 
-    /** Classifies a native binary by file name (there is no package/path to match on). */
+    /** Classifies a native file (bin or .so) by file name. */
     @JvmStatic
     fun classifyNative(name: String?): Tier {
         if (name.isNullOrBlank()) return Tier.EXCLUDED
@@ -148,9 +182,9 @@ object ApkExtractionPolicy {
     }
 
     /**
-     * Budget for a native binary. [bundleBytesSoFar] is the WHOLE bundle so far (APKs + native
-     * already accepted): native shares the one [BUDGET_TOTAL] ceiling with the APKs, so the zip
-     * stays under Telegram's 50 MB limit whatever the mix.
+     * Budget for a native file. [bundleBytesSoFar] is the WHOLE bundle so far (APKs + native
+     * already accepted): native draws from the remaining [BUDGET_TOTAL], and thanks to
+     * [NATIVE_RESERVE] at least that many bytes are always left for it.
      */
     @JvmStatic
     fun admitNative(sizeBytes: Long, bundleBytesSoFar: Long, nativeCount: Int): Skip = when {

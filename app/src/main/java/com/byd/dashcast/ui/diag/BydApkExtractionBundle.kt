@@ -128,7 +128,7 @@ object BydApkExtractionBundle {
 
         val apkBytes = accepted.sumOf { it.sizeBytes }
         val acceptedNative = ArrayList<PlannedNative>()
-        s("select native cluster/projection binaries") {
+        s("select native cluster/projection binaries + .so libraries") {
             planNative(apkBytes, acceptedNative, skips)
         }
 
@@ -137,16 +137,19 @@ object BydApkExtractionBundle {
     }
 
     /**
-     * Enumerates the native cluster/projection executables and decides which to pull, drawing from
-     * the budget already spent by the APKs so the whole bundle stays under Telegram's ceiling.
+     * Enumerates the native cluster/projection executables AND .so libraries and decides which to
+     * pull, drawing from the budget already spent by the APKs so the whole bundle stays under
+     * Telegram's ceiling. The .so libraries matter most: RE showed the /system/bin fission_* files
+     * are thin CLI front-ends and the real routing lives in libfission_services.so / the JNI bridge.
      *
-     * Enumeration is done by the daemon shell (uid 2000), which can `stat` firmware binaries the app
-     * process cannot. A binary the shell cannot stat (SELinux — it shows as `-????` in a listing)
+     * Enumeration is done by the daemon shell (uid 2000), which can `stat` firmware files the app
+     * process cannot. A file the shell cannot stat (SELinux — it shows as `-????` in a listing)
      * yields no size line and is recorded as unreadable; nothing is copied here.
      */
     private fun planNative(apkBytes: Long, accepted: MutableList<PlannedNative>, skips: MutableList<String>) {
-        val dirs = ApkExtractionPolicy.NATIVE_BIN_DIRS.joinToString(" ")
-        val pat = "fission|cluster|container|xdja|autocontainer|instrument|meter"
+        val dirs = (ApkExtractionPolicy.NATIVE_BIN_DIRS + ApkExtractionPolicy.NATIVE_LIB_DIRS)
+            .joinToString(" ")
+        val pat = ApkExtractionPolicy.NATIVE_GREP
         // Emit "path|size" per matching, stat-able file. `stat` failing (unreadable) drops the line.
         val listing = sh(
             "for d in $dirs; do " +

@@ -14,6 +14,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.10-beta (versionCode 600)
+
+**BYD APK Extraction tuning — capture the RIGHT things.** Diagnostics-only; no production path touched.
+
+**`.so` libraries.** RE of the 1.8.9 DL3 native pull showed the `/system/bin` `fission_*` files are thin CLI front-ends — they link `libfission_services.so` / `libfission_event.so` / the JNI bridge `libxdjacontainerservice_jni.so` (`System.loadLibrary("xdjacontainerservice_jni")` in the containerservice APK), and THAT is where `AutoContainerNative` and the projection routing (and the `-1`) actually live. The tool now also pulls named + swept `.so` from `/system/lib64`, `/vendor/lib64`, `/system_ext/lib64`, `/odm/lib64` (+ 32-bit `lib`) through the uid-2000 daemon's `TXN_READ_FILE_CHUNK`, same transport as the bins. `NATIVE_GREP` is a unit-tested **superset** of every `NATIVE_PATTERNS` term and `NATIVE_NAMED` file, so the shell pre-filter can never drop something `classifyNative` would accept.
+
+**Narrowed APK scope.** The old TIER2 sweep matched the generic `"byd"` / `"dilink"` and dragged in dozens of unrelated system apps — `acquisitioncontrol`, `xcall`, `filemanager`, `androidauto`, `media.autoplay`, `network.networksetting`, `logswitch`, `appstartmanagement`… all RE'd, none touching projection. Those terms are removed; TIER2 is now `cluster` / `xdja` / `fission` / `autocontainer` / `automap` / `amap` / `projection` / `instrument` / `meter` only. TIER1 gains `com.byd.clusterdebug` (the reference `type=1000` client) and `com.byd.automap` (the running OEM nav process).
+
+**Budget rebalance.** Shrinking the APK set freed room, and a `NATIVE_RESERVE` (16 MB) now caps APK spending at `APK_BUDGET` (26 MB) so a fat APK set can never again starve the `.so` pull — which is exactly why 1.8.9 came back with 40 MB of APKs and zero libraries. Whole-bundle ceiling stays 42 MB < Telegram's 50 MB `sendDocument` limit; every skip recorded in the manifest with `[native]` / `[system|data]` labels.
+
+Diagnostics-only, dev-facing; standard / DL3 / DL4 / DL5 projection untouched; no daemon protocol change; build + lint 0/0; 214 → 219 unit tests green.
+
 ### 1.8.9-beta (versionCode 599)
 
 **The DiLink 5.1 cluster fix + native-binary extraction — both from RE of the OEM APKs the extraction tool pulled off a trinket car.** DL3/DL4/DL5.0 untouched.

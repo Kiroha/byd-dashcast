@@ -860,8 +860,29 @@ android {
         // per-file cap 4 MB (skips the 8 MB Kanzi renderers), sharing the one 42 MB bundle budget so
         // the zip stays under Telegram's 50 MB (7 unit tests). Standard/DL3/DL4/DL5.0 projection
         // untouched; no daemon protocol change; build + lint 0/0; 201 -> 214 unit tests.)
-        versionCode 599
-        versionName "1.8.9-beta"
+        // 600 = 1.8.10-beta (BYD APK Extraction tuning — capture the RIGHT things. Two changes,
+        // diagnostics-only, no production path touched. (1) .SO LIBRARIES: RE of the 1.8.9 DL3
+        // native pull showed the /system/bin fission_* files are thin CLI front-ends — they link
+        // libfission_services.so / libfission_event.so / the JNI bridge libxdjacontainerservice_jni.so
+        // (System.loadLibrary in the containerservice APK), and THAT is where AutoContainerNative and
+        // the projection routing (and the -1) actually live. The tool now also pulls named + swept
+        // .so from /system/lib64, /vendor/lib64, /system_ext/lib64, /odm/lib64 (+ 32-bit lib) through
+        // the uid-2000 daemon's TXN_READ_FILE_CHUNK, same as the bins. NATIVE_GREP is a proven
+        // superset of every NATIVE_PATTERNS term and NATIVE_NAMED file so the shell pre-filter can
+        // never drop something classifyNative would accept (unit-tested). (2) NARROWED APK SCOPE:
+        // the old TIER2 sweep matched the generic "byd"/"dilink" and dragged in dozens of unrelated
+        // system apps (acquisitioncontrol, xcall, filemanager, androidauto, media.autoplay,
+        // networksetting, logswitch, appstartmanagement…) — all RE'd, none touch projection. Those
+        // terms are removed; TIER2 is now cluster/xdja/fission/autocontainer/automap/amap/projection/
+        // instrument/meter only, and TIER1 gains com.byd.clusterdebug (the reference type=1000 client)
+        // and com.byd.automap (the running OEM nav). (3) BUDGET REBALANCE: shrinking the APK set freed
+        // room, and a NATIVE_RESERVE (16 MB) now caps APK spending at APK_BUDGET (26 MB) so a fat APK
+        // set can never again starve the .so pull — which is exactly why 1.8.9 came back with 40 MB
+        // of APKs and no libs. Whole-bundle ceiling stays 42 MB < Telegram's 50 MB. Every skip
+        // recorded in the manifest with [native]/[system|data] labels. 214 -> 219 unit tests; lint
+        // 0/0; no daemon protocol change; standard/DL3/DL4/DL5 projection untouched.)
+        versionCode 600
+        versionName "1.8.10-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
