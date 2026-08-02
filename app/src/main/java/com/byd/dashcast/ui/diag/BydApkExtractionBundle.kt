@@ -36,14 +36,18 @@ object BydApkExtractionBundle {
     /** One planned APK copy: decided in [plan], executed in [materialize]. */
     data class PlannedApk(val pkg: String, val apkPath: String, val sizeBytes: Long, val tier: ApkExtractionPolicy.Tier)
 
+    /** One planned native-binary pull (through the daemon): decided in [plan], executed in [materialize]. */
+    data class PlannedNative(val name: String, val path: String, val sizeBytes: Long, val tier: ApkExtractionPolicy.Tier)
+
     /**
      * The read-only result of [plan]. [workDir] already holds the text artefacts (inventory +
-     * context); [accepted] is what [materialize] will copy; [manifestSkips] records every
-     * rejection with its reason. [payloadBytes] is the APK total the tester is asked to approve.
+     * context); [accepted] / [acceptedNative] are what [materialize] will copy; [manifestSkips]
+     * records every rejection with its reason. [payloadBytes] is the total (APKs + native).
      */
     data class Plan(
         val workDir: File,
         val accepted: List<PlannedApk>,
+        val acceptedNative: List<PlannedNative>,
         val manifestSkips: List<String>,
         val payloadBytes: Long
     )
@@ -118,12 +122,72 @@ object BydApkExtractionBundle {
 
         val accepted = ArrayList<PlannedApk>()
         val skips = ArrayList<String>()
-        s("select OEM cluster APKs (system partitions only)") {
+        s("select OEM cluster APKs") {
             planApks(pmOut, accepted, skips)
         }
 
-        val payload = accepted.sumOf { it.sizeBytes }
-        return Plan(work, accepted, skips, payload)
+        val apkBytes = accepted.sumOf { it.sizeBytes }
+        val acceptedNative = ArrayList<PlannedNative>()
+        s("select native cluster/projection binaries") {
+            planNative(apkBytes, acceptedNative, skips)
+        }
+
+        val payload = apkBytes + acceptedNative.sumOf { it.sizeBytes }
+        return Plan(work, accepted, acceptedNative, skips, payload)
+    }
+
+    /**
+     * Enumerates the native cluster/projection executables and decides which to pull, drawing from
+     * the budget already spent by the APKs so the whole bundle stays under Telegram's ceiling.
+     *
+     * Enumeration is done by the daemon shell (uid 2000), which can `stat` firmware binaries the app
+     * process cannot. A binary the shell cannot stat (SELinux — it shows as `-????` in a listing)
+     * yields no size line and is recorded as unreadable; nothing is copied here.
+     */
+    private fun planNative(apkBytes: Long, accepted: MutableList<PlannedNative>, skips: MutableList<String>) {
+        val dirs = ApkExtractionPolicy.NATIVE_BIN_DIRS.joinToString(" ")
+        val pat = "fission|cluster|container|xdja|autocontainer|instrument|meter"
+        // Emit "path|size" per matching, stat-able file. `stat` failing (unreadable) drops the line.
+        val listing = sh(
+            "for d in $dirs; do " +
+            "for f in \$(ls \"\$d\" 2>/dev/null | grep -iE '$pat'); do " +
+            "p=\"\$d/\$f\"; sz=\$(stat -c %s \"\$p\" 2>/dev/null) && echo \"\$p|\$sz\"; " +
+            "done; done"
+        )
+
+        data class Cand(val name: String, val path: String, val size: Long, val tier: ApkExtractionPolicy.Tier)
+        val cands = ArrayList<Cand>()
+        val seen = HashSet<String>()
+        for (raw in listing.lineSequence()) {
+            val line = raw.trim()
+            val bar = line.lastIndexOf('|')
+            if (bar <= 0) continue
+            val path = line.substring(0, bar)
+            val size = line.substring(bar + 1).toLongOrNull() ?: continue
+            val name = path.substringAfterLast('/')
+            if (!seen.add(name)) continue // same binary symlinked/duplicated across dirs
+            val tier = ApkExtractionPolicy.classifyNative(name)
+            if (tier == ApkExtractionPolicy.Tier.EXCLUDED) continue
+            cands.add(Cand(name, path, size, tier))
+        }
+        cands.sortBy { ApkExtractionPolicy.order(it.tier) }
+
+        var bundleBytes = apkBytes
+        for (c in cands) {
+            if (c.size <= 0) { skips.add("SKIP native ${c.name}: unreadable/zero"); continue }
+            when (ApkExtractionPolicy.admitNative(c.size, bundleBytes, accepted.size)) {
+                ApkExtractionPolicy.Skip.NONE -> {
+                    accepted.add(PlannedNative(c.name, c.path, c.size, c.tier))
+                    bundleBytes += c.size
+                }
+                ApkExtractionPolicy.Skip.TOO_BIG ->
+                    skips.add("SKIP native ${c.name}: too big (${c.size / 1024 / 1024} MB > per-file cap)")
+                ApkExtractionPolicy.Skip.OVER_BUDGET ->
+                    skips.add("SKIP native ${c.name}: over bundle budget (${c.size / 1024} KB)")
+                ApkExtractionPolicy.Skip.MAX_COUNT ->
+                    skips.add("SKIP native ${c.name}: max native count reached")
+            }
+        }
     }
 
     private fun buildInventory(pmOut: String): String {
@@ -216,13 +280,59 @@ object BydApkExtractionBundle {
                 manifest.append("FAIL ${a.pkg}: ${t.javaClass.simpleName}: ${t.message}\n")
             }
         }
+        // Native binaries — pulled through the daemon into native/, since the app process cannot
+        // read system_file. A pull that yields no bytes (SELinux denied the daemon too) is recorded.
+        var nativeCopied = 0
+        if (plan.acceptedNative.isNotEmpty()) {
+            val nativeDir = File(plan.workDir, "native").apply { mkdirs() }
+            for (n in plan.acceptedNative) {
+                try {
+                    val got = pullViaDaemon(n.path, File(nativeDir, n.name), n.sizeBytes)
+                    if (got > 0) {
+                        nativeCopied++
+                        bytes += got
+                        progress("    + native ${n.name} (${got / 1024} KB)")
+                        manifest.append("OK   native ${n.name} [${n.tier}] (${got / 1024} KB) ${n.path}\n")
+                    } else {
+                        manifest.append("FAIL native ${n.name}: daemon read returned no bytes (SELinux?) ${n.path}\n")
+                    }
+                } catch (t: Throwable) {
+                    manifest.append("FAIL native ${n.name}: ${t.javaClass.simpleName}: ${t.message}\n")
+                }
+            }
+        }
+
         manifest.append("\n")
         for (line in plan.manifestSkips) manifest.append(line).append("\n")
-        manifest.append("\nCopied: $copied APK(s), ${bytes / 1024 / 1024} MB\n")
+        manifest.append("\nCopied: $copied APK(s) + $nativeCopied native, ${bytes / 1024 / 1024} MB\n")
         write(plan.workDir, "04_apk_manifest.txt", manifest.toString())
 
         progress("zipping…")
         return zipDir(plan.workDir)
+    }
+
+    /** Chunk size per daemon read — well under the ~1 MB binder transaction limit. */
+    private const val PULL_CHUNK = 512 * 1024
+
+    /**
+     * Streams [path] out of the device through the uid-2000 daemon into [dst], chunk by chunk.
+     * Returns the number of bytes written (0 if the daemon could read nothing). [expected] bounds
+     * the loop so a misbehaving reader cannot spin forever.
+     */
+    private fun pullViaDaemon(path: String, dst: File, expected: Long): Long {
+        var offset = 0L
+        FileOutputStream(dst).use { out ->
+            while (offset < expected + PULL_CHUNK) {
+                val chunk = ProxyClient.readFileChunk(path, offset, PULL_CHUNK)
+                if (chunk.isEmpty()) break
+                out.write(chunk)
+                offset += chunk.size
+                if (chunk.size < PULL_CHUNK) break // short read = EOF
+            }
+        }
+        val written = dst.length()
+        if (written <= 0) { try { dst.delete() } catch (_: Throwable) {} }
+        return written
     }
 
     private fun zipDir(work: File): File {

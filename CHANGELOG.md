@@ -14,6 +14,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.9-beta (versionCode 599)
+
+**The DiLink 5.1 cluster fix + native-binary extraction — both from RE of the OEM APKs the extraction tool pulled off a trinket car.** DL3/DL4/DL5.0 untouched.
+
+**RE finding (`com.example.amapservice` vc10513003 + `com.xdja.containerservice` vc33, both A13).** The `-1` from `service call AutoContainer 2 i32 1000 i32 16` was a **red herring**. Its `Parcel(00000000 ffffffff)` = `writeNoException(0)` + return `-1`, so it is NOT missing-service (that `IllegalStateException` encodes `0xfffffffb`) and NOT a permission denial (`SecurityException` encodes `0xffffffff` in the FIRST word). The Java bridge fully succeeds; the native `AutoContainerNative` (registered by the running `fission_service[ivi]`) rejects the `clusterdebug` channel `type=1000`. But `type=1000` places **no pixels anywhere** — the OEM nav reaches the panel by **launching an Activity onto the display named `shared_fission_bg_XDJAScreenProjection_0`** (proven in `BydProjectionService`: `getName().equals("shared_fission_bg_XDJAScreenProjection_0")` → `getDisplayId()` → `setLaunchDisplayId()`), a virtual display present **only on trinket**. `AutoSharedDisplay` composites those shared containers at layer 100/101 **above** the plain `fission_bg_XDJAScreenProjection` (the OEM's debug target, `mDebugClusterProjectionDisplayId`) — so DashCast, projecting onto the plain display, was drawn **under** the panel foreground. Exactly the symptom: composited on `fission_bg`, panel blank.
+
+**The fix.** `ClusterDisplayNames.clusterNamePriority` ranks `shared_..._0` > `_1` > plain among cluster displays, and `findClusterDisplay` now picks the best-ranked candidate instead of the first match. It is the OEM's **own** primitive (`setLaunchDisplayId` + `startActivity`), needs **no** signature-gated API (unlike `IContentProjectionManager` / `AutoContainerManager`, both refused to our testkey build), and is **self-gating**: the `shared_` prefix exists only on trinket, so on DL3 / DL5.0 / DL4 every candidate ranks equal-last and the previous first-match order is preserved bit-for-bit (6 unit tests). Conservatively **keeps** the existing `sendInfo(1000,16)` — one variable at a time; dropping it could remove a needed projection-mode side-effect. **Open risk, only an on-car capture can settle it:** whether the app enumerates `shared_0` at our projection time, and whether cross-display launch onto it is permitted. The build logs every cluster display it sees and which it chose, so the next report is decisive either way.
+
+**Native extraction.** The `-1` is decided in the native `fission_service` binary, which the APK-only 1.8.8 tool could not reach. **BYD APK Extraction now also pulls named native binaries** (`fission_service`, `fission_screennproject`, `BydClusterManager`…) plus a `fission|cluster|container|xdja|instrument|meter` sweep of `/system/bin`, `/vendor/bin`, `/system_ext/bin`, `/odm/bin` through the uid-2000 daemon (the app process cannot read `system_file` under SELinux), streamed via the existing `TXN_READ_FILE_CHUNK`. Per-file cap 4 MB (skips the 8 MB Kanzi renderers); native shares the one 42 MB bundle budget so the zip stays under Telegram's 50 MB; every skip recorded in the manifest with `[native]`/`[system|data]` labels (7 unit tests).
+
+Standard / DL3 / DL4 / DL5.0 projection untouched; no daemon protocol change; build + lint 0/0; 201 → 214 unit tests green.
+
 ### 1.8.8-beta (versionCode 598)
 
 **BYD APK Extraction — a Diagnostics tool for interoperability analysis of the OEM cluster.** No production path touched.

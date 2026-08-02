@@ -133,4 +133,55 @@ class ApkExtractionPolicyTest {
         // A single file must not be allowed to consume the whole budget and starve tier 1.
         assertTrue(ApkExtractionPolicy.BUDGET_FILE < ApkExtractionPolicy.BUDGET_TOTAL)
     }
+
+    // ── native binaries ─────────────────────────────────────────────────────────
+
+    @Test
+    fun `the native process that returns the -1 is a named tier1 target`() {
+        // fission_service registers AutoContainerNative, which returns -1 on trinket.
+        assertEquals(Tier.TIER1, ApkExtractionPolicy.classifyNative("fission_service"))
+        assertEquals(Tier.TIER1, ApkExtractionPolicy.classifyNative("fission_screennproject"))
+        assertEquals(Tier.TIER1, ApkExtractionPolicy.classifyNative("BydClusterManager"))
+    }
+
+    @Test
+    fun `an unrelated fission-family binary matches the native sweep as tier2`() {
+        assertEquals(Tier.TIER2, ApkExtractionPolicy.classifyNative("fission_toolbox"))
+        assertEquals(Tier.TIER2, ApkExtractionPolicy.classifyNative("BydClusterKanzi"))
+    }
+
+    @Test
+    fun `an unrelated system binary is excluded from the native sweep`() {
+        assertEquals(Tier.EXCLUDED, ApkExtractionPolicy.classifyNative("toybox"))
+        assertEquals(Tier.EXCLUDED, ApkExtractionPolicy.classifyNative(""))
+        assertEquals(Tier.EXCLUDED, ApkExtractionPolicy.classifyNative(null))
+    }
+
+    @Test
+    fun `a small native dispatcher within budget is admitted`() {
+        assertEquals(Skip.NONE, ApkExtractionPolicy.admitNative(30 * 1024, 20L * 1024 * 1024, 0))
+    }
+
+    @Test
+    fun `the multi-MB Kanzi renderer is skipped by the native per-file cap`() {
+        assertEquals(
+            Skip.TOO_BIG,
+            ApkExtractionPolicy.admitNative(8L * 1024 * 1024, 0L, 0)
+        )
+    }
+
+    @Test
+    fun `native shares the APK budget so the whole bundle stays under Telegram's ceiling`() {
+        // With the APKs already near the ceiling, a native file that would overflow is rejected.
+        val nearFull = ApkExtractionPolicy.BUDGET_TOTAL - 10 * 1024
+        assertEquals(Skip.OVER_BUDGET, ApkExtractionPolicy.admitNative(1L * 1024 * 1024, nearFull, 1))
+    }
+
+    @Test
+    fun `native count backstop rejects beyond the native max`() {
+        assertEquals(
+            Skip.MAX_COUNT,
+            ApkExtractionPolicy.admitNative(1024, 0L, ApkExtractionPolicy.NATIVE_MAX_COUNT)
+        )
+    }
 }

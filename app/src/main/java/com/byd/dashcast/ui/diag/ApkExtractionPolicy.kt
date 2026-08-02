@@ -109,4 +109,54 @@ object ApkExtractionPolicy {
         Tier.TIER2 -> 1
         Tier.EXCLUDED -> 2
     }
+
+    // ── Native binaries ─────────────────────────────────────────────────────────
+    //
+    // The projection backend is partly NATIVE, and the -1 our activation gets from AutoContainer
+    // is decided there, not in any APK: the running process `fission_service[ivi]` registers the
+    // `AutoContainerNative` service that returns it. Those executables are ELF files under the
+    // firmware bin dirs, not packages — the APK sweep can never reach them. They are pulled through
+    // the uid-2000 daemon (the app process cannot read system_file under SELinux).
+
+    /** Firmware bin dirs the native cluster/projection executables live in. */
+    val NATIVE_BIN_DIRS = listOf("/system/bin", "/vendor/bin", "/system_ext/bin", "/odm/bin")
+
+    /** Native executables named from the trinket capture's `03_native_backend.txt`, pulled first. */
+    val NATIVE_NAMED = listOf(
+        "fission_service", "fission_screennproject", "BydClusterManager",
+        "fission_corebox", "fission_cbox_disp_mgr", "fissiond", "fissiontsrv"
+    )
+
+    /** Name sweep for the rest of the native cluster/projection surface. */
+    private val NATIVE_PATTERNS = listOf(
+        "fission", "cluster", "container", "xdja", "autocontainer", "instrument", "meter"
+    )
+
+    /** Per-file cap for native binaries — skips the multi-MB Kanzi renderers, keeps the dispatchers. */
+    const val NATIVE_FILE_CAP = 4L * 1024 * 1024
+
+    /** Native count backstop, separate from the APK one. */
+    const val NATIVE_MAX_COUNT = 24
+
+    /** Classifies a native binary by file name (there is no package/path to match on). */
+    @JvmStatic
+    fun classifyNative(name: String?): Tier {
+        if (name.isNullOrBlank()) return Tier.EXCLUDED
+        if (NATIVE_NAMED.contains(name)) return Tier.TIER1
+        val low = name.lowercase(Locale.US)
+        return if (NATIVE_PATTERNS.any { low.contains(it) }) Tier.TIER2 else Tier.EXCLUDED
+    }
+
+    /**
+     * Budget for a native binary. [bundleBytesSoFar] is the WHOLE bundle so far (APKs + native
+     * already accepted): native shares the one [BUDGET_TOTAL] ceiling with the APKs, so the zip
+     * stays under Telegram's 50 MB limit whatever the mix.
+     */
+    @JvmStatic
+    fun admitNative(sizeBytes: Long, bundleBytesSoFar: Long, nativeCount: Int): Skip = when {
+        nativeCount >= NATIVE_MAX_COUNT -> Skip.MAX_COUNT
+        sizeBytes > NATIVE_FILE_CAP -> Skip.TOO_BIG
+        bundleBytesSoFar + sizeBytes > BUDGET_TOTAL -> Skip.OVER_BUDGET
+        else -> Skip.NONE
+    }
 }

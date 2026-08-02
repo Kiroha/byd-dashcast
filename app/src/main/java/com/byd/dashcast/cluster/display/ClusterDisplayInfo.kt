@@ -98,6 +98,38 @@ object ClusterDisplayNames {
         val lower = name.lowercase(Locale.ROOT)
         return lower.contains("xdja") || lower.contains("fission")
     }
+
+    /**
+     * Preference rank among cluster displays — LOWER is preferred. Only meaningful for names that
+     * already pass [isKnownClusterName].
+     *
+     * WHY (trinket / DiLink 5.1, from RE of the OEM nav com.example.amapservice, vc33/A13).
+     * On trinket the OEM added two virtual displays, `shared_fission_bg_XDJAScreenProjection_0`
+     * and `_1`, and its own map is placed on the panel by launching an Activity onto `..._0` —
+     * proven in `BydProjectionService`: it enumerates displays, matches
+     * `getName().equals("shared_fission_bg_XDJAScreenProjection_0")`, takes `getDisplayId()` and
+     * `setLaunchDisplayId(id)`. The plain `fission_bg_XDJAScreenProjection` is only the OEM's
+     * DEBUG target (`mDebugClusterProjectionDisplayId`), and `AutoSharedDisplay` composites the
+     * shared containers ABOVE it (layer 100/101 on the plain display's own layerStack) — so a
+     * client that projects onto the plain display is drawn UNDER the panel foreground and never
+     * seen. That is exactly DashCast's trinket symptom: composited on `fission_bg`, panel blank.
+     *
+     * So when several cluster displays are present, prefer the OEM's own production target.
+     *
+     * SELF-GATING: the `shared_` prefix exists only on trinket. On DL3 / DL5.0 / DL4 the cluster
+     * display name carries no `shared_`, every candidate ranks equal-last (2), and the previous
+     * first-match order is preserved bit-for-bit. No platform flag needed.
+     */
+    @JvmStatic
+    fun clusterNamePriority(name: String?): Int {
+        val lower = (name ?: "").lowercase(Locale.ROOT)
+        if (!lower.contains("shared_")) return 2
+        return when {
+            lower.endsWith("_0") -> 0
+            lower.endsWith("_1") -> 1
+            else -> 2
+        }
+    }
 }
 
 /**

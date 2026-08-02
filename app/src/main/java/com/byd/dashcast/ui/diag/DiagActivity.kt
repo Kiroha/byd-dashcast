@@ -70,7 +70,8 @@ class DiagActivity : Activity() {
             val zip: File = try {
                 val plan = BydApkExtractionBundle.plan(this) { line -> log(line) }
                 lastWork = plan.workDir
-                log("Selected ${plan.accepted.size} OEM APK(s), ${plan.payloadBytes / 1024} KB" +
+                log("Selected ${plan.accepted.size} OEM APK(s) + ${plan.acceptedNative.size} native, " +
+                    "${plan.payloadBytes / 1024} KB" +
                     (if (plan.manifestSkips.isEmpty()) "" else " (${plan.manifestSkips.size} skipped — see manifest)"))
                 BydApkExtractionBundle.materialize(plan) { line -> log(line) }
             } catch (t: Throwable) {

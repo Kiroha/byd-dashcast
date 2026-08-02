@@ -827,8 +827,41 @@ android {
         // screen, English-only by project rule; NO production path touched — cluster projection,
         // Layout, HUD, mirror, boot, hotspot, daemon protocol all zero-diff. 3 files; build + lint
         // 0/0; 187 -> 201 unit tests.)
-        versionCode 598
-        versionName "1.8.8-beta"
+        // 599 = 1.8.9-beta (TRINKET FIX + native-binary extraction, both from RE of the extracted
+        // OEM APKs. RE FINDING (com.example.amapservice vc10513003 / com.xdja.containerservice vc33,
+        // both A13, pulled by the 1.8.8 tool): the -1 from `service call AutoContainer 2 i32 1000
+        // i32 16` was a RED HERRING. Its Parcel(00000000 ffffffff) = writeNoException + return -1,
+        // so NOT missing-service (that IllegalStateException = 0xfffffffb) and NOT permission
+        // (SecurityException = 0xffffffff in the FIRST word) — the Java bridge fully succeeds and the
+        // NATIVE AutoContainerNative (registered by the running fission_service[ivi]) rejects the
+        // clusterdebug channel type=1000. But type=1000 places NO pixels anywhere: the OEM nav gets
+        // onto the panel by LAUNCHING AN ACTIVITY onto the display named
+        // "shared_fission_bg_XDJAScreenProjection_0" (proven in BydProjectionService: getName().equals
+        // → getDisplayId → setLaunchDisplayId), a NEW virtual display present only on trinket.
+        // AutoSharedDisplay composites those shared containers at layer 100/101 ABOVE the plain
+        // fission_bg_XDJAScreenProjection (the OEM's DEBUG target, mDebugClusterProjectionDisplayId) —
+        // so DashCast, which projected onto the plain display, was drawn UNDER the panel foreground.
+        // Exactly the symptom: composited on fission_bg, panel blank.
+        // THE FIX: ClusterDisplayNames.clusterNamePriority prefers shared_..._0 > _1 > plain among
+        // cluster displays, and findClusterDisplay picks the best instead of the first match. It is
+        // the OEM's OWN primitive (setLaunchDisplayId+startActivity), needs NO signature-gated API
+        // (unlike IContentProjectionManager / AutoContainerManager, both refused to our testkey), and
+        // is SELF-GATING: "shared_" exists only on trinket, so on DL3/DL5.0/DL4 every candidate ranks
+        // equal-last and the previous first-match order is preserved bit-for-bit (6 unit tests).
+        // Conservatively KEEPS the existing sendInfo(1000,16) — one variable at a time; dropping it
+        // could remove a needed projection-mode side-effect. Open risk (only an on-car capture can
+        // settle): whether the app enumerates shared_0 at our projection time, and whether cross-
+        // display launch onto it is permitted; the every-candidate log line makes the capture decisive.
+        // NATIVE EXTRACTION: the -1 is decided in the native fission_service binary, which the APK-only
+        // 1.8.8 tool could not reach. BYD APK Extraction now also pulls named native binaries
+        // (fission_service, fission_screennproject, BydClusterManager…) + a fission|cluster|container|
+        // xdja sweep of /system/bin,/vendor/bin,/system_ext/bin,/odm/bin through the uid-2000 daemon
+        // (the app process cannot read system_file under SELinux), chunked via TXN_READ_FILE_CHUNK,
+        // per-file cap 4 MB (skips the 8 MB Kanzi renderers), sharing the one 42 MB bundle budget so
+        // the zip stays under Telegram's 50 MB (7 unit tests). Standard/DL3/DL4/DL5.0 projection
+        // untouched; no daemon protocol change; build + lint 0/0; 201 -> 214 unit tests.)
+        versionCode 599
+        versionName "1.8.9-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
