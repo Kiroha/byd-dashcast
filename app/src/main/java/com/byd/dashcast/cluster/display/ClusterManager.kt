@@ -796,28 +796,52 @@ class ClusterManager(context: Context) {
     // ── Cluster display detection ─────────────────────────────────────────
 
     private fun findClusterDisplay(dm: DisplayManager): Display? {
-        // Strategy 1: PRESENTATION category — prefer displays with a known cluster name.
+        // Strategy 1: PRESENTATION category — prefer displays with a known cluster name, and among
+        // those prefer the OEM's production target (shared_..._0) over the debug one. See
+        // ClusterDisplayNames.clusterNamePriority: self-gating, no-op off trinket.
         val presentations = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
         var fallback: Display? = null
         if (presentations != null) {
+            var best: Display? = null
             for (d in presentations) {
                 if (d.displayId == 0) continue
                 AppLogger.d(TAG, "PRESENTATION candidate: id=${d.displayId} name=${d.name}")
-                if (isKnownClusterName(d.name)) return d
-                if (fallback == null) fallback = d // unnamed non-zero: keep as fallback
+                if (isKnownClusterName(d.name)) {
+                    if (best == null || ClusterDisplayNames.clusterNamePriority(d.name)
+                            < ClusterDisplayNames.clusterNamePriority(best.name)) {
+                        best = d
+                    }
+                } else if (fallback == null) {
+                    fallback = d // unnamed non-zero: keep as fallback
+                }
+            }
+            if (best != null) {
+                AppLogger.i(TAG, "cluster display picked: id=${best.displayId} name=${best.name}")
+                return best
             }
         }
         if (fallback != null) return fallback
 
-        // Strategy 2: any non-default display — prefer named, fall back to first.
+        // Strategy 2: any non-default display — prefer named (by the same priority), else first.
         val all = dm.displays
         if (all != null) {
+            var best: Display? = null
             var anyNonDefault: Display? = null
             for (d in all) {
                 if (d.displayId == 0) continue
                 AppLogger.d(TAG, "Non-default candidate: id=${d.displayId} name=${d.name}")
-                if (isKnownClusterName(d.name)) return d
-                if (anyNonDefault == null) anyNonDefault = d
+                if (isKnownClusterName(d.name)) {
+                    if (best == null || ClusterDisplayNames.clusterNamePriority(d.name)
+                            < ClusterDisplayNames.clusterNamePriority(best.name)) {
+                        best = d
+                    }
+                } else if (anyNonDefault == null) {
+                    anyNonDefault = d
+                }
+            }
+            if (best != null) {
+                AppLogger.i(TAG, "cluster display picked: id=${best.displayId} name=${best.name}")
+                return best
             }
             if (anyNonDefault != null) return anyNonDefault
         }
