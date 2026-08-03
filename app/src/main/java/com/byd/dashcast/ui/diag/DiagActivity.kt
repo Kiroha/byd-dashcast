@@ -2,6 +2,7 @@ package com.byd.dashcast.ui.diag
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
@@ -9,6 +10,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
 import java.io.File
@@ -43,7 +45,9 @@ class DiagActivity : Activity() {
         root.addView(TextView(this).apply { text = "Diagnostics"; textSize = 20f })
         runBtn = Button(this).apply {
             text = "BYD APK Extraction"
-            setOnClickListener { start() }
+            // On DiLink 3 / DiLink 5.0 the OEM firmware has already been fully extracted; the
+            // button reports that and sends nothing. Everywhere else it runs the extraction.
+            setOnClickListener { if (reComplete) showReCompleteMessage() else start() }
         }
         root.addView(runBtn)
 
@@ -59,10 +63,38 @@ class DiagActivity : Activity() {
         })
 
         setContentView(root)
-        log("Ready. Extracts the OEM cluster APKs from this vehicle and sends them for analysis.")
+        if (reComplete) {
+            runBtn.text = "BYD APK Extraction — complete on this platform"
+            showReCompleteMessage()
+        } else {
+            log("Ready. Extracts the OEM cluster APKs from this vehicle and sends them for analysis.")
+        }
+    }
+
+    /** DiLink 3 / DiLink 5.0 are fully mined — see [ApkExtractionPolicy.isPlatformFullyMined]. */
+    private val reComplete: Boolean by lazy {
+        try {
+            val p = Platform.get()
+            ApkExtractionPolicy.isPlatformFullyMined(
+                p.isDiLink3(this), p.isDiLink5(this), Build.VERSION.SDK_INT)
+        } catch (t: Throwable) {
+            // Fail OPEN: if platform detection throws, keep extraction available rather than
+            // silently blocking it on a platform we might still need.
+            false
+        }
+    }
+
+    private fun showReCompleteMessage() {
+        runOnUiThread { logView.text = "" }
+        log("Reverse engineering complete for this platform (DiLink 3 / DiLink 5.0).")
+        log("The maximum OEM firmware has already been extracted and analysed — nothing to")
+        log("collect or send. Extraction stays available on the platforms still under study.")
     }
 
     private fun start() {
+        // Defensive: the button should not reach here on a fully-mined platform, but never run
+        // (or send) if it somehow does.
+        if (reComplete) { showReCompleteMessage(); return }
         runBtn.isEnabled = false
         runOnUiThread { logView.text = "" }
         log("Collecting…")

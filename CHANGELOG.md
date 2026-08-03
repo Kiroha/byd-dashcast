@@ -14,6 +14,14 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.12-beta (versionCode 602)
+
+**BYD APK Extraction — gate DiLink 3 / DiLink 5.0 as fully mined.** Diagnostics-only; no production path touched.
+
+After multiple DL3 + DL5.0 extractions (container service, amapservice, clusterdebug, the full native fission/`.so` stack incl. `libProjectionMsgSdk`), those two platforms are exhausted — a further run only re-uploads what we already have. On **DiLink 3** and **DiLink 5.0** the button now shows *"Reverse engineering complete for this platform — nothing to collect or send"* and does **not** extract or upload. Extraction STAYS LIVE where data is still needed: **DiLink 5.1/trinket** (to confirm `libProjectionMsgSdk` is absent) and **DiLink 4**.
+
+Decision extracted to `ApkExtractionPolicy.isPlatformFullyMined(isDiLink3, isDiLink5, apiLevel)` = `isDiLink3 || (isDiLink5 && apiLevel < 33)`: the DiLink generation tracks the Android version, so `API < 33` (Android 12) captures DL5.0 while **trinket (Android 13 / API 33) is ALWAYS left live** — the critical property (a wrongly-gated trinket would block the extraction we're waiting on), unit-tested. `DiagActivity` fails **open** if platform detection throws — never silently blocks a platform we might need. 221 → 226 unit tests; lint 0/0; no daemon protocol change; no production path touched.
+
 ### 1.8.11-beta (versionCode 601)
 
 **BYD APK Extraction — capture the DL5.0/DL5.1 container service too.** Diagnostics-only; no production path touched.

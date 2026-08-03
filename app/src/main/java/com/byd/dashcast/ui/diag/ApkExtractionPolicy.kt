@@ -129,6 +129,25 @@ object ApkExtractionPolicy {
         Tier.EXCLUDED -> 2
     }
 
+    /**
+     * True on the platforms whose OEM firmware has already been fully extracted and reverse-
+     * engineered, so a further extraction would only re-send what we already have. The diagnostic
+     * gates on this to say "reverse engineering complete — nothing sent" instead of re-uploading.
+     *
+     * DONE: **DiLink 3** and **DiLink 5.0** (container service, amapservice, clusterdebug, the
+     * native fission/.so stack + libProjectionMsgSdk — see doc_api/).
+     * STILL NEEDED (extraction stays live): **DiLink 5.1 / trinket** — we still need its native
+     * stack to confirm libProjectionMsgSdk is absent — and **DiLink 4**.
+     *
+     * The DiLink generation tracks the Android version, so the API level cleanly separates the two
+     * DL5 variants: DL5.0 = Android 12 (API ≤ 32), DL5.1 = Android 13 (API 33). Gating on
+     * `apiLevel < 33` therefore captures DL5.0 while ALWAYS leaving trinket (API 33) live — the
+     * critical property, since a wrongly-gated trinket would block the extraction we are waiting on.
+     */
+    @JvmStatic
+    fun isPlatformFullyMined(isDiLink3: Boolean, isDiLink5: Boolean, apiLevel: Int): Boolean =
+        isDiLink3 || (isDiLink5 && apiLevel < 33)
+
     // ── Native binaries and .so libraries ───────────────────────────────────────
     //
     // The -1 our activation gets from AutoContainer is decided in NATIVE code, not any APK: the

@@ -892,8 +892,21 @@ android {
         // wherever it lives. DL5.0 is the WORKING DL5 platform, so its container service is a prime
         // comparison target for the trinket -1. No behaviour change beyond what the extractor collects;
         // 219 -> 221 unit tests; lint 0/0; no daemon protocol change; no production path touched.)
-        versionCode 601
-        versionName "1.8.11-beta"
+        // 602 = 1.8.12-beta (BYD APK Extraction — gate DiLink 3 / DiLink 5.0 as fully mined.
+        // Diagnostics-only. After multiple DL3 + DL5.0 extractions (container service, amapservice,
+        // clusterdebug, the full native fission/.so stack incl. libProjectionMsgSdk), those two
+        // platforms are exhausted — a further run only re-uploads what we already have. On DL3 and
+        // DL5.0 the button now shows "Reverse engineering complete for this platform — nothing to
+        // collect or send" and does NOT extract or upload. Extraction STAYS LIVE where we still need
+        // data: DiLink 5.1/trinket (to confirm libProjectionMsgSdk is absent) and DiLink 4. Decision
+        // in ApkExtractionPolicy.isPlatformFullyMined(isDiLink3, isDiLink5, apiLevel) =
+        // isDiLink3 || (isDiLink5 && apiLevel < 33): the DiLink generation tracks the Android
+        // version, so API<33 (Android 12) = DL5.0 while trinket (Android 13 / API 33) is ALWAYS
+        // left live — the critical property, tested. DiagActivity fails OPEN if platform detection
+        // throws (never silently blocks a platform we might need). 221 -> 226 unit tests; lint 0/0;
+        // no daemon protocol change; no production path touched.)
+        versionCode 602
+        versionName "1.8.12-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
