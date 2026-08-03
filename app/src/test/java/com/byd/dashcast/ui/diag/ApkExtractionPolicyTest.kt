@@ -38,6 +38,23 @@ class ApkExtractionPolicyTest {
         assertTrue(ApkExtractionPolicy.TIER1.contains("com.example.amapservice"))
     }
 
+    @Test
+    fun `both container-service implementations are tier1 - xdja on DL3-trinket, byd on DL5_0`() {
+        // The 1.8.10 narrowing dropped the generic "byd" and stopped pulling com.byd.containerservice
+        // (the DL5.0 container service). Both names must be captured.
+        assertEquals(Tier.TIER1, ApkExtractionPolicy.classify(
+            "com.xdja.containerservice", "/system/priv-app/x/x.apk"))
+        assertEquals(Tier.TIER1, ApkExtractionPolicy.classify(
+            "com.byd.containerservice", "/system/priv-app/BydContainerService/BydContainerService.apk"))
+    }
+
+    @Test
+    fun `a container-named package is caught by the sweep wherever it lives`() {
+        // Belt-and-suspenders beyond the named list: the "container" pattern subsumes "autocontainer".
+        assertEquals(Tier.TIER2, ApkExtractionPolicy.classify(
+            "com.oem.containerhelper", "/system/app/c/c.apk"))
+    }
+
     // ── narrowed scope: the generic "byd" sweep is gone ─────────────────────────
 
     @Test

@@ -48,9 +48,14 @@ object ApkExtractionPolicy {
     )
 
     /**
-     * Named from hard evidence, highest value first (a pattern-only filter would miss
-     * `com.xdja.containerservice` — its name has neither "byd" nor "cluster"):
-     *  - `com.xdja.containerservice` — registers `AutoContainer` and owns the cluster VD. The -1.
+     * Named from hard evidence, highest value first (a pattern-only filter would miss the
+     * container services — their names have neither "byd-generic" nor "cluster"):
+     *  - `com.xdja.containerservice` — the container service on DiLink 3 / trinket-DL5.1; registers
+     *    `AutoContainer`, owns the cluster VD, and returns the -1. Native `libxdjacontainerservice_jni`.
+     *  - `com.byd.containerservice` — the container service on **DiLink 5.0** (a DIFFERENT
+     *    implementation: package `BydContainerService`, native `libcontainerservice_jni`). DL5.0 is
+     *    the working DL5 platform, so its container service is a prime comparison target — and the
+     *    1.8.10 narrowing (dropping "byd") accidentally stopped pulling it. Fixed here.
      *  - `com.example.amapservice` — the OEM nav; carries `com.byd.cluster.projectionmanager` and
      *    the `setLaunchDisplayId(shared_fission_bg_XDJAScreenProjection_0)` path.
      *  - `com.byd.automap` — the running OEM nav process on trinket (`ps` shows `com.byd.automap`).
@@ -60,6 +65,7 @@ object ApkExtractionPolicy {
      */
     val TIER1 = listOf(
         "com.xdja.containerservice",
+        "com.byd.containerservice",
         "com.example.amapservice",
         "com.byd.automap",
         "com.byd.clusterdebug",
@@ -69,10 +75,11 @@ object ApkExtractionPolicy {
     /**
      * Name/path sweep for the OEM cluster/projection surface. Deliberately does NOT include the
      * generic "byd" / "dilink" — those matched dozens of unrelated system apps. Every term here is
-     * cluster/projection-specific.
+     * cluster/projection-specific. "container" (subsumes the old "autocontainer") catches BOTH
+     * container-service implementations wherever they are, belt-and-suspenders to the named list.
      */
     private val TIER2_PATTERNS = listOf(
-        "cluster", "xdja", "fission", "autocontainer", "automap", "amap",
+        "cluster", "xdja", "fission", "container", "automap", "amap",
         "projection", "instrument", "meter"
     )
 

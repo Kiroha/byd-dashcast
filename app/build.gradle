@@ -881,8 +881,19 @@ android {
         // of APKs and no libs. Whole-bundle ceiling stays 42 MB < Telegram's 50 MB. Every skip
         // recorded in the manifest with [native]/[system|data] labels. 214 -> 219 unit tests; lint
         // 0/0; no daemon protocol change; standard/DL3/DL4/DL5 projection untouched.)
-        versionCode 600
-        versionName "1.8.10-beta"
+        // 601 = 1.8.11-beta (BYD APK Extraction — capture the DL5.0/DL5.1 container service too.
+        // Diagnostics-only. The 1.8.10 scope-narrowing dropped the generic "byd" pattern, and a
+        // DiLink 5.0 extraction revealed the gap: DL5.0's container service is com.byd.containerservice
+        // (package BydContainerService, native libcontainerservice_jni.so) — a DIFFERENT implementation
+        // from DiLink 3 / trinket's com.xdja.containerservice (libxdjacontainerservice_jni.so) — and it
+        // matched no TIER2 term (name has "container" but the pattern only had "autocontainer"), so it
+        // was never pulled. Fix: add com.byd.containerservice to TIER1, and broaden the sweep term
+        // "autocontainer" -> "container" (a superset) so any container-service package/lib is caught
+        // wherever it lives. DL5.0 is the WORKING DL5 platform, so its container service is a prime
+        // comparison target for the trinket -1. No behaviour change beyond what the extractor collects;
+        // 219 -> 221 unit tests; lint 0/0; no daemon protocol change; no production path touched.)
+        versionCode 601
+        versionName "1.8.11-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
