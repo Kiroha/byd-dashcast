@@ -3,6 +3,7 @@ package com.byd.dashcast.ui.diag
 import com.byd.dashcast.ui.diag.ApkExtractionPolicy.Skip
 import com.byd.dashcast.ui.diag.ApkExtractionPolicy.Tier
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
@@ -122,6 +123,36 @@ class ApkExtractionPolicyTest {
     @Test
     fun `tier1 sorts before tier2`() {
         assertTrue(ApkExtractionPolicy.order(Tier.TIER1) < ApkExtractionPolicy.order(Tier.TIER2))
+    }
+
+    // ── platform gate: DL3 + DL5.0 are fully mined, trinket + DL4 are not ────────
+
+    @Test
+    fun `DiLink 3 is fully mined at any API level`() {
+        assertTrue(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = true, isDiLink5 = false, apiLevel = 29))
+    }
+
+    @Test
+    fun `DiLink 5_0 is fully mined - Android 12 API 32`() {
+        assertTrue(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = false, isDiLink5 = true, apiLevel = 32))
+    }
+
+    @Test
+    fun `a DX_BYD_AUTO DL5_0 variant on API 30 is fully mined`() {
+        assertTrue(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = false, isDiLink5 = true, apiLevel = 30))
+    }
+
+    @Test
+    fun `trinket DiLink 5_1 is NEVER gated - Android 13 API 33, extraction still needed`() {
+        // The critical property: a wrongly-gated trinket would block the extraction we wait on.
+        assertFalse(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = false, isDiLink5 = true, apiLevel = 33))
+        assertFalse(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = false, isDiLink5 = true, apiLevel = 34))
+    }
+
+    @Test
+    fun `DiLink 4 is not gated - firmware still wanted`() {
+        // DL4 is neither isDiLink3 nor isDiLink5.
+        assertFalse(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = false, isDiLink5 = false, apiLevel = 29))
     }
 
     // ── budget: APKs are capped below a native reserve ──────────────────────────
