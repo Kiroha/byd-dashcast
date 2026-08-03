@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.11-beta (versionCode 601)
+
+**BYD APK Extraction — capture the DL5.0/DL5.1 container service too.** Diagnostics-only; no production path touched.
+
+A DiLink 5.0 extraction exposed a gap the 1.8.10 narrowing introduced: **DL5.0's container service is `com.byd.containerservice`** (package `BydContainerService`, native `libcontainerservice_jni.so`) — a DIFFERENT implementation from DiLink 3 / trinket-DL5.1's `com.xdja.containerservice` (`libxdjacontainerservice_jni.so`). Its name contains "container" but the TIER2 sweep only had "autocontainer", and dropping the generic "byd" left it matching nothing — so it was **never pulled**. That is the worst target to miss: DL5.0 is the *working* DL5 platform, so its container service is the prime comparison point for the trinket `-1`. Fix: `com.byd.containerservice` added to TIER1, and the sweep term `"autocontainer"` broadened to `"container"` (a superset) so any container-service package/lib is caught wherever it lives. No behaviour change beyond what the extractor collects; 219 → 221 unit tests; lint 0/0; no daemon protocol change.
+
 ### 1.8.10-beta (versionCode 600)
 
 **BYD APK Extraction tuning — capture the RIGHT things.** Diagnostics-only; no production path touched.
