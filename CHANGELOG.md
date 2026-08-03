@@ -14,6 +14,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.13-beta (versionCode 603)
+
+**HUD bench: `sendInfo2` NaviInfo injection — a native OEM channel, experimental.** Diagnostics-only; no production path touched.
+
+Re-examined a specific question left open by the 1.8.8–1.8.12 RE pass: does anything the extraction uncovered become *usable* through the uid-2000 daemon specifically (which runs with more permission than the app's own uid)? Disassembled `ClusterNativeService::checkPermission` in `libProjectionMsgSdk.so` (DL5.0 native pull) — it does read the real caller uid via `IPCThreadState`, comparing against `1000` (`AID_SYSTEM`), but it is **dead code**: no `sendJson`/`sendInfo`/`sendInfo2`/`registerCallback` path in that binary calls it.
+
+The load-bearing gate is Java, in `AutoContainerService` — byte-identical on DL3 (`com.xdja`) and DL5.0 (`com.byd`): `checkSendPermissionAndAllowType`/`checkCallbackPermission` both short-circuit on `pm.checkSignatures(selfUid, callingUid) == 0`, which uid 2000 (shell, `< 10000`) always satisfies, **before** the `container_comm_cfg.json` type/package allow-list is even consulted. That means `sendJson`, `sendInfo`, `sendInfo2` and `registerCallback` are all reachable from the daemon for **any** `type` value — not only `type=1000` (the one DashCast already uses for `sendInfo`). Only `getProjectionDisplayInfo` stays hard-blocked, unconditionally (`throw new RemoteException("Not allowed.")`), regardless of caller.
+
+The OEM's own navigation app (`com.example.amapservice`, decompiled) drives the physical HUD via exactly `sendInfo2(4, NaviInfo-flatbuffer-bytes)` — a channel DashCast had never used. Added a typed daemon verb (`TXN_AUTOCONTAINER_SEND_INFO2` → `Phase4ProcessVerbs.autoContainerSendInfo2`) exposing that same call, a vendored `byd.fbs.naviInfo.NaviInfo` FlatBuffer accessor (`byd/fbs/naviInfo/NaviInfo.java`, ported from the OEM's own schema-generated class — its `__init` had to be changed to route through `Table.__reset()` rather than raw field assignment, since this FlatBuffers runtime caches `vtable_start`/`vtable_size` there, not on `bb`/`bb_pos` alone), and a 4th HUD-bench tool in `HudDiagActivity` that sends a canned test `NaviInfo` payload via `sendInfo2(4, …)` so a DL3 tester can confirm whether this native channel renders on the windshield HUD **independent of CAN/`BYDAutoInstrumentDevice` and of notification-text parsing** — i.e. whether DashCast could eventually drive turn-by-turn guidance for any navigation app, not only ones whose Android notifications it can parse.
+
+Protocol v22 (purely additive). A FlatBuffer round-trip unit test (`NaviInfoPayloadBuilderTest`) is what actually caught the `__init`/`__reset` bug before it reached a car. 226 → 228 unit tests; lint 0/0; no daemon verb this touches was previously wired to anything.
+
 ### 1.8.12-beta (versionCode 602)
 
 **BYD APK Extraction — gate DiLink 3 / DiLink 5.0 as fully mined.** Diagnostics-only; no production path touched.

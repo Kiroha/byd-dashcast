@@ -905,8 +905,30 @@ android {
         // left live — the critical property, tested. DiagActivity fails OPEN if platform detection
         // throws (never silently blocks a platform we might need). 221 -> 226 unit tests; lint 0/0;
         // no daemon protocol change; no production path touched.)
-        versionCode 602
-        versionName "1.8.12-beta"
+        // 603 = 1.8.13-beta (HUD bench: sendInfo2 NaviInfo injection, native OEM channel — experimental.
+        // Re-examined whether the DL3/DL5.0 RE opened anything reachable via the uid-2000 daemon
+        // specifically. Disassembled ClusterNativeService::checkPermission (libProjectionMsgSdk.so):
+        // it reads the real caller uid via IPCThreadState but is dead code — no sendJson/sendInfo/
+        // sendInfo2/registerCallback path in that binary calls it. The load-bearing gate is the Java
+        // AutoContainerService.checkSendPermissionAndAllowType/checkCallbackPermission (byte-identical
+        // on DL3 xdja and DL5.0 byd): both short-circuit on pm.checkSignatures(selfUid, callingUid)==0,
+        // which uid 2000 (shell, <10000) always satisfies — BEFORE the type/package allow-list check.
+        // So sendJson/sendInfo/sendInfo2/registerCallback are all reachable for ANY type, not only the
+        // type=1000 we already use; only getProjectionDisplayInfo stays hard-blocked unconditionally.
+        // Since the OEM's own nav app (AmapService, decompiled) drives the HUD via exactly
+        // sendInfo2(4, NaviInfo-flatbuffer), added a new daemon verb (TXN_AUTOCONTAINER_SEND_INFO2,
+        // Phase4ProcessVerbs.autoContainerSendInfo2) exposing that same call, a vendored
+        // byd.fbs.naviInfo.NaviInfo FlatBuffer accessor (byd/fbs/naviInfo/NaviInfo.java — ported from
+        // the OEM's schema-generated class; fixed __init to route through Table.__reset() since this
+        // FlatBuffers runtime (2.0.3) caches vtable_start/vtable_size there, not on raw bb/bb_pos
+        // assignment — the decompiled source used an older runtime where that didn't matter), and a
+        // 4th HUD-bench tool (HudDiagActivity) sending a test NaviInfo payload via sendInfo2(4, …) so
+        // a DL3 tester can confirm whether this native channel renders on the physical HUD independent
+        // of CAN/BYDAutoInstrumentDevice and of notification-text parsing. Protocol v22. 228 unit tests
+        // (2 new: FlatBuffer round-trip catches vtable-offset mistakes); lint 0/0; no daemon verb this
+        // touches was previously wired to anything — purely additive.)
+        versionCode 603
+        versionName "1.8.13-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
@@ -1035,4 +1057,8 @@ dependencies {
 
     // v1.4.2 — Encrypted storage for OpenAI API key
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+
+    // v1.8.13 — FlatBuffers runtime, to encode the OEM's own byd.fbs.naviInfo.NaviInfo
+    // wire format for AutoContainer.sendInfo2(4, bytes) (HUD turn-by-turn injection).
+    implementation 'com.google.flatbuffers:flatbuffers-java:2.0.3'
 }

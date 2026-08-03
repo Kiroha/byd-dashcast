@@ -53,6 +53,7 @@ class HudDiagActivity : AppCompatActivity() {
     private lateinit var out: TextView
     private lateinit var confirmBtn: Button
     private lateinit var benchBtn: Button
+    private lateinit var sendInfo2Btn: Button
     private lateinit var bar: ProgressBar
 
     private val stamp = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -63,6 +64,10 @@ class HudDiagActivity : AppCompatActivity() {
     // ── confirmation-sequence state ─────────────────────────────────────────
     private val report = StringBuilder()
     private var stepIdx = 0
+
+    /** Bench button to re-enable when [finishBench] completes — shared between Tool 3 (CAN) and
+     *  Tool 4 (sendInfo2), which reuse the same [askBench] / [finishBench] result-picker + upload flow. */
+    private var activeBenchButton: Button? = null
 
     /** One HUD command to confirm: it performs the writes ([run] returns a log line) and asks [question]. */
     private data class Step(val id: String, val title: String, val question: String, val run: () -> String)
@@ -182,6 +187,21 @@ class HudDiagActivity : AppCompatActivity() {
             setOnClickListener { startCanHudBench() }
         }
         root.addView(benchBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+
+        // ── TOOL 4 — sendInfo2 NaviInfo injection (native OEM channel, experimental) ──
+        // AutoContainer.sendInfo2(4, NaviInfo-flatbuffer) is the SAME binder call the OEM's own
+        // nav app (AmapService) uses to drive the HUD — not the CAN bus. Unlike Tool 3 this bypasses
+        // BYDAutoInstrumentDevice entirely, going straight through the container service.
+        root.addView(sectionHeader("④ Injection NaviInfo via sendInfo2 (canal natif OEM, expérimental)"))
+        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie un guidage de test " +
+                "encodé dans le MÊME format FlatBuffer que l'appli de nav OEM, via sendInfo2(4, …) — pas le CAN. " +
+                "Regarde le PARE-BRISE : si un guidage apparaît, ce canal est pilotable directement depuis DashCast."))
+        sendInfo2Btn = Button(this).apply {
+            text = "▶  Envoyer un NaviInfo test via sendInfo2(4) → regarde le HUD"
+            isAllCaps = false
+            setOnClickListener { startSendInfo2Bench() }
+        }
+        root.addView(sendInfo2Btn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
 
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
@@ -310,6 +330,7 @@ class HudDiagActivity : AppCompatActivity() {
     // rendered by the OEM nav (e.g. Telenav) and not CAN-injectable. Only meaningful on arrow-capable
     // firmware (recent inswver) — the label is captured in the zip so we can correlate.
     private fun startCanHudBench() {
+        activeBenchButton = benchBtn
         benchBtn.isEnabled = false
         bar.visibility = View.VISIBLE
         log("──── CAN→HUD bench started (OEM nav must be OFF) ────")
@@ -341,6 +362,53 @@ class HudDiagActivity : AppCompatActivity() {
                     dist = (dist - 40).coerceAtLeast(40); sleep(1000)
                 }
                 sb.append("[$en] icon=$icon sustained 6s (dist 300→) rc=$rc\n")
+            }
+            runOnUiThread { askBench(sb) }
+        }
+    }
+
+    // ── TOOL 4 — sendInfo2 NaviInfo injection ───────────────────────────────
+    // Sends a test byd.fbs.naviInfo.NaviInfo FlatBuffer via AutoContainer.sendInfo2(4, bytes) — the
+    // exact binder call the OEM's own nav app (AmapService) uses to drive the HUD. Unlike Tool 3,
+    // this never touches BYDAutoInstrumentDevice/CAN: it goes straight through the container
+    // service, using the same uid-2000 checkSignatures fast-path already proven for sendInfo(1000,…).
+    private fun startSendInfo2Bench() {
+        activeBenchButton = sendInfo2Btn
+        sendInfo2Btn.isEnabled = false
+        bar.visibility = View.VISIBLE
+        log("──── sendInfo2 NaviInfo bench started (OEM nav must be OFF) ────")
+        bg {
+            val sb = StringBuilder("=== DL3 sendInfo2(4, NaviInfo) BENCH — native OEM channel (uid 2000) ===\n")
+            sb.append("${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — ")
+                .append("${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+                .append("HUD firmware (inswver): ${Platform.hudFirmwareVersion()}\n")
+                .append("Sends byd.fbs.naviInfo.NaviInfo via AutoContainer.sendInfo2(4, bytes) — same channel as AmapService.\n\n")
+            fun step(label: String, block: () -> Unit) {
+                val line = try { block(); "$label ok" } catch (t: Throwable) { "$label ERR ${t.message}" }
+                sb.append(line).append('\n'); log(line)
+            }
+            step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
+            val maneuvers = listOf(
+                Triple("TOUT DROIT", 1, "STRAIGHT"),
+                Triple("GAUCHE", 2, "LEFT"),
+                Triple("DROITE", 3, "RIGHT"))
+            for ((fr, icon, en) in maneuvers) {
+                log("▶▶ REGARDE LE PARE-BRISE — '$fr' (nextTurnIcon=$icon, sendInfo2) ~6 s")
+                var dist = 300
+                repeat(6) {
+                    val payload = NaviInfoPayloadBuilder.build(
+                        naviState = 1,
+                        nextRouteName = "DashCast test $fr",
+                        curToSegmentDist = dist,
+                        nextTurnIcon = icon,
+                        routeRemainTime = 300,
+                        routeRemainDist = 1200)
+                    step("sendInfo2(4, ${payload.size}B, icon=$icon, dist=$dist)") {
+                        ProxyClient.autoContainerSendInfo2(4, payload)
+                    }
+                    dist = (dist - 40).coerceAtLeast(40); sleep(1000)
+                }
+                sb.append("[$en] nextTurnIcon=$icon sustained 6s (dist 300→)\n")
             }
             runOnUiThread { askBench(sb) }
         }
@@ -388,22 +456,26 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun finishBench(sb: StringBuilder, answer: String) {
         log("──── bench result: $answer — building zip ────")
+        val viaSendInfo2 = activeBenchButton === sendInfo2Btn
+        val zipPrefix = if (viaSendInfo2) "hud_sendinfo2bench_" else "hud_canbench_"
+        val caption = if (viaSendInfo2) "DL3 sendInfo2→HUD bench [${firmwareLabel()}] — $answer"
+                      else "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer"
         bg {
             try {
             sb.append("\nRÉSULTAT (HUD arrow visible): $answer\n")
             try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}  // clean up injected nav
-            val work = File(cacheDir, "hud_canbench_" +
+            val work = File(cacheDir, zipPrefix +
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
             File(work, "01_can_bench.txt").writeText(sb.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|inswver|fission_single_os|model'"))
             writeDiagLogs(work)
             val zip = HudCaptureSupport.zipDir(work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
-            uploadZip(zip, "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer")
+            uploadZip(zip, caption)
             } finally {
                 // Always restore the UI even if the zip/upload/diag work threw (bg's outer catch
                 // only logs) — otherwise the button stays disabled + spinner visible until recreate.
-                runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
+                runOnUiThread { activeBenchButton?.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
             }
         }
     }
