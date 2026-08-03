@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.14-beta (versionCode 604)
+
+**Fix: the 1.8.13-beta HUD bench tool was unreachable from inside the app.** Diagnostics-only.
+
+`HudDiagActivity` (which 1.8.13-beta extended with the `sendInfo2` NaviInfo-injection bench) was only ever manifest-registered — nothing in the app's own `Diagnostics` screen launched it, so a tester could only reach it via a hand-fed `adb shell am start`. `Diagnostics` (previously one button: **BYD APK Extraction**) gets a second button, **"HUD bench (DL3) — sendInfo2 NaviInfo test"**, that opens the existing screen. Nothing inside `HudDiagActivity` changed. 228 unit tests (unchanged); lint 0/0.
+
 ### 1.8.13-beta (versionCode 603)
 
 **HUD bench: `sendInfo2` NaviInfo injection — a native OEM channel, experimental.** Diagnostics-only; no production path touched.
