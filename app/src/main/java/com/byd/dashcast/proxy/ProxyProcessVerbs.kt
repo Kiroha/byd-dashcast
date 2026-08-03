@@ -18,6 +18,7 @@ import com.byd.dashcast.infrastructure.task.TaskLocation
  *   <li>{@link #runShell}            — execute arbitrary shell command via daemon
  *   <li>{@link #getPidsByPackage}    — list PIDs matching a package name
  *   <li>{@link #autoContainerSendInfo} — BYD sendInfo CAN trigger
+ *   <li>{@link #autoContainerSendInfo2} — BYD sendInfo2 raw byte[] channel (NaviInfo HUD injection)
  *   <li>{@link #forceStopPackage}    — am force-stop via daemon
  *   <li>{@link #findTaskIdForPackage} — ATM task lookup via daemon reflection
  *   <li>{@link #removeTask}          — ATM task removal via daemon reflection
@@ -106,6 +107,25 @@ internal object ProxyProcessVerbs {
         } finally {
             reply.recycle()
             data.recycle()
+        }
+    }
+
+    @JvmStatic
+    @Throws(RemoteException::class, ProxyClient.ProxyException::class)
+    fun autoContainerSendInfo2(type: Int, data: ByteArray?) {
+        val b: IBinder? = ProxyClient.sBinder
+        if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
+        val parcel = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            parcel.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
+            parcel.writeInt(type)
+            parcel.writeByteArray(data)
+            b.transact(ProxyDaemonContract.TXN_AUTOCONTAINER_SEND_INFO2, parcel, reply, 0)
+            reply.readException()
+        } finally {
+            reply.recycle()
+            parcel.recycle()
         }
     }
 

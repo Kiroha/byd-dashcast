@@ -745,6 +745,22 @@ public final class ProxyClient {
     }
 
     /**
+     * Typed verb for {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — same binder
+     * the OEM's own navigation app uses to push a serialized {@code byd.fbs.naviInfo.NaviInfo}
+     * FlatBuffer (type=4) to the instrument-cluster HUD. Reaches the daemon's cached AutoContainer
+     * binder via the same {@code checkSignatures} fast-path proven by {@link #autoContainerSendInfo},
+     * so any {@code type} value is accepted, not only the ones the OEM's
+     * {@code container_comm_cfg.json} allow-lists for app-uid callers.
+     *
+     * @param type BYD AutoContainer message type (4 = navigation guidance, per the OEM's own usage)
+     * @param data raw payload bytes (a FlatBuffer-serialized struct for type 4)
+     */
+    public static void autoContainerSendInfo2(int type, byte[] data) throws ProxyException {
+        callWithRetry("autoContainerSendInfo2",
+                () -> { ProxyProcessVerbs.autoContainerSendInfo2(type, data); return null; });
+    }
+
+    /**
      * Phase 4d typed verb — direct {@code IActivityManager.forceStopPackage} in
      * the daemon, replacing {@code dadb.shell("am force-stop <pkg>")} forks
      * used by {@code AdbLocalClient.restoreBydOnCluster} and

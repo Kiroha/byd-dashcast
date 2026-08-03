@@ -16,7 +16,8 @@ import java.lang.reflect.Method;
  *   <li><b>/proc scan</b> — pure-Java {@code pidof} replacement
  *       ({@link #getPidsByPackage}).</li>
  *   <li><b>AutoContainer</b> — typed Binder transactions to the BYD
- *       {@code AutoContainer} service ({@link #autoContainerSendInfo}).</li>
+ *       {@code AutoContainer} service ({@link #autoContainerSendInfo},
+ *       {@link #autoContainerSendInfo2}).</li>
  *   <li><b>IActivityManager</b> — {@code forceStopPackage} via reflection.</li>
  * </ol>
  *
@@ -32,6 +33,7 @@ public final class Phase4ProcessVerbs {
 
     private static final String AUTOCONTAINER_SVC = "AutoContainer";
     private static final int    TXN_SEND_INFO      = 2;
+    private static final int    TXN_SEND_INFO2     = 3;
 
     private static volatile IBinder sAutoContainerBinder;
     private static volatile String  sAutoContainerDescriptor;
@@ -216,6 +218,30 @@ public final class Phase4ProcessVerbs {
         } finally {
             reply.recycle();
             data.recycle();
+        }
+    }
+
+    /**
+     * Equivalent of {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — same binder
+     * the OEM's own nav app uses to push a serialized {@code NaviInfo} FlatBuffer (type=4) to the
+     * HUD. Reuses the cached binder resolved by {@link #autoContainerBinder()}.
+     */
+    public static void autoContainerSendInfo2(int type, byte[] data) throws Throwable {
+        IBinder b = autoContainerBinder();
+        String descr = sAutoContainerDescriptor;
+        Parcel dataParcel = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            dataParcel.writeInterfaceToken(descr);
+            dataParcel.writeInt(type);
+            dataParcel.writeByteArray(data);
+            if (!b.transact(TXN_SEND_INFO2, dataParcel, reply, 0)) {
+                throw new IllegalStateException("AutoContainer sendInfo2 transaction not handled");
+            }
+            reply.readException();
+        } finally {
+            reply.recycle();
+            dataParcel.recycle();
         }
     }
 

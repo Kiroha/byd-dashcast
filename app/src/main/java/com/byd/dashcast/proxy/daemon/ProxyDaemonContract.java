@@ -192,4 +192,13 @@ public final class ProxyDaemonContract {
      *  Stops one package guardian, or all guardians when packageName is null. */
     public static final int TXN_CANCEL_FISSION_WATCHDOG =
             IBinder.FIRST_CALL_TRANSACTION + 31; // 32
+
+    /** {@code int type, byte[] data} → void (or remote exception).
+     *  Typed verb for {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — the same
+     *  binder method the OEM's own navigation app uses to push a serialized {@code NaviInfo}
+     *  FlatBuffer (type=4) to the instrument-cluster HUD. Reaches the same {@code checkSignatures}
+     *  fast-path as {@link #TXN_AUTOCONTAINER_SEND_INFO}, so any {@code type} is accepted from the
+     *  daemon's uid, not only the values the OEM's {@code container_comm_cfg.json} allow-lists. */
+    public static final int TXN_AUTOCONTAINER_SEND_INFO2 =
+            IBinder.FIRST_CALL_TRANSACTION + 32; // 33
 }

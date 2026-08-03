@@ -90,8 +90,9 @@ public final class ProxyDaemonMain {
     *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
     *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
     *  v21: adds TXN_CANCEL_FISSION_WATCHDOG (teardown cannot race post-launch re-anchoring).
+    *  v22: adds TXN_AUTOCONTAINER_SEND_INFO2 (raw sendInfo2 byte[] channel — NaviInfo HUD injection).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "21";
+    private static final String PROTOCOL_VERSION = "22";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -691,6 +692,29 @@ public final class ProxyDaemonMain {
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeInt(result);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_AUTOCONTAINER_SEND_INFO2: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int type = data.readInt();
+                    byte[] payload = data.createByteArray();
+                    try {
+                        Phase4ProcessVerbs.autoContainerSendInfo2(type, payload);
+                        if (reply != null) {
+                            reply.writeNoException();
                         }
                     } catch (Throwable ex) {
                         Throwable cause = ex;
