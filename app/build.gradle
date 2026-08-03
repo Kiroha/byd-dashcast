@@ -927,8 +927,15 @@ android {
         // of CAN/BYDAutoInstrumentDevice and of notification-text parsing. Protocol v22. 228 unit tests
         // (2 new: FlatBuffer round-trip catches vtable-offset mistakes); lint 0/0; no daemon verb this
         // touches was previously wired to anything — purely additive.)
-        versionCode 603
-        versionName "1.8.13-beta"
+        // 604 = 1.8.14-beta (fix: HUD bench was orphaned. 1.8.13-beta added the sendInfo2 NaviInfo
+        // test as a 4th tool inside HudDiagActivity, but that Activity was only manifest-registered
+        // — nothing in the app's own Diagnostics screen launched it, so a tester could only reach it
+        // via a hand-fed `adb shell am start`. DiagActivity (rewritten in Kotlin, one button so far:
+        // BYD APK Extraction) gets a second button, "HUD bench (DL3) — sendInfo2 NaviInfo test",
+        // that simply starts HudDiagActivity. No change inside HudDiagActivity itself. 228 unit
+        // tests; lint 0/0; diagnostics-only.)
+        versionCode 604
+        versionName "1.8.14-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

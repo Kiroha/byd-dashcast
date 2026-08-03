@@ -2,6 +2,7 @@ package com.byd.dashcast.ui.diag
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
@@ -10,6 +11,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.byd.dashcast.hud.HudDiagActivity
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
@@ -18,15 +20,17 @@ import java.io.File
 /**
  * Diagnostics host — rebuilt in Kotlin, English-only by project rule (SetTextI18n exempt).
  *
- * Currently hosts one tool: **BYD APK Extraction**. It exists for interoperability analysis of the
- * OEM cluster — specifically why the `AutoContainer` activation call returns -1 on DiLink 5.1 while
- * returning 0/1 on the models where projection works (9/9 trinket captures). The answer is in the
- * OEM's own `com.xdja.containerservice`, running on the tester's own vehicle.
- *
- * One button, one flow: inventory + runtime context, select the OEM cluster APKs
- * ([ApkExtractionPolicy]: firmware partitions, named targets first, budgeted under Telegram's
- * 50 MB ceiling), zip, and upload via the already-configured report channel. Runs off the UI
- * thread with a visible progress log.
+ * Hosts two tools:
+ *  1. **BYD APK Extraction** — interoperability analysis of the OEM cluster, specifically why the
+ *     `AutoContainer` activation call returns -1 on DiLink 5.1 while returning 0/1 on the models
+ *     where projection works (9/9 trinket captures). The answer is in the OEM's own
+ *     `com.xdja.containerservice`, running on the tester's own vehicle. One button, one flow:
+ *     inventory + runtime context, select the OEM cluster APKs ([ApkExtractionPolicy]: firmware
+ *     partitions, named targets first, budgeted under Telegram's 50 MB ceiling), zip, and upload
+ *     via the already-configured report channel. Runs off the UI thread with a visible progress log.
+ *  2. **HUD bench (DL3)** — opens [HudDiagActivity], which now includes the `sendInfo2(4, NaviInfo)`
+ *     bench: the RE finding that the uid-2000 daemon can reach the same native channel BYD's own
+ *     nav app uses to drive the HUD, tested independently of CAN and of notification parsing.
  */
 class DiagActivity : Activity() {
 
@@ -50,6 +54,11 @@ class DiagActivity : Activity() {
             setOnClickListener { if (reComplete) showReCompleteMessage() else start() }
         }
         root.addView(runBtn)
+
+        root.addView(Button(this).apply {
+            text = "HUD bench (DL3) — sendInfo2 NaviInfo test"
+            setOnClickListener { startActivity(Intent(this@DiagActivity, HudDiagActivity::class.java)) }
+        })
 
         logView = TextView(this).apply {
             textSize = 12f
