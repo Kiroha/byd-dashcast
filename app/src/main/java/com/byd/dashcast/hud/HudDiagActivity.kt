@@ -54,7 +54,9 @@ class HudDiagActivity : AppCompatActivity() {
     private lateinit var confirmBtn: Button
     private lateinit var benchBtn: Button
     private lateinit var sendInfo2Btn: Button
+    private lateinit var iconSweepBtn: Button
     private lateinit var bar: ProgressBar
+    private var benchKind = "canbench"   // "canbench" | "sendinfo2" | "iconsweep" — drives the zip prefix
 
     private val stamp = SimpleDateFormat("HH:mm:ss", Locale.US)
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
@@ -179,6 +181,19 @@ class HudDiagActivity : AppCompatActivity() {
             setOnClickListener { startSendInfo2Bench() }
         }
         root.addView(sendInfo2Btn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+
+        // Icon sweep — discover which AMap NEW_ICON id renders which CLUSTER glyph. Each id is sent
+        // with "ICON n" in the road-name field so a photo of the cluster maps id→glyph (the 1for2
+        // cluster's icon scheme is NOT identical to AMap's, so straight/left/right ids must be
+        // confirmed on-glass before wiring nav content for real).
+        root.addView(hint("↳ Balayage d'icônes : envoie les id 0→28 (~3 s chacun) avec « ICON n » comme " +
+                "nom de route → PHOTOGRAPHIE le cluster à chaque id pour mapper id→glyphe et verrouiller les directions."))
+        iconSweepBtn = Button(this).apply {
+            text = "▶  Balayage d'icônes (0→28) — mappe les glyphes du cluster"
+            isAllCaps = false
+            setOnClickListener { startIconSweepBench() }
+        }
+        root.addView(iconSweepBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
 
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
@@ -308,6 +323,7 @@ class HudDiagActivity : AppCompatActivity() {
     // firmware (recent inswver) — the label is captured in the zip so we can correlate.
     private fun startCanHudBench() {
         activeBenchButton = benchBtn
+        benchKind = "canbench"
         benchBtn.isEnabled = false
         bar.visibility = View.VISIBLE
         log("──── CAN→HUD bench started (OEM nav must be OFF) ────")
@@ -351,6 +367,7 @@ class HudDiagActivity : AppCompatActivity() {
     // service, using the same uid-2000 checkSignatures fast-path already proven for sendInfo(1000,…).
     private fun startSendInfo2Bench() {
         activeBenchButton = sendInfo2Btn
+        benchKind = "sendinfo2"
         sendInfo2Btn.isEnabled = false
         bar.visibility = View.VISIBLE
         log("──── sendInfo2 NaviInfo bench started (OEM nav must be OFF) ────")
@@ -398,6 +415,49 @@ class HudDiagActivity : AppCompatActivity() {
         }
     }
 
+    // ── Icon sweep — map AMap NEW_ICON id → cluster glyph ───────────────────
+    // The 1for2 cluster's turn-icon scheme is NOT identical to AMap's (an old test sent AMap "right"
+    // and the cluster drew a left-ish arrow), so before wiring real nav content we must confirm which
+    // id renders straight/left/right on-glass. Each id 0..28 is sent with the id written into the
+    // road-name field ("ICON n") so a single cluster photo captures the id→glyph mapping.
+    private fun startIconSweepBench() {
+        activeBenchButton = iconSweepBtn
+        benchKind = "iconsweep"
+        iconSweepBtn.isEnabled = false
+        bar.visibility = View.VISIBLE
+        log("──── icon sweep (sendInfo2) started (OEM nav must be OFF) ────")
+        bg {
+            val sb = StringBuilder("=== DL3 sendInfo2 ICON SWEEP — map AMap NEW_ICON id → cluster glyph ===\n")
+            sb.append("${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — ")
+                .append("${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+                .append("HUD firmware (inswver): ${Platform.hudFirmwareVersion()}\n")
+                .append("Each id sent ~3s with road-name = 'ICON n' so a cluster photo maps id→glyph.\n\n")
+            fun step(label: String, block: () -> Unit) {
+                val line = try { block(); "$label ok" } catch (t: Throwable) { "$label ERR ${t.message}" }
+                sb.append(line).append('\n'); log(line)
+            }
+            step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
+            step("sendInfo(5,0) [container nav-mode enable]") { ProxyClient.autoContainerSendInfo(5, 0, "") }
+            for (icon in 0..28) {
+                log("▶▶ ICON $icon — PHOTOGRAPHIE le cluster")
+                val payload = NaviInfoPayloadBuilder.build(
+                    naviState = 1,
+                    nextRouteName = "ICON $icon",
+                    curToSegmentDist = 200,
+                    nextTurnIcon = icon,
+                    routeRemainTime = 300,
+                    routeRemainDist = 1200)
+                var rc = "?"
+                repeat(3) {
+                    rc = try { ProxyClient.autoContainerSendInfo2(4, payload); "ok" } catch (t: Throwable) { "ERR ${t.message}" }
+                    sleep(1000)
+                }
+                sb.append("[icon=$icon] sent 3s (road='ICON $icon') $rc\n")
+            }
+            runOnUiThread { askBenchNote(sb) }   // free-text describe (+ separate photos) → hud_iconsweep_ zip
+        }
+    }
+
     /**
      * Structured, TRANSLATED result picker: the tester sees the outcomes in their own language,
      * but a canonical ENGLISH tag is recorded into the zip (analyzer counts YES vs NO/PARTIAL and
@@ -406,10 +466,11 @@ class HudDiagActivity : AppCompatActivity() {
      */
     private fun askBench(sb: StringBuilder) {
         val options = listOf(
-            getString(R.string.hud_bench_opt_ok)       to "YES — arrow on HUD",
+            getString(R.string.hud_bench_opt_cluster)  to "YES — arrow on CLUSTER",
+            getString(R.string.hud_bench_opt_ok)       to "YES — arrow on HUD (windshield)",
             getString(R.string.hud_bench_opt_wrongdir) to "NO/PARTIAL — arrow wrong direction",
             getString(R.string.hud_bench_opt_partial)  to "NO/PARTIAL — distance/text but no clear arrow",
-            getString(R.string.hud_bench_opt_nothing)  to "NO/PARTIAL — nothing on HUD",
+            getString(R.string.hud_bench_opt_nothing)  to "NO/PARTIAL — nothing",
             getString(R.string.hud_bench_opt_other)    to null,   // → optional free-text note
         )
         AlertDialog.Builder(this)
@@ -440,10 +501,16 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun finishBench(sb: StringBuilder, answer: String) {
         log("──── bench result: $answer — building zip ────")
-        val viaSendInfo2 = activeBenchButton === sendInfo2Btn
-        val zipPrefix = if (viaSendInfo2) "hud_sendinfo2bench_" else "hud_canbench_"
-        val caption = if (viaSendInfo2) "DL3 sendInfo2→HUD bench [${firmwareLabel()}] — $answer"
-                      else "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer"
+        val zipPrefix = when (benchKind) {
+            "iconsweep" -> "hud_iconsweep_"
+            "sendinfo2" -> "hud_sendinfo2bench_"
+            else -> "hud_canbench_"
+        }
+        val caption = when (benchKind) {
+            "iconsweep" -> "DL3 sendInfo2 icon-sweep [${firmwareLabel()}] — $answer"
+            "sendinfo2" -> "DL3 sendInfo2→cluster bench [${firmwareLabel()}] — $answer"
+            else -> "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer"
+        }
         bg {
             try {
             sb.append("\nRÉSULTAT (HUD arrow visible): $answer\n")

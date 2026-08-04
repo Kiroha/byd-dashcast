@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Asboblar paneliga proyeksiya proshivka tomonidan bloklangan</string>
     <string name="dl4_cluster_unsupported_msg">Ushbu avtomobilda proshivka DashCast ilovasiga asboblar paneli ekranini ko\'rishga ruxsat bermaydi: ilova ishlab chiqaruvchi ekranlarni sanab o\'tishga ruxsat bergan dasturlar ro\'yxatida yo\'q. DashCast o\'zining imtiyozli yordamchisi orqali ham so\'radi, u ham asboblar paneli ekranini topmadi. Shu sababli ilovalarni asboblar paneliga proyeksiya qilish ushbu proshivka versiyasida mumkin emas — bu ishlab chiqaruvchining cheklovi, DashCast cheklovi emas.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD natijasi — old oynada nimani ko\'rdingiz?</string>
-    <string name="hud_bench_opt_ok">✅ Strelka ko\'rindi — to\'g\'ri yo\'nalish</string>
+    <string name="hud_bench_result_title">Natija — nimani ko\'rding va QAYERDA (cluster yoki old oyna)?</string>
+    <string name="hud_bench_opt_cluster">✅ Strelka CLUSTER\'da (rul orqasida)</string>
+    <string name="hud_bench_opt_ok">✅ Strelka HUD\'da (old oyna)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Strelka ko\'rindi — noto\'g\'ri yo\'nalish</string>
     <string name="hud_bench_opt_partial">⚠️ Masofa/matn ko\'rindi — lekin aniq strelka yo\'q</string>
     <string name="hud_bench_opt_nothing">❌ HUDda hech narsa yo\'q</string>

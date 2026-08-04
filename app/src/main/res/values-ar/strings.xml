@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">إسقاط لوحة العدادات محظور بواسطة البرنامج الثابت</string>
     <string name="dl4_cluster_unsupported_msg">في هذه السيارة، لا يسمح البرنامج الثابت لـ DashCast برؤية شاشة لوحة العدادات: التطبيق ليس ضمن قائمة البرامج المسموح لها من الشركة المصنّعة بتعداد الشاشات. كما استعلم DashCast عبر مساعده ذي الامتيازات، ولم يعثر هو الآخر على أي شاشة للوحة العدادات. لذلك فإن إسقاط التطبيقات على لوحة العدادات غير ممكن مع هذا الإصدار من البرنامج الثابت — وهذا قيد من الشركة المصنّعة وليس قيدًا في DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">نتيجة HUD — ماذا رأيت على الزجاج الأمامي؟</string>
-    <string name="hud_bench_opt_ok">✅ ظهر السهم — الاتجاه صحيح</string>
+    <string name="hud_bench_result_title">النتيجة — ماذا رأيت، وأين (على cluster أو على الزجاج الأمامي)؟</string>
+    <string name="hud_bench_opt_cluster">✅ السهم على CLUSTER (خلف المقود)</string>
+    <string name="hud_bench_opt_ok">✅ السهم على HUD (الزجاج الأمامي)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ ظهر السهم — اتجاه خاطئ</string>
     <string name="hud_bench_opt_partial">⚠️ ظهرت المسافة/النص — لكن دون سهم واضح</string>
     <string name="hud_bench_opt_nothing">❌ لا شيء على HUD</string>

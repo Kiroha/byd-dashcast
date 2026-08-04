@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Gösterge paneli yansıtması ürün yazılımı tarafından engellendi</string>
     <string name="dl4_cluster_unsupported_msg">Bu araçta ürün yazılımı DashCast\'in gösterge paneli ekranını görmesine izin vermiyor: uygulama, üreticinin ekranları listelemesine izin verdiği programlar listesinde yer almıyor. DashCast ayrıca ayrıcalıklı yardımcısı üzerinden de sordu; o da bir gösterge paneli ekranı bulamadı. Bu nedenle bu ürün yazılımı sürümünde uygulamaların gösterge paneline yansıtılması mümkün değil — bu bir üretici kısıtlamasıdır, DashCast sınırlaması değil.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD sonucu — ön camda ne gördün?</string>
-    <string name="hud_bench_opt_ok">✅ Ok göründü — doğru yön</string>
+    <string name="hud_bench_result_title">Sonuç — ne gördün ve NEREDE (CLUSTER mı yoksa ön cam mı)?</string>
+    <string name="hud_bench_opt_cluster">✅ CLUSTER\'da ok (direksiyonun arkasında)</string>
+    <string name="hud_bench_opt_ok">✅ HUD\'da ok (ön cam)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Ok göründü — yanlış yön</string>
     <string name="hud_bench_opt_partial">⚠️ Mesafe/yazı göründü — ama net bir ok yok</string>
     <string name="hud_bench_opt_nothing">❌ HUD\'da hiçbir şey yok</string>

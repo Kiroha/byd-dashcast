@@ -531,8 +531,9 @@
     <string name="dl4_cluster_unsupported_title">Projekcja na zestaw wskaźników zablokowana przez oprogramowanie układowe</string>
     <string name="dl4_cluster_unsupported_msg">W tym pojeździe oprogramowanie układowe nie pozwala aplikacji DashCast zobaczyć ekranu zestawu wskaźników: aplikacja nie znajduje się na liście programów, którym producent zezwala na wyliczanie ekranów. DashCast zapytał również przez swojego uprzywilejowanego pomocnika, który także nie znalazł żadnego ekranu zestawu. Projekcja aplikacji na zestaw wskaźników nie jest więc możliwa w tej wersji oprogramowania układowego — to ograniczenie producenta, a nie DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Wynik HUD — co widziałeś na szybie?</string>
-    <string name="hud_bench_opt_ok">✅ Strzałka widoczna — poprawny kierunek</string>
+    <string name="hud_bench_result_title">Wynik — co widziałeś i GDZIE (cluster czy szyba)?</string>
+    <string name="hud_bench_opt_cluster">✅ Strzałka na CLUSTERZE (za kierownicą)</string>
+    <string name="hud_bench_opt_ok">✅ Strzałka na HUD (przednia szyba)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Strzałka widoczna — zły kierunek</string>
     <string name="hud_bench_opt_partial">⚠️ Dystans/tekst widoczny — ale bez wyraźnej strzałki</string>
     <string name="hud_bench_opt_nothing">❌ Nic na HUD</string>

@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Proiezione sul quadro bloccata dal firmware</string>
     <string name="dl4_cluster_unsupported_msg">Su questo veicolo il firmware non consente a DashCast di vedere lo schermo del quadro strumenti: l\'app non è nell\'elenco dei programmi autorizzati dal costruttore a enumerare gli schermi. DashCast ha interrogato anche il proprio assistente privilegiato, che non ha trovato alcuno schermo del quadro. La proiezione di app sul quadro non è quindi possibile con questa versione del firmware — è una restrizione del costruttore, non un limite di DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Risultato HUD — cosa hai visto sul parabrezza?</string>
-    <string name="hud_bench_opt_ok">✅ Freccia mostrata — direzione corretta</string>
+    <string name="hud_bench_result_title">Risultato — cosa hai visto, e DOVE (cluster o parabrezza)?</string>
+    <string name="hud_bench_opt_cluster">✅ Freccia sul CLUSTER (dietro il volante)</string>
+    <string name="hud_bench_opt_ok">✅ Freccia sull\'HUD (parabrezza)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Freccia mostrata — direzione sbagliata</string>
     <string name="hud_bench_opt_partial">⚠️ Distanza/testo mostrati — ma nessuna freccia nitida</string>
     <string name="hud_bench_opt_nothing">❌ Niente sull\'HUD</string>
