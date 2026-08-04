@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Cluster-Projektion durch die Firmware blockiert</string>
     <string name="dl4_cluster_unsupported_msg">Bei diesem Fahrzeug erlaubt die Firmware DashCast nicht, den Bildschirm des Kombiinstruments zu sehen: Die App steht nicht auf der Liste der vom Hersteller zugelassenen Programme, die Bildschirme auflisten dürfen. DashCast hat auch über seinen privilegierten Helfer nachgefragt, der ebenfalls keinen Cluster-Bildschirm gefunden hat. App-Projektion auf das Kombiinstrument ist mit dieser Firmware-Version daher nicht möglich — das ist eine Herstellerbeschränkung, keine DashCast-Einschränkung.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD-Ergebnis — Was hast du auf der Windschutzscheibe gesehen?</string>
-    <string name="hud_bench_opt_ok">✅ Pfeil angezeigt — richtige Richtung</string>
+    <string name="hud_bench_result_title">Ergebnis — was hast du gesehen, und WO (Cluster oder Windschutzscheibe)?</string>
+    <string name="hud_bench_opt_cluster">✅ Pfeil im CLUSTER (hinter dem Lenkrad)</string>
+    <string name="hud_bench_opt_ok">✅ Pfeil im HUD (Windschutzscheibe)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Pfeil angezeigt — falsche Richtung</string>
     <string name="hud_bench_opt_partial">⚠️ Entfernung/Text angezeigt — aber kein klarer Pfeil</string>
     <string name="hud_bench_opt_nothing">❌ Nichts auf dem HUD</string>

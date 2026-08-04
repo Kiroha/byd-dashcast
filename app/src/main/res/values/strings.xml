@@ -563,8 +563,9 @@
     <string name="dl4_cluster_unsupported_title">Projection cluster bloquée par le firmware</string>
     <string name="dl4_cluster_unsupported_msg">Sur ce véhicule, le firmware n\'autorise pas DashCast à voir l\'écran du combiné d\'instruments : l\'application ne figure pas dans la liste des programmes autorisés par le constructeur à énumérer les écrans. DashCast a également interrogé son assistant privilégié, qui n\'a trouvé aucun écran de combiné non plus. La projection d\'applications sur le combiné est donc impossible avec cette version de firmware — c\'est une restriction du constructeur, pas une limite de DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Résultat HUD — qu’as-tu vu sur le pare-brise ?</string>
-    <string name="hud_bench_opt_ok">✅ Flèche affichée — bonne direction</string>
+    <string name="hud_bench_result_title">Résultat — qu’as-tu vu, et OÙ (cluster ou pare-brise) ?</string>
+    <string name="hud_bench_opt_cluster">✅ Flèche sur le CLUSTER (derrière le volant)</string>
+    <string name="hud_bench_opt_ok">✅ Flèche sur le HUD (pare-brise)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Flèche affichée — mauvaise direction</string>
     <string name="hud_bench_opt_partial">⚠️ Distance/texte affiché — mais pas de flèche nette</string>
     <string name="hud_bench_opt_nothing">❌ Rien sur le HUD</string>

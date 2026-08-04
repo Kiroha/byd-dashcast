@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Аспаптар тақтасына проекцияны микробағдарлама бұғаттады</string>
     <string name="dl4_cluster_unsupported_msg">Бұл көлікте микробағдарлама DashCast қолданбасына аспаптар тақтасының экранын көруге рұқсат бермейді: қолданба өндіруші экрандарды тізімдеуге рұқсат еткен бағдарламалар тізімінде жоқ. DashCast өзінің артықшылықты көмекшісі арқылы да сұрады, бірақ ол да аспаптар тақтасының экранын таппады. Сондықтан микробағдарламаның осы нұсқасында қолданбаларды аспаптар тақтасына проекциялау мүмкін емес — бұл өндірушінің шектеуі, DashCast шектеуі емес.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD нәтижесі — әйнекте нені көрдіңіз?</string>
-    <string name="hud_bench_opt_ok">✅ Көрсеткі шықты — бағыты дұрыс</string>
+    <string name="hud_bench_result_title">Нәтиже — нені көрдің, әрі ҚАЙДА (cluster ме, әлде жел әйнек пе)?</string>
+    <string name="hud_bench_opt_cluster">✅ CLUSTER-дегі көрсеткі (рөл артында)</string>
+    <string name="hud_bench_opt_ok">✅ HUD-тағы көрсеткі (жел әйнек)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Көрсеткі шықты — бағыты қате</string>
     <string name="hud_bench_opt_partial">⚠️ Қашықтық/мәтін шықты — бірақ айқын көрсеткі жоқ</string>
     <string name="hud_bench_opt_nothing">❌ HUD-та ештеңе жоқ</string>

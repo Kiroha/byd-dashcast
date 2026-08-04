@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Проєкцію на приладову панель заблоковано прошивкою</string>
     <string name="dl4_cluster_unsupported_msg">У цьому автомобілі прошивка не дозволяє DashCast бачити екран приладової панелі: застосунок відсутній у списку програм, яким виробник дозволив перелічувати екрани. DashCast також звернувся через свій привілейований помічник, але й той не знайшов екрана приладової панелі. Тому проєкція застосунків на приладову панель неможлива з цією версією прошивки — це обмеження виробника, а не DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Результат HUD — що ви побачили на лобовому склі?</string>
-    <string name="hud_bench_opt_ok">✅ Стрілку показано — правильний напрямок</string>
+    <string name="hud_bench_result_title">Результат — що ти побачив і ДЕ (CLUSTER чи лобове скло)?</string>
+    <string name="hud_bench_opt_cluster">✅ Стрілка на CLUSTER (за кермом)</string>
+    <string name="hud_bench_opt_ok">✅ Стрілка на HUD (лобове скло)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Стрілку показано — неправильний напрямок</string>
     <string name="hud_bench_opt_partial">⚠️ Відстань/текст показано — але чіткої стрілки немає</string>
     <string name="hud_bench_opt_nothing">❌ На HUD нічого немає</string>

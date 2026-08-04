@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Проекция на приборную панель заблокирована прошивкой</string>
     <string name="dl4_cluster_unsupported_msg">На этом автомобиле прошивка не позволяет DashCast видеть экран приборной панели: приложение отсутствует в списке программ, которым производитель разрешил перечислять экраны. DashCast также обратился через свой привилегированный помощник, но и он не нашёл экрана приборной панели. Поэтому проекция приложений на приборную панель невозможна в этой версии прошивки — это ограничение производителя, а не DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Результат HUD — что вы увидели на лобовом стекле?</string>
-    <string name="hud_bench_opt_ok">✅ Стрелка показана — верное направление</string>
+    <string name="hud_bench_result_title">Результат — что ты увидел и ГДЕ (кластер или лобовое стекло)?</string>
+    <string name="hud_bench_opt_cluster">✅ Стрелка на КЛАСТЕРЕ (за рулём)</string>
+    <string name="hud_bench_opt_ok">✅ Стрелка на HUD (лобовое стекло)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Стрелка показана — неверное направление</string>
     <string name="hud_bench_opt_partial">⚠️ Есть расстояние/текст — но чёткой стрелки нет</string>
     <string name="hud_bench_opt_nothing">❌ На HUD ничего нет</string>

@@ -523,8 +523,9 @@
     <string name="dl4_cluster_unsupported_title">Праекцыя на прыборную панэль заблакаваная прашыўкай</string>
     <string name="dl4_cluster_unsupported_msg">У гэтым аўтамабілі прашыўка не дазваляе DashCast бачыць экран прыборнай панэлі: праграма адсутнічае ў спісе праграм, якім вытворца дазволіў пералічваць экраны. DashCast таксама звярнуўся праз свой прывілеяваны памочнік, але і той не знайшоў экрана прыборнай панэлі. Таму праекцыя праграм на прыборную панэль немагчымая з гэтай версіяй прашыўкі — гэта абмежаванне вытворцы, а не DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Вынік HUD — што вы ўбачылі на лабавым шкле?</string>
-    <string name="hud_bench_opt_ok">✅ Стрэлка паказана — правільны напрамак</string>
+    <string name="hud_bench_result_title">Вынік — што ты ўбачыў і ДЗЕ (CLUSTER ці лабавое шкло)?</string>
+    <string name="hud_bench_opt_cluster">✅ Стрэлка на CLUSTER (за рулём)</string>
+    <string name="hud_bench_opt_ok">✅ Стрэлка на HUD (лабавое шкло)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Стрэлка паказана — няправільны напрамак</string>
     <string name="hud_bench_opt_partial">⚠️ Адлегласць/тэкст паказаны — але без выразнай стрэлкі</string>
     <string name="hud_bench_opt_nothing">❌ На HUD нічога няма</string>

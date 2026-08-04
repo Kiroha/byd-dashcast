@@ -536,8 +536,9 @@
     <string name="dl4_cluster_unsupported_title">Cluster projection blocked by the firmware</string>
     <string name="dl4_cluster_unsupported_msg">On this vehicle the firmware does not allow DashCast to see the instrument-cluster screen: the app is not on the manufacturer\'s list of programs permitted to enumerate displays. DashCast also asked through its privileged helper, which found no cluster screen either. App projection to the cluster is therefore not possible on this firmware version — this is a manufacturer restriction, not a DashCast limitation.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD result — what did you see on the windshield?</string>
-    <string name="hud_bench_opt_ok">✅ Arrow shown — correct direction</string>
+    <string name="hud_bench_result_title">Result — what did you see, and WHERE (cluster or windshield)?</string>
+    <string name="hud_bench_opt_cluster">✅ Arrow on the CLUSTER (behind the steering wheel)</string>
+    <string name="hud_bench_opt_ok">✅ Arrow on the HUD (windshield)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Arrow shown — wrong direction</string>
     <string name="hud_bench_opt_partial">⚠️ Distance/text shown — but no clear arrow</string>
     <string name="hud_bench_opt_nothing">❌ Nothing on the HUD</string>
