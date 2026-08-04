@@ -941,8 +941,17 @@ android {
         // "none" = no arrow), and tell the tester to watch the CLUSTER and windshield and note WHERE
         // guidance appears — since sendInfo2 targets the 1for2 cluster, not the CAN-driven windshield
         // HUD. Diagnostics-only; no production/daemon change.)
-        versionCode 605
-        versionName "1.8.15-beta"
+        // 606 = 1.8.16-beta (HUD bench follow-ups after sendInfo2→cluster was CONFIRMED on-car — an
+        // owner's DL3 SX326 and a DL5.0 SW155 both render turn arrows on the CLUSTER via
+        // sendInfo2(4,NaviInfo). (1) Result picker adds "arrow on CLUSTER" + re-labels "arrow on HUD
+        // (windshield)" + reworded title asking WHERE, so a HUD-less tester records a YES instead of
+        // "other" (the owner's own run landed as "NO/PARTIAL — other — godzilla"). (2) New icon-sweep
+        // bench: sends AMap NEW_ICON ids 0..28 via sendInfo2, each ~3s with the id in the road-name
+        // field so ONE cluster photo maps id→glyph — the 1for2 cluster icon scheme is NOT AMap's, so
+        // straight/left/right ids must be confirmed on-glass; zipped under hud_iconsweep_. +1 string /
+        // 3 updated ×13 locales. Diagnostics-only; no production/daemon change.)
+        versionCode 606
+        versionName "1.8.16-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

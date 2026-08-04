@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.16-beta (versionCode 606)
+
+**HUD bench follow-ups now that `sendInfo2` cluster arrows are confirmed on-car.** Diagnostics-only.
+
+The `sendInfo2(4, NaviInfo)` bench is confirmed working on-car — a DiLink 3 owner (SX326) and a DiLink 5.0 car (SW155) both see turn arrows on the instrument **cluster**. Two additions: (1) the result picker gains **"arrow on the CLUSTER (behind the steering wheel)"**, re-labels the existing option **"arrow on the HUD (windshield)"**, and rewords the title to ask **where** — so a HUD-less tester who sees cluster arrows records a real YES instead of "other" (the owner's own run had landed as "NO/PARTIAL — other — godzilla"); one new string, three updated, across all thirteen locales. (2) A new **icon-sweep** bench sends AMap `NEW_ICON` ids `0..28` via `sendInfo2`, each ~3s with the id written into the road-name field ("ICON n"), so a single cluster photo maps id→glyph — the 1for2 cluster icon numbering is not AMap's (an old test drew a left-ish arrow for AMap "right"), so straight/left/right must be confirmed on-glass; captured under a distinct `hud_iconsweep_` name so it does not affect the `sendInfo2` tally. No production/daemon change.
+
 ### 1.8.15-beta (versionCode 605)
 
 **HUD bench: show only the experimental `sendInfo2` tool, and make it conclusive.** Diagnostics-only.
