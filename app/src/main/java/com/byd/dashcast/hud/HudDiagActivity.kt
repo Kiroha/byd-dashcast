@@ -150,54 +150,31 @@ class HudDiagActivity : AppCompatActivity() {
             setPadding(0, dp(4), 0, 0)
         })
 
-        // ── TOOL 1 — confirm the 5 discoveries ──────────────────────────────
-        root.addView(sectionHeader("① Confirmer les découvertes HUD"))
-        root.addView(hint("On envoie chaque commande HUD (allumage, ADAS, luminosité, hauteur, angle, " +
-                "extinction). Après CHAQUE commande, réponds OUI/NON à la question. À la fin ça envoie un ZIP."))
-        confirmBtn = Button(this).apply {
-            text = "▶  Lancer la confirmation (6 commandes)"
-            isAllCaps = false
-            setOnClickListener { startConfirmation() }
-        }
-        root.addView(confirmBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+        // ── Shared progress bar (Tool ④ uses it) ────────────────────────────
         bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = true
             visibility = View.GONE
         }
+
+        // Tools ①–③ (HUD-control confirmation, raw-logcat recorder, CAN→HUD bench) are PROVEN, so they
+        // are HIDDEN to focus testers on the still-experimental sendInfo2 channel (Tool ④). Their
+        // buttons are still created so the (now-unreachable) code paths stay valid; re-add to expose.
+        confirmBtn = Button(this).apply { isAllCaps = false; setOnClickListener { startConfirmation() } }
+        benchBtn   = Button(this).apply { isAllCaps = false; setOnClickListener { startCanHudBench() } }
+
+        // ── TOOL 4 — sendInfo2 NaviInfo injection (native OEM cluster channel) — the ONLY visible tool ──
+        // AutoContainer.sendInfo2(4, NaviInfo-flatbuffer) is the SAME binder call the OEM's own nav app
+        // (AmapService.sendNaviInfoTo1for2Clster) uses to push nav CONTENT to the 1for2 CLUSTER — not
+        // the CAN bus. The windshield HUD itself is CAN-driven (Tool ③, already proven); this tool
+        // tests whether the cluster nav strip can be driven straight through the container service.
+        root.addView(sectionHeader("④ Injection NaviInfo via sendInfo2 (canal natif OEM)"))
+        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie un guidage de test dans le " +
+                "MÊME format FlatBuffer que l'appli de nav OEM, via sendInfo2(4, …) précédé de l'activation " +
+                "sendInfo(5,0) — pas le CAN. Regarde le CLUSTER (panneau derrière le volant) ET le pare-brise, " +
+                "et note OÙ un guidage apparaît."))
         root.addView(bar, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(4) })
-
-        // ── TOOL 2 — raw logcat recorder (arrows) ───────────────────────────
-        root.addView(sectionHeader("② Enregistreur logcat brut (flèches, en roulant)"))
-        root.addView(hint("Capture un logcat NON filtré (tout, horodaté). Un passager tape la flèche " +
-                "affichée sur le HUD à chaque changement → on décode les codes de guidage. Passager uniquement."))
-        root.addView(Button(this).apply {
-            text = "▶  Ouvrir l'enregistreur logcat brut"
-            isAllCaps = false
-            setOnClickListener { startActivity(Intent(this@HudDiagActivity, HudRawCaptureActivity::class.java)) }
-        }, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
-
-        // ── TOOL 3 — CAN → HUD bench (does the HUD MCU consume our nav CAN frames?) ──
-        root.addView(sectionHeader("③ Bench CAN → HUD (firmware à flèches)"))
-        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie NOUS-MÊMES un guidage " +
-                "sur le CAN (flèche + distance + route) : tout droit, gauche, droite (~6 s chacun). Regarde le " +
-                "PARE-BRISE : si une flèche apparaît, le HUD est pilotable par nous. Puis réponds OUI/NON → ZIP."))
-        benchBtn = Button(this).apply {
-            text = "▶  Émettre un guidage CAN → regarde le HUD"
-            isAllCaps = false
-            setOnClickListener { startCanHudBench() }
-        }
-        root.addView(benchBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
-
-        // ── TOOL 4 — sendInfo2 NaviInfo injection (native OEM channel, experimental) ──
-        // AutoContainer.sendInfo2(4, NaviInfo-flatbuffer) is the SAME binder call the OEM's own
-        // nav app (AmapService) uses to drive the HUD — not the CAN bus. Unlike Tool 3 this bypasses
-        // BYDAutoInstrumentDevice entirely, going straight through the container service.
-        root.addView(sectionHeader("④ Injection NaviInfo via sendInfo2 (canal natif OEM, expérimental)"))
-        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie un guidage de test " +
-                "encodé dans le MÊME format FlatBuffer que l'appli de nav OEM, via sendInfo2(4, …) — pas le CAN. " +
-                "Regarde le PARE-BRISE : si un guidage apparaît, ce canal est pilotable directement depuis DashCast."))
         sendInfo2Btn = Button(this).apply {
-            text = "▶  Envoyer un NaviInfo test via sendInfo2(4) → regarde le HUD"
+            text = "▶  Envoyer un NaviInfo test via sendInfo2(4)"
             isAllCaps = false
             setOnClickListener { startSendInfo2Bench() }
         }
@@ -388,12 +365,19 @@ class HudDiagActivity : AppCompatActivity() {
                 sb.append(line).append('\n'); log(line)
             }
             step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
+            // OEM parity: on the 1for2 branch AmapService switches the container into nav mode with
+            // sendInfo(5,0,"") (AutoContainer — NOT the CAN bus) BEFORE pushing sendInfo2(4,…). Without
+            // this enable the container can accept every NaviInfo and render nothing (a false NO).
+            step("sendInfo(5,0) [container nav-mode enable]") { ProxyClient.autoContainerSendInfo(5, 0, "") }
+            // nextTurnIcon carries the RAW AMap NEW_ICON id — the OEM passes it UN-remapped into the
+            // FlatBuffer (TurnIdMapToCAN is applied only on the CAN path). Straight = 9, NOT 1: AMap
+            // id 1 ≈ "none" → no arrow. Left = 2, right = 3 (correct raw AMap ids).
             val maneuvers = listOf(
-                Triple("TOUT DROIT", 1, "STRAIGHT"),
+                Triple("TOUT DROIT", 9, "STRAIGHT"),
                 Triple("GAUCHE", 2, "LEFT"),
                 Triple("DROITE", 3, "RIGHT"))
             for ((fr, icon, en) in maneuvers) {
-                log("▶▶ REGARDE LE PARE-BRISE — '$fr' (nextTurnIcon=$icon, sendInfo2) ~6 s")
+                log("▶▶ REGARDE LE CLUSTER + PARE-BRISE — '$fr' (nextTurnIcon=$icon, sendInfo2) ~6 s")
                 var dist = 300
                 repeat(6) {
                     val payload = NaviInfoPayloadBuilder.build(
