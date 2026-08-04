@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.15-beta (versionCode 605)
+
+**HUD bench: show only the experimental `sendInfo2` tool, and make it conclusive.** Diagnostics-only.
+
+The bench's three proven tools (HUD-control confirmation, raw-logcat recorder, CAN→HUD arrow bench) are now hidden so testers focus on the one still to validate — the `sendInfo2` NaviInfo injection from 1.8.13-beta. An adversarial review found that tool could produce a false "nothing on HUD", so it is corrected: (1) it now sends the OEM container nav-mode enable `sendInfo(5,0,"")` (AutoContainer, not CAN) before the `sendInfo2(4, NaviInfo)` loop — without it the container accepts every payload and renders nothing; (2) the straight-ahead `nextTurnIcon` is the raw AMap `NEW_ICON` id `9`, not `1` (id `1` = "none" = no arrow; left `2`/right `3` were already correct); (3) the tester is now told to watch **both the instrument cluster and the windshield** and note **where** guidance appears — `sendInfo2(4, NaviInfo)` is the OEM's 1for2 cluster content path (`sendNaviInfoTo1for2Clster`), not the CAN-driven windshield HUD, so a result must distinguish the two. No production/daemon change.
+
 ### 1.8.14-beta (versionCode 604)
 
 **Fix: the 1.8.13-beta HUD bench tool was unreachable from inside the app.** Diagnostics-only.
