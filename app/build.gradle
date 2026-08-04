@@ -934,8 +934,15 @@ android {
         // BYD APK Extraction) gets a second button, "HUD bench (DL3) — sendInfo2 NaviInfo test",
         // that simply starts HudDiagActivity. No change inside HudDiagActivity itself. 228 unit
         // tests; lint 0/0; diagnostics-only.)
-        versionCode 604
-        versionName "1.8.14-beta"
+        // 605 = 1.8.15-beta (HUD bench: show ONLY Tool 4 (sendInfo2 NaviInfo) and hide the proven
+        // Tools 1-3, plus make Tool 4 conclusive — add the OEM container nav-mode enable
+        // sendInfo(5,0,"") before the sendInfo2(4,...) loop (without it the container accepts the
+        // payload and renders nothing), fix the STRAIGHT icon to the raw AMap NEW_ICON id 9 (1 =
+        // "none" = no arrow), and tell the tester to watch the CLUSTER and windshield and note WHERE
+        // guidance appears — since sendInfo2 targets the 1for2 cluster, not the CAN-driven windshield
+        // HUD. Diagnostics-only; no production/daemon change.)
+        versionCode 605
+        versionName "1.8.15-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
