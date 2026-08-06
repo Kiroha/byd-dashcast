@@ -950,8 +950,36 @@ android {
         // field so ONE cluster photo maps id→glyph — the 1for2 cluster icon scheme is NOT AMap's, so
         // straight/left/right ids must be confirmed on-glass; zipped under hud_iconsweep_. +1 string /
         // 3 updated ×13 locales. Diagnostics-only; no production/daemon change.)
-        versionCode 606
-        versionName "1.8.16-beta"
+        // 607 = 1.8.17-beta (INC-20260804-171617 "Phase 0": make the NEXT DiLink 5.0 report readable.
+        // Root cause of that incident is NOT ours — the OEM BydProjectionService re-fronts
+        // com.byd.launchermap/MeterActivity onto cluster display 3 within ~1.1-2s of every launch
+        // (proven in the WM events buffer) — and the app's own diagnostics could not see it at all.
+        // Diagnostics-only, no projection/daemon-protocol change, and every shared-code change fails
+        // OPEN so DL3/DL4/trinket/AAOS keep today's behaviour. Five items: (1) cluster screenshots
+        // captured the WRONG layerStack on DL5 — the app launches onto shadow display 3/4 whose
+        // content composites onto layerStack 2, so all 34 shots in that report were the same
+        // 8937-byte black frame of a legitimately empty surface, and got mis-read as "the panel was
+        // black"; the DL5 3/4→2 rule the mirror already applied is now a shared, unit-tested pure
+        // policy (ClusterLayerStackPolicy) that the recorder uses too, so the two cannot drift again.
+        // (2) The bug report now captures the OEM projection manager's own logcat (grep-based extra
+        // section — deliberately NOT a new tag in the filterspec, where a malformed entry would kill
+        // that section on every platform) and whitelists Phase4TaskVerbs:I so the daemon transcript
+        // survives a log flood. (3) The fission watchdog no longer adopts a HOME-typed task: it had
+        // latched onto the head-unit launcher task on display 0 and re-anchored it 180× — every call
+        // refused by the framework — flooding ~5000 lines and evicting the framework evidence from
+        // the report. Uses the existing 4-route readActivityType (a hand-rolled topActivityType read
+        // short-circuits on the boxed 0 = UNDEFINED and would have been a silent no-op), and is
+        // scoped to the watchdog so the eviction landing-wait and the slot verbs still see every
+        // task. (4) The watchdog logs WHO is on top of the cluster display when it changes (sampled
+        // 2s) — observation only, nothing acts on it; TaskLocation carries no z-order, which is why
+        // this failure mode was invisible, and `visible` is useless here since the OEM overlay is
+        // translucent and non-occluding. (5) A read-only "OEM cluster probes" button in Diagnostics
+        // (HOME resolution, byd_map_package, adb persistence props, component-state permission
+        // against OUR OWN component). Adversarially reviewed across DL3/DL4/DL5.1/AAOS: 8 defects
+        // found and fixed before release, incl. the silent-no-op above and a probe that would have
+        // reset+force-stopped the OEM cluster map. 228 -> 232 unit tests; lint 0/0.)
+        versionCode 607
+        versionName "1.8.17-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

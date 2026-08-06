@@ -316,11 +316,22 @@ public final class Phase4TaskVerbs {
         }
     }
 
+    /** Resolves ATM and delegates to {@link #topTaskOnDisplay}; null on any failure (read-only). */
+    private static String topTaskOnDisplayForWatchdog(int targetDisplayId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            return topTaskOnDisplay(iAtm, targetDisplayId);
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
     private static TaskLocation findWatchdogTaskLocation(String packageName,
                                                          int targetDisplayId) {
         try {
             return FissionWatchdogPolicy.selectTask(
-                    queryTaskLocationsForPackage(packageName), targetDisplayId);
+                    queryTaskLocationsForPackage(packageName, true), targetDisplayId);
         } catch (Throwable error) {
             android.util.Log.w("Phase4TaskVerbs",
                     "WATCHDOG task query failed pkg=" + packageName + ": " + error);
@@ -328,8 +339,67 @@ public final class Phase4TaskVerbs {
         }
     }
 
+    /**
+     * True only when the task is POSITIVELY identified as a home/launcher task.
+     *
+     * Delegates to {@link #readActivityType}, the four-route reader already in this file. Reading
+     * this the "obvious" way is a known trap: the activity type is NOT a usable public field on the
+     * task object, and a hand-rolled {@code topActivityType} read short-circuits on the boxed
+     * {@code 0} = {@code ACTIVITY_TYPE_UNDEFINED}, which would make every other route dead code and
+     * turn the HOME filter into a silent no-op. That is exactly the failure mode
+     * {@link #readWindowConfigInt} was written for in 1.6.112.
+     *
+     * Fails OPEN: {@code readActivityType} returns -1 when every route fails, so a task whose type
+     * cannot be read is NOT treated as home and is kept — today's behaviour on any ROM.
+     */
+    private static boolean isHomeTask(Object task) {
+        return readActivityType(task) == AT_HOME;
+    }
+
+    /**
+     * Short description of the TOP root task currently on {@code displayId}, or {@code null} when it
+     * cannot be determined. Read-only diagnostics: nothing acts on this value.
+     *
+     * <p>Why this exists: DashCast could not see the failure mode behind INC-20260804-171617 at all.
+     * {@link TaskLocation} carries only a task id and a display id, so the watchdog can detect
+     * "my task moved to another display" but is blind to "my task stayed on the right display and
+     * was covered by someone else" — which is exactly what the OEM does when it re-fronts its own
+     * map. {@code visible} is useless as a signal here (the OEM overlay is translucent and
+     * non-occluding, so our task stays visible=true while paused underneath), hence reading the
+     * task ORDER instead.
+     *
+     * <p>CAVEAT, deliberately not asserted as fact: this assumes {@code getAllRootTaskInfos()} /
+     * {@code getAllStackInfos()} returns tasks front-to-back. That ordering has NOT yet been
+     * confirmed on any BYD ROM — the first on-car capture is what will confirm or refute it, which
+     * is precisely why this only logs.
+     */
+    private static String topTaskOnDisplay(Object iAtm, int displayId) {
+        try {
+            for (Object info : getAtmTaskList(iAtm)) {
+                if (info == null) continue;
+                Object rawDisplay = readFieldNoThrow(info, "displayId");
+                if (!(rawDisplay instanceof Integer) || ((Integer) rawDisplay) != displayId) continue;
+                int id = getStackOrRootTaskId(info);
+                android.content.ComponentName top =
+                        (android.content.ComponentName) readFieldNoThrow(info, "topActivity");
+                String pkg = top != null ? top.flattenToShortString() : "?";
+                return "taskId=" + id + " top=" + pkg;
+            }
+            return null;
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    /** Every task of {@code packageName}, home tasks included — the contract all callers but the
+     *  watchdog rely on. */
     private static java.util.List<TaskLocation> queryTaskLocationsForPackage(String packageName)
             throws Throwable {
+        return queryTaskLocationsForPackage(packageName, false);
+    }
+
+    private static java.util.List<TaskLocation> queryTaskLocationsForPackage(
+            String packageName, boolean skipHomeTasks) throws Throwable {
         Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
         Object iAtm = atmCls.getMethod("getService").invoke(null);
         Method getTasks = sGetTasks;
@@ -378,6 +448,27 @@ public final class Phase4TaskVerbs {
                 continue;
             }
             int taskId = (Integer) rawTaskId;
+            // Never hand a HOME task to the WATCHDOG. An OEM package can own several tasks (e.g.
+            // com.byd.launchermap owns both the cluster MeterActivity and a head-unit home page);
+            // FissionWatchdogPolicy.selectTask returns the first task found on another display, so
+            // it latched onto the home task on display 0 and then re-anchored it 180 times, each
+            // one refused by the framework ("Root task ... of activityType=2 already on
+            // display=DefaultTaskDisplayArea. Can't have multiple"). That flooded ~5000 logcat
+            // lines and evicted the framework evidence from the bug report (INC-20260804-171617).
+            //
+            // Scoped to the watchdog on purpose. This query is ALSO the backing store for
+            // findTaskLocationForPackage → the eviction landing-wait, forceStopApp, moveAndResize
+            // and the SurfaceDaemon slot verbs; hiding a task from those would turn a FOUND task
+            // into ABSENT and, for a package whose only task is home-typed, burn the shared landing
+            // budget before force-stopping anyway. Those callers keep seeing every task.
+            //
+            // Fails OPEN regardless: readActivityType returns -1 when unreadable, so a task whose
+            // type cannot be determined is kept.
+            if (skipHomeTasks && isHomeTask(task)) {
+                android.util.Log.d("Phase4TaskVerbs",
+                        "watchdog: skip home task pkg=" + packageName + " taskId=" + taskId);
+                continue;
+            }
             Object rawDisplayId = readFieldNoThrow(task, "displayId");
             int displayId = rawDisplayId instanceof Integer
                     ? (Integer) rawDisplayId
@@ -922,6 +1013,9 @@ public final class Phase4TaskVerbs {
         Thread watchdog = new Thread(() -> {
             int currentTaskId = initialTaskId;
             int reanchorCount = 0;
+            // Last observed top task on the cluster display — logged only when it CHANGES, so this
+            // costs a handful of lines per session instead of one per 500 ms poll.
+            String lastTop = null;
             try {
                 for (int poll = 1; poll <= FissionWatchdogPolicy.MAX_POLLS; poll++) {
                     try {
@@ -940,6 +1034,23 @@ public final class Phase4TaskVerbs {
                         TaskLocation location = findWatchdogTaskLocation(
                             packageName, targetDisplayId);
                     TaskLocation.DisplayMatch match = location.matchDisplay(targetDisplayId);
+
+                    // Z-order observation only — never acted upon. Records WHO is on top of the
+                    // cluster display, which is the one thing the report could not tell us when the
+                    // OEM re-fronted its own map over a successfully launched app.
+                    // Sampled every 4th poll (2 s): the OEM's re-front floor is ~1.1 s, so 2 s loses
+                    // no transition worth naming, and it keeps three quarters of the extra binder
+                    // traffic off DL3/DL4 — platforms that gain nothing from this DL5.0 probe.
+                    String top = (poll % 4 == 0) ? topTaskOnDisplayForWatchdog(targetDisplayId) : null;
+                    if (top != null && !top.equals(lastTop)) {
+                        android.util.Log.i("Phase4TaskVerbs",
+                                "WATCHDOG cluster-top display=" + targetDisplayId
+                                        + " poll=" + poll
+                                        + " now=[" + top + "]"
+                                        + " was=[" + (lastTop == null ? "-" : lastTop) + "]"
+                                        + " ours=" + packageName);
+                        lastTop = top;
+                    }
                     if (location.getStatus() == TaskLocation.Status.FOUND
                             && location.getTaskId() != currentTaskId) {
                         android.util.Log.i("Phase4TaskVerbs",

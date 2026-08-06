@@ -11,6 +11,7 @@ import android.view.Surface
 import android.view.SurfaceControl
 import com.byd.dashcast.cluster.display.ClusterDisplayInfo
 import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
+import com.byd.dashcast.cluster.display.ClusterLayerStackPolicy
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.ProxyClient
@@ -581,6 +582,12 @@ class ClusterMirrorManager {
          * a black image. The actually-composited 1920×720 content displayed on
          * the physical cluster lives on layerStack=2 (fission_bg_XDJAScreenProjection).
          * Override 3/4 → 2 only on effective DL5. DL3 path untouched.
+         *
+         * The numeric rule lives in [ClusterLayerStackPolicy] so the mirror and the screenshot
+         * recorder cannot drift apart again — they already had, and the recorder's missing override
+         * is why every DiLink 5 cluster screenshot was an all-black frame. Behaviour here is
+         * unchanged: same DL5 gate, same fail-open on a detection throw, same 3/4 → 2 mapping,
+         * same log line.
          */
         private fun applyDl5LayerStackOverride(ctx: Context?, detectedLayerStack: Int): Int {
             if (ctx == null) return detectedLayerStack
@@ -590,12 +597,11 @@ class ClusterMirrorManager {
             } catch (t: Throwable) {
                 return detectedLayerStack
             }
-            if (!dl5) return detectedLayerStack
-            if (detectedLayerStack == 3 || detectedLayerStack == 4) {
-                AppLogger.i(TAG, "DL5 override: layerStack $detectedLayerStack → 2 (mirror composed fission output)")
-                return 2
+            val effective = ClusterLayerStackPolicy.composedOrSelf(dl5, detectedLayerStack)
+            if (effective != detectedLayerStack) {
+                AppLogger.i(TAG, "DL5 override: layerStack $detectedLayerStack → $effective (mirror composed fission output)")
             }
-            return detectedLayerStack
+            return effective
         }
 
         /**
@@ -613,12 +619,11 @@ class ClusterMirrorManager {
             } catch (t: Throwable) {
                 return detectedDisplayId
             }
-            if (!dl5) return detectedDisplayId
-            if (detectedDisplayId == 3 || detectedDisplayId == 4) {
-                AppLogger.i(TAG, "DL5 override: displayId $detectedDisplayId → 2 (touch injection on composed cluster face)")
-                return 2
+            val effective = ClusterLayerStackPolicy.composedOrSelf(dl5, detectedDisplayId)
+            if (effective != detectedDisplayId) {
+                AppLogger.i(TAG, "DL5 override: displayId $detectedDisplayId → $effective (touch injection on composed cluster face)")
             }
-            return detectedDisplayId
+            return effective
         }
     }
 }
