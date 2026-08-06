@@ -9,6 +9,7 @@ import android.view.Display
 import androidx.core.content.edit
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
+import com.byd.dashcast.cluster.display.ClusterLayerStackPolicy
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.hud.HudCaptureSupport
 import com.byd.dashcast.infrastructure.AdbLocalClient
@@ -126,7 +127,7 @@ object ClusterShotRecorder {
                 val sz = sizeOf(dm, clusterId)
                 if (sz != null) {
                     daemonPruned = capture(
-                        binder, layerStackOf(cluster, clusterId), sz.first, sz.second,
+                        binder, clusterLayerStack(ctx, cluster, clusterId), sz.first, sz.second,
                         "$SHOTS_DIR/shot_cluster_$stamp.jpg", "cluster"
                     ) || daemonPruned
                 }
@@ -227,6 +228,35 @@ object ClusterShotRecorder {
             val m = Display::class.java.getMethod("getLayerStack")
             (m.invoke(display) as? Int) ?: fallback
         } catch (t: Throwable) { fallback }
+    }
+
+    /**
+     * The layerStack the cluster face is actually composited on.
+     *
+     * On DiLink 5 the app is launched onto a shadow render display (layerStack 3/4) whose content
+     * the OEM container composites onto layerStack 2 — so capturing the detected layerStack grabbed
+     * a legitimately EMPTY surface and produced an all-black JPEG every time (all 34 cluster shots
+     * in INC-20260804-171617 were the same 8937-byte black frame, including ones taken while the
+     * projected app was demonstrably on the panel). [ClusterMirrorManager] already applied this
+     * override for the preview; the recorder did not.
+     *
+     * Fails OPEN: any platform-detection error returns the detected value, i.e. exactly today's
+     * behaviour. DiLink 3 / DiLink 4 (layerStack 1) and trinket / DiLink 5.1 (layerStack 2) are
+     * never rewritten, because the rule only ever maps 3/4 → 2.
+     */
+    private fun clusterLayerStack(ctx: Context, display: Display, clusterId: Int): Int {
+        val detected = layerStackOf(display, clusterId)
+        val dl5 = try {
+            com.byd.dashcast.platform.Platform.get().isDiLink5(ctx)
+        } catch (t: Throwable) {
+            return detected
+        }
+        val effective = ClusterLayerStackPolicy.composedOrSelf(dl5, detected)
+        if (effective != detected) {
+            AppLogger.i(TAG, "DL5 override: capture layerStack $detected → $effective "
+                    + "(composed cluster face; $detected is the empty shadow render display)")
+        }
+        return effective
     }
 
     // ── Send-time bundling (called from a background thread by the bug wizard) ────

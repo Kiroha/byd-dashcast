@@ -13,6 +13,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.byd.dashcast.hud.HudDiagActivity
 import com.byd.dashcast.platform.Platform
+import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
 import java.io.File
@@ -36,6 +37,7 @@ class DiagActivity : Activity() {
 
     private lateinit var logView: TextView
     private lateinit var runBtn: Button
+    private lateinit var probeBtn: Button
     @Volatile private var lastWork: File? = null
 
     @SuppressLint("SetTextI18n")
@@ -59,6 +61,12 @@ class DiagActivity : Activity() {
             text = "HUD bench (DL3) — sendInfo2 NaviInfo test"
             setOnClickListener { startActivity(Intent(this@DiagActivity, HudDiagActivity::class.java)) }
         })
+
+        probeBtn = Button(this).apply {
+            text = "OEM cluster probes (read-only)"
+            setOnClickListener { runOemProbes() }
+        }
+        root.addView(probeBtn)
 
         logView = TextView(this).apply {
             textSize = 12f
@@ -142,6 +150,69 @@ class DiagActivity : Activity() {
                     }
                 })
         }, "byd-apk-extract").start()
+    }
+
+    /**
+     * Read-only probes for the DiLink 5.0 "OEM re-fronts its own map over the projected app"
+     * investigation (INC-20260804-171617). Answers the questions the existing bug report cannot:
+     * which package owns HOME (so we know what would break if anything were ever disabled), which
+     * cluster map client the OEM is configured to use, whether ADB-over-TCP is set to survive a
+     * power cycle, and whether uid 2000 may change component state at all.
+     *
+     * Every command is a READ of device state. The one apparent exception, `pm default-state`, is
+     * deliberately aimed at **our own** component: it answers "may uid 2000 change component state
+     * on this ROM?" (a SecurityException answers it) without touching anything that belongs to the
+     * OEM. Pointing it at the OEM's cluster map — as an earlier draft did — would have been a real
+     * write: `pm default-state` clears any per-user override AND force-stops the owning process,
+     * i.e. it would have killed the live OEM cluster map on a tester's car in the name of a
+     * "read-only" probe.
+     *
+     * Runs off the UI thread; output goes to the on-screen log and to the journal, so it lands in
+     * the next bug report.
+     */
+    private fun runOemProbes() {
+        probeBtn.isEnabled = false
+        runOnUiThread { logView.text = "" }
+        log("Running read-only OEM cluster probes — nothing is modified.")
+        Thread({
+            val probes = listOf(
+                "HOME resolution" to
+                    "cmd package resolve-activity --brief -a android.intent.action.MAIN " +
+                    "-c android.intent.category.HOME",
+                "HOME candidates" to
+                    "cmd package query-activities -a android.intent.action.MAIN " +
+                    "-c android.intent.category.HOME 2>/dev/null | grep -iE 'packageName|name=' | head -40",
+                "OEM cluster map client" to "settings get global byd_map_package",
+                "ADB persistence props" to "getprop | grep -iE 'adb|tcp.port'",
+                "Component-state permission" to
+                    "pm default-state com.byd.dashcast/com.byd.dashcast.ui.diag.DiagActivity 2>&1",
+                "Display 0 tasks" to
+                    "dumpsys activity activities 2>/dev/null | grep -A 40 'Display #0' | " +
+                    "grep -E 'Task\\{|type=|realActivity|topResumed' | head -40",
+                "Cluster displays" to
+                    "dumpsys display 2>/dev/null | grep -oE '\"[a-z_]*fission[A-Za-z0-9_]*\"' | sort -u",
+                "OEM projection processes" to
+                    "ps -A 2>/dev/null | grep -iE 'amapservice|launchermap|containerservice|fission'"
+            )
+            try {
+                for ((label, cmd) in probes) {
+                    log("── $label ──")
+                    val out = try {
+                        ProxyClient.runShell(cmd) ?: ""
+                    } catch (t: Throwable) {
+                        "ERR ${t.javaClass.simpleName}: ${t.message}"
+                    }
+                    log(if (out.isBlank()) "(empty)" else out.trim())
+                }
+                log("")
+                log("Done. Send a bug report now so these results reach us.")
+            } finally {
+                // Always re-enable: runShell has no client-side timeout and can take the blocking
+                // reconnect path (~31 s) on a car with no daemon, and anything thrown outside the
+                // per-probe catch would otherwise leave the button dead until the screen is recreated.
+                runOnUiThread { probeBtn.isEnabled = true }
+            }
+        }, "oem-cluster-probes").start()
     }
 
     @SuppressLint("SetTextI18n")

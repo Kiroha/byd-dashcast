@@ -174,7 +174,27 @@ public final class BugReportCapture {
             // Bounded by `-t`, exactly as before: this section is written BEFORE the dumpsys
             // sections, so any unbounded growth here is what would evict them.
             + " ; echo '--- LOGCAT (window/cluster/display/car tags) ---' >> " + p
-            + " ; logcat -d -t 1500 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:V ClusterManager:V '*:S' >> " + p + " 2>&1"
+            // Phase4TaskVerbs:I carries the daemon's own launch/watchdog transcript, including the
+            // "WATCHDOG cluster-top" z-order observation. It has to be in THIS filtered section:
+            // the unfiltered one is exactly what a watchdog log flood evicts, which is how
+            // INC-20260804-171617 lost its framework evidence. Plain alphanumeric tag — no
+            // filterspec risk.
+            + " ; logcat -d -t 1500 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:V ClusterManager:V Phase4TaskVerbs:I '*:S' >> " + p + " 2>&1"
+            // The OEM's own cluster projection manager, matched by CONTENT rather than by tag.
+            // INC-20260804-171617 (DiLink 5.0) was root-caused to that service re-fronting its map
+            // onto the cluster display ~1-2 s after every launch, yet the report contained ZERO of
+            // its lines: its tag is "[Cluster]-BydProjectionService", which cannot be added to the
+            // tag-filtered spec above without risking the whole filterspec (brackets/dashes), and a
+            // malformed spec would silently cost us the section on EVERY platform. A separate
+            // grep-based pass cannot break anything else and works whatever the exact tag is.
+            + " ; echo '--- OEM CLUSTER PROJECTION (BydProjectionService / container) ---' >> " + p
+            // -t 20000, not a small window: the failure this section exists to document is
+            // accompanied by a log flood, and a line window is worthless on a spamming unit (see
+            // the same reasoning above). Output is bounded by `tail -300` regardless, so a wider
+            // window costs capture time only, never report size.
+            + " ; logcat -d -t 20000 -v threadtime 2>/dev/null"
+            + "   | grep -iE 'BydProjectionService|projectionmanager|AutoDisplayService|AutoSharedDisplay|START_MAP_VIEW|MeterActivity|stopContentProjection|byd_map_package'"
+            + "   | tail -300 >> " + p + " 2>&1"
             // ── CLUSTER / DISPLAY STATE ──
             + " ; echo '--- DISPLAYS ---' >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p

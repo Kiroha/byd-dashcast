@@ -14,6 +14,22 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.17-beta (versionCode 607)
+
+**Make the next DiLink 5.0 report readable (INC-20260804-171617, "Phase 0").** Diagnostics-only; no projection change, no daemon protocol change.
+
+That incident — "app not shown" on a DiLink 5.0 — was root-caused, and **it is not our bug**: the OEM's own `BydProjectionService` re-fronts `com.byd.launchermap/…MeterActivity` onto cluster display 3 within ~1.1–2 s of every launch (proven in the WindowManager events buffer: `bringingFoundTaskToFront` → `wm_new_intent … com.byd.automap.START_MAP_VIEW` → our app paused). Every DashCast launch succeeded. It is also **not a regression**: the display we pick is bit-identical to the last known-working build (`id=3 shared_fission_bg_XDJAScreenProjection_0` in both 1.6.8-beta and 1.8.15-beta) — what changed is the car's own OEM navigation stack.
+
+What this release fixes is that the app's diagnostics could not *see* any of it.
+
+- **Cluster screenshots were capturing the wrong surface on DiLink 5.** The app launches onto a shadow render display (3/4) whose content the OEM composites onto layerStack 2; the recorder captured the shadow, so all 34 cluster shots in that report were the same 8937-byte black frame of a legitimately empty surface — and that got mis-read as "the panel was black". The 3/4 → 2 rule the mirror already applied is now a shared, unit-tested pure policy used by both, so they cannot drift apart again.
+- **The OEM's own log is now captured**, as a separate grep-based section rather than a new entry in the tag filterspec (a malformed filterspec would have silently cost that section on *every* platform), and the daemon's transcript tag is whitelisted so it survives a log flood.
+- **The fission watchdog no longer adopts a HOME-typed task.** It had latched onto the head-unit launcher task on display 0 and re-anchored it 180 times — every call refused by the framework — flooding ~5000 log lines and evicting the framework evidence from the report. Scoped to the watchdog, so the eviction landing-wait and the slot verbs still see every task.
+- **The watchdog now records who is on top of the cluster display** when it changes. Observation only; nothing acts on it. This failure mode was invisible because task location carries no z-order, and "visible" is useless here — the OEM overlay is translucent and non-occluding, so the covered app still reports visible.
+- **A read-only "OEM cluster probes" button** in Diagnostics (HOME resolution, OEM cluster map setting, ADB persistence properties, component-state permission — the last one aimed at *our own* component).
+
+Every change to shared code fails **open**: an unreadable platform or activity type yields exactly today's behaviour, so **DiLink 3, DiLink 4, DiLink 5.1/trinket and AAOS are unaffected**. Verified by an adversarial cross-platform review, which found and fixed 8 defects before release — including one that would have made the watchdog fix a silent no-op, and a "read-only" probe that would in fact have reset and force-stopped the OEM cluster map on a tester's car. 228 → 232 unit tests; lint 0/0.
+
 ### 1.8.16-beta (versionCode 606)
 
 **HUD bench follow-ups now that `sendInfo2` cluster arrows are confirmed on-car.** Diagnostics-only.
