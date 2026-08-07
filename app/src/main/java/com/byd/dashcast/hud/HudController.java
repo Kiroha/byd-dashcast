@@ -181,6 +181,12 @@ public final class HudController {
             }
         }
 
+        // 4c. CLUSTER path — push the same maneuver through the OEM AutoContainer channel
+        //     (sendInfo2(4, NaviInfo)). Independent of CAN: this is what lights the instrument
+        //     cluster, and it is the only arrow source on cars with no windshield HUD. Sent every
+        //     update like the OEM does; guarded, never throws.
+        ClusterNavPusher.push(data);
+
         // 5. AMap broadcast — unconditional, the cluster compositor needs it every step.
         sendAmapBroadcast(ctx, data);
     }
@@ -200,6 +206,7 @@ public final class HudController {
         }
         isHudActive = false;
         stopWatchdog();
+        ClusterNavPusher.stop();   // clear the cluster guidance too (best-effort)
         sendAmapStopBroadcast(ctx);
         resetState();
     }
@@ -226,6 +233,10 @@ public final class HudController {
         try {
             CanBusController.setNaviActive(true);
             isHudActive = true;
+            // SECOND OUTPUT PATH — switch the OEM container into nav mode so the instrument CLUSTER
+            // accepts our NaviInfo frames. Cars without a windshield HUD get their arrows from this
+            // path alone. Best-effort: it must never affect the proven CAN path above.
+            ClusterNavPusher.enable();
             armWatchdog();
         } catch (ProxyClient.ProxyException e) {
             Log.w(TAG, "setNaviActive(true) failed: " + e.getMessage());
@@ -373,12 +384,16 @@ public final class HudController {
     }
 
     /**
-     * Maps a BYD turn icon ID to the AMap broadcast icon value.
-     * Based on OpenBYD 2.2 {@code mapTurnKindToAmapBroadcastIcon}:
-     * destination (48) → 12; everything else → 2 (generic arrow).
+     * Maps a BYD turn icon ID to the AMap {@code NEW_ICON} value used by the broadcast.
+     *
+     * <p>This used to send {@code 2} for every maneuver and {@code 12} for the destination — but an
+     * on-car icon sweep (29 photos, ids 0..28) decoded the real namespace: <b>2 is turn-LEFT</b> and
+     * <b>12 is a roundabout</b>. So every straight/right maneuver was drawing a LEFT arrow and the
+     * arrival was drawing a roundabout. Now shares the single verified table in
+     * {@link ClusterNavPusher#toAmapIcon(int)} with the cluster path.
      */
     private static int mapToAmapIcon(int bydIconId) {
-        return bydIconId == CanBusController.ICON_DESTINATION ? 12 : 2;
+        return ClusterNavPusher.toAmapIcon(bydIconId);
     }
 
     private static String formatMeters(int meters) {

@@ -569,4 +569,7 @@
     <string name="bug_hud_no_route_msg">Hozir hech qanday marshrut faol emas. DashCast yoʻnalish koʻrsatmalarini faqat faol navigatsiya paytida oladi: Google Maps yoki Waze\'ni shunchaki ochishning oʻzi yetarli emas. Biror manzilga marshrut boshla, keyin HUD\'ga qara — strelka paydo boʻlishi kerak.</string>
     <string name="bug_hud_no_route_understood">Tushundim, marshrut boshlayman</string>
     <string name="bug_hud_no_notif_access_msg">DashCast’ning bildirishnomalarga ruxsati yoʻq. Busiz boʻlmaydi: burilish koʻrsatmalari Google Maps yoki Waze bildirishnomasidan oʻqiladi. Android Sozlamalar → Bildirishnomalar → Bildirishnomalardan foydalanish boʻlimiga kirib, DashCast’ga ruxsat ber, keyin marshrutni qaytadan ishga tushir.</string>
+    <string name="hud_sweep_result_title">Skanerlash tugadi — CLUSTERda nima koʻrding?</string>
+    <string name="hud_sweep_opt_photographed">📷 Belgilarni suratga oldim</string>
+    <string name="hud_sweep_opt_nothing">❌ CLUSTERda hech narsa chiqmadi</string>
 </resources>

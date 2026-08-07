@@ -569,4 +569,7 @@
     <string name="bug_hud_no_route_msg">Şu anda aktif bir rota yok. DashCast dönüş yönlerini yalnızca navigasyon aktif olarak yol tarifi verirken alır; Google Maps veya Waze\'i açmış olman yeterli değil. Bir hedefe rota başlat, sonra HUD\'a bak — okun belirmesi gerekir.</string>
     <string name="bug_hud_no_route_understood">Anladım, bir rota başlatacağım</string>
     <string name="bug_hud_no_notif_access_msg">DashCast\'ın bildirim erişimi yok. Bu şart: dönüş yönleri Google Maps veya Waze bildiriminden okunuyor. Android Ayarlar → Bildirimler → Bildirim erişimi bölümüne gidip DashCast\'a izin ver, sonra rotayı yeniden başlat.</string>
+    <string name="hud_sweep_result_title">Tarama bitti — CLUSTER\'da ne gördün?</string>
+    <string name="hud_sweep_opt_photographed">📷 Simgelerin fotoğrafını çektim</string>
+    <string name="hud_sweep_opt_nothing">❌ Cluster\'da hiçbir şey görünmedi</string>
 </resources>

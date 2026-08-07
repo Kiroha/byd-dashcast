@@ -569,4 +569,7 @@
     <string name="bug_hud_no_route_msg">Қазір белсенді маршрут жоқ. DashCast бұрылыс нұсқауларын тек навигация маршрут бойынша бағыттап тұрғанда ғана алады: Google Maps немесе Waze қосымшасын жай ашып қою жеткіліксіз. Бір мекенжайға маршрут салып, бағыттауды іске қос, содан соң HUD экранына қара — көрсеткі пайда болуы керек.</string>
     <string name="bug_hud_no_route_understood">Түсінікті, маршрут саламын</string>
     <string name="bug_hud_no_notif_access_msg">DashCast-та хабарландыруларға қатынас жоқ. Бұл — міндетті нәрсе: бұрылыс нұсқаулары Google Maps не Waze хабарландыруынан оқылады. Android параметрлері → Хабарландырулар → Хабарландыруларға қатынасу бөліміне кіріп, DashCast-қа рұқсат бер де, маршрутты қайтадан іске қос.</string>
+    <string name="hud_sweep_result_title">Шолу аяқталды — КЛАСТЕРДЕ не көрдің?</string>
+    <string name="hud_sweep_opt_photographed">📷 Таңбаларды суретке түсірдім</string>
+    <string name="hud_sweep_opt_nothing">❌ КЛАСТЕРДЕ ештеңе көрсетілмеді</string>
 </resources>

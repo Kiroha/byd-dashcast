@@ -569,4 +569,7 @@
     <string name="bug_hud_no_route_msg">Сейчас маршрут не проложен. DashCast получает подсказки о поворотах только при активном ведении по маршруту: просто открыть Google Maps или Waze недостаточно. Проложи маршрут до нужного места и запусти навигацию, а потом посмотри на HUD — стрелка должна появиться.</string>
     <string name="bug_hud_no_route_understood">Понятно, сейчас проложу маршрут</string>
     <string name="bug_hud_no_notif_access_msg">У DashCast нет доступа к уведомлениям. Без него никак: указания поворотов считываются из уведомления Google Maps или Waze. Открой Настройки Android → Уведомления → Доступ к уведомлениям, разреши его для DashCast и запусти маршрут заново.</string>
+    <string name="hud_sweep_result_title">Перебор завершён — что ты увидел на КЛАСТЕРЕ?</string>
+    <string name="hud_sweep_opt_photographed">📷 Я сфотографировал значки</string>
+    <string name="hud_sweep_opt_nothing">❌ На кластере ничего не появилось</string>
 </resources>

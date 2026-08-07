@@ -187,7 +187,8 @@ class HudDiagActivity : AppCompatActivity() {
         // cluster's icon scheme is NOT identical to AMap's, so straight/left/right ids must be
         // confirmed on-glass before wiring nav content for real).
         root.addView(hint("↳ Balayage d'icônes : envoie les id 0→28 (~3 s chacun) avec « ICON n » comme " +
-                "nom de route → PHOTOGRAPHIE le cluster à chaque id pour mapper id→glyphe et verrouiller les directions."))
+                "nom de route. ⚠️ REGARDE LE CLUSTER (le panneau derrière le volant) — c'est lui que ce canal " +
+                "pilote, pas le pare-brise — et PHOTOGRAPHIE-le à chaque id pour mapper id→glyphe."))
         iconSweepBtn = Button(this).apply {
             text = "▶  Balayage d'icônes (0→28) — mappe les glyphes du cluster"
             isAllCaps = false
@@ -439,7 +440,7 @@ class HudDiagActivity : AppCompatActivity() {
             step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
             step("sendInfo(5,0) [container nav-mode enable]") { ProxyClient.autoContainerSendInfo(5, 0, "") }
             for (icon in 0..28) {
-                log("▶▶ ICON $icon — PHOTOGRAPHIE le cluster")
+                log("▶▶ ICON $icon — PHOTOGRAPHIE LE CLUSTER")
                 val payload = NaviInfoPayloadBuilder.build(
                     naviState = 1,
                     nextRouteName = "ICON $icon",
@@ -454,7 +455,7 @@ class HudDiagActivity : AppCompatActivity() {
                 }
                 sb.append("[icon=$icon] sent 3s (road='ICON $icon') $rc\n")
             }
-            runOnUiThread { askBenchNote(sb) }   // free-text describe (+ separate photos) → hud_iconsweep_ zip
+            runOnUiThread { askSweepResult(sb) }
         }
     }
 
@@ -475,6 +476,29 @@ class HudDiagActivity : AppCompatActivity() {
         )
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.hud_bench_result_title))
+            .setCancelable(false)
+            .setItems(options.map { it.first }.toTypedArray()) { _, which ->
+                val tag = options[which].second
+                if (tag == null) askBenchNote(sb) else finishBench(sb, tag)
+            }
+            .show()
+    }
+
+    /**
+     * Result picker for the ICON SWEEP. The sweep's outcome is "did you capture the glyphs on the
+     * cluster", not a HUD yes/no — it previously reused [askBenchNote], which hardcodes
+     * "NO/PARTIAL — other", so every sweep was filed as a failure whatever happened (seen on-car
+     * 2026-08-07: two sweeps recorded NO/PARTIAL even though the channel was rendering fine minutes
+     * earlier). Its zip carries a distinct hud_iconsweep_ prefix and is never tallied with the benches.
+     */
+    private fun askSweepResult(sb: StringBuilder) {
+        val options = listOf(
+            getString(R.string.hud_sweep_opt_photographed) to "DONE — glyphs photographed",
+            getString(R.string.hud_sweep_opt_nothing)      to "NO — nothing on cluster",
+            getString(R.string.hud_bench_opt_other)        to null,   // → free-text note
+        )
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.hud_sweep_result_title))
             .setCancelable(false)
             .setItems(options.map { it.first }.toTypedArray()) { _, which ->
                 val tag = options[which].second
