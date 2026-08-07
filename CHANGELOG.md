@@ -14,6 +14,13 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.18-beta (versionCode 608)
+
+**Navigation now drives BOTH surfaces: the windshield HUD over CAN, and the instrument CLUSTER through the OEM channel.** Changes the production nav path (not diagnostics-only).
+
+A parsed Google Maps notification now feeds two outputs: the existing CAN writes (windshield HUD, video-confirmed) and a new `ClusterNavPusher` that switches the OEM container into nav mode with `sendInfo(5,0,"")` then pushes a `NaviInfo` FlatBuffer per frame via `sendInfo2(4, …)` — the same call `AmapService` makes — lighting the instrument cluster. Confirmed on-car on two SX326 cars and a DiLink 5.0. **Cars without a windshield HUD get turn arrows from the cluster path alone.** The cluster push is guarded and self-heals its nav-mode enable, so it can never break the proven CAN path nor depend on the CAN activation succeeding. Also fixes a **real production bug** the 29-photo icon sweep exposed: `mapToAmapIcon` sent `NEW_ICON=2` for every maneuver and `12` for the destination, but `2` is turn-LEFT and `12` is a roundabout — so every straight/right maneuver drew a **left arrow** and arrival drew a roundabout; both paths now share one verified table (2=left, 3=right, 9=straight, each verified on the photos). Icon-sweep bench fixed too: it reused a picker hardcoded to "NO/PARTIAL — other" so every sweep filed as a failure, and it now points testers at the cluster. Three strings across thirteen locales; DL3-gated as before; no daemon protocol change.
+
+
 ### 1.8.17-beta (versionCode 607)
 
 **Make the next DiLink 5.0 report readable (INC-20260804-171617, "Phase 0").** Diagnostics-only; no projection change, no daemon protocol change.
