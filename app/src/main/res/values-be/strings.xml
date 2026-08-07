@@ -569,4 +569,7 @@
     <string name="bug_hud_no_route_msg">Зараз няма актыўнага маршруту. DashCast атрымлівае падказкі паваротаў толькі падчас актыўнага вядзення па маршруце: проста адкрыць Google Maps ці Waze недастаткова. Задай маршрут да пункта прызначэння, а потым паглядзі на HUD — стрэлка павінна з’явіцца.</string>
     <string name="bug_hud_no_route_understood">Зразумела, зараз задам маршрут</string>
     <string name="bug_hud_no_notif_access_msg">У DashCast няма доступу да апавяшчэнняў. Гэта абавязкова: падказкі пра павароты чытаюцца з апавяшчэння Google Maps або Waze. Зайдзі ў Налады Android → Апавяшчэнні → Доступ да апавяшчэнняў, дазволь DashCast, а потым запусці маршрут яшчэ раз.</string>
+    <string name="hud_sweep_result_title">Перабор завершаны — што ты ўбачыў на CLUSTER?</string>
+    <string name="hud_sweep_opt_photographed">📷 Я сфатаграфаваў значкі</string>
+    <string name="hud_sweep_opt_nothing">❌ На CLUSTER нічога не з’явілася</string>
 </resources>

@@ -569,4 +569,7 @@
     <string name="bug_hud_no_route_msg">لا يوجد أي مسار نشط حاليًا. لا يتلقّى DashCast تعليمات الانعطاف إلا أثناء التنقّل النشط: مجرّد فتح Google Maps أو Waze لا يكفي. ابدأ مسارًا إلى وجهة ما، ثم انظر إلى HUD — من المفترض أن يظهر السهم.</string>
     <string name="bug_hud_no_route_understood">فهمت، سأبدأ مسارًا</string>
     <string name="bug_hud_no_notif_access_msg">‏DashCast لا يملك إذن الوصول إلى الإشعارات، وهذا ضروري: فالاتجاهات تُقرأ من إشعار Google Maps أو Waze. افتح إعدادات أندرويد → الإشعارات → الوصول إلى الإشعارات، وامنح الإذن لـ DashCast، ثم ابدأ مسارك من جديد.</string>
+    <string name="hud_sweep_result_title">انتهى المسح — ماذا رأيت على CLUSTER (خلف المقود)؟</string>
+    <string name="hud_sweep_opt_photographed">📷 صوّرت رموز الأسهم</string>
+    <string name="hud_sweep_opt_nothing">❌ لم يظهر شيء على CLUSTER</string>
 </resources>

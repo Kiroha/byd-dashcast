@@ -570,6 +570,11 @@
     <string name="hud_bench_opt_partial">⚠️ Distance/texte affiché — mais pas de flèche nette</string>
     <string name="hud_bench_opt_nothing">❌ Rien sur le HUD</string>
     <string name="hud_bench_opt_other">❓ Autre / pas sûr…</string>
+    <!-- Icon sweep — its own result picker (it targets the CLUSTER, and its outcome is
+         "did you capture the glyphs", not a HUD yes/no). -->
+    <string name="hud_sweep_result_title">Balayage terminé — qu\'as-tu vu sur le CLUSTER ?</string>
+    <string name="hud_sweep_opt_photographed">📷 J\'ai photographié les glyphes</string>
+    <string name="hud_sweep_opt_nothing">❌ Rien ne s\'est affiché sur le cluster</string>
     <string name="hud_bench_note_title">Qu’as-tu vu ?</string>
     <string name="hud_bench_note_hint">Décris ce qui est apparu sur le HUD (optionnel)</string>
     <string name="hud_report_send">Envoyer</string>
