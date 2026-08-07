@@ -978,8 +978,24 @@ android {
         // against OUR OWN component). Adversarially reviewed across DL3/DL4/DL5.1/AAOS: 8 defects
         // found and fixed before release, incl. the silent-no-op above and a probe that would have
         // reset+force-stopped the OEM cluster map. 228 -> 232 unit tests; lint 0/0.)
-        versionCode 607
-        versionName "1.8.17-beta"
+        // 608 = 1.8.18-beta (DUAL-PATH navigation — the real feature, on both surfaces. New
+        // ClusterNavPusher pushes live turn-by-turn onto the instrument CLUSTER through the OEM
+        // AutoContainer channel (sendInfo(5,0) nav-mode enable, then sendInfo2(4, NaviInfo) per
+        // frame — the same call AmapService makes), wired into HudController alongside the existing
+        // CAN writes. One parsed Maps notification now drives BOTH: CAN → windshield HUD
+        // (video-confirmed) and sendInfo2 → cluster (on-car confirmed on two SX326 cars + a DiLink
+        // 5.0). Cars WITHOUT a windshield HUD get arrows from the cluster path alone. push()
+        // self-heals the nav-mode enable so the cluster never depends on the CAN activation
+        // succeeding. Uses the icon namespace decoded from a 29-photo on-car sweep, which also
+        // exposed a REAL PROD BUG now fixed: mapToAmapIcon sent NEW_ICON=2 for every maneuver and 12
+        // for the destination — but 2 is turn-LEFT and 12 is a roundabout, so the AUTONAVI broadcast
+        // path drew a LEFT arrow for every straight/right maneuver and a roundabout on arrival. Both
+        // paths now share one verified table (2=left 3=right 9=straight, all three verified on the
+        // photos). Icon-sweep bench also fixed: it reused a picker hardcoded to "NO/PARTIAL — other"
+        // so every sweep filed as a failure; it now has its own picker and points testers at the
+        // CLUSTER. +3 strings x13 locales. DL3-gated as before; no daemon protocol change.)
+        versionCode 608
+        versionName "1.8.18-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
