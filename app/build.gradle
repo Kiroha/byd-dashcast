@@ -6,7 +6,10 @@ apply plugin: 'kotlin-android'
 // Keys (all optional — absent → the app falls back to the Telegram share sheet):
 //   bugReport.botToken=123456789:ABC...
 //   bugReport.chatId=-100<private supergroup id>
-//   bugReport.threadId=4
+//   bugReport.threadId=<bug-report topic id>
+//   bugReport.hudThreadId=<HUD diagnostics topic id>
+// Topic ids live here and NOT in the source: an id hardcoded in a tracked file is published with
+// the repository, which is exactly how the previous supergroup id leaked (audit AUD-008).
 def _localProps = new Properties()
 def _localPropsFile = rootProject.file('local.properties')
 if (_localPropsFile.exists()) {
@@ -1284,6 +1287,8 @@ android {
                 "\"${_localProps.getProperty('bugReport.chatId', '')}\""
         buildConfigField "String", "BUG_REPORT_THREAD_ID",
                 "\"${_localProps.getProperty('bugReport.threadId', '')}\""
+        buildConfigField "String", "BUG_REPORT_HUD_THREAD_ID",
+                "\"${_localProps.getProperty('bugReport.hudThreadId', '')}\""
 
         // Azure Blob container for LARGE reverse-engineering pulls. Telegram caps at 50 MB, which is
         // what the extraction budget was sized around; the OEM artefacts that matter are far bigger
