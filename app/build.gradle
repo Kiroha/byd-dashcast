@@ -994,8 +994,23 @@ android {
         // photos). Icon-sweep bench also fixed: it reused a picker hardcoded to "NO/PARTIAL — other"
         // so every sweep filed as a failure; it now has its own picker and points testers at the
         // CLUSTER. +3 strings x13 locales. DL3-gated as before; no daemon protocol change.)
-        versionCode 608
-        versionName "1.8.18-beta"
+        // 609 = 1.8.19-beta (makes SDK write rejections visible, drops the register the SDK refuses,
+        // and re-opens APK extraction on DiLink 3. A tester's SX326 reported featureID 0x43f01030
+        // returning "You have no permission" — verified real (200 occurrences across the corpus) but
+        // NOT the cause of a missing arrow: 0x43f01030 is a redundant "dual-display" write the OEM
+        // never makes, setInt returns the SDK code rather than throwing so the batch never aborted,
+        // and cars whose arrows render fine show the same refusal. Chasing it exposed the real gap:
+        // every caller DISCARDED the SDK result code (the daemon's batch writer returns void, the HUD
+        // bench prints a hardcoded rc=0 whenever nothing threw), so a refused write has been
+        // indistinguishable from an accepted one in every report and bench zip ever collected —
+        // very likely why the NO results were never explainable. Rejections are now logged once per
+        // (feature, rc) per 30s at the single point every write reaches the SDK, covering the batch
+        // path, the single-write path and production. 0x43F01030 is no longer written (guidance batch
+        // + nav-stop clear). APK extraction is re-enabled on DL3: the windshield-HUD question is open
+        // there and testers must be able to send their system APKs; only DiLink 5.0 (API<33) stays
+        // blocked. 250 unit tests pass; no daemon protocol change.)
+        versionCode 609
+        versionName "1.8.19-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

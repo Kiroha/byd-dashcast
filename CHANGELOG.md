@@ -14,6 +14,13 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.19-beta (versionCode 609)
+
+**Makes the BYD SDK's silent write rejections visible, drops the register it refuses, and re-opens APK extraction on DiLink 3.**
+
+A tester's SX326 reported featureID `0x43f01030` returning "You have no permission" — verified real (200 occurrences across the collected logs) but **not** the cause of a missing arrow: `0x43f01030` is a redundant "dual-display" write the OEM never makes, `setInt` returns the SDK code rather than throwing so the batch never aborted, and cars whose arrows render fine show the same refusal. Investigating it exposed the real gap: **every caller discarded the SDK result code** (the daemon's batch writer returns `void`; the HUD bench prints a hardcoded `rc=0` whenever nothing threw), so a refused write has been indistinguishable from an accepted one in every report and bench zip ever collected — very likely why the "nothing on HUD" results were never explainable. Rejections are now logged once per (feature, code) per 30 s at the single point every write reaches the SDK, covering the batch path, the single-write path and production. `0x43F01030` is no longer written (guidance batch + nav-stop clear). APK extraction is re-enabled on DiLink 3 — the windshield-HUD question is open there and testers must be able to send their system APKs; only DiLink 5.0 (API < 33) stays blocked. 250 unit tests pass; no daemon protocol change; no user-facing string changed.
+
+
 ### 1.8.18-beta (versionCode 608)
 
 **Navigation now drives BOTH surfaces: the windshield HUD over CAN, and the instrument CLUSTER through the OEM channel.** Changes the production nav path (not diagnostics-only).
