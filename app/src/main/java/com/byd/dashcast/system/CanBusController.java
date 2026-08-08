@@ -153,7 +153,7 @@ public final class CanBusController {
      * <p>OFF sequence (active=false):
      * <ol>
      *   <li>Set {@code INSTRUMENT_SEND_NAVI_STATUS} = 4 (stopped).</li>
-     *   <li>Clear all 8 HUD registers to their "no data" sentinel values so the
+     *   <li>Clear the remaining HUD registers to their "no data" sentinel values so the
      *       cluster display resets cleanly to the default ADAS / speed view.</li>
      * </ol>
      */
@@ -183,7 +183,6 @@ public final class CanBusController {
      * <p>Writes three CAN registers matching OpenBYD {@code sendSimpleGuidanceInfo}:
      * <ul>
      *   <li>{@code INSTRUMENT_GUIDE_SIMPLE} = iconId</li>
-     *   <li>{@code INSTRUMENT_GUIDE_ROAD_DISTANCE} = iconId (same value — dual-display register)</li>
      *   <li>{@code INSTRUMENT_FRONT_CROSSING_DIST} = distanceMeters</li>
      * </ul>
      *

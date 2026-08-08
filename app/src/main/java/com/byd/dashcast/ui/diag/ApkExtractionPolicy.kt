@@ -146,7 +146,11 @@ object ApkExtractionPolicy {
      */
     @JvmStatic
     fun isPlatformFullyMined(isDiLink3: Boolean, isDiLink5: Boolean, apiLevel: Int): Boolean =
-        isDiLink3 || (isDiLink5 && apiLevel < 33)
+        // DiLink 3 was un-blocked 2026-08-09: the windshield-HUD question is still OPEN on DL3
+        // (a tester's SX326 refuses featureID 0x43f01030, and we need his system APKs to look for
+        // HUD-specific services), so the platform is NOT fully mined and extraction must stay
+        // available. Only DiLink 5.0 (API < 33) remains blocked.
+        isDiLink5 && apiLevel < 33
 
     // ── Native binaries and .so libraries ───────────────────────────────────────
     //

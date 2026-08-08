@@ -47,7 +47,7 @@ class CanBatchOperationTest {
     }
 
     @Test
-    fun navigationStopKeepsStatusThenEightLegacyClears() {
+    fun navigationStopKeepsStatusThenSevenLegacyClears() {
         val events = mutableListOf<String>()
 
         CanNavigationBatches.navigationState(false)
@@ -57,7 +57,6 @@ class CanBatchOperationTest {
             listOf(
                 "navi:4",
                 "int:1139806224=0",
-                "int:1139806256=0",
                 "int:1139806232=-1",
                 "bytes:1140461576=",
                 "int:1139810344=-1",

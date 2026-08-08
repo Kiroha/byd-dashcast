@@ -20,9 +20,6 @@ object CanNavigationBatches {
         } else {
             operations.add(CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, 0))
             operations.add(
-                CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_ROAD_DISTANCE, 0)
-            )
-            operations.add(
                 CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST, -1)
             )
             operations.add(
@@ -53,10 +50,12 @@ object CanNavigationBatches {
     @JvmStatic
     fun simpleGuidance(turnIconId: Int, distanceMeters: Int): List<CanBatchOperation> =
         listOf(
+            // NOTE: we used to ALSO write the icon into INSTRUMENT_GUIDE_ROAD_DISTANCE (0x43F01030)
+            // as a "dual-display" register. Dropped 2026-08-09: the OEM never writes it, and the
+            // BYD SDK REFUSES it on many cars — "no permission to use the feature: 0x43f01030 with
+            // this device: 1007!" appears 200x across the tester corpus, including on cars whose
+            // arrows render fine. So it was never needed, and it only produced noise.
             CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, turnIconId),
-            CanBatchOperation.instrumentInt(
-                CanWriteVerbs.INSTRUMENT_GUIDE_ROAD_DISTANCE, turnIconId
-            ),
             CanBatchOperation.instrumentInt(
                 CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST, distanceMeters
             )
