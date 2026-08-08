@@ -5,7 +5,7 @@ apply plugin: 'kotlin-android'
 // committed): they end up in the compiled APK but not in the public repo.
 // Keys (all optional — absent → the app falls back to the Telegram share sheet):
 //   bugReport.botToken=123456789:ABC...
-//   bugReport.chatId=-1003712642112
+//   bugReport.chatId=-100<private supergroup id>
 //   bugReport.threadId=4
 def _localProps = new Properties()
 def _localPropsFile = rootProject.file('local.properties')
