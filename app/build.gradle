@@ -1040,6 +1040,23 @@ android {
         buildConfigField "String", "BUG_REPORT_THREAD_ID",
                 "\"${_localProps.getProperty('bugReport.threadId', '')}\""
 
+        // Azure Blob container for LARGE reverse-engineering pulls. Telegram caps at 50 MB, which is
+        // what the extraction budget was sized around; the OEM artefacts that matter are far bigger
+        // (the cluster Qt theme bundles are ~126 MB and ~118 MB). Optional: when these are empty the
+        // app keeps using Telegram exactly as before.
+        //
+        // Set in local.properties (never committed):
+        //   azure.blobUrl=https://<account>.blob.core.windows.net/<container>
+        //   azure.sas=sp=cw&st=...&se=...&spr=https&sv=...&sr=c&sig=...
+        //
+        // The SAS MUST be create/write only (no read, no list) and time-limited: a token shipped
+        // inside an APK has to be treated as public, so it must not be able to read back what other
+        // cars uploaded.
+        buildConfigField "String", "AZURE_BLOB_URL",
+                "\"${_localProps.getProperty('azure.blobUrl', '')}\""
+        buildConfigField "String", "AZURE_BLOB_SAS",
+                "\"${_localProps.getProperty('azure.sas', '')}\""
+
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
         // those two ABIs to keep the APK from ballooning to 60 MB.

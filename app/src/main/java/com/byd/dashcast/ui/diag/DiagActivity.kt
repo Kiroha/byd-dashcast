@@ -14,6 +14,7 @@ import android.widget.TextView
 import com.byd.dashcast.hud.HudDiagActivity
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.report.AzureBlobUploader
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
 import java.io.File
@@ -116,6 +117,11 @@ class DiagActivity : Activity() {
         runOnUiThread { logView.text = "" }
         log("Collecting…")
         Thread({
+            // With an Azure container configured the 50 MB messaging ceiling no longer applies, so
+            // the planner may pull the big OEM artefacts (cluster Qt themes, the renderer .so) that
+            // were previously skipped for size. Set before planning — it changes every budget.
+            ApkExtractionPolicy.largeSink = AzureBlobUploader.isConfigured()
+            if (ApkExtractionPolicy.largeSink) log("Azure container configured — large pull enabled.")
             val zip: File = try {
                 val plan = BydApkExtractionBundle.plan(this) { line -> log(line) }
                 lastWork = plan.workDir
@@ -130,11 +136,46 @@ class DiagActivity : Activity() {
             }
             log("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
 
+            // Azure first when available: it has no practical size limit, and it is the only sink
+            // that can take a pull containing the 100 MB+ OEM artefacts.
+            if (AzureBlobUploader.isConfigured()) {
+                log("uploading to Azure…")
+                AzureBlobUploader.upload(zip, "dilink/${zip.name}", { line: String -> log(line) },
+                    object : AzureBlobUploader.Callback {
+                        override fun onUploaded(url: String) {
+                            log("✓ uploaded to Azure:\n$url")
+                            log("Done — tell the maintainer the file name above.")
+                            BydApkExtractionBundle.cleanup(lastWork); lastWork = null
+                            resetButton()
+                        }
+                        override fun onFailed(message: String) {
+                            // Fall back rather than losing the pull: a bundle that still fits under
+                            // the messaging ceiling can go out the old way.
+                            log("✗ Azure upload failed: $message")
+                            if (TelegramBugReporter.isConfigured()
+                                    && zip.length() < 45L * 1024 * 1024) {
+                                log("falling back to Telegram…")
+                                sendViaTelegram(zip)
+                            } else {
+                                log("zip kept locally at:\n${zip.absolutePath}")
+                                resetButton()
+                            }
+                        }
+                    })
+                return@Thread
+            }
+
             if (!TelegramBugReporter.isConfigured()) {
                 log("Telegram not configured — zip kept locally at:\n${zip.absolutePath}")
                 resetButton()
                 return@Thread
             }
+            sendViaTelegram(zip)
+        }, "byd-apk-extract").start()
+    }
+
+    /** Uploads the bundle through the report bot — the pre-Azure path, also the fallback. */
+    private fun sendViaTelegram(zip: File) {
             log("uploading…")
             TelegramBugReporter.send(this, zip,
                 "BYD APK extraction — ${BydApkExtractionBundle.header(this)}",
@@ -149,7 +190,6 @@ class DiagActivity : Activity() {
                         resetButton()
                     }
                 })
-        }, "byd-apk-extract").start()
     }
 
     /**
