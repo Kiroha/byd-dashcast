@@ -14,6 +14,11 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.20-beta (versionCode 610)
+
+**Fixes the next-street name being sent to the cluster in the wrong text encoding.** RE of a tester's DiLink 3 Seal extraction showed the OEM nav writes that register with `str.getBytes("UnicodeLittleUnmarked")` — UTF-16LE without BOM — while DashCast wrote the same register as UTF-8. The MCU decodes UTF-16LE, so our Latin street names were rendered as CJK codepoints (`"Rue de la Paix"` → `畒ၥ敤氠ၡ慐硩`). This was already visible in the field and misread: a bench report describing *"distance and some Chinese text"* on the HUD was filed as a partial failure — it was this bug. Street names are now UTF-16LE, matching the OEM byte for byte. Also: `INSTRUMENT_GUIDE_ROAD_DISTANCE` (0x43F01030) deleted outright (the OEM writes exactly 15 `INSTRUMENT_*` registers and this is not one; the SDK refuses it 344× in the corpus, including on cars whose arrows render fine); extraction gains a ~5 KB text-only probe artefact (`05_hud_probes.txt`: firmware/car identity — properties were never collected before — the `BYDAUTO_*` permission namespace and its holders, the AutoContainer type allow-list, the OEM navs' exported-service tables, `BOOTCLASSPATH`, nav/cluster processes) and `com.byd.auto.permission` (~164 KB) joins the extraction targets. No daemon protocol change.
+
+
 ### 1.8.19-beta (versionCode 609)
 
 **Makes the BYD SDK's silent write rejections visible, drops the register it refuses, and re-opens APK extraction on DiLink 3.**

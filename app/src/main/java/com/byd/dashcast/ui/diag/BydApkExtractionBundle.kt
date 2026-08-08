@@ -120,6 +120,43 @@ object BydApkExtractionBundle {
             write(work, "03_native_backend.txt", sb.toString())
         }
 
+        // Targeted text probes, ~5 KB total, zero binaries. Each answers an open question that the
+        // APK/native pulls cannot, and each is a READ of device state:
+        //  • the bundle never collected system properties, so a car's firmware (inswver) could not
+        //    even be identified from its own extraction;
+        //  • the SDK refuses some instrument registers with "no permission … with this device: 1007"
+        //    (1007 = BYDAUTO_DEVICE_INSTRUMENT). DashCast declares no BYDAUTO_* permission, and the
+        //    daemon's PackageManager identity is com.android.shell — so the permission lists tell us
+        //    whether that is the real gate;
+        //  • the Telenav APK is ~307 MB and can never be pulled, but its exported-service table is
+        //    plain text and answers whether its nav service is reachable at all;
+        //  • container_comm_cfg.json is the allow-list the AutoContainer signature check bypasses —
+        //    its max_type reveals how many sendInfo types exist beyond the 4/5 we use.
+        s("HUD/permission probes (text only)") {
+            val sb = StringBuilder()
+            sb.append("=== firmware + car identity ===\n")
+              .append(sh("getprop 2>/dev/null | grep -iE 'inswver|fingerprint|ro\\.build\\.(id|version)|" +
+                  "fission|vehicle|car\\.|series|hud' | head -c 12000")).append("\n\n")
+            sb.append("=== BYDAUTO permission namespace ===\n")
+              .append(sh("pm list permissions 2>/dev/null | grep -i bydauto | head -c 12000")).append("\n\n")
+            sb.append("=== BYDAUTO perms held by DashCast ===\n")
+              .append(sh("dumpsys package com.byd.dashcast 2>/dev/null | grep -i bydauto | head -c 8000")).append("\n\n")
+            sb.append("=== BYDAUTO perms held by the daemon's identity (shell) ===\n")
+              .append(sh("dumpsys package com.android.shell 2>/dev/null | grep -i bydauto | head -c 8000")).append("\n\n")
+            sb.append("=== AutoContainer type allow-list ===\n")
+              .append(sh("cat /system/etc/container_comm_cfg.json 2>/dev/null | head -c 12000")).append("\n\n")
+            sb.append("=== OEM nav: exported services (Telenav / AmapService) ===\n")
+              .append(sh("dumpsys package com.telenav.app.arp 2>/dev/null | " +
+                  "sed -n '/Service Resolver Table/,/Registered/p' | head -c 12000")).append("\n")
+              .append(sh("dumpsys package com.example.amapservice 2>/dev/null | " +
+                  "sed -n '/Service Resolver Table/,/Registered/p' | head -c 6000")).append("\n\n")
+            sb.append("=== boot classpath (where the bydauto SDK lives) ===\n")
+              .append(sh("sh -c 'echo \$BOOTCLASSPATH' 2>/dev/null | head -c 4000")).append("\n\n")
+            sb.append("=== nav / cluster processes (unfiltered by name) ===\n")
+              .append(sh("ps -A 2>/dev/null | grep -iE 'telenav|amap|byd|cluster|fission|qt' | head -c 12000")).append("\n")
+            write(work, "05_hud_probes.txt", sb.toString())
+        }
+
         val accepted = ArrayList<PlannedApk>()
         val skips = ArrayList<String>()
         s("select OEM cluster APKs") {

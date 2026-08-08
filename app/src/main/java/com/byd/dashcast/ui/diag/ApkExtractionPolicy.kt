@@ -69,7 +69,11 @@ object ApkExtractionPolicy {
         "com.example.amapservice",
         "com.byd.automap",
         "com.byd.clusterdebug",
-        "com.byd.launchermap"
+        "com.byd.launchermap",
+        // Defines the BYDAUTO_* permission namespace (/system/framework/AutoPermission,
+        // ~164 KB). Its manifest lists every BYDAUTO_* permission and its protection level —
+        // the cheapest way to learn which one gates BYDAutoInstrumentDevice writes.
+        "com.byd.auto.permission"
     )
 
     /**
