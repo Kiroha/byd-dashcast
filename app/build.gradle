@@ -1373,6 +1373,17 @@ android {
     }
 
 
+    // PRE-0 (audit) — Robolectric needs the merged resources and the manifest on the unit-test
+    // classpath. Nothing else changes: the 232 existing plain-JUnit tests never touch an Android
+    // API, so enabling this cannot alter their behaviour. returnDefaultValues is deliberately NOT
+    // set — it would silently turn "this test touches Android" into a passing test, which is the
+    // opposite of what a characterisation net is for.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+
     android.applicationVariants.all { variant ->
         variant.outputs.all { output ->
             outputFileName = "DashCast-v${variant.versionName}-${variant.buildType.name}.apk"
@@ -1385,6 +1396,13 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.13.2'
+
+    // PRE-0 (audit) — characterisation-test harness. The audit established that the only test
+    // dependency was plain JUnit 4, so everything touching Context / Binder / Handler / Surface /
+    // ADB / the daemon was structurally untestable — i.e. the ~15 600 lines of the eleven files
+    // over 1 000 lines, which are exactly what waves V2, V5 and V6 modify. Robolectric 4.13 is the
+    // last release in this project's offline cache and supports Java 17 + compileSdk 33.
+    testImplementation 'org.robolectric:robolectric:4.13'
     // Android 10 era versions (API 29) — minCompileSdk ≤ 29
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
