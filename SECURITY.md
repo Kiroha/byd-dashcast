@@ -44,6 +44,23 @@ A DashCast release APK is a **privileged system component**, not a sandboxed con
 - Understand that platform signing is a public-key model on this hardware, so the signature identifies the platform, not a specific author. If you require author-level trust, build from source.
 - The app requires **ADB over TCP** to be enabled out-of-band to bootstrap its privileged helper. This is an operational choice made by the installer/OEM, exposes a network-reachable `adbd` on the vehicle while enabled, and should be turned off when not needed. The app itself does not open that port; it only connects to it locally with an app-private, RSA-authenticated key.
 
+## Diagnostic artefacts and tester data
+
+DashCast's support flow collects real vehicle diagnostics: application journal, system logcat,
+`dumpsys` output and cluster screenshots. These artefacts routinely contain personal data — Wi-Fi
+SSIDs and BSSIDs, account names, Bluetooth device names, installed-app inventories, and navigation
+destinations. This repository is public, and its history is permanent.
+
+Two rules therefore apply to anything committed here:
+
+- **No third-party identifying data in versioned documentation.** No licence plates, no tester names
+  or handles, no cities or countries tied to an individual, no private channel identifiers, and no
+  nominative filesystem paths. Where a document needs to distinguish testers, use opaque labels that
+  are local to that document ("tester A", "tester B").
+- **No raw diagnostic artefact in the working tree of a clone.** Bug-report bundles and captures are
+  covered by `.gitignore`, but the rule matters more than the pattern: keep triage artefacts outside
+  the repository directory, because a single `git add -A` publishes them irrevocably.
+
 ## Reporting a vulnerability
 
 Please report suspected security issues **privately**, not in a public issue, so we can address them before disclosure:
