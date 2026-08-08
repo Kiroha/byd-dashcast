@@ -394,6 +394,15 @@ object AppLogger {
      * report, custom diagnostics, …). The MIME type is forced to text/plain so
      * any chooser entry (email, messaging, drive) accepts the file.
      */
+    /** MIME type from the file extension, defaulting to `text/plain` like the historic behaviour. */
+    private fun mimeForFile(file: File): String = when (file.extension.lowercase()) {
+        "zip" -> "application/zip"
+        "png" -> "image/png"
+        "jpg", "jpeg" -> "image/jpeg"
+        "json" -> "application/json"
+        else -> "text/plain"
+    }
+
     @JvmStatic
     fun shareFile(context: Context, file: File?, subject: String, chooserTitle: String) {
         if (file == null || !file.exists()) {
@@ -404,7 +413,12 @@ object AppLogger {
             context, context.packageName + ".fileprovider", file
         )
         val intent = Intent(Intent.ACTION_SEND)
-        intent.type = "text/plain"
+        // Derived from the extension, not forced to text/plain. Five of the six diagnostic
+        // emitters produce a .zip; announcing it as text/plain hides from the chooser every
+        // target that filters correctly on application/zip — and a target that takes the file at
+        // its word may open it as text. Callers are unchanged: a .txt still resolves to
+        // text/plain, so nothing regresses for the report path.
+        intent.type = mimeForFile(file)
         intent.putExtra(Intent.EXTRA_SUBJECT, subject)
         intent.putExtra(Intent.EXTRA_STREAM, uri)
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
