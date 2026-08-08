@@ -1,5 +1,6 @@
 package com.byd.dashcast.hud
 
+import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.proxy.ProxyClient
 import java.io.File
 import java.io.FileInputStream
@@ -15,8 +16,16 @@ import java.util.zip.ZipOutputStream
  */
 object HudCaptureSupport {
 
-    /** Telegram topic (message_thread_id) for HUD diagnostics — HUD topic of the private tester channel. */
-    const val HUD_TEST_THREAD = "2701"
+    /**
+     * Telegram topic (`message_thread_id`) for HUD diagnostics, from `local.properties`.
+     *
+     * Not a literal any more: a topic id hardcoded in a tracked file ships with the public
+     * repository, which is how the previous supergroup id leaked (audit AUD-008). Empty when the
+     * key is absent — [TelegramBugReporter] then omits the field and the upload lands in the
+     * group's General topic instead of failing.
+     */
+    @JvmStatic
+    val HUD_TEST_THREAD: String get() = BuildConfig.BUG_REPORT_HUD_THREAD_ID
 
     /** Zips every file under [work] into a sibling {@code <name>.zip} and returns it. */
     fun zipDir(work: File): File {
