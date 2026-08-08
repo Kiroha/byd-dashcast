@@ -589,7 +589,7 @@ public final class FissionOrchestrator {
         if (isFinishing && !mSlots.isEmpty()) {
             final IBinder binder = mDaemonBinder;
             final List<String> pkgs = new ArrayList<>(mSlots.keySet());
-            mExec.execute(() -> {
+            submitQuietly("destroy teardown", () -> {
                 boolean keepVds = com.byd.dashcast.data.prefs.ClusterPrefs
                         .isFissionPrecreateSlots(mAppCtx);
                 for (String pkg : pkgs) {
@@ -619,7 +619,7 @@ public final class FissionOrchestrator {
 
     /** Probes the daemon and fires auto-layout / pre-create if configured. */
     public void initAsync(LayoutPreset favoriteLayout, boolean autoLayout, boolean precreate) {
-        mExec.execute(() -> {
+        submitQuietly("initAsync", () -> {
             tryGetBinder();
             if (favoriteLayout != null) {
                 mActiveLayout = favoriteLayout;
@@ -707,7 +707,7 @@ public final class FissionOrchestrator {
             return;
         }
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_starting_fmt, label)));
-        mExec.execute(() -> {
+        submitQuietly("startSlot " + pkg, () -> {
             try {
                 doStartSlot(pkg, label, rect, surfaceHolder);
             } catch (Exception e) {
@@ -731,7 +731,7 @@ public final class FissionOrchestrator {
 
     public void stopAll(Runnable onComplete) {
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)));
-        mExec.execute(() -> {
+        boolean accepted = submitQuietly("stopAll", () -> {
             // Free zones hold no app and are not in mSlots, so the teardown plan below never
             // sees them — release them first or a stop leaves an orphaned overlay on the
             // cluster. No-op unless a manual activation created some.
@@ -792,6 +792,12 @@ public final class FissionOrchestrator {
                 if (onComplete != null) onComplete.run();
             });
         });
+        if (!accepted && onComplete != null) {
+            // The executor was already shut down, so nothing above will ever run — but the caller
+            // is waiting on this continuation (stopAutoOrchestrator hands it purgeDaemonSlotsAsync).
+            // Run it anyway, on the same looper the accepted path uses, so no caller hangs.
+            mMainHandler.post(onComplete);
+        }
     }
 
     /** Worker-thread only: waits for the shared removeTask + force-stop + PID verification path. */
@@ -825,7 +831,7 @@ public final class FissionOrchestrator {
     }
 
     public void releaseSlotAsync(String pkg) {
-        mExec.execute(() -> {
+        submitQuietly("releaseSlotAsync " + pkg, () -> {
             // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
             if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
             if (mDaemonBinder != null) {
@@ -844,7 +850,7 @@ public final class FissionOrchestrator {
     public void resizeSlotAsync(String pkg, Rect rect) {
         SlotState slot = mSlots.get(pkg);
         if (slot != null) slot.rect = new Rect(rect);
-        mExec.execute(() -> {
+        submitQuietly("resizeSlotAsync " + pkg, () -> {
             if (mDaemonBinder == null) return;
             try {
                 FissionClient.resizeSlot(mDaemonBinder, pkg,
@@ -857,7 +863,7 @@ public final class FissionOrchestrator {
 
     public void switchToLayoutAsync(LayoutPreset newLayout) {
         mActiveLayout = newLayout;
-        mExec.execute(() -> {
+        submitQuietly("switchToLayoutAsync", () -> {
             try {
                 doSwitchToLayout(newLayout, null);
             } catch (Exception e) {
@@ -1077,6 +1083,27 @@ public final class FissionOrchestrator {
      * Delete) preset A during the multi-second cluster sequence — {@code stopAutoOrchestrator}
      * shuts this executor down, and the display then arrives.
      */
+    /**
+     * Submits to {@code mExec} tolerating the shutdown race described on {@link #submitOrFail}.
+     *
+     * <p>Same hazard, different callers: these submissions have no {@code ActivationCallback} to
+     * report to, so a rejection is logged and swallowed instead of being delivered. Without this,
+     * a {@code RejectedExecutionException} raised on the {@code fission-exec} thread itself — that
+     * thread has no {@code UncaughtExceptionHandler} — reaches Android's KillApplicationHandler
+     * and takes the whole process down (AUD-002).
+     *
+     * @return {@code true} when the task was accepted by the executor.
+     */
+    private boolean submitQuietly(String what, Runnable task) {
+        try {
+            mExec.execute(task);
+            return true;
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            AppLogger.w(TAG, what + " skipped: the orchestrator was already stopped");
+            return false;
+        }
+    }
+
     private void submitOrFail(Runnable task, ActivationCallback callback) {
         try {
             mExec.execute(task);
