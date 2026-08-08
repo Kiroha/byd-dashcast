@@ -23,24 +23,41 @@ import java.util.Locale
  */
 object ApkExtractionPolicy {
 
+    /**
+     * Set once, before planning, when a large-capacity sink is available (an Azure Blob container
+     * is configured) instead of the 50 MB messaging channel. Every ceiling below then opens up.
+     *
+     * <p>It is deliberately a flag rather than a parameter: the budget is consulted from several
+     * decision helpers that the unit tests call directly, and threading a budget through all of
+     * them would change every test signature for no behavioural gain. Default `false` keeps the
+     * historical Telegram-sized behaviour exactly as it was.
+     */
+    @JvmStatic
+    var largeSink: Boolean = false
+
     /** Whole-bundle ceiling (APKs + native). Telegram's bot API refuses documents over 50 MB. */
-    const val BUDGET_TOTAL = 42L * 1024 * 1024
+    @JvmStatic
+    val BUDGET_TOTAL: Long get() = if (largeSink) 2L * 1024 * 1024 * 1024 else 42L * 1024 * 1024
 
     /**
      * Bytes reserved for the native binaries/.so libraries — the APK planning cannot spend into
      * this, so a fat APK set can never starve the native pull (that starvation is exactly why 1.8.9
      * came back with 40 MB of APKs and no room for the .so where the -1 actually lives).
      */
-    const val NATIVE_RESERVE = 16L * 1024 * 1024
+    @JvmStatic
+    val NATIVE_RESERVE: Long get() = if (largeSink) 512L * 1024 * 1024 else 16L * 1024 * 1024
 
     /** APKs are budgeted below the reserve; native draws from the rest up to [BUDGET_TOTAL]. */
-    const val APK_BUDGET = BUDGET_TOTAL - NATIVE_RESERVE
+    @JvmStatic
+    val APK_BUDGET: Long get() = BUDGET_TOTAL - NATIVE_RESERVE
 
     /** No single APK may eat the whole APK budget and starve the named targets. */
-    const val BUDGET_FILE = 22L * 1024 * 1024
+    @JvmStatic
+    val BUDGET_FILE: Long get() = if (largeSink) 512L * 1024 * 1024 else 22L * 1024 * 1024
 
     /** Backstop against a firmware with many matching packages. */
-    const val MAX_COUNT = 14
+    @JvmStatic
+    val MAX_COUNT: Int get() = if (largeSink) 60 else 14
 
     /** Read-only firmware partitions — used only to LABEL provenance in the manifest. */
     private val SYSTEM_PREFIXES = listOf(
