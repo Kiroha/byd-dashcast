@@ -428,7 +428,7 @@
     <string name="bug_wizard_other_app">Boshqa / Noma’lum ilova</string>
     <string name="bug_wizard_back">← Orqaga</string>
     <string name="bug_tg_title">Telegram taxallusingiz</string>
-    <string name="bug_tg_message">Muammoingiz uchun tuzatish tayyor bo\’lganda, uni birinchi bo\’lib sinab ko\’rishingizni so\’rash uchun to\’g\’ridan-to\’g\’ri Telegram orqali siz bilan bog\’lanamiz.\n\n⚠️ To\’g\’ri taxallusni kiritganingizga ishonch hosil qiling (misol: @john_doe). Usiz siz bilan bog\’lana olmaymiz.\n\nTaxallusingiz faqat ushbu qurilmada saqlanadi va hech qachon ulashilmaydi.</string>
+    <string name="bug_tg_message">Muammoingiz uchun tuzatish tayyor bo\’lganda, uni birinchi bo\’lib sinab ko\’rishingizni so\’rash uchun to\’g\’ridan-to\’g\’ri Telegram orqali siz bilan bog\’lanamiz.\n\n⚠️ To\’g\’ri taxallusni kiritganingizga ishonch hosil qiling (misol: @john_doe). Usiz siz bilan bog\’lana olmaymiz.\n\nTaxallusingiz shu qurilmada saqlanadi va siz yuboradigan hisobotga qo\'shiladi — faqat siz bilan bog\'lana olishimiz uchun.</string>
     <string name="bug_tg_hint">@taxallusingiz</string>
     <string name="bug_tg_confirm">Tasdiqlash</string>
     <string name="bug_tg_skip">Keyinroq</string>

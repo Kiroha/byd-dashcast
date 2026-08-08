@@ -428,7 +428,7 @@
     <string name="bug_wizard_other_app">تطبيق آخر / غير معروف</string>
     <string name="bug_wizard_back">← رجوع</string>
     <string name="bug_tg_title">معرّفك على تيليغرام</string>
-    <string name="bug_tg_message">عندما يتوفر إصلاح لمشكلتك، سنتواصل معك مباشرة عبر تيليغرام لنطلب منك تجربته أولاً.\n\n⚠️ تأكد من إدخال المعرّف الصحيح (مثال: @john_doe). بدونه لن نتمكن من التواصل معك.\n\nيُخزَّن معرّفك على هذا الجهاز فقط ولا يُشارَك أبداً.</string>
+    <string name="bug_tg_message">عندما يتوفر إصلاح لمشكلتك، سنتواصل معك مباشرة عبر تيليغرام لنطلب منك تجربته أولاً.\n\n⚠️ تأكد من إدخال المعرّف الصحيح (مثال: @john_doe). بدونه لن نتمكن من التواصل معك.\n\nيُخزَّن معرّفك على هذا الجهاز ويُرفَق بالتقرير الذي ترسله، فقط لكي نتمكن من التواصل معك.</string>
     <string name="bug_tg_hint">@معرفك</string>
     <string name="bug_tg_confirm">تأكيد</string>
     <string name="bug_tg_skip">لاحقاً</string>

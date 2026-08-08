@@ -428,7 +428,7 @@
     <string name="bug_wizard_other_app">Altra / App sconosciuta</string>
     <string name="bug_wizard_back">← Indietro</string>
     <string name="bug_tg_title">Il tuo nome Telegram</string>
-    <string name="bug_tg_message">Quando sarà disponibile una correzione per il tuo problema, ti contatteremo direttamente su Telegram per chiederti di testarlo per primo.\n\n⚠️ Assicurati di inserire il nome corretto (esempio: @john_doe). Senza di esso non potremo contattarti.\n\nIl tuo nome è memorizzato solo su questo dispositivo e non viene mai condiviso.</string>
+    <string name="bug_tg_message">Quando sarà disponibile una correzione per il tuo problema, ti contatteremo direttamente su Telegram per chiederti di testarlo per primo.\n\n⚠️ Assicurati di inserire il nome corretto (esempio: @john_doe). Senza di esso non potremo contattarti.\n\nIl tuo nome è memorizzato su questo dispositivo e allegato al rapporto che invii, solo per poterti ricontattare.</string>
     <string name="bug_tg_hint">@il_tuo_nome</string>
     <string name="bug_tg_confirm">Conferma</string>
     <string name="bug_tg_skip">Più tardi</string>
