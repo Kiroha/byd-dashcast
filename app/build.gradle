@@ -1023,8 +1023,23 @@ android {
         // OEM navs' exported-service tables, BOOTCLASSPATH, nav/cluster processes) plus
         // com.byd.auto.permission in TIER1 — all reads, answering the open questions without pulling
         // the 307 MB Telenav APK or the framework. No daemon protocol change.
-        versionCode 610
-        versionName "1.8.20-beta"
+        // 611 = 1.8.21-beta (unlimited RE pulls: Azure Blob sink, and the artefacts it unlocks.
+        // AzureBlobUploader (4 MB block upload, per-block retry, commit-on-completion) means a
+        // bundle is no longer capped by the 50 MB messaging ceiling, and with a container configured
+        // every budget opens: 2 GB total, 512 MB per file, 60 files, and the native per-file cap goes
+        // 4 MB -> 256 MB. That cap is exactly what had been excluding the two artefacts we most want:
+        // the cluster Qt theme bundles (~126 MB + ~118 MB, which hold the instrument-cluster glyph
+        // library previously mapped one photo at a time) and the renderer libBydCluster.so (~29 MB).
+        // Also sweeps /system/framework and adds "byd" to the native name patterns, to reach the
+        // bydauto SDK jar whose AbsBYDAutoDevice.checkDeviceFeatures holds the feature-device table
+        // deciding which INSTRUMENT_* registers a car accepts — the open question behind the
+        // 0x43f01030 refusals. The probe file now also lists every framework jar with its size, so
+        // the right one can be named outright next time instead of matched by pattern. Credentials
+        // come from local.properties via BuildConfig; the SAS is create/write only, no read, no list.
+        // With no container configured the feature is inert and every budget is unchanged.
+        // 250 unit tests pass; no daemon protocol change.)
+        versionCode 611
+        versionName "1.8.21-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

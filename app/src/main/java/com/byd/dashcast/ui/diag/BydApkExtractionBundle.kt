@@ -152,6 +152,12 @@ object BydApkExtractionBundle {
                   "sed -n '/Service Resolver Table/,/Registered/p' | head -c 6000")).append("\n\n")
             sb.append("=== boot classpath (where the bydauto SDK lives) ===\n")
               .append(sh("sh -c 'echo \$BOOTCLASSPATH' 2>/dev/null | head -c 4000")).append("\n\n")
+            // Names + sizes of every framework jar, so the one holding AbsBYDAutoDevice (whose
+            // feature↔device table decides which INSTRUMENT_* registers a car accepts) can be named
+            // outright on the next pull instead of guessed from a pattern.
+            sb.append("=== framework jars (candidates for the bydauto SDK) ===\n")
+              .append(sh("ls -l /system/framework/*.jar /system/framework/oat/*/*.jar 2>/dev/null | " +
+                  "head -c 12000")).append("\n\n")
             sb.append("=== nav / cluster processes (unfiltered by name) ===\n")
               .append(sh("ps -A 2>/dev/null | grep -iE 'telenav|amap|byd|cluster|fission|qt' | head -c 12000")).append("\n")
             write(work, "05_hud_probes.txt", sb.toString())
@@ -184,8 +190,8 @@ object BydApkExtractionBundle {
      * yields no size line and is recorded as unreadable; nothing is copied here.
      */
     private fun planNative(apkBytes: Long, accepted: MutableList<PlannedNative>, skips: MutableList<String>) {
-        val dirs = (ApkExtractionPolicy.NATIVE_BIN_DIRS + ApkExtractionPolicy.NATIVE_LIB_DIRS)
-            .joinToString(" ")
+        val dirs = (ApkExtractionPolicy.NATIVE_BIN_DIRS + ApkExtractionPolicy.NATIVE_LIB_DIRS +
+            ApkExtractionPolicy.NATIVE_FRAMEWORK_DIRS).joinToString(" ")
         val pat = ApkExtractionPolicy.NATIVE_GREP
         // Emit "path|size" per matching, stat-able file. `stat` failing (unreadable) drops the line.
         val listing = sh(

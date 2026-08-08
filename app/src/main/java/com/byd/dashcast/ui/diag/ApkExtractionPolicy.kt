@@ -204,10 +204,21 @@ object ApkExtractionPolicy {
         "libxdjacontainerservice_jni.so", "libfission_services.so", "libfission_event.so"
     )
 
+    /**
+     * Framework dir — added for the bydauto SDK. The class that refuses instrument registers
+     * (`AbsBYDAutoDevice.checkDeviceFeatures`) is on the boot classpath, not in any APK or .so, so
+     * it is invisible to the bin/lib sweep. Its feature↔device table is what decides which
+     * `INSTRUMENT_*` registers a given car accepts.
+     */
+    val NATIVE_FRAMEWORK_DIRS = listOf("/system/framework")
+
     /** Name sweep for the rest of the native cluster/projection surface (bins and .so alike). */
     private val NATIVE_PATTERNS = listOf(
         "fission", "cluster", "container", "xdja", "autocontainer",
-        "instrument", "meter", "projection", "kanzi"
+        "instrument", "meter", "projection", "kanzi",
+        // "byd" catches the OEM cluster renderer (libBydCluster.so) and the bydauto framework jars.
+        // Deliberately not "auto" on its own — that would sweep in autofill and friends.
+        "byd"
     )
 
     /**
@@ -215,10 +226,18 @@ object ApkExtractionPolicy {
      * and every [NATIVE_NAMED] entry, so nothing [classifyNative] would accept is filtered out
      * before it is seen.
      */
-    const val NATIVE_GREP = "fission|cluster|container|xdja|autocontainer|instrument|meter|projection|kanzi"
+    const val NATIVE_GREP =
+        "fission|cluster|container|xdja|autocontainer|instrument|meter|projection|kanzi|byd"
 
-    /** Per-file cap for native files — skips the multi-MB Kanzi renderers, keeps the dispatchers/libs. */
-    const val NATIVE_FILE_CAP = 4L * 1024 * 1024
+    /**
+     * Per-file cap for native files. The 4 MB default skips the multi-MB Kanzi renderers and keeps
+     * the dispatchers/libs — it exists because the whole bundle had to fit under a 50 MB messaging
+     * ceiling. With a large sink configured that reason disappears, and the cap is what has been
+     * excluding the artefacts we most want: the cluster Qt theme bundles (~126 MB and ~118 MB, which
+     * hold the instrument-cluster glyph library) and the renderer libBydCluster.so (~29 MB).
+     */
+    @JvmStatic
+    val NATIVE_FILE_CAP: Long get() = if (largeSink) 256L * 1024 * 1024 else 4L * 1024 * 1024
 
     /** Native count backstop, separate from the APK one. */
     const val NATIVE_MAX_COUNT = 40
