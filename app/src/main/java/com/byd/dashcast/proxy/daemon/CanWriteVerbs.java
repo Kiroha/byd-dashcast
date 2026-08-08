@@ -176,8 +176,38 @@ public final class CanWriteVerbs {
         Class<?> evClass = ensureEvClass();
         Object ev = evClass.newInstance();
         ensureIntField().set(ev, value);
-        return (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        int rc = (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        logIfRejected("instrument", featureId, rc);
+        return rc;
     }
+
+    /**
+     * Makes an SDK REJECTION visible. The BYD SDK does not throw when it refuses a feature — it
+     * logs its own "no permission to use the feature: 0x… with this device: …!" line and returns a
+     * non-zero code, which every caller here was discarding. The batch writer returns void, and the
+     * HUD bench prints a HARDCODED "rc=0" whenever no exception was thrown, so a refused write has
+     * been indistinguishable from an accepted one in every bug report and bench zip we have
+     * collected — the single biggest reason the NO results were never explainable.
+     *
+     * <p>One line, at the only place every write actually reaches the SDK, so it covers the batch
+     * path, the single-write path and production alike. Throttled per (feature, rc) so a per-frame
+     * guidance write cannot flood the log.
+     */
+    private static void logIfRejected(String device, int featureId, int rc) {
+        if (rc == 0) return;
+        long key = (((long) featureId) << 32) | (rc & 0xFFFFFFFFL);
+        Long last = sRejectLog.get(key);
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (last != null && now - last < 30_000L) return;
+        sRejectLog.put(key, now);
+        android.util.Log.w("CanWriteVerbs", String.format(
+                "CAN WRITE REJECTED %s feature=0x%08X rc=%d — the SDK refused this register on this car",
+                device, featureId, rc));
+    }
+
+    /** (featureId,rc) → last time we logged it, so a rejected per-frame write logs ~every 30 s. */
+    private static final java.util.concurrent.ConcurrentHashMap<Long, Long> sRejectLog =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Write a byte buffer to a CAN instrument feature (e.g. street name encoded as UTF-8).
@@ -193,7 +223,9 @@ public final class CanWriteVerbs {
         Class<?> evClass = ensureEvClass();
         Object ev = evClass.newInstance();
         ensureBytesField().set(ev, data);
-        return (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        int rc = (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        logIfRejected("instrument", featureId, rc);
+        return rc;
     }
 
     /**

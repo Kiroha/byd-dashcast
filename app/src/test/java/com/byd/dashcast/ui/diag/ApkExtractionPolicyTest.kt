@@ -129,7 +129,8 @@ class ApkExtractionPolicyTest {
 
     @Test
     fun `DiLink 3 is fully mined at any API level`() {
-        assertTrue(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = true, isDiLink5 = false, apiLevel = 29))
+        // DL3 un-blocked 2026-08-09 — the HUD question is still open there, testers must be able to send APKs.
+        assertFalse(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = true, isDiLink5 = false, apiLevel = 29))
     }
 
     @Test
