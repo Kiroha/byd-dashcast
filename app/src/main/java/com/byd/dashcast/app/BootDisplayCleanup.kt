@@ -2,6 +2,7 @@ package com.byd.dashcast.app
 
 import android.content.ComponentName
 import android.content.Context
+import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.util.AppLogger
 
@@ -16,6 +17,17 @@ object BootDisplayCleanup {
 
     @JvmStatic
     fun cleanup(context: Context) {
+        // Liveness guard (AUD-006). session_cluster_pkgs is NOT a leftover from a previous
+        // session: ClusterSessionTracker.persist() rewrites it after every mutation, so while a
+        // projection is live it holds the packages currently ON the cluster. Running the cleanup
+        // then would move the driver's navigation off the cluster mid-drive. ClusterService owns
+        // the cluster task lifecycle for its whole lifetime, so if it is alive we must not touch
+        // those tasks behind its back. Skipping is the safe direction: apps stay on the cluster
+        // and the next genuine cleanup still catches them.
+        if (ClusterService.isRunning()) {
+            AppLogger.i(TAG, "ClusterService is alive — skipping cleanup (projection owns these tasks)")
+            return
+        }
         val pkgs = ClusterPrefs.getSessionClusterPkgs(context)
         if (pkgs.isEmpty()) {
             AppLogger.d(TAG, "No session cluster packages to clean up")

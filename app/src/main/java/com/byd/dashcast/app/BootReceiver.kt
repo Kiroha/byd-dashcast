@@ -3,6 +3,7 @@ package com.byd.dashcast.app
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.fission.FissionOrchestrator
@@ -130,16 +131,32 @@ class BootReceiver : BroadcastReceiver() {
             // Projection not auto-started: move any apps that were on the cluster
             // (from the previous session) back to Display 0 so they don't get stuck
             // on the (possibly still-alive) VirtualDisplay.
-            pending.incrementAndGet()
-            Thread({
-                try {
-                    BootDisplayCleanup.cleanup(context)
-                } catch (e: Exception) {
-                    AppLogger.e("BootReceiver", "Display cleanup error: " + e.message)
-                } finally {
-                    releaseOne.run()
-                }
-            }, "boot-display-cleanup").start()
+            //
+            // AUD-006 — only on a GENUINE boot. This ROM re-delivers BOOT_COMPLETED at every
+            // ACC-on without rebooting (see the note below: this receiver was observed running
+            // 25 min into an already-running process on a 15-hour-old boot). elapsedRealtime()
+            // is the discriminator: it keeps counting from the last real boot, so a re-delivery
+            // reports hours while a genuine boot reports seconds. Without this gate the cleanup
+            // ran mid-session and yanked the driver's projected app off the cluster.
+            // ACTION_MY_PACKAGE_REPLACED is exempt: our process was just replaced at an
+            // arbitrary uptime, and apps really can be stranded on the cluster then.
+            val uptimeMs = SystemClock.elapsedRealtime()
+            if (!isReplace && uptimeMs > BOOT_CLEANUP_WINDOW_MS) {
+                AppLogger.i("BootReceiver", "BOOT_COMPLETED re-delivered at uptime " +
+                        (uptimeMs / 1000) + "s (> " + (BOOT_CLEANUP_WINDOW_MS / 1000) +
+                        "s) — not a real boot, skipping display cleanup")
+            } else {
+                pending.incrementAndGet()
+                Thread({
+                    try {
+                        BootDisplayCleanup.cleanup(context)
+                    } catch (e: Exception) {
+                        AppLogger.e("BootReceiver", "Display cleanup error: " + e.message)
+                    } finally {
+                        releaseOne.run()
+                    }
+                }, "boot-display-cleanup").start()
+            }
         }
 
         // ─── v1.2.43 — Auto-start TetherFi hotspot at boot ─────────────────
@@ -183,5 +200,15 @@ class BootReceiver : BroadcastReceiver() {
 
     companion object {
         private val sMain = android.os.Handler(android.os.Looper.getMainLooper())
+
+        /**
+         * Uptime ceiling below which a BOOT_COMPLETED is accepted as a genuine boot (AUD-006).
+         * This ROM re-delivers the broadcast at every ACC-on without rebooting, and
+         * `elapsedRealtime()` keeps counting from the last real boot — a re-delivery therefore
+         * reports hours where a genuine boot reports seconds. 180 s leaves ample room for a slow
+         * head-unit boot while staying orders of magnitude below the observed re-deliveries
+         * (25 min into a 15-hour-old boot).
+         */
+        private const val BOOT_CLEANUP_WINDOW_MS = 180_000L
     }
 }
