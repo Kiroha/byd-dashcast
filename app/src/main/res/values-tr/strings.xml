@@ -428,7 +428,7 @@
     <string name="bug_wizard_other_app">Diğer / Bilinmeyen uygulama</string>
     <string name="bug_wizard_back">← Geri</string>
     <string name="bug_tg_title">Telegram kullanıcı adın</string>
-    <string name="bug_tg_message">Sorunun için bir düzeltme hazır olduğunda, onu ilk test etmeni istemek için seni doğrudan Telegram\'dan arayacağız.\n\n⚠️ Doğru kullanıcı adını girdiğinden emin ol (örnek: @john_doe). Onsuz sana ulaşamayız.\n\nKullanıcı adın yalnızca bu cihazda saklanır ve asla paylaşılmaz.</string>
+    <string name="bug_tg_message">Sorunun için bir düzeltme hazır olduğunda, onu ilk test etmeni istemek için seni doğrudan Telegram\'dan arayacağız.\n\n⚠️ Doğru kullanıcı adını girdiğinden emin ol (örnek: @john_doe). Onsuz sana ulaşamayız.\n\nKullanıcı adın bu cihazda saklanır ve gönderdiğin rapora eklenir — yalnızca sana ulaşabilmemiz için.</string>
     <string name="bug_tg_hint">@kullanici_adin</string>
     <string name="bug_tg_confirm">Onayla</string>
     <string name="bug_tg_skip">Sonra</string>

@@ -428,7 +428,7 @@
     <string name="bug_wizard_other_app">Andere / Unbekannte App</string>
     <string name="bug_wizard_back">← Zurück</string>
     <string name="bug_tg_title">Dein Telegram-Name</string>
-    <string name="bug_tg_message">Wenn ein Fix für dein Problem verfügbar ist, werden wir dich direkt auf Telegram kontaktieren und dich bitten, ihn als Erster zu testen.\n\n⚠️ Achte darauf, den richtigen Namen einzugeben (Beispiel: @john_doe). Ohne ihn können wir dich nicht erreichen.\n\nDein Name wird nur auf diesem Gerät gespeichert und niemals weitergegeben.</string>
+    <string name="bug_tg_message">Wenn ein Fix für dein Problem verfügbar ist, werden wir dich direkt auf Telegram kontaktieren und dich bitten, ihn als Erster zu testen.\n\n⚠️ Achte darauf, den richtigen Namen einzugeben (Beispiel: @john_doe). Ohne ihn können wir dich nicht erreichen.\n\nDein Name wird auf diesem Gerät gespeichert und dem gesendeten Bericht beigefügt, damit wir dich erreichen können.</string>
     <string name="bug_tg_hint">@dein_name</string>
     <string name="bug_tg_confirm">Bestätigen</string>
     <string name="bug_tg_skip">Später</string>
