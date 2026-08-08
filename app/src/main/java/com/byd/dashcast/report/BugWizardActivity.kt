@@ -67,6 +67,7 @@ class BugWizardActivity : Activity() {
     private var mSelectedIssue: String? = null
     private var mDetailsField: EditText? = null
     private var mBtnSend: MaterialButton? = null
+    private var mBtnCancel: View? = null
     private var mTvSelected: TextView? = null
     private val mIssueButtons = ArrayList<MaterialButton>()
 
@@ -93,7 +94,8 @@ class BugWizardActivity : Activity() {
             findViewById(R.id.dot_wizard_2),
             findViewById(R.id.dot_wizard_3))
 
-        findViewById<View>(R.id.btn_wizard_cancel).setOnClickListener { finish() }
+        mBtnCancel = findViewById<View>(R.id.btn_wizard_cancel)
+        mBtnCancel?.setOnClickListener { finish() }
         mBtnBack.setOnClickListener { goBack() }
         mTvTgBanner.setOnClickListener { showTgHandleDialog() }
 
@@ -467,6 +469,10 @@ class BugWizardActivity : Activity() {
         mSending = true
         mBtnSend?.isEnabled = false
         mBtnBack.isEnabled = false
+        // AUD-005 — Cancel was the only control with no guard on mSending, whereas goBack()
+        // starts with `if (mSending) return`. Disabling it closes the race window in the nominal
+        // case; the lifecycle guard in onReady covers every other destruction path.
+        mBtnCancel?.isEnabled = false
         mTvStatus.visibility = View.VISIBLE
         mTvStatus.setText(R.string.bug_status_capturing)
 
@@ -492,6 +498,31 @@ class BugWizardActivity : Activity() {
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {
+                // AUD-005 — lifecycle guard. This callback is posted to the main thread by
+                // BugReportCapture AFTER a capture that takes tens of seconds (two logcat passes
+                // plus ~20 dumpsys). If the user left the wizard meanwhile, the Activity is gone
+                // and building a Dialog on it throws BadTokenException inside a bare main-looper
+                // Runnable — uncaught, so the process dies exactly when the user is reporting a
+                // bug. Same guard as bundleShotsThenDeliver() below.
+                if (isFinishing || isDestroyed) {
+                    // Consent for the screenshots can no longer be collected, so the safe default
+                    // is to NOT attach them: deliver the report alone, headless, using the
+                    // application context so no finished Activity is touched. The .txt is already
+                    // on disk at this point, so nothing is lost either way.
+                    if (TelegramBugReporter.isConfigured()) {
+                        TelegramBugReporter.send(applicationContext, file, caption,
+                            object : TelegramBugReporter.Callback {
+                                override fun onSent() {}
+                                override fun onFailed(message: String) {
+                                    AppLogger.w(TAG, "headless report upload failed: $message")
+                                }
+                            })
+                    } else {
+                        AppLogger.w(TAG, "wizard gone before consent — report kept on disk: "
+                            + file.absolutePath)
+                    }
+                    return
+                }
                 // Privacy gate (mirrors the HUD raw-recorder H3 pattern): if the rolling screenshot
                 // recorder is on, ask — per send — whether to attach the recent captures, which may
                 // show the user's screen (map, destination…). Consent is NOT persisted.
@@ -516,6 +547,7 @@ class BugWizardActivity : Activity() {
                 mSending = false
                 mBtnBack.isEnabled = true
                 mBtnSend?.isEnabled = true
+                mBtnCancel?.isEnabled = true
                 mTvStatus.text = getString(R.string.bug_status_error_fmt, message)
                 if (partial != null) shareFallback(partial)
             }
