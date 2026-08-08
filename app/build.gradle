@@ -1009,8 +1009,22 @@ android {
         // + nav-stop clear). APK extraction is re-enabled on DL3: the windshield-HUD question is open
         // there and testers must be able to send their system APKs; only DiLink 5.0 (API<33) stays
         // blocked. 250 unit tests pass; no daemon protocol change.)
-        versionCode 609
-        versionName "1.8.19-beta"
+        // 610 = 1.8.20-beta (fixes a real rendering bug found by RE of a tester's DL3 Seal extraction:
+        // the next-street name was sent in the WRONG ENCODING. The OEM nav writes that register with
+        // str.getBytes("UnicodeLittleUnmarked") = UTF-16LE without BOM, so the MCU decodes UTF-16LE;
+        // DashCast sent UTF-8 from day one, which the MCU rendered as arbitrary CJK codepoints — a
+        // field report literally described "distance and some Chinese text" on the HUD and it was
+        // misfiled as a partial failure. Verified byte-for-byte against AmapService.java:489/623/628.
+        // Also: the INSTRUMENT_GUIDE_ROAD_DISTANCE (0x43F01030) constant is deleted outright — RE
+        // shows the OEM writes exactly 15 INSTRUMENT_* registers and this is not one, and the SDK
+        // refuses it (344 occurrences in the corpus, including on cars whose arrows render fine).
+        // Extraction gains a ~5 KB text-only probe artefact (05_hud_probes.txt: firmware/car identity,
+        // the BYDAUTO permission namespace and who holds it, the AutoContainer type allow-list, the
+        // OEM navs' exported-service tables, BOOTCLASSPATH, nav/cluster processes) plus
+        // com.byd.auto.permission in TIER1 — all reads, answering the open questions without pulling
+        // the 307 MB Telenav APK or the framework. No daemon protocol change.
+        versionCode 610
+        versionName "1.8.20-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

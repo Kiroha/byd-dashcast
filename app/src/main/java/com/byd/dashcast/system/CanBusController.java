@@ -210,7 +210,14 @@ public final class CanBusController {
     }
 
     /**
-     * Send the name of the next street / road segment as UTF-8.
+     * Send the name of the next street / road segment as UTF-16LE (no BOM).
+     *
+     * <p>The encoding is NOT free: the OEM nav writes this same register with
+     * {@code str.getBytes("UnicodeLittleUnmarked")} — UTF-16 little-endian without a BOM —
+     * so the MCU decodes the buffer as UTF-16LE. DashCast sent UTF-8 here from the start, which
+     * the MCU rendered as arbitrary CJK codepoints: a field report described
+     * "distance and some Chinese text" on the HUD, which was this bug, visible on-glass, and
+     * was misfiled as a partial failure. Verified against AmapService.java:489/623/628.
      *
      * <p>Null or empty string clears the street name field on the cluster display.
      *
@@ -219,7 +226,7 @@ public final class CanBusController {
     public static void sendNextStreetName(String streetName) throws ProxyClient.ProxyException {
         byte[] bytes = (streetName == null || streetName.isEmpty())
                 ? new byte[0]
-                : streetName.getBytes(StandardCharsets.UTF_8);
+                : streetName.getBytes(java.nio.charset.Charset.forName("UTF-16LE"));
         ProxyClient.canInstrumentBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, bytes);
     }
 

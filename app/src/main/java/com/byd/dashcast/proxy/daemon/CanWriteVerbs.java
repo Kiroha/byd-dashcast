@@ -49,8 +49,11 @@ public final class CanWriteVerbs {
     /** Simple guidance: primary turn icon ID + distance-to-turn in metres. */
     public static final int INSTRUMENT_GUIDE_SIMPLE          = 1139806224; // 0x43F01010
 
-    /** Guidance with road-ahead distance (secondary display variant). */
-    public static final int INSTRUMENT_GUIDE_ROAD_DISTANCE   = 1139806256; // 0x43F01030
+    // REMOVED: INSTRUMENT_GUIDE_ROAD_DISTANCE (0x43F01030). RE of the OEM nav bridge shows it
+    // writes exactly 15 INSTRUMENT_* registers and this is NOT one of them, and the SDK refuses it
+    // ("no permission to use the feature: 0x43f01030 with this device: 1007!", 344x in the tester
+    // corpus — including on cars whose arrows render perfectly). It was never part of the contract;
+    // the constant is gone so no bench or future code can reintroduce the write.
 
     /** Distance to the next crossing / intersection in metres. */
     public static final int INSTRUMENT_FRONT_CROSSING_DIST   = 1139806232; // 0x43F01018
