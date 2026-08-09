@@ -1038,8 +1038,17 @@ android {
         // come from local.properties via BuildConfig; the SAS is create/write only, no read, no list.
         // With no container configured the feature is inert and every budget is unchanged.
         // 250 unit tests pass; no daemon protocol change.)
-        versionCode 611
-        versionName "1.8.21-beta"
+        // 612 = 1.8.22-beta (fixes the Azure upload commit. On the first real 270 MB pull every
+        // block uploaded fine and only the final Put Block List failed, HTTP 400: the shared request
+        // builder was setting x-ms-blob-type on EVERY request, but that header belongs to the
+        // single-shot Put Blob operation — Put Block List does not define it. Removed. Second, and
+        // the reason the cause had to be inferred rather than read: the uploader threw away Azure's
+        // error body, so a rejection surfaced only as "HTTP 400". It now parses the returned
+        // <Code>/<Message> into the message, on both the block and the commit path, so any future
+        // rejection names itself. Note the previously uploaded blocks stay valid on the service for
+        // 7 days, but the simplest recovery is to re-run the extraction on this build.)
+        versionCode 612
+        versionName "1.8.22-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

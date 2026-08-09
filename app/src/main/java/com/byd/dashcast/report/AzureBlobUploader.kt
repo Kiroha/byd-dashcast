@@ -100,9 +100,10 @@ object AzureBlobUploader {
                 c.doOutput = true
                 c.outputStream.use { it.write(buf, 0, len) }
                 val code = c.responseCode
+                val detail = if (code in 200..299) "" else errorDetail(c)
                 c.disconnect()
                 if (code in 200..299) return
-                lastError = IllegalStateException("HTTP $code")
+                lastError = IllegalStateException("HTTP $code$detail")
             } catch (t: Throwable) {
                 lastError = t
             }
@@ -125,8 +126,11 @@ object AzureBlobUploader {
         c.doOutput = true
         c.outputStream.use { it.write(body) }
         val code = c.responseCode
+        val detail = if (code in 200..299) "" else errorDetail(c)
         c.disconnect()
-        if (code !in 200..299) throw IllegalStateException("commit failed: HTTP $code")
+        if (code !in 200..299) {
+            throw IllegalStateException("commit failed: HTTP $code$detail")
+        }
     }
 
     private fun open(url: String, method: String): HttpURLConnection =
@@ -136,8 +140,31 @@ object AzureBlobUploader {
             readTimeout = READ_TIMEOUT_MS
             instanceFollowRedirects = false
             setRequestProperty("x-ms-version", API_VERSION)
-            setRequestProperty("x-ms-blob-type", "BlockBlob")
+            // NOTE: no x-ms-blob-type here. It belongs to the single-shot Put Blob operation only;
+            // Put Block and Put Block List do not define it, and sending it made the commit fail
+            // with HTTP 400 after a 270 MB upload had already succeeded block by block.
         }
+
+    /**
+     * Azure answers a rejected request with an XML body naming the exact cause
+     * (`<Code>UnsupportedHeader</Code>`, `InvalidBlockList`, …). Reading it turns "HTTP 400" into
+     * something actionable — without it the first real failure could only be guessed at.
+     */
+    private fun errorDetail(c: HttpURLConnection): String {
+        return try {
+            val raw = c.errorStream?.bufferedReader()?.use { it.readText() } ?: return ""
+            val code = Regex("<Code>(.*?)</Code>").find(raw)?.groupValues?.get(1)
+            val msg = Regex("<Message>(.*?)</Message>", RegexOption.DOT_MATCHES_ALL)
+                .find(raw)?.groupValues?.get(1)?.lineSequence()?.firstOrNull()?.trim()
+            when {
+                code != null && msg != null -> " ($code: $msg)"
+                code != null -> " ($code)"
+                else -> " (" + raw.take(180).replace('\n', ' ') + ")"
+            }
+        } catch (_: Throwable) {
+            ""
+        }
+    }
 
     // ── helpers ─────────────────────────────────────────────────────────────
 
