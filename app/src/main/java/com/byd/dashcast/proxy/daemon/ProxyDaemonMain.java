@@ -335,15 +335,22 @@ public final class ProxyDaemonMain {
     }
 
     /** v1.2.70 hardening: lower our OOM score so Linux's low-memory killer
-     *  reaches for foreground apps before us. uid=2000 can always write to
-     *  its own /proc/self/oom_score_adj. -900 sits just above the framework
-     *  reserved range (-1000..-900 used by system_server etc.). */
+     *  reaches for foreground apps before us. -900 sits just above the framework
+     *  reserved range (-1000..-900 used by system_server etc.).
+     *
+     *  <p>Best-effort, and it is <i>expected</i> to fail on DiLink 3: that ROM's SELinux policy
+     *  denies the shell domain write access to proc_oom_adj, so the open itself returns EACCES
+     *  (79 of 80 DiLink 3 reports in the corpus; every DiLink 4 / 5.0 / 5.1 / AAOS report
+     *  succeeds). The earlier claim here that "uid=2000 can always write to its own
+     *  /proc/self/oom_score_adj" was wrong. The daemon runs fine without it — it only loses a
+     *  priority hint — so this is logged as a state, not as a failure to chase. */
     private static void hardenAgainstOom() {
         try (FileOutputStream fos = new FileOutputStream("/proc/self/oom_score_adj")) {
             fos.write("-900".getBytes());
             log("oom_score_adj=-900 set");
         } catch (Throwable t) {
-            log("hardenAgainstOom failed: " + t);
+            log("oom_score_adj not settable, continuing without the priority hint"
+                    + " (expected on DiLink 3 — SELinux denies shell): " + t);
         }
     }
 

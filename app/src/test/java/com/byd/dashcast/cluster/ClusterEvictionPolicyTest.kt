@@ -85,6 +85,37 @@ class ClusterEvictionPolicyTest {
     }
 
     @Test
+    fun `INC-20260809-122719 - a tracked app is evicted even when both fields are null`() {
+        // "Send to main display" nulls MainActivity's mCurrentDashboardPkg; if the move silently
+        // failed the app is still on the cluster, and Stop projection used to skip it entirely.
+        assertEquals(
+            listOf("io.github.muntashirakon.AppManager"),
+            ClusterEvictionPolicy.evictionList(
+                null, null, listOf("io.github.muntashirakon.AppManager"))
+        )
+    }
+
+    @Test
+    fun `eviction list puts the on-screen apps first, then the rest of the tracked set`() {
+        assertEquals(
+            listOf("com.waze", "com.spotify", "org.schabi.newpipe"),
+            ClusterEvictionPolicy.evictionList(
+                "com.waze", "com.spotify", listOf("org.schabi.newpipe", "com.waze"))
+        )
+    }
+
+    @Test
+    fun `eviction list deduplicates and drops blanks`() {
+        assertEquals(
+            listOf("com.waze"),
+            ClusterEvictionPolicy.evictionList("com.waze", "", listOf("com.waze", "  "))
+        )
+        assertTrue(ClusterEvictionPolicy.evictionList(null, null, emptyList()).isEmpty())
+        // An empty list is the ONLY case that may short-circuit the pipeline.
+        assertTrue(ClusterEvictionPolicy.evictionList("", null, listOf("")).isEmpty())
+    }
+
+    @Test
     fun `a second app still gets probes when the first landed quickly`() {
         // The shared clock only starves later packages if an earlier one burned the budget.
         // A fast first landing (~300 ms measured on DiLink 3) must leave the second app usable.

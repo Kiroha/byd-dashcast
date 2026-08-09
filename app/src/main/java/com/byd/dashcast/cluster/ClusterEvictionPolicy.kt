@@ -54,6 +54,28 @@ object ClusterEvictionPolicy {
      */
     const val SETTLE_AFTER_LANDING_MS = 250L
 
+    /**
+     * The packages Stop projection must evict: [main] + [second] first (they are what the user
+     * just had on screen, so they should be dealt with first), then everything still [tracked].
+     *
+     * Including [tracked] is the fix for INC-20260809-122719. `MainActivity` clears its
+     * `mCurrentDashboardPkg` as soon as an app is sent to the main display, so a Stop projection
+     * that follows arrived with `main` and `second` both null; the list was empty and the entire
+     * verified pipeline was skipped — for an app that, on that ROM, had never actually left the
+     * cluster. The session tracker is the authoritative answer to "what may still hold a cluster
+     * task", so it belongs in this list; the caller's two fields alone never did.
+     *
+     * Order-preserving and deduplicated, blanks dropped.
+     */
+    @JvmStatic
+    fun evictionList(main: String?, second: String?, tracked: Collection<String>): List<String> {
+        val set = LinkedHashSet<String>()
+        for (candidate in sequenceOf(main, second) + tracked.asSequence()) {
+            if (!candidate.isNullOrBlank()) set.add(candidate)
+        }
+        return ArrayList(set)
+    }
+
     enum class Step {
         /** Confirmed on display 0 — settle, then force-stop. */
         LANDED,

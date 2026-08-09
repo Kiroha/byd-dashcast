@@ -17,7 +17,11 @@ import java.util.concurrent.Executors
  * Owns the set of packages launched on the cluster display during this session.
  *
  * Provides add / remove / contains, and the full eviction pipeline
- * (move → display 0 + force-stop) used by restoreBydDashboard / originCluster.
+ * (probe → move → display 0 → force-stop) used by restoreBydDashboard / originCluster.
+ *
+ * The set is a session HISTORY, not a live inventory: entries are added on launch and only removed
+ * when something proves the package is no longer on the cluster. Eviction therefore probes each
+ * candidate before touching it, and skips the ones that already exited or are already on display 0.
  *
  * The set is persisted after every mutation so BootDisplayCleanup can recover
  * after a process death.
@@ -25,7 +29,14 @@ import java.util.concurrent.Executors
 class ClusterSessionTracker(context: Context) {
 
     private val mAppCtx: Context = context.applicationContext
-    private val mPkgs: MutableSet<String> = LinkedHashSet()
+
+    /**
+     * Synchronized because it is mutated from two threads: the main thread (launch / kill) and
+     * [sLandingExecutor] (the landing waits, which call [remove] once a departure is confirmed).
+     * Iteration still needs an explicit `synchronized` block — see [snapshot].
+     */
+    private val mPkgs: MutableSet<String> =
+        java.util.Collections.synchronizedSet(LinkedHashSet<String>())
 
     // ── Set mutations ─────────────────────────────────────────────────────────
 
@@ -43,45 +54,46 @@ class ClusterSessionTracker(context: Context) {
 
     fun contains(pkg: String?): Boolean = pkg != null && mPkgs.contains(pkg)
 
+    /** Thread-safe copy — `synchronizedSet` protects the mutators, not iteration. */
+    private fun snapshot(): List<String> = synchronized(mPkgs) { ArrayList(mPkgs) }
+
     // ── Bulk operations ───────────────────────────────────────────────────────
 
     /**
-     * Moves all tracked packages back to Display 0 via ClusterService and clears the set.
-     * If the service is null the set is preserved so BootDisplayCleanup can retry at boot.
-     */
-    fun moveToMainDisplay(svc: ClusterService?) {
-        if (mPkgs.isEmpty()) return
-        if (svc == null) {
-            AppLogger.w(TAG, "moveToMainDisplay: service not bound — preserving set for boot cleanup")
-            return
-        }
-        AppLogger.i(TAG, "moveToMainDisplay: " + mPkgs.size + " apps → " + mPkgs)
-        for (pkg in mPkgs) svc.moveTaskToDisplay(pkg, 0, null)
-        mPkgs.clear()
-        persist()
-    }
-
-    /**
-     * Builds a deduplicated list from [main] + [second], then sequentially moves each to
-     * Display 0 and force-stops it. Runs [onAllDone] on the main thread once every package
-     * has been processed (success or error).
+     * Builds the eviction list, then sequentially moves each package to Display 0 and force-stops
+     * it. Runs [onAllDone] on the main thread once every package has been processed.
+     *
+     * The list is [main] + [second] **plus everything still tracked**. Keying it off the caller's
+     * two fields alone is what let INC-20260809-122719 through: `MainActivity` nulls
+     * `mCurrentDashboardPkg` as soon as an app is sent to the main display, so Stop projection
+     * arrived with both fields null, the list was empty, and the whole pipeline was skipped for an
+     * app that had never actually left the cluster. The tracker is the authoritative answer to
+     * "what may still hold a cluster task".
+     *
+     * Widening the list is only safe because [evictNext] now LOOKS before it acts — see there. The
+     * tracked set is a session history, so most of its entries are usually nothing to evict.
      */
     fun evictAllThen(svc: ClusterService?, main: String?, second: String?, onAllDone: Runnable) {
-        val set = LinkedHashSet<String>()
-        if (!main.isNullOrEmpty()) set.add(main)
-        if (!second.isNullOrEmpty()) set.add(second)
-        val pkgs = ArrayList(set)
+        if (svc == null) {
+            // Nothing here can verify anything: no service to move with, and probing from the main
+            // thread is not an option. Stay with the two packages the caller knows were on screen
+            // rather than force-stopping a whole session's history on a guess.
+            val blind = ClusterEvictionPolicy.evictionList(main, second, emptyList())
+            if (blind.isEmpty()) {
+                onAllDone.run()
+                return
+            }
+            for (p in blind) AdbLocalClient.forceStopApp(mAppCtx, p, null)
+            Handler(Looper.getMainLooper()).postDelayed(onAllDone, 800L)
+            return
+        }
 
+        val pkgs = ClusterEvictionPolicy.evictionList(main, second, snapshot())
         if (pkgs.isEmpty()) {
             onAllDone.run()
             return
         }
-
-        if (svc == null) {
-            for (p in pkgs) AdbLocalClient.forceStopApp(mAppCtx, p, null)
-            Handler(Looper.getMainLooper()).postDelayed(onAllDone, 800L)
-            return
-        }
+        AppLogger.i(TAG, "evictAll: ${pkgs.size} candidate(s) → $pkgs")
         // One clock for the whole eviction — see ClusterEvictionPolicy.LANDING_BUDGET_MS.
         evictNext(svc, pkgs, 0, SystemClock.elapsedRealtime(), onAllDone)
     }
@@ -104,15 +116,48 @@ class ClusterSessionTracker(context: Context) {
             evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
             return
         }
-
-        AppLogger.i(TAG, "evict: move→display0 $pkg")
-        svc.moveTaskToDisplay(pkg, 0, object : ClusterService.LaunchCallback {
-            override fun onResult(ok: Boolean) {
-                AppLogger.i(TAG, "evict: move $pkg → " + (if (ok) "OK" else "KO") + " — awaiting landing")
-                remove(pkg)
-                awaitLandingThenForceStop(svc, pkgs, idx, evictionStartedAt, onAllDone)
+        // LOOK before acting. The list is a session history, so most entries need nothing done —
+        // and doing something anyway is destructive, not merely wasteful: ClusterService's
+        // moveTaskToDisplay falls back to a LAUNCH when the package has no task, so evicting a
+        // package that already exited would cold-start it on display 0 only to force-stop it a
+        // moment later. Probing costs one binder round trip and is the only way to tell the app
+        // stranded on the cluster (the one this whole pipeline exists for) from the ones that are
+        // simply gone or already home.
+        sLandingExecutor.execute {
+            val location = try {
+                ProxyClient.findTaskLocationForPackage(pkg)
+            } catch (t: Throwable) {
+                AppLogger.w(TAG, "evict: probe failed for $pkg (${t.javaClass.simpleName}) "
+                        + "— evicting anyway, an app left on the cluster is the worse outcome")
+                TaskLocation.unknown()
             }
-        })
+            val skip = when (location.matchDisplay(0)) {
+                // Already home: the user may well be using it right now. Never kill it.
+                TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> "already on display 0"
+                // No task at all — nothing to move, nothing to kill.
+                TaskLocation.DisplayMatch.ABSENT -> "no task"
+                else -> null
+            }
+            if (skip != null) {
+                AppLogger.i(TAG, "evict: skip $pkg ($skip) — untracked")
+                remove(pkg)
+                Handler(Looper.getMainLooper()).post {
+                    evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
+                }
+                return@execute
+            }
+            AppLogger.i(TAG, "evict: move→display0 $pkg (was display=${location.displayId})")
+            Handler(Looper.getMainLooper()).post {
+                svc.moveTaskToDisplay(pkg, 0, object : ClusterService.LaunchCallback {
+                    override fun onResult(ok: Boolean) {
+                        AppLogger.i(TAG, "evict: move $pkg → "
+                                + (if (ok) "OK" else "KO") + " — awaiting landing")
+                        remove(pkg)
+                        awaitLandingThenForceStop(svc, pkgs, idx, evictionStartedAt, onAllDone)
+                    }
+                })
+            }
+        }
     }
 
     /**
@@ -209,7 +254,7 @@ class ClusterSessionTracker(context: Context) {
     }
 
     private fun persist() {
-        ClusterPrefs.setSessionClusterPkgs(mAppCtx, HashSet(mPkgs))
+        ClusterPrefs.setSessionClusterPkgs(mAppCtx, HashSet(snapshot()))
     }
 
     companion object {

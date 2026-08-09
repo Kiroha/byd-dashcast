@@ -1115,7 +1115,11 @@ class MainActivity : AppCompatActivity(),
         ClusterPrefs.setMainPkg(this, app.packageName)
         updateDashboardStatus(null)
         showAppList()
-        // Move the running task to display 0 without relaunching.
+        // Move the running task to display 0 without relaunching. Deliberately does NOT untrack the
+        // package: this move is unverified (on a ROM without moveTaskToDisplay it is an async
+        // relaunch that can silently not happen), and dropping it here is what stranded an app on
+        // the cluster in INC-20260809-122719. Stop projection probes where it actually is and skips
+        // it if it did land on display 0.
         val svc = mClusterService
         if (mServiceBound && svc != null) {
             svc.moveTaskToDisplay(app.packageName, 0, null)
@@ -1348,8 +1352,9 @@ class MainActivity : AppCompatActivity(),
 
     private fun continueRestoreBydDashboard(capturedClusterPkg: String?, capturedSecondPkg: String?) {
         // v1.2.81 — every classic cluster app is moved back to display 0 AND force-stopped.
-        mSessionTracker.moveToMainDisplay(if (mServiceBound) mClusterService else null)
-
+        // evictAllThen now covers the whole tracked set, so the unverified moveToMainDisplay() that
+        // used to run first is gone: it fired moves nobody checked and then CLEARED the set, which
+        // is what left the verified pipeline with nothing to work on (INC-20260809-122719).
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)")
 
         mSessionTracker.evictAllThen(
@@ -1492,7 +1497,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun continueOriginCluster(capturedClusterPkg: String?, capturedSecondPkg: String?) {
-        mSessionTracker.moveToMainDisplay(if (mServiceBound) mClusterService else null)
+        // Same as continueRestoreBydDashboard: evictAllThen covers the tracked set itself.
         AppLogger.log(TAG, "originCluster() cmd=" + ClusterPrefs.getClusterType(this))
 
         mSessionTracker.evictAllThen(

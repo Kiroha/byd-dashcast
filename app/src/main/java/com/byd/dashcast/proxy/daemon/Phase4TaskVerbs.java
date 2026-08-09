@@ -739,13 +739,34 @@ public final class Phase4TaskVerbs {
                 }
                 return dump.toString();
             }
-            m.invoke(iAtm, args);
+            Object rv = m.invoke(iAtm, args);
+            // API 29 throws when canResizeTask() refuses (caught below); API 30+ logs and returns
+            // false instead, and this used to be discarded — so on DiLink 5.0/5.1/AAOS a refused
+            // resize was reported as OK, which is worse for triage than the ERR it looked like it
+            // was avoiding. Proven in INC-20260804-171617: system_server logs "W ActivityTaskManager:
+            // resizeTask not allowed on task=Task{...#122...}" and 2 ms later our own transcript
+            // says "OK resizeTask(122,...)", nine times over. Boolean.FALSE.equals(null) is false,
+            // so the void API-29 signature keeps its existing throw-driven path untouched.
+            if (Boolean.FALSE.equals(rv)) {
+                return "SKIP resizeTask: task is not in a resizable windowing mode"
+                        + " (bounds already set by the preceding verb)";
+            }
             return "OK " + m.getName() + "(" + taskId + ","
                     + (bounds == null ? "null" : bounds.toShortString()) + ")";
         } catch (Throwable ex) {
             Throwable cause = (ex instanceof java.lang.reflect.InvocationTargetException
                     && ex.getCause() != null) ? ex.getCause() : ex;
             String msg = cause.getMessage();
+            // Expected outcome, not a failure: WindowConfiguration.canResizeTask() is FREEFORM-only,
+            // and BYD's own docking verb — which runs immediately before this one carrying the same
+            // bounds — leaves the task outside FREEFORM on DiLink 3. The rect still lands; the
+            // closing getTaskBounds says so. Reported as SKIP so triage (and MoveAndResizeOutcome)
+            // stop reading a platform rule as a defect. Any other failure keeps the ERR marker.
+            if (cause instanceof IllegalArgumentException
+                    && msg != null && msg.contains("resizeTask not allowed on task=")) {
+                return "SKIP resizeTask: task is not in a resizable windowing mode"
+                        + " (bounds already set by the preceding verb)";
+            }
             return "ERR resizeTask: " + cause.getClass().getSimpleName()
                     + " — " + (msg == null ? cause.toString() : msg);
         }
