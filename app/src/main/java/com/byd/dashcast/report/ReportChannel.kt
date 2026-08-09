@@ -180,6 +180,67 @@ object ReportChannel {
         }
     }
 
+    // ── provisioning ────────────────────────────────────────────────────────────────────────
+
+    /** Where a provisioning file is expected. Readable by the uid-2000 shell, unlike Android/data. */
+    const val IMPORT_PATH = "/data/local/tmp/dashcast_channel.properties"
+
+    /**
+     * Imports credentials from a file pushed to [IMPORT_PATH] by `adb push`.
+     *
+     * This is the provisioning route D2 chose as the primary one for a fleet whose owners already
+     * sideload over ADB — it needs no new screen, no new translated string, and no paste on a car
+     * touchscreen, an interaction this application has no precedent for.
+     *
+     * **The file is read with `executeShellWithResultUnlogged`, and that is not a detail.** The
+     * ordinary shell helper echoes stdout into AppLogger, which BugReportCapture appends to every
+     * bug report. Reading a credential file through it would copy the token into every artefact
+     * uploaded afterwards — a leak strictly worse than the one being fixed, because it repeats on
+     * every report instead of sitting in one binary. The D2 analysis flagged exactly this trap in
+     * the design it recommended.
+     *
+     * The file is deliberately NOT deleted after import: the README documents a full uninstall as a
+     * normal step, and that clears the encrypted store, so the file is what makes re-pairing
+     * possible without another round trip to the maintainer.
+     *
+     * @param done invoked with a human-readable outcome that never contains a credential.
+     */
+    @JvmStatic
+    fun importFromDevice(ctx: Context, done: (String) -> Unit) {
+        com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
+            ctx.applicationContext, "cat " + IMPORT_PATH + " 2>/dev/null",
+            object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
+                override fun onSuccess(out: String?) {
+                    val text = out ?: ""
+                    if (text.isBlank()) { done("no provisioning file at " + IMPORT_PATH); return }
+                    val kv = HashMap<String, String>()
+                    for (line in text.lineSequence()) {
+                        val t = line.trim()
+                        if (t.isEmpty() || t.startsWith("#") || !t.contains('=')) continue
+                        val i = t.indexOf('=')
+                        kv[t.substring(0, i).trim()] = t.substring(i + 1).trim()
+                    }
+                    var applied = 0
+                    val tok = kv["bugReport.botToken"].orEmpty()
+                    if (tok.isNotEmpty()) {
+                        if (saveTelegram(ctx, tok, kv["bugReport.chatId"].orEmpty(),
+                                kv["bugReport.threadId"].orEmpty(),
+                                kv["bugReport.hudThreadId"].orEmpty())) applied++
+                    }
+                    val sas = kv["azure.sas"].orEmpty()
+                    if (sas.isNotEmpty()) {
+                        if (saveAzure(ctx, kv["azure.blobUrl"].orEmpty(), sas)) applied++
+                    }
+                    // Counts only — never the keys' values.
+                    done(if (applied > 0) "paired: $applied credential set(s) stored on this device"
+                         else "provisioning file found but no usable credentials in it")
+                }
+                override fun onError(err: String?) {
+                    done("could not read " + IMPORT_PATH + " (" + (err ?: "no detail") + ")")
+                }
+            })
+    }
+
     // ── internals ───────────────────────────────────────────────────────────────────────────
 
     private fun read(ctx: Context, key: String, buildDefault: String): String {
