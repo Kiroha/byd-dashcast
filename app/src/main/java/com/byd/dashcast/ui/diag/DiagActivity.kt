@@ -19,6 +19,7 @@ import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.R
 import com.byd.dashcast.proxy.daemon.Phase4ProcessVerbs
 import com.byd.dashcast.report.AzureBlobUploader
+import com.byd.dashcast.report.ReportChannel
 import com.byd.dashcast.report.ReportStore
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
@@ -141,6 +142,21 @@ class DiagActivity : Activity() {
                     "Raw nav-text capture ON — start a nav route (Waze/Maps), let a few maneuvers " +
                         "pass, then send a bug report. This logs destination/road/ETA text; turn it OFF after."
                 else "Raw nav-text capture OFF.")
+            }
+        })
+
+        // Provisioning entry point. It lives here rather than in Settings on purpose: it is a
+        // technical action, and DiagActivity is the screen app/lint.xml documents as the
+        // English-only exception, so it costs no translated string. A new Settings row would have
+        // cost 13.
+        root.addView(Button(this).apply {
+            text = "Pair reporting channel (from ${ReportChannel.IMPORT_PATH})"
+            setOnClickListener {
+                isEnabled = false
+                log("pairing…")
+                ReportChannel.importFromDevice(this@DiagActivity) { outcome ->
+                    runOnUiThread { log(outcome); isEnabled = true }
+                }
             }
         })
 
