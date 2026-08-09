@@ -38,20 +38,31 @@ object ClusterNavPusher {
     /** Set once the container has been switched into nav mode for the current session. */
     @Volatile private var enabled = false
 
+    /** CCW (counter-clockwise, "left") roundabout with a known exit index, 1..10 → cluster round_left_N. */
+    private val ROUNDABOUT_CCW =
+        CanBusController.ICON_ROUNDABOUT_CCW_1_LAP..CanBusController.ICON_ROUNDABOUT_CCW_10_LAPS
+    /** CW (clockwise, "right") roundabout with a known exit index, 1..10 → cluster round_right_N. */
+    private val ROUNDABOUT_CW =
+        CanBusController.ICON_ROUNDABOUT_CW_1_LAP..CanBusController.ICON_ROUNDABOUT_CW_10_LAPS
+
     /**
      * Maps our internal BYD turn-icon id ({@code CanBusController.ICON_*}, the CAN namespace) to the
-     * **AMap `NEW_ICON` id** the cluster expects in `NaviInfo.nextTurnIcon`.
+     * cluster's `turnIconId` the OEM expects in `NaviInfo.nextTurnIcon` / the AMap `NEW_ICON` extra.
      *
-     * These two namespaces are NOT the same, and the cluster's glyphs were decoded from a 29-photo
-     * on-car icon sweep (ids 0..28, every id renders something). The three that matter were verified
-     * directly on the photos — a mirrored left/right here would put a wrong arrow in a moving car:
+     * The two namespaces are NOT the same. This table is now the firmware ground truth: decompiled
+     * from the cluster's own Qt QML (`Navigation.qml` / `SimpleNavi.qml` `switch(turnIconId)`, ids
+     * 0..28, byte-identical across cluster_theme1/2.rcc), superseding the earlier photo-sweep guesses.
      *
-     *  * AMap **2 = turn left**, **3 = turn right**, **9 = straight ahead**.
+     *  * 2 = turn_left · 3 = turn_right · 9 = straight (go-straight maneuver) · 20 = direct (stay on road)
+     *  * 4/5 = bear left/right · 6/7 = sharp/rear left/right · 8 = U-turn LEFT · **19 = U-turn RIGHT**
+     *  * 13 service_area · 14 toll_station · 15 destination · 16 tunnel
+     *  * 11 = enter_right_roundabout (CW) · 17 = enter_left_roundabout (CCW); when the exit index is
+     *    known (1..10) the firmware renders round_{right,left}_N from the separate `roungAboutNum`
+     *    field — see [roundaboutExitNum], emitted alongside in [push].
      *
-     * Also decoded: 4/5 slight left/right · 6/7 sharp left/right · 8 U-turn (left) · 0 U-turn (right)
-     * · 13 service area (P + cup) · 14 toll booth/gate · 15 destination (checkered flag) · 16 arch
-     * (tunnel) · 11 roundabout. Roundabout *exit numbering* is not decoded, so every roundabout
-     * maps to the generic entering-roundabout glyph rather than guessing an exit.
+     * Two firmware-verified corrections vs. the old table: **id 0 is a NO-OP** (Navigation.qml keeps
+     * the previous glyph), so the old `U_TURN_RIGHT -> 0` left a right U-turn showing the stale icon;
+     * it is now **19** (turn_right_about). And STRAIGHT_DOTTED is `direct` (20), not `straight` (9).
      */
     @JvmStatic
     fun toAmapIcon(bydIconId: Int): Int = when (bydIconId) {
@@ -65,17 +76,36 @@ object ClusterNavPusher {
         CanBusController.ICON_DETOUR_RIGHT     -> 5
         CanBusController.ICON_SHARP_LEFT       -> 6
         CanBusController.ICON_SHARP_RIGHT      -> 7
-        CanBusController.ICON_U_TURN_LEFT      -> 8
-        CanBusController.ICON_U_TURN_RIGHT     -> 0
-        CanBusController.ICON_STRAIGHT_SOLID,
-        CanBusController.ICON_STRAIGHT_DOTTED  -> 9
+        CanBusController.ICON_U_TURN_LEFT      -> 8    // turn_left_about
+        CanBusController.ICON_U_TURN_RIGHT     -> 19   // turn_right_about (was 0 = no-op → stale glyph)
+        CanBusController.ICON_STRAIGHT_SOLID   -> 9    // straight (go-straight maneuver)
+        CanBusController.ICON_STRAIGHT_DOTTED  -> 20   // direct (continue on current road)
         CanBusController.ICON_PARKING_CAFE     -> 13   // "P" + coffee cup = service area
         CanBusController.ICON_TOLLBOOTH        -> 14   // booth / gate
         CanBusController.ICON_DESTINATION      -> 15   // checkered finish flag
         CanBusController.ICON_TUNNEL           -> 16   // arch / portal
-        // Every roundabout variant (entry-direction 15-24, CCW 25-34, CW 35-44) → generic roundabout.
-        in 15..44                              -> 11
+        // Roundabout direction: left/CCW → 17 (enter_left), right/CW → 11 (enter_right). Exit index
+        // (round_{left,right}_N) goes through roungAboutNum, not the icon id.
+        CanBusController.ICON_ROUNDABOUT_3_4_LEFT,
+        CanBusController.ICON_ROUNDABOUT_1_4_LEFT,
+        CanBusController.ICON_ROUNDABOUT_STRAIGHT_L -> 17
+        in ROUNDABOUT_CCW                      -> 17
+        in ROUNDABOUT_CW                       -> 11
+        in 15..44                              -> 11   // remaining roundabout entry variants → generic right
         else                                   -> 9    // unknown → straight, never a turn
+    }
+
+    /**
+     * The roundabout exit index (1..10) encoded in the BYD icon id by [MapNotificationListenerService]
+     * (CCW 25-34 / CW 35-44), or 0 when the maneuver is not a numbered roundabout. Emitted into the
+     * NaviInfo `roungAboutNum` field so the cluster renders `round_{left,right}_N`; 0 falls back to the
+     * generic enter glyph (firmware only uses N when it is 1..10).
+     */
+    @JvmStatic
+    fun roundaboutExitNum(bydIconId: Int): Int = when (bydIconId) {
+        in ROUNDABOUT_CCW -> bydIconId - CanBusController.ICON_ROUNDABOUT_CCW_1_LAP + 1
+        in ROUNDABOUT_CW  -> bydIconId - CanBusController.ICON_ROUNDABOUT_CW_1_LAP + 1
+        else              -> 0
     }
 
     /**
@@ -109,7 +139,8 @@ object ClusterNavPusher {
                 curToSegmentDist = d.distanceMeters,
                 nextTurnIcon = toAmapIcon(d.iconId),
                 routeRemainTime = d.remainingTimeSeconds ?: 0,
-                routeRemainDist = d.remainingDistanceMeters ?: 0)
+                routeRemainDist = d.remainingDistanceMeters ?: 0,
+                roungAboutNum = roundaboutExitNum(d.iconId))
             ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, payload)
         } catch (t: Throwable) {
             Log.w(TAG, "cluster push failed: ${t.message}")
