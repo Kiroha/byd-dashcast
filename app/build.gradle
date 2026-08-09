@@ -1047,8 +1047,20 @@ android {
         // <Code>/<Message> into the message, on both the block and the commit path, so any future
         // rejection names itself. Note the previously uploaded blocks stay valid on the service for
         // 7 days, but the simplest recovery is to re-run the extraction on this build.)
-        versionCode 612
-        versionName "1.8.22-beta"
+        // 613 = 1.8.23-beta (diagnostics-only, builds directly on 1.8.21's framework SWEEP: the BYD
+        // APK Extraction now PULLS the bydauto SDK. planFramework() + isFrameworkArtifact() pull the
+        // boot-classpath jars (framework/ext/services.jar + their .vdex/.odex bytecode, the dex
+        // container on API 29) and any *byd* framework jar into a new framework/ subdir, so
+        // android.hardware.bydauto.* — AbsBYDAutoDevice.checkDeviceFeatures / BYDAutoFeatureIds, the
+        // class behind the 0x43f01030 refusals — finally comes out with the pull; the 1.8.21 probe
+        // proved there is no discrete bydauto.jar so it is baked into a boot-classpath jar the "byd"
+        // filter skipped. New 06_bydauto_sdk.txt probe resolves the INSTRUMENT_{GET,SET,COMMON}
+        // permission tiers (COMMON is not in com.byd.auto.permission) and dumps the runtime
+        // per-device feature-enable flags (deviceType 1007 = BYDAUTO_DEVICE_INSTRUMENT) — the only
+        // place the feature-device table exists. PlannedNative gained a subdir field. Daemon respawns
+        // on this bump. Unit tests pass; assembleDebug + assembleRelease (R8) + lintRelease green.)
+        versionCode 613
+        versionName "1.8.23-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
