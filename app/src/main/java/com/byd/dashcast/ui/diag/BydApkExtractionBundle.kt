@@ -193,10 +193,26 @@ object BydApkExtractionBundle {
                 sb.append("--- android.permission.$p ---\n")
                   .append(sh("dumpsys package permission android.permission.$p 2>/dev/null | head -c 2000")).append("\n")
             }
+            val svcList = sh("service list 2>/dev/null")
             sb.append("\n=== bydauto service registration ===\n")
-              .append(sh("service list 2>/dev/null | grep -iE 'byd|auto|instrument|hmi|cluster' | head -c 8000")).append("\n\n")
+            svcList.lineSequence()
+                .filter { l -> listOf("byd", "auto", "instrument", "hmi", "cluster").any { l.contains(it, ignoreCase = true) } }
+                .forEach { sb.append(it.trim()).append("\n") }
+            sb.append("\n")
+            // Derive the ACTUAL service names to dump from the live list. The bydauto system service
+            // registers as `autoservice` -> android.gui.BYDAutoServer; the previous hardcoded guesses
+            // (bydauto/BYDAutoService/…) never matched it, so this section came back empty. The name
+            // is the token before ':' on each matching line (e.g. "205  autoservice: [android.gui…]").
+            val svcNames = LinkedHashSet<String>()
+            svcNames.add("autoservice")          // android.gui.BYDAutoServer — the bydauto system service
+            svcNames.add("AutoContainerNative")
+            val nameRe = Regex("""^\s*\d+\s+([A-Za-z0-9_.-]+):""")
+            for (l in svcList.lineSequence()) {
+                if (listOf("byd", "auto", "instrument").none { l.contains(it, ignoreCase = true) }) continue
+                nameRe.find(l)?.groupValues?.get(1)?.let { svcNames.add(it) }
+            }
             sb.append("=== bydauto service dumps (per-device feature/enable flags if exposed) ===\n")
-            for (svc in listOf("bydauto", "byd_auto", "BYDAutoService", "byd_auto_service", "autodevice", "instrument")) {
+            for (svc in svcNames) {
                 val d = sh("dumpsys $svc 2>/dev/null | head -c 8000")
                 if (d.isNotBlank() && !d.startsWith("ERR")) sb.append("--- dumpsys $svc ---\n").append(d).append("\n")
             }
