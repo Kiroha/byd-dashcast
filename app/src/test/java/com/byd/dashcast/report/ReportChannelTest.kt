@@ -71,11 +71,6 @@ class ReportChannelTest {
         assertTrue(ReportChannel.hasAzure(ctx))
     }
 
-    // NOT asserted here: that a PARTIAL device pair (token without chat) reports unusable. While
-    // the BuildConfig fields still exist, an empty device value falls through to the build value —
-    // which is the migration behaviour this class was written to have — so the partial case is
-    // masked on a configured build machine and the assertion would be environment-dependent. It
-    // becomes meaningful, and is added, in the commit that removes those fields.
 
     @Test
     fun `a leading question mark is stripped from the sas`() {
@@ -93,18 +88,23 @@ class ReportChannelTest {
     }
 
     @Test
-    fun `an empty device value falls through to the build value instead of masking it`() {
-        // Storing "" must not be read as "the device says the token is empty" — otherwise clearing
-        // one field of the pair would silently disable a build that still carries credentials.
-        //
-        // Asserted WITHOUT naming the build value. The first version of this test compared against
-        // BuildConfig.BUG_REPORT_BOT_TOKEN, and when it failed JUnit printed the live bot token in
-        // clear into the HTML and XML test reports. A test must never hold a secret it can echo.
-        ReportChannel.saveTelegram(ctx, "device", "c", "1", "2")
-        assertEquals("device", ReportChannel.botToken(ctx))
-        ReportChannel.saveTelegram(ctx, "", "c", "1", "2")
-        assertEquals("an empty device value must not win",
-            com.byd.dashcast.BuildConfig.BUG_REPORT_BOT_TOKEN.isEmpty(),
-            ReportChannel.botToken(ctx).isEmpty())
+    fun `an unpaired device has no credentials at all`() {
+        // The whole point of AUD-001: with the buildConfigField entries gone there is nothing to
+        // fall back to, so an unpaired device reports no transport rather than quietly using one
+        // baked into the binary.
+        assertEquals("", ReportChannel.botToken(ctx))
+        assertEquals("", ReportChannel.azureSas(ctx))
+        assertFalse(ReportChannel.hasTelegram(ctx))
+        assertFalse(ReportChannel.hasAzure(ctx))
+    }
+
+    @Test
+    fun `a partial pair is not usable`() {
+        // Deferred until the build-time fallback was removed: while it existed an empty device
+        // value fell through to the build value, so this case was masked on a configured machine.
+        ReportChannel.saveTelegram(ctx, "t", "", "", "")
+        assertFalse("a token with no destination is not usable", ReportChannel.hasTelegram(ctx))
+        ReportChannel.saveAzure(ctx, "https://example/c", "")
+        assertFalse("a url with no sas is not usable", ReportChannel.hasAzure(ctx))
     }
 }

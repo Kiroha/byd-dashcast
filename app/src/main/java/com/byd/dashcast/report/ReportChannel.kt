@@ -3,7 +3,6 @@ package com.byd.dashcast.report
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.util.AppLogger
 
 /**
@@ -20,10 +19,9 @@ import com.byd.dashcast.util.AppLogger
  * provisioned at runtime instead: pasted once per device, held in [EncryptedSharedPreferences], and
  * rotatable in the two minutes it takes to edit a pinned message rather than never.
  *
- * **Migration.** This reads device storage first and falls back to [BuildConfig] while those fields
- * still exist, so behaviour is unchanged for anyone already running a configured build. The fields
- * are removed in a later commit; that removal is what actually closes AUD-001, and it is kept
- * separate so it can be reverted on its own.
+ * **There is no build-time fallback.** The five `buildConfigField` entries that used to feed this
+ * are gone, so an unpaired device simply has no transport and every emitter takes its local exit.
+ * That is the point: nothing in the APK can leak what the APK no longer contains.
  *
  * **Values are never logged.** Not on success, not on failure, not in an exception message.
  * [AppLogger] is appended to every bug report by [BugReportCapture], so one careless log line would
@@ -92,22 +90,22 @@ object ReportChannel {
 
     // No-Context overloads for the call sites that have none. They resolve through the registered
     // application context and degrade to the build value when [init] has not run yet.
-    @JvmStatic fun botToken(): String = sApp?.let { botToken(it) } ?: BuildConfig.BUG_REPORT_BOT_TOKEN
-    @JvmStatic fun chatId(): String = sApp?.let { chatId(it) } ?: BuildConfig.BUG_REPORT_CHAT_ID
-    @JvmStatic fun threadId(): String = sApp?.let { threadId(it) } ?: BuildConfig.BUG_REPORT_THREAD_ID
-    @JvmStatic fun hudThreadId(): String = sApp?.let { hudThreadId(it) } ?: BuildConfig.BUG_REPORT_HUD_THREAD_ID
-    @JvmStatic fun azureUrl(): String = sApp?.let { azureUrl(it) } ?: BuildConfig.AZURE_BLOB_URL
-    @JvmStatic fun azureSas(): String = sApp?.let { azureSas(it) } ?: BuildConfig.AZURE_BLOB_SAS
+    @JvmStatic fun botToken(): String = sApp?.let { botToken(it) } ?: ""
+    @JvmStatic fun chatId(): String = sApp?.let { chatId(it) } ?: ""
+    @JvmStatic fun threadId(): String = sApp?.let { threadId(it) } ?: ""
+    @JvmStatic fun hudThreadId(): String = sApp?.let { hudThreadId(it) } ?: ""
+    @JvmStatic fun azureUrl(): String = sApp?.let { azureUrl(it) } ?: ""
+    @JvmStatic fun azureSas(): String = sApp?.let { azureSas(it) } ?: ""
 
     @JvmStatic fun hasTelegram(): Boolean = botToken().isNotEmpty() && chatId().isNotEmpty()
     @JvmStatic fun hasAzure(): Boolean = azureUrl().isNotEmpty() && azureSas().isNotEmpty()
 
-    @JvmStatic fun botToken(ctx: Context): String = read(ctx, K_BOT_TOKEN, BuildConfig.BUG_REPORT_BOT_TOKEN)
-    @JvmStatic fun chatId(ctx: Context): String = read(ctx, K_CHAT_ID, BuildConfig.BUG_REPORT_CHAT_ID)
-    @JvmStatic fun threadId(ctx: Context): String = read(ctx, K_THREAD_ID, BuildConfig.BUG_REPORT_THREAD_ID)
-    @JvmStatic fun hudThreadId(ctx: Context): String = read(ctx, K_HUD_THREAD_ID, BuildConfig.BUG_REPORT_HUD_THREAD_ID)
-    @JvmStatic fun azureUrl(ctx: Context): String = read(ctx, K_AZURE_URL, BuildConfig.AZURE_BLOB_URL)
-    @JvmStatic fun azureSas(ctx: Context): String = read(ctx, K_AZURE_SAS, BuildConfig.AZURE_BLOB_SAS)
+    @JvmStatic fun botToken(ctx: Context): String = read(ctx, K_BOT_TOKEN, "")
+    @JvmStatic fun chatId(ctx: Context): String = read(ctx, K_CHAT_ID, "")
+    @JvmStatic fun threadId(ctx: Context): String = read(ctx, K_THREAD_ID, "")
+    @JvmStatic fun hudThreadId(ctx: Context): String = read(ctx, K_HUD_THREAD_ID, "")
+    @JvmStatic fun azureUrl(ctx: Context): String = read(ctx, K_AZURE_URL, "")
+    @JvmStatic fun azureSas(ctx: Context): String = read(ctx, K_AZURE_SAS, "")
 
     /** True when the bot can be used: a token and a destination chat. */
     @JvmStatic
