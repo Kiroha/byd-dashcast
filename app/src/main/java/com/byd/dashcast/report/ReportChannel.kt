@@ -43,6 +43,36 @@ object ReportChannel {
     private const val K_AZURE_SAS = "azure_sas"
 
     @Volatile private var sPrefs: android.content.SharedPreferences? = null
+    @Volatile private var sApp: Context? = null
+
+    /**
+     * Registers the application context so the accessors can be called without one.
+     *
+     * TelegramBugReporter.isConfigured() has 17 call sites and no Context to hand. Threading one
+     * through all of them to read a credential would be a large mechanical change across live
+     * reporting paths, for no benefit: an Application context lives as long as the process, so
+     * holding it is not the leak that holding an Activity would be.
+     *
+     * Call [warm] afterwards, off the main thread.
+     */
+    @JvmStatic
+    fun init(ctx: Context) {
+        sApp = ctx.applicationContext
+    }
+
+    /**
+     * Forces the encrypted store open, off the main thread.
+     *
+     * Creating EncryptedSharedPreferences is KeyStore IPC plus a file read. Before this class the
+     * credential was a compile-time constant and reading it was free, so every isConfigured() call
+     * — several of them on the main thread — could afford to be naive. Warming the cache at startup
+     * keeps it that way. A main-thread read arriving before the warm finishes pays the cost once
+     * rather than never, which is a smaller regression than blocking on it at every call.
+     */
+    @JvmStatic
+    fun warm() {
+        sApp?.let { runCatching { prefs(it) } }
+    }
 
     /**
      * Test seam. [EncryptedSharedPreferences] needs the Android KeyStore, which Robolectric does
@@ -59,6 +89,18 @@ object ReportChannel {
     }
 
     // ── reads ───────────────────────────────────────────────────────────────────────────────
+
+    // No-Context overloads for the call sites that have none. They resolve through the registered
+    // application context and degrade to the build value when [init] has not run yet.
+    @JvmStatic fun botToken(): String = sApp?.let { botToken(it) } ?: BuildConfig.BUG_REPORT_BOT_TOKEN
+    @JvmStatic fun chatId(): String = sApp?.let { chatId(it) } ?: BuildConfig.BUG_REPORT_CHAT_ID
+    @JvmStatic fun threadId(): String = sApp?.let { threadId(it) } ?: BuildConfig.BUG_REPORT_THREAD_ID
+    @JvmStatic fun hudThreadId(): String = sApp?.let { hudThreadId(it) } ?: BuildConfig.BUG_REPORT_HUD_THREAD_ID
+    @JvmStatic fun azureUrl(): String = sApp?.let { azureUrl(it) } ?: BuildConfig.AZURE_BLOB_URL
+    @JvmStatic fun azureSas(): String = sApp?.let { azureSas(it) } ?: BuildConfig.AZURE_BLOB_SAS
+
+    @JvmStatic fun hasTelegram(): Boolean = botToken().isNotEmpty() && chatId().isNotEmpty()
+    @JvmStatic fun hasAzure(): Boolean = azureUrl().isNotEmpty() && azureSas().isNotEmpty()
 
     @JvmStatic fun botToken(ctx: Context): String = read(ctx, K_BOT_TOKEN, BuildConfig.BUG_REPORT_BOT_TOKEN)
     @JvmStatic fun chatId(ctx: Context): String = read(ctx, K_CHAT_ID, BuildConfig.BUG_REPORT_CHAT_ID)

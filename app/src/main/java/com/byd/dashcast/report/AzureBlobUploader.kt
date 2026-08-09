@@ -47,7 +47,7 @@ object AzureBlobUploader {
     /** True when a container URL and a SAS were supplied at build time. */
     @JvmStatic
     fun isConfigured(): Boolean =
-        BuildConfig.AZURE_BLOB_URL.isNotEmpty() && BuildConfig.AZURE_BLOB_SAS.isNotEmpty()
+        ReportChannel.hasAzure()
 
     /**
      * Uploads [file] as [blobName]. Blocking — call it off the main thread (the extraction flow
@@ -56,8 +56,8 @@ object AzureBlobUploader {
     @JvmStatic
     fun upload(file: File, blobName: String, progress: (String) -> Unit, cb: Callback) {
         if (!isConfigured()) { cb.onFailed("Azure not configured"); return }
-        val base = BuildConfig.AZURE_BLOB_URL.trimEnd('/')
-        val sas = BuildConfig.AZURE_BLOB_SAS.trimStart('?')
+        val base = ReportChannel.azureUrl().trimEnd('/')
+        val sas = ReportChannel.azureSas().trimStart('?')
         val blobUrl = "$base/${sanitise(blobName)}"
         val total = file.length()
         try {

@@ -30,7 +30,7 @@ object HudCaptureSupport {
      * group's General topic instead of failing.
      */
     @JvmStatic
-    val HUD_TEST_THREAD: String get() = BuildConfig.BUG_REPORT_HUD_THREAD_ID
+    val HUD_TEST_THREAD: String get() = com.byd.dashcast.report.ReportChannel.hudThreadId()
 
     /**
      * Zips [work] into the shareable report store and drops the staging directory.
