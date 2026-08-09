@@ -183,15 +183,21 @@ class AaosDiagActivity : AppCompatActivity() {
         Thread({
             try {
                 File(work, "00_presentation_visual.txt").writeText("PRESENTATION VISUAL RESULT: $visual\n")
-                val zip = AaosDiagnosticBundle.zipDir(work)
+                val zip = HudCaptureSupport.zipDirToStore(this, work)
                 log("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
                 if (!TelegramBugReporter.isConfigured()) {
-                    log("Telegram not configured — zip at ${zip.absolutePath}"); resetUi(); return@Thread
+                    log("Telegram not configured — offering the system share instead")
+                    HudCaptureSupport.offerFallback(this, zip) { line -> log(line) }
+                    resetUi(); return@Thread
                 }
                 TelegramBugReporter.send(this, zip, "AAOS cluster diagnostic — ${Build.PRODUCT} (presentation=$visual)",
                     object : TelegramBugReporter.Callback {
                         override fun onSent() { log("✓ sent to Telegram. Done — you can leave."); resetUi() }
-                        override fun onFailed(message: String) { log("✗ upload failed: $message — zip at ${zip.absolutePath}"); resetUi() }
+                        override fun onFailed(message: String) {
+                            log("✗ upload failed: $message")
+                            HudCaptureSupport.offerFallback(this@AaosDiagActivity, zip) { line -> log(line) }
+                            resetUi()
+                        }
                     })
             } catch (t: Throwable) {
                 log("zip/upload failed: ${t.javaClass.simpleName}: ${t.message}"); resetUi()
