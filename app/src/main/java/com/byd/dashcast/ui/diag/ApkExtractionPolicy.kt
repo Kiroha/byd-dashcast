@@ -212,6 +212,66 @@ object ApkExtractionPolicy {
      */
     val NATIVE_FRAMEWORK_DIRS = listOf("/system/framework")
 
+    // ── bydauto framework SDK + permission model (added after the DL3 SX326 RE) ──
+    //
+    // The DL3 extraction (05_hud_probes) proved the framework-jar sweep pulled NOTHING useful for
+    // the instrument gate: there is no discrete `bydauto.jar`, and the "byd" name filter skips the
+    // boot-classpath jars that actually hold `android.hardware.bydauto.*`. Three gaps were left, each
+    // fixed below and by [BydApkExtractionBundle.planFramework] / the 06 probe:
+    //   1. AbsBYDAutoDevice / checkDeviceFeatures / BYDAutoFeatureIds — baked into a boot-classpath
+    //      jar (its dex lives in the sibling .vdex on API 29); named + pulled here.
+    //   2. the BYDAUTO_*_COMMON tier is NOT declared in com.byd.auto.permission — some other package
+    //      declares it, at an unknown protectionLevel; the 06 probe resolves sourcePackage + level.
+    //   3. the feature↔device table is runtime state (libbydautoservice.so loads per-device enable
+    //      bitmaps from the MCU into mDeviceFlags; the gate is isEnable(deviceType, featureId)). It is
+    //      in NO file — only a live `dumpsys`/service probe (06) can show which featureIds the
+    //      instrument device (deviceType 1007 = BYDAUTO_DEVICE_INSTRUMENT) accepts on a given car.
+
+    /**
+     * OAT dirs where a boot-classpath jar's compiled bytecode lives on API 29 (the .jar itself is
+     * often resource-only; the dex is in the sibling .vdex/.odex). Enumerated only by
+     * [BydApkExtractionBundle.planFramework], never by the bin/lib native sweep.
+     */
+    val FRAMEWORK_OAT_DIRS = listOf("/system/framework/oat/arm64", "/system/framework/oat/arm")
+
+    /**
+     * Permission / sysconfig dirs. Their XMLs declare (a) the `android.hardware.bydauto` shared-
+     * library → jar mapping (so the exact jar holding AbsBYDAutoDevice can be named), and (b) the
+     * privapp-permissions allow-list — which package is *allowed* to hold each signature BYDAUTO_*
+     * permission. Read by the 06 text probe, not pulled file-by-file (they are numerous and tiny).
+     */
+    val PERMISSION_DIRS = listOf(
+        "/system/etc/permissions", "/system/etc/sysconfig",
+        "/vendor/etc/permissions", "/product/etc/permissions", "/system_ext/etc/permissions"
+    )
+
+    /**
+     * Boot-classpath jars pulled for the bydauto SDK. `android.hardware.bydauto.*` (AbsBYDAutoDevice /
+     * checkDeviceFeatures / BYDAutoFeatureIds — the Java gate that emits "no permission to use the
+     * feature 0x… with this device: N") is baked into one of these; name them so they are pulled
+     * regardless of any name filter, together with their .vdex/.odex siblings that carry the dex.
+     * Large (tens of MB each), so in practice only fit once a large sink is configured.
+     */
+    val FRAMEWORK_SDK_JARS = listOf("framework.jar", "ext.jar", "services.jar")
+
+    /** Any framework jar whose lowercase name matches is BYD-specific and pulled unconditionally. */
+    const val FRAMEWORK_JAR_GREP = "byd|bydauto|instrument"
+
+    /**
+     * True for a framework artefact worth pulling: a named boot-classpath SDK jar, its .vdex/.odex
+     * bytecode sibling, or any BYD-specific framework jar. The numerous permission XMLs are handled
+     * by the 06 text probe instead, so they never count against the native-file backstop.
+     */
+    @JvmStatic
+    fun isFrameworkArtifact(name: String?): Boolean {
+        if (name.isNullOrBlank()) return false
+        val low = name.lowercase(Locale.US)
+        if (!(low.endsWith(".jar") || low.endsWith(".vdex") || low.endsWith(".odex"))) return false
+        val base = low.substringBeforeLast('.')
+        if (FRAMEWORK_SDK_JARS.any { it.substringBeforeLast('.') == base }) return true
+        return Regex(FRAMEWORK_JAR_GREP).containsMatchIn(low)
+    }
+
     /** Name sweep for the rest of the native cluster/projection surface (bins and .so alike). */
     private val NATIVE_PATTERNS = listOf(
         "fission", "cluster", "container", "xdja", "autocontainer",

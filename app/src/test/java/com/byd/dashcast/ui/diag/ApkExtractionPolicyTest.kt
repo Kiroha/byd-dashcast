@@ -268,4 +268,43 @@ class ApkExtractionPolicyTest {
         assertEquals(Skip.MAX_COUNT,
             ApkExtractionPolicy.admitNative(1024, 0L, ApkExtractionPolicy.NATIVE_MAX_COUNT))
     }
+
+    // ── framework SDK pull (bydauto AbsBYDAutoDevice / checkDeviceFeatures) ──────
+
+    @Test
+    fun `the boot-classpath SDK jars are pulled as framework artifacts`() {
+        // The DL3 probe proved there is no discrete bydauto.jar — android.hardware.bydauto is baked
+        // into a boot-classpath jar, so these must be pulled by name despite lacking a "byd" token.
+        for (jar in ApkExtractionPolicy.FRAMEWORK_SDK_JARS) {
+            assertTrue(jar, ApkExtractionPolicy.isFrameworkArtifact(jar))
+        }
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("framework.jar"))
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("services.jar"))
+    }
+
+    @Test
+    fun `the vdex and odex bytecode siblings of an SDK jar are pulled`() {
+        // On API 29 the jar is often resource-only; the dex is in the sibling under oat/.
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("framework.vdex"))
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("services.odex"))
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("ext.vdex"))
+    }
+
+    @Test
+    fun `a BYD-specific framework jar is pulled by pattern`() {
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("bydauto.jar"))
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("com.byd.instrument.jar"))
+        assertTrue(ApkExtractionPolicy.isFrameworkArtifact("android.hardware.bydauto.vdex"))
+    }
+
+    @Test
+    fun `unrelated framework jars and non-jars are not pulled as framework artifacts`() {
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact("telephony-common.jar"))
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact("wifi-service.jar"))
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact("libc.so"))
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact("base.apk"))
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact("privapp-permissions-byd.xml")) // XMLs go via the 06 probe
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact(""))
+        assertFalse(ApkExtractionPolicy.isFrameworkArtifact(null))
+    }
 }
