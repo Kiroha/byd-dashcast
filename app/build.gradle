@@ -1085,8 +1085,38 @@ android {
         // working. Daemon respawns on this bump. Diagnostics/RE-only; no daemon protocol change; no
         // production behavior change unless a call that was silently falling back starts
         // succeeding. Unit tests pass; assembleDebug + assembleRelease (R8) + lintRelease green.)
-        versionCode 614
-        versionName "1.8.24-beta"
+        // 615 = 1.8.25-beta (three defects found while reading INC-20260809-162829 and
+        // INC-20260809-122719. (1) INC-20260809-122719: an app sent to the main display and then
+        // left behind on the cluster. restoreBydDashboard keyed its verified eviction off
+        // mCurrentDashboardPkg, which onSendToMain nulls the instant the UNVERIFIED move is
+        // REQUESTED, so Stop projection arrived with main=null/second=null, evictAllThen got an
+        // empty list and short-circuited — App Manager stayed RESUMED on the OEM cluster display,
+        // proven by the report's own WM dump 23s after "BYD restored", and tapping it only brought
+        // that invisible task forward. evictAllThen now also draws on the session tracker (new pure
+        // ClusterEvictionPolicy.evictionList) and the two unverified moveToMainDisplay() calls that
+        // CLEARED the tracker first are deleted. Widening the list is only safe because eviction now
+        // PROBES before acting: ClusterService.moveTaskToDisplay falls back to a LAUNCH when a
+        // package has no task, so the old blind loop was already cold-starting dead apps on
+        // display 0 at every stop; now ABSENT and "already on display 0" are skipped outright —
+        // never force-stop an app the driver may be using. (2) InsetAutoApplicator retried 3/3 on
+        // every DiLink 3 launch: its break condition was "transcript contains no ERR" but
+        // moveAndResize ALWAYS reports "ERR resizeTask ... not allowed" there (canResizeTask() is
+        // FREEFORM-only and BYD's docking verb leaves the task outside FREEFORM) while the rect
+        // lands anyway — 10/10 corpus reports show attempt 3/3 and the retry never once changed the
+        // outcome. The criterion is now the actual outcome, the closing getTaskBounds, via the new
+        // unit-tested pure parser MoveAndResizeOutcome. (3) resizeTask's verdict was misreported on
+        // every platform: API 29 throws and we labelled it ERR (a platform rule, not a defect);
+        // API 30+ logs and returns false and we DISCARDED that return and said OK —
+        // INC-20260804-171617 has system_server logging "resizeTask not allowed on task=#122" and
+        // our transcript claiming "OK resizeTask(122,...)" 2ms later, nine times. Both report SKIP
+        // now. Also: hardenAgainstOom's javadoc claimed uid 2000 can always write
+        // /proc/self/oom_score_adj — it cannot, DiLink 3's SELinux denies the shell domain
+        // proc_oom_adj and the corpus splits cleanly (79/80 DL3 fail, 20/20 other platforms
+        // succeed); comment corrected, log no longer reads as a failure. Two adversarial review
+        // passes: 28 findings/4 fixed on (2)(3), then 15 findings/0 confirmed on (1). 251 unit
+        // tests (9 new); assembleDebug + assembleRelease (R8) + lintRelease green.)
+        versionCode 615
+        versionName "1.8.25-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
