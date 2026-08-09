@@ -9,6 +9,7 @@ import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.ui.settings.SettingsActivity
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.proxy.daemon.MoveAndResizeOutcome
 import com.byd.dashcast.util.concurrent.LifecycleGate
 import java.util.regex.Pattern
 
@@ -61,10 +62,16 @@ class InsetAutoApplicator(private val mHost: Host) {
     }
 
     /**
-     * Re-applies a hand-drawn rectangle 500 ms after launch via the daemon moveAndResize
-     * path. Retries up to 3× (the FREEFORM flip may not take on the first call right after a
-     * fresh launch — the same call succeeds once the task has settled, which is why drawing
-     * it manually in ClusterResizeActivity works).
+     * Re-applies a hand-drawn rectangle 500 ms after launch via the daemon moveAndResize path,
+     * retrying up to 3× until the daemon reports the task actually sitting on the requested rect.
+     *
+     * It deliberately does **not** require the FREEFORM flip the earlier wording described: on
+     * DiLink 3 that flip never lands on any attempt — the WM dump still reads
+     * `Stack #12: type=standard mode=fullscreen` right after two `OK setTaskWindowingMode(FREEFORM)`
+     * lines — while the bounds land anyway. Requiring it made the loop unable to ever stop early.
+     *
+     * Residual, worth knowing: matching bounds is a WindowManager configuration fact, not proof the
+     * app has finished relaying out to them.
      */
     private fun scheduleRectApply(pkg: String, rect: IntArray,
                                   operation: LifecycleGate.Token) {
@@ -97,8 +104,8 @@ class InsetAutoApplicator(private val mHost: Host) {
                     AppLogger.w(TAG, "autoApplyRect: task not found for " + pkg)
                     return@Runnable
                 }
-                // Re-apply via the same daemon path ClusterResizeActivity uses; retry until
-                // the FREEFORM flip lands (the daemon returns its log, never throws).
+                // Re-apply via the same daemon path ClusterResizeActivity uses (the daemon returns
+                // its log, never throws).
                 for (attempt in 1..3) {
                     if (!isCurrent(operation, pkg)) return@Runnable
                     try {
@@ -106,7 +113,13 @@ class InsetAutoApplicator(private val mHost: Host) {
                                 rect[0], rect[1], rect[2], rect[3])
                         AppLogger.i(TAG, "autoApplyRect [" + rect[0] + "," + rect[1] + ","
                                 + rect[2] + "," + rect[3] + "] (attempt " + attempt + "/3) → " + log)
-                        if (log != null && !log.contains("not allowed") && !log.contains("ERR")) break
+                        // Ask whether the rect LANDED, not whether the transcript is clean. Scanning
+                        // for "ERR"/"not allowed" made this loop structurally unable to break on
+                        // DiLink 3 — resizeTask is refused there on every call (the task is not in
+                        // FREEFORM after BYD's docking verb, and canResizeTask() is FREEFORM-only)
+                        // even though the rect is already correct — so every DiLink 3 launch burned
+                        // all 3 attempts, re-docking and re-focusing the task twice for nothing.
+                        if (MoveAndResizeOutcome.landedOn(log, rect[0], rect[1], rect[2], rect[3])) break
                     } catch (th: Throwable) {
                         AppLogger.w(TAG, "autoApplyRect failed: " + th.message)
                     }
