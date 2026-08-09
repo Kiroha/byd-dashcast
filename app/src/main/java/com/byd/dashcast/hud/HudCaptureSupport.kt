@@ -28,8 +28,19 @@ object HudCaptureSupport {
     val HUD_TEST_THREAD: String get() = BuildConfig.BUG_REPORT_HUD_THREAD_ID
 
     /** Zips every file under [work] into a sibling {@code <name>.zip} and returns it. */
-    fun zipDir(work: File): File {
-        val zip = File(work.parentFile, work.name + ".zip")
+    fun zipDir(work: File): File = zipDir(work, File(work.parentFile, work.name + ".zip"))
+
+    /**
+     * Zips [work] into an explicit [dest].
+     *
+     * The no-destination overload writes beside the work directory, which for a work directory in
+     * `cacheDir` puts the archive in `cacheDir` too — where `FileProvider` cannot reach it, because
+     * `file_paths.xml` declares no `cache-path`. Callers that need the archive to be shareable pass
+     * a destination under [com.byd.dashcast.report.ReportStore].
+     */
+    @JvmStatic
+    fun zipDir(work: File, dest: File): File {
+        val zip = dest
         ZipOutputStream(FileOutputStream(zip)).use { zos ->
             work.walkTopDown().filter { it.isFile }.forEach { f ->
                 val rel = f.relativeTo(work).path

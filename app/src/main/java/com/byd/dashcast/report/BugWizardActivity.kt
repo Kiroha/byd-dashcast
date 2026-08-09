@@ -592,7 +592,14 @@ class BugWizardActivity : Activity() {
                 reportFile.copyTo(File(work, reportFile.name), overwrite = true)
                 val n = ClusterShotRecorder.pullShotsInto(this, work)
                 if (n > 0) {
-                    toSend = HudCaptureSupport.zipDir(work)
+                    // The archive must NOT land beside the work directory. cacheDir is not declared
+                    // in file_paths.xml, so FileProvider.getUriForFile throws on anything inside it
+                    // — and shareFallback swallows that exception, shows an error toast and calls
+                    // finish(). The report was simply lost. Since the screenshot recorder defaults
+                    // to ON, that was the MAJORITY path of this screen, not an edge case.
+                    ReportStore.prune(this)
+                    toSend = HudCaptureSupport.zipDir(
+                        work, File(ReportStore.dir(this), work.name + ".zip"))
                     AppLogger.i(TAG, "bug bundle: report + $n screenshot(s) → ${toSend.name}")
                     // Shots have been captured into the zip → wipe the device-side originals now.
                     ClusterShotRecorder.clear(this)
@@ -602,6 +609,11 @@ class BugWizardActivity : Activity() {
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "bug bundle failed (${t.message}) — sending report only")
                 toSend = reportFile
+            } finally {
+                // The staging copy has served its purpose either way. Left behind it doubled the
+                // footprint of every bundle in cacheDir, for no reader.
+                try { File(cacheDir, reportFile.nameWithoutExtension).deleteRecursively() }
+                catch (_: Throwable) { /* best-effort */ }
             }
             val finalFile = toSend
             runOnUiThread {
