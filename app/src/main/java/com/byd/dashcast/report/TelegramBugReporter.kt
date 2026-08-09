@@ -34,14 +34,14 @@ object TelegramBugReporter {
     /** True when a bot token + chat id are baked in — i.e. direct upload is possible. */
     @JvmStatic
     fun isConfigured(): Boolean =
-        BuildConfig.BUG_REPORT_BOT_TOKEN.isNotEmpty() && BuildConfig.BUG_REPORT_CHAT_ID.isNotEmpty()
+        ReportChannel.hasTelegram()
 
     /**
      * Uploads [file] with [caption] on a background thread. [cb] fires on the main thread.
      */
     @JvmStatic
     fun send(context: Context, file: File, caption: String?, cb: Callback) {
-        send(context, file, caption, BuildConfig.BUG_REPORT_THREAD_ID, cb)
+        send(context, file, caption, ReportChannel.threadId(), cb)
     }
 
     /**
@@ -61,8 +61,8 @@ object TelegramBugReporter {
 
     private fun doSend(file: File, caption: String?, thread: String): String? {
         val boundary = "----dashcast" + System.currentTimeMillis()
-        val token = BuildConfig.BUG_REPORT_BOT_TOKEN
-        val chatId = BuildConfig.BUG_REPORT_CHAT_ID
+        val token = ReportChannel.botToken()
+        val chatId = ReportChannel.chatId()
         var conn: HttpURLConnection? = null
         try {
             val url = URL("https://api.telegram.org/bot$token/sendDocument")

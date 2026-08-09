@@ -18,6 +18,11 @@ public class DashCastApp extends Application {
         // Initialise platform detection once. Reads ro.product.name, Build.* etc.
         // Snapshot is process-wide and immutable. The DiLink-5 override (auto /
         // force-on / force-off) is read from SharedPreferences on demand.
+        // Register the application context for ReportChannel before anything can read a
+        // credential. Storing a reference is free; the encrypted store itself is opened lazily and
+        // warmed off the main thread below, so cold start is unaffected.
+        com.byd.dashcast.report.ReportChannel.init(getApplicationContext());
+
         final Platform p = Platform.get();
         // Build/SystemProperties-derived fields only — none of these touch
         // SharedPreferences, so the line is safe to build synchronously here.
@@ -43,6 +48,10 @@ public class DashCastApp extends Application {
         final Context app = getApplicationContext();
         Thread platformInit = new Thread(new Runnable() {
             @Override public void run() {
+                // KeyStore IPC + a file read. Off the main thread for the same reason every
+                // SharedPreferences touch below is: it must not sit on the cold-start path.
+                try { com.byd.dashcast.report.ReportChannel.warm(); }
+                catch (Throwable t) { AppLogger.w("ReportChannel", "warm failed: " + t.getMessage()); }
                 try {
                     AppLogger.i("Platform", "effectiveDiLink5=" + p.isDiLink5(app));
                     p.primeClusterResizeProbe(app);
