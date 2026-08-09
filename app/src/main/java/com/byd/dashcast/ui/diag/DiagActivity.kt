@@ -16,6 +16,7 @@ import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.hud.HudDiagActivity
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.R
 import com.byd.dashcast.proxy.daemon.Phase4ProcessVerbs
 import com.byd.dashcast.report.AzureBlobUploader
 import com.byd.dashcast.report.ReportStore
@@ -209,16 +210,27 @@ class DiagActivity : Activity() {
                 // then writes a zip beside it, so the peak is roughly twice the payload on the same
                 // volume. The planned size is used rather than the ceiling — refusing on the
                 // theoretical 2 GB would block units that can perfectly well take the real pull.
-                val need = plan.payloadBytes * 2
-                if (!ReportStore.hasRoomFor(cacheDir, need)) {
-                    val freeMb = ReportStore.usableBytes(cacheDir) / (1024 * 1024)
-                    log("aborted: needs ~${need / (1024 * 1024)} MB free, only $freeMb MB available.")
-                    log("Free some space on the head unit and run this again.")
+                // The payload is copied into the work directory on the cache volume, then zipped
+                // into the report store on external storage. These are two different volumes on
+                // these units, so each is checked for one payload rather than one volume for two.
+                val need = plan.payloadBytes
+                val store = ReportStore.dir(this)
+                val short = when {
+                    !ReportStore.hasRoomFor(cacheDir, need) -> cacheDir
+                    !ReportStore.hasRoomFor(store, need) -> store
+                    else -> null
+                }
+                if (short != null) {
+                    val freeMb = ReportStore.usableBytes(short) / (1024 * 1024)
+                    log("aborted: needs ~${need / (1024 * 1024)} MB free on ${short.absolutePath},")
+                    log("only $freeMb MB available. Free some space and run this again.")
                     BydApkExtractionBundle.cleanup(lastWork); lastWork = null
                     resetButton()
                     return@Thread
                 }
-                BydApkExtractionBundle.materialize(plan) { line -> log(line) }
+                ReportStore.prune(this)
+                BydApkExtractionBundle.materialize(
+                    plan, File(store, plan.workDir.name + ".zip")) { line -> log(line) }
             } catch (t: Throwable) {
                 log("failed: ${t.javaClass.simpleName}: ${t.message}")
                 resetButton()
@@ -247,8 +259,7 @@ class DiagActivity : Activity() {
                                 log("falling back to Telegram…")
                                 sendViaTelegram(zip)
                             } else {
-                                log("zip kept locally at:\n${zip.absolutePath}")
-                                resetButton()
+                                keepLocally(zip)
                             }
                         }
                     })
@@ -256,8 +267,8 @@ class DiagActivity : Activity() {
             }
 
             if (!TelegramBugReporter.isConfigured()) {
-                log("Telegram not configured — zip kept locally at:\n${zip.absolutePath}")
-                resetButton()
+                log("Telegram not configured.")
+                keepLocally(zip)
                 return@Thread
             }
             sendViaTelegram(zip)
@@ -449,6 +460,33 @@ class DiagActivity : Activity() {
     }
 
     @SuppressLint("SetTextI18n")
+    /**
+     * Last-resort exit for an extraction that could not be uploaded.
+     *
+     * The archive already lives in the report store, so the path printed here is one a file manager
+     * or an adb pull can actually reach — the previous message named a cacheDir path that nobody
+     * could open. The system chooser is only offered for archives small enough for it to mean
+     * something: these pulls routinely exceed a hundred megabytes, and handing such a file to a
+     * chooser wastes the tester's time rather than helping them.
+     */
+    private fun keepLocally(zip: File) {
+        log("kept locally at:\n${zip.absolutePath}")
+        if (zip.length() < 45L * 1024 * 1024) {
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                try {
+                    AppLogger.shareFile(this, zip,
+                        getString(R.string.bug_share_subject), getString(R.string.bug_share_chooser))
+                } catch (t: Throwable) {
+                    log("share unavailable (${t.javaClass.simpleName}) — pull the file above")
+                }
+            }
+        } else {
+            log("too large to share from the car — pull it over adb.")
+        }
+        resetButton()
+    }
+
     private fun log(line: String) = runOnUiThread {
         AppLogger.i(TAG, line)
         logView.append(line + "\n")

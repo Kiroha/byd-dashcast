@@ -415,7 +415,7 @@ object BydApkExtractionBundle {
      * Copies the [Plan.accepted] APKs into the working dir, writes the manifest, and zips.
      * A copy that fails or an APK that changed size mid-copy is recorded, not fatal.
      */
-    fun materialize(plan: Plan, progress: (String) -> Unit): File {
+    fun materialize(plan: Plan, zipDest: File? = null, progress: (String) -> Unit): File {
         val apkDir = File(plan.workDir, "apks").apply { mkdirs() }
         val manifest = StringBuilder("BYD APK pull manifest (budget ")
             .append(ApkExtractionPolicy.BUDGET_TOTAL / 1024 / 1024).append(" MB)\n")
@@ -463,7 +463,9 @@ object BydApkExtractionBundle {
         write(plan.workDir, "04_apk_manifest.txt", manifest.toString())
 
         progress("zipping…")
-        return zipDir(plan.workDir)
+        // Default keeps the archive beside the work directory; DiagActivity passes a destination in
+        // the report store so the result is reachable instead of stranded in cacheDir.
+        return zipDir(plan.workDir, zipDest ?: File(plan.workDir.parentFile, plan.workDir.name + ".zip"))
     }
 
     /** Chunk size per daemon read — well under the ~1 MB binder transaction limit. */
@@ -490,8 +492,8 @@ object BydApkExtractionBundle {
         return written
     }
 
-    private fun zipDir(work: File): File {
-        val zip = File(work.parentFile, work.name + ".zip")
+    private fun zipDir(work: File, dest: File): File {
+        val zip = dest
         ZipOutputStream(FileOutputStream(zip)).use { zos ->
             work.walkTopDown().filter { it.isFile }.forEach { f ->
                 zos.putNextEntry(ZipEntry(f.relativeTo(work).path))
