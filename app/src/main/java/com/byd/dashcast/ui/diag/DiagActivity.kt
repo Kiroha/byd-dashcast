@@ -287,8 +287,8 @@ class DiagActivity : Activity() {
                         resetButton()
                     }
                     override fun onFailed(message: String) {
-                        log("✗ upload failed: $message\nzip kept locally at:\n${zip.absolutePath}")
-                        resetButton()
+                        log("✗ upload failed: $message")
+                        keepLocally(zip)
                     }
                 })
     }
