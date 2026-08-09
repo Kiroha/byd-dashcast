@@ -18,6 +18,7 @@ import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.Phase4ProcessVerbs
 import com.byd.dashcast.report.AzureBlobUploader
+import com.byd.dashcast.report.ReportStore
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
 import java.io.File
@@ -202,6 +203,21 @@ class DiagActivity : Activity() {
                 log("Selected ${plan.accepted.size} OEM APK(s) + ${plan.acceptedNative.size} native, " +
                     "${plan.payloadBytes / 1024} KB" +
                     (if (plan.manifestSkips.isEmpty()) "" else " (${plan.manifestSkips.size} skipped — see manifest)"))
+
+                // Free-space guard. Nothing checked it before, and with the Azure sink the budget
+                // went from 42 MB to 2 GB: the pull copies the payload into the work directory and
+                // then writes a zip beside it, so the peak is roughly twice the payload on the same
+                // volume. The planned size is used rather than the ceiling — refusing on the
+                // theoretical 2 GB would block units that can perfectly well take the real pull.
+                val need = plan.payloadBytes * 2
+                if (!ReportStore.hasRoomFor(cacheDir, need)) {
+                    val freeMb = ReportStore.usableBytes(cacheDir) / (1024 * 1024)
+                    log("aborted: needs ~${need / (1024 * 1024)} MB free, only $freeMb MB available.")
+                    log("Free some space on the head unit and run this again.")
+                    BydApkExtractionBundle.cleanup(lastWork); lastWork = null
+                    resetButton()
+                    return@Thread
+                }
                 BydApkExtractionBundle.materialize(plan) { line -> log(line) }
             } catch (t: Throwable) {
                 log("failed: ${t.javaClass.simpleName}: ${t.message}")
