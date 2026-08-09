@@ -617,6 +617,17 @@ object AppLogger {
                     }
                 }
             }
+            // reports/: diagnostic artefacts written by the six emitters. Invisible to the loop
+            // above, which is non-recursive and keyed on three prefixes — a subdirectory would
+            // grow unbounded, which is exactly how the 1.08 GB accumulation documented above
+            // happened. ReportStore owns the policy (age, then total size, then count); this only
+            // makes sure the sweep reaches it on the same heartbeat as everything else.
+            try {
+                deleted += if (com.byd.dashcast.report.ReportStore.prune(context) > 0) 1 else 0
+            } catch (t: Throwable) {
+                Log.w("AppLogger", "reports prune failed: " + t.message)
+            }
+
             // exported_apks: keep the 2 most recent, delete the rest.
             val exportDir = File(extBase, "exported_apks")
             if (exportDir.isDirectory) {
