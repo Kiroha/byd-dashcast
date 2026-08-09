@@ -14,6 +14,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.25-beta (versionCode 615)
+
+**An app sent to the main display could be left stranded on the cluster, and a retry loop had never once been able to stop early.**
+
+**(1) INC-20260809-122719.** A tester projected App Manager, sent it back to the main display, then stopped projection — after which it could not be relaunched on the main screen. It was still `RESUMED` on the OEM cluster display, proven by the report's own WindowManager dump 23 s after `BYD restored ✓`; since that display is not destroyed when we stop projecting, relaunching only brought the invisible task forward. `restoreBydDashboard` keyed its verified eviction off `mCurrentDashboardPkg`, which `onSendToMain` nulls the moment the (unverified) move is *requested*, so Stop projection built an empty eviction list and short-circuited. Eviction now also draws on the session tracker, and the two unverified `moveToMainDisplay()` calls that used to clear that tracker first are gone. Widening the list is only safe because eviction now probes each candidate before touching it: `ClusterService.moveTaskToDisplay` falls back to a *launch* when a package has no task, so the old blind loop was already cold-starting dead apps at every stop — packages already on display 0, or with no task, are now skipped outright and never force-stopped.
+
+**(2)** `InsetAutoApplicator` retried 3/3 on every DiLink 3 launch: its stop condition was "no `ERR` in the transcript", but `moveAndResize` always reports `ERR resizeTask … not allowed` there (`canResizeTask()` is FREEFORM-only and BYD's docking verb leaves the task outside FREEFORM) while the rectangle lands anyway — 10/10 corpus reports reach attempt 3/3 and the retries never changed an outcome. The criterion is now the closing `getTaskBounds`, via a new unit-tested pure parser `MoveAndResizeOutcome`.
+
+**(3)** `resizeTask`'s verdict was wrong everywhere: API 29 throws and we called it `ERR`; API 30+ logs and returns `false` and we *discarded* that return and said `OK` (INC-20260804-171617 shows `system_server` logging `resizeTask not allowed on task=#122` against our `OK resizeTask(122,…)` 2 ms later, nine times). Both now report `SKIP`. Also: `hardenAgainstOom`'s javadoc claimed uid 2000 can always write `/proc/self/oom_score_adj` — it cannot, DiLink 3's SELinux denies the shell domain `proc_oom_adj` (79/80 DiLink 3 reports fail, 20/20 other platforms succeed).
+
+251 unit tests; two adversarial review passes (28 findings → 4 fixed, then 15 findings → 0 confirmed). No daemon protocol change; no user-facing string changed. See [docs/releases/1.8.25-beta.md](docs/releases/1.8.25-beta.md).
+
 ### 1.8.24-beta (versionCode 614)
 
 **Unlocks hidden APIs in the uid-2000 daemon process itself.** Diagnostics/RE-only.
