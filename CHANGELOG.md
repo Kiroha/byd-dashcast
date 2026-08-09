@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.22-beta (versionCode 612)
+
+**Fixes the Azure upload commit.** Diagnostics-only.
+
+On the first real 270 MB extraction every block uploaded without a failure and then the final `Put Block List` returned `HTTP 400`, so nothing landed in the container. Cause: the shared request builder set `x-ms-blob-type: BlockBlob` on **every** request, but that header belongs to the single-shot *Put Blob* operation — *Put Block List* does not define it. The blocks were accepted, so the failure only surfaced at the very end, after the whole transfer. The header is now set nowhere; this uploader only uses the block operations, which imply a block blob. Second fix, and the reason the cause had to be inferred rather than read: the uploader discarded Azure's error body, so a 270 MB failure surfaced as the single word "HTTP 400". It now parses the returned `<Code>`/`<Message>` into the error text on both the block and the commit path, so any future rejection names itself. No daemon protocol change.
+
 ### 1.8.21-beta (versionCode 611)
 
 **Lifts the 50 MB ceiling on reverse-engineering pulls, and goes after the artefacts that ceiling was hiding.** Diagnostics-only.
