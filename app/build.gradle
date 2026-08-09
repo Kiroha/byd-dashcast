@@ -1,20 +1,18 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
-// Bug-report Telegram bot credentials are read from local.properties (never
-// committed): they end up in the compiled APK but not in the public repo.
-// Keys (all optional — absent → the app falls back to the Telegram share sheet):
-//   bugReport.botToken=123456789:ABC...
-//   bugReport.chatId=-100<private supergroup id>
-//   bugReport.threadId=<bug-report topic id>
-//   bugReport.hudThreadId=<HUD diagnostics topic id>
-// Topic ids live here and NOT in the source: an id hardcoded in a tracked file is published with
-// the repository, which is exactly how the previous supergroup id leaked (audit AUD-008).
-def _localProps = new Properties()
-def _localPropsFile = rootProject.file('local.properties')
-if (_localPropsFile.exists()) {
-    _localPropsFile.withInputStream { _localProps.load(it) }
-}
+// Reporting credentials are NOT part of the build any more (audit AUD-001).
+//
+// They used to be injected from local.properties into BuildConfig, which put them in the DEX of a
+// publicly downloadable APK. They now live in EncryptedSharedPreferences on each device and are
+// provisioned at runtime by ReportChannel.
+//
+// local.properties keeps the same key names and doubles as the provisioning file:
+//   bugReport.botToken / bugReport.chatId / bugReport.threadId / bugReport.hudThreadId
+//   azure.blobUrl / azure.sas
+// To pair a device:
+//   adb push local.properties /data/local/tmp/dashcast_channel.properties
+// then tap "Pair reporting channel" in the Diagnostics screen.
 
 android {
     signingConfigs {
@@ -1280,32 +1278,17 @@ android {
         // on-car OTA. Perf audit 2026-07-05 finding #16.
         resConfigs 'ar', 'be', 'de', 'en', 'es', 'it', 'kk', 'pl', 'ru', 'tr', 'uk', 'uz'
 
-        // Bug-report bot credentials (see note at top of file).
-        buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
-                "\"${_localProps.getProperty('bugReport.botToken', '')}\""
-        buildConfigField "String", "BUG_REPORT_CHAT_ID",
-                "\"${_localProps.getProperty('bugReport.chatId', '')}\""
-        buildConfigField "String", "BUG_REPORT_THREAD_ID",
-                "\"${_localProps.getProperty('bugReport.threadId', '')}\""
-        buildConfigField "String", "BUG_REPORT_HUD_THREAD_ID",
-                "\"${_localProps.getProperty('bugReport.hudThreadId', '')}\""
-
-        // Azure Blob container for LARGE reverse-engineering pulls. Telegram caps at 50 MB, which is
-        // what the extraction budget was sized around; the OEM artefacts that matter are far bigger
-        // (the cluster Qt theme bundles are ~126 MB and ~118 MB). Optional: when these are empty the
-        // app keeps using Telegram exactly as before.
+        // AUD-001 — no credential is compiled into the APK any more.
         //
-        // Set in local.properties (never committed):
-        //   azure.blobUrl=https://<account>.blob.core.windows.net/<container>
-        //   azure.sas=sp=cw&st=...&se=...&spr=https&sv=...&sr=c&sig=...
+        // These used to be five buildConfigField entries fed from local.properties. A String
+        // constant is inlined by R8 into the DEX pool, so `unzip` plus `strings` handed the bot
+        // token to anyone who downloaded a release; the Azure SAS added in 1.8.21 repeated the
+        // pattern. Credentials now live in EncryptedSharedPreferences on each device and are
+        // provisioned at runtime — see ReportChannel.
         //
-        // The SAS MUST be create/write only (no read, no list) and time-limited: a token shipped
-        // inside an APK has to be treated as public, so it must not be able to read back what other
-        // cars uploaded.
-        buildConfigField "String", "AZURE_BLOB_URL",
-                "\"${_localProps.getProperty('azure.blobUrl', '')}\""
-        buildConfigField "String", "AZURE_BLOB_SAS",
-                "\"${_localProps.getProperty('azure.sas', '')}\""
+        // To pair a device: push this very file (the key names are identical) as
+        //   adb push local.properties /data/local/tmp/dashcast_channel.properties
+        // then tap "Pair reporting channel" in the Diagnostics screen.
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
