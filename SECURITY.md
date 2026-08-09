@@ -44,6 +44,11 @@ A DashCast release APK is a **privileged system component**, not a sandboxed con
 - Understand that platform signing is a public-key model on this hardware, so the signature identifies the platform, not a specific author. If you require author-level trust, build from source.
 - The app requires **ADB over TCP** to be enabled out-of-band to bootstrap its privileged helper. This is an operational choice made by the installer/OEM, exposes a network-reachable `adbd` on the vehicle while enabled, and should be turned off when not needed. The app itself does not open that port; it only connects to it locally with an app-private, RSA-authenticated key.
 
+## Privacy
+
+What a diagnostic report collects and where it goes is documented separately, in
+[PRIVACY.md](PRIVACY.md).
+
 ## Diagnostic artefacts and tester data
 
 DashCast's support flow collects real vehicle diagnostics: application journal, system logcat,
