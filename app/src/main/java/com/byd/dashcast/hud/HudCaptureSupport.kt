@@ -1,6 +1,11 @@
 package com.byd.dashcast.hud
 
 import com.byd.dashcast.BuildConfig
+import com.byd.dashcast.util.AppLogger
+import com.byd.dashcast.report.ReportStore
+import com.byd.dashcast.R
+import android.content.Context
+import android.app.Activity
 import com.byd.dashcast.proxy.ProxyClient
 import java.io.File
 import java.io.FileInputStream
@@ -26,6 +31,46 @@ object HudCaptureSupport {
      */
     @JvmStatic
     val HUD_TEST_THREAD: String get() = BuildConfig.BUG_REPORT_HUD_THREAD_ID
+
+    /**
+     * Zips [work] into the shareable report store and drops the staging directory.
+     *
+     * The plain [zipDir] writes beside the work directory, which for a work directory in `cacheDir`
+     * leaves the archive somewhere `FileProvider` cannot reach and the tester cannot open. Every HUD
+     * capture goes through here instead, so the archive is always shareable and the staging copy
+     * never survives its own bundle.
+     */
+    @JvmStatic
+    fun zipDirToStore(ctx: Context, work: File): File {
+        ReportStore.prune(ctx)
+        val zip = zipDir(work, File(ReportStore.dir(ctx), work.name + ".zip"))
+        try { work.deleteRecursively() } catch (_: Throwable) { /* best-effort */ }
+        return zip
+    }
+
+    /**
+     * Last-resort exit for a capture that could not be uploaded.
+     *
+     * Replaces the previous dead end — a log line naming a `/data/data/<pkg>/cache` path that
+     * neither a file manager nor the uid-2000 shell can open. The archive now lives under the
+     * app's external files dir, so it can be pulled; the system chooser is offered on top, as a
+     * convenience rather than as the plan, because a client able to receive it is not guaranteed
+     * to be installed on these head units.
+     */
+    @JvmStatic
+    fun offerFallback(activity: Activity, zip: File, log: (String) -> Unit) {
+        log("kept locally: ${zip.absolutePath}")
+        activity.runOnUiThread {
+            if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+            try {
+                AppLogger.shareFile(activity, zip,
+                    activity.getString(R.string.bug_share_subject),
+                    activity.getString(R.string.bug_share_chooser))
+            } catch (t: Throwable) {
+                log("share unavailable (${t.javaClass.simpleName}) — pull the file above")
+            }
+        }
+    }
 
     /** Zips every file under [work] into a sibling {@code <name>.zip} and returns it. */
     fun zipDir(work: File): File = zipDir(work, File(work.parentFile, work.name + ".zip"))

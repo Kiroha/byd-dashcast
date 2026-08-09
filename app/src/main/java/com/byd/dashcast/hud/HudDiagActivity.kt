@@ -291,7 +291,7 @@ class HudDiagActivity : AppCompatActivity() {
             File(work, "01_confirm.txt").writeText(report.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
             writeDiagLogs(work)
-            val zip = HudCaptureSupport.zipDir(work)
+            val zip = HudCaptureSupport.zipDirToStore(this, work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 HUD control confirmation — ${Build.PRODUCT}")
             } finally {
@@ -544,7 +544,7 @@ class HudDiagActivity : AppCompatActivity() {
             File(work, "01_can_bench.txt").writeText(sb.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|inswver|fission_single_os|model'"))
             writeDiagLogs(work)
-            val zip = HudCaptureSupport.zipDir(work)
+            val zip = HudCaptureSupport.zipDirToStore(this, work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, caption)
             } finally {
@@ -590,12 +590,17 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun uploadZip(zip: File, caption: String) {
         if (!TelegramBugReporter.isConfigured()) {
-            log("Telegram non configuré — zip: ${zip.absolutePath}"); return
+            log("Telegram not configured — offering the system share instead")
+            HudCaptureSupport.offerFallback(this, zip) { line -> log(line) }
+            return
         }
         TelegramBugReporter.send(this, zip, caption, HudCaptureSupport.HUD_TEST_THREAD,
             object : TelegramBugReporter.Callback {
                 override fun onSent() { log("✓ envoyé sur Telegram (topic ${HudCaptureSupport.HUD_TEST_THREAD}). Terminé.") }
-                override fun onFailed(message: String) { log("✗ échec envoi: $message — zip: ${zip.absolutePath}") }
+                override fun onFailed(message: String) {
+                    log("✗ upload failed: $message")
+                    HudCaptureSupport.offerFallback(this@HudDiagActivity, zip) { line -> log(line) }
+                }
             })
     }
 
