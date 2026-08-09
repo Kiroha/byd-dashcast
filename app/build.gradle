@@ -1059,8 +1059,34 @@ android {
         // per-device feature-enable flags (deviceType 1007 = BYDAUTO_DEVICE_INSTRUMENT) — the only
         // place the feature-device table exists. PlannedNative gained a subdir field. Daemon respawns
         // on this bump. Unit tests pass; assembleDebug + assembleRelease (R8) + lintRelease green.)
-        versionCode 613
-        versionName "1.8.23-beta"
+        // 614 = 1.8.24-beta (unlocks hidden APIs in the uid-2000 daemon process, ProxyDaemonMain —
+        // the one process that actually makes the calls the 1.8.23 framework.jar/services.jar RE
+        // proved are PRESENT in this ROM's own bytecode but invisible to getMethod():
+        // setDisplayToSingleTaskInstance (IActivityTaskManager transaction 159) and
+        // setCustomTaskWindowingMode (transaction 164, a real BYD split-screen-docking feature,
+        // log string "py_dock setCustomeWindowingMode"). Both have been silently falling back to
+        // DashCast's own NoSuchMethodException handling in Phase4TaskVerbs since day one — exactly
+        // the symptom of Android's P+ hidden-API greylist filtering getMethod() itself, not a
+        // genuine platform absence. SurfaceDaemon.java and ClusterMirrorManager.kt each ALREADY
+        // hand-roll a setHiddenApiExemptions unlock via double reflection, but that state is
+        // per-process/per-ART-VM — it never covered ProxyDaemonMain. Adds
+        // org.lsposed.hiddenapibypass:hiddenapibypass:6.1 (Apache 2.0, Unsafe-based HiddenApiBypass
+        // class — not the faster LSPass, which the library's own README says cannot reach core
+        // platform API, exactly what every target here is) and calls
+        // HiddenApiBypass.setHiddenApiExemptions("Landroid/","Lcom/android/","Ljava/lang/") as the
+        // literal first statement in main(), before renameProcess() or anything else gets a chance
+        // to resolve (and cache a negative on) a reflective Method. Self-proving: a new
+        // hiddenApiSelfTest() logs BEFORE/AFTER getMethod() visibility of
+        // setDisplayToSingleTaskInstance, read-only (getMethod() only, never invoke()), wrapped so
+        // it can never itself throw — the next bug report confirms or refutes the whole hypothesis
+        // with a plain log line. No platform gate: hidden-API enforcement is an ART-wide P+
+        // mechanism, not DiLink-version-specific, so this runs unconditionally on DL3/DL4/DL5.0/
+        // DL5.1/AAOS alike; widening what's reflectively visible cannot regress anything already
+        // working. Daemon respawns on this bump. Diagnostics/RE-only; no daemon protocol change; no
+        // production behavior change unless a call that was silently falling back starts
+        // succeeding. Unit tests pass; assembleDebug + assembleRelease (R8) + lintRelease green.)
+        versionCode 614
+        versionName "1.8.24-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
@@ -1210,4 +1236,12 @@ dependencies {
     // v1.8.13 — FlatBuffers runtime, to encode the OEM's own byd.fbs.naviInfo.NaviInfo
     // wire format for AutoContainer.sendInfo2(4, bytes) (HUD turn-by-turn injection).
     implementation 'com.google.flatbuffers:flatbuffers-java:2.0.3'
+
+    // v1.8.24 — Hidden-API bypass for the uid-2000 daemon (ProxyDaemonMain), which never had ANY
+    // hidden-API unlock (SurfaceDaemon.java / ClusterMirrorManager.kt each hand-roll their own via
+    // double reflection, but that state is per-process/per-ART-VM — it never covered the daemon
+    // process that actually makes the failing calls). Pure-Java, stable on API 10+ (does not touch
+    // internal ART structures, unlike the hand-rolled meta-reflection trick this replaces — which
+    // this library's own README warns "will be blocked"). Apache 2.0.
+    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
 }

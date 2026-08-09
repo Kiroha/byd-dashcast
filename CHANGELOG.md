@@ -14,6 +14,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.24-beta (versionCode 614)
+
+**Unlocks hidden APIs in the uid-2000 daemon process itself.** Diagnostics/RE-only.
+
+The 1.8.23 framework.jar/services.jar pull proved `setDisplayToSingleTaskInstance` (`IActivityTaskManager` transaction 159) and `setCustomTaskWindowingMode` (transaction 164, a real BYD split-screen-docking feature) are present and fully implemented in this ROM's own bytecode — yet both have thrown `NoSuchMethodException` on-car since day one. Present in the compiled class but invisible to `getMethod()` is the signature of Android P+ hidden-API greylist filtering, not a genuine absence. DashCast already had the fix twice (`SurfaceDaemon.java`, `ClusterMirrorManager.kt` each hand-roll a `setHiddenApiExemptions` unlock), but that state is per-process/per-ART-VM and neither call ever reached `ProxyDaemonMain` — the one process actually making the failing calls. Adds `org.lsposed.hiddenapibypass:hiddenapibypass:6.1` and calls `HiddenApiBypass.setHiddenApiExemptions("Landroid/","Lcom/android/","Ljava/lang/")` as the literal first statement of `main()`, before anything else can resolve (and cache a negative on) a reflective `Method`. A new read-only self-test logs `getMethod()` visibility of `setDisplayToSingleTaskInstance` before/after, so the next bug report confirms or refutes the hypothesis directly. No platform gate — hidden-API enforcement is ART-wide, not DiLink-version-specific — and widening reflective visibility cannot regress a call that already worked. No daemon protocol change; no user-facing string changed. See [docs/releases/1.8.24-beta.md](docs/releases/1.8.24-beta.md).
+
+### 1.8.23-beta (versionCode 613)
+
+**The BYD APK Extraction now pulls the bydauto SDK itself, and probes the feature gate behind the `0x43f01030` refusals.** Diagnostics-only.
+
+1.8.21's `/system/framework` sweep proved there is no discrete `bydauto.jar` — `AbsBYDAutoDevice.checkDeviceFeatures` and `BYDAutoFeatureIds`, the class that decides which `INSTRUMENT_*` registers a car accepts, is baked into a boot-classpath jar the `byd` name filter skipped. `planFramework()` now pulls the boot-classpath jars (`framework.jar`/`ext.jar`/`services.jar`) and their `.vdex`/`.odex` bytecode into a new `framework/` folder, and a new `06_bydauto_sdk.txt` probe resolves the `BYDAUTO_INSTRUMENT_{GET,SET,COMMON}` permission tiers (`COMMON` is not declared in `com.byd.auto.permission` — its source was previously unknown) plus the runtime per-device feature-enable flags via `dumpsys` of the bydauto service. `PlannedNative` gained a `subdir` field so a framework jar can never collide with a native library. No daemon protocol change. See [docs/releases/1.8.23-beta.md](docs/releases/1.8.23-beta.md).
+
 ### 1.8.22-beta (versionCode 612)
 
 **Fixes the Azure upload commit.** Diagnostics-only.

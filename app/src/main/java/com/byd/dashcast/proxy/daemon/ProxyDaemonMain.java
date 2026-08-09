@@ -184,6 +184,19 @@ public final class ProxyDaemonMain {
 
     public static void main(String[] args) {
         try {
+            // v1.8.24 — unlock hidden APIs for THIS process before anything else touches
+            // reflection. Deliberately the very first statement: Phase4TaskVerbs/Phase4Probes/
+            // CanWriteVerbs etc. all reflect into android.app.*/android.hardware.bydauto.* classes,
+            // and setHiddenApiExemptions is per-ART-VM state — running it after any of those verbs
+            // have already resolved (and cached, or given up on) a Method would be too late for
+            // that call site. SurfaceDaemon.java and ClusterMirrorManager.kt each already unlock
+            // hidden APIs in THEIR OWN process, but that never covered this one, which is the
+            // process that actually makes the calls logged as "NoSuchMethodException" throughout
+            // Phase4TaskVerbs — a class demonstrably present in this ROM's own services.jar/
+            // framework.jar (setDisplayToSingleTaskInstance, setCustomTaskWindowingMode) is exactly
+            // the symptom of hidden-API filtering: a method invisible to getMethod() despite
+            // existing in the compiled bytecode.
+            hiddenApiSelfTest();
             renameProcess();
             // v1.2.70 hardening (Couche 3): tell the Linux OOM killer to
             // treat us as critically important. uid=2000 (shell) can write
@@ -274,6 +287,51 @@ public final class ProxyDaemonMain {
                 .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
         ctx.sendBroadcast(intent);
         log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
+    }
+
+    /**
+     * v1.8.24 — self-proving hidden-API unlock. Logs whether a method already known to be
+     * blocked on this exact car ({@code IActivityTaskManager$Stub$Proxy.setDisplayToSingleTaskInstance})
+     * is visible to {@code getMethod()} BEFORE and AFTER calling
+     * {@link HiddenApiBypass#setHiddenApiExemptions}, so the very next bug report either confirms
+     * or refutes the whole hypothesis with a plain log line — no guesswork needed on the next pull.
+     *
+     * <p>Uses the same scoped exemption list as the existing {@code unlockHiddenApis()} precedent
+     * in {@code SurfaceDaemon}/{@code ClusterMirrorManager} ({@code Landroid/}, {@code Lcom/android/},
+     * {@code Ljava/lang/}) — every reflected target across the daemon (android.app.*, android.view.*,
+     * android.hardware.bydauto.*) falls under {@code Landroid/}; nothing observed so far needs a
+     * broader exemption. Uses the library's {@code HiddenApiBypass} class specifically (backed by
+     * {@code sun.misc.Unsafe}, documented stable on API 10+ without touching internal ART
+     * structures) — not {@code LSPass}, which the library's own README says cannot reach core
+     * platform API, exactly what every target here is.
+     *
+     * <p>Read-only: only calls {@code getMethod()}, never {@code invoke()}. Cannot itself break
+     * anything even if the whole hypothesis is wrong.
+     */
+    private static void hiddenApiSelfTest() {
+        log("hiddenapi BEFORE: " + probeHiddenMethodVisibility());
+        try {
+            org.lsposed.hiddenapibypass.HiddenApiBypass.setHiddenApiExemptions(
+                    "Landroid/", "Lcom/android/", "Ljava/lang/");
+            log("hiddenapi: setHiddenApiExemptions OK");
+        } catch (Throwable t) {
+            log("hiddenapi: setHiddenApiExemptions FAILED: " + t);
+        }
+        log("hiddenapi AFTER: " + probeHiddenMethodVisibility());
+    }
+
+    /** @return "VISIBLE (...)" / "HIDDEN (NoSuchMethodException)" / "INCONCLUSIVE ..." — never throws. */
+    private static String probeHiddenMethodVisibility() {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method m = iAtm.getClass().getMethod("setDisplayToSingleTaskInstance", int.class);
+            return "VISIBLE (" + m + ")";
+        } catch (NoSuchMethodException nsme) {
+            return "HIDDEN (NoSuchMethodException)";
+        } catch (Throwable t) {
+            return "INCONCLUSIVE " + t.getClass().getSimpleName() + ": " + t.getMessage();
+        }
     }
 
     /** v1.2.70 hardening: lower our OOM score so Linux's low-memory killer
