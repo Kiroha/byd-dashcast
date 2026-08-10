@@ -11,6 +11,7 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import com.byd.dashcast.system.CanBusController;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.util.PackagePseudonymizer;
 import com.byd.dashcast.util.concurrent.LatestValueDispatcher;
@@ -719,6 +720,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                     + (bigText.isEmpty() ? "" : " bigLen=" + bigText.length())
                     + " -> dist=" + distance + " road=" + (roadName.isEmpty() ? "no" : "yes")
                     + " eta=" + (eta != null ? "yes" : "no"));
+
+            // OPT-IN raw capture (Diagnostics screen → "Capture raw nav-notification text"): the
+            // ACTUAL title/text a nav app posts, clipped, so the maintainer can calibrate the text
+            // parser against real Waze/Maps strings. This is location PII (destination / road / ETA)
+            // and flows into bug reports, so it is emitted ONLY when explicitly enabled, and OFF by
+            // default. One sample per distinct maneuver (already inside the (icon|road) dedup).
+            if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+                AppLogger.i(TAG, "NAV RAW pkg=" + sbn.getPackageName()
+                        + " title='" + clip(title) + "'"
+                        + " text='" + clip(text) + "'"
+                        + (bigText.isEmpty() ? "" : " big='" + clip(bigText) + "'")
+                        + (subText.isEmpty() ? "" : " sub='" + clip(subText) + "'"));
+            }
         }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
                 + " road=" + (roadName.isEmpty() ? "no" : "yes")

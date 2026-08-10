@@ -62,6 +62,9 @@ object ClusterPrefs {
      */
     const val KEY_ADAS_WINDOW_FIX = "adas_window_fix"
 
+    /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
+    const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
+
     // ── Voice ASR model ──────────────────────────────────────────────
     /** true = high-accuracy large model (~1.3 GB), false = small model (~40 MB, default). */
     const val KEY_VOSK_HIGH_ACCURACY = "vosk_high_accuracy"
@@ -252,6 +255,22 @@ object ClusterPrefs {
     @JvmStatic
     fun setAdasWindowFixEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_ADAS_WINDOW_FIX, enabled).apply()
+    }
+
+    /**
+     * Diagnostic opt-in: when true, [com.byd.dashcast.hud.MapNotificationListenerService] also logs
+     * the RAW notification title/text/bigText (clipped) so a maintainer can see exactly what Waze (or
+     * any nav app) posts, to calibrate the text parser. OFF by default — the raw text is location PII
+     * (destination / current road / ETA) and flows into bug reports, so it must be turned on
+     * deliberately from the Diagnostics screen and off again after capturing a route.
+     */
+    @JvmStatic
+    fun isNavRawCaptureEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_NAV_RAW_CAPTURE, false)
+
+    @JvmStatic
+    fun setNavRawCaptureEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_NAV_RAW_CAPTURE, enabled).apply()
     }
 
     // ───────────────────────────────────────────────────────────────────────
