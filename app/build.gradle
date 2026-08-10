@@ -1183,8 +1183,34 @@ android {
         // 10.25" car gets misread as a 12.3" one.
         // 257 unit tests (6 new, on the pure policy); assembleDebug + assembleRelease (R8) +
         // lintRelease green. Two adversarial review rounds; every confirmed finding fixed.
-        versionCode 617
-        versionName "1.8.27-beta"
+        // 618 = 1.8.28-beta (fixes where 1.8.27's small-panel latch READS. The latch itself was
+        // right — persisted, one-way, never re-read live — but it fired from
+        // ClusterService.onDashboardDisplayConnected, i.e. AFTER activation, and therefore after
+        // the ADAS window fix may already have forced the panel to 1920x720. On exactly the 8.8"
+        // cars it protects it read the switched value and never latched: the self-concealing
+        // damage the latch exists to defeat, reintroduced one layer up. Proven on
+        // INC-20260720-073031, where the app logs "real 1920 x 720" during projection while the
+        // system's own DisplayDeviceInfo for the same fission surface reads 1280x480 once the
+        // native shape is restored — both readings correct, at different instants.
+        // ClusterManager.activateClusterDisplay now latches from the display it ALREADY holds
+        // (findClusterDisplay, step 1) before a single command goes out — the only moment the
+        // panel is guaranteed not to have been changed by us, and the same display the ADAS guard
+        // already consults. The ClusterService site stays as a second chance for DiLink 4, where
+        // the app cannot enumerate the display at all and the geometry only arrives later from the
+        // uid-2000 daemon's dumpsys parse.
+        // Also settles two leads by RE rather than by an on-car pull: libfission_config.so holds a
+        // static {count=2, 1920x1080, 1920x720} table returned by fission_disp_config_get
+        // (adrp/add/ret, no property or file read) — but INC-20260720-064201 (1920x720) and
+        // INC-20260720-073031 (1280x480) carry a BYTE-IDENTICAL ro.build.fingerprint, so one
+        // /system image ships on both panel sizes and a static table in it cannot discriminate:
+        // dead by construction. And FissionHostSvc.getAutoCarDisplay is initialised to
+        // type=0/w=-1/h=-1/producer=NULL by its constructor, so it answers -1/-1 before any
+        // projection — a falsifiable prediction for the read-only Diag button shipped in 1.8.26
+        // and still never run on a car.
+        // No behaviour change on 10.25"/12.3" clusters. 257 unit tests; assembleDebug +
+        // assembleRelease (R8) + lintRelease green.
+        versionCode 618
+        versionName "1.8.28-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

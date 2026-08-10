@@ -207,6 +207,17 @@ class ClusterManager(context: Context) {
 
         // 1. First check if the cluster VirtualDisplay is already present.
         val found = findClusterDisplay(dm)
+
+        // Latch the panel size HERE, before a single command goes out — this is the only moment
+        // it is guaranteed not to have been changed by us. v1.8.27 latched it from
+        // ClusterService.onDashboardDisplayConnected instead, which runs AFTER activation, i.e.
+        // after the ADAS fix may already have forced the panel to 1920x720: on exactly the 8.8"
+        // cars the latch protects, it read the switched value and never fired. Proven on
+        // INC-20260720-073031, where the app logged "real 1920 x 720" during projection while the
+        // system's own DisplayDeviceInfo for the same surface reads 1280x480 once restored.
+        // The persisted latch was right; its reading point was not.
+        if (found != null) latchPanelGeometry(found)
+
         if (found != null && sQtInProjectionMode) {
             // True fast path: VD up AND Qt already projecting — just hand the display back.
             AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id=${found.displayId})")
@@ -742,6 +753,26 @@ class ClusterManager(context: Context) {
      * smaller than 12.3\"": the native resolution of a 10.25" cluster is not established, and a
      * width-based rule risks blocking the very car the fix is needed on.
      */
+    /**
+     * Records, permanently, that this car has the small 1280x480 panel. Reads the display we were
+     * handed rather than re-querying, and is only ever called before a geometry command has been
+     * sent this session — see the call site in [activateClusterDisplay].
+     */
+    private fun latchPanelGeometry(display: Display) {
+        if (ClusterPrefs.isSmallClusterPanelLatched(mContext)) return
+        val size = Point()
+        try {
+            @Suppress("DEPRECATION")
+            display.getRealSize(size)
+        } catch (t: Throwable) {
+            return // Unreadable geometry latches nothing.
+        }
+        if (!ClusterGeometryPolicy.isSmallPanelGeometry(size.x, size.y)) return
+        ClusterPrefs.latchSmallClusterPanel(mContext)
+        AppLogger.i(TAG, "small cluster panel observed (${size.x}x${size.y}) before any command — "
+                + "latched; shape presets 30/31 are refused on this car from now on")
+    }
+
     private fun adasGeometryAllowed(current: Display?): Boolean {
         if (ClusterPrefs.getClusterType(mContext) == CMD_SCREEN_SIZE_ATTO3) return false
         if (current != null) {
