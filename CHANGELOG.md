@@ -14,6 +14,22 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.27-beta (versionCode 617)
+
+**Stops DashCast from degrading the instrument cluster on Atto 3 / Dolphin, and makes the deferred cluster re-anchor actually work on DiLink 3.**
+
+**(1) The 8.8" guard.** `sendInfo(1000, 29|30|31)` switches the cluster *geometry preset* (29 = 8.8"/1280x480, 30 = 12.3"/1920x720, 31 = 10.25"). On a 1280x480 panel, 30 and 31 drop the instrument cluster into its degraded "simple mode" — owners sent photographs. Two things let that reach real cars: the cluster-size preference defaults to 30 with no auto-detection, and the default Stop flow (`restoreOriginCluster`) sent that raw preference unconditionally on both its transports. So every Stop press ordered those panels into the 12.3" shape, with the ADAS window fix uninvolved. The corpus settles it: exactly **two** reports in 161 are self-categorised *Cluster simple mode* — INC-20260625-173900 and INC-20260715-141429 — both 1280x480, both showing `restoreOriginCluster` sending cmd 30 (6× and 2×), **neither with any ADAS-fix activity**. A new pure `ClusterGeometryPolicy` refuses 30/31 whenever the app has evidence of a small panel (configured type 29, or a *persisted* sighting of a 1280x480 cluster — persisted because a panel already pushed to 1920x720 reports 1920x720 for good, so a live check goes blind on exactly the damaged cars). Enforced at three points — the ADAS fix, `restoreOriginCluster`, and `AdbLocalClient.sendInfo` as a backstop — because the first attempt guarded one sender and missed the one behind both incidents. 10.25"/12.3" cars are untouched; the ADAS fix still forces 12.3" there.
+
+**(2) `enforceTaskOnDisplay` rewritten.** It reflected into `IActivityTaskManager.moveTaskToDisplay` from the app process, which DiLink 3 strips — so it threw, logged a WARN claiming *"using launcher fallback"*, and then did not fall back (that branch was skipped for this caller). A silent no-op with a lying log, on the platform that needs it. It now probes the task's real location and acts only on `ON_OTHER_DISPLAY`, routing the move through the uid-2000 daemon. The dead `enforceOnly` parameter is gone, which is what makes the surviving WARN true again.
+
+**(3)** That removal also deleted a load-bearing side effect: the re-anchor was what latched "this ROM has no `moveTaskToDisplay`" (82 % of corpus sessions latched it only from there), and without it the force-stop-the-previous-app guard never armed — reviving INC-20260621-130238's split-screen NPE. Caught by adversarial review, not by a test. Support is now resolved on demand from the *interface class* rather than a live binder (which could be null, could block, and was the only reason the probe needed a worker thread); inconclusive stays unknown and retries.
+
+Also: one INFO line per activation stamping the configured cluster type and ADAS state — without it a report reveals the type only if the tester stopped projection, and `Cluster dimensions` shows the geometry *after* the ADAS switch, which is how a 10.25" car gets misread as a 12.3" one.
+
+**Known limitation**, documented rather than fixed: the guard needs evidence of a small panel, and has none on a fresh install where the ADAS fix is enabled before the first projection ever runs — the VirtualDisplay does not exist until activation creates it, and the preference is still at its 12.3" default. The window is narrow (the ADAS fix is off by default, and with it off no geometry command is sent) and closes permanently at the first observed cluster display. Neither known incident went through it. 8.8" owners should select their cluster size in Settings, which closes it immediately.
+
+257 unit tests (6 new); no daemon protocol change; no user-facing string changed. See [docs/releases/1.8.27-beta.md](docs/releases/1.8.27-beta.md).
+
 ### 1.8.26-beta (versionCode 616)
 
 **Three firmware-RE findings that had never been turned into code, now three read-only Diag buttons.** Diagnostic-only.

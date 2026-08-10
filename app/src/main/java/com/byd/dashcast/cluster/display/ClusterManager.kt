@@ -1,6 +1,7 @@
 package com.byd.dashcast.cluster.display
 
 import android.content.Context
+import android.graphics.Point
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
@@ -193,6 +194,17 @@ class ClusterManager(context: Context) {
             return
         }
 
+        // Stamp the cluster geometry configuration on EVERY activation. Without this a report only
+        // reveals the configured type if the tester also stopped projection (originCluster() is the
+        // sole reader of getClusterType), and the observed "Cluster dimensions" is the geometry
+        // AFTER the ADAS command has already switched it — so a reader who takes it for the panel's
+        // own size concludes the wrong cluster model entirely. That misread happened on
+        // INC-20260810-180902, on a 10.25" car whose cluster reads 1920x720 precisely because the
+        // ADAS fix had switched it to the 12.3" shape in an earlier session.
+        AppLogger.i(TAG, "cluster config — type=${ClusterPrefs.getClusterType(mContext)}"
+                + " (29=8.8\" 30=12.3\" 31=10.25\"), ADAS window fix "
+                + (if (ClusterPrefs.isAdasWindowFixEnabled(mContext)) "ON" else "OFF"))
+
         // 1. First check if the cluster VirtualDisplay is already present.
         val found = findClusterDisplay(dm)
         if (found != null && sQtInProjectionMode) {
@@ -202,7 +214,7 @@ class ClusterManager(context: Context) {
             return
         }
         if (found != null) {
-            val adasFix = ClusterPrefs.isAdasWindowFixEnabled(mContext)
+            val adasFix = adasFixEffective(found)
             if (!adasFix) {
                 // Default warm path: VD present, Qt in native mode → sendInfo(16) only.
                 AppLogger.i(TAG, "VD present id=${found.displayId} but Qt in native mode — warm path (16 only)")
@@ -276,7 +288,7 @@ class ClusterManager(context: Context) {
         // "30→3s→16→3s→35" while the DEFAULT (fix OFF) sends only 16→3s→35, and both lines land
         // in the journal ~2.5 s apart flatly contradicting each other — every triage of these
         // reports started by mis-reading which commands had actually been sent.
-        val seq = if (ClusterPrefs.isAdasWindowFixEnabled(mContext)) "30→3s→16→3s→35" else "16→3s→35"
+        val seq = if (adasFixQuiet()) "30→3s→16→3s→35" else "16→3s→35"
         AppLogger.w(TAG, "VirtualDisplay not found — sending activation sequence ($seq) + polling")
 
         val timeoutMs = CLUSTER_DISPLAY_TIMEOUT_MS
@@ -400,14 +412,14 @@ class ClusterManager(context: Context) {
         // intervening delay") and was simply wrong with the fix ON, where a 6 s cmd-30 round trip
         // puts cmd 16 at T+11 s — past the release, so a probe resolving at T+10 s pre-empted the
         // sequence and Qt was never put into projection. Testers run with the fix ON.
-        val dispatchMaxMs = if (ClusterPrefs.isAdasWindowFixEnabled(mContext))
+        val dispatchMaxMs = if (adasFixQuiet())
                 ACTIVATION_DISPATCH_MAX_MS_ADAS_ON else ACTIVATION_DISPATCH_MAX_MS_ADAS_OFF
         mHandler.postDelayed({
             if (gen == mActivationGeneration && !mActivationCmd16Dispatched) {
                 // Loud, not debug: if a resolution now pre-empts the sequence this line is the
                 // only explanation for a cluster that reports connected while Qt stayed native.
                 AppLogger.e(TAG, "DL4: cmd 16 not dispatched within $dispatchMaxMs ms (ADAS fix "
-                        + (if (ClusterPrefs.isAdasWindowFixEnabled(mContext)) "ON" else "OFF")
+                        + (if (adasFixQuiet()) "ON" else "OFF")
                         + ") — releasing the daemon probe anyway; a resolution from here on may "
                         + "run BEFORE Qt is switched into projection mode")
                 mActivationCmd16Dispatched = true
@@ -711,6 +723,58 @@ class ClusterManager(context: Context) {
             })
     }
 
+    /**
+     * Whether the ADAS window fix may send its geometry command on this car.
+     *
+     * The fix works by forcing the cluster into the 12.3" shape (cmd 30) — legitimate on a 12.3"
+     * panel, and the whole point on a 10.25" one, where it is what removes the ADAS window bug.
+     * On the 8.8" / 1280x480 clusters (Atto 3, Dolphin) it is not: owners have sent captures of
+     * their instrument cluster dropping into its degraded "simple mode" after being forced to
+     * 1920x720. That is a vehicle-level symptom — strictly worse than our projection not working —
+     * so it is refused outright, and the car takes the plain no-geometry-change path instead.
+     *
+     * Checked on BOTH the configured type and, when a display is already up, its real geometry.
+     * The type alone is not enough: [ClusterPrefs.CLUSTER_TYPE_DEFAULT] is 12.3", so an Atto 3
+     * owner who never opened Settings sails straight past a type-only guard — which is the most
+     * likely way those captures came to exist in the first place.
+     *
+     * Deliberately keyed to the ONE geometry proven to break (1280x480) rather than "anything
+     * smaller than 12.3\"": the native resolution of a 10.25" cluster is not established, and a
+     * width-based rule risks blocking the very car the fix is needed on.
+     */
+    private fun adasGeometryAllowed(current: Display?): Boolean {
+        if (ClusterPrefs.getClusterType(mContext) == CMD_SCREEN_SIZE_ATTO3) return false
+        if (current != null) {
+            val size = Point()
+            try {
+                @Suppress("DEPRECATION")
+                current.getRealSize(size)
+            } catch (t: Throwable) {
+                return true // Unreadable geometry is not evidence of a small panel — fail open.
+            }
+            if (size.x == ADAS_UNSAFE_W && size.y == ADAS_UNSAFE_H) return false
+        }
+        return true
+    }
+
+    /** Silent form, for the readers that only DESCRIBE the sequence or size a timeout for it. */
+    private fun adasFixQuiet(): Boolean =
+        ClusterPrefs.isAdasWindowFixEnabled(mContext) && adasGeometryAllowed(null)
+
+    /**
+     * The ADAS fix as it will ACTUALLY be applied: the user's preference narrowed by
+     * [adasGeometryAllowed]. Every reader — the sequence that gets sent, the log lines describing
+     * it, and the DL4 dispatch timeout sized for it — must use this or [adasFixQuiet] rather than
+     * the raw preference, or they describe a sequence the car is never going to receive.
+     */
+    private fun adasFixEffective(current: Display? = null): Boolean {
+        if (!ClusterPrefs.isAdasWindowFixEnabled(mContext)) return false
+        if (adasGeometryAllowed(current)) return true
+        AppLogger.w(TAG, "ADAS window fix is ON but this is an 8.8\" cluster — refusing the 12.3\" "
+                + "switch (it drops that panel into its degraded simple mode); using the plain path")
+        return false
+    }
+
     // ── Activation sequence sendInfo(30 → 16 → 35) ─────────────────────────────
 
     /**
@@ -724,7 +788,9 @@ class ClusterManager(context: Context) {
      * DL3/DL5 is unchanged — the value is carried and never acted upon.
      */
     private fun sendActivationSequence(gen: Int) {
-        val adasFix = ClusterPrefs.isAdasWindowFixEnabled(mContext)
+        // No display exists yet on this path, so the geometry half of the guard cannot run —
+        // only the configured type is available to protect an 8.8" car here.
+        val adasFix = adasFixEffective()
         AppLogger.i(TAG, "sendActivationSequence — ADAS fix " + (if (adasFix) "ON (30→3s→16→3s→35)" else "OFF (16→3s→35)"))
 
         if (adasFix) {
@@ -965,6 +1031,13 @@ class ClusterManager(context: Context) {
         const val CMD_RESTORE_NATIVE = 0 // refresh Qt stream (after cmd 18)
         // CMD=1 : disconnects Qt completely — NEVER USE (destroys display 1).
         const val CMD_SCREEN_SIZE_SEAL_EU = 30 // BYD Seal EU (CONFIRMED 16/04/2026)
+
+        /** 8.8" cluster preset (Atto 3, Dolphin…) — the panel the ADAS fix must never touch. */
+        const val CMD_SCREEN_SIZE_ATTO3 = 29
+
+        /** Native geometry of that 8.8" panel, the one shape proven to break under a forced 12.3". */
+        private const val ADAS_UNSAFE_W = 1280
+        private const val ADAS_UNSAFE_H = 480
         const val CMD_DI40_MODE = 35 // Di4.0 mode — triggers VirtualDisplay creation (CONFIRMED 03/05/2026)
 
         // Timeout waiting for the VirtualDisplay after the sendInfo activation sequence.

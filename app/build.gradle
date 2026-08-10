@@ -1141,8 +1141,50 @@ android {
         // a genuine empty reply, and no cross-button gating on the Diag screen letting two probes
         // stomp the same log view. 251 unit tests; assembleDebug + assembleRelease (R8) +
         // lintRelease green. Daemon respawns on this bump.
-        versionCode 616
-        versionName "1.8.26-beta"
+        // 617 = 1.8.27-beta (protects the 8.8" clusters from a shape command that degrades them,
+        // and makes the deferred cluster re-anchor actually work on DiLink 3.
+        // (1) THE 8.8" GUARD. sendInfo(1000, 29|30|31) switches the cluster GEOMETRY preset
+        // (29 = 8.8"/1280x480 Atto 3 & Dolphin, 30 = 12.3"/1920x720, 31 = 10.25"). On a 1280x480
+        // panel, 30 and 31 drop the instrument cluster into its degraded "simple mode" — owners
+        // sent photographs. That is vehicle-level harm, worse than any projection failure. New
+        // pure ClusterGeometryPolicy refuses 30/31 whenever the app has evidence of a small panel
+        // (configured type 29, OR a persisted sighting of a 1280x480 cluster); 29 is always
+        // allowed, since shrinking to native is what those cars want. The evidence must be
+        // PERSISTED, not read live: a panel already pushed to 1920x720 reports 1920x720 for good,
+        // so a live check goes blind on exactly the cars already damaged. Enforced at three
+        // points because the first attempt guarded one sender and missed the dominant one: the
+        // ADAS window fix (activation), restoreOriginCluster (the DEFAULT Stop flow, which passed
+        // the raw preference whose default is 30), and AdbLocalClient.sendInfo as a backstop.
+        // Decisive evidence, found by adversarial review and re-verified: the corpus contains
+        // exactly TWO reports self-categorised "Cluster simple mode" — INC-20260625-173900 and
+        // INC-20260715-141429 — both 1280x480, both showing restoreOriginCluster sending cmd 30
+        // (6x and 2x), NEITHER with any ADAS-fix activity. 2 of 2 came through the Stop path the
+        // ADAS-only guard did not cover. Cars with a 10.25"/12.3" cluster are untouched: the ADAS
+        // fix still forces 12.3" there, which is what removes the ADAS window bug.
+        // (2) enforceTaskOnDisplay REWRITTEN. It reflected into IActivityTaskManager
+        // .moveTaskToDisplay from the APP process; DiLink 3 strips that method, so it threw,
+        // logged a WARN claiming "using launcher fallback", and then did not fall back — the
+        // enforceOnly branch skipped it. A silent no-op with a lying log, on the platform that
+        // needs it. Now it probes findTaskLocationForPackage first and acts only on
+        // ON_OTHER_DISPLAY, routing the move through the uid-2000 daemon (moveAndResize), which
+        // works there. ABSENT/UNKNOWN never act. The dead enforceOnly parameter and its ternaries
+        // are gone, which is what makes the surviving WARN true again.
+        // (3) That removal also deleted a load-bearing SIDE EFFECT: the re-anchor was what latched
+        // sMoveTaskToDisplayAvailable on DL3 (82% of corpus sessions latched it ONLY from there),
+        // and without it the "force-stop the previous cluster app" guard never armed, so a second
+        // cold app landed split-screen — INC-20260621-130238's NPE, revived. Caught by review, not
+        // by a test. Support is now resolved on demand from isMoveTaskToDisplaySupported() via an
+        // INTERFACE lookup (no live binder: getService() can be null, can block, and forced the
+        // probe onto a worker thread, which was the only source of a race). Inconclusive stays
+        // null and retries instead of latching a guess.
+        // Also: one INFO line per activation stamping the configured cluster type and the ADAS
+        // state — without it a report reveals the type only if the tester stopped projection, and
+        // the observed "Cluster dimensions" is the geometry AFTER the ADAS switch, which is how a
+        // 10.25" car gets misread as a 12.3" one.
+        // 257 unit tests (6 new, on the pure policy); assembleDebug + assembleRelease (R8) +
+        // lintRelease green. Two adversarial review rounds; every confirmed finding fixed.
+        versionCode 617
+        versionName "1.8.27-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

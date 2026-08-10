@@ -24,6 +24,7 @@ import android.view.Display;
 import com.byd.dashcast.cluster.mirror.ClusterInputForwarder;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
 import com.byd.dashcast.cluster.display.ClusterDisplayInfo;
+import com.byd.dashcast.cluster.display.ClusterGeometryPolicy;
 import com.byd.dashcast.cluster.display.ClusterDisplayRegistry;
 import com.byd.dashcast.cluster.display.ClusterManager;
 import com.byd.dashcast.cluster.display.DashboardDisplayHelper;
@@ -89,7 +90,14 @@ public class ClusterService extends Service
      * main display (INC-20260621-130238).
      */
     public boolean isMoveTaskToDisplaySupported() {
-        return !Boolean.FALSE.equals(sMoveTaskToDisplayAvailable);
+        // Resolved on demand, by the reader that actually needs the answer. Previously the flag was
+        // only ever latched as a SIDE EFFECT of a move attempt, and the corpus shows 82% of real
+        // sessions got it from the deferred re-anchor alone — the very call that now goes through
+        // the daemon instead. A fire-and-forget prime at startup would have left a silent window
+        // (and a race); a cheap interface lookup here has neither.
+        Boolean known = sMoveTaskToDisplayAvailable;
+        if (known == null) known = resolveMoveTaskToDisplaySupport();
+        return !Boolean.FALSE.equals(known);
     }
 
     private static final String CHANNEL_ID = "cluster_projection";
@@ -470,11 +478,147 @@ public class ClusterService extends Service
 
     public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
                                    final LaunchCallback callback) {
-        moveTaskToDisplayInternal(packageName, targetDisplayId, callback, false);
+        moveTaskToDisplayInternal(packageName, targetDisplayId, callback);
     }
 
+    /**
+     * Record, permanently, that this car has the small 1280x480 cluster panel — the one that drops
+     * into its degraded "simple mode" if a larger shape preset is ever sent to it.
+     *
+     * <p>Called from the one place the real geometry becomes known. Latching rather than re-reading
+     * is the whole point: the damage is self-concealing, because a panel that has already been
+     * pushed to 1920x720 reports 1920x720 from then on, so a live check stops recognising exactly
+     * the cars that need protecting. One sighting is enough and it has to outlive the process.
+     */
+    private void latchPanelGeometry(int width, int height) {
+        if (!ClusterGeometryPolicy.isSmallPanelGeometry(width, height)) return;
+        if (ClusterPrefs.isSmallClusterPanelLatched(this)) return;
+        ClusterPrefs.latchSmallClusterPanel(this);
+        AppLogger.i(TAG, "small cluster panel observed (" + width + "x" + height + ") — latched; "
+                + "shape presets 30/31 will be refused on this car from now on");
+    }
+
+    /**
+     * Resolve once, at service start, whether this ROM still has
+     * {@code IActivityTaskManager.moveTaskToDisplay}.
+     *
+     * <p>Used to be a side effect: the deferred re-anchor was, on DiLink 3, the call that happened
+     * to reach the reflection first and latch the flag to FALSE. Routing that re-anchor through the
+     * daemon removed the side effect, and with it the only primer on a path where every launch goes
+     * through {@code fallbackLaunch} (a cold app has no task, so the reflection is never reached).
+     * The flag then stayed {@code null}, {@link #isMoveTaskToDisplaySupported()} kept answering
+     * "supported", and {@code MainActivity}'s DiLink-3 workaround — force-stop the previous cluster
+     * app before launching the next — never armed. The second app would land split-screen on the
+     * main display: exactly the {@code ActivityStack.getBounds} NPE of INC-20260621-130238 that the
+     * workaround exists to prevent. Caught by adversarial review, not by a test.
+     *
+     * <p>A lookup, never an invoke — it cannot move or disturb anything.
+     */
+    private static Boolean resolveMoveTaskToDisplaySupport() {
+        Boolean known = sMoveTaskToDisplayAvailable;
+        if (known != null) return known;
+        try {
+            // The INTERFACE, not a live binder. An earlier version resolved
+            // ActivityTaskManager.getService() and inspected the returned Stub$Proxy, which asks a
+            // question about a class through an object: getService() can return null before
+            // activity_task is registered (NPE, answered "inconclusive" for a reason unrelated to
+            // the method), can block on ServiceManager, and forced the whole probe onto a worker
+            // thread — which is the only reason there was ever a race to reason about. The AIDL
+            // method is a property of the interface; verified against this ROM's own decompiled
+            // framework.jar, where IActivityTaskManager declares no moveTaskToDisplay at all.
+            Class.forName("android.app.IActivityTaskManager")
+                    .getMethod("moveTaskToDisplay", int.class, int.class);
+            sMoveTaskToDisplayAvailable = Boolean.TRUE;
+            return Boolean.TRUE;
+        } catch (NoSuchMethodException nsme) {
+            // Means "unreachable from this process" — stripped by the OEM, OR hidden-API filtered,
+            // which surfaces identically because Android's enforcement makes a blocked member
+            // invisible to reflection (see the 1.8.24 hidden-API work: the bypass ships in the
+            // DAEMON process, not this one). Both are the same verdict for every consumer of this
+            // flag: the in-process fallback cannot reparent a task either way. On DiLink 3 the
+            // daemon dump settles which it is — genuine absence.
+            sMoveTaskToDisplayAvailable = Boolean.FALSE;
+            AppLogger.i(TAG, "moveTaskToDisplay unreachable on this ROM — launcher fallback will "
+                    + "be used, and the stop-previous-app guard is armed");
+            return Boolean.FALSE;
+        } catch (Throwable t) {
+            // ClassNotFoundException on a ROM without the interface at all, or a LinkageError.
+            // Genuinely inconclusive: leave the flag null so the NEXT reader probes again rather
+            // than latching a guess for the life of the process.
+            AppLogger.d(TAG, "moveTaskToDisplay probe inconclusive ("
+                    + t.getClass().getSimpleName() + ": " + t.getMessage() + ") — will retry");
+            return null;
+        }
+    }
+
+    /**
+     * Deferred post-launch re-anchor: 2.5 s after a launch, make sure the task really is on the
+     * cluster, because AOSP sometimes places it on display 0 anyway.
+     *
+     * <p>Looks before it acts, and moves through the uid-2000 daemon rather than in-process
+     * reflection. The old implementation called {@code IActivityTaskManager.moveTaskToDisplay}
+     * from the app process; that method does not exist on DiLink 3 (the OEM stripped it), so it
+     * threw {@code NoSuchMethodException}, logged a WARN claiming a launcher fallback that the
+     * {@code enforceOnly} branch never actually ran, and gave up — the re-anchor was a silent
+     * no-op on the platform that needs it most. The daemon has a working path
+     * ({@code moveAndResize} → {@code setDisplayToSingleTaskInstance} + stack move), proven on
+     * DL3 in every {@code launchAndForce} transcript.
+     *
+     * <p>The probe is what keeps this cheap: when the daemon's own post-launch watchdog has
+     * already done the job — the normal case — the task is found on the right display and nothing
+     * is sent at all.
+     */
     public void enforceTaskOnDisplay(final String packageName, final int targetDisplayId) {
-        moveTaskToDisplayInternal(packageName, targetDisplayId, null, true);
+        if (packageName == null || packageName.isEmpty() || targetDisplayId <= 0) return;
+        if (PKG_FORCE_FRESH_LAUNCH.equals(packageName)) {
+            AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg " + packageName);
+            return;
+        }
+        final LifecycleGate.Token operation = mOperationGate.capture();
+        sMoveTaskExecutor.execute(() -> {
+            if (!operation.isValid()) return;
+            TaskLocation location;
+            try {
+                location = ProxyClient.findTaskLocationForPackage(packageName);
+            } catch (Throwable t) {
+                // A failed probe says nothing about where the task is; acting on that would be the
+                // mistake TaskLocation exists to prevent.
+                AppLogger.d(TAG, "enforceTaskOnDisplay: probe failed for " + packageName
+                        + " (" + t.getClass().getSimpleName() + ") — leaving it alone");
+                return;
+            }
+            if (!operation.isValid()) return;
+            switch (location.matchDisplay(targetDisplayId)) {
+                case ON_EXPECTED_DISPLAY:
+                    AppLogger.d(TAG, "enforceTaskOnDisplay: " + packageName
+                            + " already on display " + targetDisplayId + " — nothing to do");
+                    return;
+                case ABSENT:
+                    AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName);
+                    return;
+                case UNKNOWN:
+                    AppLogger.d(TAG, "enforceTaskOnDisplay: location unknown for " + packageName
+                            + " — leaving it alone");
+                    return;
+                default:
+                    break; // ON_OTHER_DISPLAY — the case this method exists for.
+            }
+            int w = (mInputForwarder != null) ? mInputForwarder.getClusterWidth() : 0;
+            int h = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() : 0;
+            if (w <= 0) w = 1920;
+            if (h <= 0) h = 720;
+            AppLogger.i(TAG, "enforceTaskOnDisplay: " + packageName + " is on display "
+                    + location.getDisplayId() + ", re-anchoring to " + targetDisplayId
+                    + " via daemon");
+            try {
+                String log = ProxyClient.moveAndResize(packageName, targetDisplayId, 0, 0, w, h);
+                AppLogger.i(TAG, "enforceTaskOnDisplay result:\n"
+                        + (log == null || log.isEmpty() ? "(empty)" : log));
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "enforceTaskOnDisplay: daemon move failed for " + packageName
+                        + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            }
+        });
     }
 
     public interface TaskLocationCallback {
@@ -509,14 +653,9 @@ public class ClusterService extends Service
     }
 
     private void moveTaskToDisplayInternal(final String packageName, final int targetDisplayId,
-                                            final LaunchCallback callback,
-                                            final boolean enforceOnly) {
+                                            final LaunchCallback callback) {
         final LifecycleGate.Token operation = mOperationGate.capture();
         if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
-            if (enforceOnly) {
-                AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg " + packageName);
-                return;
-            }
             AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName);
             fallbackLaunch(packageName, targetDisplayId, callback, operation);
             return;
@@ -528,21 +667,15 @@ public class ClusterService extends Service
                 int taskId = findRunningTaskId(packageName);
                 if (!operation.isValid()) return;
                 if (taskId == -1) {
-                    if (enforceOnly) {
-                        AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName);
-                        return;
-                    }
                     AppLogger.w(TAG, "moveTaskToDisplay: no task for " + packageName + " → fallback");
                     fallbackLaunch(packageName, targetDisplayId, callback, operation);
                     return;
                 }
 
                 if (Boolean.FALSE.equals(sMoveTaskToDisplayAvailable)) {
-                    AppLogger.d(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + ": method unavailable on ROM → "
-                            + (enforceOnly ? "skip" : "fallback launch"));
+                    AppLogger.d(TAG, "moveTaskToDisplay: method unavailable on ROM → fallback launch");
                     if (!operation.isValid()) return;
-                    if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback, operation);
+                    fallbackLaunch(packageName, targetDisplayId, callback, operation);
                     return;
                 }
 
@@ -552,8 +685,8 @@ public class ClusterService extends Service
                 if (!operation.isValid()) return;
                 iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
                         .invoke(iatm, taskId, targetDisplayId);
-                AppLogger.i(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                        + " taskId=" + taskId + " → display=" + targetDisplayId + " OK");
+                AppLogger.i(TAG, "moveTaskToDisplay taskId=" + taskId
+                        + " → display=" + targetDisplayId + " OK");
 
                 if (targetDisplayId > 0) {
                     try { Thread.sleep(300); } catch (InterruptedException ie) {
@@ -598,14 +731,12 @@ public class ClusterService extends Service
                         || (e.getCause() instanceof NoSuchMethodException);
                 if (stripped && sMoveTaskToDisplayAvailable == null) {
                     sMoveTaskToDisplayAvailable = Boolean.FALSE;
-                    AppLogger.w(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + ": moveTaskToDisplay stripped on ROM — using launcher fallback");
+                    AppLogger.w(TAG, "moveTaskToDisplay stripped on ROM — using launcher fallback");
                 } else if (!stripped) {
-                    AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + " error", e);
+                    AppLogger.e(TAG, "moveTaskToDisplay error", e);
                 }
                 if (!operation.isValid()) return;
-                if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback, operation);
+                fallbackLaunch(packageName, targetDisplayId, callback, operation);
             }
         });
     }
@@ -1330,6 +1461,15 @@ public class ClusterService extends Service
             ClusterDisplayInfo info = ClusterDisplayRegistry.forDisplayId(displayId);
             if (info != null) {
                 mInputForwarder.setClusterGeometry(displayId, info.getWidth(), info.getHeight());
+                latchPanelGeometry(info.getWidth(), info.getHeight());
+            }
+        } else {
+            android.graphics.Point size = new android.graphics.Point();
+            try {
+                display.getRealSize(size);
+                latchPanelGeometry(size.x, size.y);
+            } catch (Throwable ignored) {
+                // Unreadable geometry latches nothing — the policy stays on the configured type.
             }
         }
         updateNotification(getString(R.string.notif_cluster_active, displayId));
