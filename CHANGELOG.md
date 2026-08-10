@@ -14,6 +14,14 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.26-beta (versionCode 616)
+
+**Three firmware-RE findings that had never been turned into code, now three read-only Diag buttons.** Diagnostic-only.
+
+A fresh pass over the DL3/DL5.0 firmware extractions turned up two Binder-reachable surfaces the daemon had never called: `FissionHostSvc.getAutoCarDisplay` (native transaction 101, DL3 only — a pure getter, disassembly-confirmed to be the exact registry the OEM's own `AutoContainerNative.getQtProjectionDispInfoNative` reads to feed the Qt cluster compositor) and `AutoContainer.registerCallback` (AIDL transaction 4, documented in this codebase's comments since the DL3 RE pass, never called). Neither is a fix by itself — they answer two open questions before any write is ever considered: does the OEM actually use that registry today, and does the native container service's lifecycle correlate with any known eviction incident. Three new buttons: a one-shot registry read, a callback arm (payoff is asynchronous — lands in a future bug report's daemon transcript, rate-limited against a crash-reconnect flood), and a 60s sampler around a normal projection cycle. All three fail open ("SERVICE NOT FOUND" is a normal answer on 4 of 5 platforms) and touch no production path. The five Diag buttons now share a lock so two probes can no longer interleave their output on the same log view.
+
+Two adversarial review passes: 4 findings fixed in 1.8.25 on the underlying `resizeTask`/retry work, then 10 more found and fixed here — the most serious being the callback's raw `Binder` skipping only half of `writeInterfaceToken()`'s wire header, silently corrupting every decoded field. 251 unit tests; no daemon protocol change beyond the addition; no user-facing string changed. See [docs/releases/1.8.26-beta.md](docs/releases/1.8.26-beta.md).
+
 ### 1.8.25-beta (versionCode 615)
 
 **An app sent to the main display could be left stranded on the cluster, and a retry loop had never once been able to stop early.**
