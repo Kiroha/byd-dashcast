@@ -1115,8 +1115,34 @@ android {
         // succeed); comment corrected, log no longer reads as a failure. Two adversarial review
         // passes: 28 findings/4 fixed on (2)(3), then 15 findings/0 confirmed on (1). 251 unit
         // tests (9 new); assembleDebug + assembleRelease (R8) + lintRelease green.)
-        versionCode 615
-        versionName "1.8.25-beta"
+        // 616 = 1.8.26-beta (three read-only/diagnostic Diag buttons built from firmware RE
+        // findings that had never been turned into code: (1) FissionHostSvc.getAutoCarDisplay
+        // (native transaction 101, DL3 only) — a pure getter over a single-slot IBinder-producer
+        // registry, disassembly-confirmed to be the same registry AutoContainerNative's own
+        // getQtProjectionDispInfoNative reads to feed the Qt cluster compositor; the reply layout
+        // is a disassembly READING not a spec, so every call logs the raw reply hex before any
+        // best-effort structured decode. (2) AutoContainer.registerCallback (AIDL transaction 4,
+        // documented in ClusterManager.kt since the DL3 RE pass, never called before this release)
+        // — arms the daemon's own raw Binder callback so a FUTURE bug report captures the native
+        // container service's serviceDied()/receivedJson/Info/Info2() pushes; rate-limited into
+        // the daemon's own dashcast_proxy.log (the one bug-report section that survives a logcat
+        // flood) rather than android.util.Log. (3) a 60s registry sampler (start/drain, matching
+        // the existing CAN_LISTEN_START/DRAIN idiom rather than a single blocking transact) around
+        // a tester's normal projection cycle, to answer the open question of whether the OEM
+        // itself uses the FissionHostSvc registry — the prerequisite before setAutoCarDisplay (the
+        // write side) could ever be considered safe. All three fail open ("SERVICE NOT FOUND" is a
+        // normal, expected answer on 4 of 5 platforms) and touch no production code path.
+        // Adversarially reviewed twice: 4 findings fixed on the underlying moveAndResize/resizeTask
+        // work already shipped in 1.8.25, then 10 more found+fixed here — the most serious being
+        // ContainerCallbackBinder skipping only half of writeInterfaceToken()'s wire header
+        // (a leading strict-mode-policy int32 the Java Parcel API doesn't expose a plain accessor
+        // for), which silently corrupted every decoded field; also fixed: unsynchronized callback
+        // registration/rate-limiter, a silently-defaulted-to-0 result code indistinguishable from
+        // a genuine empty reply, and no cross-button gating on the Diag screen letting two probes
+        // stomp the same log view. 251 unit tests; assembleDebug + assembleRelease (R8) +
+        // lintRelease green. Daemon respawns on this bump.
+        versionCode 616
+        versionName "1.8.26-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

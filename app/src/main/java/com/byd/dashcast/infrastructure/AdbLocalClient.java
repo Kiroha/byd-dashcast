@@ -1079,9 +1079,12 @@ public class AdbLocalClient {
                 // uid-2000 daemon is not connected (so healthy DL3/DL5.0 keep their exact
                 // proven path). Transacts the AutoContainer binder directly from THIS process:
                 // needs neither the daemon nor the self-ADB shell — the only path left on an
-                // unprivileged unit whose ADB-TCP is dead (D50F_LC). It succeeds only if the
-                // AutoContainer server does not enforce caller uid/signature (UNPROVEN from the
-                // app uid), so any failure — incl. SecurityException — falls through untouched.
+                // unprivileged unit whose ADB-TCP is dead (D50F_LC). The checkSignatures(uid<10000)
+                // fast-path this whole call is betting on is confirmed real for the uid-2000
+                // daemon (81 bug reports, zero refusals) — but the app's own uid is NOT under
+                // 10000, so it does NOT get that fast-path and IS refused here in practice. That
+                // is fine: this is explicitly a best-effort first attempt, and any failure — incl.
+                // SecurityException — falls through untouched to the ADB/daemon paths below.
                 if (!ProxyClient.isConnected()) {
                     try {
                         String svc = autoContainerSvcName(context);

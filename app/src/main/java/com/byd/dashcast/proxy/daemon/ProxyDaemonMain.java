@@ -91,8 +91,12 @@ public final class ProxyDaemonMain {
     *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
     *  v21: adds TXN_CANCEL_FISSION_WATCHDOG (teardown cannot race post-launch re-anchoring).
     *  v22: adds TXN_AUTOCONTAINER_SEND_INFO2 (raw sendInfo2 byte[] channel — NaviInfo HUD injection).
+    *  v23: adds TXN_FISSION_GET_AUTOCAR_DISPLAY (read-only FissionHostSvc registry probe, DL3),
+    *  TXN_AUTOCONTAINER_REGISTER_CALLBACK (arms serviceDied/receivedX logging, diagnostic-only,
+    *  never called before this release) and TXN_PROJECTION_TRACE_START/DRAIN (60s registry sampler
+    *  around a normal projection cycle). All three read-only or purely observational.
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "22";
+    private static final String PROTOCOL_VERSION = "23";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -1217,6 +1221,46 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_FISSION_GET_AUTOCAR_DISPLAY: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String report = FissionHostSvcVerbs.getAutoCarDisplay();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(report); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_AUTOCONTAINER_REGISTER_CALLBACK: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        int rc = Phase4ProcessVerbs.autoContainerRegisterCallback();
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_PROJECTION_TRACE_START: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        FissionHostSvcVerbs.startTrace();
+                        if (reply != null) reply.writeNoException();
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_PROJECTION_TRACE_DRAIN: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String report = FissionHostSvcVerbs.drainTrace();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(report); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
                 case INTERFACE_TRANSACTION: {
                     if (reply != null) reply.writeString(DESCRIPTOR);
                     return true;
@@ -1261,7 +1305,11 @@ public final class ProxyDaemonMain {
         return new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
     }
 
-    private static void log(String s) {
+    /** Package-visible so verb classes (e.g. the AutoContainer callback listener in
+     *  {@link Phase4ProcessVerbs}) can write into the same daemon transcript — the one section of
+     *  a bug report ({@code --- PROXYDAEMON LOG ---}) that survives a logcat flood, unlike
+     *  {@code android.util.Log}. */
+    static void log(String s) {
         System.out.println("[dashcast_proxy] " + s);
     }
 }

@@ -1120,6 +1120,43 @@ public final class ProxyClient {
         return callWithRetry("aaosHalProbe", ProxyCanVerbs::aaosHalProbe);
     }
 
+    /**
+     * Read-only probe of the native {@code FissionHostSvc} display registry (DL3 only,
+     * transaction 101 = {@code getAutoCarDisplay}) — RE'd from a real firmware pull, never called
+     * before v1.8.26-beta. Returns raw hex plus a best-effort decode; "SERVICE NOT FOUND" is a
+     * normal, expected answer on every platform but DL3.
+     */
+    public static String fissionGetAutoCarDisplay() throws ProxyException {
+        return callWithRetry("fissionGetAutoCarDisplay", ProxyNativeServiceVerbs::fissionGetAutoCarDisplay);
+    }
+
+    /**
+     * Arms the daemon's {@code AutoContainer.registerCallback} listener (AIDL transaction 4,
+     * documented since the DL3 RE pass, never called before this release). The registration lives
+     * for the rest of THIS daemon process — re-arm after any daemon respawn. Payoff is
+     * asynchronous: any push the native service makes afterward lands in the daemon's own
+     * transcript, {@code --- PROXYDAEMON LOG ---} in the next bug report.
+     *
+     * @return the native result code from {@code registerCallback}
+     */
+    public static int autoContainerRegisterCallback() throws ProxyException {
+        return callWithRetry("autoContainerRegisterCallback", ProxyNativeServiceVerbs::autoContainerRegisterCallback);
+    }
+
+    /**
+     * Arms a ~90s-capped background sampler of the {@code FissionHostSvc} registry, one sample
+     * every ~2s, logged only on change. Call {@link #projectionTraceDrain()} after the tester has
+     * run their normal projection start/stop cycle.
+     */
+    public static void projectionTraceStart() throws ProxyException {
+        callWithRetry("projectionTraceStart", () -> { ProxyNativeServiceVerbs.projectionTraceStart(); return null; });
+    }
+
+    /** Stops the sampler armed by {@link #projectionTraceStart()} and returns every change recorded. */
+    public static String projectionTraceDrain() throws ProxyException {
+        return callWithRetry("projectionTraceDrain", ProxyNativeServiceVerbs::projectionTraceDrain);
+    }
+
     /** Clear the push-feedback log + persistent last-known map (for a fresh, uncontaminated read). */
     public static void canListenClear() throws ProxyException {
         callWithRetry("canListenClear", () -> { ProxyCanVerbs.canListenClear(); return null; });

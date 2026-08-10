@@ -1,11 +1,13 @@
 package com.byd.dashcast.proxy.daemon;
 
+import android.os.Binder;
 import android.os.IBinder;
 import android.os.Parcel;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 /**
  * Phase4ProcessVerbs — process-management verbs that run inside the daemon
@@ -17,7 +19,7 @@ import java.lang.reflect.Method;
  *       ({@link #getPidsByPackage}).</li>
  *   <li><b>AutoContainer</b> — typed Binder transactions to the BYD
  *       {@code AutoContainer} service ({@link #autoContainerSendInfo},
- *       {@link #autoContainerSendInfo2}).</li>
+ *       {@link #autoContainerSendInfo2}, {@link #autoContainerRegisterCallback}).</li>
  *   <li><b>IActivityManager</b> — {@code forceStopPackage} via reflection.</li>
  * </ol>
  *
@@ -31,9 +33,10 @@ public final class Phase4ProcessVerbs {
 
     // ─── AutoContainer cache ──────────────────────────────────────────────
 
-    private static final String AUTOCONTAINER_SVC = "AutoContainer";
-    private static final int    TXN_SEND_INFO      = 2;
-    private static final int    TXN_SEND_INFO2     = 3;
+    private static final String AUTOCONTAINER_SVC       = "AutoContainer";
+    private static final int    TXN_SEND_INFO           = 2;
+    private static final int    TXN_SEND_INFO2          = 3;
+    private static final int    TXN_REGISTER_CALLBACK   = 4;
 
     private static volatile IBinder sAutoContainerBinder;
     private static volatile String  sAutoContainerDescriptor;
@@ -253,5 +256,136 @@ public final class Phase4ProcessVerbs {
         Object am = activityManager();
         Method m = forceStopMethod(am);
         m.invoke(am, packageName, userId);
+    }
+
+    // ─── AutoContainer callback (diagnostic, never called before this release) ────────────
+
+    /** Kept alive for the daemon process lifetime — a dropped local reference would not by
+     *  itself unregister the far side, but there is no reason to rely on that; a static field
+     *  costs nothing and removes the question. Re-armed on every daemon respawn (a fresh
+     *  process has no memory of a prior registration — the OEM service does not persist it
+     *  across our process death either, since it is keyed by this binder's own identity). */
+    private static volatile ContainerCallbackBinder sRegisteredCallback;
+
+    /** Returned by {@link #autoContainerRegisterCallback()} when the native reply carries no
+     *  result int at all — distinct from any real result code (including 0, which is meaningful
+     *  elsewhere in this file: {@link #autoContainerSendInfoResult} uses it for "accepted"). The
+     *  reply shape for this specific call was never confirmed on-car; silently defaulting to 0
+     *  would make "genuinely accepted" and "reply layout guess is wrong" indistinguishable. */
+    public static final int REGISTER_CALLBACK_NO_RESULT_FIELD = Integer.MIN_VALUE;
+
+    /**
+     * Registers this daemon's own callback with {@code AutoContainer.registerCallback}
+     * (AIDL transaction 4 — documented in {@code ClusterManager.kt} since the DL3 RE pass that
+     * found it, never called until now). Every push the native service makes afterward
+     * ({@code serviceDied}/{@code receivedJson/Info/Info2}) is logged into the daemon's own
+     * transcript for as long as this process lives — diagnostic only, does not feed any
+     * production code path.
+     */
+    public static int autoContainerRegisterCallback() throws Throwable {
+        ContainerCallbackBinder cb = sRegisteredCallback;
+        if (cb == null) {
+            synchronized (Phase4ProcessVerbs.class) {
+                cb = sRegisteredCallback;
+                if (cb == null) {
+                    cb = new ContainerCallbackBinder();
+                    sRegisteredCallback = cb;
+                }
+            }
+        }
+        IBinder b = autoContainerBinder();
+        String descr = sAutoContainerDescriptor;
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(descr);
+            data.writeStrongBinder(cb);
+            if (!b.transact(TXN_REGISTER_CALLBACK, data, reply, 0)) {
+                throw new IllegalStateException("AutoContainer registerCallback transaction not handled");
+            }
+            reply.readException();
+            return reply.dataAvail() >= Integer.BYTES
+                    ? reply.readInt() : REGISTER_CALLBACK_NO_RESULT_FIELD;
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /**
+     * Raw Binder (not the hidden {@code IContainerCallback$Stub}) receiving pushes from the OEM's
+     * AIDL-generated proxy. Transaction codes below (1=serviceDied, 2=receivedJson,
+     * 3=receivedInfo, 4=receivedInfo2) are inferred from the callback implementation's method
+     * order in the OEM's own decompiled bytecode, NOT independently confirmed against the AIDL
+     * compiler's actual numbering — every call therefore logs its raw code and a hex dump of the
+     * untouched data first, so a wrong guess here can still be decoded later from a bug report.
+     * Rate-limited: a dying/reconnecting native service could otherwise flood the one log section
+     * that is captured in full (unlike logcat, which the project has already lost evidence to
+     * once from an unrelated flood — see Phase 0 / INC-20260804-171617).
+     */
+    private static final class ContainerCallbackBinder extends Binder {
+        private long mLastLogAt;
+        private int mSuppressedSinceLog;
+        private static final long MIN_LOG_INTERVAL_MS = 5_000L;
+
+        @Override
+        protected synchronized boolean onTransact(int code, Parcel data, Parcel reply, int flags) {
+            byte[] raw = data.marshall();
+            data.setDataPosition(0);
+            long now = System.currentTimeMillis();
+            boolean logIt = (now - mLastLogAt) >= MIN_LOG_INTERVAL_MS;
+            if (logIt) {
+                if (mSuppressedSinceLog > 0) {
+                    ProxyDaemonMain.log("AutoContainer callback: (" + mSuppressedSinceLog
+                            + " earlier push(es) suppressed, min " + MIN_LOG_INTERVAL_MS + "ms apart)");
+                }
+                mLastLogAt = now;
+                mSuppressedSinceLog = 0;
+                StringBuilder sb = new StringBuilder("AutoContainer callback: code=").append(code)
+                        .append(" raw(").append(raw.length).append("B)=").append(toHex(raw));
+                try {
+                    // Skip whatever the caller wrote as an interface token — not validated against
+                    // any expected descriptor, just consumed so the following best-effort reads
+                    // line up. writeInterfaceToken()'s real wire format is TWO fields, not one: a
+                    // leading int32 (IPCThreadState strict-mode policy word) THEN the String16
+                    // descriptor — a lone readString() misreads that policy int as the string's
+                    // length prefix and desyncs every field that follows (caught by review).
+                    data.readInt();
+                    data.readString();
+                    switch (code) {
+                        case 1: sb.append(" [serviceDied()]"); break;
+                        case 2: sb.append(" [receivedJson type=").append(data.readInt())
+                                  .append(" json=").append(data.readString()).append(']'); break;
+                        case 3: sb.append(" [receivedInfo type=").append(data.readInt())
+                                  .append(" infoInt=").append(data.readInt())
+                                  .append(" infoStr=").append(data.readString()).append(']'); break;
+                        case 4: {
+                            int t = data.readInt();
+                            byte[] payload = data.createByteArray();
+                            sb.append(" [receivedInfo2 type=").append(t)
+                              .append(" dataLen=").append(payload == null ? -1 : payload.length)
+                              .append(']');
+                            break;
+                        }
+                        default: sb.append(" [unknown code — see raw hex above]");
+                    }
+                } catch (Throwable decodeFail) {
+                    sb.append(" (decode failed: ").append(decodeFail.getClass().getSimpleName()).append(')');
+                }
+                ProxyDaemonMain.log(sb.toString());
+            } else {
+                mSuppressedSinceLog++;
+            }
+            if ((flags & IBinder.FLAG_ONEWAY) == 0 && reply != null) {
+                reply.writeNoException();
+            }
+            return true;
+        }
+
+        private static String toHex(byte[] b) {
+            StringBuilder sb = new StringBuilder(b.length * 2);
+            for (byte x : b) sb.append(String.format(Locale.ROOT, "%02x", x));
+            return sb.toString();
+        }
     }
 }
