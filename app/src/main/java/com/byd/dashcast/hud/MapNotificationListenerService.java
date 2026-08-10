@@ -618,6 +618,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastText    = text;
         lastSubText = subText;
 
+        // OPT-IN raw capture (Diagnostics → "Capture raw nav-notification text"): the ACTUAL text a
+        // supported nav app posts, clipped — logged here for EVERY distinct notification content,
+        // BEFORE the skip / guidance gates below, so notifications that FAIL to parse (the Waze case
+        // we need to diagnose: no matchable distance/icon → early return) are still captured. Location
+        // PII; OFF by default; deduped on content by the check just above. See KEY_NAV_RAW_CAPTURE.
+        if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+            AppLogger.i(TAG, "NAV RAW pkg=" + sbn.getPackageName()
+                    + " title='" + clip(title) + "'"
+                    + " text='" + clip(text) + "'"
+                    + (bigText.isEmpty() ? "" : " big='" + clip(bigText) + "'")
+                    + (subText.isEmpty() ? "" : " sub='" + clip(subText) + "'"));
+        }
+
         // Skip noise notifications (OpenBYD MapNotificationListenerService pattern).
         // These are ongoing navigation notifications that carry no maneuver data.
         String lowerText  = text.toLowerCase(Locale.ROOT);
@@ -720,19 +733,6 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                     + (bigText.isEmpty() ? "" : " bigLen=" + bigText.length())
                     + " -> dist=" + distance + " road=" + (roadName.isEmpty() ? "no" : "yes")
                     + " eta=" + (eta != null ? "yes" : "no"));
-
-            // OPT-IN raw capture (Diagnostics screen → "Capture raw nav-notification text"): the
-            // ACTUAL title/text a nav app posts, clipped, so the maintainer can calibrate the text
-            // parser against real Waze/Maps strings. This is location PII (destination / road / ETA)
-            // and flows into bug reports, so it is emitted ONLY when explicitly enabled, and OFF by
-            // default. One sample per distinct maneuver (already inside the (icon|road) dedup).
-            if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
-                AppLogger.i(TAG, "NAV RAW pkg=" + sbn.getPackageName()
-                        + " title='" + clip(title) + "'"
-                        + " text='" + clip(text) + "'"
-                        + (bigText.isEmpty() ? "" : " big='" + clip(bigText) + "'")
-                        + (subText.isEmpty() ? "" : " sub='" + clip(subText) + "'"));
-            }
         }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
                 + " road=" + (roadName.isEmpty() ? "no" : "yes")
