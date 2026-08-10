@@ -6,6 +6,8 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.os.SystemClock;
 
+import com.byd.dashcast.cluster.display.ClusterGeometryPolicy;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.proxy.DaemonBinderResolver;
 import com.byd.dashcast.proxy.ProxyClient;
@@ -944,9 +946,27 @@ public class AdbLocalClient {
      *
      * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal EU — CONFIRMED), 31=10.25" (Seal U-DMI)
      */
-    public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
+    public static void restoreOriginCluster(final Context context, final int requestedScreenSizeCmd,
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
+        // This is the DEFAULT Stop flow and it passes the raw preference, whose default is 30
+        // (12.3"). On an Atto 3 / Dolphin that never had its cluster size configured, every Stop
+        // was therefore ordering a 1280x480 panel into the 12.3" shape — which drops it into its
+        // degraded simple mode. Two of the three known simple-mode reports came through HERE, with
+        // the ADAS window fix off entirely (INC-20260625-173900, INC-20260715-141429); only one
+        // came through the ADAS path that was guarded first. Sanitising at the entry covers both
+        // the typed and the shell sub-paths below with one check.
+        final int screenSizeCmd = ClusterGeometryPolicy.allowShapeCommand(
+                requestedScreenSizeCmd,
+                ClusterPrefs.getClusterType(context),
+                ClusterPrefs.isSmallClusterPanelLatched(context))
+                ? requestedScreenSizeCmd
+                : ClusterGeometryPolicy.CMD_8_8;
+        if (screenSizeCmd != requestedScreenSizeCmd) {
+            AppLogger.w(TAG, "restoreOriginCluster: refusing shape preset "
+                    + requestedScreenSizeCmd + " on a 1280x480 cluster — sending "
+                    + screenSizeCmd + " (8.8\") instead, the larger shape breaks that panel");
+        }
         // v1.2.78 — see restoreBydOnCluster() above for rationale.
         com.byd.dashcast.cluster.display.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
@@ -1073,6 +1093,20 @@ public class AdbLocalClient {
     public static void sendInfo(final Context context,
                                 final int type, final int infoInt, final String infoStr,
                                 final Callback callback) {
+        // Last line of defence for the cluster shape presets. The senders are guarded individually
+        // (the ADAS window fix in ClusterManager, the preference in restoreOriginCluster), but the
+        // first version of this protection guarded one of them and missed the other, so the rule is
+        // also enforced here — the single point every AutoContainer command physically leaves the
+        // app through. Non-shape commands are untouched.
+        if (type == com.byd.dashcast.cluster.display.ClusterManager.CLUSTER_TYPE
+                && !ClusterGeometryPolicy.allowShapeCommand(infoInt,
+                        ClusterPrefs.getClusterType(context),
+                        ClusterPrefs.isSmallClusterPanelLatched(context))) {
+            AppLogger.w(TAG, "sendInfo: BLOCKED shape preset " + infoInt
+                    + " — this car has the 1280x480 cluster, the larger shape breaks it");
+            if (callback != null) callback.onSuccess("");
+            return;
+        }
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 // v1.6.102 — daemon-free & ADB-free FIRST attempt, tried ONLY when the

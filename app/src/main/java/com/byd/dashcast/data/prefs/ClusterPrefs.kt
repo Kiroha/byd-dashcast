@@ -61,6 +61,7 @@ object ClusterPrefs {
      * some screen sizes but causes a visible shape change on others.
      */
     const val KEY_ADAS_WINDOW_FIX = "adas_window_fix"
+    private const val KEY_SMALL_CLUSTER_PANEL = "small_cluster_panel_seen"
 
     /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
     const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
@@ -255,6 +256,26 @@ object ClusterPrefs {
     @JvmStatic
     fun setAdasWindowFixEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_ADAS_WINDOW_FIX, enabled).apply()
+    }
+
+    /**
+     * Latched the first time this car's cluster is ever seen at 1280x480 — see
+     * [com.byd.dashcast.cluster.display.ClusterGeometryPolicy].
+     *
+     * Persisted deliberately, and never cleared: a live geometry reading is useless for this
+     * question because once a small panel has been pushed to 1920x720 it reports 1920x720 for
+     * good, so the very cars that need protecting are the ones a live check stops recognising.
+     * One observation is enough, and it must outlive the process that made it.
+     */
+    @JvmStatic
+    fun isSmallClusterPanelLatched(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_SMALL_CLUSTER_PANEL, false)
+
+    /** One-way: only ever sets the latch, never clears it. */
+    @JvmStatic
+    fun latchSmallClusterPanel(ctx: Context) {
+        if (isSmallClusterPanelLatched(ctx)) return
+        edit(ctx).putBoolean(KEY_SMALL_CLUSTER_PANEL, true).apply()
     }
 
     /**
