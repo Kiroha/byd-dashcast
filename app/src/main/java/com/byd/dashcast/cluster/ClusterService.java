@@ -485,10 +485,17 @@ public class ClusterService extends Service
      * Record, permanently, that this car has the small 1280x480 cluster panel — the one that drops
      * into its degraded "simple mode" if a larger shape preset is ever sent to it.
      *
-     * <p>Called from the one place the real geometry becomes known. Latching rather than re-reading
-     * is the whole point: the damage is self-concealing, because a panel that has already been
-     * pushed to 1920x720 reports 1920x720 from then on, so a live check stops recognising exactly
-     * the cars that need protecting. One sighting is enough and it has to outlive the process.
+     * <p><b>Second chance, not the primary reading.</b> This runs after activation, so on a car
+     * where the ADAS fix has just forced the 12.3" shape it sees 1920x720 and correctly declines to
+     * latch — which is why v1.8.27, where this was the ONLY latch site, failed to fire on exactly
+     * the cars it protects. {@code ClusterManager.activateClusterDisplay} now latches from the
+     * display it already holds BEFORE sending anything; this site still earns its place for the
+     * DiLink 4 path, where the app cannot enumerate the display at all and the geometry only
+     * arrives later via the uid-2000 daemon's {@code dumpsys display} parse.
+     *
+     * <p>Latching rather than re-reading is the whole point: the damage is self-concealing, because
+     * a panel already pushed to 1920x720 reports 1920x720 from then on. One sighting is enough and
+     * it has to outlive the process.
      */
     private void latchPanelGeometry(int width, int height) {
         if (!ClusterGeometryPolicy.isSmallPanelGeometry(width, height)) return;

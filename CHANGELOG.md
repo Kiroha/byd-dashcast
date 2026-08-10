@@ -14,6 +14,16 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.28-beta (versionCode 618)
+
+**Fixes where 1.8.27's small-panel latch reads.** Follow-up to that release; nothing else changes.
+
+1.8.27 refuses the destructive shape presets (30/31) on 1280x480 clusters using a *persisted* latch rather than a live reading — because a panel already pushed to 1920x720 reports 1920x720 from then on. The latch was right; **where it read was not**. It fired from `ClusterService.onDashboardDisplayConnected`, which runs *after* activation, and therefore after the ADAS window fix may already have forced 1920x720 — so on exactly the 8.8" cars it protects, it read the switched value and never fired. INC-20260720-073031 shows both readings on one car, each correct at its instant: `real 1920 x 720` during projection, `DisplayDeviceInfo … 1280 x 480` once the native shape was restored. `ClusterManager.activateClusterDisplay` now latches from the display it already holds (`findClusterDisplay`, step 1) before any command goes out — the same display the ADAS guard consults two lines later. The `ClusterService` site stays as a second chance for DiLink 4, where the app cannot enumerate the display and the geometry arrives later from the daemon's `dumpsys` parse. No behaviour change on 10.25"/12.3" clusters.
+
+Two leads closed by RE rather than an on-car pull: **`libfission_config.so`** holds a static `{count=2, 1920x1080, 1920x720}` table returned by `fission_disp_config_get` (`adrp/add/ret`, no property or file read) — but INC-20260720-064201 (1920x720) and INC-20260720-073031 (1280x480) carry a **byte-identical `ro.build.fingerprint`**, so one `/system` image ships on both panel sizes and that table cannot discriminate: dead by construction. And **`FissionHostSvc.getAutoCarDisplay`** is initialised to `type=0/w=-1/h=-1/producer=NULL` by its constructor, so it answers −1/−1 before any projection — a falsifiable prediction for the Diag button shipped in 1.8.26 and still never run on a car.
+
+Still open: no reliable pre-activation signal exists. The fresh-install window is narrower but not closed; selecting the cluster size in Settings closes it immediately. 257 unit tests. See [docs/releases/1.8.28-beta.md](docs/releases/1.8.28-beta.md).
+
 ### 1.8.27-beta (versionCode 617)
 
 **Stops DashCast from degrading the instrument cluster on Atto 3 / Dolphin, and makes the deferred cluster re-anchor actually work on DiLink 3.**
