@@ -695,7 +695,18 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         noteNavActivity(sbn.getPackageName(), false);
 
         if (distance < 0) {
-            Log.d(TAG, "no distance found in: " + combined);
+            // This printed the whole notification — current road, upcoming street, destination,
+            // ETA — with no gate, thirty lines above the comment that calls exactly that content
+            // location PII and notes that it flows into every bug report. It goes to logcat, and
+            // BugReportCapture copies logcat whole, so the opt-in that exists to control raw nav
+            // text did not in fact control it. Worse, it fires precisely when parsing failed —
+            // the situation people open a bug report about — so it was correlated with sending.
+            if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+                Log.d(TAG, "no distance found in: " + combined);
+            } else {
+                Log.d(TAG, "no distance found (len=" + combined.length()
+                        + ", raw nav capture off — enable it in Diagnostics to see the text)");
+            }
             return; // guidance-looking but no usable distance → recorded above as parse-fail
         }
 
