@@ -22,6 +22,9 @@ public class DashCastApp extends Application {
         // credential. Storing a reference is free; the encrypted store itself is opened lazily and
         // warmed off the main thread below, so cold start is unaffected.
         com.byd.dashcast.report.ReportChannel.init(getApplicationContext());
+        // Same reason, for the consent gate: TelegramBugReporter.isConfigured() is called from
+        // places with no Context, and it must be able to answer "no" before anything uploads.
+        com.byd.dashcast.report.ReportConsent.init(getApplicationContext());
 
         final Platform p = Platform.get();
         // Build/SystemProperties-derived fields only — none of these touch

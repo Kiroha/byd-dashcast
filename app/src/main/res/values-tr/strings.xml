@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Hata raporlarının gönderimi</string>
     <string name="pairing_state_on">Açık — raporların DashCast ekibine gönderiliyor</string>
     <string name="pairing_state_off">Kapalı — raporların bu cihazda kalıyor</string>
-    <string name="pairing_dialog_howto">Raporlarını DashCast ekibine gönderebilmek için bu cihazın %1$s yapılandırma dosyasına ihtiyacı var.\n\n1. Dosyayı İndirilenler klasörüne kopyala\n2. İçe aktar\'a dokun\n\nYapılandırmayı metin olarak aldıysan kopyala ve Yapıştır\'a dokun.</string>
-    <string name="pairing_dialog_paired">Bu cihaz yapılandırıldı: hata raporların DashCast ekibine gönderiliyor.\n\nYapılandırmayı unutmak gönderimi kapatır; raporlar bu cihazda kalır.</string>
-    <string name="pairing_action_import">İçe aktar</string>
-    <string name="pairing_action_paste">Yapıştır</string>
-    <string name="pairing_action_forget">Unut</string>
-    <string name="pairing_action_close">Kapat</string>
-    <string name="pairing_working">Dosya aranıyor…</string>
-    <string name="pairing_result_ok">Cihaz yapılandırıldı. Rapor gönderimi açık.</string>
-    <string name="pairing_result_not_found">Dosya bulunamadı. İndirilenler klasöründe olduğunu kontrol et.</string>
-    <string name="pairing_result_invalid">Yapılandırma kullanılamaz: içinde geçerli kimlik bilgisi yok.</string>
-    <string name="pairing_result_unreadable">Okunamadı. Tekrar dene.</string>
-    <string name="pairing_result_clipboard_empty">Pano boş.</string>
-    <string name="pairing_result_forgotten">Yapılandırma unutuldu. Raporlar bu cihazda kalıyor.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Kabul edildi, ancak bu cihazda yapılandırılmış bir kanal yok</string>
+    <string name="consent_title">Tanılama verileri DashCast ekibine gönderilsin mi?</string>
+    <string name="consent_body">Bir sorunu düzeltmek için DashCast ekibinin, o anda araçta neler olduğunu bilmesi gerekir.\n\nBir rapor şunları içerir:\n\n•  DashCast günlüğü ve Android sistem günlüğü — diğer uygulamaların yazdıkları dahil;\n\n•  araç ve ana ünite bilgileri: model, sürüm, ayarlar, kurulu uygulamalar ve aracını tanımlayan şasi numarası (VIN);\n\n•  Wi-Fi ağının adı ve yerel IP adresi;\n\n•  forma yazdıkların ve verdiğin Telegram kullanıcı adı;\n\n•  ekran görüntüleri açıksa: ana ekranın ve gösterge panelinin bulanıklaştırılmamış görüntüleri; bunlarda gideceğin yeri gösteren bir harita görünebilir. Bunlar her gönderimde ayrıca sorulur.\n\n“Gönder”e dokunmadan hiçbir şey araçtan çıkmaz. Raporları DashCast ekibi özel bir grupta okur.\n\nReddedersen rapor bu cihazda kalır ve dilersen kendin paylaşırsın. Fikrini istediğin zaman Ayarlar\'dan değiştirebilirsin.</string>
+    <string name="consent_accept">Kabul et</string>
+    <string name="consent_refuse">Reddet</string>
+    <string name="consent_revoke">Geri al</string>
+    <string name="consent_close">Kapat</string>
+    <string name="consent_result_granted">Teşekkürler. Raporların DashCast ekibine gönderilecek.</string>
+    <string name="consent_result_refused">Reddedildi. Raporların bu cihazda kalacak.</string>
+    <string name="consent_result_revoked">Geri alındı. Raporların bu cihazda kalacak.</string>
 </resources>

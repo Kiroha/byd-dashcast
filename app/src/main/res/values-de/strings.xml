@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Übermittlung von Fehlerberichten</string>
     <string name="pairing_state_on">Ein — deine Berichte gehen an das DashCast-Team</string>
     <string name="pairing_state_off">Aus — deine Berichte bleiben auf diesem Gerät</string>
-    <string name="pairing_dialog_howto">Damit deine Berichte an das DashCast-Team gehen, benötigt dieses Gerät die Konfigurationsdatei %1$s.\n\n1. Kopiere die Datei in den Ordner „Download“\n2. Tippe auf Importieren\n\nWenn du die Konfiguration als Text erhalten hast, kopiere sie und tippe auf Einfügen.</string>
-    <string name="pairing_dialog_paired">Dieses Gerät ist eingerichtet: Deine Fehlerberichte gehen an das DashCast-Team.\n\nWird die Konfiguration verworfen, ist die Übermittlung aus; die Berichte bleiben dann auf diesem Gerät.</string>
-    <string name="pairing_action_import">Importieren</string>
-    <string name="pairing_action_paste">Einfügen</string>
-    <string name="pairing_action_forget">Verwerfen</string>
-    <string name="pairing_action_close">Schließen</string>
-    <string name="pairing_working">Datei wird gesucht…</string>
-    <string name="pairing_result_ok">Gerät eingerichtet. Die Übermittlung ist eingeschaltet.</string>
-    <string name="pairing_result_not_found">Datei nicht gefunden. Prüfe, ob sie im Ordner „Download“ liegt.</string>
-    <string name="pairing_result_invalid">Konfiguration unbrauchbar: keine gültigen Zugangsdaten darin.</string>
-    <string name="pairing_result_unreadable">Lesen nicht möglich. Versuche es erneut.</string>
-    <string name="pairing_result_clipboard_empty">Die Zwischenablage ist leer.</string>
-    <string name="pairing_result_forgotten">Konfiguration verworfen. Die Berichte bleiben auf diesem Gerät.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Zugestimmt, aber auf diesem Gerät ist kein Kanal eingerichtet</string>
+    <string name="consent_title">Diagnosedaten an das DashCast-Team senden?</string>
+    <string name="consent_body">Um ein Problem zu beheben, muss das DashCast-Team wissen, was zu diesem Zeitpunkt im Auto passiert ist.\n\nEin Bericht enthält:\n\n•  das DashCast-Protokoll und das Android-Systemprotokoll, einschließlich dessen, was andere Apps geschrieben haben;\n\n•  Angaben zum Auto und zur Recheneinheit: Modell, Version, Einstellungen, installierte Apps und die Fahrzeug-Identifizierungsnummer (VIN), die dein Auto identifiziert;\n\n•  den Namen des WLAN-Netzwerks und die lokale IP-Adresse;\n\n•  was du ins Formular schreibst, und den angegebenen Telegram-Namen;\n\n•  wenn Screenshots eingeschaltet sind: unverpixelte Bilder des Hauptbildschirms und des Kombiinstruments, auf denen eine Karte mit deinem Ziel zu sehen sein kann. Danach wirst du bei jedem Senden erneut gefragt.\n\nNichts verlässt das Auto, bevor du auf „Senden“ tippst. Die Berichte liest das DashCast-Team in einer privaten Gruppe.\n\nWenn du ablehnst, bleibt der Bericht auf diesem Gerät und du kannst ihn selbst weitergeben. Du kannst es in den Einstellungen jederzeit ändern.</string>
+    <string name="consent_accept">Zustimmen</string>
+    <string name="consent_refuse">Ablehnen</string>
+    <string name="consent_revoke">Widerrufen</string>
+    <string name="consent_close">Schließen</string>
+    <string name="consent_result_granted">Danke. Deine Berichte gehen an das DashCast-Team.</string>
+    <string name="consent_result_refused">Abgelehnt. Deine Berichte bleiben auf diesem Gerät.</string>
+    <string name="consent_result_revoked">Widerrufen. Deine Berichte bleiben auf diesem Gerät.</string>
 </resources>

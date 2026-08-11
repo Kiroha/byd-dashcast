@@ -186,7 +186,7 @@ class AaosDiagActivity : AppCompatActivity() {
                 val zip = HudCaptureSupport.zipDirToStore(this, work)
                 log("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
                 if (!TelegramBugReporter.isConfigured()) {
-                    log("Telegram not configured — offering the system share instead")
+                    log("cannot upload: ${com.byd.dashcast.report.ReportConsent.transportBlockReason()} — offering the system share instead")
                     HudCaptureSupport.offerFallback(this, zip) { line -> log(line) }
                     resetUi(); return@Thread
                 }

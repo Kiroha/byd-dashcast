@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Envío de informes de error</string>
     <string name="pairing_state_on">Activado: tus informes se envían al equipo de DashCast</string>
     <string name="pairing_state_off">Desactivado: tus informes se quedan en este dispositivo</string>
-    <string name="pairing_dialog_howto">Para enviar tus informes al equipo de DashCast, este dispositivo necesita el archivo de configuración %1$s.\n\n1. Copia el archivo en la carpeta Descargas\n2. Toca Importar\n\nSi has recibido la configuración como texto, cópiala y toca Pegar.</string>
-    <string name="pairing_dialog_paired">Este dispositivo está configurado: tus informes de error se envían al equipo de DashCast.\n\nSi olvidas la configuración, el envío se desactiva y los informes se quedarán en este dispositivo.</string>
-    <string name="pairing_action_import">Importar</string>
-    <string name="pairing_action_paste">Pegar</string>
-    <string name="pairing_action_forget">Olvidar</string>
-    <string name="pairing_action_close">Cerrar</string>
-    <string name="pairing_working">Buscando el archivo…</string>
-    <string name="pairing_result_ok">Dispositivo configurado. El envío de informes está activado.</string>
-    <string name="pairing_result_not_found">Archivo no encontrado. Comprueba que esté en la carpeta Descargas.</string>
-    <string name="pairing_result_invalid">Configuración inservible: no contiene credenciales válidas.</string>
-    <string name="pairing_result_unreadable">No se ha podido leer. Inténtalo de nuevo.</string>
-    <string name="pairing_result_clipboard_empty">El portapapeles está vacío.</string>
-    <string name="pairing_result_forgotten">Configuración olvidada. Los informes se quedan en este dispositivo.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Aceptado, pero no hay ningún canal configurado en este dispositivo</string>
+    <string name="consent_title">¿Enviar diagnósticos al equipo de DashCast?</string>
+    <string name="consent_body">Para corregir un problema, el equipo de DashCast necesita saber qué estaba pasando en el coche en ese momento.\n\nUn informe contiene:\n\n•  el registro de DashCast y el del sistema Android, incluido lo que hayan escrito otras aplicaciones;\n\n•  información sobre el coche y la unidad central: modelo, versión, ajustes, aplicaciones instaladas y el número de bastidor (VIN), que identifica tu coche;\n\n•  el nombre de la red wifi y la dirección IP local;\n\n•  lo que escribas en el formulario y el usuario de Telegram que indiques;\n\n•  si las capturas de pantalla están activadas: imágenes sin difuminar de la pantalla central y del cuadro de instrumentos, que pueden mostrar un mapa con tu destino. Se te preguntará por ellas en cada envío.\n\nNada sale del coche hasta que tocas «Enviar». Los informes los lee el equipo de DashCast en un grupo privado.\n\nSi te niegas, el informe se queda en este dispositivo y puedes compartirlo tú mismo. Puedes cambiar de opinión cuando quieras en los Ajustes.</string>
+    <string name="consent_accept">Aceptar</string>
+    <string name="consent_refuse">Rechazar</string>
+    <string name="consent_revoke">Retirar</string>
+    <string name="consent_close">Cerrar</string>
+    <string name="consent_result_granted">Gracias. Tus informes se enviarán al equipo de DashCast.</string>
+    <string name="consent_result_refused">Rechazado. Tus informes se quedarán en este dispositivo.</string>
+    <string name="consent_result_revoked">Retirado. Tus informes se quedarán en este dispositivo.</string>
 </resources>

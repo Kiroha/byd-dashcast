@@ -629,17 +629,18 @@
     <string name="pairing_row_title">Envoi des rapports de bug</string>
     <string name="pairing_state_on">Activé — vos rapports sont transmis à l\'équipe DashCast</string>
     <string name="pairing_state_off">Désactivé — vos rapports restent sur cet appareil</string>
-    <string name="pairing_dialog_howto">Pour transmettre vos rapports à l\'équipe DashCast, cet appareil a besoin du fichier de configuration %1$s.\n\n1. Copiez ce fichier dans le dossier Téléchargements\n2. Touchez Importer\n\nSi vous avez reçu la configuration sous forme de texte, copiez-la, puis touchez Coller.</string>
-    <string name="pairing_dialog_paired">Cet appareil est configuré : vos rapports de bug sont transmis à l\'équipe DashCast.\n\nOublier la configuration désactive l\'envoi ; les rapports resteront sur cet appareil.</string>
-    <string name="pairing_action_import">Importer</string>
-    <string name="pairing_action_paste">Coller</string>
-    <string name="pairing_action_forget">Oublier</string>
-    <string name="pairing_action_close">Fermer</string>
-    <string name="pairing_working">Recherche du fichier…</string>
-    <string name="pairing_result_ok">Appareil configuré. L\'envoi des rapports est activé.</string>
-    <string name="pairing_result_not_found">Fichier introuvable. Vérifiez qu\'il se trouve bien dans le dossier Téléchargements.</string>
-    <string name="pairing_result_invalid">Configuration inutilisable : aucun identifiant valide dedans.</string>
-    <string name="pairing_result_unreadable">Lecture impossible. Réessayez.</string>
-    <string name="pairing_result_clipboard_empty">Le presse-papiers est vide.</string>
-    <string name="pairing_result_forgotten">Configuration oubliée. Les rapports restent sur cet appareil.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Accepté, mais aucun canal n\'est configuré sur cet appareil</string>
+    <string name="consent_title">Envoyer les diagnostics à l\'équipe DashCast ?</string>
+    <string name="consent_body">Pour corriger un problème, l\'équipe DashCast a besoin de savoir ce qui se passait dans la voiture à ce moment-là.\n\nUn rapport contient :\n\n•  le journal de DashCast et celui du système Android, y compris ce que les autres applications ont écrit ;\n\n•  des informations sur la voiture et le boîtier : modèle, version, réglages, applications installées, et le numéro de série du véhicule (VIN), qui identifie votre voiture ;\n\n•  le nom du réseau Wi-Fi et l\'adresse IP locale ;\n\n•  ce que vous écrivez dans le formulaire et le pseudo Telegram que vous indiquez ;\n\n•  si les captures d\'écran sont activées : des images non floutées de l\'écran central et du combiné, qui peuvent montrer une carte avec votre destination. Elles vous sont redemandées à chaque envoi.\n\nRien ne part tant que vous n\'avez pas touché « Envoyer ». Les rapports sont lus par l\'équipe DashCast dans un groupe privé.\n\nSi vous refusez, le rapport reste sur cet appareil et vous pouvez le partager vous-même. Vous pouvez changer d\'avis à tout moment dans les Réglages.</string>
+    <string name="consent_accept">Accepter</string>
+    <string name="consent_refuse">Refuser</string>
+    <string name="consent_revoke">Révoquer</string>
+    <string name="consent_close">Fermer</string>
+    <string name="consent_result_granted">Merci. Vos rapports seront transmis à l\'équipe DashCast.</string>
+    <string name="consent_result_refused">Refusé. Vos rapports resteront sur cet appareil.</string>
+    <string name="consent_result_revoked">Révoqué. Vos rapports resteront sur cet appareil.</string>
 </resources>

@@ -31,10 +31,20 @@ object TelegramBugReporter {
         fun onFailed(message: String)
     }
 
-    /** True when a bot token + chat id are baked in — i.e. direct upload is possible. */
+    /**
+     * True when this device may upload: the driver has agreed, and a channel is configured.
+     *
+     * The consent term is first on purpose. It is the cheap check, and it is the one whose answer
+     * must not depend on whether a credential happens to be present — a device that has refused is
+     * not "unconfigured pending provisioning", it has said no.
+     *
+     * Every caller of this already handles false by keeping the report on the device or offering a
+     * share sheet, which is exactly the right behaviour for a refusal. See [ReportConsent] for why
+     * the gate lives here rather than in the seven screens that can start an upload.
+     */
     @JvmStatic
     fun isConfigured(): Boolean =
-        ReportChannel.hasTelegram()
+        ReportConsent.isGranted() && ReportChannel.hasTelegram()
 
     /**
      * Uploads [file] with [caption] on a background thread. [cb] fires on the main thread.

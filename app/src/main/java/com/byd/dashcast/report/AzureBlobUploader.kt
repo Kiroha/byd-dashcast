@@ -44,10 +44,15 @@ object AzureBlobUploader {
         fun onFailed(message: String)
     }
 
-    /** True when a container URL and a SAS were supplied at build time. */
+    /**
+     * True when this device may upload: the driver has agreed, and a container + SAS are stored.
+     *
+     * Same gate as [TelegramBugReporter.isConfigured], for the same reason — a refusal has to close
+     * every road out of the car, not just the one the user happened to be looking at.
+     */
     @JvmStatic
     fun isConfigured(): Boolean =
-        ReportChannel.hasAzure()
+        ReportConsent.isGranted() && ReportChannel.hasAzure()
 
     /**
      * Uploads [file] as [blobName]. Blocking — call it off the main thread (the extraction flow

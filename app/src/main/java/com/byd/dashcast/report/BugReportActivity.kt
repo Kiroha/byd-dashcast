@@ -65,6 +65,13 @@ class BugReportActivity : Activity() {
             etTitle.requestFocus()
             return
         }
+        // Validate first, ask second: a notice raised over a form that is about to be rejected for
+        // a missing title asks the user to decide something before they have finished the task.
+        ReportConsent.askThen(this) { doSend(title) }
+    }
+
+    private fun doSend(title: String) {
+        if (mSending) return
 
         mSending = true
         btnSend.isEnabled = false
