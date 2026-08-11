@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Durchlauf beendet — was hast du auf dem CLUSTER gesehen?</string>
     <string name="hud_sweep_opt_photographed">📷 Ich habe die Symbole fotografiert</string>
     <string name="hud_sweep_opt_nothing">❌ Auf dem Cluster wurde nichts angezeigt</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Übermittlung von Fehlerberichten</string>
+    <string name="pairing_state_on">Ein — deine Berichte gehen an das DashCast-Team</string>
+    <string name="pairing_state_off">Aus — deine Berichte bleiben auf diesem Gerät</string>
+    <string name="pairing_dialog_howto">Damit deine Berichte an das DashCast-Team gehen, benötigt dieses Gerät die Konfigurationsdatei %1$s.\n\n1. Kopiere die Datei in den Ordner „Download“\n2. Tippe auf Importieren\n\nWenn du die Konfiguration als Text erhalten hast, kopiere sie und tippe auf Einfügen.</string>
+    <string name="pairing_dialog_paired">Dieses Gerät ist eingerichtet: Deine Fehlerberichte gehen an das DashCast-Team.\n\nWird die Konfiguration verworfen, ist die Übermittlung aus; die Berichte bleiben dann auf diesem Gerät.</string>
+    <string name="pairing_action_import">Importieren</string>
+    <string name="pairing_action_paste">Einfügen</string>
+    <string name="pairing_action_forget">Verwerfen</string>
+    <string name="pairing_action_close">Schließen</string>
+    <string name="pairing_working">Datei wird gesucht…</string>
+    <string name="pairing_result_ok">Gerät eingerichtet. Die Übermittlung ist eingeschaltet.</string>
+    <string name="pairing_result_not_found">Datei nicht gefunden. Prüfe, ob sie im Ordner „Download“ liegt.</string>
+    <string name="pairing_result_invalid">Konfiguration unbrauchbar: keine gültigen Zugangsdaten darin.</string>
+    <string name="pairing_result_unreadable">Lesen nicht möglich. Versuche es erneut.</string>
+    <string name="pairing_result_clipboard_empty">Die Zwischenablage ist leer.</string>
+    <string name="pairing_result_forgotten">Konfiguration verworfen. Die Berichte bleiben auf diesem Gerät.</string>
 </resources>

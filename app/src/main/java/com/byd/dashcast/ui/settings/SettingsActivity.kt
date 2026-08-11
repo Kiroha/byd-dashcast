@@ -11,11 +11,13 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.CompoundButton
 import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -26,6 +28,7 @@ import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonConfig
+import com.byd.dashcast.report.ReportChannel
 import com.byd.dashcast.proxy.ShellGateway
 import com.byd.dashcast.ui.diag.DiagActivity
 import com.byd.dashcast.ui.diag.SysInfoActivity
@@ -103,6 +106,135 @@ class SettingsActivity : AppCompatActivity() {
         // "Code source" row — opens the GitHub repository.
         val rowSourceCode: View? = findViewById(R.id.row_source_code)
         rowSourceCode?.setOnClickListener { openUrl("https://github.com/Kiroha/byd-dashcast") }
+
+        // Bug report delivery — the only place a normal user can pair this device.
+        findViewById<View>(R.id.row_report_channel)?.setOnClickListener { showPairingDialog() }
+        refreshReportChannelRow()
+    }
+
+    // ── Bug report delivery (pairing) ────────────────────────────────────────
+    //
+    // Credentials no longer ship in the APK, so a device that has not been paired keeps its
+    // reports to itself. That is the safe default, but it is only acceptable if pairing is
+    // something a user can actually do — hence a row with a visible state and a dialog, rather
+    // than the developer-screen button this started as.
+
+    /**
+     * Reflects the pairing state into the row.
+     *
+     * Read off the main thread: the state lives in EncryptedSharedPreferences, and the first read
+     * of the process builds a KeyStore-backed store — an IPC round trip that has no business on
+     * the thread drawing this screen. [mDestroyed] guards the hop back.
+     */
+    private fun refreshReportChannelRow() {
+        Thread {
+            val paired = try { ReportChannel.isPairedOnDevice(this) } catch (_: Throwable) { false }
+            if (mDestroyed) return@Thread
+            runOnUiThread {
+                if (mDestroyed) return@runOnUiThread
+                findViewById<TextView>(R.id.tv_report_channel_state)?.setText(
+                    if (paired) R.string.pairing_state_on else R.string.pairing_state_off)
+                findViewById<ImageView>(R.id.iv_report_channel_state)?.visibility =
+                    if (paired) View.VISIBLE else View.GONE
+            }
+        }.start()
+    }
+
+    /**
+     * Two dialogs in one, because the two states need different verbs.
+     *
+     * Unpaired: explain what the file is for and offer the two ways in — the folder, or the
+     * clipboard for a token received in a chat, where saving an attachment is the harder half.
+     * Paired: say so plainly and offer to forget, which is the only action left that means
+     * anything.
+     */
+    private fun showPairingDialog() {
+        Thread {
+            val paired = try { ReportChannel.isPairedOnDevice(this) } catch (_: Throwable) { false }
+            if (mDestroyed) return@Thread
+            runOnUiThread {
+                if (mDestroyed || isFinishing) return@runOnUiThread
+                val b = AlertDialog.Builder(this)
+                    .setTitle(R.string.pairing_row_title)
+                    .setNegativeButton(R.string.pairing_action_close, null)
+                if (paired) {
+                    b.setMessage(R.string.pairing_dialog_paired)
+                        .setPositiveButton(R.string.pairing_action_forget) { _, _ -> forgetPairing() }
+                } else {
+                    b.setMessage(getString(R.string.pairing_dialog_howto, ReportChannel.IMPORT_NAME))
+                        .setPositiveButton(R.string.pairing_action_import) { _, _ -> pairFromFolder() }
+                        .setNeutralButton(R.string.pairing_action_paste) { _, _ -> pairFromClipboard() }
+                }
+                b.show()
+            }
+        }.start()
+    }
+
+    /** Looks for the provisioning file in Download, then in the maintainer's /data/local/tmp. */
+    private fun pairFromFolder() {
+        toast(getString(R.string.pairing_working))
+        try {
+            // Already asynchronous: the helper hands the work to its own executor and calls back
+            // on a background thread, so the outcome has to hop to the UI thread itself.
+            ReportChannel.importFromDevice(this) { outcome ->
+                onPairingOutcome(
+                    when {
+                        outcome.startsWith("paired") -> R.string.pairing_result_ok
+                        outcome.startsWith("no ") -> R.string.pairing_result_not_found
+                        outcome.startsWith("provisioning file found") -> R.string.pairing_result_invalid
+                        else -> R.string.pairing_result_unreadable
+                    })
+            }
+        } catch (t: Throwable) {
+            onPairingOutcome(R.string.pairing_result_unreadable)
+        }
+    }
+
+    /**
+     * Same parser, clipboard instead of a file.
+     *
+     * A tester who receives the credentials in a message can long-press, copy and paste, which
+     * skips the part of the folder route they are most likely to get wrong: getting an attachment
+     * out of a chat app and into Download with its name intact.
+     */
+    private fun pairFromClipboard() {
+        val text = try {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+        } catch (_: Throwable) { null }
+        if (text.isNullOrBlank()) {
+            onPairingOutcome(R.string.pairing_result_clipboard_empty)
+            return
+        }
+        Thread {
+            // Writes to the encrypted store — never on the main thread.
+            val applied = try { ReportChannel.applyProperties(this, text) } catch (_: Throwable) { 0 }
+            onPairingOutcome(
+                if (applied > 0) R.string.pairing_result_ok else R.string.pairing_result_invalid)
+        }.start()
+    }
+
+    /** Drops the stored credentials. Reports then stay on the device, as they do out of the box. */
+    private fun forgetPairing() {
+        Thread {
+            val ok = try { ReportChannel.clear(this) } catch (_: Throwable) { false }
+            onPairingOutcome(
+                if (ok) R.string.pairing_result_forgotten else R.string.pairing_result_unreadable)
+        }.start()
+    }
+
+    /** Single exit for every pairing attempt: tell the user, then re-read the state. */
+    private fun onPairingOutcome(msgRes: Int) {
+        if (mDestroyed) return
+        runOnUiThread {
+            if (mDestroyed) return@runOnUiThread
+            toast(getString(msgRes))
+            refreshReportChannelRow()
+        }
+    }
+
+    private fun toast(msg: String) {
+        if (!mDestroyed) Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
     }
 
     /** Open the given URL in an external browser. Null-safe and intent-resolve-safe. */

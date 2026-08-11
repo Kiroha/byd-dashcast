@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Scansione completata — cosa hai visto sul CLUSTER?</string>
     <string name="hud_sweep_opt_photographed">📷 Ho fotografato le icone</string>
     <string name="hud_sweep_opt_nothing">❌ Non è apparso niente sul cluster</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Invio delle segnalazioni</string>
+    <string name="pairing_state_on">Attivo — le tue segnalazioni arrivano al team DashCast</string>
+    <string name="pairing_state_off">Disattivato — le tue segnalazioni restano su questo dispositivo</string>
+    <string name="pairing_dialog_howto">Per inviare le tue segnalazioni al team DashCast, questo dispositivo ha bisogno del file di configurazione %1$s.\n\n1. Copia il file nella cartella Download\n2. Tocca Importa\n\nSe hai ricevuto la configurazione come testo, copiala e tocca Incolla.</string>
+    <string name="pairing_dialog_paired">Questo dispositivo è configurato: le tue segnalazioni arrivano al team DashCast.\n\nDimenticare la configurazione disattiva l\'invio; le segnalazioni resteranno su questo dispositivo.</string>
+    <string name="pairing_action_import">Importa</string>
+    <string name="pairing_action_paste">Incolla</string>
+    <string name="pairing_action_forget">Dimentica</string>
+    <string name="pairing_action_close">Chiudi</string>
+    <string name="pairing_working">Ricerca del file…</string>
+    <string name="pairing_result_ok">Dispositivo configurato. L\'invio delle segnalazioni è attivo.</string>
+    <string name="pairing_result_not_found">File non trovato. Controlla che sia nella cartella Download.</string>
+    <string name="pairing_result_invalid">Configurazione inutilizzabile: nessuna credenziale valida al suo interno.</string>
+    <string name="pairing_result_unreadable">Lettura non riuscita. Riprova.</string>
+    <string name="pairing_result_clipboard_empty">Gli appunti sono vuoti.</string>
+    <string name="pairing_result_forgotten">Configurazione dimenticata. Le segnalazioni restano su questo dispositivo.</string>
 </resources>

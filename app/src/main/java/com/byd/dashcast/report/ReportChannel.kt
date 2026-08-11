@@ -234,24 +234,7 @@ object ReportChannel {
                         done("no " + IMPORT_NAME + " found (looked in Download and /data/local/tmp)")
                         return
                     }
-                    val kv = HashMap<String, String>()
-                    for (line in text.lineSequence()) {
-                        val t = line.trim()
-                        if (t.isEmpty() || t.startsWith("#") || !t.contains('=')) continue
-                        val i = t.indexOf('=')
-                        kv[t.substring(0, i).trim()] = t.substring(i + 1).trim()
-                    }
-                    var applied = 0
-                    val tok = kv["bugReport.botToken"].orEmpty()
-                    if (tok.isNotEmpty()) {
-                        if (saveTelegram(ctx, tok, kv["bugReport.chatId"].orEmpty(),
-                                kv["bugReport.threadId"].orEmpty(),
-                                kv["bugReport.hudThreadId"].orEmpty())) applied++
-                    }
-                    val sas = kv["azure.sas"].orEmpty()
-                    if (sas.isNotEmpty()) {
-                        if (saveAzure(ctx, kv["azure.blobUrl"].orEmpty(), sas)) applied++
-                    }
+                    val applied = applyProperties(ctx, text)
                     // Counts only — never the keys' values.
                     done(if (applied > 0) "paired: $applied credential set(s) stored on this device"
                          else "provisioning file found but no usable credentials in it")
@@ -260,6 +243,42 @@ object ReportChannel {
                     done("could not read " + IMPORT_NAME + " (" + (err ?: "no detail") + ")")
                 }
             })
+    }
+
+    /**
+     * Parses a provisioning blob and stores whatever credential sets it carries.
+     *
+     * Extracted from [importFromDevice] so the same parser serves the file route and the paste
+     * route — a second implementation would be a second place for the two to drift, and a
+     * credential parser that drifts fails silently rather than loudly.
+     *
+     * Tolerant on purpose: blank lines, `#` comments and unknown keys are skipped, and `=` inside a
+     * value is preserved (Azure SAS strings contain them). A partial file is not an error — storing
+     * Telegram without Azure is a valid outcome.
+     *
+     * @return how many credential sets were stored: 0, 1 or 2. Never the values themselves.
+     */
+    @JvmStatic
+    fun applyProperties(ctx: Context, text: String): Int {
+        val kv = HashMap<String, String>()
+        for (line in text.lineSequence()) {
+            val t = line.trim()
+            if (t.isEmpty() || t.startsWith("#") || !t.contains('=')) continue
+            val i = t.indexOf('=')
+            kv[t.substring(0, i).trim()] = t.substring(i + 1).trim()
+        }
+        var applied = 0
+        val tok = kv["bugReport.botToken"].orEmpty()
+        if (tok.isNotEmpty()) {
+            if (saveTelegram(ctx, tok, kv["bugReport.chatId"].orEmpty(),
+                    kv["bugReport.threadId"].orEmpty(),
+                    kv["bugReport.hudThreadId"].orEmpty())) applied++
+        }
+        val sas = kv["azure.sas"].orEmpty()
+        if (sas.isNotEmpty()) {
+            if (saveAzure(ctx, kv["azure.blobUrl"].orEmpty(), sas)) applied++
+        }
+        return applied
     }
 
     /**

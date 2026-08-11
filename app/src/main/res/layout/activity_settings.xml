@@ -793,6 +793,42 @@
                                 app:tint="@color/md_on_surface_variant"/>
                         </LinearLayout>
 
+                        <!-- Bug report delivery: pairing state + entry point to the pairing dialog. -->
+                        <LinearLayout
+                            android:id="@+id/row_report_channel"
+                            style="@style/Widget.DashCast.ListItem"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                app:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_bug_report"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/pairing_row_title"/>
+                                <TextView
+                                    android:id="@+id/tv_report_channel_state"
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/pairing_state_off"/>
+                            </LinearLayout>
+                            <ImageView
+                                android:id="@+id/iv_report_channel_state"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center_vertical"
+                                android:visibility="gone"
+                                android:contentDescription="@string/pairing_state_on"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/md_on_surface_variant"/>
+                        </LinearLayout>
+
                         <!-- Pre-release channel (different icon to avoid duplicating system_update) -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">

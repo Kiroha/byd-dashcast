@@ -620,4 +620,26 @@
     <string name="bug_hud_no_route_understood">Compris, je vais lancer un itinéraire</string>
     <!-- HUD gate 3b — DashCast has no notification access: that alone explains "no arrow". -->
     <string name="bug_hud_no_notif_access_msg">DashCast n\'a pas accès aux notifications. C\'est indispensable : les directions sont lues dans la notification de Google Maps ou Waze. Va dans Réglages Android → Notifications → Accès aux notifications et autorise DashCast, puis relance un itinéraire.</string>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Bug report delivery — pairing.
+         Credentials are no longer built into the APK, so an unpaired device keeps its reports
+         to itself. Safe by default, but only acceptable if pairing is something a user can do
+         without a computer: hence a folder, a clipboard, and plain words for both states.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="pairing_row_title">Envoi des rapports de bug</string>
+    <string name="pairing_state_on">Activé — vos rapports sont transmis à l\'équipe DashCast</string>
+    <string name="pairing_state_off">Désactivé — vos rapports restent sur cet appareil</string>
+    <string name="pairing_dialog_howto">Pour transmettre vos rapports à l\'équipe DashCast, cet appareil a besoin du fichier de configuration %1$s.\n\n1. Copiez ce fichier dans le dossier Téléchargements\n2. Touchez Importer\n\nSi vous avez reçu la configuration sous forme de texte, copiez-la, puis touchez Coller.</string>
+    <string name="pairing_dialog_paired">Cet appareil est configuré : vos rapports de bug sont transmis à l\'équipe DashCast.\n\nOublier la configuration désactive l\'envoi ; les rapports resteront sur cet appareil.</string>
+    <string name="pairing_action_import">Importer</string>
+    <string name="pairing_action_paste">Coller</string>
+    <string name="pairing_action_forget">Oublier</string>
+    <string name="pairing_action_close">Fermer</string>
+    <string name="pairing_working">Recherche du fichier…</string>
+    <string name="pairing_result_ok">Appareil configuré. L\'envoi des rapports est activé.</string>
+    <string name="pairing_result_not_found">Fichier introuvable. Vérifiez qu\'il se trouve bien dans le dossier Téléchargements.</string>
+    <string name="pairing_result_invalid">Configuration inutilisable : aucun identifiant valide dedans.</string>
+    <string name="pairing_result_unreadable">Lecture impossible. Réessayez.</string>
+    <string name="pairing_result_clipboard_empty">Le presse-papiers est vide.</string>
+    <string name="pairing_result_forgotten">Configuration oubliée. Les rapports restent sur cet appareil.</string>
 </resources>

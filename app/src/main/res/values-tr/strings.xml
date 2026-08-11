@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Tarama bitti — CLUSTER\'da ne gördün?</string>
     <string name="hud_sweep_opt_photographed">📷 Simgelerin fotoğrafını çektim</string>
     <string name="hud_sweep_opt_nothing">❌ Cluster\'da hiçbir şey görünmedi</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Hata raporlarının gönderimi</string>
+    <string name="pairing_state_on">Açık — raporların DashCast ekibine gönderiliyor</string>
+    <string name="pairing_state_off">Kapalı — raporların bu cihazda kalıyor</string>
+    <string name="pairing_dialog_howto">Raporlarını DashCast ekibine gönderebilmek için bu cihazın %1$s yapılandırma dosyasına ihtiyacı var.\n\n1. Dosyayı İndirilenler klasörüne kopyala\n2. İçe aktar\'a dokun\n\nYapılandırmayı metin olarak aldıysan kopyala ve Yapıştır\'a dokun.</string>
+    <string name="pairing_dialog_paired">Bu cihaz yapılandırıldı: hata raporların DashCast ekibine gönderiliyor.\n\nYapılandırmayı unutmak gönderimi kapatır; raporlar bu cihazda kalır.</string>
+    <string name="pairing_action_import">İçe aktar</string>
+    <string name="pairing_action_paste">Yapıştır</string>
+    <string name="pairing_action_forget">Unut</string>
+    <string name="pairing_action_close">Kapat</string>
+    <string name="pairing_working">Dosya aranıyor…</string>
+    <string name="pairing_result_ok">Cihaz yapılandırıldı. Rapor gönderimi açık.</string>
+    <string name="pairing_result_not_found">Dosya bulunamadı. İndirilenler klasöründe olduğunu kontrol et.</string>
+    <string name="pairing_result_invalid">Yapılandırma kullanılamaz: içinde geçerli kimlik bilgisi yok.</string>
+    <string name="pairing_result_unreadable">Okunamadı. Tekrar dene.</string>
+    <string name="pairing_result_clipboard_empty">Pano boş.</string>
+    <string name="pairing_result_forgotten">Yapılandırma unutuldu. Raporlar bu cihazda kalıyor.</string>
 </resources>

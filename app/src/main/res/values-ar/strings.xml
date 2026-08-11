@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">انتهى المسح — ماذا رأيت على CLUSTER (خلف المقود)؟</string>
     <string name="hud_sweep_opt_photographed">📷 صوّرت رموز الأسهم</string>
     <string name="hud_sweep_opt_nothing">❌ لم يظهر شيء على CLUSTER</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">إرسال تقارير الأخطاء</string>
+    <string name="pairing_state_on">مُفعَّل — تقاريرك تصل إلى فريق DashCast</string>
+    <string name="pairing_state_off">مُعطَّل — تقاريرك تبقى على هذا الجهاز</string>
+    <string name="pairing_dialog_howto">لإرسال تقاريرك إلى فريق DashCast، يحتاج هذا الجهاز إلى ملف الإعدادات %1$s.\n\n١. انسخ الملف إلى مجلد «التنزيلات»\n٢. اضغط «استيراد»\n\nإذا وصلتك الإعدادات كنص، فانسخها ثم اضغط «لصق».</string>
+    <string name="pairing_dialog_paired">هذا الجهاز مُهيّأ: تقارير الأخطاء تصل إلى فريق DashCast.\n\nحذف الإعدادات يوقف الإرسال، وستبقى التقارير على هذا الجهاز.</string>
+    <string name="pairing_action_import">استيراد</string>
+    <string name="pairing_action_paste">لصق</string>
+    <string name="pairing_action_forget">حذف</string>
+    <string name="pairing_action_close">إغلاق</string>
+    <string name="pairing_working">جارٍ البحث عن الملف…</string>
+    <string name="pairing_result_ok">تم تهيئة الجهاز. إرسال التقارير مُفعَّل.</string>
+    <string name="pairing_result_not_found">لم يُعثر على الملف. تأكد من وجوده في مجلد «التنزيلات».</string>
+    <string name="pairing_result_invalid">الإعدادات غير صالحة: لا تحتوي على بيانات اعتماد سليمة.</string>
+    <string name="pairing_result_unreadable">تعذّرت القراءة. أعد المحاولة.</string>
+    <string name="pairing_result_clipboard_empty">الحافظة فارغة.</string>
+    <string name="pairing_result_forgotten">تم حذف الإعدادات. التقارير تبقى على هذا الجهاز.</string>
 </resources>
