@@ -150,7 +150,7 @@ class DiagActivity : Activity() {
         // English-only exception, so it costs no translated string. A new Settings row would have
         // cost 13.
         root.addView(Button(this).apply {
-            text = "Pair reporting channel (from ${ReportChannel.IMPORT_PATH})"
+            text = "Pair reporting channel — put ${ReportChannel.IMPORT_NAME} in Download"
             setOnClickListener {
                 isEnabled = false
                 log("pairing…")
