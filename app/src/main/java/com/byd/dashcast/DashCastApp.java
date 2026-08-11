@@ -52,6 +52,12 @@ public class DashCastApp extends Application {
                 // SharedPreferences touch below is: it must not sit on the cold-start path.
                 try { com.byd.dashcast.report.ReportChannel.warm(); }
                 catch (Throwable t) { AppLogger.w("ReportChannel", "warm failed: " + t.getMessage()); }
+
+                // Pair on its own if a provisioning file is sitting in Download. Only runs while
+                // the device is unpaired, so it costs nothing once it has succeeded — and it means
+                // a tester never has to find a button in the Diagnostics screen.
+                try { com.byd.dashcast.report.ReportChannel.autoPairIfNeeded(app); }
+                catch (Throwable t) { AppLogger.w("ReportChannel", "auto-pair failed: " + t.getMessage()); }
                 try {
                     AppLogger.i("Platform", "effectiveDiLink5=" + p.isDiLink5(app));
                     p.primeClusterResizeProbe(app);

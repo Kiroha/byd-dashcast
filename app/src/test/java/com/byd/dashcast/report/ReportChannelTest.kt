@@ -88,6 +88,25 @@ class ReportChannelTest {
     }
 
     @Test
+    fun `the provisioning file is looked for in Download before anywhere else`() {
+        // Download first is the point of the whole change: it is the only location a tester can
+        // reach without a computer — USB stick, file manager, or a download on the head unit.
+        // /data/local/tmp needs adb push, so it must never be the one that decides.
+        assertTrue(ReportChannel.IMPORT_PATHS.first().contains("/Download/"))
+        assertTrue(ReportChannel.IMPORT_PATHS.any { it.startsWith("/data/local/tmp/") })
+        assertTrue(ReportChannel.IMPORT_PATHS.all { it.endsWith(ReportChannel.IMPORT_NAME) })
+    }
+
+    @Test
+    fun `auto-pairing does nothing once the device is paired`() {
+        // Guard against a shell call on every cold start for the rest of the install's life.
+        ReportChannel.saveTelegram(ctx, "t", "c", "1", "2")
+        assertTrue(ReportChannel.isPairedOnDevice(ctx))
+        ReportChannel.autoPairIfNeeded(ctx)   // must return before touching the shell
+        assertEquals("t", ReportChannel.botToken(ctx))
+    }
+
+    @Test
     fun `an unpaired device has no credentials at all`() {
         // The whole point of AUD-001: with the buildConfigField entries gone there is nothing to
         // fall back to, so an unpaired device reports no transport rather than quietly using one

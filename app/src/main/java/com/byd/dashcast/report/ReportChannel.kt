@@ -180,11 +180,30 @@ object ReportChannel {
 
     // ── provisioning ────────────────────────────────────────────────────────────────────────
 
-    /** Where a provisioning file is expected. Readable by the uid-2000 shell, unlike Android/data. */
-    const val IMPORT_PATH = "/data/local/tmp/dashcast_channel.properties"
+    /** File name looked for, wherever it has been dropped. */
+    const val IMPORT_NAME = "dashcast_channel.properties"
 
     /**
-     * Imports credentials from a file pushed to [IMPORT_PATH] by `adb push`.
+     * Where the provisioning file is looked for, in order.
+     *
+     * `Download` comes first and that is the whole point: it removes the computer from the
+     * procedure. A tester can put the file there from a USB stick, a file manager, or a download on
+     * the head unit itself — no ADB, no IP address, no `adb push`. `/data/local/tmp` stays as the
+     * maintainer's route, and because the read goes through the uid-2000 shell rather than the
+     * app's own file access, neither location needs a storage permission and A13's Android/data
+     * restriction is irrelevant.
+     */
+    @JvmField
+    val IMPORT_PATHS = listOf(
+        "/sdcard/Download/" + IMPORT_NAME,
+        "/storage/emulated/0/Download/" + IMPORT_NAME,
+        "/data/local/tmp/" + IMPORT_NAME)
+
+    /** Kept for the Diagnostics label; the search covers [IMPORT_PATHS]. */
+    const val IMPORT_PATH = "/sdcard/Download/dashcast_channel.properties"
+
+    /**
+     * Imports credentials from the first of [IMPORT_PATHS] that exists.
      *
      * This is the provisioning route D2 chose as the primary one for a fleet whose owners already
      * sideload over ADB — it needs no new screen, no new translated string, and no paste on a car
@@ -206,11 +225,15 @@ object ReportChannel {
     @JvmStatic
     fun importFromDevice(ctx: Context, done: (String) -> Unit) {
         com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
-            ctx.applicationContext, "cat " + IMPORT_PATH + " 2>/dev/null",
+            ctx.applicationContext,
+            IMPORT_PATHS.joinToString(" || ") { "cat '" + it + "' 2>/dev/null" },
             object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     val text = out ?: ""
-                    if (text.isBlank()) { done("no provisioning file at " + IMPORT_PATH); return }
+                    if (text.isBlank()) {
+                        done("no " + IMPORT_NAME + " found (looked in Download and /data/local/tmp)")
+                        return
+                    }
                     val kv = HashMap<String, String>()
                     for (line in text.lineSequence()) {
                         val t = line.trim()
@@ -234,9 +257,32 @@ object ReportChannel {
                          else "provisioning file found but no usable credentials in it")
                 }
                 override fun onError(err: String?) {
-                    done("could not read " + IMPORT_PATH + " (" + (err ?: "no detail") + ")")
+                    done("could not read " + IMPORT_NAME + " (" + (err ?: "no detail") + ")")
                 }
             })
+    }
+
+    /**
+     * Pairs on its own when a provisioning file is present and the device is not paired yet.
+     *
+     * Removes the last manual step: drop the file in `Download`, open the app, done. The tester
+     * never has to find a button in a developer screen — a place they have no reason to look.
+     *
+     * Runs only while unpaired, so it stops costing anything the moment it succeeds. Must be called
+     * off the main thread: it goes through the shell, which may have to wake a cold daemon.
+     */
+    @JvmStatic
+    fun autoPairIfNeeded(ctx: Context) {
+        if (isPairedOnDevice(ctx)) return
+        try {
+            importFromDevice(ctx) { outcome ->
+                // Only worth a line when something actually happened; an absent file is the normal
+                // case for a device that was never meant to upload, and must not look like an error.
+                if (outcome.startsWith("paired")) AppLogger.i(TAG, "auto-pair: " + outcome)
+            }
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "auto-pair skipped (" + t.javaClass.simpleName + ")")
+        }
     }
 
     // ── internals ───────────────────────────────────────────────────────────────────────────
