@@ -594,17 +594,18 @@
     <string name="pairing_row_title">Bug report delivery</string>
     <string name="pairing_state_on">On — your reports are sent to the DashCast team</string>
     <string name="pairing_state_off">Off — your reports stay on this device</string>
-    <string name="pairing_dialog_howto">To send your reports to the DashCast team, this device needs the configuration file %1$s.\n\n1. Copy that file into the Download folder\n2. Tap Import\n\nIf you received the configuration as text, copy it, then tap Paste.</string>
-    <string name="pairing_dialog_paired">This device is configured: your bug reports are sent to the DashCast team.\n\nForgetting the configuration turns delivery off; reports will stay on this device.</string>
-    <string name="pairing_action_import">Import</string>
-    <string name="pairing_action_paste">Paste</string>
-    <string name="pairing_action_forget">Forget</string>
-    <string name="pairing_action_close">Close</string>
-    <string name="pairing_working">Looking for the file…</string>
-    <string name="pairing_result_ok">Device configured. Report delivery is on.</string>
-    <string name="pairing_result_not_found">File not found. Check that it is in the Download folder.</string>
-    <string name="pairing_result_invalid">Unusable configuration: no valid credentials in it.</string>
-    <string name="pairing_result_unreadable">Could not read it. Try again.</string>
-    <string name="pairing_result_clipboard_empty">The clipboard is empty.</string>
-    <string name="pairing_result_forgotten">Configuration forgotten. Reports stay on this device.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Accepted, but no channel is configured on this device</string>
+    <string name="consent_title">Send diagnostics to the DashCast team?</string>
+    <string name="consent_body">To fix a problem, the DashCast team needs to know what was going on in the car at the time.\n\nA report contains:\n\n•  the DashCast journal and the Android system log, including what other apps wrote;\n\n•  information about the car and the head unit: model, version, settings, installed apps, and the vehicle serial number (VIN), which identifies your car;\n\n•  the Wi-Fi network name and the local IP address;\n\n•  what you write in the form and the Telegram handle you give;\n\n•  if screenshots are turned on: unblurred images of the main screen and the instrument cluster, which can show a map with your destination. You are asked about these again on every send.\n\nNothing leaves the car until you tap “Send”. Reports are read by the DashCast team in a private group.\n\nIf you refuse, the report stays on this device and you can share it yourself. You can change your mind at any time in Settings.</string>
+    <string name="consent_accept">Accept</string>
+    <string name="consent_refuse">Refuse</string>
+    <string name="consent_revoke">Withdraw</string>
+    <string name="consent_close">Close</string>
+    <string name="consent_result_granted">Thank you. Your reports will be sent to the DashCast team.</string>
+    <string name="consent_result_refused">Refused. Your reports will stay on this device.</string>
+    <string name="consent_result_revoked">Withdrawn. Your reports will stay on this device.</string>
 </resources>

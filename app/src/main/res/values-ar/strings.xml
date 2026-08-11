@@ -576,17 +576,18 @@
     <string name="pairing_row_title">إرسال تقارير الأخطاء</string>
     <string name="pairing_state_on">مُفعَّل — تقاريرك تصل إلى فريق DashCast</string>
     <string name="pairing_state_off">مُعطَّل — تقاريرك تبقى على هذا الجهاز</string>
-    <string name="pairing_dialog_howto">لإرسال تقاريرك إلى فريق DashCast، يحتاج هذا الجهاز إلى ملف الإعدادات %1$s.\n\n١. انسخ الملف إلى مجلد «التنزيلات»\n٢. اضغط «استيراد»\n\nإذا وصلتك الإعدادات كنص، فانسخها ثم اضغط «لصق».</string>
-    <string name="pairing_dialog_paired">هذا الجهاز مُهيّأ: تقارير الأخطاء تصل إلى فريق DashCast.\n\nحذف الإعدادات يوقف الإرسال، وستبقى التقارير على هذا الجهاز.</string>
-    <string name="pairing_action_import">استيراد</string>
-    <string name="pairing_action_paste">لصق</string>
-    <string name="pairing_action_forget">حذف</string>
-    <string name="pairing_action_close">إغلاق</string>
-    <string name="pairing_working">جارٍ البحث عن الملف…</string>
-    <string name="pairing_result_ok">تم تهيئة الجهاز. إرسال التقارير مُفعَّل.</string>
-    <string name="pairing_result_not_found">لم يُعثر على الملف. تأكد من وجوده في مجلد «التنزيلات».</string>
-    <string name="pairing_result_invalid">الإعدادات غير صالحة: لا تحتوي على بيانات اعتماد سليمة.</string>
-    <string name="pairing_result_unreadable">تعذّرت القراءة. أعد المحاولة.</string>
-    <string name="pairing_result_clipboard_empty">الحافظة فارغة.</string>
-    <string name="pairing_result_forgotten">تم حذف الإعدادات. التقارير تبقى على هذا الجهاز.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">تمت الموافقة، لكن لا توجد قناة مُهيّأة على هذا الجهاز</string>
+    <string name="consent_title">إرسال بيانات التشخيص إلى فريق DashCast؟</string>
+    <string name="consent_body">لإصلاح مشكلة، يحتاج فريق DashCast إلى معرفة ما كان يجري في السيارة في تلك اللحظة.\n\nيحتوي التقرير على:\n\n•  سجل DashCast وسجل نظام أندرويد، بما في ذلك ما كتبته التطبيقات الأخرى؛\n\n•  معلومات عن السيارة والوحدة الرئيسية: الطراز والإصدار والإعدادات والتطبيقات المثبّتة، ورقم الهيكل (VIN) الذي يُعرّف سيارتك؛\n\n•  اسم شبكة الواي فاي وعنوان IP المحلي؛\n\n•  ما تكتبه في النموذج ومعرّف تيليجرام الذي تذكره؛\n\n•  إذا كانت لقطات الشاشة مُفعَّلة: صور غير مموّهة للشاشة المركزية ولوحة العدادات، وقد تظهر فيها خريطة تحمل وجهتك. يُسأل عنها مرة أخرى مع كل إرسال.\n\nلا يغادر السيارة أي شيء قبل أن تضغط «إرسال». يقرأ التقارير فريق DashCast في مجموعة خاصة.\n\nإذا رفضت، يبقى التقرير على هذا الجهاز ويمكنك مشاركته بنفسك. يمكنك تغيير رأيك في أي وقت من الإعدادات.</string>
+    <string name="consent_accept">أوافق</string>
+    <string name="consent_refuse">أرفض</string>
+    <string name="consent_revoke">سحب الموافقة</string>
+    <string name="consent_close">إغلاق</string>
+    <string name="consent_result_granted">شكرًا. ستُرسل تقاريرك إلى فريق DashCast.</string>
+    <string name="consent_result_refused">تم الرفض. ستبقى تقاريرك على هذا الجهاز.</string>
+    <string name="consent_result_revoked">تم سحب الموافقة. ستبقى تقاريرك على هذا الجهاز.</string>
 </resources>

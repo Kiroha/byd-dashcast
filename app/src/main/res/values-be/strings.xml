@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Адпраўка справаздач пра памылкі</string>
     <string name="pairing_state_on">Уключана — вашы справаздачы ідуць камандзе DashCast</string>
     <string name="pairing_state_off">Выключана — вашы справаздачы застаюцца на гэтай прыладзе</string>
-    <string name="pairing_dialog_howto">Каб адпраўляць справаздачы камандзе DashCast, гэтай прыладзе патрэбны файл наладаў %1$s.\n\n1. Скапіруйце файл у папку «Спампоўкі»\n2. Націсніце «Імпартаваць»\n\nКалі налады прыйшлі тэкстам, скапіруйце іх і націсніце «Уставіць».</string>
-    <string name="pairing_dialog_paired">Прылада наладжана: вашы справаздачы пра памылкі ідуць камандзе DashCast.\n\nКалі выдаліць налады, адпраўка выключыцца і справаздачы будуць заставацца на гэтай прыладзе.</string>
-    <string name="pairing_action_import">Імпартаваць</string>
-    <string name="pairing_action_paste">Уставіць</string>
-    <string name="pairing_action_forget">Выдаліць</string>
-    <string name="pairing_action_close">Закрыць</string>
-    <string name="pairing_working">Пошук файла…</string>
-    <string name="pairing_result_ok">Прылада наладжана. Адпраўка справаздач уключана.</string>
-    <string name="pairing_result_not_found">Файл не знойдзены. Праверце, ці ляжыць ён у папцы «Спампоўкі».</string>
-    <string name="pairing_result_invalid">Налады непрыдатныя: у іх няма сапраўдных уліковых даных.</string>
-    <string name="pairing_result_unreadable">Не ўдалося прачытаць. Паспрабуйце яшчэ раз.</string>
-    <string name="pairing_result_clipboard_empty">Буфер абмену пусты.</string>
-    <string name="pairing_result_forgotten">Налады выдалены. Справаздачы застаюцца на гэтай прыладзе.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Згода дадзена, але на гэтай прыладзе не наладжаны канал</string>
+    <string name="consent_title">Адпраўляць дыягностыку камандзе DashCast?</string>
+    <string name="consent_body">Каб выправіць праблему, камандзе DashCast трэба ведаць, што адбывалася ў машыне ў той момант.\n\nСправаздача змяшчае:\n\n•  журнал DashCast і сістэмны журнал Android, у тым ліку тое, што запісалі іншыя праграмы;\n\n•  звесткі пра аўтамабіль і галоўную прыладу: мадэль, версію, налады, усталяваныя праграмы і VIN — нумар, па якім пазнаюць вашу машыну;\n\n•  назву сеткі Wi-Fi і лакальны IP-адрас;\n\n•  тое, што вы напішаце ў форме, і пазначаны вамі нік у Telegram;\n\n•  калі ўключаны здымкі экрана: незамазаныя выявы цэнтральнага экрана і прыборнай панэлі, на якіх можа быць карта з вашым пунктам прызначэння. Пра іх пытаюцца асобна пры кожнай адпраўцы.\n\nНічога не пакідае машыну, пакуль вы не націснеце «Адправіць». Справаздачы чытае каманда DashCast у закрытай групе.\n\nКалі вы адмовіцеся, справаздача застанецца на гэтай прыладзе і вы зможаце перадаць яе самі. Перадумаць можна ў любы час у наладах.</string>
+    <string name="consent_accept">Пагаджаюся</string>
+    <string name="consent_refuse">Адмовіцца</string>
+    <string name="consent_revoke">Адклікаць</string>
+    <string name="consent_close">Закрыць</string>
+    <string name="consent_result_granted">Дзякуй. Вашы справаздачы будуць ісці камандзе DashCast.</string>
+    <string name="consent_result_refused">Адмоўлена. Вашы справаздачы застануцца на гэтай прыладзе.</string>
+    <string name="consent_result_revoked">Згода адклікана. Вашы справаздачы застануцца на гэтай прыладзе.</string>
 </resources>

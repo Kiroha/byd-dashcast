@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Xato hisobotlarini yuborish</string>
     <string name="pairing_state_on">Yoqilgan — hisobotlaringiz DashCast jamoasiga yuboriladi</string>
     <string name="pairing_state_off">Oʻchirilgan — hisobotlaringiz shu qurilmada qoladi</string>
-    <string name="pairing_dialog_howto">Hisobotlaringizni DashCast jamoasiga yuborish uchun bu qurilmaga %1$s sozlama fayli kerak.\n\n1. Faylni «Yuklamalar» jildiga nusxalang\n2. «Import qilish»ga bosing\n\nAgar sozlamalarni matn koʻrinishida olgan boʻlsangiz, uni nusxalang va «Qoʻyish»ga bosing.</string>
-    <string name="pairing_dialog_paired">Bu qurilma sozlangan: xato hisobotlaringiz DashCast jamoasiga yuboriladi.\n\nSozlamalarni oʻchirsangiz, yuborish toʻxtaydi va hisobotlar shu qurilmada qoladi.</string>
-    <string name="pairing_action_import">Import qilish</string>
-    <string name="pairing_action_paste">Qoʻyish</string>
-    <string name="pairing_action_forget">Oʻchirish</string>
-    <string name="pairing_action_close">Yopish</string>
-    <string name="pairing_working">Fayl qidirilmoqda…</string>
-    <string name="pairing_result_ok">Qurilma sozlandi. Hisobot yuborish yoqilgan.</string>
-    <string name="pairing_result_not_found">Fayl topilmadi. U «Yuklamalar» jildida ekanini tekshiring.</string>
-    <string name="pairing_result_invalid">Sozlamalar yaroqsiz: ichida haqiqiy hisob maʼlumotlari yoʻq.</string>
-    <string name="pairing_result_unreadable">Oʻqib boʻlmadi. Qayta urinib koʻring.</string>
-    <string name="pairing_result_clipboard_empty">Almashish buferi boʻsh.</string>
-    <string name="pairing_result_forgotten">Sozlamalar oʻchirildi. Hisobotlar shu qurilmada qoladi.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Rozilik berilgan, ammo bu qurilmada kanal sozlanmagan</string>
+    <string name="consent_title">Diagnostika DashCast jamoasiga yuborilsinmi?</string>
+    <string name="consent_body">Muammoni tuzatish uchun DashCast jamoasi oʻsha paytda avtomobilda nima boʻlganini bilishi kerak.\n\nHisobot tarkibida:\n\n•  DashCast jurnali va Android tizim jurnali — boshqa ilovalar yozganlari bilan birga;\n\n•  avtomobil va bosh qurilma haqidagi maʼlumotlar: modeli, versiyasi, sozlamalari, oʻrnatilgan ilovalar va avtomobilingizni tanitadigan VIN raqami;\n\n•  Wi-Fi tarmogʻi nomi va mahalliy IP manzil;\n\n•  shaklga yozganingiz va koʻrsatgan Telegram taxallusingiz;\n\n•  agar ekran suratlari yoqilgan boʻlsa: markaziy ekran va asboblar panelining xiralashtirilmagan tasvirlari — ularda boradigan joyingiz koʻrsatilgan xarita boʻlishi mumkin. Ular haqida har safar yuborishda alohida soʻraladi.\n\n«Yuborish»ga bosmaguningizcha avtomobildan hech narsa chiqmaydi. Hisobotlarni DashCast jamoasi yopiq guruhda oʻqiydi.\n\nRad etsangiz, hisobot shu qurilmada qoladi va uni oʻzingiz ulashishingiz mumkin. Fikringizni istalgan vaqtda Sozlamalarda oʻzgartirasiz.</string>
+    <string name="consent_accept">Roziman</string>
+    <string name="consent_refuse">Rad etish</string>
+    <string name="consent_revoke">Bekor qilish</string>
+    <string name="consent_close">Yopish</string>
+    <string name="consent_result_granted">Rahmat. Hisobotlaringiz DashCast jamoasiga yuboriladi.</string>
+    <string name="consent_result_refused">Rad etildi. Hisobotlaringiz shu qurilmada qoladi.</string>
+    <string name="consent_result_revoked">Rozilik bekor qilindi. Hisobotlaringiz shu qurilmada qoladi.</string>
 </resources>

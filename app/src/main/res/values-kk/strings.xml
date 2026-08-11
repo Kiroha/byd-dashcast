@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Қате туралы есептерді жіберу</string>
     <string name="pairing_state_on">Қосулы — есептеріңіз DashCast тобына жіберіледі</string>
     <string name="pairing_state_off">Өшірулі — есептеріңіз осы құрылғыда қалады</string>
-    <string name="pairing_dialog_howto">Есептеріңізді DashCast тобына жіберу үшін бұл құрылғыға %1$s баптау файлы қажет.\n\n1. Файлды «Жүктеулер» қалтасына көшіріңіз\n2. «Импорттау» түймесін түртіңіз\n\nЕгер баптауларды мәтін түрінде алған болсаңыз, оны көшіріп, «Қою» түймесін түртіңіз.</string>
-    <string name="pairing_dialog_paired">Бұл құрылғы бапталған: қате туралы есептеріңіз DashCast тобына жіберіледі.\n\nБаптауларды жойсаңыз, жіберу өшеді және есептер осы құрылғыда қалады.</string>
-    <string name="pairing_action_import">Импорттау</string>
-    <string name="pairing_action_paste">Қою</string>
-    <string name="pairing_action_forget">Жою</string>
-    <string name="pairing_action_close">Жабу</string>
-    <string name="pairing_working">Файл ізделуде…</string>
-    <string name="pairing_result_ok">Құрылғы бапталды. Есептерді жіберу қосулы.</string>
-    <string name="pairing_result_not_found">Файл табылмады. Оның «Жүктеулер» қалтасында екенін тексеріңіз.</string>
-    <string name="pairing_result_invalid">Баптаулар жарамсыз: ішінде жарамды тіркелгі деректері жоқ.</string>
-    <string name="pairing_result_unreadable">Оқу мүмкін болмады. Қайталап көріңіз.</string>
-    <string name="pairing_result_clipboard_empty">Алмасу буфері бос.</string>
-    <string name="pairing_result_forgotten">Баптаулар жойылды. Есептер осы құрылғыда қалады.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Келісім берілген, бірақ бұл құрылғыда арна бапталмаған</string>
+    <string name="consent_title">Диагностика DashCast тобына жіберілсін бе?</string>
+    <string name="consent_body">Ақаулықты түзету үшін DashCast тобына сол сәтте көлікте не болғанын білу қажет.\n\nЕсеп мыналарды қамтиды:\n\n•  DashCast журналы және Android жүйелік журналы — басқа қолданбалар жазғандарды қоса;\n\n•  көлік пен басты құрылғы туралы мәліметтер: моделі, нұсқасы, баптаулары, орнатылған қолданбалар және көлігіңізді танытатын VIN нөмірі;\n\n•  Wi-Fi желісінің атауы және жергілікті IP-мекенжай;\n\n•  пішінге жазғаныңыз және өзіңіз көрсеткен Telegram лақап аты;\n\n•  егер экран суреттері қосулы болса: орталық экран мен аспаптар панелінің бұлдырланбаған суреттері — оларда баратын жеріңіз көрсетілген карта болуы мүмкін. Олар туралы әр жіберу сайын бөлек сұралады.\n\n«Жіберу» түймесін баспайынша, көліктен ештеңе шықпайды. Есептерді DashCast тобы жабық топта оқиды.\n\nБас тартсаңыз, есеп осы құрылғыда қалады және оны өзіңіз бере аласыз. Шешіміңізді кез келген уақытта баптаулардан өзгертуге болады.</string>
+    <string name="consent_accept">Келісемін</string>
+    <string name="consent_refuse">Бас тарту</string>
+    <string name="consent_revoke">Кері қайтару</string>
+    <string name="consent_close">Жабу</string>
+    <string name="consent_result_granted">Рақмет. Есептеріңіз DashCast тобына жіберіледі.</string>
+    <string name="consent_result_refused">Бас тартылды. Есептеріңіз осы құрылғыда қалады.</string>
+    <string name="consent_result_revoked">Келісім кері қайтарылды. Есептеріңіз осы құрылғыда қалады.</string>
 </resources>

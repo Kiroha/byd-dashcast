@@ -576,17 +576,18 @@
     <string name="pairing_row_title">Invio delle segnalazioni</string>
     <string name="pairing_state_on">Attivo — le tue segnalazioni arrivano al team DashCast</string>
     <string name="pairing_state_off">Disattivato — le tue segnalazioni restano su questo dispositivo</string>
-    <string name="pairing_dialog_howto">Per inviare le tue segnalazioni al team DashCast, questo dispositivo ha bisogno del file di configurazione %1$s.\n\n1. Copia il file nella cartella Download\n2. Tocca Importa\n\nSe hai ricevuto la configurazione come testo, copiala e tocca Incolla.</string>
-    <string name="pairing_dialog_paired">Questo dispositivo è configurato: le tue segnalazioni arrivano al team DashCast.\n\nDimenticare la configurazione disattiva l\'invio; le segnalazioni resteranno su questo dispositivo.</string>
-    <string name="pairing_action_import">Importa</string>
-    <string name="pairing_action_paste">Incolla</string>
-    <string name="pairing_action_forget">Dimentica</string>
-    <string name="pairing_action_close">Chiudi</string>
-    <string name="pairing_working">Ricerca del file…</string>
-    <string name="pairing_result_ok">Dispositivo configurato. L\'invio delle segnalazioni è attivo.</string>
-    <string name="pairing_result_not_found">File non trovato. Controlla che sia nella cartella Download.</string>
-    <string name="pairing_result_invalid">Configurazione inutilizzabile: nessuna credenziale valida al suo interno.</string>
-    <string name="pairing_result_unreadable">Lettura non riuscita. Riprova.</string>
-    <string name="pairing_result_clipboard_empty">Gli appunti sono vuoti.</string>
-    <string name="pairing_result_forgotten">Configurazione dimenticata. Le segnalazioni restano su questo dispositivo.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Accettato, ma su questo dispositivo non è configurato alcun canale</string>
+    <string name="consent_title">Inviare i dati diagnostici al team DashCast?</string>
+    <string name="consent_body">Per risolvere un problema, il team DashCast ha bisogno di sapere cosa stava succedendo nell\'auto in quel momento.\n\nUna segnalazione contiene:\n\n•  il registro di DashCast e quello del sistema Android, compreso ciò che hanno scritto le altre app;\n\n•  informazioni sull\'auto e sull\'unità centrale: modello, versione, impostazioni, app installate e il numero di telaio (VIN), che identifica la tua auto;\n\n•  il nome della rete Wi-Fi e l\'indirizzo IP locale;\n\n•  quello che scrivi nel modulo e il nome utente Telegram che indichi;\n\n•  se le schermate sono attive: immagini non sfocate dello schermo centrale e del quadro strumenti, che possono mostrare una mappa con la tua destinazione. Ti verranno richieste a ogni invio.\n\nNiente esce dall\'auto finché non tocchi «Invia». Le segnalazioni sono lette dal team DashCast in un gruppo privato.\n\nSe rifiuti, la segnalazione resta su questo dispositivo e puoi condividerla tu. Puoi cambiare idea in qualsiasi momento nelle Impostazioni.</string>
+    <string name="consent_accept">Accetta</string>
+    <string name="consent_refuse">Rifiuta</string>
+    <string name="consent_revoke">Revoca</string>
+    <string name="consent_close">Chiudi</string>
+    <string name="consent_result_granted">Grazie. Le tue segnalazioni arriveranno al team DashCast.</string>
+    <string name="consent_result_refused">Rifiutato. Le tue segnalazioni resteranno su questo dispositivo.</string>
+    <string name="consent_result_revoked">Revocato. Le tue segnalazioni resteranno su questo dispositivo.</string>
 </resources>

@@ -590,7 +590,7 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun uploadZip(zip: File, caption: String) {
         if (!TelegramBugReporter.isConfigured()) {
-            log("Telegram not configured — offering the system share instead")
+            log("cannot upload: ${com.byd.dashcast.report.ReportConsent.transportBlockReason()} — offering the system share instead")
             HudCaptureSupport.offerFallback(this, zip) { line -> log(line) }
             return
         }

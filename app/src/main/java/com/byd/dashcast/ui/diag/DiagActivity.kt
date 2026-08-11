@@ -283,7 +283,7 @@ class DiagActivity : Activity() {
             }
 
             if (!TelegramBugReporter.isConfigured()) {
-                log("Telegram not configured.")
+                log("cannot upload: ${com.byd.dashcast.report.ReportConsent.transportBlockReason()}")
                 keepLocally(zip)
                 return@Thread
             }

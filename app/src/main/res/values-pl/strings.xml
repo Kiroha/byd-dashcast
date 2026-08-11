@@ -584,17 +584,18 @@
     <string name="pairing_row_title">Wysyłanie zgłoszeń błędów</string>
     <string name="pairing_state_on">Włączone — Twoje zgłoszenia trafiają do zespołu DashCast</string>
     <string name="pairing_state_off">Wyłączone — Twoje zgłoszenia zostają na tym urządzeniu</string>
-    <string name="pairing_dialog_howto">Aby wysyłać zgłoszenia do zespołu DashCast, to urządzenie potrzebuje pliku konfiguracyjnego %1$s.\n\n1. Skopiuj ten plik do folderu Pobrane\n2. Dotknij Importuj\n\nJeśli konfigurację otrzymałeś jako tekst, skopiuj ją i dotknij Wklej.</string>
-    <string name="pairing_dialog_paired">To urządzenie jest skonfigurowane: Twoje zgłoszenia błędów trafiają do zespołu DashCast.\n\nUsunięcie konfiguracji wyłącza wysyłanie; zgłoszenia zostaną na tym urządzeniu.</string>
-    <string name="pairing_action_import">Importuj</string>
-    <string name="pairing_action_paste">Wklej</string>
-    <string name="pairing_action_forget">Usuń</string>
-    <string name="pairing_action_close">Zamknij</string>
-    <string name="pairing_working">Szukanie pliku…</string>
-    <string name="pairing_result_ok">Urządzenie skonfigurowane. Wysyłanie zgłoszeń jest włączone.</string>
-    <string name="pairing_result_not_found">Nie znaleziono pliku. Sprawdź, czy jest w folderze Pobrane.</string>
-    <string name="pairing_result_invalid">Konfiguracja bezużyteczna: brak w niej prawidłowych danych dostępowych.</string>
-    <string name="pairing_result_unreadable">Nie udało się odczytać. Spróbuj ponownie.</string>
-    <string name="pairing_result_clipboard_empty">Schowek jest pusty.</string>
-    <string name="pairing_result_forgotten">Konfiguracja usunięta. Zgłoszenia zostają na tym urządzeniu.</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Zgoda udzielona, ale na tym urządzeniu nie skonfigurowano żadnego kanału</string>
+    <string name="consent_title">Wysłać dane diagnostyczne do zespołu DashCast?</string>
+    <string name="consent_body">Żeby naprawić problem, zespół DashCast musi wiedzieć, co działo się w samochodzie w tamtej chwili.\n\nZgłoszenie zawiera:\n\n•  dziennik DashCast oraz dziennik systemu Android, w tym to, co zapisały inne aplikacje;\n\n•  informacje o samochodzie i jednostce centralnej: model, wersję, ustawienia, zainstalowane aplikacje oraz numer nadwozia (VIN), który identyfikuje Twój samochód;\n\n•  nazwę sieci Wi-Fi i lokalny adres IP;\n\n•  to, co wpiszesz w formularzu, oraz podaną nazwę użytkownika Telegrama;\n\n•  jeśli zrzuty ekranu są włączone: nierozmyte obrazy ekranu centralnego i zestawu wskaźników, na których może być widoczna mapa z Twoim celem podróży. Pytanie o nie pojawia się przy każdym wysłaniu.\n\nNic nie opuszcza samochodu, dopóki nie dotkniesz „Wyślij”. Zgłoszenia czyta zespół DashCast w prywatnej grupie.\n\nJeśli odmówisz, zgłoszenie zostanie na tym urządzeniu i możesz przekazać je samodzielnie. Zdanie możesz zmienić w każdej chwili w Ustawieniach.</string>
+    <string name="consent_accept">Zgadzam się</string>
+    <string name="consent_refuse">Odmawiam</string>
+    <string name="consent_revoke">Wycofaj</string>
+    <string name="consent_close">Zamknij</string>
+    <string name="consent_result_granted">Dziękujemy. Twoje zgłoszenia trafią do zespołu DashCast.</string>
+    <string name="consent_result_refused">Odmówiono. Twoje zgłoszenia zostaną na tym urządzeniu.</string>
+    <string name="consent_result_revoked">Wycofano. Twoje zgłoszenia zostaną na tym urządzeniu.</string>
 </resources>

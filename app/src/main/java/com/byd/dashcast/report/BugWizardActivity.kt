@@ -464,7 +464,23 @@ class BugWizardActivity : Activity() {
         mBtnSend?.isEnabled = true
     }
 
+    /**
+     * Send, gated on the one question the app has to ask before diagnostics leave the car.
+     *
+     * The ask sits here rather than at first launch because this is the moment it means something:
+     * the user has just described a problem and wants it looked at. Asked at install time, before
+     * they know the feature exists, the same question gets dismissed reflexively.
+     *
+     * Whatever they answer, the capture runs — a refusal turns the upload into the share sheet the
+     * app already offers when no channel is configured, so the report is never lost, only kept in
+     * their hands.
+     */
     private fun submitReport() {
+        if (mSending || mSelectedIssue == null) return
+        ReportConsent.askThen(this) { doSubmitReport() }
+    }
+
+    private fun doSubmitReport() {
         if (mSending || mSelectedIssue == null) return
         mSending = true
         mBtnSend?.isEnabled = false
