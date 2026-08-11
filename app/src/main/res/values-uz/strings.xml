@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Skanerlash tugadi — CLUSTERda nima koʻrding?</string>
     <string name="hud_sweep_opt_photographed">📷 Belgilarni suratga oldim</string>
     <string name="hud_sweep_opt_nothing">❌ CLUSTERda hech narsa chiqmadi</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Xato hisobotlarini yuborish</string>
+    <string name="pairing_state_on">Yoqilgan — hisobotlaringiz DashCast jamoasiga yuboriladi</string>
+    <string name="pairing_state_off">Oʻchirilgan — hisobotlaringiz shu qurilmada qoladi</string>
+    <string name="pairing_dialog_howto">Hisobotlaringizni DashCast jamoasiga yuborish uchun bu qurilmaga %1$s sozlama fayli kerak.\n\n1. Faylni «Yuklamalar» jildiga nusxalang\n2. «Import qilish»ga bosing\n\nAgar sozlamalarni matn koʻrinishida olgan boʻlsangiz, uni nusxalang va «Qoʻyish»ga bosing.</string>
+    <string name="pairing_dialog_paired">Bu qurilma sozlangan: xato hisobotlaringiz DashCast jamoasiga yuboriladi.\n\nSozlamalarni oʻchirsangiz, yuborish toʻxtaydi va hisobotlar shu qurilmada qoladi.</string>
+    <string name="pairing_action_import">Import qilish</string>
+    <string name="pairing_action_paste">Qoʻyish</string>
+    <string name="pairing_action_forget">Oʻchirish</string>
+    <string name="pairing_action_close">Yopish</string>
+    <string name="pairing_working">Fayl qidirilmoqda…</string>
+    <string name="pairing_result_ok">Qurilma sozlandi. Hisobot yuborish yoqilgan.</string>
+    <string name="pairing_result_not_found">Fayl topilmadi. U «Yuklamalar» jildida ekanini tekshiring.</string>
+    <string name="pairing_result_invalid">Sozlamalar yaroqsiz: ichida haqiqiy hisob maʼlumotlari yoʻq.</string>
+    <string name="pairing_result_unreadable">Oʻqib boʻlmadi. Qayta urinib koʻring.</string>
+    <string name="pairing_result_clipboard_empty">Almashish buferi boʻsh.</string>
+    <string name="pairing_result_forgotten">Sozlamalar oʻchirildi. Hisobotlar shu qurilmada qoladi.</string>
 </resources>

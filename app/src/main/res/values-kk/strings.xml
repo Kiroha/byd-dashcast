@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Шолу аяқталды — КЛАСТЕРДЕ не көрдің?</string>
     <string name="hud_sweep_opt_photographed">📷 Таңбаларды суретке түсірдім</string>
     <string name="hud_sweep_opt_nothing">❌ КЛАСТЕРДЕ ештеңе көрсетілмеді</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Қате туралы есептерді жіберу</string>
+    <string name="pairing_state_on">Қосулы — есептеріңіз DashCast тобына жіберіледі</string>
+    <string name="pairing_state_off">Өшірулі — есептеріңіз осы құрылғыда қалады</string>
+    <string name="pairing_dialog_howto">Есептеріңізді DashCast тобына жіберу үшін бұл құрылғыға %1$s баптау файлы қажет.\n\n1. Файлды «Жүктеулер» қалтасына көшіріңіз\n2. «Импорттау» түймесін түртіңіз\n\nЕгер баптауларды мәтін түрінде алған болсаңыз, оны көшіріп, «Қою» түймесін түртіңіз.</string>
+    <string name="pairing_dialog_paired">Бұл құрылғы бапталған: қате туралы есептеріңіз DashCast тобына жіберіледі.\n\nБаптауларды жойсаңыз, жіберу өшеді және есептер осы құрылғыда қалады.</string>
+    <string name="pairing_action_import">Импорттау</string>
+    <string name="pairing_action_paste">Қою</string>
+    <string name="pairing_action_forget">Жою</string>
+    <string name="pairing_action_close">Жабу</string>
+    <string name="pairing_working">Файл ізделуде…</string>
+    <string name="pairing_result_ok">Құрылғы бапталды. Есептерді жіберу қосулы.</string>
+    <string name="pairing_result_not_found">Файл табылмады. Оның «Жүктеулер» қалтасында екенін тексеріңіз.</string>
+    <string name="pairing_result_invalid">Баптаулар жарамсыз: ішінде жарамды тіркелгі деректері жоқ.</string>
+    <string name="pairing_result_unreadable">Оқу мүмкін болмады. Қайталап көріңіз.</string>
+    <string name="pairing_result_clipboard_empty">Алмасу буфері бос.</string>
+    <string name="pairing_result_forgotten">Баптаулар жойылды. Есептер осы құрылғыда қалады.</string>
 </resources>

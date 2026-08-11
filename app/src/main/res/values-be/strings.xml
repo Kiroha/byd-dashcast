@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Перабор завершаны — што ты ўбачыў на CLUSTER?</string>
     <string name="hud_sweep_opt_photographed">📷 Я сфатаграфаваў значкі</string>
     <string name="hud_sweep_opt_nothing">❌ На CLUSTER нічога не з’явілася</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Адпраўка справаздач пра памылкі</string>
+    <string name="pairing_state_on">Уключана — вашы справаздачы ідуць камандзе DashCast</string>
+    <string name="pairing_state_off">Выключана — вашы справаздачы застаюцца на гэтай прыладзе</string>
+    <string name="pairing_dialog_howto">Каб адпраўляць справаздачы камандзе DashCast, гэтай прыладзе патрэбны файл наладаў %1$s.\n\n1. Скапіруйце файл у папку «Спампоўкі»\n2. Націсніце «Імпартаваць»\n\nКалі налады прыйшлі тэкстам, скапіруйце іх і націсніце «Уставіць».</string>
+    <string name="pairing_dialog_paired">Прылада наладжана: вашы справаздачы пра памылкі ідуць камандзе DashCast.\n\nКалі выдаліць налады, адпраўка выключыцца і справаздачы будуць заставацца на гэтай прыладзе.</string>
+    <string name="pairing_action_import">Імпартаваць</string>
+    <string name="pairing_action_paste">Уставіць</string>
+    <string name="pairing_action_forget">Выдаліць</string>
+    <string name="pairing_action_close">Закрыць</string>
+    <string name="pairing_working">Пошук файла…</string>
+    <string name="pairing_result_ok">Прылада наладжана. Адпраўка справаздач уключана.</string>
+    <string name="pairing_result_not_found">Файл не знойдзены. Праверце, ці ляжыць ён у папцы «Спампоўкі».</string>
+    <string name="pairing_result_invalid">Налады непрыдатныя: у іх няма сапраўдных уліковых даных.</string>
+    <string name="pairing_result_unreadable">Не ўдалося прачытаць. Паспрабуйце яшчэ раз.</string>
+    <string name="pairing_result_clipboard_empty">Буфер абмену пусты.</string>
+    <string name="pairing_result_forgotten">Налады выдалены. Справаздачы застаюцца на гэтай прыладзе.</string>
 </resources>

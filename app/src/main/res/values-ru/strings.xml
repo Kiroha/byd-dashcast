@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Перебор завершён — что ты увидел на КЛАСТЕРЕ?</string>
     <string name="hud_sweep_opt_photographed">📷 Я сфотографировал значки</string>
     <string name="hud_sweep_opt_nothing">❌ На кластере ничего не появилось</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Отправка отчётов об ошибках</string>
+    <string name="pairing_state_on">Включена — ваши отчёты уходят команде DashCast</string>
+    <string name="pairing_state_off">Выключена — ваши отчёты остаются на этом устройстве</string>
+    <string name="pairing_dialog_howto">Чтобы отправлять отчёты команде DashCast, этому устройству нужен файл настроек %1$s.\n\n1. Скопируйте файл в папку «Загрузки»\n2. Нажмите «Импортировать»\n\nЕсли настройки пришли текстом, скопируйте их и нажмите «Вставить».</string>
+    <string name="pairing_dialog_paired">Устройство настроено: ваши отчёты об ошибках уходят команде DashCast.\n\nЕсли удалить настройки, отправка выключится и отчёты будут оставаться на этом устройстве.</string>
+    <string name="pairing_action_import">Импортировать</string>
+    <string name="pairing_action_paste">Вставить</string>
+    <string name="pairing_action_forget">Удалить</string>
+    <string name="pairing_action_close">Закрыть</string>
+    <string name="pairing_working">Поиск файла…</string>
+    <string name="pairing_result_ok">Устройство настроено. Отправка отчётов включена.</string>
+    <string name="pairing_result_not_found">Файл не найден. Проверьте, что он лежит в папке «Загрузки».</string>
+    <string name="pairing_result_invalid">Настройки непригодны: в них нет действительных учётных данных.</string>
+    <string name="pairing_result_unreadable">Не удалось прочитать. Попробуйте ещё раз.</string>
+    <string name="pairing_result_clipboard_empty">Буфер обмена пуст.</string>
+    <string name="pairing_result_forgotten">Настройки удалены. Отчёты остаются на этом устройстве.</string>
 </resources>

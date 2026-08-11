@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Barrido terminado — ¿qué viste en el CLUSTER?</string>
     <string name="hud_sweep_opt_photographed">📷 He fotografiado los glifos</string>
     <string name="hud_sweep_opt_nothing">❌ No apareció nada en el clúster</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Envío de informes de error</string>
+    <string name="pairing_state_on">Activado: tus informes se envían al equipo de DashCast</string>
+    <string name="pairing_state_off">Desactivado: tus informes se quedan en este dispositivo</string>
+    <string name="pairing_dialog_howto">Para enviar tus informes al equipo de DashCast, este dispositivo necesita el archivo de configuración %1$s.\n\n1. Copia el archivo en la carpeta Descargas\n2. Toca Importar\n\nSi has recibido la configuración como texto, cópiala y toca Pegar.</string>
+    <string name="pairing_dialog_paired">Este dispositivo está configurado: tus informes de error se envían al equipo de DashCast.\n\nSi olvidas la configuración, el envío se desactiva y los informes se quedarán en este dispositivo.</string>
+    <string name="pairing_action_import">Importar</string>
+    <string name="pairing_action_paste">Pegar</string>
+    <string name="pairing_action_forget">Olvidar</string>
+    <string name="pairing_action_close">Cerrar</string>
+    <string name="pairing_working">Buscando el archivo…</string>
+    <string name="pairing_result_ok">Dispositivo configurado. El envío de informes está activado.</string>
+    <string name="pairing_result_not_found">Archivo no encontrado. Comprueba que esté en la carpeta Descargas.</string>
+    <string name="pairing_result_invalid">Configuración inservible: no contiene credenciales válidas.</string>
+    <string name="pairing_result_unreadable">No se ha podido leer. Inténtalo de nuevo.</string>
+    <string name="pairing_result_clipboard_empty">El portapapeles está vacío.</string>
+    <string name="pairing_result_forgotten">Configuración olvidada. Los informes se quedan en este dispositivo.</string>
 </resources>

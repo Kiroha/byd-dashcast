@@ -585,4 +585,26 @@
     <string name="hud_sweep_result_title">Sweep done — what did you see on the CLUSTER?</string>
     <string name="hud_sweep_opt_photographed">📷 I photographed the icons</string>
     <string name="hud_sweep_opt_nothing">❌ Nothing showed up on the cluster</string>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Bug report delivery — pairing.
+         Credentials are no longer built into the APK, so an unpaired device keeps its reports
+         to itself. Safe by default, but only acceptable if pairing is something a user can do
+         without a computer: hence a folder, a clipboard, and plain words for both states.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="pairing_row_title">Bug report delivery</string>
+    <string name="pairing_state_on">On — your reports are sent to the DashCast team</string>
+    <string name="pairing_state_off">Off — your reports stay on this device</string>
+    <string name="pairing_dialog_howto">To send your reports to the DashCast team, this device needs the configuration file %1$s.\n\n1. Copy that file into the Download folder\n2. Tap Import\n\nIf you received the configuration as text, copy it, then tap Paste.</string>
+    <string name="pairing_dialog_paired">This device is configured: your bug reports are sent to the DashCast team.\n\nForgetting the configuration turns delivery off; reports will stay on this device.</string>
+    <string name="pairing_action_import">Import</string>
+    <string name="pairing_action_paste">Paste</string>
+    <string name="pairing_action_forget">Forget</string>
+    <string name="pairing_action_close">Close</string>
+    <string name="pairing_working">Looking for the file…</string>
+    <string name="pairing_result_ok">Device configured. Report delivery is on.</string>
+    <string name="pairing_result_not_found">File not found. Check that it is in the Download folder.</string>
+    <string name="pairing_result_invalid">Unusable configuration: no valid credentials in it.</string>
+    <string name="pairing_result_unreadable">Could not read it. Try again.</string>
+    <string name="pairing_result_clipboard_empty">The clipboard is empty.</string>
+    <string name="pairing_result_forgotten">Configuration forgotten. Reports stay on this device.</string>
 </resources>

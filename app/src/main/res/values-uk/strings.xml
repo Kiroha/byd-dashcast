@@ -572,4 +572,21 @@
     <string name="hud_sweep_result_title">Перебір завершено — що ти побачив на CLUSTER?</string>
     <string name="hud_sweep_opt_photographed">📷 Я сфотографував гліфи</string>
     <string name="hud_sweep_opt_nothing">❌ На cluster нічого не відобразилося</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Надсилання звітів про помилки</string>
+    <string name="pairing_state_on">Увімкнено — ваші звіти надходять команді DashCast</string>
+    <string name="pairing_state_off">Вимкнено — ваші звіти залишаються на цьому пристрої</string>
+    <string name="pairing_dialog_howto">Щоб надсилати звіти команді DashCast, цьому пристрою потрібен файл налаштувань %1$s.\n\n1. Скопіюйте файл до теки «Завантаження»\n2. Торкніться «Імпортувати»\n\nЯкщо налаштування надійшли текстом, скопіюйте їх і торкніться «Вставити».</string>
+    <string name="pairing_dialog_paired">Цей пристрій налаштовано: ваші звіти про помилки надходять команді DashCast.\n\nЯкщо вилучити налаштування, надсилання вимкнеться, і звіти залишатимуться на цьому пристрої.</string>
+    <string name="pairing_action_import">Імпортувати</string>
+    <string name="pairing_action_paste">Вставити</string>
+    <string name="pairing_action_forget">Вилучити</string>
+    <string name="pairing_action_close">Закрити</string>
+    <string name="pairing_working">Пошук файлу…</string>
+    <string name="pairing_result_ok">Пристрій налаштовано. Надсилання звітів увімкнено.</string>
+    <string name="pairing_result_not_found">Файл не знайдено. Перевірте, чи він у теці «Завантаження».</string>
+    <string name="pairing_result_invalid">Налаштування непридатні: у них немає дійсних облікових даних.</string>
+    <string name="pairing_result_unreadable">Не вдалося прочитати. Спробуйте ще раз.</string>
+    <string name="pairing_result_clipboard_empty">Буфер обміну порожній.</string>
+    <string name="pairing_result_forgotten">Налаштування вилучено. Звіти залишаються на цьому пристрої.</string>
 </resources>

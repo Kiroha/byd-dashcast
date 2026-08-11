@@ -126,4 +126,57 @@ class ReportChannelTest {
         ReportChannel.saveAzure(ctx, "https://example/c", "")
         assertFalse("a url with no sas is not usable", ReportChannel.hasAzure(ctx))
     }
+
+    // ── the parser shared by the folder route and the paste route ────────────────────────────
+
+    @Test
+    fun `a full provisioning blob stores both credential sets`() {
+        val applied = ReportChannel.applyProperties(ctx, """
+            # DashCast reporting channel
+            bugReport.botToken=123:ABC
+            bugReport.chatId=-1004472712700
+            bugReport.threadId=2
+            bugReport.hudThreadId=4
+            azure.blobUrl=https://example.blob.core.windows.net/re
+            azure.sas=sv=2024-01-01&sp=cw&sig=abc
+        """.trimIndent())
+        assertEquals(2, applied)
+        assertTrue(ReportChannel.hasTelegram(ctx))
+        assertTrue(ReportChannel.hasAzure(ctx))
+    }
+
+    @Test
+    fun `an equals sign inside a value survives`() {
+        // Azure SAS strings are query strings: splitting on every '=' instead of the first one
+        // would truncate the signature and produce a credential that fails only at upload time.
+        ReportChannel.applyProperties(ctx, "azure.blobUrl=https://x/y\nazure.sas=sv=2024&sig=a=b")
+        assertEquals("sv=2024&sig=a=b", ReportChannel.azureSas(ctx))
+    }
+
+    @Test
+    fun `comments blank lines and unknown keys are ignored`() {
+        val applied = ReportChannel.applyProperties(ctx, """
+
+            # a comment
+            unrelated.key=whatever
+            not a properties line
+            bugReport.botToken=t
+            bugReport.chatId=c
+        """.trimIndent())
+        assertEquals("one set, from the two keys that mean something", 1, applied)
+    }
+
+    @Test
+    fun `a blob with nothing usable stores nothing`() {
+        assertEquals(0, ReportChannel.applyProperties(ctx, "# empty\n\n"))
+        assertFalse(ReportChannel.isPairedOnDevice(ctx))
+    }
+
+    @Test
+    fun `a partial blob is a valid outcome not an error`() {
+        // Telegram without Azure is how most testers will be provisioned; it must pair.
+        assertEquals(1, ReportChannel.applyProperties(ctx, "bugReport.botToken=t\nbugReport.chatId=c"))
+        assertTrue(ReportChannel.isPairedOnDevice(ctx))
+        assertFalse(ReportChannel.hasAzure(ctx))
+    }
 }
