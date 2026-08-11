@@ -32,8 +32,13 @@ anyone diagnose a vehicle they cannot touch. It includes:
   time, whether to attach them, and answering no does not cancel the report.
 
 HUD and cluster diagnostics collect the same kind of material, focused on the instrument cluster.
-The APK extraction tool collects copies of manufacturer software from the vehicle; it does not
-collect personal data, but the archives are large.
+
+The APK extraction tool collects copies of manufacturer software from the vehicle. An earlier
+version of this page said it does not collect personal data. That was wrong: alongside the
+manufacturer packages it writes an inventory of **every** application installed on the head unit —
+name, path, version and signer — and a set of vehicle identity properties. A full list of the
+applications someone installed is personal data by any reasonable reading of the phrase, and the
+vehicle properties name the car. The archives are also large.
 
 ## Where it goes
 
