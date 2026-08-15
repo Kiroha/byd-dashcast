@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        '🔒 Zgłoszenie zawiera wyłącznie dzienniki DashCast i techniczny stan urządzenia/klastra — bez kontaktów, bez pozycji GPS, bez zawartości aplikacji.',
+        '🔒 Przed wysłaniem DashCast usuwa numer nadwozia, nazwy sieci Wi-Fi, adresy sprzętowe i położenia. Zostają dziennik DashCast i dziennik systemu Android, kopiowane bez zmian — zawierają to, co zapisały inne aplikacje. Pytamy raz przed jakimkolwiek wysłaniem, a jeśli odmówisz, nic nie opuszcza samochodu.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        '🔒 Żadne dane osobowe (kontakty, pozycja GPS, zawartość aplikacji) nie są rejestrowane — tylko działania DashCast i techniczne kody zwrotne.',
+        '🔒 Dziennik zapisuje, co robi DashCast, w tym nazwy pakietów i wynik wykonywanych poleceń. Udostępnienie go z tego ekranu wysyła go bez zmian — filtrowanie usuwające numer nadwozia, nazwy sieci i położenia działa przy zgłoszeniach błędów, nie tutaj.',
     },
   ],
 

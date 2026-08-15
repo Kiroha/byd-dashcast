@@ -29,6 +29,7 @@ import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.report.ReportChannel
+import com.byd.dashcast.report.RelayUploader
 import com.byd.dashcast.report.ReportConsent
 import com.byd.dashcast.proxy.ShellGateway
 import com.byd.dashcast.ui.diag.DiagActivity
@@ -131,7 +132,13 @@ class SettingsActivity : AppCompatActivity() {
     private fun refreshReportChannelRow() {
         Thread {
             val granted = try { ReportConsent.isGranted(this) } catch (_: Throwable) { false }
-            val channel = try { ReportChannel.isPairedOnDevice(this) } catch (_: Throwable) { false }
+            // "Is there a way out of the car", not "is a credential stored". The relay needs none,
+            // so reading isPairedOnDevice alone told every relay-using tester their reports go
+            // nowhere while they were in fact being sent — the worst direction for this row to be
+            // wrong in, because it invites someone to stop reporting.
+            val channel = try {
+                RelayUploader.isConfigured() || ReportChannel.isPairedOnDevice(this)
+            } catch (_: Throwable) { false }
             if (mDestroyed) return@Thread
             runOnUiThread {
                 if (mDestroyed) return@runOnUiThread

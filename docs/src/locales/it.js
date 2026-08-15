@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        '🔒 La segnalazione contiene solo i log di DashCast e lo stato tecnico del dispositivo/cluster — nessun contatto, nessuna posizione GPS, nessun contenuto delle app.',
+        '🔒 Prima dell\'invio, DashCast rimuove il numero di telaio, i nomi delle reti Wi-Fi, gli indirizzi fisici e le posizioni. Restano il registro di DashCast e quello del sistema Android, copiati così come sono: contengono ciò che hanno scritto le altre app. Ti viene chiesto una volta prima di ogni invio e, se rifiuti, niente esce dall\'auto.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        '🔒 Nessun dato personale (contatti, posizione GPS, contenuto delle app) viene registrato — solo le azioni DashCast e i codici di ritorno tecnici.',
+        '🔒 Il registro annota ciò che fa DashCast, compresi i nomi dei pacchetti e l\'output dei comandi eseguiti. Condividerlo da questa schermata lo invia così com\'è: il filtro che rimuove il numero di telaio, i nomi delle reti e le posizioni agisce sulle segnalazioni, non qui.',
     },
   ],
 

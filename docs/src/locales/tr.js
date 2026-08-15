@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        '🔒 Rapor yalnızca DashCast günlüklerini ve teknik cihaz/küme durumunu içerir — kişiler yok, GPS konumu yok, uygulama içeriği yok.',
+        '🔒 Göndermeden önce DashCast şasi numarasını, Wi-Fi ağ adlarını, donanım adreslerini ve konumları çıkarır. Geriye DashCast günlüğü ve Android sistem günlüğü kalır; oldukları gibi kopyalanırlar ve diğer uygulamaların yazdıklarını içerirler. Herhangi bir gönderimden önce bir kez sorulur; reddedersen araçtan hiçbir şey çıkmaz.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        '🔒 Hiçbir kişisel veri (kişiler, GPS konumu, uygulama içeriği) kaydedilmez — yalnızca DashCast eylemleri ve teknik dönüş kodları.',
+        '🔒 Günlük, DashCast\'in yaptıklarını kaydeder; paket adları ve çalıştırdığı komutların çıktısı dahil. Bu ekrandan paylaşmak onu olduğu gibi gönderir — şasi numarasını, ağ adlarını ve konumları çıkaran süzme hata raporlarında çalışır, burada değil.',
     },
   ],
 

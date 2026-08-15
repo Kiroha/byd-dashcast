@@ -38,7 +38,7 @@ const { app } = require('@azure/functions');
  * ## Application settings
  *
  *   TELEGRAM_BOT_TOKEN   required
- *   TELEGRAM_CHAT_ID     required, e.g. -1004472712700
+ *   TELEGRAM_CHAT_ID     required, e.g. -100999999999
  *   TELEGRAM_THREAD_BUG  optional, the bug-report topic id
  *   TELEGRAM_THREAD_HUD  optional, the HUD-report topic id
  */

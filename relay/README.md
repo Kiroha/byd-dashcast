@@ -69,7 +69,7 @@ az functionapp create -g $RG -n $APP \
 # The secret lives here and only here.
 az functionapp config appsettings set -g $RG -n $APP --settings \
     TELEGRAM_BOT_TOKEN="<the bot token>" \
-    TELEGRAM_CHAT_ID="-1004472712700" \
+    TELEGRAM_CHAT_ID="-100999999999" \
     TELEGRAM_THREAD_BUG="2" \
     TELEGRAM_THREAD_HUD="4"
 

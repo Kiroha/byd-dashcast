@@ -7,12 +7,18 @@ apply plugin: 'kotlin-android'
 // publicly downloadable APK. They now live in EncryptedSharedPreferences on each device and are
 // provisioned at runtime by ReportChannel.
 //
-// local.properties keeps the same key names and doubles as the provisioning file:
-//   bugReport.botToken / bugReport.chatId / bugReport.threadId / bugReport.hudThreadId
-//   azure.blobUrl / azure.sas
-// To pair a device:
-//   adb push local.properties /data/local/tmp/dashcast_channel.properties
-// then tap "Pair reporting channel" in the Diagnostics screen.
+// A device is normally provisioned by nothing at all: uploads go through the relay, whose address
+// is compiled in and is not a credential (see RelayUploader). The file route below exists only for
+// a device that must reach Telegram or Azure directly.
+//
+// NEVER PUSH local.properties ITSELF. It is the maintainer's build file and holds keys that have no
+// business on a tester's car: azure.primary.key is a storage ACCOUNT key, granting read, write and
+// delete over the whole account, and the Download folder is readable by every app on the head unit.
+// Write a file containing only what the device needs:
+//   printf 'bugReport.botToken=...\\nbugReport.chatId=...\\n' > /tmp/dashcast_channel.properties
+//   adb push /tmp/dashcast_channel.properties /data/local/tmp/
+// Accepted keys: bugReport.botToken / chatId / threadId / hudThreadId, azure.blobUrl / azure.sas,
+// relay.url. Anything else in the file is ignored by the parser, but it still lands on the car.
 
 android {
     signingConfigs {
@@ -1269,8 +1275,39 @@ android {
         // kept as a named EMPTY set so the next person to reach for one reads why first.
         // Everything else from 1.8.29 stands. 264 unit tests, rewritten to assert that Android Auto
         // and CarPlay stay projectable. assembleDebug + assembleRelease (R8) + lintRelease green.
-        versionCode 620
-        versionName "1.8.30-beta"
+        // 621 = 1.8.31-beta (the audit's reporting work reaches testers. Three things change for
+        // an owner and one of them they will meet immediately.
+        // FIRST, A QUESTION. The app now asks, once, before any diagnostic leaves the car, in each
+        // of the thirteen languages it ships. It is asked at the first Send rather than at install
+        // — a consent question raised before the user knows the feature exists gets dismissed
+        // reflexively. Either answer lets the capture proceed: refusing turns the upload into the
+        // share sheet the app already offered when no channel was configured, so a refusal keeps a
+        // report rather than losing it. Revocable in Settings, and the notice is re-readable there.
+        // The gate is in the transport, not in the eleven screens that can start an upload, so all
+        // of them inherit it through branches that were already shipped and exercised.
+        // SECOND, LESS LEAVES. Reports are filtered before upload: the VIN, Wi-Fi network names,
+        // hardware addresses of nearby devices, positions, e-mail addresses and Google account
+        // names. The rules were measured against 160 real reports (116 MB) rather than guessed,
+        // which is what kept two obvious-looking rules out — a free-floating 17-character VIN match
+        // fires 1370 times on that corpus and never once on a VIN (it eats display identifiers, the
+        // field every cluster diagnosis is made with), and a decimal coordinate pair is 92% window
+        // scales. 128 of the 160 carried something now removed; every diagnostic field verified
+        // unchanged.
+        // THIRD, THE TOKEN IS OUT OF THE BINARY. AUD-001, the audit's only P0: since versionCode
+        // 441 every published APK carried the Telegram bot token in its DEX, extractable with unzip
+        // and strings, and rotating it meant reaching every car. Uploads now go through a relay
+        // that holds the token server-side, so a decompiled APK yields an HTTPS address and nothing
+        // else. THE PRACTICAL CONSEQUENCE FOR TESTERS: the old token has been revoked, so 1.8.29
+        // and 1.8.30 can no longer upload anything at all — they fall back to a local save. This
+        // version is the fix, and there is no way back to the old channel.
+        // Also: the extraction bundle's privacy page said it collects no personal data; it writes an
+        // inventory of every installed application, and the page now says so. And the raw-nav-text
+        // opt-in did not actually gate the raw text — one ungated Log.d printed the whole
+        // notification, and only when parsing failed, which is exactly when a report gets sent.
+        // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
+        // credential patterns in any dex or resource.)
+        versionCode 621
+        versionName "1.8.31-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
@@ -1286,9 +1323,9 @@ android {
         // pattern. Credentials now live in EncryptedSharedPreferences on each device and are
         // provisioned at runtime — see ReportChannel.
         //
-        // To pair a device: push this very file (the key names are identical) as
-        //   adb push local.properties /data/local/tmp/dashcast_channel.properties
-        // then tap "Pair reporting channel" in the Diagnostics screen.
+        // To provision a device that needs a direct channel, write a file holding ONLY the
+        // reporting keys and push that. Never local.properties itself: it also carries
+        // azure.primary.key, a storage account key. See the header of this file.
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to

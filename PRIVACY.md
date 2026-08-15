@@ -54,9 +54,16 @@ Two consequences worth stating plainly:
 - **Neither destination is under a retention policy.** There is no automatic deletion today. If you
   want a report removed, ask the maintainer.
 
-If no upload channel is configured on your device — which is the default, since credentials are no
-longer built into the application — nothing is uploaded at all. The report is written to the device
-and offered to the system share sheet, and you decide what happens to it.
+Uploads go through a relay whose address is built into the application, so a device does not need
+any credential to send a report. That address is not a secret and grants nothing — it can only be
+used to send something to the relay — but it does mean the previous sentence on this page, that
+nothing is uploaded by default because no channel is configured, is no longer true and has been
+removed.
+
+What stands in its place is the question. Nothing is uploaded until you have been asked and have
+agreed, once, at your first attempt to send a report; the notice is re-readable and revocable in
+Settings. If you refuse, the report is written to the device and offered to the system share sheet,
+and you decide what happens to it.
 
 ## What is never collected
 
