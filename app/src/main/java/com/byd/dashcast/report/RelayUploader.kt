@@ -60,6 +60,9 @@ object RelayUploader {
     /** The relay's own ceiling, mirrored so a doomed upload is refused before it is attempted. */
     const val MAX_BYTES = 45L * 1024 * 1024
 
+    /** Telegram's caption limit, applied here because the caption travels as an HTTP header. */
+    const val CAPTION_MAX_CHARS = 1024
+
     /** A device value wins, so a test deployment needs no build. */
     @JvmStatic
     fun url(): String {
@@ -100,9 +103,16 @@ object RelayUploader {
                 setRequestProperty("X-DashCast-Filename", safeName(file.name))
                 // Base64 because a caption contains newlines, and a header cannot.
                 if (!caption.isNullOrEmpty()) {
+                    // Capped BEFORE it becomes a header. The wizard's free-text field has no length
+                    // limit, the relay and Telegram both truncate at 1024 — but only after the
+                    // header has been built, and a header this large is refused by the platform
+                    // long before either of them gets a say. So a tester who wrote a long
+                    // description would have lost the whole upload, not the tail of their text.
+                    val capped = if (caption.length > CAPTION_MAX_CHARS)
+                        caption.take(CAPTION_MAX_CHARS - 3) + "..." else caption
                     setRequestProperty("X-DashCast-Caption",
                         android.util.Base64.encodeToString(
-                            caption.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP))
+                            capped.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP))
                 }
                 // Streamed rather than buffered: a report can be tens of megabytes and the car has
                 // less headroom than a phone.

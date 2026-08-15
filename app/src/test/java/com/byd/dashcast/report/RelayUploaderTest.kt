@@ -151,4 +151,13 @@ class RelayUploaderTest {
         assertTrue(RelayUploader.safeName("_leading").first().isLetterOrDigit())
         assertTrue(RelayUploader.safeName("x".repeat(400)).length <= 120)
     }
+
+    @Test
+    fun `the caption is capped before it becomes a header`() {
+        // The wizard's free-text field has no length limit. The relay and Telegram both truncate at
+        // 1024 — but only after the header exists, and an oversized header is refused by the
+        // platform before either of them is consulted. A tester who wrote a long description would
+        // have lost the entire upload rather than the tail of their sentence.
+        assertEquals(1024, RelayUploader.CAPTION_MAX_CHARS)
+    }
 }

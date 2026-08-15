@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        "🔒 Le rapport ne contient que les journaux DashCast et l'état technique de l'appareil/du cluster — aucun contact, aucune position GPS, aucun contenu d'app.",
+        '🔒 Avant l\'envoi, DashCast retire le numéro de série du véhicule, les noms de réseaux Wi-Fi, les adresses matérielles et les positions. Restent le journal DashCast et celui du système Android, copiés tels quels — ils contiennent ce que les autres applications ont écrit. On vous demande votre accord une fois avant tout envoi, et rien ne quitte la voiture si vous refusez.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        "🔒 Aucune donnée personnelle (contacts, position GPS, contenu d'app) n'est journalisée — uniquement les actions DashCast et les codes de retour techniques.",
+        '🔒 Le journal enregistre ce que fait DashCast, y compris les noms de paquets et la sortie des commandes exécutées. Le partager depuis cet écran l\'envoie tel quel — le filtrage qui retire le numéro de série du véhicule, les noms de réseaux et les positions s\'applique aux rapports de bug, pas ici.',
     },
   ],
 

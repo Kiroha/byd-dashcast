@@ -134,7 +134,7 @@ class ReportChannelTest {
         val applied = ReportChannel.applyProperties(ctx, """
             # DashCast reporting channel
             bugReport.botToken=123:ABC
-            bugReport.chatId=-1004472712700
+            bugReport.chatId=-100999999999
             bugReport.threadId=2
             bugReport.hudThreadId=4
             azure.blobUrl=https://example.blob.core.windows.net/re

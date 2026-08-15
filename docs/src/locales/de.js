@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        '🔒 Der Bericht enthält nur DashCast-Protokolle und technischen Geräte-/Cockpit-Zustand — keine Kontakte, keine GPS-Position, keine App-Inhalte.',
+        '🔒 Vor dem Senden entfernt DashCast die Fahrzeug-Identifizierungsnummer, WLAN-Netzwerknamen, Hardware-Adressen und Standorte. Es bleiben das DashCast-Protokoll und das Android-Systemprotokoll, unverändert kopiert — sie enthalten, was andere Apps geschrieben haben. Du wirst einmal gefragt, bevor etwas gesendet wird, und bei Ablehnung verlässt nichts das Auto.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        '🔒 Keine persönlichen Daten (Kontakte, GPS-Position, App-Inhalte) werden protokolliert — nur DashCast-Aktionen und technische Rückgabecodes.',
+        '🔒 Das Protokoll hält fest, was DashCast tut, einschließlich Paketnamen und der Ausgabe ausgeführter Befehle. Wer es von diesem Bildschirm aus teilt, sendet es unverändert — die Filterung, die Fahrgestellnummer, Netzwerknamen und Standorte entfernt, läuft bei Fehlerberichten, nicht hier.',
     },
   ],
 
