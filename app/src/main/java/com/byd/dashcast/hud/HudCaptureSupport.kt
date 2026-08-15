@@ -30,7 +30,17 @@ object HudCaptureSupport {
      * group's General topic instead of failing.
      */
     @JvmStatic
-    val HUD_TEST_THREAD: String get() = com.byd.dashcast.report.ReportChannel.hudThreadId()
+    /**
+     * The HUD topic.
+     *
+     * A numeric `message_thread_id` while a device is provisioned directly; the relay's symbolic
+     * name once it is not, because with a relay the thread ids live server-side and the car has
+     * none to quote. Both forms are understood by TelegramBugReporter.
+     */
+    val HUD_TEST_THREAD: String get() {
+        val id = com.byd.dashcast.report.ReportChannel.hudThreadId()
+        return if (id.isNotEmpty()) id else com.byd.dashcast.report.RelayUploader.TOPIC_HUD
+    }
 
     /**
      * Zips [work] into the shareable report store and drops the staging directory.
