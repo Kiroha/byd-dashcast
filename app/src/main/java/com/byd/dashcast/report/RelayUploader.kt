@@ -41,13 +41,14 @@ object RelayUploader {
     private const val TAG = "RelayUploader"
 
     /**
-     * The deployed relay endpoint. EMPTY UNTIL DEPLOYED — see `relay/README.md`.
+     * The deployed relay endpoint — see `relay/README.md` for what stands behind it.
      *
-     * Paste the function URL here, e.g. `https://dashcast-relay.azurewebsites.net/api/report`.
-     * This is deliberately a plain constant and deliberately not a credential: the release
-     * secret-scan workflow looks for token shapes, and a bare HTTPS URL is not one.
+     * Deliberately a plain constant and deliberately not a credential. It grants the ability to
+     * send something to the relay and nothing else: no read of anyone's report, no impersonation
+     * of the bot beyond posting into the group it already posts into. The release secret-scan
+     * workflow looks for token shapes, and a bare HTTPS URL is not one.
      */
-    const val DEFAULT_URL = ""
+    const val DEFAULT_URL = "https://func-dc-relay-bf8097.azurewebsites.net/api/report"
 
     /** Topic names the relay understands. The thread ids themselves live server-side now. */
     const val TOPIC_BUG = "bug"

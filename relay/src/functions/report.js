@@ -64,15 +64,6 @@ app.http('report', {
     methods: ['POST'],
     authLevel: 'anonymous',
     handler: async (request, context) => {
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        const chatId = process.env.TELEGRAM_CHAT_ID;
-        if (!token || !chatId) {
-            // A misconfigured relay must not look like a rejected report: the car would fall back
-            // to a local save and the tester would be told their report was refused.
-            context.error('relay not configured: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing');
-            return bad(503, 'relay not configured');
-        }
-
         const topic = (request.headers.get('x-dashcast-topic') || 'bug').toLowerCase();
         if (!Object.prototype.hasOwnProperty.call(TOPICS, topic)) return bad(400, 'unknown topic');
 
@@ -92,6 +83,21 @@ app.http('report', {
         const body = Buffer.from(await request.arrayBuffer());
         if (body.length < MIN_BYTES) return bad(400, 'body too small to be a report');
         if (body.length > MAX_BYTES) return bad(413, 'body too large');
+
+        // Configuration is checked LAST, once the request is known to be a report.
+        //
+        // Two reasons, and the order is not cosmetic. Anything malformed is refused without the
+        // function considering its own state, so junk costs one comparison rather than a decision
+        // about credentials. And 503 stays reserved for a well-formed report that could not be
+        // forwarded — a misconfigured relay must not look like a rejected report, or the car falls
+        // back to a local save and the tester is told their report was refused when in fact nobody
+        // was listening.
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        const chatId = process.env.TELEGRAM_CHAT_ID;
+        if (!token || !chatId) {
+            context.error('relay not configured: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing');
+            return bad(503, 'relay not configured');
+        }
 
         const form = new FormData();
         form.append('chat_id', chatId);
