@@ -388,6 +388,32 @@ public final class BugReportCapture {
                     + "\n[report body build failed: " + t + "]\n"
                     + "\n════════ DASHCAST JOURNAL ════════\n" + AppLogger.get();
         }
+        // AUD-004 — the single choke point. By this line `content` holds everything a report will
+        // ever contain: the wizard's header, the device and version lines, the HUD state, both
+        // unfiltered logcat passes, the ~20 dumpsys sections and the journal. One call covers the
+        // lot; redacting earlier would mean redacting in five places and eventually missing one.
+        //
+        // Off the main thread by construction — finish() is reached from the shell callback or from
+        // the offline capture thread, never from the UI — so six regex passes over a body capped at
+        // 4 MB cost nothing a user can feel.
+        //
+        // FAILS OPEN, on purpose, and says so. Redactor already isolates its rules so one bad
+        // pattern cannot take the others down; if the whole call still throws, the report goes out
+        // as it would have before this commit existed — which is the state the consent notice
+        // describes — rather than being lost. What must never happen is shipping unfiltered text
+        // while looking filtered, so the report carries the failure in its own body.
+        String redactionNote;
+        try {
+            Redactor.Result r = Redactor.redact(content);
+            content = r.text;
+            redactionNote = r.summary();
+        } catch (Throwable t) {
+            redactionNote = "REDACTION FAILED (" + t.getClass().getSimpleName()
+                    + ") — this report was NOT filtered";
+            AppLogger.e(TAG, "redaction failed — shipping unfiltered", t);
+        }
+        content = content + "\n════════ REDACTION ════════\n" + redactionNote + "\n";
+
         final String body = content;
 
         // Primary target is EXTERNAL (so the uid-2000 shell can co-write the dump into it).
