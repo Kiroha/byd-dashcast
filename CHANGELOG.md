@@ -14,6 +14,16 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.29-beta (versionCode 619)
+
+**Stops DashCast from making an app it projected unreachable on the centre screen afterwards** (INC-20260815-181820).
+
+A tester projected the car's own Android Auto host onto the cluster, then could never get it back on the centre screen, and uninstalled DashCast — which could not help, because nothing that survived belonged to us. The eviction was not at fault: it parked the task on display 0 and the probe confirmed it. Then `forceStopApp` **removed that task before attempting the kill**, and the kill failed (same pid before and after). With no task left to recycle, the tester's launcher tap seven seconds later had its fresh task attached to the cluster by the system, before any of the app's code ran. Attribution is proven by a control pair in the same log: the identical launcher call site logs `mDisplayId=0` two minutes before the session and `mDisplayId=1` five seconds after it. What DashCast leaves behind is a per-component display **routing preference** in `system_server` — not a task, not a process.
+
+**Fixes.** `forceStopApp` now kills, verifies, and removes the task only when the kill is confirmed; a failed kill deliberately keeps the task, because a task parked on display 0 is the app's way home (both the daemon path and the ADB shell fallback). A new pure `ProjectionSafetyPolicy` (+7 tests) refuses packages projection cannot clean up after, in the picker and again at launch — keyed on the failing *property*, deliberately **not** on the system uid: that hypothesis is refuted by the corpus, since `com.byd.avc` and `com.byd.mediacenter` both run as `system`, force-stop cleanly, and `com.byd.avc` has been projected successfully 4 times, so a uid rule would have deleted a working feature. The general rule is `FLAG_PERSISTENT` plus the **runtime-resolved** HOME handler (the hard-coded launcher list misses the launcher in use on 27 corpus cars). `BootDisplayCleanup`'s only recovery reflected into `moveTaskToDisplay`, which DiLink 3 strips — the report prints `moveTaskToDisplay stripped on ROM` — so the shipped safety net had never once run on the platform needing it; it now falls back to relaunching on display 0. Bug reports capture `logcat -b events` at 2000 lines instead of 500.
+
+**Known residual**: this stops the app losing its way home but does not erase the routing preference. Decisive test if you hit it — project, Stop, tap from the launcher, note the screen, then **reboot** and tap again. 264 unit tests; no daemon protocol change; no user-facing string changed. See [docs/releases/1.8.29-beta.md](docs/releases/1.8.29-beta.md).
+
 ### 1.8.28-beta (versionCode 618)
 
 **Fixes where 1.8.27's small-panel latch reads.** Follow-up to that release; nothing else changes.
