@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import com.byd.dashcast.cluster.ProjectionSafetyPolicy
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.model.AppInfo
 import com.byd.dashcast.model.AppShortcut
@@ -184,6 +185,18 @@ class AppRepository {
         // Exclude well-known system launchers that should never appear in the list.
         val exclusions = buildExclusionSet(selfPkg)
 
+        // Resolve the package that ACTUALLY handles HOME right now, rather than trusting the
+        // hard-coded launcher list above: on 27 corpus cars the launcher in use is neither
+        // com.android.launcher3 nor com.byd.launcher, so a user could send their own home screen
+        // to the cluster. Resolving costs one PackageManager call for the whole list build.
+        val homePkg: String? = try {
+            pm.resolveActivity(
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0
+            )?.activityInfo?.packageName
+        } catch (ignored: Exception) {
+            null
+        }
+
         // Check shortcut host permission once — avoids per-app SecurityException overhead.
         var launcherApps: LauncherApps? = null
         var hasShortcutPerm = false
@@ -219,6 +232,17 @@ class AppRepository {
         for (ri in resolveInfos) {
             val pkg = ri.activityInfo.packageName
             if (exclusions.contains(pkg)) continue
+
+            // Hide anything projection cannot clean up after — see ProjectionSafetyPolicy. Hiding
+            // rather than failing at launch time: the picker is the only place the user chooses,
+            // and an app that would strand itself should not be offered in the first place.
+            val persistent = (ri.activityInfo.applicationInfo.flags
+                    and android.content.pm.ApplicationInfo.FLAG_PERSISTENT) != 0
+            val safety = ProjectionSafetyPolicy.verdict(pkg, persistent, pkg == homePkg)
+            if (safety != ProjectionSafetyPolicy.Verdict.ALLOWED) {
+                AppLogger.i(TAG, "app list: hiding $pkg — ${ProjectionSafetyPolicy.reason(safety)}")
+                continue
+            }
 
             val name: String = try {
                 ri.loadLabel(pm).toString()

@@ -14,6 +14,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Binder;
@@ -762,6 +765,35 @@ public class ClusterService extends Service
         });
     }
 
+    /**
+     * Resolves this package's flags and the current HOME handler, then asks
+     * {@link ProjectionSafetyPolicy}. Fails OPEN: if PackageManager cannot answer, the launch
+     * proceeds exactly as before — a lookup failure is not evidence that a package is dangerous,
+     * and this guard must never be the reason a working car stops projecting.
+     */
+    private boolean isProjectionAllowed(String packageName) {
+        boolean persistent = false;
+        boolean isHome = false;
+        try {
+            PackageManager pm = getPackageManager();
+            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+            persistent = (ai.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
+            ResolveInfo home = pm.resolveActivity(
+                    new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0);
+            isHome = home != null && packageName.equals(home.activityInfo.packageName);
+        } catch (Throwable t) {
+            AppLogger.d(TAG, "projection safety check inconclusive for " + packageName
+                    + " (" + t.getClass().getSimpleName() + ") — allowing");
+            return true;
+        }
+        ProjectionSafetyPolicy.Verdict v =
+                ProjectionSafetyPolicy.verdict(packageName, persistent, isHome);
+        if (v == ProjectionSafetyPolicy.Verdict.ALLOWED) return true;
+        AppLogger.w(TAG, "refusing to project " + packageName + " — "
+                + ProjectionSafetyPolicy.reason(v));
+        return false;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Launch on cluster
     // ─────────────────────────────────────────────────────────────────────────
@@ -769,6 +801,13 @@ public class ClusterService extends Service
     public void launchOnDashboard(final String packageName, final LaunchCallback callback) {
         final LifecycleGate.Token operation = mOperationGate.capture();
         if (!operation.isValid()) return;
+        // Backstop for the paths the app picker does not gate: auto-launch, saved layouts, the
+        // headless boot launch, and a target persisted from before this build. Hiding it in the
+        // list is the primary defence; refusing here is what makes it unreachable.
+        if (!isProjectionAllowed(packageName)) {
+            if (callback != null) callback.onResult(false);
+            return;
+        }
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → " + packageName);
         if (mPendingLaunchRunnable != null) {
             mMainHandler.removeCallbacks(mPendingLaunchRunnable);

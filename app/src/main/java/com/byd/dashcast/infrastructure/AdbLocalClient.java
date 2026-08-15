@@ -1341,17 +1341,36 @@ public class AdbLocalClient {
                 if (!DaemonConfig.isLegacyPathEnabled(context) && ProxyClient.isConnected()) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
+                        // ORDER MATTERS, and it is the reverse of what it used to be.
+                        //
+                        // This used to removeTask() FIRST and kill second, to avoid leaving an
+                        // orphan task on display 0. That reasoning only holds when the kill
+                        // actually succeeds. When it does not — a persistent / system-uid package
+                        // the uid-2000 daemon cannot signal — destroying the task removes the one
+                        // thing that would have brought the app back to the centre screen.
+                        //
+                        // INC-20260815-181820: the eviction correctly parked com.byd.androidauto's
+                        // task on display 0, then removeTask() destroyed it, then the kill failed
+                        // (pid unchanged before and after). Seven seconds later the tester tapped
+                        // Android Auto in the head-unit launcher and system_server, with no task
+                        // left to recycle, sent the fresh one to the CLUSTER — proven by the same
+                        // launcher call site logging mDisplayId=0 before the session and
+                        // mDisplayId=1 after it. Had the parked task survived, the tap would have
+                        // found a task with the right affinity already on display 0.
+                        //
+                        // So: kill, verify, and only then remove the task. On the overwhelming
+                        // majority of packages the kill succeeds and behaviour is unchanged.
                         int taskId = ProxyClient.findTaskIdForPackage(packageName);
-                        if (taskId >= 0) {
-                            AppLogger.d(TAG, "forceStopApp typed: removeTask taskId=" + taskId);
-                            ProxyClient.removeTask(taskId);
-                            Thread.sleep(300);
-                        }
                         ProxyClient.forceStopPackage(packageName, 0);
                         StringBuilder verification = new StringBuilder();
                         boolean killed = verifyForceStop(packageName, verification);
                         long dt = SystemClock.elapsedRealtime() - t0;
                         if (killed) {
+                            if (taskId >= 0) {
+                                AppLogger.d(TAG, "forceStopApp typed: kill verified — removeTask taskId="
+                                        + taskId);
+                                ProxyClient.removeTask(taskId);
+                            }
                             AppLogger.log(TAG, "forceStopApp typed verified (" + dt + "ms): "
                                 + packageName + " taskId=" + taskId);
                             if (callback != null) callback.onSuccess(
@@ -1360,8 +1379,12 @@ public class AdbLocalClient {
                             String detail = verification.length() == 0
                                 ? "process still alive after force-stop"
                                 : verification.toString().trim();
+                            // Deliberately KEEP the task. It is the app's way home: still parked on
+                            // display 0 by the eviction that ran just before, and the only thing
+                            // that stops the next launcher tap from being routed to the cluster.
                             AppLogger.w(TAG, "forceStopApp verification failed for "
-                                + packageName + ": " + detail);
+                                + packageName + ": " + detail
+                                + " — keeping task " + taskId + " on display 0 as its way back");
                             if (callback != null) callback.onError(detail);
                         }
                         return;
@@ -1378,28 +1401,31 @@ public class AdbLocalClient {
                     }
                 }
                 try (Dadb dadb = connect(context)) {
-                    // Extract Task IDs associated with the package and remove them from Recents BEFORE force-stopping.
-                    // On Android 10, dumpsys activity recents prints lines like:
+                    // Same inversion as the typed path above, for the same reason
+                    // (INC-20260815-181820): kill first, and only clear the task once the process
+                    // is gone. A task destroyed after a FAILED kill is the app losing its way back
+                    // to display 0. On Android 10, dumpsys activity recents prints lines like:
                     //   * Recent #0: TaskRecord{3a9c7f5 #42 A=com.example.app U=0 StackId=1 sz=1}
                     // We extract the task ID (#42) using sed BRE — NOT grep -o (its \+ is unsupported
                     // on Android's busybox grep). We also must NOT match the recents index (#0).
                     String apkPath = context.getPackageCodePath();
                     String cleanRecentsCmd =
-                            // 1. Find TaskRecord lines containing this package, extract the task ID
-                            //    (the number inside "TaskRecord{<hash> #<ID> ...}")
-                            "TASKS=$(dumpsys activity recents 2>/dev/null | grep 'TaskRecord' | grep -F '" + packageName + "' " +
-                            "| sed -n 's/.*TaskRecord{[^ ]* #\\([0-9]*\\).*/\\1/p' | sort -u); " +
-                            "echo \"[DashCast-recents] pkg=" + packageName + " tasks=$TASKS\"; " +
-                            // 2. Remove each task: try IActivityTaskManager.removeTask() via reflection
-                            //    (app_process, uid=2000 shell). Also try am task remove as OEM fallback.
-                            "for t in $TASKS; do " +
-                            "  am task remove $t 2>/dev/null; " +
-                            "  export CLASSPATH=" + apkPath + "; " +
-                            "  /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "done; ";
-                    
-                    AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");
+                            // Kill FIRST. Then, only if no process survives, remove its tasks:
+                            // `pidof` empty is the same liveness test verifyForceStopViaAdb uses.
+                            "am force-stop " + packageName + " 2>&1; " +
+                            "if [ -z \"$(pidof " + packageName + " 2>/dev/null)\" ]; then " +
+                            "  TASKS=$(dumpsys activity recents 2>/dev/null | grep 'TaskRecord' | grep -F '" + packageName + "' " +
+                            "  | sed -n 's/.*TaskRecord{[^ ]* #\\([0-9]*\\).*/\\1/p' | sort -u); " +
+                            "  echo \"[DashCast-recents] pkg=" + packageName + " tasks=$TASKS\"; " +
+                            "  for t in $TASKS; do " +
+                            "    am task remove $t 2>/dev/null; " +
+                            "    export CLASSPATH=" + apkPath + "; " +
+                            "    /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
+                            "    /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
+                            "  done; " +
+                            "else echo \"[DashCast-recents] pkg=" + packageName + " STILL ALIVE — keeping its tasks as its way back\"; fi; ";
+
+                    AdbShellResponse r = dadb.shell(cleanRecentsCmd + "echo STOPPED");
                     String out = r.getAllOutput().trim();
                     noteTransportSuccess();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);

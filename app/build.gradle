@@ -1209,8 +1209,48 @@ android {
         // and still never run on a car.
         // No behaviour change on 10.25"/12.3" clusters. 257 unit tests; assembleDebug +
         // assembleRelease (R8) + lintRelease green.
-        versionCode 618
-        versionName "1.8.28-beta"
+        // 619 = 1.8.29-beta (INC-20260815-181820: a tester projected the OEM Android Auto host onto
+        // the cluster, then could never get Android Auto back on the CENTRE screen and uninstalled
+        // DashCast over it — which could not help, because everything that survived lives in
+        // system_server, not in our APK.
+        // MECHANISM (the middle of the first hypothesis was wrong and was corrected by review): the
+        // eviction WORKED — it parked com.byd.androidauto's task on display 0 and the probe
+        // confirmed LANDED. Then forceStopApp called removeTask() BEFORE the kill and destroyed
+        // that task; then the kill failed (pid 2740 identical before and after, no am_proc_start).
+        // Net: process alive, NO task anywhere. Seven seconds later the tester tapped Android Auto
+        // in the head-unit launcher and system_server, with no task left to recycle, attached the
+        // fresh one to display 1 — before any Android Auto code ran (mCallingPackage=
+        // com.android.launcher3). Attribution is proven by a control pair inside the same log: the
+        // SAME launcher call site logs mDisplayId=0 two minutes before the session and mDisplayId=1
+        // five seconds after it. What DashCast leaves behind is a per-component display ROUTING
+        // preference, not a task and not a process. The app was NOT re-parenting itself, and
+        // mSingleTaskInstance is not implicated (it repels launches, and is not clearable anyway).
+        // FIX 1 — forceStopApp now kills, VERIFIES, and removes the task only when the kill is
+        // confirmed; on a failed kill the task is deliberately kept, because a task parked on
+        // display 0 is the app's way home. Both the typed daemon path and the ADB shell fallback.
+        // FIX 2 — new pure ProjectionSafetyPolicy (+7 tests) refusing packages projection cannot
+        // clean up after. Deliberately keyed on the failing PROPERTY, not on uid: "uid 1000 means
+        // unkillable" was the first hypothesis and the corpus refutes it — com.byd.avc and
+        // com.byd.mediacenter both run as system, force-stop cleanly, and com.byd.avc has been
+        // projected successfully 4 times, so a uid rule would have deleted a working feature. The
+        // name list is therefore the single package with an incident behind it; the general case is
+        // FLAG_PERSISTENT (inference — the report never captured that package's flags), plus the
+        // RUNTIME-resolved CATEGORY_HOME handler, because the hard-coded launcher list misses the
+        // launcher actually in use on 27 corpus cars. Wired at the picker (hide) and at
+        // launchOnDashboard (refuse), failing OPEN on any PackageManager error.
+        // FIX 3 — BootDisplayCleanup's only recovery reflected into moveTaskToDisplay, which DL3
+        // strips (this very report prints "moveTaskToDisplay stripped on ROM"), so the shipped
+        // safety net could never once have run on the platform that needs it. It now falls back to
+        // relaunching on display 0, which also rewrites the routing preference that does the harm.
+        // FIX 4 — bug reports capture logcat -b events at 2000 lines instead of 500: that buffer is
+        // what reconstructed this incident, and 500 barely covered the window.
+        // KNOWN RESIDUAL: this stops the app losing its way home, but does not erase the routing
+        // preference itself. If that preference survives a reboot, the app will be pulled back to
+        // the cluster whenever it has no task to recycle. Decisive test for the next tester:
+        // project, Stop, tap from the launcher, note the screen — then REBOOT and tap again.
+        // 264 unit tests (7 new); assembleDebug + assembleRelease (R8) + lintRelease green.
+        versionCode 619
+        versionName "1.8.29-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
