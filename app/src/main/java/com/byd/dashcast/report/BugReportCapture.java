@@ -163,7 +163,7 @@ public final class BugReportCapture {
             // test, and is idempotent if the shell layer replays the command.
             + " ; echo '--- LOGCAT (last " + LOGCAT_FALLBACK_LINES + " lines) ---' >> " + p
             + " ; logcat -d -t " + LOGCAT_FALLBACK_LINES + " -v threadtime >> " + p + " 2>&1"
-            + " ; echo '--- LOGCAT EVENTS (last 500) ---' >> " + p
+            + " ; echo '--- LOGCAT EVENTS (last 2000) ---' >> " + p
             // 2000, not 500: the events buffer is where task/stack creation and display routing are
             // actually visible (wm_task_created, am_create_activity, wm_stack_created), and it is
             // the buffer that reconstructed INC-20260815-181820 — where 500 lines barely covered

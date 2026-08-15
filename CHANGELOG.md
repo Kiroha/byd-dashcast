@@ -14,6 +14,16 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.30-beta (versionCode 620)
+
+**Android Auto and CarPlay are back in the app list. 1.8.29 removed them, and it should not have.**
+
+1.8.29 refused `com.byd.androidauto` by name and every `FLAG_PERSISTENT` process by rule, reasoning that an app we cannot force-stop is one we cannot bring back. The rule was sound; applying it here was not. Projecting Android Auto and CarPlay onto the cluster is what DashCast is *for* — the incident that prompted the rule opens with the tester saying Maps and Waze via Android Auto worked on the screen behind the wheel — and `com.byd.carplay.ui` is persistent, so the general rule silently removed CarPlay too. The harm was never in projecting those apps; it was in destroying their task on the way out, which is fixed where it happens. Prevention by removal traded the product's purpose for a cleanup bug. The policy now refuses exactly one thing: whatever currently resolves as the home screen. The name list is kept as a named **empty** set so the next person reaching for a deny-list reads why first.
+
+**Two more defects the adversarial review caught after 1.8.29 shipped**, both mine. (a) Keeping the task on a failed kill is right only when the task is on display 0 — one caller force-stops the app *currently on the cluster* to free that display before launching the next one, and keeping it there left the next launch landing split-screen (INC-20260621-130238's NPE). The decision now reads the task's **display** from the same round trip: kept on display 0, removed when still on the cluster, kept on ABSENT/UNKNOWN since destroying on a failed lookup is the original defect. (b) The boot safety-net change is **reverted**: it walked a session history, matched on package name with no idea which display a task was on, and ran on `BOOT_COMPLETED` — which this ROM re-delivers at every ACC-on without a reboot — so several apps could be cold-launched onto the centre screen at ignition. The gap it tried to close is documented in the code and left open; doing it properly needs task locations from the daemon.
+
+264 unit tests, rewritten to assert Android Auto and CarPlay stay projectable. See [docs/releases/1.8.30-beta.md](docs/releases/1.8.30-beta.md).
+
 ### 1.8.29-beta (versionCode 619)
 
 **Stops DashCast from making an app it projected unreachable on the centre screen afterwards** (INC-20260815-181820).

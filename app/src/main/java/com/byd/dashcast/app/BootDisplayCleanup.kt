@@ -2,7 +2,6 @@ package com.byd.dashcast.app
 
 import android.content.ComponentName
 import android.content.Context
-import com.byd.dashcast.cluster.display.DashboardLauncher
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.util.AppLogger
 
@@ -25,7 +24,7 @@ object BootDisplayCleanup {
         val remaining = HashSet(pkgs)
         AppLogger.i(TAG, "Cleaning up " + pkgs.size + " apps → Display 0: " + pkgs)
         for (pkg in pkgs) {
-            if (moveTaskToDisplayZero(pkg) || relaunchOnDisplayZero(context, pkg)) {
+            if (moveTaskToDisplayZero(pkg)) {
                 remaining.remove(pkg)
             }
         }
@@ -38,30 +37,22 @@ object BootDisplayCleanup {
     }
 
     /**
-     * Fallback for the platform this safety net exists for.
+     * KNOWN GAP, deliberately left open. This reflects into
+     * `IActivityTaskManager.moveTaskToDisplay`, which DiLink 3 strips — INC-20260815-181820 prints
+     * `moveTaskToDisplay stripped on ROM` on the very car whose app was stuck — so on that platform
+     * this safety net has never once done anything.
      *
-     * [moveTaskToDisplayZero] reflects into `IActivityTaskManager.moveTaskToDisplay`, which DiLink 3
-     * strips — INC-20260815-181820 logs `moveTaskToDisplay stripped on ROM` on the very car whose
-     * app was stuck on the cluster. So the only automatic recovery DashCast ships could never once
-     * have run on the platform that needs it; every call went straight to the catch below and
-     * reported failure.
+     * v1.8.29 tried to fix it by relaunching the package on display 0 instead. That was worse than
+     * the gap: `cleanup()` walks a session HISTORY rather than a live inventory, this method matches
+     * on package name alone with no idea which display the task is on, and both callers fire it
+     * unprompted — opening DashCast, and `BOOT_COMPLETED`, which this ROM re-delivers at every
+     * ACC-on without a reboot. The driver could get several apps cold-launched onto the centre
+     * screen at ignition. Reverted.
      *
-     * Relaunching on display 0 does work there, and does more than move a task: the launch itself
-     * rewrites the per-component display the system remembers, which is the state that actually
-     * strands an app (see the same incident — a launcher tap was routed to the cluster afterwards).
+     * Doing this properly needs positive evidence that a task exists on a non-zero display, and
+     * `getTasks()` here is uid-filtered so the app process cannot see it — it has to come from the
+     * uid-2000 daemon. That is its own change, not a corollary of this one.
      */
-    private fun relaunchOnDisplayZero(context: Context, packageName: String): Boolean {
-        return try {
-            val ok = DashboardLauncher(context).launchOnMainDisplay(packageName)
-            if (ok) AppLogger.i(TAG, "Relaunched $packageName on Display 0 (move was unavailable)")
-            else AppLogger.w(TAG, "Could not relaunch $packageName on Display 0")
-            ok
-        } catch (e: Throwable) {
-            AppLogger.w(TAG, "Relaunch of $packageName on Display 0 failed: " + e.message)
-            false
-        }
-    }
-
     private fun moveTaskToDisplayZero(packageName: String): Boolean {
         return try {
             val atmClass = Class.forName("android.app.ActivityTaskManager")

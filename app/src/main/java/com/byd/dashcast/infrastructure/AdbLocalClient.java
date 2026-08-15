@@ -1360,7 +1360,17 @@ public class AdbLocalClient {
                         //
                         // So: kill, verify, and only then remove the task. On the overwhelming
                         // majority of packages the kill succeeds and behaviour is unchanged.
-                        int taskId = ProxyClient.findTaskIdForPackage(packageName);
+                        // Location, not just the id: whether keeping the task HELPS depends on
+                        // where it is. Review caught the first version keeping it unconditionally,
+                        // which regresses the DL3 "free the cluster" path — MainActivity force-stops
+                        // the app CURRENTLY ON THE CLUSTER before launching the next one, with no
+                        // move to display 0 first, precisely because moveTaskToDisplay is stripped
+                        // there. Keeping that task leaves the cluster occupied and the next launch
+                        // lands split-screen: INC-20260621-130238's NPE. Same round trip, one more
+                        // field.
+                        com.byd.dashcast.infrastructure.task.TaskLocation loc =
+                                ProxyClient.findTaskLocationForPackage(packageName);
+                        int taskId = loc.getTaskId();
                         ProxyClient.forceStopPackage(packageName, 0);
                         StringBuilder verification = new StringBuilder();
                         boolean killed = verifyForceStop(packageName, verification);
@@ -1379,12 +1389,29 @@ public class AdbLocalClient {
                             String detail = verification.length() == 0
                                 ? "process still alive after force-stop"
                                 : verification.toString().trim();
-                            // Deliberately KEEP the task. It is the app's way home: still parked on
-                            // display 0 by the eviction that ran just before, and the only thing
-                            // that stops the next launcher tap from being routed to the cluster.
-                            AppLogger.w(TAG, "forceStopApp verification failed for "
-                                + packageName + ": " + detail
-                                + " — keeping task " + taskId + " on display 0 as its way back");
+                            // A task on display 0 is the app's way home — keep it, that is the
+                            // whole point of this inversion. A task still on the CLUSTER is the
+                            // opposite: it occupies the display the caller is trying to free, so it
+                            // must go, exactly as before this change. ABSENT/UNKNOWN keep too: a
+                            // failed lookup is not evidence, and destroying on one is the original
+                            // defect.
+                            boolean onCluster =
+                                    loc.getStatus() == com.byd.dashcast.infrastructure.task.TaskLocation.Status.FOUND
+                                    && loc.getDisplayId() > 0;
+                            if (onCluster && taskId >= 0) {
+                                ProxyClient.removeTask(taskId);
+                                AppLogger.w(TAG, "forceStopApp verification failed for "
+                                    + packageName + ": " + detail + " — task " + taskId
+                                    + " still on display " + loc.getDisplayId()
+                                    + ", removed to free that display");
+                            } else if (taskId >= 0) {
+                                AppLogger.w(TAG, "forceStopApp verification failed for "
+                                    + packageName + ": " + detail + " — keeping task " + taskId
+                                    + " (display " + loc.getDisplayId() + ") as its way back");
+                            } else {
+                                AppLogger.w(TAG, "forceStopApp verification failed for "
+                                    + packageName + ": " + detail + " — no task to keep or remove");
+                            }
                             if (callback != null) callback.onError(detail);
                         }
                         return;
