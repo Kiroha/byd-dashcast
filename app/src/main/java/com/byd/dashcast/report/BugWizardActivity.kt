@@ -494,7 +494,13 @@ class BugWizardActivity : Activity() {
 
         val details = mDetailsField?.text?.toString()?.trim() ?: ""
         val cats = resources.getStringArray(R.array.bug_categories)
-        val caption = "Category: " + cats[mCategory] +
+        // The caption is a SECOND egress, not a copy of the file. It is handed to
+        // TelegramBugReporter.send() at three call sites independently of the report, so the
+        // redaction applied in BugReportCapture.finish() never touched it — and it is the piece
+        // that carries the driver's own free text, where an address or an e-mail is most likely to
+        // have been typed by hand. It is also the file's metaHeader, so redacting it here covers
+        // both. A few hundred bytes on the main thread, unlike the 4 MB body.
+        val rawCaption = "Category: " + cats[mCategory] +
             "\nCategoryKey: " + CAT_KEYS.getOrElse(mCategory) { "other" } +
             (if (mHudArrowsAnswer.isEmpty()) "" else "\nHudArrows: $mHudArrowsAnswer") +
             (if (mHudNavApp.isEmpty()) "" else "\nHudNavApp: $mHudNavApp") +
@@ -511,6 +517,10 @@ class BugWizardActivity : Activity() {
             "\nDevice: " + BugReportCapture.deviceLine() +
             "\nVersion: " + BugReportCapture.versionLine() +
             (if (mTgHandle.isEmpty()) "" else "\nTelegram: $mTgHandle")
+        // The handle survives on its own line: Redactor keeps the `Telegram:` header verbatim so
+        // the maintainer can still answer the report, and tokenises the same string only where it
+        // reappears elsewhere.
+        val caption = Redactor.redact(rawCaption).text
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {

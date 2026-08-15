@@ -79,7 +79,9 @@ class BugReportActivity : Activity() {
         tvStatus.visibility = View.VISIBLE
         tvStatus.setText(R.string.bug_status_capturing)
 
-        val caption = buildCaption(title)
+        // Same second egress as the wizard: this string goes to Telegram beside the file, so the
+        // report's own redaction never reaches it.
+        val caption = Redactor.redact(buildCaption(title)).text
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {

@@ -155,13 +155,99 @@ object Redactor {
         else m.groupValues[1] + "<coords:" + tok(m.groupValues[2]) + ">"
     }
 
+
+    /**
+     * The VIN-derived cloud token: the literal `byd` followed by exactly 16 hex digits.
+     *
+     * The heaviest identifier in the corpus — 1164 occurrences across 111 of the 160 reports, 25
+     * distinct vehicles, and each token binds to exactly one device string. [VIN_KEY] was already
+     * taking 1048 of them because they usually sit behind a `vin=`; 116 do not, and reached the
+     * report through five other carriers (the getprop sweep, BYDAutoBodyworkDevice, AutoiotService,
+     * BydDataCollector, DiCarSDK). Anchoring on the value instead of the key catches every carrier
+     * at once, including the ones nobody has written yet.
+     *
+     * Self-anchoring and safe: a literal prefix plus a fixed hex length matched nothing else in
+     * 141 MB — never a version string, a fingerprint, a package name or a stack frame. The prefix
+     * is matched case-insensitively, which picks up 4 further occurrences the case-sensitive form
+     * missed.
+     *
+     * Runs before [VIN_KEY] so the whole class is treated identically wherever it appears.
+     */
+    private val VIN_CLOUD = Rule(
+        "vin-cloud",
+        Regex("""byd[0-9a-f]{16}(?![0-9a-fA-F])""", RegexOption.IGNORE_CASE),
+    ) { m, tok -> "<vin:" + tok(m.value.lowercase()) + ">" }
+
+    /**
+     * A real ISO-3779 VIN, anchored on its world-manufacturer prefix.
+     *
+     * Four occurrences in two reports — rare, and the only place the actual chassis number appears
+     * in plain form rather than as the cloud token. The WMI anchor is what makes it safe: the bare
+     * 17-character VIN charset fires 1370 times on this corpus with a 0.29% true-positive rate,
+     * because 1361 of those are 17-DIGIT display identifiers. Requiring a leading `L`,
+     * case-sensitively, excludes every one of them — and `local:` is lowercase.
+     *
+     * The three-character prefix is kept: it names the manufacturer, which is triage context, and
+     * carries nothing about the individual car.
+     */
+    private val VIN_RAW = Rule(
+        "vin-raw",
+        Regex("""\b(L[A-HJ-NPR-Z0-9]{2})[A-HJ-NPR-Z0-9]{14}\b"""),
+    ) { m, tok -> m.groupValues[1] + "<vin:" + tok(m.value) + ">" }
+
+    /**
+     * The activation blob, anchored on the one tag that carries it.
+     *
+     * 1043 occurrences across 70 reports. The lookbehind is the entire rule: the value class —
+     * 22 base64 characters then `==` — matches 4042 times across 139 reports, and about 2986 of
+     * those are `/data/app/~~<blob>==/<pkg>-<blob>==/base.apk` install paths, which are the
+     * build-and-split evidence for DashCast and every navigation app under test. Removing them
+     * would blind the most common triage question there is: which build is actually installed.
+     */
+    private val ACTIVATION = Rule(
+        "activation",
+        Regex("""(?<=before:)[A-Za-z0-9+/]{22}=="""),
+    ) { _, _ -> "<activation>" }
+
+    /**
+     * A Google account name, behind either of the two tags that log one. 17 occurrences, 3 reports.
+     */
+    private val GMS_ACCOUNT = Rule(
+        "account",
+        Regex("""((?:GmsAuthManagerSvc: getToken: account:)|""" +
+              """(?:GmsAuthenticator: getAuthToken: Account \{name=))(\s*)([^\s,}]{1,128})"""),
+    ) { m, _ -> m.groupValues[1] + m.groupValues[2] + "<account>" }
+
+    /**
+     * An e-mail address. 26 real ones in the corpus, and every guard below was measured.
+     *
+     * The naive form — `[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}` — matches 1977 times with 98.7% false
+     * positives, dominated by versioned vendor HAL and AIDL service names shaped like
+     * `a.b.c@1.0-service.suffix`. Deleting those strips the ROM's own vendor-stack identity out of
+     * 81 of the 160 reports.
+     *
+     * Two guards do the work. Refusing a digit or a colon straight after the `@` takes 1977 matches
+     * down to 26 on its own. The closed list of top-level domains is what keeps the rule off
+     * `IInputMethod$Stub$Proxy@<hash>` and off the AudioFocus client ids this application writes
+     * into its own journal.
+     */
+    private val EMAIL = Rule(
+        "email",
+        Regex("""(?<![\w.%+-])[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9])?""" +
+              """@(?![\d:])(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+""" +
+              """(?:com|net|org|edu|gov|io|me|info|biz|eu|co|fr|de|es|it|uk|nl|be|pl|pt|ru|cn|ch|""" +
+              """at|se|dk|no|fi|cz|sk|hu|ro|gr|ie|il|tr|ua|us|ca|au|br|mx|jp|kr|in)(?![\w-])"""),
+    ) { _, _ -> "<email>" }
+
     /**
      * Order matters. The two VIN rules are anchored and run first; [SSID] must precede [SSID_BARE]
      * so the quoted form is consumed by the rule that keeps its quotes; [MAC] is broad but unambiguous,
      * so it can run afterwards without eating anything the earlier rules produced — the tokens they
      * write contain no colon-separated hex.
      */
-    private val RULES = listOf(VIN_PROP, VIN_KEY, SSID, SSID_BARE, MAC, GPS)
+    private val RULES = listOf(
+        VIN_PROP, VIN_CLOUD, VIN_KEY, VIN_RAW, ACTIVATION,
+        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, MAC, GPS)
 
     /** What a pass removed, per rule. Empty when the text was already clean. */
     class Result(@JvmField val text: String, @JvmField val counts: Map<String, Int>) {
@@ -171,6 +257,54 @@ object Redactor {
             if (counts.isEmpty()) "redaction: nothing matched"
             else "redaction: " + counts.entries.sortedBy { it.key }
                 .joinToString(", ") { it.key + "=" + it.value }
+    }
+
+
+    /**
+     * The header line the wizard writes when a tester gives a contact handle.
+     *
+     * Anchored on the line start because the word `Telegram` occurs 929 times across 127 reports
+     * and every other occurrence is the `org.telegram.messenger` package name or a path under
+     * `/storage/.../Telegram/`.
+     */
+    private val REPORTER_HEADER = Regex("""(?m)^Telegram:[ \t]*(\S.*)$""")
+
+    /**
+     * Tokenises the reporter's handle everywhere EXCEPT the header line that carries it.
+     *
+     * The finding this exists for: the handle does not stay in the header. The same string comes
+     * back deeper in the same tester's report as the name of the Wi-Fi network they are connected
+     * to — 64 occurrences across 14 reports — and again in IME candidate lists and as the local
+     * part of an e-mail address. 115 header lines, 67 incidental occurrences elsewhere. Redacting
+     * only the header would have left the interesting half untouched.
+     *
+     * The header stays verbatim, deliberately. It is the one field the driver typed in order to be
+     * contacted, the consent notice already says it is sent, and the bot rather than the tester is
+     * the Telegram sender — so tokenising it would break the follow-up loop outright and protect
+     * someone from a disclosure they made on purpose. Redacting it too is a defensible stricter
+     * policy; it costs contactability, and that cost should be chosen rather than defaulted into.
+     *
+     * Must run BEFORE the SSID rules. Otherwise the occurrence that matters most — the handle
+     * sitting in a network name — is replaced by a generic `<ssid:…>` and the link between the two
+     * disappears instead of being recorded as the same token.
+     *
+     * Short stems are left alone: below four characters the cross-pass starts matching ordinary
+     * words, and a rule that eats prose to protect a four-letter nickname is a bad trade.
+     */
+    private fun redactReporter(text: String, tok: (String) -> String): Pair<String, Int> {
+        val m = REPORTER_HEADER.find(text) ?: return text to 0
+        val stem = m.groupValues[1].trim().removePrefix("@").trim()
+        if (stem.length < 4 || !stem.any { it.isLetter() }) return text to 0
+        val cross = Regex("""(?<![\w@./-])@?""" + Regex.escape(stem) + """(?![\w.-])""",
+            RegexOption.IGNORE_CASE)
+        var n = 0
+        val label = "<reporter:" + tok(stem.lowercase()) + ">"
+        fun pass(part: String) = cross.replace(part) { n++; label }
+        // Rebuilt around the header's own span, so the line itself cannot be touched.
+        val out = pass(text.substring(0, m.range.first)) +
+            m.value +
+            pass(text.substring(m.range.last + 1))
+        return out to n
     }
 
     /**
@@ -187,6 +321,14 @@ object Redactor {
         val counts = LinkedHashMap<String, Int>()
         var out = text
         val tok: (String) -> String = { v -> token(salt, v) }
+        // Before the rules: the cross-pass needs the handle to still be findable inside the
+        // network names the SSID rules are about to replace.
+        try {
+            val (t, n) = redactReporter(out, tok)
+            out = t
+            if (n > 0) counts["reporter"] = n
+        } catch (_: Throwable) {
+        }
         for (r in RULES) {
             try {
                 var n = 0
