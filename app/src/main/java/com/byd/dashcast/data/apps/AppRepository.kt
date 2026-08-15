@@ -233,12 +233,9 @@ class AppRepository {
             val pkg = ri.activityInfo.packageName
             if (exclusions.contains(pkg)) continue
 
-            // Hide anything projection cannot clean up after — see ProjectionSafetyPolicy. Hiding
-            // rather than failing at launch time: the picker is the only place the user chooses,
-            // and an app that would strand itself should not be offered in the first place.
-            val persistent = (ri.activityInfo.applicationInfo.flags
-                    and android.content.pm.ApplicationInfo.FLAG_PERSISTENT) != 0
-            val safety = ProjectionSafetyPolicy.verdict(pkg, persistent, pkg == homePkg)
+            // The launcher itself is the one thing worth hiding — see ProjectionSafetyPolicy for
+            // why this check is no bigger than that.
+            val safety = ProjectionSafetyPolicy.verdict(pkg, pkg == homePkg)
             if (safety != ProjectionSafetyPolicy.Verdict.ALLOWED) {
                 AppLogger.i(TAG, "app list: hiding $pkg — ${ProjectionSafetyPolicy.reason(safety)}")
                 continue

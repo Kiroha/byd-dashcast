@@ -772,12 +772,9 @@ public class ClusterService extends Service
      * and this guard must never be the reason a working car stops projecting.
      */
     private boolean isProjectionAllowed(String packageName) {
-        boolean persistent = false;
         boolean isHome = false;
         try {
             PackageManager pm = getPackageManager();
-            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
-            persistent = (ai.flags & ApplicationInfo.FLAG_PERSISTENT) != 0;
             ResolveInfo home = pm.resolveActivity(
                     new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0);
             isHome = home != null && packageName.equals(home.activityInfo.packageName);
@@ -787,7 +784,7 @@ public class ClusterService extends Service
             return true;
         }
         ProjectionSafetyPolicy.Verdict v =
-                ProjectionSafetyPolicy.verdict(packageName, persistent, isHome);
+                ProjectionSafetyPolicy.verdict(packageName, isHome);
         if (v == ProjectionSafetyPolicy.Verdict.ALLOWED) return true;
         AppLogger.w(TAG, "refusing to project " + packageName + " — "
                 + ProjectionSafetyPolicy.reason(v));

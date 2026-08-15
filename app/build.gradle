@@ -1249,8 +1249,27 @@ android {
         // the cluster whenever it has no task to recycle. Decisive test for the next tester:
         // project, Stop, tap from the launcher, note the screen — then REBOOT and tap again.
         // 264 unit tests (7 new); assembleDebug + assembleRelease (R8) + lintRelease green.
-        versionCode 619
-        versionName "1.8.29-beta"
+        // 620 = 1.8.30-beta (URGENT — undoes the deny-list 1.8.29 shipped hours earlier. That
+        // release refused com.byd.androidauto by name and every FLAG_PERSISTENT process by rule,
+        // reasoning "an app we cannot force-stop cannot be brought back". The rule was sound and
+        // applying it here was not: Android Auto and CarPlay on the cluster are what DashCast is
+        // FOR — INC-20260815-181820 itself opens with the tester saying Maps and Waze via Android
+        // Auto worked on the screen behind the wheel — and com.byd.carplay.ui is persistent, so the
+        // general rule silently removed the headline feature as well as the named one. The
+        // maintainer spotted both missing from the picker within hours.
+        // The harm in that incident was never in PROJECTING those apps; it was in destroying their
+        // task on the way out. That fix (forceStopApp kills, verifies, and only then removes the
+        // task) is untouched and remains the real remedy. Prevention by removal traded the
+        // product's purpose for a cleanup bug.
+        // ProjectionSafetyPolicy now refuses exactly one thing: whatever currently resolves
+        // CATEGORY_HOME, the single case with no plausible use behind it (projecting the launcher
+        // leaves the head unit with no home screen), still resolved at runtime because the
+        // hard-coded launcher list misses the launcher in use on 27 corpus cars. The name list is
+        // kept as a named EMPTY set so the next person to reach for one reads why first.
+        // Everything else from 1.8.29 stands. 264 unit tests, rewritten to assert that Android Auto
+        // and CarPlay stay projectable. assembleDebug + assembleRelease (R8) + lintRelease green.
+        versionCode 620
+        versionName "1.8.30-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
