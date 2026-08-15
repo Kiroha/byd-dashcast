@@ -44,7 +44,7 @@ object TelegramBugReporter {
      */
     @JvmStatic
     fun isConfigured(): Boolean =
-        ReportConsent.isGranted() && ReportChannel.hasTelegram()
+        ReportConsent.isGranted() && (RelayUploader.isConfigured() || ReportChannel.hasTelegram())
 
     /**
      * Uploads [file] with [caption] on a background thread. [cb] fires on the main thread.
@@ -69,7 +69,42 @@ object TelegramBugReporter {
         }, "tg-bugreport").start()
     }
 
+    /**
+     * Sends through the relay when one is deployed, and through the bot directly otherwise.
+     *
+     * The choice lives here rather than at the eleven upload call sites, for the same reason the
+     * consent gate does: those sites already know how to be told "it did not go out", and none of
+     * them should have to learn what a relay is.
+     *
+     * Order matters and the fallback is deliberate. A relay that is unreachable — the car is on a
+     * dead hotspot, the function is cold, the quota tripped — must not turn into a lost report on
+     * a device that still holds a working bot token from an earlier provisioning. So a relay
+     * failure falls through to the direct path, and only both failing is a failure.
+     */
     private fun doSend(file: File, caption: String?, thread: String): String? {
+        if (RelayUploader.isConfigured()) {
+            val topic = if (isHudThread(thread)) RelayUploader.TOPIC_HUD else RelayUploader.TOPIC_BUG
+            val relayError = RelayUploader.send(file, caption, topic)
+            if (relayError == null) return null
+            if (!ReportChannel.hasTelegram()) return relayError
+            AppLogger.w(TAG, "relay failed ($relayError) — falling back to the direct bot path")
+        }
+        return doSendDirect(file, caption, thread)
+    }
+
+    /**
+     * True when this send is aimed at the HUD topic rather than the bug topic.
+     *
+     * Two forms, because both exist at once during the migration: the symbolic name the relay
+     * understands, and the numeric `message_thread_id` a directly-provisioned device still holds.
+     */
+    private fun isHudThread(thread: String): Boolean {
+        if (thread.equals(RelayUploader.TOPIC_HUD, ignoreCase = true)) return true
+        val hud = ReportChannel.hudThreadId()
+        return hud.isNotEmpty() && thread == hud
+    }
+
+    private fun doSendDirect(file: File, caption: String?, thread: String): String? {
         val boundary = "----dashcast" + System.currentTimeMillis()
         val token = ReportChannel.botToken()
         val chatId = ReportChannel.chatId()
@@ -85,7 +120,11 @@ object TelegramBugReporter {
 
             DataOutputStream(BufferedOutputStream(conn.outputStream)).use { out ->
                 writeField(out, boundary, "chat_id", chatId)
-                if (thread.isNotEmpty()) writeField(out, boundary, "message_thread_id", thread)
+                // Only a numeric id is a message_thread_id. In relay mode the topic travels as a
+                // name, and forwarding "hud" here would make Telegram reject the whole upload.
+                if (thread.isNotEmpty() && thread.all { it.isDigit() }) {
+                    writeField(out, boundary, "message_thread_id", thread)
+                }
                 if (!caption.isNullOrEmpty()) {
                     // Telegram caption hard limit is 1024 chars.
                     val cap = if (caption.length > 1024) caption.substring(0, 1024) else caption

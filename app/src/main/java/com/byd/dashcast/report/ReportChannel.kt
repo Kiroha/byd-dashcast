@@ -39,6 +39,7 @@ object ReportChannel {
     private const val K_HUD_THREAD_ID = "hud_thread_id"
     private const val K_AZURE_URL = "azure_url"
     private const val K_AZURE_SAS = "azure_sas"
+    private const val K_RELAY_URL = "relay_url"
 
     @Volatile private var sPrefs: android.content.SharedPreferences? = null
     @Volatile private var sApp: Context? = null
@@ -96,6 +97,8 @@ object ReportChannel {
     @JvmStatic fun hudThreadId(): String = sApp?.let { hudThreadId(it) } ?: ""
     @JvmStatic fun azureUrl(): String = sApp?.let { azureUrl(it) } ?: ""
     @JvmStatic fun azureSas(): String = sApp?.let { azureSas(it) } ?: ""
+    /** Device override for the relay endpoint. Not a credential — see [RelayUploader]. */
+    @JvmStatic fun relayUrl(): String = sApp?.let { relayUrl(it) } ?: ""
 
     @JvmStatic fun hasTelegram(): Boolean = botToken().isNotEmpty() && chatId().isNotEmpty()
     @JvmStatic fun hasAzure(): Boolean = azureUrl().isNotEmpty() && azureSas().isNotEmpty()
@@ -106,6 +109,7 @@ object ReportChannel {
     @JvmStatic fun hudThreadId(ctx: Context): String = read(ctx, K_HUD_THREAD_ID, "")
     @JvmStatic fun azureUrl(ctx: Context): String = read(ctx, K_AZURE_URL, "")
     @JvmStatic fun azureSas(ctx: Context): String = read(ctx, K_AZURE_SAS, "")
+    @JvmStatic fun relayUrl(ctx: Context): String = read(ctx, K_RELAY_URL, "")
 
     /** True when the bot can be used: a token and a destination chat. */
     @JvmStatic
@@ -277,6 +281,13 @@ object ReportChannel {
         val sas = kv["azure.sas"].orEmpty()
         if (sas.isNotEmpty()) {
             if (saveAzure(ctx, kv["azure.blobUrl"].orEmpty(), sas)) applied++
+        }
+        // Not counted as a credential set: it is an endpoint, and a file that carries only this
+        // has provisioned nothing that needs protecting.
+        val relay = kv["relay.url"].orEmpty()
+        if (relay.isNotEmpty()) {
+            try { prefs(ctx)?.edit()?.putString(K_RELAY_URL, relay.trim())?.apply() }
+            catch (t: Throwable) { AppLogger.w(TAG, "relay url not stored (" + t.javaClass.simpleName + ")") }
         }
         return applied
     }

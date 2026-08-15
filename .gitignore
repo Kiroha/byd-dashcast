@@ -58,3 +58,7 @@ triage/
 graphify-out/
 # local Claude Code session config
 .claude/
+
+# Azure Function relay — holds the bot token when running the relay locally.
+relay/local.settings.json
+relay/node_modules/
