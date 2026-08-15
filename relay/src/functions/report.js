@@ -60,6 +60,20 @@ function bad(status, why) {
     return { status, jsonBody: { ok: false, error: why } };
 }
 
+/**
+ * Strips a bot token out of anything on its way to a log.
+ *
+ * One path could actually leak. A `fetch` rejection sometimes carries the request URL in its
+ * message, and the request URL here is `https://api.telegram.org/bot<TOKEN>/sendDocument`. Every
+ * other line is built from a status code or Telegram's own description and holds nothing — but
+ * "holds nothing today" is a property that decays the moment someone adds a line. Scrubbing at the
+ * point of logging makes it structural instead of a thing to keep remembering.
+ */
+function safe(text) {
+    return String(text == null ? '' : text)
+        .replace(/bot\d{6,12}:[A-Za-z0-9_-]{20,}/g, 'bot<redacted>');
+}
+
 app.http('report', {
     methods: ['POST'],
     authLevel: 'anonymous',
@@ -113,22 +127,22 @@ app.http('report', {
                 body: form,
             });
         } catch (e) {
-            context.error('telegram unreachable: ' + e.message);
+            context.error(safe('telegram unreachable: ' + e.message));
             return bad(502, 'telegram unreachable');
         }
 
         if (!res.ok) {
-            // Log the status and Telegram's description, never the URL — it carries the token.
+            // Status and Telegram's description only — and scrubbed on the way out regardless.
             let detail = '';
             try {
                 const j = await res.json();
                 detail = j && j.description ? String(j.description) : '';
             } catch { /* body was not JSON */ }
-            context.error(`telegram refused: HTTP ${res.status} ${detail}`);
+            context.error(safe(`telegram refused: HTTP ${res.status} ${detail}`));
             return bad(502, `telegram refused: HTTP ${res.status}`);
         }
 
-        context.log(`relayed ${filename} (${body.length} bytes) to ${topic}`);
+        context.log(safe(`relayed ${filename} (${body.length} bytes) to ${topic}`));
         return { status: 200, jsonBody: { ok: true } };
     },
 });
