@@ -195,4 +195,108 @@ class RedactorTest {
         assertEquals(1, r.counts["mac"])
         assertTrue("the key itself stays readable", r.text.contains("BSSID: "))
     }
+
+    // ── the classes a second, larger measurement pass found ──────────────────────────────────
+
+    @Test
+    fun `the vin cloud token is removed wherever it appears`() {
+        // 1164 occurrences across 111 of 160 reports, 25 distinct cars. 1048 sat behind a `vin=`
+        // and were already caught; 116 arrived through five other carriers and were not.
+        val r = redact("AutoiotService: reporting byd0123456789abcdef to cloud")
+        assertFalse(r.text.contains("byd0123456789abcdef"))
+        assertTrue(r.text.contains("<vin:"))
+    }
+
+    @Test
+    fun `a plain vin keeps its manufacturer prefix and loses the rest`() {
+        val r = redact("BodyworkDevice: LC0CE4CC1S0123456")
+        assertTrue("the WMI names the manufacturer, which is triage context",
+            r.text.contains("LC0<vin:"))
+        assertFalse(r.text.contains("LC0CE4CC1S0123456"))
+    }
+
+    @Test
+    fun `an install path is not an activation blob`() {
+        // The value class matches 4042 times across the corpus; ~2986 are install paths, and they
+        // are how a triager answers the commonest question there is: which build is installed.
+        val line = "/data/app/~~AbCdEfGhIjKlMnOpQrStUv==/com.byd.dashcast-WxYzAbCdEfGhIjKlMnOpQr==/base.apk"
+        assertEquals(line, redact(line).text)
+    }
+
+    @Test
+    fun `an activation blob behind its own tag is removed`() {
+        val r = redact("Activation before:AbCdEfGhIjKlMnOpQrStUv== after:ok")
+        assertFalse(r.text.contains("AbCdEfGhIjKlMnOpQrStUv=="))
+        assertTrue(r.text.contains("<activation>"))
+    }
+
+    @Test
+    fun `a vendor service name is not an email address`() {
+        // The naive email pattern matches 1977 times with 98.7% false positives, mostly these.
+        // Deleting them strips the ROM's own vendor-stack identity out of half the corpus.
+        val line = "vendor.qti.bluetooth@1.0-ibs_handler started; android.hardware.graphics.composer@2.4-service"
+        assertEquals(line, redact(line).text)
+    }
+
+    @Test
+    fun `a real email address is removed`() {
+        val r = redact("GoogleAuth: signing in someone.else@example.com ok")
+        assertFalse(r.text.contains("someone.else@example.com"))
+        assertTrue(r.text.contains("<email>"))
+    }
+
+    @Test
+    fun `a google account name is removed`() {
+        val r = redact("GmsAuthManagerSvc: getToken: account: someone@example.com scope=oauth")
+        assertFalse(r.text.contains("someone@example.com"))
+        assertTrue(r.text.contains("<account>"))
+    }
+
+    @Test
+    fun `the loopback verdict is never touched`() {
+        // 667 occurrences across 20 reports, and the single most reproduced diagnostic line in the
+        // corpus: it is why journal-only reports exist at all. Any blanket IPv4 rule eats it, and
+        // that is 72% of everything such a rule would match.
+        val line = "failed to connect to localhost/127.0.0.1 (port 5555): ECONNREFUSED"
+        assertEquals(line, redact(line).text)
+    }
+
+    // ── the reporter's handle, which does not stay in its header ─────────────────────────────
+
+    @Test
+    fun `the handle is kept in its header and removed everywhere else`() {
+        // The finding: the same string comes back as the tester's Wi-Fi network name, 64 times
+        // across 14 reports. Redacting only the header would have left the interesting half.
+        val r = redact("Telegram: @somebody\nWifiService: SSID: \"somebody\" connected\n")
+        assertTrue("the maintainer must still be able to answer the report",
+            r.text.contains("Telegram: @somebody"))
+        assertTrue("but not the same string used as a network name",
+            r.text.contains("<reporter:"))
+        assertEquals(1, r.counts["reporter"])
+    }
+
+    @Test
+    fun `the cross-pass runs before the network name is replaced`() {
+        // Order dependency: if the SSID rule got there first the occurrence would become a generic
+        // <ssid:...> and the link between the tester and that network would vanish rather than be
+        // recorded as the same token.
+        val r = redact("Telegram: @somebody\nSSID: \"somebody\"\n")
+        assertTrue(r.text.contains("<reporter:"))
+        assertEquals("the SSID rule found nothing left to do", null, r.counts["wifi-ssid"])
+    }
+
+    @Test
+    fun `a very short handle is left alone`() {
+        // Below four characters the cross-pass starts eating ordinary words, and no nickname is
+        // worth shredding prose for.
+        val r = redact("Telegram: @ab\nthe cab was late and the lab was closed\n")
+        assertEquals(null, r.counts["reporter"])
+        assertTrue(r.text.contains("the cab was late"))
+    }
+
+    @Test
+    fun `no header means no cross-pass`() {
+        val line = "WifiService: SSID: \"somebody\" connected"
+        assertEquals(null, redact(line).counts["reporter"])
+    }
 }
