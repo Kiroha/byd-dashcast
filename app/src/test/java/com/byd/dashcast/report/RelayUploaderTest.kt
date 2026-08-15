@@ -55,9 +55,13 @@ class RelayUploaderTest {
     }
 
     @Test
-    fun `consent without an endpoint sends nothing either`() {
+    fun `an explicitly blank device endpoint is not a relay`() {
+        // A provisioning file that carries an empty relay.url must not read as "relay available"
+        // and shadow the built-in one into silence.
         ReportConsent.grant(ctx)
-        assertFalse(RelayUploader.isConfigured())
+        ReportChannel.applyProperties(ctx, "relay.url=")
+        assertEquals("the built-in endpoint still stands", RelayUploader.DEFAULT_URL, RelayUploader.url())
+        assertTrue(RelayUploader.isConfigured())
     }
 
     @Test
@@ -80,15 +84,23 @@ class RelayUploaderTest {
     // ── additive by construction ────────────────────────────────────────────────────────────
 
     @Test
-    fun `an undeployed relay changes nothing`() {
-        // The whole migration rests on this: until DEFAULT_URL is filled in and no device override
-        // exists, every reporting path behaves exactly as it did before the relay was written.
-        assertEquals("", RelayUploader.DEFAULT_URL)
-        ReportConsent.grant(ctx)
-        assertFalse(RelayUploader.isConfigured())
+    fun `the built-in endpoint is an https url and nothing else`() {
+        // It ships in the APK on purpose, so the thing to keep asserting is that it stays the kind
+        // of value that is safe to ship: a plain HTTPS address, never a query string, which is
+        // where a function key would end up if someone ever added one.
+        val u = RelayUploader.DEFAULT_URL
+        assertTrue("built-in endpoint must be https", u.startsWith("https://"))
+        assertFalse("a credential must never ride in the URL", u.contains("?"))
+        assertFalse(u.contains("code="))
+    }
 
-        ReportChannel.saveTelegram(ctx, "token", "-100123", "2", "4")
-        assertTrue("the direct path still works", TelegramBugReporter.isConfigured())
+    @Test
+    fun `consent still gates the built-in endpoint`() {
+        // The endpoint being compiled in must not make the app configured on its own: a device
+        // that has not answered the notice sends nothing, relay or no relay.
+        assertFalse(RelayUploader.isConfigured())
+        ReportConsent.grant(ctx)
+        assertTrue(RelayUploader.isConfigured())
     }
 
     @Test

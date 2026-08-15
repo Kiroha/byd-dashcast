@@ -109,14 +109,17 @@ class ReportConsentTest {
     }
 
     @Test
-    fun `agreement plus a channel is what opens the road`() {
+    fun `agreement alone now opens the road, and that is the point of the relay`() {
+        // Before the relay this asserted the opposite: consent without a stored credential sent
+        // nothing, because the device had nothing to send with. The relay is exactly the change
+        // that makes agreement sufficient — a car can report while holding no secret at all.
         ReportConsent.grant(ctx)
-        assertFalse("agreement without a channel sends nothing", TelegramBugReporter.isConfigured())
+        assertTrue("the relay endpoint ships in the APK and is not a credential",
+            TelegramBugReporter.isConfigured())
 
-        ReportChannel.saveTelegram(ctx, "token", "-100123", "2", "4")
-        assertTrue(TelegramBugReporter.isConfigured())
+        // Azure is a different transport with its own credential, and the relay does not stand in
+        // for it. A blob upload still needs a container and a SAS.
         assertFalse("Azure is still unprovisioned", AzureBlobUploader.isConfigured())
-
         ReportChannel.saveAzure(ctx, "https://example.blob.core.windows.net/re", "sv=1&sp=cw")
         assertTrue(AzureBlobUploader.isConfigured())
     }
