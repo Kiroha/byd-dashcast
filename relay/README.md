@@ -55,8 +55,8 @@ is refused outright as end-of-life.
 
 ```bash
 RG=rg-byd-app                      # the resource group you already have
-APP=func-dc-relay-bf8097           # must be globally unique
-STORAGE=stdcrelaybf8097            # 3-24 chars, lowercase letters and digits only
+APP=<function app>                 # must be globally unique
+STORAGE=<storage account>          # 3-24 chars, lowercase letters and digits only, globally unique
 
 az group create -n $RG -l francecentral     # skip if it exists
 az storage account create -n $STORAGE -g $RG -l francecentral --sku Standard_LRS \
