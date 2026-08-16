@@ -75,6 +75,10 @@ public class KeyboardBridgeActivity extends Activity {
     public static boolean isShowing() { return sShowing; }
 
     private EditText           mInput;
+
+    /** AUD-007 — true while this activity edits its own field; such edits are not relayed. */
+
+    private boolean mSuppressRelay = false;
     private InputMethodManager mImm;
 
     @Override
@@ -129,8 +133,14 @@ public class KeyboardBridgeActivity extends Activity {
                         AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
                     }
                     if (ok) {
-                        // Reset local field so next session starts fresh.
+                        // AUD-007 — reset the LOCAL field for the next session, without relaying
+                        // it. This clear is housekeeping, not something the user typed, and the
+                        // TextWatcher below would otherwise forward it to the cluster as
+                        // setTextOnCluster("") — landing after the Enter and wiping the field the
+                        // user had just validated. Half of this finding was this line.
+                        mSuppressRelay = true;
                         try { mInput.setText(""); } catch (Throwable ignored) { }
+                        finally { mSuppressRelay = false; }
                     }
                     return true;
                 }
@@ -453,6 +463,9 @@ public class KeyboardBridgeActivity extends Activity {
             // the cluster editable's text. No per-character KeyEvent path, no
             // diff calculation — ACTION_SET_TEXT is atomic by design and
             // matches what the user sees in their local field.
+            // AUD-007 — a change this activity made to its own field is not a change the user
+            // made, and must not travel to the cluster.
+            if (mSuppressRelay) return;
             try {
                 ClusterImeWatcherService.setTextOnCluster(s == null ? "" : s.toString());
             } catch (Throwable t) {
