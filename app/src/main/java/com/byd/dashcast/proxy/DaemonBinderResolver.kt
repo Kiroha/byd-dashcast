@@ -103,6 +103,63 @@ object DaemonBinderResolver {
         return lookupRegisteredBinder()
     }
 
+    /**
+     * Re-acquires the surface daemon's binder after a caller found its cached one dead.
+     *
+     * ## Why this exists — AUD-009
+     *
+     * Five call sites handled a [android.os.DeadObjectException] raised by a **surface** daemon
+     * transaction by calling `ProxyClient.invalidateBinder(...)`, which drops the **proxy**
+     * daemon's cached binder. Two things went wrong at once, and neither was visible:
+     *
+     *  - the proxy daemon — very likely alive, since it is a different process — had its cache
+     *    dropped and was reconnected for nothing;
+     *  - the binder that was actually dead stayed cached in its holder. `ClusterInputForwarder`
+     *    keeps its own `mDaemonBinder`, `MainActivity` keeps another, and neither was touched. So
+     *    every subsequent touch, key and mirror call went to the same dead binder and threw again,
+     *    forever, while the recovery machinery worked on the wrong daemon.
+     *
+     * Recovery for a surface binder cannot go through ProxyClient at all. It is this: forget the
+     * dead reference, ask ServiceManager again — the daemon may already have respawned and
+     * re-registered — and adopt whatever comes back.
+     *
+     * ## The throttle is not an optimisation
+     *
+     * The busiest caller is the cluster touch path, which runs on every MotionEvent. When the
+     * daemon is gone for good, every event would otherwise pay a reflection plus a ServiceManager
+     * lookup while the driver drags a finger across the screen. One attempt per
+     * [REACQUIRE_MIN_INTERVAL_MS] is enough to catch a respawn quickly and cheap enough to sit in
+     * that path.
+     *
+     * @return a live binder, or null — both when the daemon is absent and when this call was
+     *         throttled. Either way the caller must drop its cached reference: a null binder falls
+     *         back to the local path, a dead one does nothing at all.
+     */
+    @JvmStatic
+    fun reacquireSurfaceBinder(reason: String): IBinder? {
+        val now = android.os.SystemClock.elapsedRealtime()
+        synchronized(this) {
+            if (now - sLastReacquireMs < REACQUIRE_MIN_INTERVAL_MS) return null
+            sLastReacquireMs = now
+        }
+        val b = lookupRegisteredBinder()
+        if (b != null) AppLogger.i(TAG, "surface binder re-acquired after $reason")
+        else AppLogger.w(TAG, "surface daemon still absent after $reason")
+        return b
+    }
+
+    /** One re-acquire attempt per second: fast enough to catch a respawn, cheap enough for the
+     *  touch path. */
+    const val REACQUIRE_MIN_INTERVAL_MS = 1_000L
+
+    @Volatile private var sLastReacquireMs = 0L
+
+    /** Test seam — the throttle is time-based and a test must be able to start from zero. */
+    @JvmStatic
+    fun resetReacquireThrottleForTesting() {
+        synchronized(this) { sLastReacquireMs = 0L }
+    }
+
     /** Reflective `ServiceManager.getService(SERVICE_KEY)`; null if absent or on any error. */
     private fun lookupRegisteredBinder(): IBinder? {
         return try {
