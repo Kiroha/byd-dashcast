@@ -78,9 +78,21 @@ public class ClusterImeWatcherService extends AccessibilityService {
     private volatile CharSequence    mPendingText;
     /** Coalescing window for rapid keystrokes — last-writer-wins. */
     private static final long        SET_TEXT_DEBOUNCE_MS = 80L;
-    private final Runnable mSetTextRunner = new Runnable() {
-        @Override public void run() {
-            CharSequence text = mPendingText;
+    /**
+     * The setter last posted to the worker, so a newer request can cancel it — AUD-007.
+     *
+     * There used to be one shared Runnable reading {@link #mPendingText} at run time. That is the
+     * defect: what reached the cluster was whatever the field held when the worker got round to it,
+     * not what the user had typed when the request was made.
+     */
+    private volatile Runnable mPostedSetText;
+
+    /**
+     * Applies [text] to the cluster's focused editable. Takes its text as a parameter — never from
+     * a field — so a request cannot be overwritten between being made and being run.
+     */
+    private void applyTextOnCluster(CharSequence text) {
+        {
             if (text == null) return;
             AccessibilityNodeInfo node = findClusterFocusedEditable();
             if (node == null) {
@@ -100,7 +112,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 try { node.recycle(); } catch (Throwable ignored) { }
             }
         }
-    };
+    }
 
     @Override
     public void onCreate() {
@@ -305,15 +317,23 @@ public class ClusterImeWatcherService extends AccessibilityService {
         // v1.2.24 — Never run the a11y tree walk on the caller's thread.
         // Coalesce rapid keystrokes (last-writer-wins) and dispatch to the
         // background worker. We optimistically return true; failures are
-        // logged inside mSetTextRunner.
+        // logged inside applyTextOnCluster.
         android.os.Handler worker = self.mWorker;
         if (worker == null) {
             AppLogger.w(TAG, "setTextOnCluster no-op: worker not ready");
             return false;
         }
-        self.mPendingText = text == null ? "" : text;
-        worker.removeCallbacks(self.mSetTextRunner);
-        worker.postDelayed(self.mSetTextRunner, SET_TEXT_DEBOUNCE_MS);
+        final CharSequence captured = text == null ? "" : text;
+        self.mPendingText = captured;
+        // AUD-007 — bind the text to the runnable instead of leaving it in a field the runnable
+        // will re-read. Cancel only the setter WE posted; a stale handle is harmless.
+        Runnable previous = self.mPostedSetText;
+        if (previous != null) worker.removeCallbacks(previous);
+        Runnable posted = new Runnable() {
+            @Override public void run() { self.applyTextOnCluster(captured); }
+        };
+        self.mPostedSetText = posted;
+        worker.postDelayed(posted, SET_TEXT_DEBOUNCE_MS);
         return true;
     }
 
@@ -336,13 +356,26 @@ public class ClusterImeWatcherService extends AccessibilityService {
             AppLogger.w(TAG, "performImeEnterOnCluster no-op: worker not ready");
             return false;
         }
-        // Cancel debounced setText and run it now, then perform Enter.
-        worker.removeCallbacks(self.mSetTextRunner);
+        // AUD-007 — capture NOW, on the caller's thread, at the instant the user pressed Done.
+        //
+        // The old code cancelled the debounced setter and then, on the worker, re-read
+        // mPendingText. Between those two moments KeyboardBridgeActivity clears its own input
+        // field — housekeeping for the next session — and that clear is relayed here as
+        // setTextOnCluster(""). So the flush ran with an empty string: the destination the user
+        // had typed was wiped and the Enter went out on an empty field. The keyboard bridge's one
+        // job, typing a destination and validating it, returned nothing.
+        final CharSequence flush = self.mPendingText;
+        self.mPendingText = null;
+        Runnable pendingSetter = self.mPostedSetText;
+        if (pendingSetter != null) {
+            worker.removeCallbacks(pendingSetter);
+            self.mPostedSetText = null;
+        }
         worker.post(new Runnable() {
             @Override public void run() {
-                // Flush any pending text first.
-                if (self.mPendingText != null) {
-                    try { self.mSetTextRunner.run(); } catch (Throwable ignored) { }
+                // Flush the text as it was when Done was pressed.
+                if (flush != null) {
+                    try { self.applyTextOnCluster(flush); } catch (Throwable ignored) { }
                 }
                 AccessibilityNodeInfo node = self.findClusterFocusedEditable();
                 if (node == null) {
