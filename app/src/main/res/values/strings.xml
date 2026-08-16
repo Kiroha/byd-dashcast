@@ -643,4 +643,5 @@
     <string name="consent_result_granted">Merci. Vos rapports seront transmis à l\'équipe DashCast.</string>
     <string name="consent_result_refused">Refusé. Vos rapports resteront sur cet appareil.</string>
     <string name="consent_result_revoked">Révoqué. Vos rapports resteront sur cet appareil.</string>
+    <string name="bug_kept_locally_fmt">Rapport conservé sur cet appareil : %1$s. Choisissez comment le transmettre.</string>
 </resources>

@@ -779,7 +779,21 @@ class BugWizardActivity : Activity() {
             .show()
     }
 
+    /**
+     * Says what happened before handing the report over.
+     *
+     * This is reached on a refusal and on every upload failure, and it used to fire the chooser and
+     * call finish() with the status line still reading "Sending…". The tester saw a share sheet
+     * appear over a screen claiming to be uploading, with nothing naming the file or the reason —
+     * indistinguishable from a bug. The toast is the whole difference between "it failed and here
+     * is your report" and "something odd happened".
+     */
     private fun shareFallback(file: File) {
+        try {
+            mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
+            Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),
+                Toast.LENGTH_LONG).show()
+        } catch (_: Throwable) { /* never let a message cost the report */ }
         try {
             AppLogger.shareFile(this, file,
                 getString(R.string.bug_share_subject),

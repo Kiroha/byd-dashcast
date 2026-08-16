@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Danke. Deine Berichte gehen an das DashCast-Team.</string>
     <string name="consent_result_refused">Abgelehnt. Deine Berichte bleiben auf diesem Gerät.</string>
     <string name="consent_result_revoked">Widerrufen. Deine Berichte bleiben auf diesem Gerät.</string>
+    <string name="bug_kept_locally_fmt">Bericht auf diesem Gerät gespeichert: %1$s. Wähle, wie du ihn weitergibst.</string>
 </resources>

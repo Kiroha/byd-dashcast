@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Grazie. Le tue segnalazioni arriveranno al team DashCast.</string>
     <string name="consent_result_refused">Rifiutato. Le tue segnalazioni resteranno su questo dispositivo.</string>
     <string name="consent_result_revoked">Revocato. Le tue segnalazioni resteranno su questo dispositivo.</string>
+    <string name="bug_kept_locally_fmt">Segnalazione salvata su questo dispositivo: %1$s. Scegli come inviarla.</string>
 </resources>

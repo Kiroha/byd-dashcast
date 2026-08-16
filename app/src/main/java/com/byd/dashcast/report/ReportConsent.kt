@@ -18,12 +18,19 @@ import com.byd.dashcast.util.AppLogger
  *
  * ## Where the gate is
  *
- * Not in the seven screens that can start an upload. In the transport: [TelegramBugReporter] and
- * [AzureBlobUploader] report themselves unconfigured until consent is granted. Every one of those
- * seven call sites already has an else-branch for "no channel configured" — a share sheet, a local
- * save, a message naming the file on disk — and those branches are shipped, exercised code. Gating
- * the transport reuses all of them at once; gating each screen would have meant seven new
- * branches in the app's most delicate flow, each with its own way of being wrong.
+ * Not in the screens that can start an upload. In the transport: [TelegramBugReporter] and
+ * [AzureBlobUploader] report themselves unconfigured until consent is granted, and every call site
+ * already has an else-branch for "no channel configured" — a share sheet, a local save, a message
+ * naming the file on disk. Gating the transport reuses all of them at once; gating each screen
+ * would have meant a new branch in the app's most delicate flow for each, every one with its own
+ * way of being wrong.
+ *
+ * An earlier version of this note said "seven call sites" whose branches were "shipped, exercised
+ * code". Both halves were wrong and a pre-release audit caught them: there are eleven, and five of
+ * those else-branches were written in the same branch as this class, so they were new code being
+ * cited as evidence that new code was unnecessary. The argument survives — reusing eleven existing
+ * exits still beats writing eleven new ones — but it is worth less than it claimed, and a
+ * justification that overstates itself is how a bad decision gets waved through later.
  *
  * The consequence to keep in mind: a report is never lost by a refusal, it is kept on the device.
  *

@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Gracias. Tus informes se enviarán al equipo de DashCast.</string>
     <string name="consent_result_refused">Rechazado. Tus informes se quedarán en este dispositivo.</string>
     <string name="consent_result_revoked">Retirado. Tus informes se quedarán en este dispositivo.</string>
+    <string name="bug_kept_locally_fmt">Informe guardado en este dispositivo: %1$s. Elige cómo enviarlo.</string>
 </resources>

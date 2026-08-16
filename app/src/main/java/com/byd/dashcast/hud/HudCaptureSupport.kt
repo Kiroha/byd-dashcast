@@ -7,6 +7,7 @@ import com.byd.dashcast.R
 import android.content.Context
 import android.app.Activity
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.report.Redactor
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -100,11 +101,47 @@ object HudCaptureSupport {
             work.walkTopDown().filter { it.isFile }.forEach { f ->
                 val rel = f.relativeTo(work).path
                 zos.putNextEntry(ZipEntry(rel))
-                FileInputStream(f).use { it.copyTo(zos) }
+                if (isRedactableText(f)) {
+                    zos.write(redactedBytes(f))
+                } else {
+                    FileInputStream(f).use { it.copyTo(zos) }
+                }
                 zos.closeEntry()
             }
         }
         return zip
+    }
+
+    /**
+     * The bundles' redaction point, and the reason it exists here.
+     *
+     * The consent notice tells a driver, in thirteen languages, that the vehicle serial number,
+     * Wi-Fi network names, hardware addresses and positions are removed from **every** report. That
+     * was true of the bug report and false of the three bundles that come through this function —
+     * the HUD bench, the raw HUD capture and the AAOS diagnostic — which carry the same
+     * device-wide logcat and the same getprop sweep. A notice that promises more than the code
+     * does is worse than no notice, so the promise is made true here rather than narrowed there.
+     *
+     * Only text is filtered. An image cannot be redacted the way text can, which the notice already
+     * says, and a binary run through a regex would be corrupted rather than cleaned.
+     */
+    private val REDACTABLE = setOf("txt", "log", "json", "xml", "properties", "csv", "md", "")
+
+    private fun isRedactableText(f: File): Boolean =
+        f.extension.lowercase() in REDACTABLE && f.length() <= MAX_REDACTABLE_BYTES
+
+    /** Beyond this a file is streamed unfiltered: holding it twice in memory is the worse failure. */
+    private const val MAX_REDACTABLE_BYTES = 8L * 1024 * 1024
+
+    /**
+     * Fails OPEN, like the bug-report path: a redaction that throws must not cost the bundle. The
+     * per-rule isolation inside Redactor already contains a single bad pattern; this catches the
+     * rest, and the archive still carries the file rather than a hole.
+     */
+    private fun redactedBytes(f: File): ByteArray = try {
+        Redactor.redact(f.readText()).text.toByteArray()
+    } catch (_: Throwable) {
+        f.readBytes()
     }
 
     /**

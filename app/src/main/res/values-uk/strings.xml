@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Дякуємо. Ваші звіти надходитимуть команді DashCast.</string>
     <string name="consent_result_refused">Відмовлено. Ваші звіти залишатимуться на цьому пристрої.</string>
     <string name="consent_result_revoked">Згоду відкликано. Ваші звіти залишатимуться на цьому пристрої.</string>
+    <string name="bug_kept_locally_fmt">Звіт збережено на цьому пристрої: %1$s. Оберіть, як його передати.</string>
 </resources>

@@ -54,8 +54,14 @@ object RelayUploader {
     const val TOPIC_BUG = "bug"
     const val TOPIC_HUD = "hud"
 
-    private const val CONNECT_TIMEOUT_MS = 30_000
-    private const val READ_TIMEOUT_MS = 180_000
+    // Chosen against what the wizard does while this runs, not against what a patient network
+    // deserves. doSubmitReport disables Send, Back AND Cancel for the whole attempt, so every
+    // second here is a second a tester sits in front of a frozen screen with no way out. The relay
+    // is tried first and a device that also holds a bot token then pays the direct path on top, so
+    // the old 30 s + 180 s made a single send able to hold that screen for over four minutes — long
+    // enough to read as a crash and be answered with a power cycle.
+    private const val CONNECT_TIMEOUT_MS = 15_000
+    private const val READ_TIMEOUT_MS = 60_000
 
     /** The relay's own ceiling, mirrored so a doomed upload is refused before it is attempted. */
     const val MAX_BYTES = 45L * 1024 * 1024

@@ -598,4 +598,5 @@
     <string name="consent_result_granted">Dziękujemy. Twoje zgłoszenia trafią do zespołu DashCast.</string>
     <string name="consent_result_refused">Odmówiono. Twoje zgłoszenia zostaną na tym urządzeniu.</string>
     <string name="consent_result_revoked">Wycofano. Twoje zgłoszenia zostaną na tym urządzeniu.</string>
+    <string name="bug_kept_locally_fmt">Zgłoszenie zapisane na tym urządzeniu: %1$s. Wybierz, jak je przekazać.</string>
 </resources>

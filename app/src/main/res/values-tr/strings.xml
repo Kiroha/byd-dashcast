@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Teşekkürler. Raporların DashCast ekibine gönderilecek.</string>
     <string name="consent_result_refused">Reddedildi. Raporların bu cihazda kalacak.</string>
     <string name="consent_result_revoked">Geri alındı. Raporların bu cihazda kalacak.</string>
+    <string name="bug_kept_locally_fmt">Rapor bu cihazda saklandı: %1$s. Nasıl ileteceğini seç.</string>
 </resources>
