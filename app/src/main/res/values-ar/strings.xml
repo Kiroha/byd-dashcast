@@ -590,4 +590,5 @@
     <string name="consent_result_granted">شكرًا. ستُرسل تقاريرك إلى فريق DashCast.</string>
     <string name="consent_result_refused">تم الرفض. ستبقى تقاريرك على هذا الجهاز.</string>
     <string name="consent_result_revoked">تم سحب الموافقة. ستبقى تقاريرك على هذا الجهاز.</string>
+    <string name="bug_kept_locally_fmt">حُفظ التقرير على هذا الجهاز: %1$s. اختر كيف تريد إرساله.</string>
 </resources>

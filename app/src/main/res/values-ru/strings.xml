@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Спасибо. Ваши отчёты будут уходить команде DashCast.</string>
     <string name="consent_result_refused">Отказано. Ваши отчёты останутся на этом устройстве.</string>
     <string name="consent_result_revoked">Согласие отозвано. Ваши отчёты останутся на этом устройстве.</string>
+    <string name="bug_kept_locally_fmt">Отчёт сохранён на этом устройстве: %1$s. Выберите, как его передать.</string>
 </resources>

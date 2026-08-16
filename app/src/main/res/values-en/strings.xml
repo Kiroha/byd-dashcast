@@ -608,4 +608,5 @@
     <string name="consent_result_granted">Thank you. Your reports will be sent to the DashCast team.</string>
     <string name="consent_result_refused">Refused. Your reports will stay on this device.</string>
     <string name="consent_result_revoked">Withdrawn. Your reports will stay on this device.</string>
+    <string name="bug_kept_locally_fmt">Report kept on this device: %1$s. Choose how to pass it on.</string>
 </resources>

@@ -169,9 +169,15 @@ class AaosDiagActivity : AppCompatActivity() {
                 .setTitle(R.string.hud_visual_title)
                 .setMessage("Did the big blue \"DASHCAST\" screen appear on the instrument cluster?")
                 .setCancelable(false)
-                .setPositiveButton(R.string.hud_visual_yes) { _, _ -> zipAndUpload(work, "YES — Presentation shows on cluster") }
-                .setNeutralButton(R.string.hud_visual_unsure) { _, _ -> zipAndUpload(work, "NOT SURE") }
-                .setNegativeButton(R.string.hud_visual_no) { _, _ -> zipAndUpload(work, "NO") }
+                // Same reason as HudRawCaptureActivity: this is the last main-thread moment before
+                // the bundle goes out, so it is the only place this screen can put the question.
+                .setPositiveButton(R.string.hud_visual_yes) { _, _ ->
+                    com.byd.dashcast.report.ReportConsent.askThen(this) {
+                        zipAndUpload(work, "YES — Presentation shows on cluster") } }
+                .setNeutralButton(R.string.hud_visual_unsure) { _, _ ->
+                    com.byd.dashcast.report.ReportConsent.askThen(this) { zipAndUpload(work, "NOT SURE") } }
+                .setNegativeButton(R.string.hud_visual_no) { _, _ ->
+                    com.byd.dashcast.report.ReportConsent.askThen(this) { zipAndUpload(work, "NO") } }
                 .show()
         } catch (t: Throwable) {
             AppLogger.w("AaosDiag", "askVisual dialog skipped: ${t.message}")

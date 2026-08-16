@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Rahmat. Hisobotlaringiz DashCast jamoasiga yuboriladi.</string>
     <string name="consent_result_refused">Rad etildi. Hisobotlaringiz shu qurilmada qoladi.</string>
     <string name="consent_result_revoked">Rozilik bekor qilindi. Hisobotlaringiz shu qurilmada qoladi.</string>
+    <string name="bug_kept_locally_fmt">Hisobot shu qurilmada saqlandi: %1$s. Uni qanday uzatishni tanlang.</string>
 </resources>

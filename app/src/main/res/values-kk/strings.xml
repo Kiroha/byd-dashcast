@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Рақмет. Есептеріңіз DashCast тобына жіберіледі.</string>
     <string name="consent_result_refused">Бас тартылды. Есептеріңіз осы құрылғыда қалады.</string>
     <string name="consent_result_revoked">Келісім кері қайтарылды. Есептеріңіз осы құрылғыда қалады.</string>
+    <string name="bug_kept_locally_fmt">Есеп осы құрылғыда сақталды: %1$s. Оны қалай жіберетініңізді таңдаңыз.</string>
 </resources>

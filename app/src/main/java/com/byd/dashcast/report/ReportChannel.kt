@@ -227,10 +227,11 @@ object ReportChannel {
      * @param done invoked with a human-readable outcome that never contains a credential.
      */
     @JvmStatic
-    fun importFromDevice(ctx: Context, done: (String) -> Unit) {
+    @JvmOverloads
+    fun importFromDevice(ctx: Context, paths: List<String> = IMPORT_PATHS, done: (String) -> Unit) {
         com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
             ctx.applicationContext,
-            IMPORT_PATHS.joinToString(" || ") { "cat '" + it + "' 2>/dev/null" },
+            paths.joinToString(" || ") { "cat '" + it + "' 2>/dev/null" },
             object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     val text = out ?: ""
@@ -301,11 +302,26 @@ object ReportChannel {
      * Runs only while unpaired, so it stops costing anything the moment it succeeds. Must be called
      * off the main thread: it goes through the shell, which may have to wake a cold daemon.
      */
+    /**
+     * Where the AUTOMATIC pass may read from — deliberately not [IMPORT_PATHS].
+     *
+     * `Download` is writable by every application on the head unit, and [autoPairIfNeeded] runs
+     * unattended on every cold start while a device is unpaired, which since AUD-001 is every
+     * device. Reading credentials from there without anyone asking means any app that can write a
+     * file, or a tester who downloads one with the right name, decides where this car's diagnostics
+     * go. `/data/local/tmp` is reachable only through the uid-2000 shell, so putting a file there
+     * is already an act of the maintainer.
+     *
+     * Download stays available to the manual button in Diagnostics, where a human is deciding.
+     */
+    @JvmField
+    val AUTO_IMPORT_PATHS = listOf("/data/local/tmp/" + IMPORT_NAME)
+
     @JvmStatic
     fun autoPairIfNeeded(ctx: Context) {
         if (isPairedOnDevice(ctx)) return
         try {
-            importFromDevice(ctx) { outcome ->
+            importFromDevice(ctx, AUTO_IMPORT_PATHS) { outcome ->
                 // Only worth a line when something actually happened; an absent file is the normal
                 // case for a device that was never meant to upload, and must not look like an error.
                 if (outcome.startsWith("paired")) AppLogger.i(TAG, "auto-pair: " + outcome)

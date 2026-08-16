@@ -590,4 +590,5 @@
     <string name="consent_result_granted">Дзякуй. Вашы справаздачы будуць ісці камандзе DashCast.</string>
     <string name="consent_result_refused">Адмоўлена. Вашы справаздачы застануцца на гэтай прыладзе.</string>
     <string name="consent_result_revoked">Згода адклікана. Вашы справаздачы застануцца на гэтай прыладзе.</string>
+    <string name="bug_kept_locally_fmt">Справаздача захавана на гэтай прыладзе: %1$s. Выберыце, як яе перадаць.</string>
 </resources>

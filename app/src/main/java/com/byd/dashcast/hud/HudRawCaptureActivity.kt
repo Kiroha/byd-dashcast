@@ -214,7 +214,12 @@ class HudRawCaptureActivity : AppCompatActivity() {
                         "les buffers). L'envoyer au canal support DashCast (Telegram) ?\n\n" +
                         "Sinon il reste en local :\n${zip.absolutePath}")
                 .setCancelable(false)
-                .setPositiveButton("Envoyer") { _, _ -> bg { uploadZip(zip, caption) } }
+                // Ask here, where the trigger is already on the main thread. Without it a tester
+                // who only ever uses this screen can never answer the notice, and the upload path
+                // is dead until they think to visit Settings.
+                .setPositiveButton("Envoyer") { _, _ ->
+                    com.byd.dashcast.report.ReportConsent.askThen(this) { bg { uploadZip(zip, caption) } }
+                }
                 .setNegativeButton("Garder local") { _, _ -> log("zip gardé en local: ${zip.absolutePath}") }
                 .show()
         } catch (t: Throwable) {
