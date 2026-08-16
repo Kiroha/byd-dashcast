@@ -405,8 +405,11 @@ class ClusterInputForwarder(context: Context) {
                     data.recycle()
                 }
             } catch (doe: android.os.DeadObjectException) {
-                ProxyClient.invalidateBinder("InjectKeyEvent")
-                AppLogger.w(TAG, "injectKeyEvent: daemon binder dead — invalidated")
+                // AUD-009 — last of the three in this file. Same SURFACE transaction, same wrong
+                // daemon repaired, same dead reference left behind.
+                mDaemonBinder = DaemonBinderResolver.reacquireSurfaceBinder("InjectKeyEvent")
+                AppLogger.w(TAG, "injectKeyEvent: surface binder dead — dropped"
+                        + (if (mDaemonBinder != null) " and re-acquired" else ""))
             } catch (e: Exception) {
                 AppLogger.e(TAG, "injectKeyEvent via daemon failed", e)
             }
