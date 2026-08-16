@@ -14,6 +14,20 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.32-beta (versionCode 622)
+
+**Wave V2 of the audit: the last three P1s, all in paths a driver feels within seconds and none reproducible off a car.** With this the audit report has no P0 and no P1 left open.
+
+**Cluster touch comes back by itself (AUD-009).** DashCast runs two uid-2000 daemons. Five call sites answered the death of the SURFACE one by invalidating the PROXY one's cache — a live process in a different address space, reconnected for nothing, while the reference that was actually dead stayed cached in its holder. Every subsequent finger movement went to the same corpse and the cluster stopped responding until the app was force-stopped. Split into seven commits with the touch path alone in its own, because it is the regression nobody can reach remotely: recovery is now surface-side everywhere, `ProxyClient.invalidateBinder` survives at exactly one call site (ProxyKeeperService, where it was always correct), and the holder drops its dead reference so the mirror path stops being handed the same corpse.
+
+**The windshield arrow stops blinking out (AUD-003).** The staleness watchdog tied liveness to content. Maps and Waze re-post the same notification while the distance has not changed — about 28 s at 130 km/h — and the listener's content deduplication swallowed those re-posts before `lastUpdateMs` was ever written, so the 12-second watchdog cleared a HUD that was perfectly correct. Liveness now follows a re-post of the frame already displayed, and only when that frame actually reached the HUD, so the watchdog still catches the frozen arrow it was built for (INC-20260715-125508).
+
+**The keyboard bridge sends what you typed (AUD-007).** `mPendingText` was shared state read at run time: between the Enter and its flush the bridge cleared its own input box — housekeeping for the next session — and that clear was relayed to the cluster, so the destination went out empty and the field was wiped 80 ms later. Text is now captured at the instant Done is pressed, the bridge no longer relays its own housekeeping, and a draft abandoned in one session no longer replays onto the cluster in the next — that last one could route the car to an address the driver had given up on, with zero keystrokes.
+
+**Two things a pre-release audit caught before testers did.** My own AUD-009 fix had put a *blocking* `pingBinder` inside the view traversal: `getSurfaceDaemonBinder` is reached from `addOnLayoutChangeListener` on every layout pass, not "at mirror start and stop" as the comment claimed, so a wedged daemon would have frozen the interface. The ping now runs off the main thread and repairs the cache for the next caller. And the abandoned-destination replay above.
+
+Not validated on a car — all three need the vehicle, and this release exists to get them there. 375 unit tests; `assembleDebug`, `assembleRelease` (R8) and lint green with 0 errors and 0 missing translations; release APK scanned, no credential pattern in any dex or resource.
+
 ### 1.8.31-beta (versionCode 621)
 
 **The audit's reporting work reaches testers: a consent question, a redaction stage, and the Telegram token out of the binary.**
