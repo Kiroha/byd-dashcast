@@ -338,6 +338,30 @@ public class ClusterImeWatcherService extends AccessibilityService {
     }
 
     /**
+     * Forgets any text typed but never validated — call when a bridge session ends.
+     *
+     * The accessibility service outlives the bridge by a long way: the service runs for as long as
+     * it is enabled, the bridge is a transient dialog dismissed on Back or a tap outside. So a
+     * draft survived its own session. Someone typed a street, changed their mind, dismissed the
+     * bridge — and the next time the bridge opened on a cluster field with an empty box, pressing
+     * Done to get rid of the keyboard replayed that street: ACTION_SET_TEXT is a full atomic
+     * replace, so it overwrote whatever was in the cluster field, and Enter routed the car to an
+     * address the driver had abandoned. Zero keystrokes were needed, because the editor action
+     * fires on Done regardless of what the box contains.
+     *
+     * The Enter path already clears the field after consuming it. This closes the other exit.
+     */
+    public static void clearPendingText() {
+        ClusterImeWatcherService self = sInstance;
+        if (self == null) return;
+        self.mPendingText = null;
+        android.os.Handler worker = self.mWorker;
+        Runnable posted = self.mPostedSetText;
+        if (worker != null && posted != null) worker.removeCallbacks(posted);
+        self.mPostedSetText = null;
+    }
+
+    /**
      * v1.2.12 — Trigger the IME-enter action on the cluster focused editable
      * (Search / Send / Done depending on the field's {@code imeOptions}).
      * Falls back to a synthesized click on API &lt; 30.

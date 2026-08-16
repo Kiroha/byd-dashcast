@@ -440,6 +440,10 @@ public class KeyboardBridgeActivity extends Activity {
     @Override
     protected void onDestroy() {
         sShowing = false;
+        // AUD-007 — the session ends here, and so must anything typed in it but never validated.
+        // The accessibility service outlives this dialog; without this, a draft the user abandoned
+        // is replayed onto the cluster the next time someone presses Done in a fresh session.
+        try { ClusterImeWatcherService.clearPendingText(); } catch (Throwable ignored) { }
         try {
             if (mImm != null && mInput != null) {
                 mImm.hideSoftInputFromWindow(mInput.getWindowToken(), 0);

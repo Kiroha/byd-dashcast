@@ -46,7 +46,8 @@ public final class HudController {
 
     // ─── Deduplication state ──────────────────────────────────────────────
 
-    private boolean isHudActive;
+    /** Volatile: {@link #noteNavFrameSeen} reads it without the lock the writers hold. */
+    private volatile boolean isHudActive;
 
     /**
      * Cached DiLink-3 gate. The windshield-HUD nav feature is DL3-only: DL3 is the
