@@ -11,6 +11,7 @@ import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
 
+import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.util.AppLogger
@@ -254,10 +255,19 @@ class ClusterInputForwarder(context: Context) {
                             SurfaceDaemon.TRANSACT_INJECT_MOTION, data, null, IBinder.FLAG_ONEWAY
                         )
                     } catch (doe: android.os.DeadObjectException) {
-                        // v1.3.3 — silent binder death seen on user devices; invalidate so
-                        // ProxyKeeperService can recover.
-                        ProxyClient.invalidateBinder("InjectMotion")
-                        AppLogger.w(TAG, "injectTouchAt: daemon binder dead — invalidated")
+                        // AUD-009 — this transaction is the SURFACE daemon's. The old line here
+                        // invalidated the PROXY daemon's cache, which repaired a process that was
+                        // not broken and left `mDaemonBinder` — the dead one — in place. Every
+                        // subsequent finger movement then went to the same dead binder, so the
+                        // cluster stopped responding to touch until the app was killed.
+                        //
+                        // Dropping the reference is what matters; null falls back to the local
+                        // injection path, which still works. The re-acquire is the cheap chance
+                        // that the daemon already respawned, and it is throttled precisely because
+                        // this line sits in a per-MotionEvent path.
+                        mDaemonBinder = DaemonBinderResolver.reacquireSurfaceBinder("InjectMotion")
+                        AppLogger.w(TAG, "injectTouchAt: surface binder dead — dropped"
+                                + (if (mDaemonBinder != null) " and re-acquired" else ""))
                     } catch (e: Exception) {
                         AppLogger.e(TAG, "injectTouchAt via daemon failed", e)
                     } finally {
