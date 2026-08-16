@@ -42,9 +42,13 @@ vehicle properties name the car. The archives are also large.
 
 ## Where it goes
 
-Reports are uploaded to a **private Telegram group** held by the project maintainer, or — for
-archives too large for Telegram — to a **private Azure container**. Large diagnostic pulls may use
-the container instead.
+Reports are uploaded to a **private Telegram group whose only members are the project maintainer
+and the bot that delivers them** — not the community group linked from the README, which is a
+separate place where no diagnostic is ever posted. Archives too large for Telegram go to a
+**private Azure container** instead, and large diagnostic pulls may use it as well.
+
+The upload itself passes through a relay that holds the delivery credential, so no car carries one.
+The relay forwards and keeps nothing.
 
 Two consequences worth stating plainly:
 
