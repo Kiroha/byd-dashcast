@@ -14,6 +14,24 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.31-beta (versionCode 621)
+
+**The audit's reporting work reaches testers: a consent question, a redaction stage, and the Telegram token out of the binary.**
+
+*Read first:* the old bot token has been revoked, so **1.8.29 and 1.8.30 can no longer upload anything** — they fall back to a local save. This version is the fix.
+
+**The question.** Before any diagnostic leaves the car, the app asks once, in each of the thirteen languages it ships, and shows what a report contains. Asked at the first Send rather than at install, because that is the only moment it means anything. Either answer lets the capture finish: refusing turns the upload into the share sheet the app already offered when no channel was configured, so a refusal keeps a report rather than losing one — and the wizard now says so with the file name instead of opening a chooser over a screen still reading "Sending". Re-readable and revocable in Settings. The gate sits in the transport rather than in the eleven screens that can start an upload, so all of them inherit it through exits that already existed.
+
+**Less leaves.** Reports, HUD bundles and diagnostic archives are filtered before upload: vehicle serial number, Wi-Fi network names, hardware addresses, positions, e-mail addresses, account names, and the reporter's own handle wherever it reappears outside its header. The rules were measured against 160 real reports (116 MB) rather than guessed, which is what kept the obvious ones out — a free-floating seventeen-character VIN match fires 1370 times on that corpus and never once on a VIN (it eats display identifiers, the field every cluster diagnosis is made with), and a decimal coordinate pair is 92% window-manager scales. 128 of the 160 carried something now removed; display identifiers, window scales, broadcast addresses, install paths, vendor service names and the loopback verdict all verified unchanged, with tests that go red if that stops being true.
+
+**AUD-001, the audit's only P0.** Since versionCode 441 every published APK carried the Telegram bot token in its DEX, extractable with `unzip` and `strings`, and rotating it meant reaching every car. Uploads now go through an Azure Function relay holding the credential server-side; a decompiled APK yields an HTTPS address and nothing else. The relay runs with no managed identity, no role assignment and no VNet integration, on its own storage account, with basic publishing credentials disabled and a daily quota — audited after deployment rather than asserted before it.
+
+**Four false statements corrected.** The user manual claimed in thirteen languages that reports contain no GPS position and no app content; the privacy page claimed nothing is uploaded by default, which the relay undid; the extraction tool's page claimed it collects no personal data while writing an inventory of every installed application; and the Log screen implied its raw log is filtered, which it is not. Also: a documented pairing step instructed pushing `local.properties` onto tester cars — a file holding an Azure storage **account** key.
+
+**One real leak closed.** The opt-in for raw navigation text did not gate it: one ungated log line printed the whole notification — street, destination, ETA — and only when parsing failed, which is exactly when a report gets sent.
+
+Found by a pre-release audit of the 42 commits: three blockers and twelve highs, all fixed here. 368 unit tests; `assembleDebug`, `assembleRelease` (R8) and lint green, 0 errors and 0 missing translations; release APK scanned, no credential pattern in any dex or resource. Not validated on a car.
+
 ### 1.8.30-beta (versionCode 620)
 
 **Android Auto and CarPlay are back in the app list. 1.8.29 removed them, and it should not have.**
