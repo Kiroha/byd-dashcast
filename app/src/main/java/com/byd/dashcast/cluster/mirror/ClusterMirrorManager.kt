@@ -326,8 +326,16 @@ class ClusterMirrorManager {
             // the cached binder is stuck "alive". Eagerly invalidate so the
             // keeper re-bootstraps within HEARTBEAT_MS instead of leaving every
             // call broken until the user quits the app.
-            com.byd.dashcast.proxy.ProxyClient.invalidateBinder("MirrorStart")
-            AppLogger.e(TAG, "startMirrorViaDaemon DeadObjectException — binder invalidated", doe)
+            // AUD-009 — the transaction above is the SURFACE daemon's (TRANSACT_MIRROR_START,
+            // SurfaceDaemon.DESCRIPTOR), so invalidating the PROXY daemon repaired a process that
+            // was not down and did nothing for the one that was.
+            //
+            // This class holds no cache of its own — the binder arrives as a parameter — so it
+            // cannot forget the dead reference on the caller's behalf. What it can do is warm a
+            // fresh ServiceManager lookup for whoever asks next, and stop disturbing the other
+            // daemon. The caller's stale copy is dealt with where it lives.
+            com.byd.dashcast.proxy.DaemonBinderResolver.reacquireSurfaceBinder("MirrorStart")
+            AppLogger.e(TAG, "startMirrorViaDaemon: surface binder dead", doe)
             return false
         } catch (e: Exception) {
             AppLogger.e(TAG, "startMirrorViaDaemon failed", e)
