@@ -76,6 +76,9 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
     private String lastLoggedNav = "";
 
+    /** AUD-003 — whether the currently deduplicated content actually made it onto the HUD. */
+    private boolean lastContentReachedHud = false;
+
     // Throttle for the "unsupported nav app" diagnostic — the same app is logged at most once per
     // ~30 s so a "no arrow" bug report always carries a RECENT line explaining why (e.g. Telenav).
     private String lastUnsupportedNavPkg = "";
@@ -613,10 +616,21 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String subText = charSeqToString(extras.getCharSequence("android.subText"));
 
         // Notification-level deduplication: skip if content hasn't changed since last call.
-        if (title.equals(lastTitle) && text.equals(lastText) && subText.equals(lastSubText)) return;
+        if (title.equals(lastTitle) && text.equals(lastText) && subText.equals(lastSubText)) {
+            // AUD-003 — but first, keep the HUD alive. This is a re-post of the very frame already
+            // displayed, so the arrow up there is still correct and the staleness watchdog must not
+            // read "no update" as "frozen". Only when that frame actually reached the HUD: an
+            // identical re-post of something that never parsed proves nothing, and letting it
+            // refresh liveness would disarm the watchdog for the case it exists for.
+            if (lastContentReachedHud) HudController.INSTANCE.noteNavFrameSeen();
+            return;
+        }
         lastTitle   = title;
         lastText    = text;
         lastSubText = subText;
+        // New content: it has not reached the HUD yet, and may never — unparseable frames return
+        // early below. Set true only where the frame is actually dispatched.
+        lastContentReachedHud = false;
 
         // OPT-IN raw capture (Diagnostics → "Capture raw nav-notification text"): the ACTUAL text a
         // supported nav app posts, clipped — logged here for EVERY distinct notification content,
@@ -751,6 +765,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
         // Fully parsed into a HudNavigationData ⇒ we understood the frame, not just received it.
         noteNavActivity(sbn.getPackageName(), true);
+
+        // AUD-003 — this content reached the HUD, so a later identical re-post proves the
+        // displayed arrow is still current and may refresh the staleness watchdog.
+        lastContentReachedHud = true;
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
         postNavUpdate(data);
