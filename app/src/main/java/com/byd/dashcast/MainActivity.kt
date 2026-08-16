@@ -1742,7 +1742,38 @@ class MainActivity : AppCompatActivity(),
 
     override fun getClusterServiceIfBound(): ClusterService? = if (mServiceBound) mClusterService else null
 
-    override fun getSurfaceDaemonBinder(): IBinder? = mDaemonBinder
+    /**
+     * The surface daemon's binder, re-acquired if the cached one has died — AUD-009, last step.
+     *
+     * The five call sites that mishandled a dead surface binder are fixed, but two of them live in
+     * [ClusterMirrorManager], which receives the binder as a parameter and therefore cannot forget
+     * a dead reference on anyone's behalf. The reference it is handed comes from here, so this is
+     * where the forgetting has to happen.
+     *
+     * `pingBinder` rather than `isBinderAlive`, and the difference is the entire failure mode this
+     * finding is about: on DiLink 3 the kernel's binderDied notification is sometimes never
+     * delivered, so the local flag keeps saying "alive" about a process that is gone.
+     * `ProxyKeeperService` learned the same lesson on the other daemon and does the same thing.
+     *
+     * A round trip is affordable here: this getter is read when a mirror starts or stops, not per
+     * frame and not per touch. The touch path has its own recovery, in the forwarder that owns its
+     * own cache.
+     *
+     * Republishes to the input forwarder as well, so a recovered binder reaches the path that
+     * needs it most without waiting for the next ACTION_DAEMON_READY broadcast.
+     */
+    override fun getSurfaceDaemonBinder(): IBinder? {
+        val cached = mDaemonBinder
+        if (cached != null && cached.pingBinder()) return cached
+        if (cached == null) return null
+
+        val fresh = DaemonBinderResolver.reacquireSurfaceBinder("MainActivity.getSurfaceDaemonBinder")
+        mDaemonBinder = fresh
+        if (mServiceBound) mClusterService?.getInputForwarder()?.setDaemonBinder(fresh)
+        AppLogger.w(TAG, "surface binder was dead — "
+                + (if (fresh != null) "re-acquired" else "dropped, waiting for the daemon"))
+        return fresh
+    }
 
     override fun onPreviewClicked() {
         // no-op: frameMirror touch is handled by clusterMirror.setOnTouchListener()
