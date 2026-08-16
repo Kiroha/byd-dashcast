@@ -270,6 +270,33 @@ public final class HudController {
     }
 
     /**
+     * Records that guidance is still live, without touching a single register — AUD-003.
+     *
+     * The watchdog's premise was that "no update in {@value #STALE_MS} ms" means the arrow is
+     * frozen. That is true when the nav app has stopped, and false in the one case that matters on
+     * a motorway: Maps and Waze re-post the SAME notification while the distance to the next
+     * manoeuvre has not changed, and the listener's content deduplication swallows those re-posts
+     * before {@link #updateNavigation} is ever reached. At 130 km/h a "40 km" frame stays identical
+     * for roughly 28 seconds, so the watchdog fired at 12 and cleared a HUD that was perfectly
+     * correct. The arrow blinked out mid-motorway and came back when the kilometre finally ticked.
+     *
+     * So liveness stops depending on content. The listener calls this when a nav app re-posts
+     * exactly the frame that is already on the HUD — which means the displayed arrow is still the
+     * right one, which is precisely what the watchdog wanted to know.
+     *
+     * Deliberately NOT synchronized and deliberately doing nothing else. It is called from the
+     * notification dispatch thread on every re-post; taking the same lock as updateNavigation and
+     * closeNavigation would put that thread behind a CAN write. Writing a volatile long is atomic,
+     * and the worst interleaving with the watchdog is one tick's delay.
+     *
+     * Ignored when the HUD is not active: a re-post cannot keep alive something that was never lit.
+     */
+    public void noteNavFrameSeen() {
+        if (!isHudActive) return;
+        lastUpdateMs = SystemClock.elapsedRealtime();
+    }
+
+    /**
      * Watchdog tick: if the HUD is active but no nav update has arrived for {@link #STALE_MS},
      * the arrow is frozen — clear the HUD so a stale/wrong arrow does not persist. Synchronized on
      * {@code this} (like update/close) so it never races the notification-writer thread.
