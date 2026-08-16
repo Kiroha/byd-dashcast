@@ -77,7 +77,6 @@ public class KeyboardBridgeActivity extends Activity {
     private EditText           mInput;
 
     /** AUD-007 — true while this activity edits its own field; such edits are not relayed. */
-
     private boolean mSuppressRelay = false;
     private InputMethodManager mImm;
 

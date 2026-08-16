@@ -1750,30 +1750,85 @@ class MainActivity : AppCompatActivity(),
      * a dead reference on anyone's behalf. The reference it is handed comes from here, so this is
      * where the forgetting has to happen.
      *
-     * `pingBinder` rather than `isBinderAlive`, and the difference is the entire failure mode this
-     * finding is about: on DiLink 3 the kernel's binderDied notification is sometimes never
-     * delivered, so the local flag keeps saying "alive" about a process that is gone.
-     * `ProxyKeeperService` learned the same lesson on the other daemon and does the same thing.
+     * Two ways to ask whether a binder is alive, and the difference is the failure mode this
+     * finding is about. `isBinderAlive` is a local flag; on DiLink 3 the kernel's binderDied
+     * notification is sometimes never delivered, so it keeps saying "alive" about a process that
+     * is gone. Only `pingBinder` catches that — and it is a blocking round trip.
+     * `ProxyKeeperService` learned the same lesson on the other daemon, but it runs on its own
+     * heartbeat thread and can afford to block. THIS GETTER CANNOT, and an earlier version of it
+     * did, which is the mistake this comment exists to stop repeating.
      *
-     * A round trip is affordable here: this getter is read when a mirror starts or stops, not per
-     * frame and not per touch. The touch path has its own recovery, in the forwarder that owns its
-     * own cache.
+     * `MirrorCoordinator` states the contract in its own class doc — every method on the main
+     * thread — and both call sites honour it. Worse than "main thread occasionally": one of them
+     * is reached from `clusterMirror.addOnLayoutChangeListener`, so it runs inside the view
+     * traversal on every layout pass with a non-zero size. A daemon that is WEDGED rather than
+     * cleanly dead does not fail a ping quickly; it blocks it. Blocking there blocks the traversal,
+     * and the lifecycle callers (`onStop`, `onDestroy`) charge the same block against the
+     * transition ANR budget.
      *
-     * Republishes to the input forwarder as well, so a recovered binder reaches the path that
-     * needs it most without waiting for the next ACTION_DAEMON_READY broadcast.
+     * So liveness is established in two steps, neither of which blocks:
+     *
+     *  - [android.os.IBinder.isBinderAlive] is local and free. It answers correctly once the kernel
+     *    has delivered `binderDied`, which is the ordinary case. If it says dead, the replacement
+     *    comes from a ServiceManager lookup — reflection plus a lookup, no IPC to the daemon.
+     *  - the silent death, where the notification never arrives and the flag keeps saying "alive",
+     *    is checked with a real ping on a background thread. This call returns the cached binder
+     *    immediately; if the ping comes back dead, the cache is dropped and republished, so the
+     *    NEXT caller is correct. The current one may still transact against a corpse and take a
+     *    DeadObjectException — which every one of these call sites now handles, because that is
+     *    what the rest of AUD-009 was about.
+     *
+     * One stale attempt is the price of never blocking the UI thread. It is the right trade: the
+     * attempt fails loudly and recovers, an ANR does not.
+     *
+     * Republishes to the input forwarder as well, so a recovered binder reaches the path that needs
+     * it most without waiting for the next ACTION_DAEMON_READY broadcast.
      */
     override fun getSurfaceDaemonBinder(): IBinder? {
-        val cached = mDaemonBinder
-        if (cached != null && cached.pingBinder()) return cached
-        if (cached == null) return null
-
-        val fresh = DaemonBinderResolver.reacquireSurfaceBinder("MainActivity.getSurfaceDaemonBinder")
-        mDaemonBinder = fresh
-        if (mServiceBound) mClusterService?.getInputForwarder()?.setDaemonBinder(fresh)
-        AppLogger.w(TAG, "surface binder was dead — "
-                + (if (fresh != null) "re-acquired" else "dropped, waiting for the daemon"))
+        val cached = mDaemonBinder ?: return null
+        if (cached.isBinderAlive()) {
+            checkSurfaceBinderLivenessAsync(cached)
+            return cached
+        }
+        val fresh = DaemonBinderResolver.reacquireSurfaceBinder("getSurfaceDaemonBinder")
+        adoptSurfaceBinder(fresh, "was dead")
         return fresh
     }
+
+    /**
+     * Confirms a seemingly-alive binder really is, without blocking the caller.
+     *
+     * `pingBinder` is the only thing that catches the silent death this whole finding is about, and
+     * it is a blocking round trip. Off the main thread it costs nothing anyone can feel; on it, it
+     * is an ANR waiting for a wedged daemon. Throttled by [DaemonBinderResolver], so a layout storm
+     * cannot spawn a thread per pass.
+     */
+    private fun checkSurfaceBinderLivenessAsync(binder: IBinder) {
+        if (mSurfaceLivenessCheckInFlight.getAndSet(true)) return
+        Thread({
+            try {
+                if (binder.pingBinder()) return@Thread
+                val fresh = DaemonBinderResolver.reacquireSurfaceBinder("silent-death")
+                runOnUiThread {
+                    // Only if nothing better arrived meanwhile — a broadcast may have republished.
+                    if (mDaemonBinder === binder) adoptSurfaceBinder(fresh, "silently dead")
+                }
+            } catch (_: Throwable) {
+            } finally {
+                mSurfaceLivenessCheckInFlight.set(false)
+            }
+        }, "surface-binder-ping").start()
+    }
+
+    /** Main thread. Replaces the cached surface binder and tells the touch path about it. */
+    private fun adoptSurfaceBinder(fresh: IBinder?, why: String) {
+        mDaemonBinder = fresh
+        if (mServiceBound) mClusterService?.getInputForwarder()?.setDaemonBinder(fresh)
+        AppLogger.w(TAG, "surface binder " + why + " — "
+                + (if (fresh != null) "re-acquired" else "dropped, waiting for the daemon"))
+    }
+
+    private val mSurfaceLivenessCheckInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
 
     override fun onPreviewClicked() {
         // no-op: frameMirror touch is handled by clusterMirror.setOnTouchListener()
