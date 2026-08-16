@@ -12,7 +12,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 
 import com.byd.dashcast.proxy.DaemonBinderResolver
-import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.util.AppLogger
 

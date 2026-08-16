@@ -368,8 +368,11 @@ class ClusterMirrorManager {
             }
         } catch (doe: android.os.DeadObjectException) {
             // v1.3.3 — see comment in startMirrorViaDaemon.
-            com.byd.dashcast.proxy.ProxyClient.invalidateBinder("MirrorStop")
-            AppLogger.w(TAG, "stopMirrorViaDaemon DeadObjectException — binder invalidated")
+            // AUD-009 — same as the start path. Harmless here in one sense, since a stop whose
+            // daemon is already dead has nothing left to stop, but it still reconnected the wrong
+            // daemon on every teardown after a surface death.
+            com.byd.dashcast.proxy.DaemonBinderResolver.reacquireSurfaceBinder("MirrorStop")
+            AppLogger.w(TAG, "stopMirrorViaDaemon: surface binder dead — nothing left to stop")
         } catch (e: Exception) {
             AppLogger.w(TAG, "stopMirrorViaDaemon transact failed: ${e.message}")
         } finally {
