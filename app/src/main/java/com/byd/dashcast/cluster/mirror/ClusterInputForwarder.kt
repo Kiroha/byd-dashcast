@@ -349,8 +349,13 @@ class ClusterInputForwarder(context: Context) {
                     dataUp.recycle()
                 }
             } catch (doe: android.os.DeadObjectException) {
-                ProxyClient.invalidateBinder("InjectKey")
-                AppLogger.w(TAG, "injectKey: daemon binder dead — invalidated")
+                // AUD-009 — SURFACE daemon transaction, so the PROXY daemon's cache was the wrong
+                // thing to drop. What matters is forgetting the dead reference: the key falls back
+                // to the local path, which is why this failure was quieter than the touch one and
+                // survived longer.
+                mDaemonBinder = DaemonBinderResolver.reacquireSurfaceBinder("InjectKey")
+                AppLogger.w(TAG, "injectKey: surface binder dead — dropped"
+                        + (if (mDaemonBinder != null) " and re-acquired" else ""))
             } catch (e: Exception) {
                 AppLogger.e(TAG, "injectKey via daemon failed", e)
             }
