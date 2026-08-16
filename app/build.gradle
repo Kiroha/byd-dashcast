@@ -1306,8 +1306,34 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
-        versionCode 621
-        versionName "1.8.31-beta"
+        // 622 = 1.8.32-beta (wave V2 of the audit: the last three P1s, all in paths a driver feels
+        // within seconds and none reproducible off a car.
+        // CLUSTER TOUCH COMES BACK BY ITSELF. AUD-009: the app runs two uid-2000 daemons, and five
+        // sites answered the death of the SURFACE one by invalidating the PROXY one's cache. The
+        // proxy daemon — alive, different process — was reconnected for nothing while the dead
+        // reference stayed cached, so every subsequent finger movement went to the same corpse and
+        // the cluster stopped responding until the app was killed. Split into seven commits, the
+        // touch path alone in its own, because it is the regression nobody can reach remotely.
+        // THE WINDSHIELD ARROW STOPS BLINKING. AUD-003: liveness was tied to content. Maps re-posts
+        // the same notification while the distance has not changed — about 28 s at 130 km/h — the
+        // listener's dedup swallowed those re-posts before lastUpdateMs was written, and the 12 s
+        // watchdog cleared a HUD that was perfectly correct. Liveness now follows a re-post of the
+        // frame already displayed, and only when that frame actually reached the HUD, so the
+        // watchdog still catches the frozen arrow it was built for.
+        // THE KEYBOARD BRIDGE SENDS WHAT YOU TYPED. AUD-007: mPendingText was shared state read at
+        // run time; between the Enter and its flush the bridge cleared its own box and that clear
+        // was relayed, so the destination went out empty and the field was wiped. Text is now
+        // captured when Done is pressed, the bridge no longer relays its own housekeeping, and a
+        // draft abandoned in one session no longer replays onto the cluster in the next.
+        // Found by a pre-release audit, before shipping: my own AUD-009 fix had put a BLOCKING
+        // pingBinder inside the view traversal — getSurfaceDaemonBinder is reached from
+        // addOnLayoutChangeListener on every layout pass, not "at mirror start and stop" as the
+        // comment claimed. A wedged daemon would have blocked the traversal. The ping now runs off
+        // the main thread and the cache is repaired for the next caller.
+        // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
+        // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
+        versionCode 622
+        versionName "1.8.32-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
