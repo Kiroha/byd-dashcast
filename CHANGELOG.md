@@ -14,6 +14,30 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.33-beta (versionCode 623)
+
+**The APK is 36% smaller and the microphone permission is gone.** 10 367 492 bytes to 6 607 550. Every OTA every car downloads is a third smaller, and the storage it occupies afterwards shrinks with it.
+
+**The voice subsystem is removed (decision D1).** Wake-word -> Vosk -> LLM -> TTS was a proof of concept that lived in the diagnostics surface, and that surface was emptied in 1.7.0. Since then nothing in the tree has called `VoiceService.start()`: the pipeline shipped in every APK with no reachable entry point, carrying 3.7 MB of ONNX models, `RECORD_AUDIO` and a microphone foreground service that nothing could reach. Gone with it: ONNX Runtime, Vosk, and `androidx.localbroadcastmanager` — the project's only AndroidX-deprecated library, whose seven consumers were six voice classes plus the subscriber to them. If you ever tried the PoC, the app now deletes the Vosk model and native libraries it left on your device (40 MB, up to 1.3 GB on the large model, plus 25 MB of libraries) on its next housekeeping sweep.
+
+**Resource shrinking is enabled — this is the one thing to watch.** R8 has been shrinking *code* since 1.8.3; the resource table was never shrunk, so every unused AndroidX and Material resource shipped. `shrinkResources` now runs beside it. Verified before enabling: no resource in this app is fetched by a name built at runtime (no `getIdentifier()` anywhere), and the 722 removed entries were read one by one — all library resources except one string belonging to a method R8 had already deleted as unreachable. Per-locale string counts were compared in the built APK: **no DashCast string was lost in any of the 13 languages.** But resource shrinking has never run on a car. If an icon is missing or a colour looks wrong somewhere, that is where it comes from — please report it.
+
+**Translations.** In Arabic, choosing the left half of the cluster gave you the right one (AUD-011). Five languages displayed a literal `50%%` in the split menu (AUD-010). Four French labels shipped untranslated to all thirteen languages, and lint had been told not to mention it (AUD-137).
+
+**Theme.** The log filter icon was white on a near-white background in day mode (AUD-146). The active preset card was unreadable at night (AUD-147). A stopped service showed red text inside a green badge (AUD-148).
+
+**Screens that were doing more work than they needed.** `textIsSelectable` was set on every recycled row of the live log and on the full system report — the report is published in eleven successive passes, each laying out the whole text on the main thread with an editor attached (AUD-144). The cluster background was the heaviest single file in the APK: a fully opaque image carrying an unused alpha channel, with no density qualifier, so it was upscaled to roughly 17 MB of bitmap on a 320 dpi cluster before being drawn scaled back down. Now a lossless WebP in `drawable-nodpi`, pixel-identical, about 4 MB decoded (AUD-196).
+
+**Diagnostic uploads retry once.** The relay is an Azure Function on a consumption plan: after 20 minutes idle it is deallocated and the first request pays a cold start. That first request was the one that failed.
+
+**Supply chain and build.** The Gradle distribution is cryptographically anchored (AUD-022). The R8 mapping is archived with the release it decodes (AUD-152). A fresh clone now builds: signing falls back to a debug key when the platform keystore is absent, instead of failing before compiling a line, and the README no longer claims a proprietary SDK is required — it is not, and that was verified by removing the stub jar and watching exactly which six references break (AUD-156, AUD-165).
+
+**Documentation that had rotted into being wrong.** Four performance documents still said R8 was disabled and that `proguard-rules.pro` did not exist; ten patch documents were labelled "not applied" while being in production since 1.6.108 (AUD-160, AUD-161). The README gave the wrong ServiceManager name for the proxy daemon, ninety lines after its own section warning that getting that name wrong fails silently (AUD-167). The published site advertised `v0.9.92-alpha`; the version is now read from `app/build.gradle` at build time (AUD-159). Opening the manual with `?lang=constructor` served a blank page in every language (AUD-157).
+
+**Privacy.** Third-party identifying data — a tester's licence plate, two testers' first names, a private channel identifier, nominative filesystem paths — was removed from the default branch, where it had stayed visible while the fix sat on a working branch.
+
+372 unit tests, including three new ones pinning the directory-deleting cleanup above. `assembleDebug`, `assembleRelease` (R8 + resource shrinking) and lint green, 0 errors. Release APK verified after building: platform signature, 0 credential patterns, 0 `RECORD_AUDIO`, 0 voice classes in the dex.
+
 ### 1.8.32-beta (versionCode 622)
 
 **Wave V2 of the audit: the last three P1s, all in paths a driver feels within seconds and none reproducible off a car.** With this the audit report has no P0 and no P1 left open.
