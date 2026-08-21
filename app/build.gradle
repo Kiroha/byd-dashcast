@@ -1511,7 +1511,16 @@ android {
     // No resolutionStrategy.force needed with these API-29-compatible versions.
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // AUD-196 — byd-auto-api-stubs.jar is compile-time only. Its 54 classes live in the
+    // android.hardware.* namespace, which means the real ones come from the head unit's boot
+    // classpath and win over anything in our dex anyway: shipping the stubs added 49 dead
+    // classes to classes.dex. Worse if they were ever reached — a listener subclassing our
+    // stub would be rejected by the platform's own registerListener(realType). The only
+    // compile-time need is CanFeedbackListener's two `extends AbsBYDAuto*Listener` sinks
+    // (CanFeedbackListener.java:125,140,156); everything else already goes through
+    // Class.forName, and every one of those paths is inside a catch (Throwable).
+    compileOnly fileTree(include: ['*.jar'], dir: 'libs')
+    testCompileOnly fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.13.2'
 
     // PRE-0 (audit) — characterisation-test harness. The audit established that the only test
