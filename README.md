@@ -425,6 +425,13 @@ cd MyBYDApp   # repo folder name
 # APK → app/build/outputs/apk/debug/DashCast-v<versionName>-debug.apk
 ```
 
+> **Building without the platform key.** `app/keystore/platform.keystore` is not in the repository —
+> it is what grants the BYD system permissions, and an APK signed with it is a privileged APK. If it
+> is absent the build still works: Gradle falls back to its default debug signing and prints a line
+> saying so. The APK installs and runs, and the bydauto features — cluster projection, HUD, the
+> uid-2000 daemon — are denied at runtime. That is enough to read, compile and review the code, which
+> is what SECURITY.md means by "build from source".
+
 > **Do not leave a debug build on a vehicle.** It carries the same platform signature as the
 > release — that part is unavoidable, the BYD permissions depend on it — but it is also
 > `debuggable`, which the release is not. On a head unit, ADB over TCP has to be enabled for

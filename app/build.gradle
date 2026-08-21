@@ -21,13 +21,34 @@ apply plugin: 'kotlin-android'
 // relay.url. Anything else in the file is ignored by the parser, but it still lands on the car.
 
 android {
+    // AUD-156 — the keystore is gitignored, so a fresh clone does not have it. Declaring a
+    // signingConfig that points at a missing file made `./gradlew assembleDebug` fail outright on
+    // any machine but this one, while SECURITY.md tells readers to "build from source" if they want
+    // author-level trust. They could not.
+    //
+    // The signature itself cannot be shipped and should not be: it is what grants the bydauto
+    // system permissions, and an APK signed with it is a privileged APK. So the config becomes
+    // conditional. With the keystore present nothing changes. Without it the build falls back to
+    // Gradle's default debug signing and produces an APK that installs, runs, and is missing
+    // exactly the BYD permissions — which is the honest outcome for someone who does not have the
+    // platform key, and infinitely more useful than a build that refuses to start.
+    def platformKeystore = file('./keystore/platform.keystore')
+    def hasPlatformKeystore = platformKeystore.exists()
+    if (!hasPlatformKeystore) {
+        logger.lifecycle("DashCast: app/keystore/platform.keystore is absent — building UNSIGNED "
+                + "by the BYD platform key. The APK will build and run, but the bydauto system "
+                + "APIs (cluster projection, HUD, uid-2000 daemon) will be denied at runtime.")
+    }
+
     signingConfigs {
         // BYD signature required to access bydauto system APIs
-        bydPlatform {
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-            storeFile file('./keystore/platform.keystore')
-            storePassword 'android'
+        if (hasPlatformKeystore) {
+            bydPlatform {
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+                storeFile platformKeystore
+                storePassword 'android'
+            }
         }
     }
 
@@ -1374,7 +1395,7 @@ android {
             // developer who cannot debug will simply build a release and lose the stack traces.
             // The control is that debug builds stay off cars — stated in README.md and SECURITY.md
             // rather than left for someone to infer from "same platform-signed APK".
-            signingConfig signingConfigs.bydPlatform
+            if (hasPlatformKeystore) signingConfig signingConfigs.bydPlatform
         }
             // R8 enabled (issue #78 hardening). Keep rules in proguard-rules.pro
             // are conservative (whole proxy.** kept) because the daemon is launched
@@ -1382,7 +1403,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.bydPlatform
+            if (hasPlatformKeystore) signingConfig signingConfigs.bydPlatform
         }
     }
 
