@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Deteniendo…</string>
     <string name="lm_action_add">Añadir</string>
     <string name="lm_action_delete">Eliminar</string>
+    <string name="lm_section_my_layouts">MIS DISEÑOS</string>
+    <string name="lm_action_clear_all">Borrar todo</string>
+    <string name="lm_action_favorite">⭐ Favorito</string>
     <string name="lm_action_save">Guardar</string>
     <string name="lm_activated_ok_fmt">%1$s activado ✓</string>
     <string name="lm_activated_partial_fmt">%1$s activado (algunos slots fallaron)</string>

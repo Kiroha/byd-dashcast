@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">To\'xtatilmoqda…</string>
     <string name="lm_action_add">Qo\'shish</string>
     <string name="lm_action_delete">O\'chirish</string>
+    <string name="lm_section_my_layouts">MENING MAKETLARIM</string>
+    <string name="lm_action_clear_all">Hammasini tozalash</string>
+    <string name="lm_action_favorite">⭐ Sevimli</string>
     <string name="lm_action_save">Saqlash</string>
     <string name="lm_activated_ok_fmt">%1$s faollashtirildi ✓</string>
     <string name="lm_activated_partial_fmt">%1$s faollashtirildi (ba\'zi slotlar muvaffaqiyatsiz)</string>

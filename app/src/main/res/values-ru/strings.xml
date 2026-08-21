@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Остановка…</string>
     <string name="lm_action_add">Добавить</string>
     <string name="lm_action_delete">Удалить</string>
+    <string name="lm_section_my_layouts">МОИ МАКЕТЫ</string>
+    <string name="lm_action_clear_all">Очистить всё</string>
+    <string name="lm_action_favorite">⭐ Избранный</string>
     <string name="lm_action_save">Сохранить</string>
     <string name="lm_activated_ok_fmt">%1$s активирован ✓</string>
     <string name="lm_activated_partial_fmt">%1$s активирован (некоторые слоты не удались)</string>

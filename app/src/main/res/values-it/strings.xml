@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Arresto…</string>
     <string name="lm_action_add">Aggiungi</string>
     <string name="lm_action_delete">Elimina</string>
+    <string name="lm_section_my_layouts">I MIEI LAYOUT</string>
+    <string name="lm_action_clear_all">Cancella tutto</string>
+    <string name="lm_action_favorite">⭐ Preferito</string>
     <string name="lm_action_save">Salva</string>
     <string name="lm_activated_ok_fmt">%1$s attivato ✓</string>
     <string name="lm_activated_partial_fmt">%1$s attivato (alcuni slot non riusciti)</string>
