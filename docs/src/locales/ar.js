@@ -5,7 +5,7 @@ export default {
   rtl: true,
   title: 'DashCast — دليل المستخدم',
   manualName: 'دليل المستخدم',
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 جدول المحتويات',
 
   intro: {

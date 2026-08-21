@@ -4,7 +4,7 @@ export default {
   name: 'Polski',
   title: 'DashCast — Instrukcja obsługi',
   manualName: 'Instrukcja obsługi',
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Spis treści',
 
   intro: {

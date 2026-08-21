@@ -4,7 +4,7 @@ export default {
   name: "O'zbekcha",
   title: "DashCast — Foydalanuvchi qo'llanmasi",
   manualName: "Foydalanuvchi qo'llanmasi",
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Mundarija',
 
   intro: {
