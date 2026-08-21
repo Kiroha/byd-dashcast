@@ -1363,7 +1363,17 @@ android {
 
     buildTypes {
         debug {
-            // Platform signature is mandatory even in debug builds for BYD permissions
+            // Platform signature is mandatory even in debug builds for BYD permissions.
+            //
+            // AUD-155 — and it makes this variant sharper than a debug build usually is. AGP leaves
+            // it `debuggable`, so the APK holds platform permissions AND accepts a debugger. On a
+            // head unit that is not academic: DashCast cannot work at all unless ADB over TCP is
+            // enabled, so the port an attacker would need is open by requirement, not by accident.
+            //
+            // Deliberately NOT set to debuggable false: that is what the variant is for, and a
+            // developer who cannot debug will simply build a release and lose the stack traces.
+            // The control is that debug builds stay off cars — stated in README.md and SECURITY.md
+            // rather than left for someone to infer from "same platform-signed APK".
             signingConfig signingConfigs.bydPlatform
         }
             // R8 enabled (issue #78 hardening). Keep rules in proguard-rules.pro
