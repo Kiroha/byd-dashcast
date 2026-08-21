@@ -342,7 +342,7 @@ object ReportChannel {
      * Encrypted preferences, cached — the KeyStore round-trip is IPC and this is read on hot paths.
      * Returns null rather than throwing when the KeyStore is unavailable, which happens on some
      * ROMs; callers then fall back to the build-time value and the feature degrades instead of
-     * crashing. Mirrors the pattern already used by LlmVoiceEngine.
+     * crashing.
      */
     private fun prefs(ctx: Context): android.content.SharedPreferences? {
         sPrefs?.let { return it }

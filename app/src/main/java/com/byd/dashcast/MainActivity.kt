@@ -25,7 +25,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.RecyclerView
 import com.byd.dashcast.app.AppStartupTasks
 import com.byd.dashcast.app.BootDisplayCleanup
@@ -72,8 +71,6 @@ import com.byd.dashcast.update.OtaProgressUi
 import com.byd.dashcast.update.UpdateChecker
 import com.byd.dashcast.util.AppLogger
 import com.byd.dashcast.util.LocaleHelper
-import com.byd.dashcast.voice.VoiceCommandReceiver
-import com.byd.dashcast.voice.VoiceCommandRouter
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -395,16 +392,6 @@ class MainActivity : AppCompatActivity(),
         handleShowMirrorIntent(intent)
     }
 
-    // ─── v1.4.0 Voice command receiver ─────────────────────────────────────────
-
-    private val mVoiceCommandReceiver = VoiceCommandReceiver(object : VoiceCommandReceiver.Host {
-        override fun isActivityAlive(): Boolean = !isFinishing && !isDestroyed
-        override fun activateCluster() = this@MainActivity.activateCluster()
-        override fun restoreBydDashboard() = this@MainActivity.restoreBydDashboard()
-        override fun startActivity(intent: Intent) = this@MainActivity.startActivity(intent)
-        override fun quickSwitchToApp(pkg: String) = this@MainActivity.quickSwitchToApp(pkg)
-    })
-
     override fun onResume() {
         super.onResume()
         // Re-evaluate after returning from Settings/Layout Manager, not only on process creation.
@@ -592,11 +579,6 @@ class MainActivity : AppCompatActivity(),
             }
         }
         mStatePollCoordinator?.start()
-        // Register the voice-command receiver only while the Activity is visible.
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            mVoiceCommandReceiver, IntentFilter(VoiceCommandRouter.ACTION_VOICE_COMMAND)
-        )
-
         // Reflect fission-layout apps in the app list (indicator + long-press kill).
         FissionOrchestrator.setLayoutChangeListener { refreshLayoutPackages() }
         refreshLayoutPackages()
@@ -621,10 +603,6 @@ class MainActivity : AppCompatActivity(),
         }
         // Detach the fission layout listener — only the foreground Activity drives the indicators.
         FissionOrchestrator.setLayoutChangeListener(null)
-        try {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(mVoiceCommandReceiver)
-        } catch (ignore: Throwable) {
-        }
     }
 
     override fun onDestroy() {

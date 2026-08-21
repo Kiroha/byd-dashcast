@@ -141,8 +141,10 @@ public class UpdateChecker {
         JSONArray list = new JSONArray(json);
         for (int i = 0; i < list.length(); i++) {
             JSONObject r = list.getJSONObject(i);
-            // Skip non-app releases (e.g. "voice-libs-v1"): a valid app tag starts
-            // with 'v' followed by a digit (v1.2.3) or directly with a digit (1.2.3).
+            // Skip non-app releases: a valid app tag starts with 'v' followed by a digit
+            // (v1.2.3) or directly with a digit (1.2.3). The case that motivated this filter,
+            // the "voice-libs-v1" asset release, outlived the voice subsystem itself — that
+            // release still exists on GitHub, so the guard still earns its place.
             String t = r.getString("tag_name");
             String stripped = t.startsWith("v") ? t.substring(1) : t;
             if (stripped.isEmpty() || !Character.isDigit(stripped.charAt(0))) continue;

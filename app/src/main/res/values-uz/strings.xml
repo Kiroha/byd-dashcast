@@ -252,19 +252,6 @@
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
-    <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_voice_notif_channel">DashCast — Ovozli PoC</string>
-    <string name="diag_voice_notif_title">DashCast — mikrofon tinglanyapti (PoC)</string>
-    <string name="diag_voice_notif_text">Audio darajasi lokal tahlil qilinadi, hech narsa yozilmaydi.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
-
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Mahalliy oldindan ko\'rish mavjud emas — klaster displeyi hali faol</string>
     <string name="layout_mirror_previous">Oldingi tartib ilovasi</string>
