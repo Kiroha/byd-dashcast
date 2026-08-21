@@ -3,7 +3,7 @@
 # that VoiceLibsManager downloads from.
 #
 # Usage:
-#   cd /home/ccarre/app_byd/MyBYDApp
+#   cd <repo root>
 #   ./scripts/prepare_voice_libs.sh
 #
 # After running, upload the produced file to the GitHub release:

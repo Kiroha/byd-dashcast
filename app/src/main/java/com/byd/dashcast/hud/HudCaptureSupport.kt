@@ -15,7 +15,7 @@ import java.util.zip.ZipOutputStream
  */
 object HudCaptureSupport {
 
-    /** Telegram topic (message_thread_id) for HUD diagnostics — t.me/c/3712642112/2701. */
+    /** Telegram topic (message_thread_id) for HUD diagnostics, in the private tester channel. */
     const val HUD_TEST_THREAD = "2701"
 
     /** Zips every file under [work] into a sibling {@code <name>.zip} and returns it. */

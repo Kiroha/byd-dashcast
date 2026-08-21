@@ -56,7 +56,7 @@ Hard constraints on every change: **never break DL3 or DL5**, keep **lint 0 erro
 - Cluster = Display 1 "HDMI Screen", EXTERNAL, FLAG_SECURE+PRESENTATION+TRUSTED, owned by the AAOS cluster-rendering pipeline (`InstrumentClusterService` / `ClusterRenderingService` driven by the `android.frameworks.automotive.display@1.0::IAutomotiveDisplayProxyService` HAL).
 - **No `auto_container`, no `fission`, no `xdja`.** DashCast's whole DL3/DL5 activation is inapplicable.
 - **PROVEN CLOSED on-car (1.6.74 HAL probe):** `IAutomotiveDisplayProxyService` Java HIDL class is **ABSENT** (ClassNotFoundException) in-app AND via daemon; `lshal` shows the native HAL registered but **SELinux denies `find` to the shell domain** (`avc: denied … fwk_automotive_display_hwservice … permissive=0`). Same for bosch.display, composer, etc. App-window projection is a **platform wall**, not a DashCast gap. **Closure accepted.** The SurfaceControl mirror *preview* still works, but the physical panel only presents the OEM Neusoft nav.
-- There IS a theoretical NAV-DATA lever on AAOS (not app windows): `com.ts.appservice.cluster/.service.ClusterCoreService` (exported, permission `CAR_CLUSTER_COMMUNICATION` = `normal` = grantable), AIDL `IClusterCommService.sendCommand(int, Bundle)` + SOME/IP (`NAVI=4100`, `ROAD_INFO=1`, `REQUEST_NAVI_AREA_DISPLAY`). Unvalidated; low priority; decompiled at `/home/ccarre/app_byd/log/decompiled/tscluster`.
+- There IS a theoretical NAV-DATA lever on AAOS (not app windows): `com.ts.appservice.cluster/.service.ClusterCoreService` (exported, permission `CAR_CLUSTER_COMMUNICATION` = `normal` = grantable), AIDL `IClusterCommService.sendCommand(int, Bundle)` + SOME/IP (`NAVI=4100`, `ROAD_INFO=1`, `REQUEST_NAVI_AREA_DISPLAY`). Unvalidated; low priority; decompiled at `~/app_byd/log/decompiled/tscluster`.
 - **Recommended product behaviour:** detect AAOS (FEATURE_AUTOMOTIVE + no fission) and single-OS DL3 (`fission_single_os=1`) and show a clear "cluster projection unsupported on this variant" message instead of looping on activation. (Gate strings `R.string.aaos_cluster_unsupported_*`, `dl3_singleos_cluster_unsupported_*` exist; gating is wired in `MainActivity.onSendToDashboard` + `ClusterService`.)
 
 **Detection helpers in code:** `Platform.isClusterSingleOs()` (reads `fission_single_os == "1"`), `Platform.isDiLink3/4/5(ctx)`, `Platform.isAaos`/`FEATURE_AUTOMOTIVE`. **Gate combos:** single-OS DL3 = `isDiLink3(ctx) && isClusterSingleOs()`; AAOS = automotive feature + no fission.
@@ -105,7 +105,7 @@ Do not report physical success from `DisplayManager`, task placement, SurfaceFli
 
 ## 5. RE channels & the pixel path (bydhud)
 
-Full RE (decompiled sources at `/home/ccarre/app_byd/re_hud/src/`: `com.example.amapservice`, `com.byd.clusterdebug`, `com.example.bydhud`; APKs in `re_hud/apks/`; jadx at `/home/ccarre/app_byd/jadx`). Four channels put content on the cluster — for **projection** the relevant ones are **B (control)** and **D (pixels)**:
+Full RE (decompiled sources at `~/app_byd/re_hud/src/`: `com.example.amapservice`, `com.byd.clusterdebug`, `com.example.bydhud`; APKs in `re_hud/apks/`; jadx at `~/app_byd/jadx`). Four channels put content on the cluster — for **projection** the relevant ones are **B (control)** and **D (pixels)**:
 
 - **Channel B — `sendInfo(1000, code)`** = the control surface DashCast already uses to activate (§3). clusterdebug is a BYD engineering app exercising the full code table via `AutoContainerManager.sendInfo(1000, code, "")` (wrapped in `catch(SecurityException)` — privileged; but DashCast's uid-2000 daemon already calls `sendInfo` successfully for activation).
 - **Channel D — PIXELS = `com.example.bydhud`'s whole approach** (a DashCast-like sibling that projects its own dashboard onto the cluster). It uses **the exact uid-2000 primitives DashCast has**:
@@ -134,7 +134,7 @@ The cluster display is owned by another uid/user (`com.xdja.containerservice` ui
 
 ## 6.5. ★ The signing wall — why the app is unprivileged on D50F_LC (root cause, 2026-07-04)
 
-The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_214035`, in `/home/ccarre/app_byd/log/`) **pins the root cause and unifies the two blockers.** The casing fix works (`AutoContainer resolved (probe)`), the crash fix works (tester confirms), the display is healthy — yet nothing activates. Why:
+The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_214035`, in `~/app_byd/log/`) **pins the root cause and unifies the two blockers.** The casing fix works (`AutoContainer resolved (probe)`), the crash fix works (tester confirms), the display is healthy — yet nothing activates. Why:
 
 - **`keytool` on `app/keystore/platform.keystore`** → alias `androiddebugkey`, `CN=Android, O=Android, android@android.com`, SHA1 `27:19:6E:38:6B:87:5E:76:AD:F7:00:E7:EA:84:E4:C6:EE:E3:3D:FA` — this is the **AOSP public `platform.x509.pem` test key** (downloadable by anyone). No `sharedUserId`; the app relies purely on cert-matching for signature perms.
 - **Old DL3 / DL5.0 BYD ROMs were built with those same AOSP testkeys** → cert matches → DashCast is privileged there → direct SurfaceControl mirror / launch / inject work, daemon optional.
@@ -152,7 +152,7 @@ The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_2140
 
 ## 7. Case study — the DL5.1 D50F_LC bugreport
 
-`byd_bugreport_20260702_190502` + `byd_log_20260702_190721` (in `/home/ccarre/app_byd/log/`):
+`byd_bugreport_20260702_190502` + `byd_log_20260702_190721` (in `~/app_byd/log/`):
 - Device: `model=D50F_LC for BYD AUTO`, `product=trinket`, API 33, `inswver=DiLink50F_LC-1for2_USER_SIGN_S2285_202512102113_Q2700`, `fission_single_os=0` (family a).
 - App log: `Platform … autoDiLink5=true effectiveDiLink5=true`; `ClusterMirrorManager unlockHiddenApis OK`; `ClusterManager DL5 activation path: sendInfo(16) only on auto_container`; **`sendInfo ADB(1000,16) → service: Service auto_container does not exist`** ← the casing bug; yet `ClusterManager PRESENTATION candidate: id=2 name=fission_bg_XDJAScreenProjection` + `Cluster display connected: id=2` + `Cluster dimensions: 1920x720 displayId=2` → **the display is present and registered**.
 - Bugreport: service list has `1 AutoContainer: [android.os.IAutoContainer]`, `2 AutoContainerNative: []`, `6 FissionHostSvc`. Display dump: `fission_bg_XDJAScreenProjection` id=2, VIRTUAL, owner `com.xdja.containerservice`, FLAG_PRESENTATION + FLAG_OWN_CONTENT_ONLY.
@@ -206,12 +206,12 @@ The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_2140
 
 ## 10. Diagnostics workflow & data locations
 
-- **Projection bug reports arrive on Telegram TOPIC 4** (HUD zips are topic **2701** — different topic). Fetched via the Telethon session in `/home/ccarre/app_byd/hud_reports` (there are `fetch_inc*.py` scripts for INC reports).
+- **Projection bug reports arrive on Telegram TOPIC 4** (HUD zips are topic **2701** — different topic). Fetched via the Telethon session in `~/app_byd/hud_reports` (there are `fetch_inc*.py` scripts for INC reports).
 - Bug reports are named `byd_bugreport_*` (full: `getExternalFilesDir` + shell dump via daemon/ADB — see `report/BugReportCapture.java`) and `byd_report_*` (app-log export). The tester triggers them from `BugReportActivity` / `BugWizardActivity`.
-- **DL5.1 sample logs:** `/home/ccarre/app_byd/log/byd_bugreport_20260702_190502*.txt` + `byd_log_20260702_190721*.log` (the D50F_LC case, §7).
+- **DL5.1 sample logs:** `~/app_byd/log/byd_bugreport_20260702_190502*.txt` + `byd_log_20260702_190721*.log` (the D50F_LC case, §7).
 - **Decompiled OEM apps:** `re_hud/src/` (amapservice/clusterdebug/bydhud); `decompiled/containerservice` (AutoContainerService.java — the `AutoContainerNative` check); `decompiled/freedom` + `freedom_debug` (com.xdja.clusterdemo / Byd Dashboard / WindowManagement, single-OS renderer); `log/decompiled/tscluster` (AAOS ClusterCoreService).
-- **Build:** Gradle JDK `/home/ccarre/.jdks/jdk-17.0.19+10`; `./gradlew :app:assembleRelease :app:lintRelease`; BYD platform signing (`bydPlatform`).
-- **Persistent memory (this session's notes):** `/home/ccarre/.claude/projects/-home-ccarre-app-byd-MyBYDApp/memory/` — `dl3-firmware-autocontainer.md` (the fission_single_os discriminator + AutoContainerNative), `dx-byd-auto-cluster-topology.md` (AAOS closed), `project_architecture.md`, `release-and-build-conventions.md`.
+- **Build:** Gradle JDK `~/.jdks/jdk-17.0.19+10`; `./gradlew :app:assembleRelease :app:lintRelease`; BYD platform signing (`bydPlatform`).
+- **Persistent memory (this session's notes):** `~/.claude/projects/<this project>/memory/` — `dl3-firmware-autocontainer.md` (the fission_single_os discriminator + AutoContainerNative), `dx-byd-auto-cluster-topology.md` (AAOS closed), `project_architecture.md`, `release-and-build-conventions.md`.
 - **Codebase knowledge graph:** `graphify-out/` — query with `graphify query "<question>"` for cluster code structure.
 
 ---
