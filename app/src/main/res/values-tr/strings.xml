@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Durduruluyor…</string>
     <string name="lm_action_add">Ekle</string>
     <string name="lm_action_delete">Sil</string>
+    <string name="lm_section_my_layouts">DÜZENLERİM</string>
+    <string name="lm_action_clear_all">Tümünü temizle</string>
+    <string name="lm_action_favorite">⭐ Favori</string>
     <string name="lm_action_save">Kaydet</string>
     <string name="lm_activated_ok_fmt">%1$s etkinleştirildi ✓</string>
     <string name="lm_activated_partial_fmt">%1$s etkinleştirildi (bazı slotlar başarısız)</string>

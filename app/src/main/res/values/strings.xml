@@ -424,6 +424,9 @@
     <string name="fo_status_stopping">Arrêt…</string>
     <string name="lm_action_add">Ajouter</string>
     <string name="lm_action_delete">Supprimer</string>
+    <string name="lm_section_my_layouts">MES LAYOUTS</string>
+    <string name="lm_action_clear_all">Effacer tout</string>
+    <string name="lm_action_favorite">⭐ Favori</string>
     <string name="lm_action_save">Enregistrer</string>
     <string name="lm_activated_ok_fmt">%1$s activé ✓</string>
     <string name="lm_activated_partial_fmt">%1$s activé (certains slots ont échoué)</string>

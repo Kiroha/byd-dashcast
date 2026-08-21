@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Тоқтатылуда…</string>
     <string name="lm_action_add">Қосу</string>
     <string name="lm_action_delete">Жою</string>
+    <string name="lm_section_my_layouts">МЕНІҢ МАКЕТТЕРІМ</string>
+    <string name="lm_action_clear_all">Барлығын тазалау</string>
+    <string name="lm_action_favorite">⭐ Таңдаулы</string>
     <string name="lm_action_save">Сақтау</string>
     <string name="lm_activated_ok_fmt">%1$s іске қосылды ✓</string>
     <string name="lm_activated_partial_fmt">%1$s іске қосылды (кейбір слоттар сәтсіз)</string>

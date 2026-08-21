@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">جارٍ الإيقاف…</string>
     <string name="lm_action_add">إضافة</string>
     <string name="lm_action_delete">حذف</string>
+    <string name="lm_section_my_layouts">تخطيطاتي</string>
+    <string name="lm_action_clear_all">مسح الكل</string>
+    <string name="lm_action_favorite">⭐ مفضّل</string>
     <string name="lm_action_save">حفظ</string>
     <string name="lm_activated_ok_fmt">تم تفعيل %1$s ✓</string>
     <string name="lm_activated_partial_fmt">تم تفعيل %1$s (فشلت بعض الفتحات)</string>

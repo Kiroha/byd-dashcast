@@ -403,6 +403,9 @@
     <string name="fo_status_stopping">Stopping…</string>
     <string name="lm_action_add">Add</string>
     <string name="lm_action_delete">Delete</string>
+    <string name="lm_section_my_layouts">MY LAYOUTS</string>
+    <string name="lm_action_clear_all">Clear all</string>
+    <string name="lm_action_favorite">⭐ Favourite</string>
     <string name="lm_action_save">Save</string>
     <string name="lm_activated_ok_fmt">%1$s activated ✓</string>
     <string name="lm_activated_partial_fmt">%1$s activated (some slots failed)</string>

@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Прыпынак…</string>
     <string name="lm_action_add">Дадаць</string>
     <string name="lm_action_delete">Выдаліць</string>
+    <string name="lm_section_my_layouts">МАЕ МАКЕТЫ</string>
+    <string name="lm_action_clear_all">Ачысціць усё</string>
+    <string name="lm_action_favorite">⭐ Абраны</string>
     <string name="lm_action_save">Захаваць</string>
     <string name="lm_activated_ok_fmt">%1$s актываваны ✓</string>
     <string name="lm_activated_partial_fmt">%1$s актываваны (некаторыя слоты не ўдаліся)</string>

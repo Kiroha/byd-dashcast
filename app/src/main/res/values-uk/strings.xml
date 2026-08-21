@@ -375,6 +375,9 @@
     <string name="fo_status_stopping">Зупинка…</string>
     <string name="lm_action_add">Додати</string>
     <string name="lm_action_delete">Видалити</string>
+    <string name="lm_section_my_layouts">МОЇ МАКЕТИ</string>
+    <string name="lm_action_clear_all">Очистити все</string>
+    <string name="lm_action_favorite">⭐ Обраний</string>
     <string name="lm_action_save">Зберегти</string>
     <string name="lm_activated_ok_fmt">%1$s активовано ✓</string>
     <string name="lm_activated_partial_fmt">%1$s активовано (деякі слоти не вдалися)</string>

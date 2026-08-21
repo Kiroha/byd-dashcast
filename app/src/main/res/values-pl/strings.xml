@@ -383,6 +383,9 @@
     <string name="fo_status_stopping">Zatrzymywanie…</string>
     <string name="lm_action_add">Dodaj</string>
     <string name="lm_action_delete">Usuń</string>
+    <string name="lm_section_my_layouts">MOJE UKŁADY</string>
+    <string name="lm_action_clear_all">Wyczyść wszystko</string>
+    <string name="lm_action_favorite">⭐ Ulubiony</string>
     <string name="lm_action_save">Zapisz</string>
     <string name="lm_activated_ok_fmt">%1$s aktywowano ✓</string>
     <string name="lm_activated_partial_fmt">%1$s aktywowano (niektóre sloty zawiodły)</string>
