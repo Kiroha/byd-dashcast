@@ -277,8 +277,22 @@ CLASSPATH=<apk> exec /system/bin/app_process64 /system/bin \
   com.byd.dashcast.proxy.daemon.ProxyDaemonMain
 ```
 
-It exposes a Binder interface (registered in `ServiceManager` as `dashcast_proxy`) with
-19 transactions. Key verbs:
+It exposes a Binder interface registered in `ServiceManager` as **`byd_proxy_daemon`**.
+
+Three different identifiers coexist here and confusing them is the documented cause of a
+past incident, so they are worth separating once:
+
+| Identifier | Value | What it names |
+|---|---|---|
+| ServiceManager name | `byd_proxy_daemon` | what `service list` shows and what `getService()` takes — `ProxyDaemonMain.SERVICE_NAME` |
+| Process nice-name | `dashcast_proxy` | what `ps` shows, and the prefix of the pid/trigger files in `/data/local/tmp` — `ProxyDaemonMain.PROC_NAME` |
+| Interface DESCRIPTOR | `com.byd.dashcast.proxy.daemon.IProxyDaemon` | the token every transaction must carry — `ProxyDaemonContract.DESCRIPTOR` |
+
+Looking the daemon up as `dashcast_proxy` finds nothing and looks exactly like "the daemon
+is not registered", which is convincing because a process by that name really is running.
+
+The transaction count is not repeated here — `ProxyDaemonContract.java` is the source of
+truth and it grows with the protocol. Key verbs:
 
 | TXN | Method | Purpose |
 |-----|--------|---------|
@@ -290,7 +304,13 @@ It exposes a Binder interface (registered in `ServiceManager` as `dashcast_proxy
 | 16 | `canNaviStatus` | Write CAN navigation status |
 
 `ProxyKeeperService` reconnects to the daemon every 10 s if the Binder is dead.
-`ProxyWatchdog` polls every 30 s during active sessions.
+
+`ProxyWatchdog` was designed as a lighter 30 s fallback for when the keeper is not running,
+and in practice that loop never runs: `ProxyKeeperService.onCreate` calls
+`noteKeeperStarted()`, `shouldPoll()` is `!keeperActive && foregroundCount > 0`, and nothing
+in the tree ever stops the keeper — there is no `stopSelf()` and no `stopService()` for it,
+only `ensureRunning()`. What is actually live in that class is the foreground-activity
+counter, which `HotspotKeeper` reads.
 
 ### Restore
 
