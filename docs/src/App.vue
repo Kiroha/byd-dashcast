@@ -8,8 +8,11 @@ const activeSection = ref(readSectionFromLocation());
 
 function readLocaleFromLocation() {
   const hashMatch = window.location.hash.match(/^#\/([a-z]{2})\b/);
+  // AUD-157 — hold ?lang= to the same shape as the hash. resolveLocale is the real
+  // guard now, but there is no reason for this half of the pair to stay looser.
   const queryLocale = new URLSearchParams(window.location.search).get('lang');
-  return hashMatch?.[1] || queryLocale || '';
+  const queryMatch = queryLocale?.match(/^[a-z]{2}$/) ? queryLocale : '';
+  return hashMatch?.[1] || queryMatch || '';
 }
 
 function readSectionFromLocation() {
