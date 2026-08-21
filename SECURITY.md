@@ -43,6 +43,7 @@ A DashCast release APK is a **privileged system component**, not a sandboxed con
 - Install release APKs only from the official project releases, and **verify the signer SHA-1** above — or build from source.
 - Understand that platform signing is a public-key model on this hardware, so the signature identifies the platform, not a specific author. If you require author-level trust, build from source.
 - The app requires **ADB over TCP** to be enabled out-of-band to bootstrap its privileged helper. This is an operational choice made by the installer/OEM, exposes a network-reachable `adbd` on the vehicle while enabled, and should be turned off when not needed. The app itself does not open that port; it only connects to it locally with an app-private, RSA-authenticated key.
+- **Never leave a debug build on a vehicle.** Debug and release carry the same platform signature — the BYD permissions depend on it — but the debug variant is also `debuggable`, and the release is not. Combined with the point above, that is the sharp edge: on a car where ADB over TCP is on because DashCast needs it, anyone who can reach that port can attach a debugger to a process holding platform permissions and act with them. Debug builds belong on a bench. The published releases are release builds.
 
 ## Privacy
 

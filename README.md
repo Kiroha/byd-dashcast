@@ -420,10 +420,17 @@ cd MyBYDApp   # repo folder name
 ./gradlew assembleRelease
 # APK → app/build/outputs/apk/release/DashCast-v<versionName>-release.apk
 
-# Debug build (same platform-signed APK, useful for development):
+# Debug build — for a development machine, NOT for a car (see the warning below):
 ./gradlew assembleDebug
 # APK → app/build/outputs/apk/debug/DashCast-v<versionName>-debug.apk
 ```
+
+> **Do not leave a debug build on a vehicle.** It carries the same platform signature as the
+> release — that part is unavoidable, the BYD permissions depend on it — but it is also
+> `debuggable`, which the release is not. On a head unit, ADB over TCP has to be enabled for
+> DashCast to work at all, so anyone who can reach that port can attach a debugger to a process
+> holding platform permissions. The release build is the one to install; use debug builds on the
+> bench and uninstall them when you are done.
 
 ---
 
