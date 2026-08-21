@@ -65,6 +65,14 @@
          md_status_ok as the stroke, like md_primary_container is paired with md_primary. -->
     <color name="md_active_container">#C4ECCA</color>
 
+    <!-- Status pill tones. Alphas match the ratios the single hard-coded pill already
+         used (0x1F fill, 0x56 stroke); the colours now come from the status family so
+         they follow the night theme, which the hard-coded #2BD576 never did. -->
+    <color name="md_pill_ok_fill">#1F2E7D32</color>
+    <color name="md_pill_ok_stroke">#562E7D32</color>
+    <color name="md_pill_off_fill">#1F74777F</color>
+    <color name="md_pill_off_stroke">#5674777F</color>
+
     <color name="md_status_ok">#2E7D32</color>
     <color name="md_status_warn">#E65100</color>
     <color name="md_status_err">#BA1A1A</color>
