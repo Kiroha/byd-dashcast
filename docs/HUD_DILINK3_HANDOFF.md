@@ -134,7 +134,7 @@ Turn icon ids (CanBusController `ICON_*`, 49 values): LEFT=1, RIGHT=2, SLIGHT_LE
 
 ## 6. Cluster projection — the 4 channels + RE of 3 OEM APKs
 
-RE done via a multi-agent workflow. **Decompiled sources persisted at `/home/ccarre/app_byd/re_hud/src/`** (`com.example.amapservice`, `com.byd.clusterdebug`, `com.example.bydhud`); APKs in `re_hud/apks/` (pulled from old `hud_diag_*` zips); jadx at `/home/ccarre/app_byd/jadx`.
+RE done via a multi-agent workflow. **Decompiled sources persisted at `~/app_byd/re_hud/src/`** (`com.example.amapservice`, `com.byd.clusterdebug`, `com.example.bydhud`); APKs in `re_hud/apks/` (pulled from old `hud_diag_*` zips); jadx at `~/app_byd/jadx`.
 
 **FOUR distinct channels put content on the DiLink CLUSTER** (the HUD is separate — but the HUD MCU consumes Channel C, per §5):
 
@@ -225,12 +225,12 @@ Rebuilt in 1.6.98, extended since. **Three tools** (dev-only screen, built progr
 ## 12. Tester workflow & data locations
 
 - **Telegram topic 2701** (HUD topic of the private tester channel) — testers upload HUD zips (the app posts via the bot).
-- **Fetch:** `/home/ccarre/app_byd/hud_reports/fetch_hud.py` (Telethon; downloads new zips to `hud_reports/zips/`, then `analyze_hud.py`). State in `hud_reports/state.json`. Config `hud_reports/config.ini`.
+- **Fetch:** `~/app_byd/hud_reports/fetch_hud.py` (Telethon; downloads new zips to `hud_reports/zips/`, then `analyze_hud.py`). State in `hud_reports/state.json`. Config `hud_reports/config.ini`.
 - **Zip types:** `hud_confirm_*` (HUD control confirmation), `hud_rawcap_*` (raw logcat + arrow taps), `hud_canbench_*` (CAN→HUD bench). Each has `02_props.txt` with `inswver`.
-- **Gold source:** `/home/ccarre/app_byd/log/log.docx` (OEM CarSettings HalSetter logcat) — the HUD-control ground truth (§3).
-- **Decompiled OEM APKs:** `/home/ccarre/app_byd/re_hud/src/` (amapservice, clusterdebug, bydhud); jadx at `/home/ccarre/app_byd/jadx`.
-- **Build:** Gradle JDK `/home/ccarre/.jdks/jdk-17.0.19+10`; `./gradlew :app:assembleRelease :app:lintRelease`; APK `app/build/outputs/apk/release/DashCast-v<ver>-release.apk`. BYD platform signing (`bydPlatform`). `app/libs/byd-auto-api-stubs.jar` = the BYD SDK compile stubs (incl. an added `BYDAutoEventValue` stub).
-- **Persistent memory (this session's notes):** `/home/ccarre/.claude/projects/-home-ccarre-app-byd-MyBYDApp/memory/` — `dl3-hud-investigation.md` (the richest), `dl3-firmware-autocontainer.md`, `dx-byd-auto-cluster-topology.md`, `project_architecture.md`, `release-and-build-conventions.md`.
+- **Gold source:** `~/app_byd/log/log.docx` (OEM CarSettings HalSetter logcat) — the HUD-control ground truth (§3).
+- **Decompiled OEM APKs:** `~/app_byd/re_hud/src/` (amapservice, clusterdebug, bydhud); jadx at `~/app_byd/jadx`.
+- **Build:** Gradle JDK `~/.jdks/jdk-17.0.19+10`; `./gradlew :app:assembleRelease :app:lintRelease`; APK `app/build/outputs/apk/release/DashCast-v<ver>-release.apk`. BYD platform signing (`bydPlatform`). `app/libs/byd-auto-api-stubs.jar` = the BYD SDK compile stubs (incl. an added `BYDAutoEventValue` stub).
+- **Persistent memory (this session's notes):** `~/.claude/projects/<this project>/memory/` — `dl3-hud-investigation.md` (the richest), `dl3-firmware-autocontainer.md`, `dx-byd-auto-cluster-topology.md`, `project_architecture.md`, `release-and-build-conventions.md`.
 
 ---
 
