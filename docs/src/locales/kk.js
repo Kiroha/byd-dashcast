@@ -4,7 +4,7 @@ export default {
   name: 'Қазақша',
   title: 'DashCast — Пайдаланушы нұсқаулығы',
   manualName: 'Пайдаланушы нұсқаулығы',
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Мазмұны',
 
   intro: {

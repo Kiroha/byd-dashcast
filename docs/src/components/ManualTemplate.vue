@@ -6,6 +6,9 @@ const props = defineProps({
   section: { type: String, default: '' },
 });
 
+// AUD-159 — same injected version as the landing page.
+const appVersion = __APP_VERSION__;
+
 const mockupBase = computed(() => `mockup_m3.html`);
 
 function sectionHref(idx) {
@@ -45,7 +48,7 @@ watch(
     <div class="cover">
       <h1>DashCast</h1>
       <div class="sub">{{ t.manualName }}</div>
-      <div class="meta">{{ t.meta }}</div>
+      <div class="meta">v{{ appVersion }} · {{ t.meta }}</div>
     </div>
 
     <div class="toc">
