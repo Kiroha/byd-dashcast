@@ -50,8 +50,8 @@
     <string name="cluster_label_123">12,3 дюйма (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 дюйма (cmd=31)</string>
     <string name="split_full_screen">⬜ Повний екран</string>
-    <string name="split_left">⬜⬛ Ліворуч (50%%)</string>
-    <string name="split_right">⬛⬜ Праворуч (50%%)</string>
+    <string name="split_left">⬜⬛ Ліворуч (50%)</string>
+    <string name="split_right">⬛⬜ Праворуч (50%)</string>
     <string name="log_title">Журнал</string>
     <string name="log_filter_hint">Фільтр журналу (тег, повідомлення, regex)…</string>
     <string name="log_empty">(немає записів)</string>
