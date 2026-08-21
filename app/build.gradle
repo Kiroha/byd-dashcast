@@ -1439,6 +1439,35 @@ android {
         variant.outputs.all { output ->
             outputFileName = "DashCast-v${variant.versionName}-${variant.buildType.name}.apk"
         }
+
+        // AUD-152 — keep the mapping WITH the release it belongs to.
+        //
+        // R8 renames everything outside `com.byd.dashcast.proxy.**`, so a stack trace from a car
+        // arrives as `a.b.c(SourceFile)` and means nothing without the mapping that produced it.
+        // AGP does write one, to build/outputs/mapping/release/mapping.txt — a path that is
+        // overwritten by the next build and carries no version. So the artefact needed to read a
+        // field report is destroyed by the act of preparing the following release.
+        //
+        // Copied here under the same name as the APK it decodes, so the two travel together and a
+        // report from 1.8.31 can still be read after 1.8.40 has shipped. Publishing it costs
+        // nothing: this repository is public, so the mapping reveals strictly less than the source
+        // already does.
+        if (variant.buildType.minifyEnabled) {
+            // The path, not variant.mappingFileProvider: the provider carries task references and
+            // the configuration cache refuses to serialise them, failing the build with a wall of
+            // "cannot serialize object of type ...Task". The location is stable AGP output.
+            def buildTypeName = variant.buildType.name
+            def apkVersionName = variant.versionName
+            def mappingCopy = tasks.register("copyMapping${variant.name.capitalize()}", Copy) {
+                from layout.buildDirectory.file("outputs/mapping/${buildTypeName}/mapping.txt")
+                // NOT into outputs/apk: AGP's own createReleaseApkListingFileRedirect reads that
+                // directory, and Gradle refuses the implicit dependency that writing there creates.
+                into layout.buildDirectory.dir("outputs/mapping-archive")
+                rename { "DashCast-v${apkVersionName}-mapping.txt" }
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+            }
+            variant.assembleProvider.configure { finalizedBy(mappingCopy) }
+        }
     }
 }
 
