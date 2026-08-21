@@ -97,6 +97,34 @@ object RelayUploader {
         if (!file.isFile) return "report file missing"
         if (file.length() > MAX_BYTES) return "report too large for the relay (${file.length()} bytes)"
 
+        // One retry, and only for a failure that a second attempt can plausibly fix.
+        //
+        // The relay runs on a consumption plan, so Azure deallocates its worker after a few
+        // minutes of idleness and the next request pays a cold start. A car on a phone hotspot
+        // adds its own hiccups. Reports are rare by nature — the relay is almost always cold when
+        // one arrives — so the first attempt of a real report is exactly the one most likely to
+        // meet a waking function or a dropped connection.
+        //
+        // Losing it is not silent: the wizard falls back to the share sheet and says so. But a
+        // tester who has just described a problem should not have to send it twice, and one
+        // failure in the reporting channel is what teaches people to stop reporting.
+        val first = attempt(endpoint, file, caption, topic)
+        if (first == null || !first.retryable) return first?.message
+        AppLogger.w(TAG, "relay attempt 1 failed (${first.message}) — retrying once")
+        try { Thread.sleep(RETRY_DELAY_MS) } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt(); return first.message
+        }
+        return attempt(endpoint, file, caption, topic)?.message
+    }
+
+    /** Failure of one attempt: the message to report, and whether trying again could help. */
+    private class Failure(val message: String, val retryable: Boolean)
+
+    /** Long enough for a function to finish waking, short enough not to feel like a hang. */
+    const val RETRY_DELAY_MS = 2_000L
+
+    private fun attempt(endpoint: String, file: File, caption: String?, topic: String): Failure? {
+
         var conn: HttpURLConnection? = null
         return try {
             conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
@@ -136,10 +164,15 @@ object RelayUploader {
                 val detail = try {
                     conn.errorStream?.bufferedReader()?.use { it.readText() }?.take(200) ?: ""
                 } catch (_: Throwable) { "" }
-                "relay refused: HTTP $code $detail".trim()
+                // 4xx means the request itself is wrong — a filename we mangled, a body too small,
+                // an unknown topic. Sending the identical bytes again would fail identically and
+                // only add load to a public endpoint. 5xx is the relay's own trouble and can pass.
+                Failure("relay refused: HTTP $code $detail".trim(), retryable = code >= 500)
             }
         } catch (t: Throwable) {
-            t.message ?: t.javaClass.simpleName
+            // No HTTP status at all: connection refused, timed out, reset mid-body. This is the
+            // cold-start and flaky-hotspot case, and the one a retry exists for.
+            Failure(t.message ?: t.javaClass.simpleName, retryable = true)
         } finally {
             try { conn?.disconnect() } catch (_: Throwable) { }
         }
