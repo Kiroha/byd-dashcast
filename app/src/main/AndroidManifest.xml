@@ -19,12 +19,6 @@
     <!-- Foreground Service pour maintenir la projection cluster en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
-    <!-- v1.2.43-beta — Voice PoC (Diagnostic tab). Microphone access is
-         requested at runtime from the new VoiceService. FG service type
-         "microphone" is required on API 30+ to read AudioRecord from a
-         foreground service while the activity is in the background. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-
     <!-- Connexion TCP localhost:5555 pour dadb (ADB local → popup autorisation) -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
@@ -290,14 +284,6 @@
             android:name=".system.FloatingRemoteButton"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
-
-        <!-- v1.2.43-beta — Voice PoC service. Fully isolated, only started
-             from the Diagnostic > Voice tab. Reads AudioRecord 16 kHz mono
-             and broadcasts RMS/peak/clip metrics. No machine learning yet. -->
-        <service
-            android:name=".voice.VoiceService"
-            android:exported="false"
-            android:foregroundServiceType="microphone"/>
 
         <!-- v1.4.11-beta — HUD navigation: parses Google Maps / Waze navigation
              notifications to drive the BYD cluster HUD via CanBusController.

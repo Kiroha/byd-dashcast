@@ -62,3 +62,9 @@ graphify-out/
 # Azure Function relay — holds the bot token when running the relay locally.
 relay/local.settings.json
 relay/node_modules/
+
+# Audit deliverables and triage artefacts — deliberately NOT versioned.
+# SECURITY.md: "No raw diagnostic artefact in the working tree of a clone … a single
+# git add -A publishes them irrevocably." These two lines are that rule, enforced.
+audit/
+*.mp4

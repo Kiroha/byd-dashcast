@@ -601,22 +601,24 @@ object AppLogger {
                 }
             }
         }
-        // Vosk directory: remove orphan partial-download temp files.
-        // Uses File constructor to avoid creating the directory if it doesn't
-        // exist (getExternalFilesDir("vosk") would create it as a side effect).
+        // D1 — the voice subsystem is gone as of 1.8.33-beta, so its downloads are orphans
+        // nothing will ever open again. A user who tried the PoC is holding a Vosk model
+        // (~40 MB, up to ~1.3 GB on the large one) plus the native libs (~25 MB) that the app
+        // no longer has any code to load. This used to sweep only ".download.tmp" leftovers;
+        // now it takes the whole tree, once, on the first sweep after the upgrade.
+        //
+        // File() rather than getExternalFilesDir("vosk"): the qualified form creates the
+        // directory as a side effect, which would have this cleanup manufacture the very
+        // thing it is meant to remove.
         val extBase = context.getExternalFilesDir(null)
+        for (stale in listOfNotNull(
+            extBase?.let { File(it, "vosk") },   // Vosk model, external
+            File(context.filesDir, "vosk"),      // Vosk model, internal fallback
+            File(context.filesDir, "voice_libs") // ONNX/Vosk .so downloaded by VoiceLibsManager
+        )) {
+            if (stale.isDirectory) deleted += deleteTree(stale)
+        }
         if (extBase != null) {
-            val voskDir = File(extBase, "vosk")
-            if (voskDir.isDirectory) {
-                val voskEntries = voskDir.listFiles()
-                if (voskEntries != null) {
-                    for (f in voskEntries) {
-                        if (f != null && f.isFile && f.name.endsWith(".download.tmp")) {
-                            if (f.delete()) deleted++
-                        }
-                    }
-                }
-            }
             // reports/: diagnostic artefacts written by the six emitters. Invisible to the loop
             // above, which is non-recursive and keyed on three prefixes — a subdirectory would
             // grow unbounded, which is exactly how the 1.08 GB accumulation documented above
@@ -653,5 +655,23 @@ object AppLogger {
             "pruneOldFiles: $deleted file(s) deleted (keep $keepPerPrefix/prefix)"
         )
         return deleted
+    }
+
+    /**
+     * Deletes [dir] and everything under it, returning how many FILES went — the caller counts
+     * files, not directories. Best-effort by design: this runs on a housekeeping sweep, and a
+     * directory that resists deletion must never take the sweep down with it.
+     */
+    private fun deleteTree(dir: File): Int {
+        var n = 0
+        try {
+            dir.listFiles()?.forEach { child ->
+                n += if (child.isDirectory) deleteTree(child) else if (child.delete()) 1 else 0
+            }
+            dir.delete()
+        } catch (t: Throwable) {
+            Log.w("AppLogger", "deleteTree(" + dir.name + ") stopped: " + t.javaClass.simpleName)
+        }
+        return n
     }
 }

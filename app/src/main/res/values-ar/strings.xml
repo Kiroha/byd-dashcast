@@ -252,19 +252,6 @@
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
-    <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_voice_notif_channel">DashCast — اختبار الصوت</string>
-    <string name="diag_voice_notif_title">DashCast — استماع الميكروفون (PoC)</string>
-    <string name="diag_voice_notif_text">تحليل مستوى الصوت محليًا، لا يتم تسجيل أي شيء.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
-
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">المعاينة المحلية غير متاحة — شاشة العنقود لا تزال نشطة</string>
     <string name="layout_mirror_previous">تطبيق التخطيط السابق</string>

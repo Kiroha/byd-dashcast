@@ -257,22 +257,11 @@
     <string name="settings_legacy_path">Daemon proxy nie działa. Użyj starej ścieżki</string>
     <string name="settings_legacy_path_support">Kieruje wszystkie uprzywilejowane polecenia przez starą powłokę ADB zamiast przez daemon proxy. Włącz, jeśli daemon nie odpowiada lub powoduje problemy.</string>
 
-
-    <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
-    <string name="diag_voice_notif_channel">DashCast — Głos PoC</string>
-    <string name="diag_voice_notif_title">DashCast — nasłuch mikrofonu (PoC)</string>
-    <string name="diag_voice_notif_text">Poziom audio analizowany lokalnie, nic nie jest nagrywane.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-    <!-- v1.4.2-beta — LLM API key -->
-
     <!-- Diag — Export APK panel (v1.2.42) -->
 
     <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-
-
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
 
@@ -340,7 +329,6 @@
     <string name="settings_fission_mode_support">Wieloaplikacyjna projekcja na klastrze z niestandardowymi strefami. Wymaga demona proxy.</string>
     <string name="fission_editor_edit">Edytuj</string>
     <string name="fission_editor_delete">Usuń</string>
-    <!-- v1.4 Voice commands + VD pipeline test (missing from pl) -->
     <string name="main_nav_layouts">Layouts</string>
     <string name="layout_manager_title">Menedżer układów</string>
     <string name="layout_manager_new">Nowy układ</string>

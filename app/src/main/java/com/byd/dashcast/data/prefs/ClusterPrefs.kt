@@ -66,10 +66,6 @@ object ClusterPrefs {
     /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
     const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
 
-    // ── Voice ASR model ──────────────────────────────────────────────
-    /** true = high-accuracy large model (~1.3 GB), false = small model (~40 MB, default). */
-    const val KEY_VOSK_HIGH_ACCURACY = "vosk_high_accuracy"
-
     // ── Fission layout automation ─────────────────────────────────────────────
     /** When true: favourite layout is activated automatically when FissionActivity opens,
      *  and all bound apps are launched immediately. */
@@ -292,19 +288,6 @@ object ClusterPrefs {
     @JvmStatic
     fun setNavRawCaptureEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_NAV_RAW_CAPTURE, enabled).apply()
-    }
-
-    // ───────────────────────────────────────────────────────────────────────
-    // Voice ASR model
-    // ───────────────────────────────────────────────────────────────────────
-
-    @JvmStatic
-    fun isVoskHighAccuracy(ctx: Context): Boolean =
-        prefs(ctx).getBoolean(KEY_VOSK_HIGH_ACCURACY, false)
-
-    @JvmStatic
-    fun setVoskHighAccuracy(ctx: Context, highAccuracy: Boolean) {
-        edit(ctx).putBoolean(KEY_VOSK_HIGH_ACCURACY, highAccuracy).apply()
     }
 
     @JvmStatic

@@ -275,27 +275,12 @@
     <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
     <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
 
-
-    <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
-    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
-    <string name="diag_voice_notif_title">DashCast — mic listening (PoC)</string>
-    <string name="diag_voice_notif_text">Audio level analysed locally, nothing is recorded.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
     <!-- Diag — Export APK panel (v1.2.42) -->
 
     <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-
-
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
 

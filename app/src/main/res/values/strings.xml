@@ -329,16 +329,6 @@
 
     <!-- Diag tabs -->
 
-    <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
-    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
-    <string name="diag_voice_notif_title">DashCast — écoute micro (PoC)</string>
-    <string name="diag_voice_notif_text">Niveau audio analysé localement, rien n’est enregistré.</string>
-
-    <!-- Diag — Voice wake-word card (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <!-- v1.4.2-beta — LLM API key -->
-
     <!-- Diag — Export APK panel (v1.2.42) -->
 
     <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->

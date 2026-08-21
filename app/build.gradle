@@ -1327,6 +1327,23 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 623 = 1.8.33-beta (decision D1 — the voice subsystem is removed. Wake-word -> Vosk ->
+        // LLM -> TTS was a proof of concept that lived in the diagnostics surface, and that surface
+        // was emptied in 1.7.0: since then nothing in the tree has called VoiceService.start(), so
+        // the pipeline has shipped in every APK without a single reachable entry point. Gone: the
+        // nine files of voice/, its two tests, the three ONNX wake-word models in assets/, the
+        // RECORD_AUDIO permission and the microphone foreground service, the ONNX Runtime and Vosk
+        // dependencies, LocalBroadcastManager (the project's only AndroidX-deprecated library, whose
+        // seven consumers were six voice classes plus MainActivity's subscriber to them), the Vosk
+        // preference, three notification strings in thirteen locales, and scripts/prepare_voice_libs.sh.
+        // Kept, contrary to the audit's expectation: androidx.security:security-crypto — the audit
+        // recorded its only user as the voice engine's OpenAI key, but ReportChannel now holds the
+        // runtime-provisioned bug-report credential in it. It stays the last alpha dependency.
+        // Also a courtesy: a user who tried the PoC is holding a downloaded Vosk model (~40 MB, up
+        // to ~1.3 GB on the large one) and ~25 MB of native libraries that no code can open any
+        // more, so AppLogger's housekeeping sweep now removes those three directories outright
+        // instead of only their .download.tmp leftovers. No behaviour change on any reachable path;
+        // no daemon protocol change.)
         // 622 = 1.8.32-beta (wave V2 of the audit: the last three P1s, all in paths a driver feels
         // within seconds and none reproducible off a car.
         // CLUSTER TOUCH COMES BACK BY ITSELF. AUD-009: the app runs two uid-2000 daemons, and five
@@ -1353,8 +1370,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 622
-        versionName "1.8.32-beta"
+        versionCode 623
+        versionName "1.8.33-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
@@ -1439,13 +1456,6 @@ android {
         exclude 'META-INF/NOTICE.txt'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/*.kotlin_module'
-        // v1.3.32-beta — voice native libs excluded from APK (~44 MB saved).
-        // Downloaded on demand by VoiceLibsManager when voice is first enabled.
-        // See scripts/prepare_voice_libs.sh to produce the zip for hosting.
-        exclude '**/libonnxruntime.so'
-        exclude '**/libonnxruntime4j_jni.so'
-        exclude '**/libvosk.so'
-        exclude '**/libjnidispatch.so'
     }
 
     // Java 17 unlocked by AGP 8 (D8 desugars records & co down to API 28).
@@ -1541,23 +1551,14 @@ dependencies {
     // dadb — pure-JVM ADB client (same library used by Overdrive)
     implementation 'dev.mobile:dadb:2.0.0'
 
-    // v1.2.43-beta — used by the voice PoC (VoiceService → DiagActivity).
-    // In-process broadcast only, no system-wide IPC, no extra permissions.
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+    // D1 — ONNX Runtime, Vosk and LocalBroadcastManager left with the voice subsystem
+    // in 1.8.33-beta. They were the project's only deprecated library and its heaviest
+    // native payload, and every consumer of all three was code with no entry point.
 
-    // v1.2.50-beta — ONNX Runtime for openWakeWord wake-word detection.
-    // Scope strictly limited to the Diag Voice tab (com.byd.dashcast.voice.wakeword.*).
-    // The library ships native .so for several ABIs; we restrict to arm64+armv7
-    // (the only ABIs DiLink 3/4/5 ever run on) via android.defaultConfig.ndk.abiFilters
-    // to keep the APK growth under control. The runtime is initialised lazily —
-    // production paths never reach this code unless the user toggles the wake-word
-    // switch in the Diagnostic tab.
-    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.1'
-    // v1.4.0 — Vosk offline speech recognition (post-wake transcription).
-    // Small FR model (~40 MB) downloaded on first use via StorageService.unpack().
-    implementation 'com.alphacephei:vosk-android:0.3.47'
-
-    // v1.4.2 — Encrypted storage for OpenAI API key
+    // Encrypted storage. Introduced for the voice PoC's OpenAI key; the only user now is
+    // ReportChannel, which holds the bug-report credential provisioned at runtime — so this
+    // one stays. It is the project's last alpha dependency, and it sits on the Android
+    // KeyStore path, which is the component OEM ROMs diverge on most: worth requalifying.
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
     // v1.8.13 — FlatBuffers runtime, to encode the OEM's own byd.fbs.naviInfo.NaviInfo
