@@ -1,6 +1,9 @@
 # Patch 2 — Move both cluster launch cascades off the main thread
 
-- **Status:** PROPOSED — reviewed draft, **not applied**. Review + on-car verify before merging.
+- **Status:** ⚠️ **APPLIED — in production since 1.6.108-beta. Do not apply this diff.**
+  Both launch cascades hop to `sMoveTaskExecutor` and marshal only the callback back through
+  `postLaunchResult`, as proposed; `ClusterService.java` is the live version. The "Why" and
+  "Side effects" sections still explain the reasoning; the diff is history.
 - **File:** `app/src/main/java/com/byd/dashcast/cluster/ClusterService.java`
 - **Fixes:** Finding #1 (HIGH, `launchOnDashboard`) + Finding #2 (HIGH, `launchOnDashboardWithBounds`).
 - **Fix risk:** Medium
