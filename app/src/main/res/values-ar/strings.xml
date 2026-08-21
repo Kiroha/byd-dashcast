@@ -47,8 +47,8 @@
     <string name="cluster_label_123">12,3 بوصة (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 بوصة (cmd=31)</string>
     <string name="split_full_screen">⬜ ملء الشاشة</string>
-    <string name="split_left">⬛⬜ اليمين (50%)</string>
-    <string name="split_right">⬜⬛ اليسار (50%)</string>
+    <string name="split_left">⬜⬛ اليسار (50%)</string>
+    <string name="split_right">⬛⬜ اليمين (50%)</string>
     <string name="log_title">السجل</string>
     <string name="log_filter_hint">تصفية السجل (علامة، رسالة، regex)…</string>
     <string name="log_empty">(لا توجد إدخالات)</string>
