@@ -1,5 +1,12 @@
 # DashCast performance re-audit — 2026-07-17
 
+> ⚠️ **HISTORICAL SNAPSHOT — 2026-07-17. Do not apply.**
+> R8 has been enabled for release builds since **1.8.3-beta** (commit `269e2533`, 2026-07-26),
+> and `app/proguard-rules.pro` exists — it is the source of truth for keep rules, not this
+> document. `shrinkResources true` followed in **1.8.32-beta**. Every statement below about
+> minification being off, or about `proguard-rules.pro` being absent, was true when written and
+> is false now. Read this file for its reasoning, never for its state of the world.
+
 **Baseline:** `switch-kotlin` at `v1.6.132-beta` (`9f76fc7`)  
 **Scope:** current production startup, proxy monitoring, Journal rendering, voice streaming, process-state polling, HUD dispatch, and build footprint.
 

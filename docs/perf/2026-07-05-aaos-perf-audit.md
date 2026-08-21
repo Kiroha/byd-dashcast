@@ -1,5 +1,12 @@
 # AOSP-Automotive Performance Audit — MyBYDApp / DashCast
 
+> ⚠️ **HISTORICAL SNAPSHOT — 2026-07-05. Do not apply.**
+> R8 has been enabled for release builds since **1.8.3-beta** (commit `269e2533`, 2026-07-26),
+> and `app/proguard-rules.pro` exists — it is the source of truth for keep rules, not this
+> document. `shrinkResources true` followed in **1.8.32-beta**. Every statement below about
+> minification being off, or about `proguard-rules.pro` being absent, was true when written and
+> is false now. Read this file for its reasoning, never for its state of the world.
+
 **Date:** 2026-07-05 · **Branch:** `switch-kotlin` · **Scope:** 137 source files, ~46k LOC
 **Method:** graphify-grounded multi-agent workflow — 8 perf finders (1 per AOSP pillar) → per-finding adversarial verification (re-anchored to current code) → dedup/rank by drain × fix-safety → full patch generation.
 **Verification tally:** 18 findings adversarially verified → **11 CONFIRMED, 5 ADJUSTED, 2 REFUTED**. 16 survive into the ranked matrix below.
@@ -130,7 +137,9 @@ All figures are **ESTIMATES** on a DL3/DL5 head-unit class SoC (A55/A53-tier, eM
 
 ### TUNING 1 — R8/ProGuard keep-rules to safely unblock `minifyEnabled true`
 
-`minifyEnabled false` is set today and `proguard-rules.pro` is **referenced but absent**. Reflection/JNI surfaces here: `ReflectionTaskResizer` + `IamAppLauncher` (framework/BYD IAM reflection), ONNX Runtime (`ai.onnxruntime` JNI), Vosk (`org.vosk` JNI), Tink via `security-crypto`, and the daemon Parcelable verbs. Create `app/proguard-rules.pro`:
+> **SUPERSEDED — do not follow the instruction below.** `app/proguard-rules.pro` now exists (4 420 bytes) and `minifyEnabled true` shipped in 1.8.3-beta. Creating the file from this template would overwrite validated keep rules. The reflection/JNI inventory in this section is still worth reading; the action is not.
+
+Reflection/JNI surfaces here: `ReflectionTaskResizer` + `IamAppLauncher` (framework/BYD IAM reflection), ONNX Runtime (`ai.onnxruntime` JNI), Vosk (`org.vosk` JNI), Tink via `security-crypto`, and the daemon Parcelable verbs. Create `app/proguard-rules.pro`:
 
 ```proguard
 # ---- attributes needed for JNI / reflection / generics ----
@@ -162,7 +171,7 @@ All figures are **ESTIMATES** on a DL3/DL5 head-unit class SoC (A55/A53-tier, eM
 -keepnames class * implements java.io.Serializable
 ```
 
-Then set `minifyEnabled true` (keep `shrinkResources false` for the first pass). **SHIP SEPARATELY:** validate a signed `assembleRelease` on the full DL3 + DL5 on-car matrix (voice wake→Vosk, IAM launch, cluster resize, daemon verbs) before release — the platform-cert / signing-wall (`[[dl5-signing-wall]]`) makes a bad shrink hard to hotfix.
+Then set `minifyEnabled true` (keep `shrinkResources false` for the first pass). **Both are done: minification in 1.8.3-beta, resource shrinking in 1.8.32-beta.** **SHIP SEPARATELY:** validate a signed `assembleRelease` on the full DL3 + DL5 on-car matrix (voice wake→Vosk, IAM launch, cluster resize, daemon verbs) before release — the platform-cert / signing-wall (`[[dl5-signing-wall]]`) makes a bad shrink hard to hotfix.
 
 ### TUNING 2 — Build-config footprint levers (zero runtime risk, verified inputs)
 
