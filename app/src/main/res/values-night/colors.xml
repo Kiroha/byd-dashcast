@@ -58,6 +58,14 @@
          green enough to still read as "running" beside the neutral and selected cards. -->
     <color name="md_active_container">#1B3A24</color>
 
+    <!-- Status pill tones. Alphas match the ratios the single hard-coded pill already
+         used (0x1F fill, 0x56 stroke); the colours now come from the status family so
+         they follow the night theme, which the hard-coded #2BD576 never did. -->
+    <color name="md_pill_ok_fill">#1F3CD070</color>
+    <color name="md_pill_ok_stroke">#563CD070</color>
+    <color name="md_pill_off_fill">#1F6E7783</color>
+    <color name="md_pill_off_stroke">#566E7783</color>
+
     <color name="md_status_ok">#3CD070</color>
     <color name="md_status_warn">#FFA940</color>
     <color name="md_status_err">#FFB4AB</color>

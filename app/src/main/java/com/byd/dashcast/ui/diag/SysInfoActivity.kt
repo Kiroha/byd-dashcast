@@ -1229,12 +1229,20 @@ class SysInfoActivity : AppCompatActivity() {
         }
         row.findViewById<TextView>(R.id.row_support).text = sub
         val badge = row.findViewById<TextView>(R.id.row_badge)
+        // AUD-148 — the pill has to follow the text. Only one pill drawable existed, green, set
+        // once in row_sysinfo.xml and never changed, so an OFF row rendered red text inside a
+        // green badge: the two halves of the same widget disagreeing about what they meant.
         if (running) {
             badge.text = getString(if (useConnBadge) R.string.sysinfo_svc_conn else R.string.sysinfo_svc_run)
             badge.setTextColor(ContextCompat.getColor(this, R.color.md_status_ok))
+            badge.setBackgroundResource(R.drawable.bg_status_pill_ok)
         } else {
             badge.text = getString(R.string.sysinfo_svc_off)
-            badge.setTextColor(ContextCompat.getColor(this, R.color.md_status_err))
+            // Neutral rather than the error red it used to take: a service that is not running is
+            // a state, not a fault, and every stopped row shouting in red teaches people to ignore
+            // the colour entirely.
+            badge.setTextColor(ContextCompat.getColor(this, R.color.md_outline))
+            badge.setBackgroundResource(R.drawable.bg_status_pill_off)
         }
     }
 
