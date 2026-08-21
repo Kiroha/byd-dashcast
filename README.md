@@ -325,13 +325,9 @@ On BYD Seal EU (DiLink 3.0), ADB TCP is available at `localhost:5555` from withi
 
 ### 2. Platform keystore
 
-The APK must be signed with `platform.keystore` (included in the BYD SDK v1.0.5) to obtain `signature`-level permissions (`INJECT_EVENTS`, `BYDAUTO_*`).
+To obtain `signature`-level permissions (`INJECT_EVENTS`, `BYDAUTO_*`) the APK must be signed with the platform key — the public AOSP test key, as [SECURITY.md](SECURITY.md) explains. Place it at `app/keystore/platform.keystore`.
 
-Place it at `app/keystore/platform.keystore` before building.
-
-### 3. BYD SDK
-
-See [Build requirements](#build-requirements) below.
+Only needed to **run** the privileged features. The project builds without it; see [Build requirements](#build-requirements).
 
 ---
 
@@ -380,36 +376,47 @@ Once DashCast is installed, future updates are automatic:
 
 ## Build requirements
 
-| Tool | Version |
-|---|---|
-| JDK | 11 (Temurin recommended) |
-| Android SDK | API 29 compileSdk, **BYD SDK v1.0.5** as sdk.dir |
-| AGP | 7.4.2 |
-| Gradle wrapper | 7.6 |
+| Tool | Version | Where it is pinned |
+|---|---|---|
+| JDK | **17** — a full JDK, not a JRE (AGP 8 runs `jlink`) | `app/build.gradle` (`JavaVersion.VERSION_17`) |
+| AGP | **8.13.2** | `build.gradle` |
+| Kotlin | **2.4.0** | `build.gradle` |
+| Gradle wrapper | **8.14.5** | `gradle/wrapper/gradle-wrapper.properties` |
+| compileSdk | **33** | `app/build.gradle` |
+| targetSdk | **29** — deliberately frozen for DiLink compatibility, do not raise it | `app/build.gradle` |
+| minSdk | **28** | `app/build.gradle` |
 
-### BYD SDK
+A stock Android SDK is enough. Point `sdk.dir` in `local.properties` at it, or set
+`ANDROID_HOME`, as with any Android project.
 
-This project requires BYD SDK v1.0.5 (modified `android.jar` with `android.hardware.bydauto.*`).
+### The BYD SDK is not required to build
 
-> The SDK is **not included** in this repository (proprietary).  
-> Extract to: `../sdk/SDK_v1.0.5/byd-auto_sdk_windows/`  
-> Configure `local.properties`:
+Older revisions of this file said it was, and that instruction outlived the fact.
+The proprietary SDK's distinguishing artefact is a modified `android.jar` carrying the
+`android.hardware.bydauto.*` classes, and it exists only in that SDK's `platforms/android-25`.
+This project compiles against **API 33**, whose `android.jar` — the BYD SDK's own copy included —
+contains none of those classes.
 
-```properties
-sdk.dir=/path/to/sdk/SDK_v1.0.5/byd-auto_sdk_windows
-```
+They come from `app/libs/byd-auto-api-stubs.jar` instead, which **is** in this repository:
+interface declarations only, no implementation, enough to compile against and useless to run.
+Move it aside and `compileDebugJavaWithJavac` fails on the six references in
+`CanFeedbackListener.java`; put it back and the build is green. That is the whole of the
+dependency.
 
 ### Signing
 
-The APK must be signed with `platform.keystore` (BYD SDK) for `signature` permissions
-(`INJECT_EVENTS`, `BYDAUTO_*_COMMON`).
+`app/keystore/platform.keystore` is not in the repository, and the build no longer requires it:
+if it is absent, Gradle falls back to its own debug signing and says so. See the note under
+[Build](#build) for what that costs at runtime.
 
 ```
 app/keystore/platform.keystore
   alias: androiddebugkey | storepass/keypass: android
 ```
 
-The `app/build.gradle` signing config applies this keystore for both debug and release builds.
+The key itself is the **public AOSP platform test key** — see [SECURITY.md](SECURITY.md), which
+explains why that is both intentional and unavoidable on this hardware. The copy shipped in the
+BYD SDK is byte-for-byte the same file. It is not a secret, and it is not proof of authorship.
 
 ---
 
@@ -506,10 +513,9 @@ adb pull /sdcard/Android/data/com.byd.dashcast/files/
 
 This project is licensed under the [MIT License](LICENSE).
 
-> **Note on dependencies**: This project requires **BYD SDK v1.0.5** (proprietary) which
-> is NOT included in this repository and is NOT covered by the MIT license.
-> The BYD SDK contains a modified `android.jar` with `android.hardware.bydauto.*` APIs.
-> You must obtain it separately.
+> **Note on dependencies**: the `android.hardware.bydauto.*` APIs originate in the proprietary
+> **BYD SDK v1.0.5**, which is NOT included here and is NOT covered by the MIT license.
+> Building does not require it — see [Build requirements](#build-requirements).
 >
 > The file `app/libs/byd-auto-api-stubs.jar` is a stub-only extract of the BYD SDK v1.0.5
 > (interface declarations, no implementation). It is included solely to allow the project
