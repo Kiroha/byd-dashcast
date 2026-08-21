@@ -1402,6 +1402,12 @@ android {
             // by name via app_process. MUST be on-car validated before shipping.
         release {
             minifyEnabled true
+            // AUD-196 — R8 has been shrinking the code since 1.8.x while every unused
+            // AndroidX and Material resource stayed in the APK. The usual reason to hold this
+            // back is a resource named at runtime, which the shrinker cannot see; there is no
+            // such call site in this app (no getIdentifier() anywhere in app/src/main/java),
+            // so no res/raw/keep.xml is needed. If one is ever added, it needs a keep rule.
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (hasPlatformKeystore) signingConfig signingConfigs.bydPlatform
         }
