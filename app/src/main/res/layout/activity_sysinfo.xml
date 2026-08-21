@@ -384,7 +384,8 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="monospace"
-                                android:textIsSelectable="true"
+                                android:breakStrategy="simple"
+                                android:hyphenationFrequency="none"
                                 android:textSize="11sp"
                                 android:textColor="@color/md_on_surface"
                                 android:text="@string/sysinfo_hint"/>
