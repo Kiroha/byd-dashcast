@@ -1,4 +1,18 @@
-# Perf Patches — 2026-07-05 (DRAFT, not applied)
+# Perf Patches — 2026-07-05
+
+> ⚠️ **APPLIED — all eight are in the tree. Do not apply these diffs.**
+> Checked one by one against the code, not inferred from the batch:
+> P1 `Platform` private probe lock · P2 `resize-affordance-probe` off the UI thread ·
+> P3 `platform-init` thread + memory shedding in `DashCastApp` · P4 `volatile mDestroyed`
+> at `FloatingRemoteButton.java:112` · P5 the `ClusterCanvasView` label cache ·
+> P6 the single picker executor — its target file `fission/FissionActivity.java` was deleted
+> in `cac83e08`, and its successor `LayoutManagerActivity.java:66` already carries the pattern ·
+> P7 the `WakeWordEngine` zero-copy ONNX read · P8 `android.enableJetifier=false`.
+>
+> These diffs carry frozen Git blob indices and target code that has since moved. Applying
+> them fails, or worse, half-applies and duplicates the HUD coalescing or the `mDestroyed`
+> guard on the most ANR-sensitive path in the project. Kept for the reasoning in each
+> "Notes / verification" block.
 
 Companion to [`2026-07-05-aaos-perf-audit.md`](2026-07-05-aaos-perf-audit.md). Full production-ready patch content for the 8 top-ranked performance targets. **Nothing here is applied to the build tree.** Several diffs were validated with `git apply --check` at generation time (noted per patch). Land in the batches recommended in the audit doc; the two HIGH ANR patches in [`../hardening/`](../hardening/) land ahead of these.
 
