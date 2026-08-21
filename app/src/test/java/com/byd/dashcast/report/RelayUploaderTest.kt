@@ -160,4 +160,31 @@ class RelayUploaderTest {
         // have lost the entire upload rather than the tail of their sentence.
         assertEquals(1024, RelayUploader.CAPTION_MAX_CHARS)
     }
+
+    // ── the retry, and what it must not retry ────────────────────────────────────────────────
+
+    @Test
+    fun `the retry delay is long enough for a wake and short enough not to feel like a hang`() {
+        // The relay runs on a consumption plan: Azure deallocates its worker after a few minutes
+        // idle, and reports are rare by nature, so the first attempt of a real report is exactly
+        // the one most likely to meet a waking function.
+        assertEquals(2_000L, RelayUploader.RETRY_DELAY_MS)
+    }
+
+    @Test
+    fun `an unreachable endpoint fails without throwing`() {
+        // The retry path must survive a host that does not resolve — that is the shape of the
+        // failure it exists for, and throwing here would take the send thread down instead of
+        // falling back to the share sheet.
+        ReportConsent.grant(ctx)
+        setRelay("https://relay.invalid.example/api/report")   // never resolves, never reached
+        val f = java.io.File.createTempFile("relay", ".txt")
+        f.writeText("x".repeat(200))
+        try {
+            val err = RelayUploader.send(f, "caption", RelayUploader.TOPIC_BUG)
+            assertTrue("a failure must be reported, not thrown", err != null && err.isNotEmpty())
+        } finally {
+            f.delete()
+        }
+    }
 }
