@@ -54,6 +54,10 @@
     <color name="md_surface_container">#191E29</color>
     <color name="md_surface_container_high">#222938</color>
     <!-- v0.9.81 — Diag status pill colors -->
+    <!-- Night twin of md_active_container: dark enough for md_on_background text to stay legible,
+         green enough to still read as "running" beside the neutral and selected cards. -->
+    <color name="md_active_container">#1B3A24</color>
+
     <color name="md_status_ok">#3CD070</color>
     <color name="md_status_warn">#FFA940</color>
     <color name="md_status_err">#FFB4AB</color>

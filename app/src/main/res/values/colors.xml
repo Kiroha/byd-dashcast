@@ -60,6 +60,11 @@
     <color name="md_surface_container">#EEEDF2</color>
     <color name="md_surface_container_high">#E8E7EC</color>
     <!-- v0.9.81 — Diag status pill colors -->
+    <!-- Active-preset card fill. The green is the semantic — this preset is RUNNING — and it needs a
+         night twin, which the hard-coded #C4ECCA it replaces did not have. Paired with
+         md_status_ok as the stroke, like md_primary_container is paired with md_primary. -->
+    <color name="md_active_container">#C4ECCA</color>
+
     <color name="md_status_ok">#2E7D32</color>
     <color name="md_status_warn">#E65100</color>
     <color name="md_status_err">#BA1A1A</color>
