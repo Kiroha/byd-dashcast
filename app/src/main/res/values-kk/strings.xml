@@ -47,8 +47,8 @@
     <string name="cluster_label_123">12,3 дюйм (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 дюйм (cmd=31)</string>
     <string name="split_full_screen">⬜ Толық экран</string>
-    <string name="split_left">⬜⬛ Сол жақ (50%%)</string>
-    <string name="split_right">⬛⬜ Оң жақ (50%%)</string>
+    <string name="split_left">⬜⬛ Сол жақ (50%)</string>
+    <string name="split_right">⬛⬜ Оң жақ (50%)</string>
     <string name="log_title">Журнал</string>
     <string name="log_filter_hint">Журналды сүзу (тег, хабар, regex)…</string>
     <string name="log_empty">(жазба жоқ)</string>
