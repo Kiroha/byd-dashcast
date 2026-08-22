@@ -35,6 +35,32 @@ object OtaProgressUi {
 
         return object : UpdateChecker.ProgressListener {
 
+            /**
+             * Closes the dialog without assuming its Activity is still alive.
+             *
+             * Every callback below this one arrives from UpdateChecker's download thread through
+             * `ui.post(...)`, and an APK download over a car hotspot runs for minutes. `onUpdateFound`
+             * guards on isFinishing/isDestroyed before it BUILDS the dialog; nothing guarded the
+             * later callbacks that CLOSE it. `Dialog.dismiss()` on an Activity whose window is gone
+             * throws IllegalArgumentException("View not attached to window manager") — an uncaught
+             * RuntimeException on the main thread, i.e. a process crash, which on this app means the
+             * cluster projection dies with it.
+             *
+             * The reference is cleared first, so a second callback cannot retry a dismiss that
+             * already failed.
+             */
+            private fun closeDialog() {
+                val d = dlgHolder ?: return
+                dlgHolder = null
+                if (activity.isFinishing || activity.isDestroyed) return
+                try {
+                    d.dismiss()
+                } catch (t: Throwable) {
+                    // Belt and braces: the window can go between the check and the call.
+                    AppLogger.w("OTA", "dialog dismiss skipped: " + t.javaClass.simpleName)
+                }
+            }
+
             override fun onUpdateFound(
                 version: String, changelog: String,
                 downloadUrl: String
@@ -129,7 +155,7 @@ object OtaProgressUi {
             }
 
             override fun onInstalling() {
-                if (dlgHolder != null) { dlgHolder!!.dismiss(); dlgHolder = null }
+                closeDialog()
             }
 
             override fun onUpToDate() {
@@ -143,7 +169,7 @@ object OtaProgressUi {
             }
 
             override fun onError(message: String) {
-                if (dlgHolder != null) { dlgHolder!!.dismiss(); dlgHolder = null }
+                closeDialog()
                 AppLogger.e("OTA", "error: $message")
             }
         }

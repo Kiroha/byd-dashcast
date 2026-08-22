@@ -350,6 +350,28 @@ public final class FissionOrchestrator {
             AppLogger.d(TAG, "auto-start skipped: classic projection already active");
             return AutoStartResult.PROJECTION_CONFLICT;
         }
+        // Take the SAME guard activateLayoutManually takes, for the same reason it exists: two
+        // concurrent activations build two ClusterManagers, and the second one's cancel() cannot
+        // unregister the first's DisplayListener — the listener leak + double-launch fixed in
+        // 1.2.29. Only the manual path ever took it, so the two paths did not exclude each other:
+        // auto-start runs for several seconds at launch (30 → 3s → 16 → 3s → 35), and a user who
+        // opens Layout Manager and taps Activate inside that window walked straight past a guard
+        // that was never armed.
+        //
+        // Released in activateFavoriteLayout and in markAutoStartFailed — the success and failure
+        // funnels of this path — and, if both are somehow missed, stolen by the existing
+        // ACTIVATION_GUARD_MAX_MS expiry. A lost guard here cannot disable anything permanently.
+        if (!sActivationInFlight.compareAndSet(false, true)) {
+            long heldMs = android.os.SystemClock.elapsedRealtime() - sActivationStartedMs;
+            if (heldMs < ACTIVATION_GUARD_MAX_MS) {
+                AppLogger.w(TAG, "auto-start skipped: an activation is already in flight (held "
+                        + heldMs + "ms)");
+                return AutoStartResult.PROJECTION_CONFLICT;
+            }
+            AppLogger.w(TAG, "auto-start: previous activation never reported after " + heldMs
+                    + "ms — reclaiming the guard");
+        }
+        sActivationStartedMs = android.os.SystemClock.elapsedRealtime();
         sAutoStartFired = true;
         AppLogger.i(TAG, "auto-start on app launch: projection + layout « " + fav.name + " »");
 
@@ -1070,6 +1092,11 @@ public final class FissionOrchestrator {
             AppLogger.e(TAG, "activateFavoriteLayout failed", e);
             post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autolayout_err_fmt, e.getMessage())));
             markAutoStartFailed("layout activation failed: " + e.getMessage());
+        } finally {
+            // The success funnel of the auto-start path: the ClusterManager sequence is done, so
+            // a manual Activate is safe again. markAutoStartFailed covers the failure funnel; the
+            // guard's own expiry covers anything that reaches neither.
+            sActivationInFlight.set(false);
         }
     }
 
@@ -1278,6 +1305,12 @@ public final class FissionOrchestrator {
         synchronized (FissionOrchestrator.class) {
             if (sAutoStartOrchestrator == this) sAutoStartOrchestrator = null;
             sAutoStartFired = false;
+            // The failure funnel of the auto-start path. Release the activation guard here too:
+            // this method is reached from onDisplayTimeout, i.e. BEFORE activateFavoriteLayout
+            // ever runs, so its finally would never fire and the guard would sit held until the
+            // 60 s expiry stole it — leaving Activate answering "busy" on a car that just failed
+            // to project, which is exactly when a user tries it by hand.
+            sActivationInFlight.set(false);
         }
         AppLogger.w(TAG, "auto-start re-armed after failure: " + reason);
         // mFreeZoneKeys counts too. Free zones are deliberately kept OUT of mSlots and never set

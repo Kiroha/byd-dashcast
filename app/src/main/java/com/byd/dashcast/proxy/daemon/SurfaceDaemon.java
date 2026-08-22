@@ -941,7 +941,13 @@ public class SurfaceDaemon {
         if (surface == null) { reply.writeNoException(); reply.writeInt(0); return true; }
         int displayId = createTrustedVdForSlot(slot, surface, "dashcast_cluster_default");
         if (displayId < 0) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true; }
-        sSlots.put("__default__", slot);
+        // Release whatever this replaced. The pre-check above releases an EXISTING slot, but two
+        // concurrent attaches for the same key can both observe null there and both build; the
+        // second put would then drop the first SlotInfo on the floor, leaking a
+        // TYPE_SYSTEM_OVERLAY window, a VirtualDisplay and a Surface in a daemon that outlives the
+        // app. Phase4DisplayVerbs' VirtualDisplay registry — same process, same shape — has always
+        // done this; this map had drifted from it.
+        { SlotInfo replaced = sSlots.put("__default__", slot); if (replaced != null) replaced.release(); }
         out("[Fission] CLUSTER_ATTACH OK displayId=" + displayId);
         reply.writeNoException(); reply.writeInt(1);
         reply.writeParcelable(surface, 0); reply.writeInt(displayId);
@@ -966,7 +972,13 @@ public class SurfaceDaemon {
         int displayId = createTrustedVdForSlot(slot, surface,
                 "dashcast_slot_" + pkg.replace('.', '_'));
         if (displayId < 0) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true; }
-        sSlots.put(pkg, slot);
+        // Release whatever this replaced. The pre-check above releases an EXISTING slot, but two
+        // concurrent attaches for the same key can both observe null there and both build; the
+        // second put would then drop the first SlotInfo on the floor, leaking a
+        // TYPE_SYSTEM_OVERLAY window, a VirtualDisplay and a Surface in a daemon that outlives the
+        // app. Phase4DisplayVerbs' VirtualDisplay registry — same process, same shape — has always
+        // done this; this map had drifted from it.
+        { SlotInfo replaced = sSlots.put(pkg, slot); if (replaced != null) replaced.release(); }
         out("[Fission] ATTACH_SLOT OK pkg=" + pkg + " displayId=" + displayId);
         reply.writeNoException(); reply.writeInt(1);
         reply.writeParcelable(surface, 0); reply.writeInt(displayId);
@@ -1042,7 +1054,7 @@ public class SurfaceDaemon {
             if (surface == null) { reply.writeInt(-1); continue; }
             int displayId = createTrustedVdForSlot(slot, surface, "dashcast_layout_" + safe);
             if (displayId < 0) { slot.release(); reply.writeInt(-1); continue; }
-            sSlots.put(key, slot);
+            { SlotInfo replaced = sSlots.put(key, slot); if (replaced != null) replaced.release(); }
             out("[Fission] ACTIVATE_LAYOUT [" + label + "] → displayId=" + displayId);
             reply.writeInt(displayId);
         }
