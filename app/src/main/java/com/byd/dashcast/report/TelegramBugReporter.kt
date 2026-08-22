@@ -104,6 +104,22 @@ object TelegramBugReporter {
         return hud.isNotEmpty() && thread == hud
     }
 
+    /**
+     * Removes [token] from any text that may be quoting the request URL.
+     *
+     * Package-private so the test can drive it: this is the only thing standing between an
+     * exception message and a live credential in every subsequent bug report, and a refactor that
+     * dropped it would be silent — the leak only appears once something on the network fails.
+     *
+     * Exact-string removal rather than a pattern. We hold the token here, so there is nothing to
+     * infer, and an exact match cannot miss a shape we did not anticipate.
+     */
+    @JvmStatic
+    internal fun scrubToken(text: String?, token: String): String {
+        val t = text ?: return ""
+        return if (token.isEmpty()) t else t.replace(token, "<token>")
+    }
+
     private fun doSendDirect(file: File, caption: String?, thread: String): String? {
         val boundary = "----dashcast" + System.currentTimeMillis()
         val token = ReportChannel.botToken()
@@ -141,11 +157,21 @@ object TelegramBugReporter {
                 return null
             }
             val body = readErr(conn)
-            AppLogger.w(TAG, "Telegram HTTP $code: $body")
+            AppLogger.w(TAG, "Telegram HTTP $code: " + scrubToken(body, token))
             return "HTTP $code"
         } catch (e: Exception) {
-            AppLogger.e(TAG, "send failed", e)
-            return e.javaClass.simpleName + ": " + e.message
+            // NEVER log this exception raw. The request URL above carries the bot token, and
+            // several java.net / java.io exceptions quote the request URL in their own message
+            // (FileNotFoundException and the SSL failures are the usual ones). AppLogger's content
+            // is copied verbatim into the DASHCAST JOURNAL section of every report sent afterwards,
+            // so one raw exception here would put a live credential — the very one AUD-001 took out
+            // of the APK — into the next report a tester sends, and into every one after that.
+            //
+            // Scrubbed by exact string, not by pattern: we hold the token, so there is nothing to
+            // guess. Redactor's bot_token rule is the backstop for the call site nobody thought of;
+            // this is the fix.
+            AppLogger.e(TAG, "send failed: " + scrubToken(e.toString(), token))
+            return e.javaClass.simpleName + ": " + scrubToken(e.message, token)
         } finally {
             conn?.disconnect()
         }
