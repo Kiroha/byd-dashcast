@@ -119,12 +119,30 @@ class RelayUploaderTest {
     }
 
     @Test
-    fun `an endpoint is not counted as a credential set`() {
-        // applyProperties returns how many credential sets were stored. A file carrying only a
-        // relay URL has provisioned nothing that needs protecting, and reporting otherwise would
-        // make the pairing outcome message lie.
-        assertEquals(0, setRelay("https://example.invalid/api/report"))
+    fun `an endpoint IS counted, because it decides where the report goes`() {
+        // This test previously asserted the opposite, and it was pinning the defect rather than
+        // the behaviour: "a file carrying only a relay URL has provisioned nothing that needs
+        // protecting". The relay endpoint is where every diagnostic report goes, and the
+        // provisioning file is read from Download, which any app can write to. Not counting it
+        // also made the one visible signal lie — the screen said "no usable credentials in it"
+        // immediately after storing it.
+        assertEquals(1, setRelay("https://example.invalid/api/report"))
+        // Still not "paired": pairing means a channel credential, and an endpoint is not one.
         assertFalse(ReportChannel.isPairedOnDevice(ctx))
+    }
+
+    @Test
+    fun `a cleartext endpoint is refused`() {
+        // No legitimate relay needs http, and the difference is whether a report full of logcat,
+        // dumpsys and cluster screenshots can be read in transit.
+        assertEquals(0, setRelay("http://example.invalid/api/report"))
+        assertEquals("the built-in endpoint must be untouched", RelayUploader.DEFAULT_URL, RelayUploader.url())
+    }
+
+    @Test
+    fun `a non-http scheme is refused too`() {
+        assertEquals(0, setRelay("file:///data/local/tmp/x"))
+        assertEquals(RelayUploader.DEFAULT_URL, RelayUploader.url())
     }
 
     // ── the file name the relay will accept ─────────────────────────────────────────────────
