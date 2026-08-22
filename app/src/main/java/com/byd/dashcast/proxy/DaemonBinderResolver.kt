@@ -142,7 +142,7 @@ object DaemonBinderResolver {
             if (now - sLastReacquireMs < REACQUIRE_MIN_INTERVAL_MS) return null
             sLastReacquireMs = now
         }
-        val b = lookupRegisteredBinder()
+        val b = (lookupForTesting ?: ::lookupRegisteredBinder)()
         if (b != null) AppLogger.i(TAG, "surface binder re-acquired after $reason")
         else AppLogger.w(TAG, "surface daemon still absent after $reason")
         return b
@@ -159,6 +159,17 @@ object DaemonBinderResolver {
     fun resetReacquireThrottleForTesting() {
         synchronized(this) { sLastReacquireMs = 0L }
     }
+
+    /**
+     * Test seam for the lookup itself. Null in production, so nothing changes there.
+     *
+     * Without it the throttle is not observable: this function returns null both when the call was
+     * throttled AND when the daemon is simply absent, and no daemon can exist under Robolectric.
+     * A test could only ever assert null == null, which is why the whole throttle could have been
+     * deleted with the suite still green. A seam that returns a real Binder and counts its own
+     * invocations makes the two nulls tell apart.
+     */
+    internal var lookupForTesting: (() -> IBinder?)? = null
 
     /** Reflective `ServiceManager.getService(SERVICE_KEY)`; null if absent or on any error. */
     private fun lookupRegisteredBinder(): IBinder? {
