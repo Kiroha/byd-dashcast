@@ -121,6 +121,10 @@ public class SurfaceDaemon {
     // ── Fission slot transacts (purely additive — transacts 1-4 unchanged) ──
     // 6-8 reserved (wire-format gap matching devtools numbering)
     /** TRANSACT 5 — create default full-screen overlay+VD (legacy CLUSTER_ATTACH). */
+    /** RESERVED, no client. handleClusterAttach is dispatched at :427 but nothing in the repo
+     *  sends transaction 5. The code stays allocated rather than reused: a daemon survives an APK
+     *  reinstall, so a rebuilt app talking to an old daemon must never find a different meaning
+     *  behind a number it already knows. */
     public static final int TRANSACT_CLUSTER_ATTACH    = 5;
     /** TRANSACT 9 — resize a named slot overlay+VD in-place. */
     public static final int TRANSACT_RESIZE_SLOT       = 9;

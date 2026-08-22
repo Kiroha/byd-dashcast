@@ -21,6 +21,20 @@ import java.io.File
  * requires changing all six screens in one commit, and the diagnostic campaigns running on those
  * screens are worth more than the guarantee. It belongs with the migration of the last emitter.
  */
+/*
+ * STATUS: NOT WIRED. Nothing in production calls this object — only its own unit test does. The
+ * "emitters move over one at a time" migration described above has never started, so the six
+ * screens still each pick their own transport, which is the exact drift this was written to end.
+ *
+ * For whoever picks it up: the relay is NOT missing from the routing. It lives inside
+ * TelegramBugReporter.send (TelegramBugReporter.kt:85), which prefers it and falls back to the
+ * direct bot, so routing through Route.TELEGRAM reaches the relay. What this adds over the current
+ * BugWizardActivity path is the Azure fallback above the messaging ceiling and one decision point
+ * instead of six.
+ *
+ * Not wired as part of the P3 sweep on purpose: it changes how bug reports leave the car, the path
+ * that had a P1 two releases ago, and it cannot be exercised without a configured device.
+ */
 object ReportDelivery {
 
     private const val TAG = "ReportDelivery"

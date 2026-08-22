@@ -34,6 +34,15 @@ import java.util.Locale
  * Dev-only screen, built programmatically (no layout/strings → no i18n burden).
  */
 @android.annotation.SuppressLint("SetTextI18n")
+/*
+ * STATUS: NO ENTRY POINT. This Activity is declared in AndroidManifest.xml and started by nothing
+ * — grepped across java, kotlin, xml and the manifest. With AaosClusterProbe and
+ * AaosDiagnosticBundle it is roughly 516 lines of AAOS diagnostic that a tester cannot reach.
+ *
+ * Same situation as HudRawCaptureActivity, and the same reason it is documented rather than
+ * decided here: the removal of these entry points was deliberate, the code works, and whether the
+ * AAOS investigation still needs them is a product call, not a cleanup.
+ */
 class AaosDiagActivity : AppCompatActivity() {
 
     private lateinit var out: TextView

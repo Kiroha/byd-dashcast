@@ -501,68 +501,11 @@ object AppLogger {
 
     // ── Storage cleanup ───────────────────────────────────────────────────────
 
-    /**
-     * Deletes all DashCast-generated files from app external and cache storage:
-     *   - byd_log_*.log         (AppLogger.saveToFile)
-     *   - byd_report_*.txt      (SysInfoActivity)
-     *   - BYD_RE_Sniffer_*.txt  (DiagActivity)
-     *   - cluster_live.png      (legacy — produced by captureClusterDisplay, removed in LOT 4 / v1.2.32)
-     * ADB keys (adb.key / adb.pub) in getFilesDir() are NOT deleted.
-     * Also clears the in-memory log buffer.
-     *
-     * @return number of files deleted
-     */
-    @JvmStatic
-    fun cleanupFiles(context: Context): Int {
-        var deleted = 0
-
-        // External files dir: byd_log_*, byd_report_*, BYD_RE_Sniffer_*
-        val extDir = externalFilesDirOrNull(context)
-        if (extDir != null && extDir.exists()) {
-            val files = extDir.listFiles()
-            if (files != null) {
-                for (f in files) {
-                    val name = f.name
-                    if (name.startsWith("byd_log_") ||
-                        name.startsWith("byd_report_") ||
-                        name.startsWith("BYD_RE_Sniffer_")
-                    ) {
-                        if (f.delete()) deleted++
-                    }
-                }
-            }
-        }
-
-        // Internal files dir: same patterns (fallback when external not available)
-        val intDir = context.filesDir
-        if (intDir != null && intDir.exists()) {
-            val files = intDir.listFiles()
-            if (files != null) {
-                for (f in files) {
-                    val name = f.name
-                    if (name.startsWith("byd_log_") ||
-                        name.startsWith("byd_report_") ||
-                        name.startsWith("BYD_RE_Sniffer_")
-                    ) {
-                        if (f.delete()) deleted++
-                    }
-                }
-            }
-        }
-
-        // External cache: cluster_live.png
-        val extCache = context.externalCacheDir
-        if (extCache != null && extCache.exists()) {
-            val png = File(extCache, "cluster_live.png")
-            if (png.exists() && png.delete()) deleted++
-        }
-
-        // Clear in-memory buffer too
-        clear()
-
-        Log.i("AppLogger", "cleanupFiles: $deleted file(s) deleted")
-        return deleted
-    }
+    // cleanupFiles() lived here: 60 lines that deleted every generated artefact and cleared the
+    // in-memory buffer, with no caller in source, resources or the manifest. It was the "wipe
+    // everything" counterpart to pruneOldFiles' rotation, and the button that would have called it
+    // does not exist. Deleted rather than wired: pruneOldFiles already bounds the same directories
+    // on every start, and a destructive one-shot with no UI is a hazard waiting for a caller.
 
     /**
      * v1.2.55-beta — caps the on-disk accumulation of generated files by
