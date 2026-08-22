@@ -404,6 +404,7 @@
     <string name="bug_send">Gönder</string>
     <string name="bug_status_capturing">Günlük yakalanıyor…</string>
     <string name="bug_status_sending">Gönderiliyor…</string>
+    <string name="bug_status_slow">Gönderme beklenenden uzun sürüyor — iptal edebilirsiniz.</string>
     <string name="bug_status_error_fmt">Hata: %1$s</string>
     <string name="bug_sent_ok">Rapor gönderildi ✓ Teşekkürler!</string>
     <string name="bug_share_subject">DashCast — Hata raporu</string>

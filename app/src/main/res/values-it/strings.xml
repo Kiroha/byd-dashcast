@@ -404,6 +404,7 @@
     <string name="bug_send">Invia</string>
     <string name="bug_status_capturing">Acquisizione log…</string>
     <string name="bug_status_sending">Invio in corso…</string>
+    <string name="bug_status_slow">L\'invio sta richiedendo più tempo del previsto — puoi annullare.</string>
     <string name="bug_status_error_fmt">Errore: %1$s</string>
     <string name="bug_sent_ok">Segnalazione inviata ✓ Grazie!</string>
     <string name="bug_share_subject">DashCast — Segnalazione bug</string>

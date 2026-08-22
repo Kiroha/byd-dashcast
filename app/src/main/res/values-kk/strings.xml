@@ -404,6 +404,7 @@
     <string name="bug_send">Жіберу</string>
     <string name="bug_status_capturing">Журнал жиналуда…</string>
     <string name="bug_status_sending">Жіберілуде…</string>
+    <string name="bug_status_slow">Жіберу күтілгеннен ұзақ жүріп жатыр — бас тартуға болады.</string>
     <string name="bug_status_error_fmt">Қате: %1$s</string>
     <string name="bug_sent_ok">Есеп жіберілді ✓ Рақмет!</string>
     <string name="bug_share_subject">DashCast — Қате туралы есеп</string>
