@@ -287,6 +287,7 @@ object ClusterShotRecorder {
      */
     @JvmStatic
     fun pullShotsInto(ctx: Context, destDir: File): Int {
+        var pendingPull: java.util.concurrent.Future<Int>? = null
         return try {
             // Two bounds, because the screenshots are an OPTIONAL attachment and the report is not.
             //
@@ -301,17 +302,31 @@ object ClusterShotRecorder {
             // of site (BugReportCapture.hudStateSnapshot:455/464). The verbs fail fast instead of
             // waiting for a bootstrap, and a missing screenshot is strictly better than a report
             // that never leaves. Restored in a finally because the pooled thread is reused.
-            sExecutor.submit<Int> {
+            pendingPull = sExecutor.submit<Int> {
                 ProxyClient.setNonBlockingReconnect(true)
                 try {
                     pullShotsIntoNow(ctx.applicationContext, destDir)
                 } finally {
                     ProxyClient.setNonBlockingReconnect(false)
                 }
-            }.get(PULL_BUDGET_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            }
+            pendingPull.get(PULL_BUDGET_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
         } catch (te: java.util.concurrent.TimeoutException) {
-            // The work keeps running on sExecutor and may still finish; we simply stop waiting for
-            // it. Whatever landed in destDir before the budget expired is still attached.
+            // Whatever landed in destDir before the budget expired is still attached — that part is
+            // deliberate and unchanged. What was missing is the cancel.
+            //
+            // sExecutor is ONE thread, shared with captureRound and prune, and that sharing is
+            // load-bearing: prune runs `rm -f shot_*.jpg` over the very files a pull is copying, so
+            // serialising them is what stops a purge deleting a shot mid-copy. Do NOT "fix" this by
+            // giving the pull its own executor — that trades a starvation window for a
+            // delete-during-copy race.
+            //
+            // The consequence of the sharing is that a wedged pull holds the only worker, so every
+            // periodic capture and prune queues behind it for as long as it runs. Cancelling bounds
+            // that to the budget wherever the work is interruptible. Where it is not — a blocking
+            // binder transact into a wedged daemon — the interrupt is a request, not a guarantee,
+            // and the old behaviour stands.
+            pendingPull?.cancel(true)
             AppLogger.w(TAG, "pull shots exceeded ${PULL_BUDGET_MS}ms — sending without them")
             0
         } catch (ie: InterruptedException) {
