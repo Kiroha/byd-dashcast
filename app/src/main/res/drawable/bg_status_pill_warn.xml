@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Present but invisible to the API. A state worth noticing, not an error: same shape and the
+     same 12%/34% recipe as bg_status_pill_ok and bg_status_pill_off, so the three read as one
+     family. Paired with @color/md_pill_warn_text, not md_status_warn — see values/colors.xml. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="999dp"/>
+    <solid android:color="@color/md_pill_warn_fill"/>
+    <stroke android:width="1dp" android:color="@color/md_pill_warn_stroke"/>
+</shape>

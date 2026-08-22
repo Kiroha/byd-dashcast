@@ -866,7 +866,14 @@ class SysInfoActivity : AppCompatActivity() {
                             val stackStr = if (value >= 0) "layerStack=$value" else "layerStack=?"
                             support.text = stackStr + " · " + getString(R.string.sysinfo_disp_hidden_sub)
                             badge.text = "●"
-                            badge.setTextColor(0xFFFF9800.toInt()) // orange — not visible via API
+                            // AUD-148 (suite) — this row is why AUD-148 was raised, and the first
+                            // fix did not reach it: setServiceRowState was the only place touched,
+                            // and no display-row builder calls it. A hard-coded orange glyph was
+                            // left sitting inside the GREEN pill the layout supplies by default —
+                            // #FF9800 on that ground measures 1.59:1, the least legible thing on
+                            // the screen and semantically the opposite of what the pill says.
+                            badge.setTextColor(ContextCompat.getColor(this@SysInfoActivity, R.color.md_pill_warn_text))
+                            badge.setBackgroundResource(R.drawable.bg_status_pill_warn)
                             container.addView(row)
                         }
                     }
@@ -1241,7 +1248,11 @@ class SysInfoActivity : AppCompatActivity() {
             // Neutral rather than the error red it used to take: a service that is not running is
             // a state, not a fault, and every stopped row shouting in red teaches people to ignore
             // the colour entirely.
-            badge.setTextColor(ContextCompat.getColor(this, R.color.md_outline))
+            // md_on_surface_variant, not md_outline. My AUD-148 fix used the outline token —
+            // which exists for strokes and dividers, never for text — and took the OFF badge from
+            // 6.9:1 to 3.37:1 in day mode and 3.22:1 at night, making the one state a triager
+            // scans for the hardest thing on the screen to read. This measures 7.03:1 and 6.42:1.
+            badge.setTextColor(ContextCompat.getColor(this, R.color.md_on_surface_variant))
             badge.setBackgroundResource(R.drawable.bg_status_pill_off)
         }
     }
