@@ -254,8 +254,19 @@ public class ClusterService extends Service
                                 // If this resolved only AFTER the first activation already timed
                                 // out, correct the notification now (it would otherwise read the
                                 // generic "disconnected" until the next boot).
-                                mMainHandler.post(() -> updateNotification(
-                                        getString(R.string.dl3_singleos_cluster_unsupported_title)));
+                                //
+                                // Guarded: this is a shell round-trip, so it can land after the
+                                // user has already stopped projection — and updateNotification
+                                // would then re-post NOTIF_ID for a session that is over, putting
+                                // an ongoing notification back on screen with nothing behind it.
+                                // mProjectionActive covers the common stopped-but-still-bound
+                                // case that mDestroyed misses; it is cleared in
+                                // stopProjectionNoAdb() before the cancel/stopSelf.
+                                mMainHandler.post(() -> {
+                                    if (mDestroyed || !mProjectionActive) return;
+                                    updateNotification(
+                                        getString(R.string.dl3_singleos_cluster_unsupported_title));
+                                });
                             }
                         }
                         @Override public void onError(String err) { /* stays unflagged; projection proceeds (fail-open) */ }

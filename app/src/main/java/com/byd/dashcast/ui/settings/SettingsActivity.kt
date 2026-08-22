@@ -295,9 +295,8 @@ class SettingsActivity : AppCompatActivity() {
         // sendInfo(16) without changing the cluster screen shape).
         cbAdasWindowFix?.isChecked = ClusterPrefs.isAdasWindowFixEnabled(this)
 
-        // Use-own-SIM toggle (default: disabled). Controls visibility of the
-        // Hotspot navrail entry.
-        cbUseOwnSim.isChecked = prefs.getBoolean(PREF_USE_OWN_SIM, false)
+        // Use-own-SIM toggle. Controls visibility of the Hotspot navrail entry.
+        cbUseOwnSim.isChecked = prefs.getBoolean(PREF_USE_OWN_SIM, DEFAULT_USE_OWN_SIM)
 
         // v1.2.45 — Compact apps panel toggle (default OFF, historical layout)
         cbCompactAppsPanel?.isChecked = prefs.getBoolean(PREF_COMPACT_APPS_PANEL, false)
@@ -428,6 +427,17 @@ class SettingsActivity : AppCompatActivity() {
         // ── ADAS Window Fix ────────────────────────────────────────────────────────
         const val PREF_ADAS_WINDOW_FIX = ClusterPrefs.KEY_ADAS_WINDOW_FIX
         const val PREF_USE_OWN_SIM = "use_own_sim"
+
+        /**
+         * The default all three readers must agree on.
+         *
+         * They did not: this screen drew the box from `false` while the two consumers that decide
+         * whether the Hotspot entry appears read `true`, so on a fresh install the box was
+         * unchecked and the entry was there anyway — and ticking it changed nothing, which reads
+         * as a broken toggle. `true` is the side that had to win: flipping the consumers instead
+         * would have removed the Hotspot entry from every existing user who never touched this.
+         */
+        const val DEFAULT_USE_OWN_SIM = true
 
         // v1.2.45 — Compact apps panel.
         const val PREF_COMPACT_APPS_PANEL = "compact_apps_panel"

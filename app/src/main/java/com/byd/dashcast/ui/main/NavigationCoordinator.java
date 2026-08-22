@@ -151,7 +151,7 @@ public final class NavigationCoordinator {
         Context ctx = mHost.getContext();
         boolean isDl3 = Platform.get().isDiLink3(ctx);
         boolean useOwnSim = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, true);
+                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, SettingsActivity.DEFAULT_USE_OWN_SIM);
         if (isDl3 && useOwnSim) {
             mNavHotspot.setVisibility(View.VISIBLE);
             mNavHotspot.setOnClickListener(v ->
