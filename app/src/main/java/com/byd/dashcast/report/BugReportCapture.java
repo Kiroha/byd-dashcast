@@ -402,8 +402,11 @@ public final class BugReportCapture {
      *     path); when non-null it is used verbatim and {@code outFile} is NOT read (on A13 the
      *     app cannot read that path). When null, the body is read from {@code outFile} (A10).
      */
-    private static void finish(Context app, File outFile, String metaHeader,
-                               Callback cb, String shellError, String preReadShellBody) {
+    // Package-private, not private, so RedactionCallSiteTest can drive it. That test is the only
+    // thing that proves the artefact LEAVING this emitter is filtered: Redactor's own tests cover
+    // the rules as a pure function, and would all still pass if the call at :448 were deleted.
+    static void finish(Context app, File outFile, String metaHeader,
+                       Callback cb, String shellError, String preReadShellBody) {
         // Build the body first. This must NEVER sink the report — on any failure fall back
         // to a journal-only body so the tester still gets something to send.
         String content;
