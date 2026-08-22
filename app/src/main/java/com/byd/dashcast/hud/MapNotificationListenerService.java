@@ -199,7 +199,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // before "m"; "25 min" still cannot match (the trailing \b fails on "min" for every alternative),
     // so remaining-time text is never misread as a distance.
     private static final Pattern RX_DIST =
-            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|mi|ft|yd|mt|m|м)\\b",
+            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|كم|mi|ft|yd|mt|m|м|م)\\b",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Road name: "onto X", "sur X", "on X" ────────────────────────────
@@ -212,10 +212,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // Mins:  \b(\d+)[\s ]*(?:min|mins|мин)\b
     // Both handle ASCII and Cyrillic units plus non-breaking space.
     private static final Pattern RX_HOURS =
-            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.)\\b",
+            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.|ساعة|س)\\b",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern RX_MINS =
-            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин)\\b",
+            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин|دقيقة|د)\\b",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Arrival wall-clock ETA — "· 14:32", "2:05 pm" (OEM EXPECTED_ARRIVE_*) ─
@@ -654,7 +654,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
 
         // Combine title + text for pattern matching.
-        String combined = (title + " " + text + " " + bigText).trim();
+        // Normalise Eastern Arabic-Indic (U+0660-U+0669) and Extended (U+06F0-U+06F9) digits
+        // to ASCII before anything parses this. The maneuver-keyword table below has a full
+        // Arabic section, so on an Arabic head unit the ARROW resolves — while \\d in the
+        // distance and time patterns is ASCII-only, so the DISTANCE never did. An arrow with
+        // no distance is the worst of the three states: the driver sees a turn and no idea when.
+        String combined = normaliseDigits((title + " " + text + " " + bigText).trim());
         String lower    = combined.toLowerCase(Locale.ROOT);
 
         if (combined.isEmpty()) return;
@@ -910,6 +915,29 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // ─── Distance parsing ─────────────────────────────────────────────────
 
     /** Returns the first distance found (in metres) or -1. */
+    /**
+     * Maps Arabic-Indic digits onto ASCII, leaving everything else untouched.
+     *
+     * Two ranges, because both are in use: U+0660-U+0669 (Arabic-Indic) and U+06F0-U+06F9
+     * (Extended Arabic-Indic, Persian/Urdu). Cheap enough to run on every notification — one scan
+     * of a short string, allocating only when it actually finds a digit to convert.
+     */
+    static String normaliseDigits(String s) {
+        if (s == null || s.isEmpty()) return s;
+        StringBuilder sb = null;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            int v = -1;
+            if (c >= '\u0660' && c <= '\u0669') v = c - '\u0660';
+            else if (c >= '\u06F0' && c <= '\u06F9') v = c - '\u06F0';
+            if (v >= 0) {
+                if (sb == null) sb = new StringBuilder(s);
+                sb.setCharAt(i, (char) ('0' + v));
+            }
+        }
+        return sb == null ? s : sb.toString();
+    }
+
     private static int parseFirstDistance(String text) {
         return parseMeters(text, -1);
     }
