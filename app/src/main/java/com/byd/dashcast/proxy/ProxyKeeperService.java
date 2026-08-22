@@ -172,7 +172,7 @@ public final class ProxyKeeperService extends Service {
         if (ok) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
             mHudListenerArmed = false;   // fresh daemon → re-arm the HUD listener on the next tick
-            mArmAttempts = 0;            // and give it the full retry budget again
+            mArmAttempts.set(0);         // and give it the full retry budget again
             AppLogger.i(TAG, "keeper reconnect ✅ pid="
                     + ProxyClient.getDaemonPid());
         } else {
@@ -185,8 +185,15 @@ public final class ProxyKeeperService extends Service {
      *  connection; reset on reconnect / respawn so it re-arms against the fresh daemon. */
     private volatile boolean mHudListenerArmed = false;
 
-    /** Failed arm attempts against the CURRENT daemon connection. See {@link #ARM_MAX_ATTEMPTS}. */
-    private volatile int mArmAttempts = 0;
+    /**
+     * Failed arm attempts against the CURRENT daemon connection. See {@link #ARM_MAX_ATTEMPTS}.
+     *
+     * Atomic because it is incremented on the arm executor and reset on the heartbeat thread; a
+     * plain int would let a reconnect's reset be lost against an in-flight increment, and the
+     * budget would then run out early on a daemon that had just come back.
+     */
+    private final java.util.concurrent.atomic.AtomicInteger mArmAttempts =
+            new java.util.concurrent.atomic.AtomicInteger(0);
 
     /**
      * How many times to retry arming before giving up until the next reconnect.
@@ -251,13 +258,14 @@ public final class ProxyKeeperService extends Service {
                 // no exception anywhere. HUD push-feedback is push-only and captured once at
                 // nav-start, so every bug report from that car then carried no HUD state at all.
                 if (isListenerArmed(r)) {
-                    mArmAttempts = 0;
+                    mArmAttempts.set(0);
                     return;
                 }
-                if (++mArmAttempts < ARM_MAX_ATTEMPTS) {
+                final int attempt = mArmAttempts.incrementAndGet();
+                if (attempt < ARM_MAX_ATTEMPTS) {
                     mHudListenerArmed = false;   // retry on the next alive tick
                     AppLogger.w(TAG, "HUD listener not armed (" + r + ") — retry in "
-                            + (HEARTBEAT_MS / 1000) + "s, attempt " + mArmAttempts
+                            + (HEARTBEAT_MS / 1000) + "s, attempt " + attempt
                             + "/" + ARM_MAX_ATTEMPTS);
                 } else {
                     AppLogger.w(TAG, "HUD listener not armed (" + r + ") after "
