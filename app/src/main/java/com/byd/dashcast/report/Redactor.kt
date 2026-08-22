@@ -17,8 +17,13 @@ import java.security.MessageDigest
  *    project depends on. The VIN is reached by its key instead ([VIN_PROP], [VIN_KEY]), which is
  *    where it actually lives: `persist.sys.cloud.last_vin` in 85 reports, a bare `vin=` in 73.
  *  - **A free-floating decimal coordinate pair is 92% noise.** 593 of its 646 corpus hits are
- *    `globalScale=…, windowScale=(x,y)` from the window manager. Real positions arrive through one
- *    tag, in 13 reports out of 160, so [GPS] is anchored on it.
+ *    `globalScale=…, windowScale=(x,y)` from the window manager. Positions are therefore reached
+ *    through their carrier, never their shape: [GPS] for the third-party `GpsMonitor` tag,
+ *    [GPS_FRAMEWORK] for the platform's own `Location[…]` / `Loc[…]`, [GPS_KEYED] for the
+ *    `lat=`/`lon=` parameters the OEM services post. The first version of this
+ *    file had only [GPS] and, measured later across 178 reports, that covered 16 positions while
+ *    218 in 19 reports left the car untouched — the anchor was right, the inventory of anchors
+ *    was not.
  *
  * The lesson generalises: anchor on the key, never on the shape, unless the shape is unambiguous.
  * [MAC] is the one exception — a six-group colon-separated hex address has no other meaning in this
@@ -155,6 +160,70 @@ object Redactor {
         else m.groupValues[1] + "<coords:" + tok(m.groupValues[2]) + ">"
     }
 
+    /**
+     * The framework's own position carrier — the one [GPS] never covered.
+     *
+     * [GPS] is anchored on `GpsMonitor`, a third-party dashcam tag. It is real (16 hits in the
+     * corpus) but it is not what the platform emits, and the platform emits far more: measured
+     * across 178 real reports, `Location[` / `Loc[` carries **218 positions in 19 reports**,
+     * against 16 in 16 for `GpsMonitor`. The AUD-004 counter-verification quoted one of these
+     * lines as its reason for keeping the finding at P1, and the fix then shipped without
+     * covering it.
+     *
+     * These ROMs print the pair with the decimal point implied, which is why it does not look
+     * like a coordinate at a glance: `Location[gps,655440,265461 hAcc=3.79 …]` is 65.5440, 26.5461
+     * — roughly ten metres. Four shapes exist in the corpus and all four are positional:
+     * `Loc[N,lat,lon` (164), `Location[gps,lat,lon` (44), `Location[,lat,lon` (6, empty provider)
+     * and `Loc[fused,lat,lon` (4). The AOSP form `Location[gps 48.858370,2.294481` is matched too.
+     *
+     * Safe to anchor this way, and measured rather than assumed: of every `Loc[`/`Location[`
+     * occurrence in the corpus, **zero** fall outside this pattern, so there is no shape it
+     * silently misses and no non-positional shape it would eat. That is the opposite of the bare
+     * decimal pair the class KDoc warns about, which was 92% noise — the bracket plus the
+     * provider slot is the anchor doing the work.
+     *
+     * Only the pair is replaced. `hAcc`, `alt`, `vel` and the satellite bundle stay, because they
+     * are the diagnostic content and they identify nobody. The token is derived from the pair, so
+     * a stationary car logging the same fix 164 times still reads as one place.
+     *
+     * Deliberately NOT matched: `reportLocation [ hAcc=4 …` and `incoming location: [ hAcc=4 …`,
+     * 235 lines in the corpus where the framework already omitted the coordinates. There is
+     * nothing there to remove, and matching them would inflate the count the summary line reports.
+     */
+    private val GPS_FRAMEWORK = Rule(
+        "gps",
+        Regex("""\b(Loc(?:ation)?\[)([A-Za-z0-9]*[ ,])(-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?)"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[3])) m.value
+        else m.groupValues[1] + m.groupValues[2] + "<coords:" + tok(m.groupValues[3]) + ">"
+    }
+
+
+    /**
+     * Position carried as a named parameter, which is how the OEM's own services leak it.
+     *
+     * Measured on the same 178 reports: 14 occurrences in 7 reports, all of them real and all in
+     * range. Two carriers, and neither is anything DashCast writes —
+     * `postPar:{"param":"language=zh_CN&lon=3.12092513&lat=50.6654332&dataType=charge"}` from the
+     * charge-point lookup, and a nav log line `lon:0.0 0.0`.
+     *
+     * Anchored on the key, per the rule this file states at the top: the shape alone is 92% noise
+     * (727 free decimal pairs survive both position rules in the corpus, and the sample is
+     * `globalScale=1.000000, windowScale=(1.000000,1.000000)` — the window manager, every time).
+     * `lat=` / `lon=` / `latitude=` / `longitude=` followed by a decimal has no second meaning
+     * here: of the 14 hits, zero fall outside ±90 / ±180.
+     *
+     * A zero value is kept, for the same reason [MAC] keeps the all-zero address: it identifies
+     * nobody, and `lon:0.0` in a nav frame is itself the diagnostic — the fix had not arrived yet.
+     */
+    private val GPS_KEYED = Rule(
+        "gps",
+        Regex("""(?i)\b(lat|latitude|lon|lng|longitude)(\s*[=:]\s*)(-?\d+\.\d+)"""),
+    ) { m, tok ->
+        val v = m.groupValues[3]
+        if (v.toDoubleOrNull() == 0.0) m.value
+        else m.groupValues[1] + m.groupValues[2] + "<coords:" + tok(v) + ">"
+    }
 
     /**
      * The VIN-derived cloud token: the literal `byd` followed by exactly 16 hex digits.
@@ -247,7 +316,7 @@ object Redactor {
      */
     private val RULES = listOf(
         VIN_PROP, VIN_CLOUD, VIN_KEY, VIN_RAW, ACTIVATION,
-        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, MAC, GPS)
+        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, MAC, GPS, GPS_FRAMEWORK, GPS_KEYED)
 
     /** What a pass removed, per rule. Empty when the text was already clean. */
     class Result(@JvmField val text: String, @JvmField val counts: Map<String, Int>) {

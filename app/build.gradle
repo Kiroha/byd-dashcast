@@ -1327,6 +1327,23 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 624 = 1.8.34-beta (the report redactor was not removing positions, and the consent notice
+        // shipped in thirteen languages says it is. Found by the 1.8.33 re-audit and confirmed by
+        // running the compiled Redactor, not by reading it: three of four real location line shapes
+        // passed through in clear. The single GPS rule was anchored on "GpsMonitor", a third-party
+        // dashcam tag that exists nowhere else in the tree — not on anything the platform emits.
+        // Measured across 178 real reports: that rule covered 16 positions in 16 reports while 218
+        // in 19 reports left the car untouched, plus 14 more in 7 reports carried as lat=/lon=
+        // parameters by an OEM service. AUD-004's own counter-verification had quoted one of those
+        // framework lines as its reason for keeping the finding at P1, and the fix shipped without
+        // covering it. Two rules added, both anchored on their carrier and both measured against
+        // the corpus rather than guessed: Location[…]/Loc[…] (zero occurrences in 176 reports fall
+        // outside the pattern, all four shapes are positional) and keyed lat=/lon= (14 hits, zero
+        // outside +/-90 and +/-180). Accuracy, altitude, velocity and satellite counts are kept —
+        // they are the diagnostic content and identify nobody; a zero coordinate is kept for the
+        // same reason the all-zero MAC is. Verdict from the compiled redactor over all 176 reports:
+        // 245 positions removed across 38 reports, 0 left in clear. 383 unit tests, 11 of them new
+        // and every one built from a line copied verbatim out of a real report.)
         // 623 = 1.8.33-beta (decision D1 — the voice subsystem is removed. Wake-word -> Vosk ->
         // LLM -> TTS was a proof of concept that lived in the diagnostics surface, and that surface
         // was emptied in 1.7.0: since then nothing in the tree has called VoiceService.start(), so
@@ -1370,8 +1387,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 623
-        versionName "1.8.33-beta"
+        versionCode 624
+        versionName "1.8.34-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
