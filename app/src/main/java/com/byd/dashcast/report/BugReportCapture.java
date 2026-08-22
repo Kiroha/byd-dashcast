@@ -58,6 +58,13 @@ public final class BugReportCapture {
      */
     private static final long   REPORT_BODY_MAX_BYTES = 4L * 1024L * 1024L;
 
+    /**
+     * Trailer the A13 staged read-back appends when it had to cut the body ON THE DEVICE, followed
+     * by the true size in bytes. The shell is the only place that knows that size; the banner
+     * itself is built here so both truncation paths word it identically.
+     */
+    private static final String TRUNC_MARKER = "@@DASHCAST_BODY_TRUNCATED@@";
+
 
 
     public interface Callback {
@@ -328,18 +335,43 @@ public final class BugReportCapture {
             + " ; cat /data/local/tmp/dashcast_proxy.log 2>/dev/null | tail -200 >> " + p
             + " ; echo '=== END SHELL DUMP ===' >> " + p;
 
-        // A13: emit the staged body to stdout (the only way back to the app, which can't read
-        // /data/local/tmp) and delete the temp file. Every dump command above redirects into
-        // $p, so stdout is otherwise empty and `out` carries exactly the body. Uses the
-        // non-logging shell path so the ~1 MB body never lands in the journal.
         if (stageInTmp) {
-            cmd += " ; cat " + p + " 2>/dev/null ; rm -f " + p + " 2>/dev/null";
+            // Sweep leftovers BEFORE this run writes anything. The `rm -f` below only runs when
+            // the dump reaches the end of the command, so a cancelled or crashed capture strands
+            // a multi-megabyte UNREDACTED dump in a shell-readable directory, and nothing else in
+            // the app ever removes one. Skip the path this run is about to write: captures are
+            // dispatched on a pool, so a bare wildcard could race a concurrent one.
+            cmd = "for f in /data/local/tmp/" + PREFIX + "*.txt ; do"
+                + " [ \"$f\" = '" + p + "' ] || rm -f \"$f\" ; done 2>/dev/null ; " + cmd;
+
+            // Emit the staged body to stdout (the only way back to the app, which can't read
+            // /data/local/tmp) and delete the temp file. Every dump command above redirects into
+            // $p, so stdout is otherwise empty and `out` carries exactly the body. Uses the
+            // non-logging shell path so the ~1 MB body never lands in the journal.
+            //
+            // The cap is applied HERE, on the device, because this is the last point upstream of
+            // the unbounded String the transport builds. readFile() holds the only other copy of
+            // the cap and is never called on this path, so without this the A13 body is unbounded
+            // through the transport and every redaction pass. The size is only knowable on the
+            // device, so the shell just flags the cut with a marker and finish()'s caller appends
+            // the same banner readFile() uses — one wording, two paths.
+            cmd += " ; _sz=$(wc -c < " + p + " 2>/dev/null | tr -d ' \\n')"
+                 + " ; [ -n \"$_sz\" ] || _sz=0"
+                 // `|| cat` keeps a ROM whose head has no -c producing a full body rather than
+                 // an empty one: head prints its usage to stderr and exits non-zero, and only
+                 // then does cat run.
+                 + " ; { head -c " + REPORT_BODY_MAX_BYTES + " " + p + " 2>/dev/null"
+                 + " || cat " + p + " 2>/dev/null ; }"
+                 + " ; if [ \"$_sz\" -gt " + REPORT_BODY_MAX_BYTES + " ] ; then"
+                 + " echo ; echo \"" + TRUNC_MARKER + " $_sz\" ; fi"
+                 + " ; rm -f " + p + " 2>/dev/null";
         }
 
         final AdbLocalClient.Callback dumpCb = new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 // A13: `out` is the staged body. A10: body is in outFile → let finish() read it.
-                finish(app, outFile, metaHeader, cb, null, stageInTmp ? out : null);
+                finish(app, outFile, metaHeader, cb, null,
+                        stageInTmp ? applyStagedTruncation(out) : null);
             }
             @Override public void onError(String err) {
                 // The shell dump failed (ADB down) — still ship the in-memory
@@ -348,10 +380,18 @@ public final class BugReportCapture {
                 finish(app, outFile, metaHeader, cb, err, null);
             }
         };
+        // Both branches run the SAME dump, which pauses between expensive dumpsys sections on a
+        // transport that stays silent throughout — that is what REPORT_IDLE_TIMEOUT_MS exists for.
+        // The A13 branch already resolved to it; the A10 branch was falling through to the 60 s
+        // wedged-transport default, so a slow DL3 shell was cut off mid-dump. Name the constant at
+        // both call sites so the asymmetry cannot come back. (Do NOT raise SHELL_IDLE_TIMEOUT_MS:
+        // it is the dead-adbd detector for every other shell call in the app.)
         if (stageInTmp) {
-            AdbLocalClient.executeShellWithResultUnlogged(app, cmd, dumpCb);
+            AdbLocalClient.executeShellWithResultUnlogged(
+                    app, cmd, dumpCb, AdbLocalClient.REPORT_IDLE_TIMEOUT_MS);
         } else {
-            AdbLocalClient.executeShellWithResult(app, cmd, dumpCb);
+            AdbLocalClient.executeShellWithResult(
+                    app, cmd, dumpCb, AdbLocalClient.REPORT_IDLE_TIMEOUT_MS);
         }
     }
 
@@ -395,7 +435,8 @@ public final class BugReportCapture {
         //
         // Off the main thread by construction — finish() is reached from the shell callback or from
         // the offline capture thread, never from the UI — so six regex passes over a body capped at
-        // 4 MB cost nothing a user can feel.
+        // REPORT_BODY_MAX_BYTES cost nothing a user can feel. Both read-back paths enforce that cap
+        // before they get here: readFile() on A10, the staged `head -c` on A13.
         //
         // FAILS OPEN, on purpose, and says so. Redactor already isolates its rules so one bad
         // pattern cannot take the others down; if the whole call still throws, the report goes out
@@ -510,16 +551,49 @@ public final class BugReportCapture {
             if (len <= REPORT_BODY_MAX_BYTES) return body;
             AppLogger.w(TAG, "shell dump truncated: " + len + " B on disk, cap "
                     + REPORT_BODY_MAX_BYTES + " B — the trailing dumpsys sections are MISSING");
-            return body
-                    + "\n\n!!!!!!!! REPORT TRUNCATED !!!!!!!!\n"
-                    + "The shell dump was " + len + " bytes; only the first "
-                    + REPORT_BODY_MAX_BYTES + " were kept.\n"
-                    + "Everything after this point (the remaining dumpsys sections: DISPLAYS, "
-                    + "WINDOW STACKS, SURFACEFLINGER, CAR SERVICE, daemon logs) IS MISSING — it "
-                    + "was NOT absent on the device.\n"
-                    + "Lower the logcat -t bounds in BugReportCapture.\n"
-                    + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+            return body + truncationBanner(len);
         }
+    }
+
+    /**
+     * The one wording for "this report is missing its tail", shared by the A10 read-back
+     * ({@link #readFile}) and the A13 staged read-back ({@link #applyStagedTruncation}).
+     *
+     * @param actualBytes the dump's true size, or a negative value if it could not be read back.
+     */
+    private static String truncationBanner(long actualBytes) {
+        return "\n\n!!!!!!!! REPORT TRUNCATED !!!!!!!!\n"
+                + "The shell dump was "
+                + (actualBytes >= 0 ? actualBytes + " bytes" : "larger than the cap")
+                + "; only the first " + REPORT_BODY_MAX_BYTES + " were kept.\n"
+                + "Everything after this point (the remaining dumpsys sections: DISPLAYS, "
+                + "WINDOW STACKS, SURFACEFLINGER, CAR SERVICE, daemon logs) IS MISSING — it "
+                + "was NOT absent on the device.\n"
+                + "Lower the logcat -t bounds in BugReportCapture.\n"
+                + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    }
+
+    /**
+     * Turns the shell's truncation trailer into the human banner, on the A13 staged path.
+     *
+     * <p>Package-private for the test: this is the only place that decides whether a DL5.1 report
+     * announces its own truncation, and a report that stays silent about it is how a cut dump gets
+     * triaged as "the device produced nothing".
+     */
+    static String applyStagedTruncation(String out) {
+        if (out == null) return null;
+        final int i = out.lastIndexOf(TRUNC_MARKER);
+        // Only ever a trailer. Bounding the search to the tail means a body that happens to quote
+        // the marker (a previous report pasted into a log, say) cannot truncate the next one.
+        if (i < 0 || out.length() - i > TRUNC_MARKER.length() + 24) return out;
+        long actual = -1L;
+        try {
+            actual = Long.parseLong(out.substring(i + TRUNC_MARKER.length()).trim());
+        } catch (Throwable ignore) { /* -1: the banner still says the body was cut */ }
+        AppLogger.w(TAG, "staged shell dump truncated on device: " + actual + " B, cap "
+                + REPORT_BODY_MAX_BYTES + " B — the trailing dumpsys sections are MISSING");
+        // trimEnd would also eat the blank line the banner opens with; strip only the trailer.
+        return out.substring(0, i) + truncationBanner(actual);
     }
 
     private static void post(Context app, Runnable r) {
