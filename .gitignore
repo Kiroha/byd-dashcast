@@ -2,6 +2,9 @@
 /build/
 /app/build/
 /docs/dist/
+# Release artefacts kept ACROSS builds — outside build/ on purpose, so `clean` cannot
+# destroy the mapping a field stack trace needs (AUD-152). Not versioned: 13 MB per release.
+/dist/
 /docs/node_modules/
 /.gradle/
 *.iml

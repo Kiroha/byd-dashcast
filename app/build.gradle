@@ -1540,9 +1540,14 @@ android {
             def apkVersionName = variant.versionName
             def mappingCopy = tasks.register("copyMapping${variant.name.capitalize()}", Copy) {
                 from layout.buildDirectory.file("outputs/mapping/${buildTypeName}/mapping.txt")
-                // NOT into outputs/apk: AGP's own createReleaseApkListingFileRedirect reads that
-                // directory, and Gradle refuses the implicit dependency that writing there creates.
-                into layout.buildDirectory.dir("outputs/mapping-archive")
+                // NOT into build/ at all — that was the hole in the first version of this fix.
+                // `outputs/mapping-archive` sat inside app/build/, which .gitignore excludes and
+                // `clean` deletes, so the artefact meant to outlive the next release was destroyed
+                // by the next release. It has to live outside the build directory to mean anything.
+                //
+                // NOT into outputs/apk either: AGP's own createReleaseApkListingFileRedirect reads
+                // that directory, and Gradle refuses the implicit dependency writing there creates.
+                into rootProject.layout.projectDirectory.dir("dist/mappings")
                 rename { "DashCast-v${apkVersionName}-mapping.txt" }
                 duplicatesStrategy = DuplicatesStrategy.INCLUDE
             }
