@@ -1340,6 +1340,37 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 625 = 1.8.35-beta (eleven P2s from the 1.8.33 re-audit, and five of them are the same
+        // shape: a finding marked CORRIGE whose fix only covered half the defect. AUD-156 — a
+        // release built without the keystore was UNSIGNED, not debug-signed as three of my own
+        // texts claimed, so it could not be installed at all; explicit fallback, -debugsigned
+        // filename, and logger.quiet because logger.lifecycle is swallowed by `gradlew -q`, which
+        // is why I had not seen it. AUD-152 — the mapping archive was written inside app/build/,
+        // which `clean` deletes; moved to dist/mappings/ and the retrace procedure, never written,
+        // is now in SECURITY.md with a worked example. AUD-003 — if setNaviActive(true) threw,
+        // isHudActive stayed false forever: watchdog never armed, closeNavigation a permanent
+        // no-op, guidance writes continuing outside the guard, an arrow nothing in the app could
+        // clear; session flag and CAN acknowledgement are separate latches now, retry at 5 s
+        // instead of every guidance frame. AUD-007 — the abandoned-draft clear ran only in
+        // onDestroy, but the activity is singleTask so reopening the keyboard is onStop/onStart;
+        // the draft survived exactly the case the fix was written for. AUD-148 — reached only the
+        // services list, and its own fix took the OFF badge from 6.9:1 to 3.37:1; contrast
+        // recomputed with alpha compositing, third pill added for hidden displays, and the
+        // auto-launch badge at 1.63:1 fixed as the same class.
+        //
+        // Then the storage and report path. One unguarded getExternalFilesDir() was the FIRST
+        // statement of pruneOldFiles, and on DL5.1/A13 ROMs that throw it, the caller's
+        // catch(Throwable) meant the entire sweep silently did nothing — including the D1 voice
+        // reclaim announced to testers in 1.8.33. The screenshot pull waited with no timeout on a
+        // ~31 s daemon bootstrap per capture, on the send thread; bounded at 20 s with the
+        // non-blocking opt-out this project already uses. The send screen had no exit while that
+        // ran; a 45 s watchdog restores Cancel, in thirteen languages. The relay endpoint was
+        // storable from a file in world-writable Download without being counted or validated —
+        // counted and https-only now, and the unit test that asserted the old behaviour was
+        // pinning the defect and is flipped. Two bundles carried private copies of the zipper
+        // WITHOUT the redaction pass; a third turned up by grepping rather than assuming, in
+        // AaosDiagnosticBundle, which HudCaptureSupport's own docs claimed to protect. One
+        // ZipOutputStream left in the whole source tree. 393 unit tests, lint 0/0.)
         // 624 = 1.8.34-beta (the report redactor was not removing positions, and the consent notice
         // shipped in thirteen languages says it is. Found by the 1.8.33 re-audit and confirmed by
         // running the compiled Redactor, not by reading it: three of four real location line shapes
@@ -1400,8 +1431,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 624
-        versionName "1.8.34-beta"
+        versionCode 625
+        versionName "1.8.35-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
