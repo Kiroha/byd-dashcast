@@ -771,20 +771,55 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastContentReachedHud = true;
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
+        // Remember WHICH notification is driving the HUD, so the removal path can tell it apart
+        // from the nav app's other ongoing notifications. See onNotificationRemoved.
+        sDrivingKey = sbn.getKey();
         postNavUpdate(data);
     }
 
+    /**
+     * Key of the notification currently driving the HUD, or null when none is.
+     *
+     * Written only after the guidance gate has accepted a frame, so it identifies the ONE
+     * notification whose disappearance means the route ended. Null is treated as "unknown, close
+     * anyway": a listener that reconnects mid-route has no key yet, and failing to close a HUD is
+     * worse than closing one that was already stopping.
+     */
+    private static volatile String sDrivingKey;
+
+    /**
+     * The removal path needs the same gate the posting path has.
+     *
+     * onNotificationPosted carries a GUIDANCE-SIGNAL GATE, added because a nav app's non-guidance
+     * ongoing notifications — Waze's CLOSE_WAZE_CHANNEL prompt is the documented one — were being
+     * pushed to the HUD as a bogus "straight, 0 m" arrow (INC-20260726-140441). This method had no
+     * such gate: ANY ongoing notification from a nav package tore the HUD down. So the very prompt
+     * that gate was written to reject would, on disappearing, kill live guidance mid-route.
+     *
+     * Rather than duplicate the gate's logic, this reuses its verdict: the key of the last
+     * notification that actually passed it and reached the HUD. Only that one closing means the
+     * route is over. As a side effect it also fixes the two-nav-apps case, where one app's
+     * teardown used to cancel the other's guidance.
+     */
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         if (sbn == null || !isNavPackage(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
-        if (n != null && (n.flags & Notification.FLAG_ONGOING_EVENT) != 0) {
-            Log.d(TAG, "nav notification removed → closeNavigation");
-            postNavClose();
-            lastTitle   = "";
-            lastText    = "";
-            lastSubText = "";
+        if (n == null || (n.flags & Notification.FLAG_ONGOING_EVENT) == 0) return;
+
+        String key = sbn.getKey();
+        String driving = sDrivingKey;
+        if (driving != null && !driving.equals(key)) {
+            // A different ongoing notification from the same nav app. Not our guidance frame.
+            Log.d(TAG, "nav notification removed but it was not the one driving the HUD — ignored");
+            return;
         }
+        Log.d(TAG, "nav notification removed → closeNavigation");
+        sDrivingKey = null;
+        postNavClose();
+        lastTitle   = "";
+        lastText    = "";
+        lastSubText = "";
     }
 
     // ─── HUD write dispatch (serial writer thread) ────────────────────────

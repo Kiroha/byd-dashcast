@@ -547,7 +547,6 @@ class HudDiagActivity : AppCompatActivity() {
         bg {
             try {
             sb.append("\nRÉSULTAT (HUD arrow visible): $answer\n")
-            try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}  // clean up injected nav
             val work = File(cacheDir, zipPrefix +
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
             File(work, "01_can_bench.txt").writeText(sb.toString())
@@ -557,6 +556,20 @@ class HudDiagActivity : AppCompatActivity() {
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, caption)
             } finally {
+                // Clear what the bench put on the vehicle, BEFORE anything that can fail.
+                //
+                // This used to be one setNaviActive(false) sitting in the try, above the zip and
+                // the upload. Two problems. It only cleared the CAN registers, and the reachable
+                // benches — sendinfo2 and iconsweep — write to the instrument cluster through a
+                // second path, ClusterNavPusher/sendInfo2, which nothing cleared: a fake test
+                // manoeuvre stayed latched on the cluster after the bench ended, and the way out
+                // was to start and end a real route. And being in the try meant a failed zip or a
+                // failed upload skipped the cleanup entirely, leaving the fake guidance up on
+                // precisely the run where something already went wrong.
+                //
+                // Both paths, in the finally, each guarded so one cannot prevent the other.
+                try { ClusterNavPusher.stop() } catch (_: Throwable) {}
+                try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}
                 // Always restore the UI even if the zip/upload/diag work threw (bg's outer catch
                 // only logs) — otherwise the button stays disabled + spinner visible until recreate.
                 runOnUiThread { activeBenchButton?.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
