@@ -1556,6 +1556,18 @@ public class ClusterService extends Service
         sBootLaunchedPkg = null;
         // Nothing downstream may keep using a dead display's geometry. No-op on DL3/DL5.
         ClusterDisplayRegistry.clear();
+
+        // The mirror was compositing onto the display that just went away, and nothing here used to
+        // tell it so. stopProjectionNoAdb tears it down; this path did not, so mMirrorActive stayed
+        // true against a dead surface — and because every start is guarded by that flag, the mirror
+        // could never be started again for the rest of the process's life. On a head unit that runs
+        // for weeks, "never again" means what it says: the preview stays black until the app is
+        // force-stopped, and nothing on screen explains why.
+        try {
+            if (mMirrorManager != null) mMirrorManager.stopMirror();
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "mirror teardown on disconnect failed: " + t.getMessage());
+        }
         // On a DL3 single-OS car the "disconnect" is really "activation timed out because no
         // VirtualDisplay can exist" — tell the user projection is unavailable rather than the
         // generic "disconnected" (which reads like a transient glitch they should retry).

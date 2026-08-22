@@ -987,7 +987,14 @@ public final class FissionOrchestrator {
                 rect.width(), rect.height());
         AppLogger.i(TAG, "FISSION launchAndForce result:\n" + launchResult);
         if (!com.byd.dashcast.proxy.daemon.TaskLaunchRecovery.isSuccessful(launchResult)) {
+            // The verdict is load-bearing, the way the teardown path already makes moveToDisplay0
+            // load-bearing above. It used to be logged and stepped over: the slot was then
+            // registered as live, the layout was reported "activated", and — because activation
+            // success is what marks a layout as the auto-start favourite — a layout whose app never
+            // started could be saved as the one to bring up on every boot. The driver sees an empty
+            // cluster and an interface telling them it worked.
             AppLogger.w(TAG, "FISSION launchAndForce failed/incomplete: " + launchResult);
+            throw new IllegalStateException("launch failed for " + pkg + ": " + launchResult);
         }
 
         int layerStack = resolveLayerStack(displayId);
