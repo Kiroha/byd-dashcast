@@ -36,6 +36,38 @@ keytool -printcert -jarfile app-release.apk
 
 Confirm the printed SHA-1 equals `27:19:6E:38:6B:87:5E:76:AD:F7:00:E7:EA:84:E4:C6:EE:E3:3D:FA`. If it does not match, do not install the APK. For maximum assurance, **build from source** (the signing key used is the public AOSP test key; the keystore file itself is not committed to the repository).
 
+### Reading a stack trace from a car
+
+Release builds are minified. R8 renames everything outside `com.byd.dashcast.proxy.**`, so a crash
+reported from a vehicle arrives looking like this and means nothing on its own:
+
+```
+java.lang.RuntimeException: boom
+	at R8$$REMOVED$$CLASS$$4.a(SourceFile:1)
+```
+
+Every release therefore ships its mapping file as a **release asset**, named after the version it
+decodes: `DashCast-v<version>-mapping.txt`. Download the one matching the version in the report —
+mappings are not interchangeable between builds — then:
+
+```
+java -jar retrace.jar DashCast-v1.8.34-beta-mapping.txt trace.txt
+```
+
+which turns the frame above back into:
+
+```
+	at com.byd.dashcast.hud.HudDiagActivity$bg$1.a(SourceFile:1)
+```
+
+`retrace.jar` ships with the Android SDK (`tools/proguard/lib/`); recent command-line tools also
+provide a `retrace` wrapper. Locally, the build keeps a copy at `dist/mappings/` — deliberately
+outside `app/build/`, because `clean` would otherwise destroy the artefact needed to read a report
+about a version that has already shipped.
+
+Publishing the mapping costs nothing here: this repository is public, so it reveals strictly less
+than the source already does.
+
 ## Known: what's in the APK
 
 A DashCast release APK is a **privileged system component**, not a sandboxed consumer app. Installing it grants it powerful capabilities (input injection, SurfaceFlinger/display access, boot receiver, tethering/Wi-Fi config, microphone, network). Treat it accordingly:
