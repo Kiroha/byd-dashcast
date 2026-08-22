@@ -30,7 +30,16 @@ import java.util.Locale
  * `com.byd.carsettings` HalSetter logcat (log.docx): each windshield-HUD control maps to a
  * BYDAutoSettingDevice feature id (ECU 0x4C1 / sub 0xE).
  *
- * Three tools:
+ * Three tools were built. **Only tool 4 (sendInfo2) is reachable from this screen today** —
+ * commit 084a5849 narrowed the bench to it on the grounds that tools ①–③ were PROVEN, and removed
+ * their buttons. Tools 1 and 3 live in this file and are simply not wired; tool 2 is a separate
+ * Activity, [HudRawCaptureActivity], 271 lines, still declared in AndroidManifest.xml and
+ * reachable by nothing. This list describes what exists, not what a tester can open — the previous
+ * version of it read as an inventory of live features and cost a re-audit finding to correct.
+ *
+ * Whether tool 2 comes back or goes is a decision, not a cleanup: the code works, the manifest
+ * entry is valid, and the HUD investigation it was built for is still open.
+ *
  *  1. **Confirm the discoveries** — we send each HUD command ourselves and, after every command,
  *     ask the tester whether the expected effect happened (OK / KO). The answers + SDK result
  *     codes are zipped and uploaded to Telegram.
