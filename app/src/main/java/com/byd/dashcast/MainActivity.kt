@@ -1441,16 +1441,30 @@ class MainActivity : AppCompatActivity(),
         })
     }
 
+    /**
+     * Second half of Relaunch: the app has just been force-stopped, now put it back.
+     *
+     * Resolve from the repository FIRST, the grid only as a fallback — the same correction already
+     * applied to the auto-launch path below, for the same reason. getApps() is the UI grid, and the
+     * grid deliberately excludes favourites into their own strip. So Relaunch on a favourited app
+     * force-stopped it, failed to find it, logged a warning nobody sees, and left the cluster dark
+     * with no way back except sending the app again by hand. The more an app is used — favourited —
+     * the more certainly this broke.
+     */
     private fun relaunchFromList(pkg: String) {
-        for (a in mAppListCoordinator.getApps()) {
-            if (pkg == a.packageName) {
-                mCurrentDashboardPkg = null // clear so onSendToDashboard doesn't bail early
-                mCurrentDashboardApp = null
-                runOnUiThread { onSendToDashboard(a) }
-                return
-            }
+        val app = mAppRepo.findByPackage(pkg)
+            ?: mAppListCoordinator.getApps().firstOrNull { it.packageName == pkg }
+        if (app != null) {
+            mCurrentDashboardPkg = null // clear so onSendToDashboard doesn't bail early
+            mCurrentDashboardApp = null
+            runOnUiThread { onSendToDashboard(app) }
+            return
         }
-        AppLogger.w(TAG, "relaunchCurrentApp: pkg not found in list — $pkg")
+        // Not reachable in practice once the repository is consulted — the package was on the
+        // cluster a moment ago, so the repository knows it. Kept as the honest last word: the app
+        // has just been force-stopped and the cluster is empty, and a silent return would leave no
+        // trace of why.
+        AppLogger.w(TAG, "relaunchCurrentApp: pkg not found in repository or list — $pkg")
     }
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
