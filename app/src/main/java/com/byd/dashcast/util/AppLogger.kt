@@ -618,6 +618,23 @@ object AppLogger {
         )) {
             if (stale.isDirectory) deleted += deleteTree(stale)
         }
+        // The models were the visible leftover. This is the one that matters more: anyone who
+        // tried the PoC could paste an OpenAI API key into it, and LlmVoiceEngine kept it in its
+        // own EncryptedSharedPreferences file. D1 deleted every line that could read, rewrite or
+        // clear that key — so a live third-party credential was left on a head unit that runs for
+        // weeks, with no code and no UI able to reach it. Encrypted at rest is not the same as
+        // gone, and the population holding one is exactly the population this sweep was written
+        // for. Its Tink keyset sibling goes with it, and so do the abandoned TTS clips.
+        for (name in arrayOf("dashcast_llm_prefs.xml", "dashcast_llm_prefs")) {
+            val f = File(File(context.filesDir.parentFile, "shared_prefs"), name)
+            if (f.isFile && f.delete()) deleted++
+        }
+        try {
+            context.cacheDir.listFiles { _, n -> n.startsWith("jarvis_tts_") && n.endsWith(".mp3") }
+                ?.forEach { if (it.delete()) deleted++ }
+        } catch (t: Throwable) {
+            Log.w("AppLogger", "tts cache sweep skipped: " + t.javaClass.simpleName)
+        }
         if (extBase != null) {
             // reports/: diagnostic artefacts written by the six emitters. Invisible to the loop
             // above, which is non-recursive and keyed on three prefixes — a subdirectory would

@@ -146,4 +146,28 @@ class VoiceLeftoverCleanupTest {
         assertTrue("a file must still be produced", f != null && f.exists())
         assertTrue("and it must be on internal storage", f!!.absolutePath.startsWith(ctx.filesDir.absolutePath))
     }
+
+    /**
+     * The credential, not just the model.
+     *
+     * The voice PoC let a user paste an OpenAI API key, and kept it in its own
+     * EncryptedSharedPreferences file. D1 deleted every line that could read or clear it, so the
+     * key outlived all of its own code — a live third-party credential sitting on a head unit with
+     * nothing able to reach it. Encrypted at rest is not the same as gone.
+     */
+    @Test
+    fun `the orphaned voice credential file is removed too`() {
+        val prefsDir = File(ctx.filesDir.parentFile, "shared_prefs")
+        val llm = seed(prefsDir, "dashcast_llm_prefs.xml")
+        val ours = seed(prefsDir, "byd_app_prefs.xml")
+        val tts = seed(ctx.cacheDir, "jarvis_tts_0001.mp3")
+        val otherCache = seed(ctx.cacheDir, "byd_bugreport_work.txt")
+
+        AppLogger.pruneOldFiles(ctx, 5)
+
+        llm.forEach { assertFalse("the voice credential file must go", it.exists()) }
+        tts.forEach { assertFalse("abandoned TTS clips must go", it.exists()) }
+        ours.forEach { assertTrue("our own preferences must survive", it.exists()) }
+        otherCache.forEach { assertTrue("unrelated cache files must survive", it.exists()) }
+    }
 }

@@ -38,9 +38,6 @@
     <!-- No autofill framework on the head unit. -->
     <issue id="Autofill" severity="ignore" />
 
-    <!-- Vosk/LLM native libs are downloaded and side-loaded at runtime by
-         design (VoiceLibsManager). -->
-    <issue id="UnsafeDynamicallyLoadedCode" severity="ignore" />
 
     <!-- BYD launcher requires a fixed orientation even with the translucent
          diag theme; harmless on this platform. -->
@@ -88,10 +85,10 @@
         <ignore regexp="fixed orientation|Fixed screen orientations" />
     </issue>
 
-    <!-- onnxruntime/vosk/jna .so are EXCLUDED from the APK (packagingOptions)
-         and side-loaded at runtime by VoiceLibsManager; DiLink hardware runs
-         Android 10 with 4 KB pages — the 16 KB page-size rollout does not
-         apply to this platform. -->
+    <!-- DiLink hardware runs Android 10 with 4 KB pages; the 16 KB page-size rollout
+         does not apply to this platform. (The other half of this rationale — .so files
+         excluded from the APK and side-loaded — died with the voice subsystem in
+         1.8.33-beta: there is no native library in this APK at all any more.) -->
     <issue id="Aligned16KB" severity="ignore" />
 
     <!-- RECEIVER_EXPORTED/NOT_EXPORTED flags only take effect on API 33+;
