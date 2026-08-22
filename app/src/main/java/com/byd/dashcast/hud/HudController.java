@@ -50,6 +50,34 @@ public final class HudController {
     private volatile boolean isHudActive;
 
     /**
+     * Whether the CAN side of activation was actually accepted.
+     *
+     * Separate from {@link #isHudActive} on purpose, and the separation is the AUD-003 follow-up
+     * fix. The two mean different things: isHudActive means "a nav session is open and something
+     * will have to tear it down", which is true the moment we decide to open one; this means "the
+     * car acknowledged SETTING_NAVI_SCREEN_STATUS", which may never become true on a car that
+     * refuses the register. Conflating them left the close path unreachable on exactly those cars.
+     */
+    private boolean naviActiveAcked;
+
+    /**
+     * When the last CAN activation attempt ran, so a refusing car is retried but not spammed.
+     *
+     * <p>Initialised to {@link #NEVER_ATTEMPTED} rather than 0. Zero is a real
+     * {@link SystemClock#elapsedRealtime()} value — the instant the head unit booted — so a 0
+     * sentinel is indistinguishable from an attempt made in the first milliseconds of uptime, and
+     * on a car where that happened the first retry would have been silently delayed by a whole
+     * cadence. Cheap to get right, and the unit test for the predicate is what surfaced it.
+     */
+    private long lastActivationAttemptMs = NEVER_ATTEMPTED;
+
+    /** Sentinel for "no activation attempt has run yet"; cannot collide with elapsedRealtime(). */
+    static final long NEVER_ATTEMPTED = Long.MIN_VALUE;
+
+    /** Retry cadence for a refused activation. Guidance frames arrive far faster than this. */
+    private static final long ACTIVATION_RETRY_MS = 5_000L;
+
+    /**
      * Cached DiLink-3 gate. The windshield-HUD nav feature is DL3-only: DL3 is the
      * proven platform whose HUD MCU consumes our CAN guidance (video-confirmed across
      * SX245→SX326). DL5.1 uses a different HUD scheme and AAOS uses car_service, not
@@ -206,6 +234,7 @@ public final class HudController {
             Log.w(TAG, "setNaviActive(false) failed: " + e.getMessage());
         }
         isHudActive = false;
+        naviActiveAcked = false;
         stopWatchdog();
         ClusterNavPusher.stop();   // clear the cluster guidance too (best-effort)
         sendAmapStopBroadcast(ctx);
@@ -220,7 +249,27 @@ public final class HudController {
     // ─── Internal helpers ─────────────────────────────────────────────────
 
     private void ensureHudActive() {
-        if (isHudActive) return;
+        // AUD-003 follow-up — the session opens HERE, not when the car says yes.
+        //
+        // isHudActive used to be assigned inside the try, after CanBusController.setNaviActive(true).
+        // On a car that refuses that register the assignment never ran, and the consequences
+        // compounded: armWatchdog() never ran either, closeNavigation() short-circuited forever on
+        // `if (!isHudActive) return`, and the guidance writes further down updateNavigation() are
+        // outside that guard so they kept going. The result was an arrow on the windshield that
+        // nothing in the app could clear — not the end of the route, not onNotificationRemoved,
+        // not the staleness watchdog, because none of them could get past the flag. On top of that
+        // ensureHudActive() re-entered on every single guidance frame, re-issuing two CAN batches
+        // per frame at nav cadence.
+        //
+        // So the flag now means what its name says — a session is open and something will have to
+        // close it — and CAN acceptance is tracked separately in naviActiveAcked.
+        if (isHudActive) {
+            retryActivationIfRefused();
+            return;
+        }
+        isHudActive = true;
+        armWatchdog();
+
         // Turn the windshield HUD ON (DL3 feature id SET_HUD_SWITCH=1) so nav shows even
         // if the user had the HUD switched off — matches the video-proven CAN→HUD bench.
         // Best-effort: a failure here must not block nav activation. DL3 gating is enforced
@@ -231,17 +280,62 @@ public final class HudController {
         } catch (ProxyClient.ProxyException e) {
             Log.w(TAG, "SET_HUD_SWITCH on failed: " + e.getMessage());
         }
+        attemptCanActivation();
+    }
+
+    /**
+     * The CAN half of activation, and the only place naviActiveAcked is set.
+     *
+     * <p>ClusterNavPusher.enable() is the second output path — it switches the OEM container into
+     * nav mode so the instrument CLUSTER accepts our NaviInfo frames, which is where cars without a
+     * windshield HUD get their arrows. It only runs once the CAN register was accepted, exactly as
+     * before; what changed is that its failure no longer takes the session flag down with it.
+     */
+    private void attemptCanActivation() {
+        lastActivationAttemptMs = SystemClock.elapsedRealtime();
         try {
             CanBusController.setNaviActive(true);
-            isHudActive = true;
-            // SECOND OUTPUT PATH — switch the OEM container into nav mode so the instrument CLUSTER
-            // accepts our NaviInfo frames. Cars without a windshield HUD get their arrows from this
-            // path alone. Best-effort: it must never affect the proven CAN path above.
+            naviActiveAcked = true;
             ClusterNavPusher.enable();
-            armWatchdog();
         } catch (ProxyClient.ProxyException e) {
+            naviActiveAcked = false;
             Log.w(TAG, "setNaviActive(true) failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * Re-attempt activation on a car that refused it, at most once every {@link #ACTIVATION_RETRY_MS}.
+     *
+     * <p>The old code retried on every guidance frame, which on a refusing car meant two CAN
+     * batches per frame for the whole trip. Retrying still matters — a refusal can be transient,
+     * the daemon may have been cold — but at nav cadence, not at frame cadence.
+     */
+    private void retryActivationIfRefused() {
+        if (!shouldRetryActivation(naviActiveAcked, SystemClock.elapsedRealtime(),
+                lastActivationAttemptMs, ACTIVATION_RETRY_MS)) {
+            return;
+        }
+        attemptCanActivation();
+    }
+
+    /**
+     * The retry decision, pulled out as a pure function so it can be tested.
+     *
+     * <p>Everything else on this path needs a uid-2000 daemon and a DiLink 3 car, which is why
+     * {@code HudControllerLivenessTest} says what it says about the limits of testing here. This
+     * predicate does not, and it is where the mistake would be made: an inverted comparison, or a
+     * forgotten {@code acked} check, turns the fix back into two CAN batches per guidance frame.
+     *
+     * @param acked      whether the car has already accepted SETTING_NAVI_SCREEN_STATUS
+     * @param nowMs      current {@link SystemClock#elapsedRealtime()}
+     * @param lastTryMs  when the last activation attempt ran, 0 if never
+     * @param cadenceMs  minimum interval between attempts
+     */
+    static boolean shouldRetryActivation(boolean acked, long nowMs, long lastTryMs, long cadenceMs) {
+        if (acked) return false;
+        // Explicit, not arithmetic: nowMs - Long.MIN_VALUE overflows.
+        if (lastTryMs == NEVER_ATTEMPTED) return true;
+        return nowMs - lastTryMs >= cadenceMs;
     }
 
     // ─── Staleness watchdog impl ──────────────────────────────────────────
