@@ -33,7 +33,29 @@ object ClusterNavPusher {
 
     /** naviState in the NaviInfo FlatBuffer: 1 = guiding (what the OEM sends while navigating). */
     private const val NAVI_STATE_GUIDING = 1
-    private const val NAVI_STATE_STOPPED = 0
+
+    /**
+     * naviState the OEM writes when it stops guiding.
+     *
+     * Was 0, which is a GUIDING state, not a stopped one — docs/HUD_DILINK3_HANDOFF.md:146 records
+     * TYPE = 0 or 1 as the two guiding values. The OEM's own clear
+     * (AmapService.reSetGuideInfo → sendNaviInfoTo1for2Clster) sets naviState = 9, and this app's
+     * broadcast close path has always sent TYPE = 9 (HudController.sendAmapStopBroadcast); only the
+     * sendInfo2 path disagreed.
+     */
+    private const val NAVI_STATE_STOPPED = 9
+
+    /**
+     * nextTurnIcon that actually clears the glyph.
+     *
+     * Icon id 0 is a NO-OP: the cluster's Navigation.qml keeps whatever arrow it was already
+     * showing (firmware-confirmed from cluster_theme{1,2}.rcc, and the reason U_TURN_RIGHT had to
+     * move off 0). So the end-of-route frame was leaving the last manoeuvre arrow lit on the
+     * cluster. The OEM clears with -1 (AmapService:151), and its reader treats -1 as "no icon".
+     * The FlatBuffer builder omits a scalar equal to its 0 default, so the old frame did not even
+     * carry the field — -1 is written.
+     */
+    private const val NO_TURN_ICON = -1
 
     /** Set once the container has been switched into nav mode for the current session. */
     @Volatile private var enabled = false
@@ -147,18 +169,27 @@ object ClusterNavPusher {
         }
     }
 
+    /**
+     * The end-of-route frame, built apart from [stop] so a test can pin it.
+     *
+     * It is the only frame whose entire job is to make something disappear, and every value that
+     * means "no change" is indistinguishable from a working clear until an owner reports an arrow
+     * stuck on their cluster. Mirrors the OEM's reSetGuideInfo: -1 everywhere, because 0 is a
+     * legitimate distance and reads as "0 m to the turn", not as "there is no turn".
+     */
+    internal fun buildClearPayload(): ByteArray = NaviInfoPayloadBuilder.build(
+        naviState = NAVI_STATE_STOPPED,
+        nextRouteName = "",
+        curToSegmentDist = -1,
+        nextTurnIcon = NO_TURN_ICON,
+        routeRemainTime = -1,
+        routeRemainDist = -1)
+
     /** Clears the cluster guidance at the end of a route. Best-effort; never throws. */
     @JvmStatic
     fun stop() {
         try {
-            val payload = NaviInfoPayloadBuilder.build(
-                naviState = NAVI_STATE_STOPPED,
-                nextRouteName = "",
-                curToSegmentDist = 0,
-                nextTurnIcon = 0,
-                routeRemainTime = 0,
-                routeRemainDist = 0)
-            ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, payload)
+            ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, buildClearPayload())
         } catch (t: Throwable) {
             Log.w(TAG, "cluster stop failed: ${t.message}")
         } finally {
