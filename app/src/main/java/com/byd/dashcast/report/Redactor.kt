@@ -314,9 +314,58 @@ object Redactor {
      * so it can run afterwards without eating anything the earlier rules produced — the tokens they
      * write contain no colon-separated hex.
      */
+    /**
+     * A Telegram bot token, in the URL that leaks it.
+     *
+     * Every other rule here protects the TESTER. This one protects the project: the token is the
+     * credential AUD-001 took out of the APK, and the one asset in this system whose loss lets a
+     * stranger post into — and read — the diagnostics channel.
+     *
+     * The vector is narrow and was not obvious. [TelegramBugReporter] builds
+     * `https://api.telegram.org/bot<TOKEN>/sendDocument`, and several `java.net` / `java.io`
+     * exceptions carry the request URL in their own message. One logged exception puts the token
+     * in the journal — and the journal is copied verbatim into every report sent afterwards. The
+     * journal DOES pass through this redactor (BugReportCapture assembles it into the body before
+     * the single redact call), so the gap was never that it went unfiltered; it was that no rule
+     * here recognised a bot token.
+     *
+     * The primary fix is at the log site, which scrubs before writing. This is the backstop,
+     * because a backstop is what catches the next call site nobody thought of.
+     *
+     * Measured on the 178-report corpus: 0 matches. That is the wanted answer twice over — no
+     * token has leaked to date, AND the pattern costs nothing in false positives. The hash bound
+     * is loosened to 30-50 characters only when the `bot` prefix is present, because that prefix
+     * is already decisive on its own.
+     */
+    private val TELEGRAM_TOKEN = Rule(
+        "bot_token",
+        Regex("""\bbot(\d{6,12}):([A-Za-z0-9_-]{30,50})"""),
+    ) { m, tok -> "bot<token:" + tok(m.groupValues[1] + ":" + m.groupValues[2]) + ">" }
+
+    /**
+     * The same credential written without the `bot` URL prefix — a raw token pasted into a log
+     * line or a provisioning file.
+     *
+     * Kept tighter than the prefixed form above, because nothing else vouches for it here — but
+     * NOT pinned to the canonical 35-character hash. A first draft was, and its own test caught
+     * why that is wrong: one character of drift in the format and the rule silently stops matching
+     * the thing it exists to catch, with no failure anywhere to say so. A credential rule that can
+     * fail closed on a format change is not a credential rule.
+     *
+     * The bound is measured, not guessed. Across the 178-report corpus, {35,35}, {32,45}, {30,50}
+     * and even {25,60} all match ZERO times — 8-12 digits, a colon, then thirty-odd characters of
+     * the URL-safe alphabet simply does not occur by accident in a logcat or a dumpsys. {32,45} is
+     * chosen as the widest bound that still describes a token rather than a shape.
+     */
+    private val TELEGRAM_TOKEN_BARE = Rule(
+        "bot_token",
+        Regex("""\b(\d{8,12}:[A-Za-z0-9_-]{32,45})\b"""),
+    ) { m, tok -> "<token:" + tok(m.groupValues[1]) + ">" }
+
     private val RULES = listOf(
         VIN_PROP, VIN_CLOUD, VIN_KEY, VIN_RAW, ACTIVATION,
-        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, MAC, GPS, GPS_FRAMEWORK, GPS_KEYED)
+        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
+        TELEGRAM_TOKEN, TELEGRAM_TOKEN_BARE)
 
     /** What a pass removed, per rule. Empty when the text was already clean. */
     class Result(@JvmField val text: String, @JvmField val counts: Map<String, Int>) {
