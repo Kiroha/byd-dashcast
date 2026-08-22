@@ -1304,9 +1304,15 @@ class SysInfoActivity : AppCompatActivity() {
         // always supplies a value, so get() never returns null here (it is nonetheless
         // typed nullable in Kotlin → !! at the call sites is safe by construction).
         private val SDF_REPORT_HEADER: ThreadLocal<SimpleDateFormat> =
-            ThreadLocal.withInitial { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
+            ThreadLocal.withInitial { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT) }
+        // Locale.ROOT, not getDefault(): this stamp goes into a FILENAME and into the report
+        // header, both of which are machine-read — by the Telegram pull script's filename filter
+        // and by triage. AppLogger already learned this the hard way and documents it: on an
+        // Arabic head unit getDefault() renders Arabic-Indic digits, and the artefact stops
+        // matching the pattern everything downstream expects. SDF_TIME_HMS / SDF_TIME_HM below
+        // feed on-screen text only and legitimately stay on getDefault().
         private val SDF_FILE_STAMP: ThreadLocal<SimpleDateFormat> =
-            ThreadLocal.withInitial { SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()) }
+            ThreadLocal.withInitial { SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT) }
         private val SDF_TIME_HMS: ThreadLocal<SimpleDateFormat> =
             ThreadLocal.withInitial { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
         private val SDF_TIME_HM: ThreadLocal<SimpleDateFormat> =

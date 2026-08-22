@@ -84,6 +84,17 @@ class BugWizardActivity : Activity() {
 
     // Step 2 (issue) — selection + optional free-text details, sent via an explicit button.
     private var mSelectedIssue: String? = null
+
+    /**
+     * Position of the chosen issue inside its category array, or -1.
+     *
+     * The stable identity of a symptom, and the reason it is an index rather than a slug: the nine
+     * issue arrays are pinned to identical item counts across all thirteen locales — this screen
+     * already indexes them BY POSITION to work at all — so position N means the same symptom in
+     * every language. Inventing English slugs would mean 47 new strings that can drift out of sync
+     * with the arrays they mirror; the index cannot.
+     */
+    private var mSelectedIssueIndex: Int = -1
     private var mDetailsField: EditText? = null
     private var mBtnSend: MaterialButton? = null
     private var mBtnCancel: View? = null
@@ -413,14 +424,15 @@ class BugWizardActivity : Activity() {
         mLlIssues.removeAllViews()
         mIssueButtons.clear()
         mSelectedIssue = null
+        mSelectedIssueIndex = -1
 
         // Issue chips: a tap now just selects (highlights) the issue; the report is sent
         // by the explicit "Send" button below, so the optional free-text can be filled first.
         val issues = resources.getStringArray(ISSUE_ARRAYS[mCategory])
-        for (issue in issues) {
+        for ((index, issue) in issues.withIndex()) {
             val btn = makeOutlinedButton(issue)
             btn.isCheckable = true
-            btn.setOnClickListener { onIssuePicked(issue, btn) }
+            btn.setOnClickListener { onIssuePicked(issue, index, btn) }
             mLlIssues.addView(btn)
             mIssueButtons.add(btn)
         }
@@ -473,9 +485,10 @@ class BugWizardActivity : Activity() {
     }
 
     /** Marks the picked issue chip (single-choice) and enables the Send button. */
-    private fun onIssuePicked(issue: String, picked: MaterialButton) {
+    private fun onIssuePicked(issue: String, index: Int, picked: MaterialButton) {
         if (mSending) return
         mSelectedIssue = issue
+        mSelectedIssueIndex = index
         for (b in mIssueButtons) {
             b.isChecked = b === picked
         }
@@ -533,6 +546,10 @@ class BugWizardActivity : Activity() {
             (if (mNavSeen.isEmpty()) "" else "\nNavSeen: $mNavSeen") +
             "\nApp: " + (if (mAppPkg.isEmpty()) mAppLabel else "$mAppLabel ($mAppPkg)") +
             "\nIssue: " + mSelectedIssue +
+            // The label is what a human reads; this is what a triager can group by. Without it the
+            // same symptom reported in French, Arabic and Polish is three unrelated strings, and
+            // the category line next to it already carries a stable key for exactly this reason.
+            "\nIssueKey: " + CAT_KEYS.getOrElse(mCategory) { "other" } + "/" + mSelectedIssueIndex +
             (if (details.isEmpty()) "" else "\nDetails: $details") +
             "\nDevice: " + BugReportCapture.deviceLine() +
             "\nVersion: " + BugReportCapture.versionLine() +
