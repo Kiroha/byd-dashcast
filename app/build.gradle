@@ -1340,6 +1340,36 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 626 = 1.8.36-beta (the last 23 P3s of the 1.8.33 re-audit, re-opened against the tree
+        // as it is now rather than as the audit found it: 45 commits had landed since, and seven of
+        // the twenty-three no longer held — five were misreadings, two were already fixed. The
+        // sixteen that survived are here. AUD-220 — on DL5.1 the report body had NO size cap at
+        // all: the 4 MB limit and its truncation banner live in readFile(), which only Android 10
+        // reaches, so since the A13 staging path was added the cap has been dead code on exactly
+        // the platform whose dumps are largest. Capped on the device now, and `head -c` runs only
+        // when the cap is actually exceeded so the ordinary path stays the plain `cat` it has
+        // always been. Same file: the DL3 dump was getting the 60 s wedged-transport timeout
+        // instead of the 120 s constant that exists for it, and an interrupted capture stranded a
+        // multi-megabyte UNREDACTED dump in /data/local/tmp that nothing ever swept. AUD-221 — the
+        // relay retried a read timeout that happened AFTER the body was fully written, against a
+        // relay that does not deduplicate: one Send could post the same report twice. AUD-224 —
+        // ClusterNavPusher.stop() cleared with naviState 0 and icon 0, and both mean "carry on", so
+        // the last manoeuvre arrow stayed lit after the route ended; the OEM's own clear values
+        // (9 / -1) were already in this tree twice. AUD-222/223 — a checkbox whose default
+        // disagreed with both its consumers, a notification re-posted after a stop, a badge shown
+        // without its foreground service, Cancel not cancelling in the layout editor, and a
+        // favourite lost when the screen closed mid-activation. AUD-225 — three places trusting the
+        // wrong signal, the worst being a HUD listener that latched "armed" on having made the call
+        // rather than on the daemon's answer, so one truthful "not yet" disabled HUD capture for
+        // the life of the process. AUD-226 — the secret-scan workflow pasted the release tag into
+        // its own shell. Three test gaps closed and mutation-verified: redaction was proved nowhere
+        // it is APPLIED (deleting a call site left the suite green), the binder-throttle tests
+        // passed with the throttle removed, and the boot discriminator had none. AUD-230 — owner
+        // decisions: ReportDelivery and the AAOS diagnostic trio are deleted, HudRawCaptureActivity
+        // deliberately kept, and the OK status pill finally gets the dedicated text token the warn
+        // pill got in AUD-148 (4.26:1 -> 6.54:1 in day mode, md_status_ok untouched). A review pass
+        // over my own sixteen fixes narrowed two of them. 421 unit tests, lint 0/0, release APK
+        // -19,856 bytes.)
         // 625 = 1.8.35-beta (eleven P2s from the 1.8.33 re-audit, and five of them are the same
         // shape: a finding marked CORRIGE whose fix only covered half the defect. AUD-156 — a
         // release built without the keystore was UNSIGNED, not debug-signed as three of my own
@@ -1431,8 +1461,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 625
-        versionName "1.8.35-beta"
+        versionCode 626
+        versionName "1.8.36-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
