@@ -1241,7 +1241,7 @@ class SysInfoActivity : AppCompatActivity() {
         // green badge: the two halves of the same widget disagreeing about what they meant.
         if (running) {
             badge.text = getString(if (useConnBadge) R.string.sysinfo_svc_conn else R.string.sysinfo_svc_run)
-            badge.setTextColor(ContextCompat.getColor(this, R.color.md_status_ok))
+            badge.setTextColor(ContextCompat.getColor(this, R.color.md_pill_ok_text))
             badge.setBackgroundResource(R.drawable.bg_status_pill_ok)
         } else {
             badge.text = getString(R.string.sysinfo_svc_off)

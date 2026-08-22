@@ -63,6 +63,8 @@
          they follow the night theme, which the hard-coded #2BD576 never did. -->
     <color name="md_pill_ok_fill">#1F3CD070</color>
     <color name="md_pill_ok_stroke">#563CD070</color>
+    <!-- Night needs no darkening either: md_status_ok on its own tint measures 9.10:1. -->
+    <color name="md_pill_ok_text">#3CD070</color>
     <color name="md_pill_off_fill">#1F6E7783</color>
     <color name="md_pill_off_stroke">#566E7783</color>
     <!-- Night needs no darkening: md_status_warn on its own tint already measures 6.90:1. -->

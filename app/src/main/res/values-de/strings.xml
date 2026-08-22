@@ -503,10 +503,6 @@
     <string name="bug_wizard_pick_issue">Wähle oben ein Problem</string>
     <string name="bug_wizard_selected_fmt">Ausgewählt: %1$s</string>
     <string name="toast_adb_port_refused">ADB nicht erreichbar (Port 5555) — Spiegelung auf diesem Gerät nicht verfügbar</string>
-    <string name="hud_visual_title">HUD-Sichtprüfung</string>
-    <string name="hud_visual_yes">Ja</string>
-    <string name="hud_visual_no">Nein</string>
-    <string name="hud_visual_unsure">Nicht sicher</string>
     <string name="aaos_cluster_unsupported_title">Cluster-Projektion blockiert</string>
     <string name="aaos_cluster_unsupported_msg">Ihr Fahrzeug nutzt das Android-Automotive-System von BYD (DX_BYD_AUTO). Auf diesem Gerät ist das Kombiinstrument vom Hersteller gesperrt: BYD reserviert es für die integrierte Navigation und blockiert die App-Projektion. Dies ist eine Fahrzeugbeschränkung (keine DashCast-Einschränkung) — es gibt keine Umgehung.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Cluster-Projektion nicht verfügbar</string>
