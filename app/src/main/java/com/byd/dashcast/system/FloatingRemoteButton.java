@@ -309,6 +309,15 @@ badge.setOnTouchListener(new View.OnTouchListener() {
             if (sShouldBeVisible) {
                 mFloatView.setVisibility(View.VISIBLE);
                 triggerDimTimer();
+                // Same v1.2.74 invariant show() upholds: a visible badge means a foreground
+                // service. This path was flipping only the visibility, so on the first run after
+                // install — overlay permission not yet granted when the badge was first asked for
+                // — the badge came back on screen with no ongoing notification and the service
+                // demoted to an ordinary started one, i.e. a prime reclaim target. Losing it takes
+                // the badge with it, and the badge is the only route back to the mirror and to the
+                // bug reporter. No-op on the common path: promoteForeground returns immediately
+                // when already foreground, and swallows the A13 background-start refusal.
+                promoteForeground();
                 AppLogger.d(TAG, "Overlay created — applying deferred show()");
             } else {
                 mDimHandler.postDelayed(mDimRunnable, 3000);
