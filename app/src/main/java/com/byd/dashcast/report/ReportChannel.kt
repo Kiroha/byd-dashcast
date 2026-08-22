@@ -283,12 +283,34 @@ object ReportChannel {
         if (sas.isNotEmpty()) {
             if (saveAzure(ctx, kv["azure.blobUrl"].orEmpty(), sas)) applied++
         }
-        // Not counted as a credential set: it is an endpoint, and a file that carries only this
-        // has provisioned nothing that needs protecting.
-        val relay = kv["relay.url"].orEmpty()
+        // The relay endpoint IS security-relevant, and the previous version of this comment
+        // argued the opposite: "it is an endpoint, and a file that carries only this has
+        // provisioned nothing that needs protecting". That is wrong twice over.
+        //
+        // First, this is where every diagnostic report goes. The provisioning file is read from
+        // Download — a world-writable directory on Android — so any application able to write
+        // there could re-point the egress of a report containing logcat, dumpsys and cluster
+        // screenshots at an endpoint of its choosing.
+        //
+        // Second, because it was not counted, the screen said "provisioning file found but no
+        // usable credentials in it" AFTER storing it. The one visible signal told the user the
+        // opposite of what had happened.
+        //
+        // Counted now, and validated: https only. Rejecting http is not paranoia — it is the
+        // difference between a report that is intercepted in transit and one that is not, and no
+        // legitimate relay needs cleartext.
+        val relay = kv["relay.url"].orEmpty().trim()
         if (relay.isNotEmpty()) {
-            try { prefs(ctx)?.edit()?.putString(K_RELAY_URL, relay.trim())?.apply() }
-            catch (t: Throwable) { AppLogger.w(TAG, "relay url not stored (" + t.javaClass.simpleName + ")") }
+            if (!relay.startsWith("https://", ignoreCase = true)) {
+                AppLogger.w(TAG, "relay url rejected: not https")
+            } else {
+                try {
+                    prefs(ctx)?.edit()?.putString(K_RELAY_URL, relay)?.apply()
+                    applied++
+                } catch (t: Throwable) {
+                    AppLogger.w(TAG, "relay url not stored (" + t.javaClass.simpleName + ")")
+                }
+            }
         }
         return applied
     }

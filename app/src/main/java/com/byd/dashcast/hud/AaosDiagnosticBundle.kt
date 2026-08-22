@@ -182,17 +182,17 @@ object AaosDiagnosticBundle {
     }
 
     // ── zip ───────────────────────────────────────────────────────────────────
-    fun zipDir(work: File): File {
-        val zip = File(work.parentFile, work.name + ".zip")
-        ZipOutputStream(FileOutputStream(zip)).use { zos ->
-            work.walkTopDown().filter { it.isFile }.forEach { f ->
-                zos.putNextEntry(ZipEntry(f.relativeTo(work).path))
-                FileInputStream(f).use { it.copyTo(zos) }
-                zos.closeEntry()
-            }
-        }
-        return zip
-    }
+    /**
+     * Delegates to the shared redacting zipper.
+     *
+     * This used to be a third private copy of the same loop, without the redaction pass —
+     * alongside the one in BydApkExtractionBundle. [HudCaptureSupport.zipDir]'s own documentation
+     * named this bundle as one of the three it protects, and it was not protecting it: the AAOS
+     * diagnostic carries a device-wide logcat and a getprop sweep, and shipped them raw under a
+     * consent notice promising the opposite in thirteen languages.
+     */
+    fun zipDir(work: File): File =
+        HudCaptureSupport.zipDir(work, File(work.parentFile, work.name + ".zip"))
 
     // ── helpers ────────────────────────────────────────────────────────────────
     private data class Candidate(val tier: String, val pkg: String, val apkPath: String)
