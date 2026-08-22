@@ -45,6 +45,25 @@ class RelayUploaderTest {
     private fun setRelay(url: String) =
         ReportChannel.applyProperties(ctx, "relay.url=$url")
 
+    /**
+     * Points the uploader at a local socket, WITHOUT going through [ReportChannel.applyProperties].
+     *
+     * applyProperties rejects anything that is not https, on purpose. A test that tried to
+     * configure http://127.0.0.1 through it does not get a local relay — it gets a silently
+     * unchanged store, [RelayUploader.url] falls back to DEFAULT_URL, and the test uploads to the
+     * PRODUCTION relay, which answers 200 and forwards the junk into the triage topic. That is not
+     * hypothetical: it happened while these two cases were being written. Write the key the
+     * accessor actually reads, and assert the endpoint before sending anything.
+     */
+    private fun setLocalRelay(port: Int): String {
+        val url = "http://127.0.0.1:$port/api/report"
+        ctx.getSharedPreferences("test_relay", Context.MODE_PRIVATE)
+            .edit().putString("relay_url", url).commit()
+        assertEquals("the uploader must be aimed at the local socket, never at production",
+            url, RelayUploader.url())
+        return url
+    }
+
     // ── the gate ────────────────────────────────────────────────────────────────────────────
 
     @Test
@@ -187,6 +206,108 @@ class RelayUploaderTest {
         // idle, and reports are rare by nature, so the first attempt of a real report is exactly
         // the one most likely to meet a waking function.
         assertEquals(2_000L, RelayUploader.RETRY_DELAY_MS)
+    }
+
+    /**
+     * The ambiguous failure: the relay took the whole report and then went quiet.
+     *
+     * A retry cannot recover that — the relay does not deduplicate (relay/README.md), so if the
+     * first copy landed, the second one lands too and the triage topic gets the same incident
+     * twice. It also re-uploads the whole report from a car on a phone hotspot to do it.
+     *
+     * The server here accepts the connection, reads the body to the last byte, and closes without
+     * answering. That is the real shape of the case — same as a read timeout, without waiting
+     * READ_TIMEOUT_MS for it.
+     */
+    @Test
+    fun `a relay that takes the body and never answers is not retried`() {
+        ReportConsent.grant(ctx)
+        val accepted = java.util.concurrent.atomic.AtomicInteger(0)
+        val server = java.net.ServerSocket(0, 4, java.net.InetAddress.getByName("127.0.0.1"))
+        val done = java.util.concurrent.CountDownLatch(1)
+
+        val t = Thread {
+            try {
+                while (true) {
+                    val s = server.accept()
+                    accepted.incrementAndGet()
+                    // Read the request head, then exactly Content-Length body bytes, so the upload
+                    // completes normally and the failure lands on the response read — not earlier.
+                    val input = s.getInputStream()
+                    var length = 0
+                    val head = StringBuilder()
+                    while (!head.endsWith("\r\n\r\n")) {
+                        val c = input.read()
+                        if (c < 0) break
+                        head.append(c.toChar())
+                    }
+                    Regex("(?i)content-length:\\s*(\\d+)").find(head)?.let {
+                        length = it.groupValues[1].toInt()
+                    }
+                    var read = 0
+                    val buf = ByteArray(8192)
+                    while (read < length) {
+                        val n = input.read(buf, 0, minOf(buf.size, length - read))
+                        if (n < 0) break
+                        read += n
+                    }
+                    s.close()          // the whole body is in, and the relay says nothing
+                    done.countDown()
+                }
+            } catch (_: Throwable) { /* server closed — that is how this thread ends */ }
+        }
+        t.isDaemon = true
+        t.start()
+
+        setLocalRelay(server.localPort)
+        val f = java.io.File.createTempFile("relay", ".txt")
+        f.writeText("x".repeat(200))
+        try {
+            val err = RelayUploader.send(f, "caption", RelayUploader.TOPIC_BUG)
+            done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            // The retry sleeps RETRY_DELAY_MS before reconnecting, so if it were going to fire it
+            // would have by now — send() has already returned.
+            assertEquals("the report must be posted exactly once", 1, accepted.get())
+            assertTrue("the failure must be reported", err != null && err.isNotEmpty())
+            assertTrue("and it must warn that the send may have worked: $err",
+                err!!.contains("may already have been sent"))
+        } finally {
+            f.delete()
+            server.close()
+        }
+    }
+
+    /**
+     * The other half of the same decision: a failure BEFORE the body is out reached nothing, so it
+     * must still be retried. This is the cold-start case the retry was built for, and narrowing
+     * the retry must not have taken it with it.
+     */
+    @Test
+    fun `a connection refused before the body is out is still retried`() {
+        ReportConsent.grant(ctx)
+        // Bind then immediately close: the port is almost certainly free, so the connect is
+        // refused outright and no body is ever written.
+        val probe = java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))
+        val deadPort = probe.localPort
+        probe.close()
+
+        setLocalRelay(deadPort)
+        val f = java.io.File.createTempFile("relay", ".txt")
+        f.writeText("x".repeat(200))
+        try {
+            val started = System.currentTimeMillis()
+            val err = RelayUploader.send(f, "caption", RelayUploader.TOPIC_BUG)
+            val elapsed = System.currentTimeMillis() - started
+            assertTrue("a failure must be reported", err != null && err.isNotEmpty())
+            // Two attempts means the RETRY_DELAY_MS sleep happened between them. Timing is the
+            // only observable here, and the margin is wide enough not to flake.
+            assertTrue("the retry must still fire on a pre-body failure (took ${elapsed} ms)",
+                elapsed >= RelayUploader.RETRY_DELAY_MS)
+            assertFalse("and it is not the ambiguous case: $err",
+                err!!.contains("may already have been sent"))
+        } finally {
+            f.delete()
+        }
     }
 
     @Test

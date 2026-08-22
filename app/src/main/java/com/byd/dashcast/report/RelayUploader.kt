@@ -126,6 +126,9 @@ object RelayUploader {
     private fun attempt(endpoint: String, file: File, caption: String?, topic: String): Failure? {
 
         var conn: HttpURLConnection? = null
+        // Flips the moment the last body byte is out. Before that, a failure IS a failure and the
+        // retry is exactly right. After that, the outcome is unknown — see the catch below.
+        var bodyWritten = false
         return try {
             conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
@@ -155,6 +158,7 @@ object RelayUploader {
             FileInputStream(file).use { input ->
                 conn.outputStream.use { out -> input.copyTo(out, 64 * 1024) }
             }
+            bodyWritten = true
             val code = conn.responseCode
             if (code in 200..299) {
                 AppLogger.i(TAG, "relayed ${file.name} (${file.length()} bytes) to $topic")
@@ -170,9 +174,25 @@ object RelayUploader {
                 Failure("relay refused: HTTP $code $detail".trim(), retryable = code >= 500)
             }
         } catch (t: Throwable) {
-            // No HTTP status at all: connection refused, timed out, reset mid-body. This is the
-            // cold-start and flaky-hotspot case, and the one a retry exists for.
-            Failure(t.message ?: t.javaClass.simpleName, retryable = true)
+            // No HTTP status at all. WHEN it happened decides whether trying again is safe.
+            //
+            // Before the body is out — connection refused, DNS, reset mid-body — nothing reached
+            // the relay, and this is the cold-start and flaky-hotspot case the retry exists for.
+            //
+            // After the body is out, the only thing left to fail is the READ of the response, and
+            // the relay has already been handed the whole report: it may well have forwarded it to
+            // Telegram and simply answered too slowly. It does not deduplicate (relay/README.md),
+            // so retrying here does not recover an unknown — it converts it into a guaranteed
+            // duplicate whenever the first one landed, and re-uploads tens of megabytes from a car
+            // on a phone hotspot to do it. Surface it instead, and say the send may have worked so
+            // the tester does not blindly send a third copy.
+            val msg = t.message ?: t.javaClass.simpleName
+            if (bodyWritten) {
+                Failure("relay did not answer ($msg) — the report may already have been sent",
+                        retryable = false)
+            } else {
+                Failure(msg, retryable = true)
+            }
         } finally {
             try { conn?.disconnect() } catch (_: Throwable) { }
         }
