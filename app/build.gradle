@@ -1581,6 +1581,14 @@ android {
                 into rootProject.layout.projectDirectory.dir("dist/mappings")
                 rename { "DashCast-v${apkVersionName}-mapping.txt" }
                 duplicatesStrategy = DuplicatesStrategy.INCLUDE
+                // The version has to be a DECLARED input, not just a value captured by the rename
+                // closure. Gradle does not look inside the closure, so with only the source file
+                // and the destination directory tracked, bumping versionName left the task
+                // UP-TO-DATE: 1.8.35 was built and dist/mappings/ still held exactly one file,
+                // DashCast-v1.8.34-beta-mapping.txt, with 1.8.34's content. A mapping labelled
+                // with the wrong release is worse than no mapping — it decodes a trace into
+                // plausible, wrong names — and it is the same failure AUD-152 exists to prevent.
+                inputs.property("versionName", apkVersionName)
             }
             variant.assembleProvider.configure { finalizedBy(mappingCopy) }
         }
