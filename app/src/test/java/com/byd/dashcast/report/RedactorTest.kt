@@ -299,4 +299,134 @@ class RedactorTest {
         val line = "WifiService: SSID: \"somebody\" connected"
         assertEquals(null, redact(line).counts["reporter"])
     }
+
+    // ─── framework position carriers (the AUD-004 gap) ──────────────────────────────────────
+
+    /**
+     * Every line below is copied verbatim out of a real report in the corpus, not invented. They
+     * are the four shapes `Location[` / `Loc[` takes on these ROMs, and before GPS_FRAMEWORK every
+     * one of them left the car with the position intact while the consent notice told the driver
+     * positions were removed.
+     */
+    @Test
+    fun `the framework location carrier is redacted in all four real shapes`() {
+        val real = listOf(
+            "06-22 08:03:45.218   657  1128 V GnssLocationProvider: incoming location Location[gps,655440,265461 hAcc=3.7900925 et=+20h4m5s141ms alt=185.0020751953125 vAcc=2.5 vel=0.0 sAcc=0.080622576]",
+            "07-15 14:14:26.971   338  1346 V GnssLocationProvider: reportLoc Loc[1,335222,373752 hAcc=4 et=+1d1h15m3s48ms -23.19012451171875 3.79 318.4 vAcc=3 sAcc=2 bAcc=25]",
+            "18:05:26.089  1222  1844 D LocationManagerService: incoming location: Location[,571343,836721 hAcc=4 et=+4m55s125ms alt=516.86]",
+            "V GnssLocationProvider: reportLocation Loc[fused,655440,265461 hAcc=4]",
+        )
+        for (line in real) {
+            val r = redact(line)
+            assertEquals("one position removed from: $line", 1, r.counts["gps"])
+            assertTrue("token missing in: ${r.text}", r.text.contains("<coords:"))
+        }
+    }
+
+    /** The AOSP form, for a ROM that prints the pair the way the platform documents it. */
+    @Test
+    fun `the AOSP space-separated form is redacted too`() {
+        val r = redact("D LocationManagerService: incoming location: Location[fused 48.858370,2.294481 hAcc=12.0]")
+        assertEquals(1, r.counts["gps"])
+        assertFalse(r.text.contains("48.858370"))
+        assertFalse(r.text.contains("2.294481"))
+    }
+
+    /**
+     * What must survive. The accuracy, altitude and satellite figures are the diagnostic content
+     * and identify nobody; removing them would cost triage and protect no one.
+     */
+    @Test
+    fun `only the coordinate pair goes, the diagnostics stay`() {
+        val r = redact("Location[gps,655440,265461 hAcc=3.79 alt=185.002 vel=0.0 {Bundle[{satellites=27, maxCn0=41}]}]")
+        assertFalse("the position must be gone", r.text.contains("655440,265461"))
+        assertTrue("hAcc must stay", r.text.contains("hAcc=3.79"))
+        assertTrue("altitude must stay", r.text.contains("alt=185.002"))
+        assertTrue("satellite count must stay", r.text.contains("satellites=27"))
+        assertTrue("the carrier must stay readable", r.text.contains("Location[gps,"))
+    }
+
+    /**
+     * 235 lines in the corpus are `reportLocation [ hAcc=…` — the framework already omitted the
+     * coordinates. There is nothing to remove, and matching them would make the summary line
+     * claim positions were redacted when none were present.
+     */
+    @Test
+    fun `a location line with no coordinates is not counted`() {
+        val line = "07-17 17:09:23.987   590  1329 V GnssLocationProvider: reportLocation [ hAcc=4 et=+3h53m11s744ms =283.43585205078125 vAcc=3 sAcc=0 bAcc=???]"
+        val r = redact(line)
+        assertEquals("nothing to redact here", null, r.counts["gps"])
+        assertEquals(line, r.text)
+    }
+
+    /** The same fix logged twice reads as the same place — the corpus has 164 repeats of one. */
+    @Test
+    fun `the same position yields the same token within one report`() {
+        val r = redact("A Location[gps,655440,265461 hAcc=4]\nB Location[gps,655440,265461 hAcc=4]\n")
+        val tokens = Regex("<coords:([^>]+)>").findAll(r.text).map { it.groupValues[1] }.toList()
+        assertEquals(2, tokens.size)
+        assertEquals("a stationary car must still read as one place", tokens[0], tokens[1])
+    }
+
+    /** And a different place must not collide with it. */
+    @Test
+    fun `a different position yields a different token`() {
+        val r = redact("A Location[gps,655440,265461 hAcc=4]\nB Location[gps,335222,373752 hAcc=4]\n")
+        val tokens = Regex("<coords:([^>]+)>").findAll(r.text).map { it.groupValues[1] }.toList()
+        assertEquals(2, tokens.size)
+        assertNotEquals(tokens[0], tokens[1])
+    }
+
+    /** The pre-existing third-party carrier must keep working — this rule was not replaced. */
+    @Test
+    fun `the GpsMonitor carrier still works alongside the framework one`() {
+        val r = redact(
+            "I CameraDaemon: GpsMonitor: GPS: 48.858370,2.294481 alt=35\n" +
+            "V GnssLocationProvider: incoming location Location[gps,655440,265461 hAcc=4]\n"
+        )
+        assertEquals("both carriers counted under one name", 2, r.counts["gps"])
+        assertFalse(r.text.contains("48.858370"))
+        assertFalse(r.text.contains("655440,265461"))
+    }
+
+    /** Idempotence: a second pass must not tokenise the token. */
+    @Test
+    fun `redacting twice changes nothing the second time`() {
+        val once = redact("Location[gps,655440,265461 hAcc=4]").text
+        val twice = redact(once)
+        assertEquals(null, twice.counts["gps"])
+        assertEquals(once, twice.text)
+    }
+
+    /** The OEM's charge-point lookup posts the car's position as query parameters. Real line. */
+    @Test
+    fun `a position carried as named parameters is redacted`() {
+        val r = redact("""E m_tag   : postPar:{"param":"language=zh_CN&lon=3.12092513&lat=50.6654332&dataType=charge","sourceType":0}""")
+        assertEquals(2, r.counts["gps"])
+        assertFalse(r.text.contains("3.12092513"))
+        assertFalse(r.text.contains("50.6654332"))
+        assertTrue("the keys stay so the carrier is still identifiable", r.text.contains("lon=<coords:"))
+        assertTrue("the rest of the parameter string is untouched", r.text.contains("dataType=charge"))
+    }
+
+    /**
+     * A zero position identifies nobody, and its presence is the diagnostic — the fix had not
+     * arrived yet. Same reasoning as the all-zero MAC.
+     */
+    @Test
+    fun `a zero coordinate is kept`() {
+        val line = "AutoNavi: 拥堵length:0 toDist:-1 lon:0.0 0.0 roadSpeed:0"
+        val r = redact(line)
+        assertEquals(null, r.counts["gps"])
+        assertEquals(line, r.text)
+    }
+
+    /** The window manager's decimal pairs are 92% of the corpus noise and must survive untouched. */
+    @Test
+    fun `window manager scale factors are not mistaken for a position`() {
+        val line = "InputDispatcher: globalScale=1.000000, windowScale=(1.000000,1.000000), touchableRegion=[0,0][1920,720]"
+        val r = redact(line)
+        assertEquals(null, r.counts["gps"])
+        assertEquals(line, r.text)
+    }
 }
