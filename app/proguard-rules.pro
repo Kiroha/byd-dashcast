@@ -6,7 +6,7 @@
 # (the uid-2000 daemon). R8 cannot see those as reachable, so getting a rule
 # wrong strips/renames a class and the failure only appears AT RUNTIME ON THE
 # CAR (daemon dead, no cluster/CAN/HUD). Validate on the DL3 + DL5 on-car matrix
-# (daemon spawn, cluster launch/resize, CAN/HUD, voice wake->Vosk, IAM launch)
+# (daemon spawn, cluster launch/resize, CAN/HUD, IAM launch)
 # before shipping any minified release.
 # ============================================================================
 
@@ -56,19 +56,16 @@
 -dontwarn android.hardware.display.**
 
 # ============================================================================
-# Native / JNI dependencies — ONNX Runtime, Vosk (Kaldi via JNA), Tink.
+# Native / JNI dependencies — Tink (via androidx.security-crypto).
+#
+# The ONNX Runtime, Vosk, Kaldi and JNA rules that used to live here went with the
+# voice subsystem in 1.8.33-beta. None of those packages is in the dependency graph
+# any more, so the -keep rules matched nothing and the -dontwarn lines suppressed
+# warnings about absent classes — which is how a keep file quietly stops describing
+# the app it protects. The generic native-methods rule below stays: it is not
+# specific to those libraries.
 # ============================================================================
 -keepclasseswithmembernames,includedescriptorclasses class * { native <methods>; }
-
--keep class ai.onnxruntime.** { *; }
--dontwarn ai.onnxruntime.**
-
--keep class org.vosk.** { *; }
--keep class org.kaldi.** { *; }
--keep class com.sun.jna.** { *; }
--keepclassmembers class * extends com.sun.jna.** { *; }
--dontwarn org.vosk.**
--dontwarn com.sun.jna.**
 
 # security-crypto / Tink registers primitives reflectively
 -keep class com.google.crypto.tink.** { *; }

@@ -72,7 +72,8 @@ and you decide what happens to it.
 ## What is never collected
 
 No contacts, no messages, no media, no browsing history, no continuous location tracking, no
-microphone recording outside the voice feature, and no unique advertising identifier. The
+microphone recording of any kind — the voice feature it once carved an exception for was removed
+in 1.8.33-beta, along with the RECORD_AUDIO permission — and no unique advertising identifier. The
 application does not have a server that tracks installations.
 
 ## What you can do
