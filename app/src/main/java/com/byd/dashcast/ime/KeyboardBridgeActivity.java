@@ -434,22 +434,47 @@ public class KeyboardBridgeActivity extends Activity {
     @Override
     protected void onStop() {
         sShowing = false;
+        endSession();
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
         sShowing = false;
-        // AUD-007 — the session ends here, and so must anything typed in it but never validated.
-        // The accessibility service outlives this dialog; without this, a draft the user abandoned
-        // is replayed onto the cluster the next time someone presses Done in a fresh session.
-        try { ClusterImeWatcherService.clearPendingText(); } catch (Throwable ignored) { }
+        endSession();
         try {
             if (mImm != null && mInput != null) {
                 mImm.hideSoftInputFromWindow(mInput.getWindowToken(), 0);
             }
         } catch (Exception ignored) { }
         super.onDestroy();
+    }
+
+    /**
+     * Discard anything typed in this session but never validated.
+     *
+     * <p>AUD-007 put this in {@code onDestroy} only, and that is not where the session ends. This
+     * activity is {@code launchMode="singleTask"} (AndroidManifest.xml:175), so re-opening the
+     * bridge reuses the existing instance: the lifecycle is onStop then onStart, and onDestroy
+     * never runs. The abandoned draft therefore survived exactly the case the fix was written for —
+     * leave the keyboard without validating, come back later, press Done, and the previous
+     * session's destination is what leaves for the cluster. In a car that means being routed to an
+     * address the driver had given up on, with zero keystrokes.
+     *
+     * <p>Both the relay's pending text and the local field are cleared, the latter under
+     * {@code mSuppressRelay} so the TextWatcher does not forward the housekeeping clear to the
+     * cluster as {@code setTextOnCluster("")} — the other half of AUD-007, and the same trap.
+     *
+     * <p>Idempotent: onStop is followed by onDestroy on a real teardown, and clearing twice costs
+     * nothing.
+     */
+    private void endSession() {
+        try { ClusterImeWatcherService.clearPendingText(); } catch (Throwable ignored) { }
+        if (mInput != null) {
+            mSuppressRelay = true;
+            try { mInput.setText(""); } catch (Throwable ignored) { }
+            finally { mSuppressRelay = false; }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
