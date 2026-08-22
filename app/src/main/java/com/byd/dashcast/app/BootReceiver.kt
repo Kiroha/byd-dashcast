@@ -58,14 +58,26 @@ class BootReceiver : BroadcastReceiver() {
         val releaseOne = Runnable {
             if (pending.decrementAndGet() == 0) result.finish()
         }
+        /**
+         * Takes a token for one piece of background work and returns the runnable that releases
+         * it. Taking the token IS how a branch obtains its release, so a branch cannot schedule
+         * work without being counted — which is the only way this counter fails. A forgotten
+         * increment finishes the broadcast while work is still running and the system is then free
+         * to kill the process mid-task; a forgotten release wedges the broadcast until the ANR
+         * timeout. Neither shows up anywhere a reader would look, so the shape has to prevent it.
+         */
+        fun takeToken(): Runnable {
+            pending.incrementAndGet()
+            return releaseOne
+        }
 
         if (isReplace) {
-            pending.incrementAndGet()
+            val done = takeToken()
             sMain.postDelayed({
                 try {
                     OtaRelaunchCoordinator.relaunchIfPending(appCtx, "MY_PACKAGE_REPLACED")
                 } finally {
-                    releaseOne.run()
+                    done.run()
                 }
             }, 750L)
         }
@@ -74,7 +86,7 @@ class BootReceiver : BroadcastReceiver() {
             // Phase 5 — pre-warm the proxy daemon at boot so the first user
             // action doesn't pay the ~1.9 s bootstrap cost (measured cold
             // sendInfo in build-178 device log = 1916 ms; warm = 3 ms).
-            pending.incrementAndGet()
+            val done = takeToken()
             Thread({
                 try {
                     AppLogger.i("BootReceiver", "daemon pre-warm starting...")
@@ -87,7 +99,7 @@ class BootReceiver : BroadcastReceiver() {
                     // Pre-warm failure must never block boot.
                     AppLogger.w("BootReceiver", "daemon pre-warm threw: " + t.message)
                 } finally {
-                    releaseOne.run()
+                    done.run()
                 }
             }, "daemon-prewarm").start()
         }
@@ -103,14 +115,14 @@ class BootReceiver : BroadcastReceiver() {
                 // little so the daemon pre-warm connects first; the orchestrator runs on its own bg
                 // thread. MainActivity's later call to the same method no-ops (one-shot per process).
                 AppLogger.i("BootReceiver", "DashCast Auto-Boot: layout auto-start (headless)")
-                pending.incrementAndGet()
+                val done = takeToken()
                 sMain.postDelayed({
                     try {
                         FissionOrchestrator.maybeAutoStartOnAppLaunch(appCtx)
                     } catch (t: Throwable) {
                         AppLogger.w("BootReceiver", "layout auto-start failed: " + t.message)
                     } finally {
-                        releaseOne.run()
+                        done.run()
                     }
                 }, 3_000L)
             } else {
@@ -141,19 +153,20 @@ class BootReceiver : BroadcastReceiver() {
             // ACTION_MY_PACKAGE_REPLACED is exempt: our process was just replaced at an
             // arbitrary uptime, and apps really can be stranded on the cluster then.
             val uptimeMs = SystemClock.elapsedRealtime()
-            if (!isReplace && uptimeMs > BOOT_CLEANUP_WINDOW_MS) {
+            if (!BootCleanupPolicy.shouldCleanup(isReplace, uptimeMs)) {
                 AppLogger.i("BootReceiver", "BOOT_COMPLETED re-delivered at uptime " +
-                        (uptimeMs / 1000) + "s (> " + (BOOT_CLEANUP_WINDOW_MS / 1000) +
+                        (uptimeMs / 1000) + "s (> " +
+                        (BootCleanupPolicy.BOOT_CLEANUP_WINDOW_MS / 1000) +
                         "s) — not a real boot, skipping display cleanup")
             } else {
-                pending.incrementAndGet()
+                val done = takeToken()
                 Thread({
                     try {
                         BootDisplayCleanup.cleanup(context)
                     } catch (e: Exception) {
                         AppLogger.e("BootReceiver", "Display cleanup error: " + e.message)
                     } finally {
-                        releaseOne.run()
+                        done.run()
                     }
                 }, "boot-display-cleanup").start()
             }
@@ -174,15 +187,15 @@ class BootReceiver : BroadcastReceiver() {
         // code it replaces. The keeper's dedupe rule makes the two passes safe.
         val hotspotAutoStart = prefs.getBoolean(SettingsActivity.PREF_HOTSPOT_AUTOSTART_BOOT, false)
         if (hotspotAutoStart) {
-            pending.incrementAndGet()
+            val done = takeToken()
             // 3 s — same rationale as the layout auto-start above: let the daemon pre-warm connect
             // first, because the keeper's first launch route is a uid-2000 `am start` through that
             // daemon. Shorter than the old 7 s: we no longer fire blind, so an early pass costs one
-            // dumpsys, not a wasted popup. runImmediatePass never throws and invokes releaseOne
+            // dumpsys, not a wasted popup. runImmediatePass never throws and invokes the release
             // exactly once (run-once guard + a 12 s internal safety timeout), so the goAsync token
             // cannot leak — and 3 s + 12 s is far inside the ~60 s a background broadcast is given.
             sMain.postDelayed({
-                HotspotKeeper.runImmediatePass(appCtx, "boot/ACC-on", releaseOne)
+                HotspotKeeper.runImmediatePass(appCtx, "boot/ACC-on", done)
             }, 3_000L)
         }
 
@@ -200,15 +213,5 @@ class BootReceiver : BroadcastReceiver() {
 
     companion object {
         private val sMain = android.os.Handler(android.os.Looper.getMainLooper())
-
-        /**
-         * Uptime ceiling below which a BOOT_COMPLETED is accepted as a genuine boot (AUD-006).
-         * This ROM re-delivers the broadcast at every ACC-on without rebooting, and
-         * `elapsedRealtime()` keeps counting from the last real boot — a re-delivery therefore
-         * reports hours where a genuine boot reports seconds. 180 s leaves ample room for a slow
-         * head-unit boot while staying orders of magnitude below the observed re-deliveries
-         * (25 min into a 15-hour-old boot).
-         */
-        private const val BOOT_CLEANUP_WINDOW_MS = 180_000L
     }
 }
