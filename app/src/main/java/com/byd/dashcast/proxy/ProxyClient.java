@@ -108,6 +108,21 @@ public final class ProxyClient {
             "TRIG=" + DAEMON_TRIGGER + "; "
             + "PS_OUT=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy'); "
             + "ALIVE_PID=$(echo \"$PS_OUT\" | awk '{print $2}' | head -n1); "
+            // AUD — the process NAME is not an identity. `ps -A | grep dashcast_proxy` matches
+            // any process whose name merely contains that string, and any app can obtain one by
+            // declaring an android:process ending in dashcast_proxy in its own manifest. With the version
+            // file already holding the current versionCode — which it does as soon as a real
+            // daemon has run once — such a process made this take the REBROADCAST path forever:
+            // the genuine uid-2000 daemon was never started again, and every privileged feature
+            // stayed dead with no error anywhere.
+            //
+            // The pid file is the identity, because only uid 2000 can write /data/local/tmp.
+            // A name match that does not agree with it is not our daemon.
+            + "PID_FILE_VAL=$(cat /data/local/tmp/dashcast_proxy.pid 2>/dev/null); "
+            + "if [ -n \"$ALIVE_PID\" ] && [ \"$ALIVE_PID\" != \"$PID_FILE_VAL\" ]; then "
+            +   "echo \"[diag] proxy name-match pid=$ALIVE_PID != pidfile=${PID_FILE_VAL:-none} — ignoring\" >&2; "
+            +   "ALIVE_PID=; "
+            + "fi; "
             + "if [ -n \"$ALIVE_PID\" ]; then "
             // Version check: daemon loaded from old APK after OTA has a stale
             // versionCode in VERSION_FILE — fall through to kill+restart instead

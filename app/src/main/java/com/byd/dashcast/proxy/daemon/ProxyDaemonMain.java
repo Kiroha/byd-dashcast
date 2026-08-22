@@ -1301,8 +1301,34 @@ public final class ProxyDaemonMain {
         if (t instanceof java.lang.reflect.InvocationTargetException && t.getCause() != null) {
             cause = t.getCause();
         }
-        if (cause instanceof Exception) return (Exception) cause;
-        return new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
+        if (isParcelEncodable(cause)) return (Exception) cause;
+        // Everything else becomes IllegalStateException, which IS encodable, carrying the original
+        // type and message in its own message so nothing is lost for triage.
+        //
+        // Handing Parcel.writeException an Exception is not enough — it only encodes eight
+        // well-known types. For anything else it writes code 0, which the client reads as "no
+        // exception", and THEN throws on the daemon side. So the app was told the verb succeeded
+        // and went on to read a zeroed return value: a failed launch, a refused CAN write or a
+        // missing task came back as success with 0, and the app acted on it. Silent wrong answers
+        // are the worst failure mode this binder can have, and this was producing them for every
+        // exception type outside that set of eight.
+        return new IllegalStateException(
+                cause.getClass().getName() + ": " + cause.getMessage(), cause);
+    }
+
+    /** The exact set {@link android.os.Parcel#writeException} can encode. Anything else is code 0. */
+    private static boolean isParcelEncodable(Throwable t) {
+        return t instanceof SecurityException
+                || t instanceof android.os.BadParcelableException
+                || t instanceof IllegalArgumentException
+                || t instanceof NullPointerException
+                || t instanceof IllegalStateException
+                || t instanceof android.os.NetworkOnMainThreadException
+                || t instanceof UnsupportedOperationException
+                // By name: android.os.ServiceSpecificException is a hidden API and is not in the
+                // compileSdk 33 stubs, but it IS one of the eight the platform can encode, and a
+                // binder verb can genuinely receive one from a system service.
+                || "android.os.ServiceSpecificException".equals(t.getClass().getName());
     }
 
     /** Package-visible so verb classes (e.g. the AutoContainer callback listener in
