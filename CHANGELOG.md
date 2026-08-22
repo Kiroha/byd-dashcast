@@ -14,6 +14,22 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.34-beta (versionCode 624)
+
+**The bug reporter was not removing positions, and the consent notice promised it was.** Found by a full re-audit of 1.8.33, and confirmed by running the compiled redactor rather than by reading it: three of the four location line shapes that occur in real reports passed straight through in clear.
+
+The single position rule was anchored on `GpsMonitor` — a third-party dashcam tag that appears nowhere else in this tree, not in anything the Android framework emits. Measured across 178 real reports: that rule covered **16 positions in 16 reports**, while **218 in 19 reports** left the car untouched through `Location[…]` / `Loc[…]`, and **14 more in 7 reports** through `lat=`/`lon=` parameters posted by an OEM service. These ROMs print the pair with the decimal point implied, which is why it does not read as a coordinate at a glance: `Location[gps,655440,265461 hAcc=3.79 …]` is 65.5440, 26.5461 — about ten metres.
+
+What makes this more than an oversight: AUD-004's own counter-verification had quoted one of those framework lines as its reason for keeping the finding at P1, and the fix then shipped without covering it. Meanwhile `consent_body`, shown in thirteen languages before every send, says positions are removed — an inaccurate assurance is worse than silence.
+
+Two rules added, both anchored on their carrier and both measured rather than guessed. Of every `Loc[`/`Location[` occurrence in 176 reports, **zero** fall outside the new pattern and all four shapes are positional. The keyed `lat=`/`lon=` rule has 14 hits, **zero** outside ±90/±180 — anchored on the key because the shape alone is 92% noise (727 free decimal pairs survive both rules; the sample is the window manager's `globalScale`/`windowScale`, every time).
+
+Kept deliberately: `hAcc`, `alt`, `vel` and the satellite bundle, which are the diagnostic content and identify nobody; and a zero coordinate, for the same reason the all-zero MAC is kept — `lon:0.0` in a nav frame means the fix had not arrived, which is itself the signal.
+
+**Verdict from the compiled redactor over all 176 real reports: 245 positions removed across 38 reports, 0 left in clear.** Before this release, 229 of those 245 were leaving the car.
+
+383 unit tests, 11 new — every one built from a line copied verbatim out of a real report, including the negative cases, which is where this class of rule actually fails: the coordinate-less `reportLocation [ hAcc=…` form (235 lines in the corpus) must not be counted, and the window manager's scale factors must not be touched. lint green with 0 errors on both variants.
+
 ### 1.8.33-beta (versionCode 623)
 
 **The APK is 36% smaller and the microphone permission is gone.** 10 367 492 bytes to 6 607 550. Every OTA every car downloads is a third smaller, and the storage it occupies afterwards shrinks with it.
