@@ -27,6 +27,13 @@
     <!-- Log / Diag backgrounds -->
     <!-- Static pure colors -->
     <color name="pure_white">#FFFFFF</color>
+    <!-- Auto-launch badge. The glyph is dark ON PURPOSE and has no values-night twin: the amber
+         is fixed in both themes, so a theme-varying text token would break one of them. White on
+         this amber measured 1.63:1 — the same text-colour-versus-container mismatch as AUD-146 and
+         AUD-148, on the one badge a user sees in the ordinary app list. This pairing is 10.56:1.
+         The sibling shortcut badge is left alone: white on its #1565C0 blue is 5.65:1. -->
+    <color name="auto_launch_badge_fill">#FFC107</color>
+    <color name="auto_launch_badge_on">#1A1B1F</color>
 
     <!-- ============================================ -->
     <!-- Material 3 tokens (LIGHT scheme) — source #1565C0 -->
@@ -72,6 +79,13 @@
     <color name="md_pill_ok_stroke">#562E7D32</color>
     <color name="md_pill_off_fill">#1F74777F</color>
     <color name="md_pill_off_stroke">#5674777F</color>
+    <!-- Warn pill: a state the API cannot see, not a fault. Fill and stroke follow the sibling
+         recipe (12% / 34% of the status colour), but the TEXT does not use md_status_warn: on its
+         own tinted ground #E65100 measures 2.81:1, worse than the badge this replaces. #A63A00 is
+         the same hue two steps darker and measures 4.83:1, which clears AA for 11sp bold. -->
+    <color name="md_pill_warn_fill">#1FE65100</color>
+    <color name="md_pill_warn_stroke">#56E65100</color>
+    <color name="md_pill_warn_text">#A63A00</color>
 
     <color name="md_status_ok">#2E7D32</color>
     <color name="md_status_warn">#E65100</color>
