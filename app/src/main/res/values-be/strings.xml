@@ -404,6 +404,7 @@
     <string name="bug_send">Адправіць</string>
     <string name="bug_status_capturing">Збор журнала…</string>
     <string name="bug_status_sending">Адпраўка…</string>
+    <string name="bug_status_slow">Адпраўка доўжыцца даўжэй, чым звычайна — можна скасаваць.</string>
     <string name="bug_status_error_fmt">Памылка: %1$s</string>
     <string name="bug_sent_ok">Справаздача адпраўлена ✓ Дзякуй!</string>
     <string name="bug_share_subject">DashCast — Справаздача пра памылку</string>

@@ -404,6 +404,7 @@
     <string name="bug_send">Yuborish</string>
     <string name="bug_status_capturing">Jurnal olinmoqda…</string>
     <string name="bug_status_sending">Yuborilmoqda…</string>
+    <string name="bug_status_slow">Yuborish kutilganidan uzoqroq davom etmoqda — bekor qilishingiz mumkin.</string>
     <string name="bug_status_error_fmt">Xato: %1$s</string>
     <string name="bug_sent_ok">Hisobot yuborildi ✓ Rahmat!</string>
     <string name="bug_share_subject">DashCast — Xato hisoboti</string>

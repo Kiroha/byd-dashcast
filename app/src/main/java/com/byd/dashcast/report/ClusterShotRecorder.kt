@@ -15,6 +15,7 @@ import com.byd.dashcast.hud.HudCaptureSupport
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.daemon.SurfaceDaemon
+import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.util.AppLogger
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -287,7 +288,32 @@ object ClusterShotRecorder {
     @JvmStatic
     fun pullShotsInto(ctx: Context, destDir: File): Int {
         return try {
-            sExecutor.submit<Int> { pullShotsIntoNow(ctx.applicationContext, destDir) }.get()
+            // Two bounds, because the screenshots are an OPTIONAL attachment and the report is not.
+            //
+            // The .get() had no timeout, and the work behind it walks every shot through
+            // ProxyClient.readFileChunk. With a cold or dead uid-2000 daemon each of those pays the
+            // ~31 s blocking bootstrap — once per screenshot — on the thread that is trying to send
+            // a bug report. The scenario is not exotic: it is precisely the daemon-down case the
+            // report exists to capture, and the user is sitting in front of a Send button that has
+            // already disabled itself.
+            //
+            // setNonBlockingReconnect is the opt-out this project already uses at exactly this kind
+            // of site (BugReportCapture.hudStateSnapshot:455/464). The verbs fail fast instead of
+            // waiting for a bootstrap, and a missing screenshot is strictly better than a report
+            // that never leaves. Restored in a finally because the pooled thread is reused.
+            sExecutor.submit<Int> {
+                ProxyClient.setNonBlockingReconnect(true)
+                try {
+                    pullShotsIntoNow(ctx.applicationContext, destDir)
+                } finally {
+                    ProxyClient.setNonBlockingReconnect(false)
+                }
+            }.get(PULL_BUDGET_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (te: java.util.concurrent.TimeoutException) {
+            // The work keeps running on sExecutor and may still finish; we simply stop waiting for
+            // it. Whatever landed in destDir before the budget expired is still attached.
+            AppLogger.w(TAG, "pull shots exceeded ${PULL_BUDGET_MS}ms — sending without them")
+            0
         } catch (ie: InterruptedException) {
             Thread.currentThread().interrupt()
             0
@@ -296,6 +322,16 @@ object ClusterShotRecorder {
             0
         }
     }
+
+    /**
+     * How long a send may wait for the optional screenshots.
+     *
+     * Sized against the thing it is protecting from: a single daemon bootstrap is about 31 s, so
+     * anything at or above that lets one cold verb consume the whole budget. Twenty seconds is
+     * comfortably more than a healthy pull of the ring buffer needs and comfortably less than one
+     * bootstrap.
+     */
+    private const val PULL_BUDGET_MS = 20_000L
 
     private fun pullShotsIntoNow(ctx: Context, destDir: File): Int {
         val shots = listRemoteShots(ctx)

@@ -167,6 +167,7 @@
     <string name="bug_send">Envoyer</string>
     <string name="bug_status_capturing">Capture du journal…</string>
     <string name="bug_status_sending">Envoi en cours…</string>
+    <string name="bug_status_slow">Envoi plus long que prévu — vous pouvez annuler.</string>
     <string name="bug_status_error_fmt">Erreur : %1$s</string>
     <string name="bug_sent_ok">Rapport envoyé ✓ Merci !</string>
     <string name="bug_share_subject">DashCast — Rapport de bug</string>

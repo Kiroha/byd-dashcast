@@ -404,6 +404,7 @@
     <string name="bug_send">Senden</string>
     <string name="bug_status_capturing">Protokoll wird erfasst…</string>
     <string name="bug_status_sending">Wird gesendet…</string>
+    <string name="bug_status_slow">Das Senden dauert länger als erwartet – Sie können abbrechen.</string>
     <string name="bug_status_error_fmt">Fehler: %1$s</string>
     <string name="bug_sent_ok">Bericht gesendet ✓ Danke!</string>
     <string name="bug_share_subject">DashCast — Fehlerbericht</string>

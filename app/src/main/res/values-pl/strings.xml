@@ -413,6 +413,7 @@
     <string name="bug_send">Wyślij</string>
     <string name="bug_status_capturing">Przechwytywanie dziennika…</string>
     <string name="bug_status_sending">Wysyłanie…</string>
+    <string name="bug_status_slow">Wysyłanie trwa dłużej niż zwykle — możesz anulować.</string>
     <string name="bug_status_error_fmt">Błąd: %1$s</string>
     <string name="bug_sent_ok">Zgłoszenie wysłane ✓ Dziękujemy!</string>
     <string name="bug_share_subject">DashCast — Zgłoszenie błędu</string>

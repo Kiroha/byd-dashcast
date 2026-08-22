@@ -61,6 +61,25 @@ class BugWizardActivity : Activity() {
     private var mAppPkg = ""
     private var mAppLabel = ""
     private var mSending = false
+
+    /**
+     * Re-opens an exit if the send has not reached a terminal state in time.
+     *
+     * Every nominal outcome ends the screen — onSent finishes, onFailed and the unconfigured
+     * branch go through shareFallback which finishes, and a capture onError re-enables the
+     * controls. So this is not about a permanent lock. It is about the window in between: from the
+     * moment Send is tapped, Send, Back and Cancel are all disabled and onBackPressed delegates to
+     * a goBack() that returns early on mSending, so there is no way off this screen at all. A slow
+     * upload can hold that for the length of a connect plus a read timeout plus a retry, and the
+     * person holding the phone is sitting in a car.
+     *
+     * After the budget the Cancel button comes back and says so. The send is not aborted — it may
+     * still succeed, and its callbacks are already guarded against a destroyed Activity.
+     */
+    private var mSendWatchdog: Runnable? = null
+
+    /** How long Send may hold the screen with no exit before Cancel is restored. */
+    private val mSendWatchdogMs = 45_000L
     private var mTgHandle = ""
 
     // Step 2 (issue) — selection + optional free-text details, sent via an explicit button.
@@ -489,6 +508,7 @@ class BugWizardActivity : Activity() {
         // starts with `if (mSending) return`. Disabling it closes the race window in the nominal
         // case; the lifecycle guard in onReady covers every other destruction path.
         mBtnCancel?.isEnabled = false
+        armSendWatchdog()
         mTvStatus.visibility = View.VISIBLE
         mTvStatus.setText(R.string.bug_status_capturing)
 
@@ -570,6 +590,7 @@ class BugWizardActivity : Activity() {
             }
 
             override fun onError(message: String, partial: File?) {
+                disarmSendWatchdog()
                 mSending = false
                 mBtnBack.isEnabled = true
                 mBtnSend?.isEnabled = true
@@ -586,6 +607,7 @@ class BugWizardActivity : Activity() {
             mTvStatus.setText(R.string.bug_status_sending)
             TelegramBugReporter.send(this, file, caption, object : TelegramBugReporter.Callback {
                 override fun onSent() {
+                    disarmSendWatchdog()
                     Toast.makeText(this@BugWizardActivity, R.string.bug_sent_ok, Toast.LENGTH_LONG).show()
                     finish()
                 }
@@ -682,6 +704,12 @@ class BugWizardActivity : Activity() {
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
+    override fun onDestroy() {
+        // The posted Runnable holds this Activity; a send that outlives the screen must not.
+        disarmSendWatchdog()
+        super.onDestroy()
+    }
+
     override fun onBackPressed() {
         goBack()
     }
@@ -788,7 +816,28 @@ class BugWizardActivity : Activity() {
      * indistinguishable from a bug. The toast is the whole difference between "it failed and here
      * is your report" and "something odd happened".
      */
+    private fun armSendWatchdog() {
+        disarmSendWatchdog()
+        val r = Runnable {
+            mSendWatchdog = null
+            if (isFinishing || isDestroyed) return@Runnable
+            // Cancel only. Send stays disabled: a second submission while the first may still be
+            // in flight is how a report gets delivered twice.
+            mBtnCancel?.isEnabled = true
+            mTvStatus.text = getString(R.string.bug_status_slow)
+            AppLogger.w(TAG, "send exceeded ${mSendWatchdogMs}ms — Cancel restored")
+        }
+        mSendWatchdog = r
+        mTvStatus.postDelayed(r, mSendWatchdogMs)
+    }
+
+    private fun disarmSendWatchdog() {
+        mSendWatchdog?.let { mTvStatus.removeCallbacks(it) }
+        mSendWatchdog = null
+    }
+
     private fun shareFallback(file: File) {
+        disarmSendWatchdog()
         try {
             mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
             Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),

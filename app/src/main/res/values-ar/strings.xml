@@ -404,6 +404,7 @@
     <string name="bug_send">إرسال</string>
     <string name="bug_status_capturing">جارٍ التقاط السجل…</string>
     <string name="bug_status_sending">جارٍ الإرسال…</string>
+    <string name="bug_status_slow">الإرسال يستغرق وقتًا أطول من المتوقع — يمكنك الإلغاء.</string>
     <string name="bug_status_error_fmt">خطأ: %1$s</string>
     <string name="bug_sent_ok">تم إرسال التقرير ✓ شكرًا!</string>
     <string name="bug_share_subject">DashCast — تقرير خطأ</string>
