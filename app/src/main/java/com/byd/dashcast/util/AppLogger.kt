@@ -316,7 +316,7 @@ object AppLogger {
     @JvmStatic
     fun writeFile(context: Context, prefix: String, content: String?): File? {
         val filename = prefix + sFileFmt.get()!!.format(Date()) + ".log"
-        val outDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val outDir = externalFilesDirOrNull(context) ?: context.filesDir
         if (!outDir.exists()) outDir.mkdirs()
         val outFile = File(outDir, filename)
         return try {
@@ -517,7 +517,7 @@ object AppLogger {
         var deleted = 0
 
         // External files dir: byd_log_*, byd_report_*, BYD_RE_Sniffer_*
-        val extDir = context.getExternalFilesDir(null)
+        val extDir = externalFilesDirOrNull(context)
         if (extDir != null && extDir.exists()) {
             val files = extDir.listFiles()
             if (files != null) {
@@ -582,7 +582,7 @@ object AppLogger {
         if (context == null || keepPerPrefix < 1) return 0
         val prefixes = arrayOf("byd_log_", "byd_report_", "BYD_RE_Sniffer_")
         var deleted = 0
-        val dirs = arrayOf(context.getExternalFilesDir(null), context.filesDir)
+        val dirs = arrayOf(externalFilesDirOrNull(context), context.filesDir)
         for (dir in dirs) {
             if (dir == null || !dir.exists()) continue
             val entries = dir.listFiles() ?: continue
@@ -610,7 +610,7 @@ object AppLogger {
         // File() rather than getExternalFilesDir("vosk"): the qualified form creates the
         // directory as a side effect, which would have this cleanup manufacture the very
         // thing it is meant to remove.
-        val extBase = context.getExternalFilesDir(null)
+        val extBase = externalFilesDirOrNull(context)
         for (stale in listOfNotNull(
             extBase?.let { File(it, "vosk") },   // Vosk model, external
             File(context.filesDir, "vosk"),      // Vosk model, internal fallback
@@ -662,6 +662,35 @@ object AppLogger {
      * files, not directories. Best-effort by design: this runs on a housekeeping sweep, and a
      * directory that resists deletion must never take the sweep down with it.
      */
+    /**
+     * [Context.getExternalFilesDir] without the throw, returning null when it fails.
+     *
+     * That API routes through StorageManagerService and its AppOps package/uid check, and on some
+     * DL5.1 / Android 13 ROMs it raises SecurityException("callingPackage does not match UID").
+     * The project has known this since 1.6.101, when it took down the whole bug-report feature, and
+     * BugReportCapture.newFile has guarded it ever since — but four call sites in THIS file never
+     * were, and their failure modes are worse than a missing directory:
+     *
+     *  - [writeFile] and [saveToFile] crash the process on the Share/Save-log tap, because the call
+     *    sits above the try and the catch below only handles IOException.
+     *  - [pruneOldFiles] makes it its first storage statement, so on those ROMs the entire
+     *    storage-hygiene sweep never runs: not the log rotation that exists because an app directory
+     *    once reached 1.08 GB, not the reports prune, not the exported-APK prune, and not the D1
+     *    voice-leftover reclaim shipped in 1.8.33 — which was announced to testers as something the
+     *    app would do for them, on the very ROM family most likely to still hold the download.
+     *
+     * Returning null rather than falling back to filesDir is deliberate here: the callers want to
+     * know the external directory is unavailable so they can keep working on internal storage,
+     * which for the sweep means the vosk/ and voice_libs/ deletions still happen.
+     */
+    private fun externalFilesDirOrNull(context: Context): File? = try {
+        context.getExternalFilesDir(null)
+    } catch (t: Throwable) {
+        // android.util.Log, not our own w(): this can be reached from the log plumbing itself.
+        Log.w("AppLogger", "getExternalFilesDir threw (" + t.javaClass.simpleName + ") — external storage skipped")
+        null
+    }
+
     private fun deleteTree(dir: File): Int {
         var n = 0
         try {

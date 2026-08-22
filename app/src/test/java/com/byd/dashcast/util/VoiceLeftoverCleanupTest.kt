@@ -101,4 +101,49 @@ class VoiceLeftoverCleanupTest {
 
         assertFalse(File(ctx.filesDir, "voice_libs").exists())
     }
+
+    /**
+     * The DL5.1 / Android 13 case, which is the one that matters for D1.
+     *
+     * getExternalFilesDir() routes through StorageManagerService and throws SecurityException on
+     * some of those ROMs — a defect this project has known since 1.6.101. It used to be the FIRST
+     * storage statement in pruneOldFiles, outside any try, so on those cars the whole sweep was
+     * abandoned: no log rotation, no reports prune, and no voice reclaim. The 1.8.33 release notes
+     * promised testers the app would reclaim their Vosk model, and on the ROM family most likely
+     * to still be holding it, nothing ran.
+     *
+     * Internal storage is unaffected by that failure, so the internal half must still be cleaned.
+     */
+    @Test
+    fun `the sweep still cleans internal storage when getExternalFilesDir throws`() {
+        val internalVosk = File(ctx.filesDir, "vosk")
+        seed(internalVosk, "model.zip")
+        val voiceLibs = File(ctx.filesDir, "voice_libs")
+        seed(voiceLibs, "libvosk.so")
+        val keep = seed(File(ctx.filesDir, "shared_prefs"), "byd_app_prefs.xml")
+
+        val throwing = object : android.content.ContextWrapper(ctx) {
+            override fun getExternalFilesDir(type: String?): File? =
+                throw SecurityException("callingPackage does not match UID")
+        }
+
+        // Must not throw, and must not give up on the internal half.
+        AppLogger.pruneOldFiles(throwing, 5)
+
+        assertFalse("internal vosk/ must still be reclaimed", internalVosk.exists())
+        assertFalse("voice_libs/ must still be reclaimed", voiceLibs.exists())
+        keep.forEach { assertTrue("${it.path} must survive", it.exists()) }
+    }
+
+    /** The same guard on the write path: Share/Save-log used to crash the process outright. */
+    @Test
+    fun `writing a log file falls back to internal storage when getExternalFilesDir throws`() {
+        val throwing = object : android.content.ContextWrapper(ctx) {
+            override fun getExternalFilesDir(type: String?): File? =
+                throw SecurityException("callingPackage does not match UID")
+        }
+        val f = AppLogger.writeFile(throwing, "byd_log_", "hello")
+        assertTrue("a file must still be produced", f != null && f.exists())
+        assertTrue("and it must be on internal storage", f!!.absolutePath.startsWith(ctx.filesDir.absolutePath))
+    }
 }
