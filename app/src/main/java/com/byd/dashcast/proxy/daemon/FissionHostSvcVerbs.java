@@ -83,10 +83,23 @@ final class FissionHostSvcVerbs {
             data.writeInterfaceToken("android.IFissionHostService");
             boolean handled = b.transact(TXN_GET_AUTOCAR_DISPLAY, data, reply, 0);
             if (!handled) return "NOT HANDLED (transact returned false — wrong code or dead service)";
-            byte[] raw = reply.marshall();
-            reply.setDataPosition(0);
             StringBuilder out = new StringBuilder();
-            out.append("raw(").append(raw.length).append("B)=").append(toHex(raw));
+            // marshall() is ILLEGAL on a parcel that carries binder objects, and the layout this
+            // probe was written for ends in a producer Binder. So on the one outcome that matters
+            // — a populated registry — this line threw and took the whole probe with it, leaving
+            // "SERVICE NOT FOUND"-shaped noise instead of the evidence the class doc promises
+            // ("the raw reply bytes FIRST, unconditionally, so a wrong decode never loses the
+            // evidence"). Best-effort now, and the throw is itself a finding: it can only happen
+            // when a Binder is present, i.e. when something IS registered.
+            try {
+                byte[] raw = reply.marshall();
+                out.append("raw(").append(raw.length).append("B)=").append(toHex(raw));
+            } catch (Throwable marshallFail) {
+                out.append("raw=<unavailable: ").append(marshallFail.getClass().getSimpleName())
+                   .append(" — the reply carries binder objects, so a producer IS present>");
+            }
+            out.append(" sz=").append(reply.dataSize());
+            reply.setDataPosition(0);
             // Best-effort decode, per the disassembly-read layout. Any failure here is reported
             // alongside the raw hex above, never in place of it.
             try {

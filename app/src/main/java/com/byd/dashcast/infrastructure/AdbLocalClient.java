@@ -330,8 +330,32 @@ public class AdbLocalClient {
         // Character-class tricks match both runtime names without matching grep's own cmdline.
         private static final String DAEMON_GREP =
             "grep -E '[m]irrordaemon|[b]yd[.]mirror[.]daemon'";
+
+    /**
+     * Keeps only lines owned by uid 2000, because a process NAME is not an identity.
+     *
+     * Any installed app can declare {@code android:process="byd.mirror.daemon"} and land in this
+     * grep. It cannot be mistaken for the daemon — reuse also demands a live {@code
+     * byd_mirror_daemon} binder AND a pid matching the marker file that only shell can write — but
+     * a second matching line is enough to make {@link SurfaceDaemonReusePolicy#singleProcessPid}
+     * return -1, which sends every startMirrorDaemon down the kill-and-respawn branch. That throws
+     * away the state this daemon exists to HOLD (slot overlays, VirtualDisplays, the mirror token)
+     * on every call, permanently, since our {@code kill -9} from uid 2000 cannot touch another
+     * app's process. It would also let the post-launch "ACTIVE ✓" check pass on the impostor's
+     * line while our own launch had failed.
+     *
+     * The USER column is field 1 of toybox {@code ps -A}; it can print either the name or the
+     * number depending on the ROM, so both are accepted. Filtering here keeps the line shape
+     * intact, so singleProcessPid still reads the pid from field 2.
+     */
+    private static final String SHELL_OWNED_ONLY = "awk '$1==\"shell\" || $1==\"2000\"'";
+
+    /** {@code ps} listing of OUR daemon processes only — never another app's lookalike. */
+    private static final String DAEMON_PS =
+            "ps -A | " + DAEMON_GREP + " | " + SHELL_OWNED_ONLY;
+
     private static final String KILL_DAEMON_CMD =
-            "ps -A | " + DAEMON_GREP + " | awk '{print $2}'" +
+            DAEMON_PS + " | awk '{print $2}'" +
             " | xargs -r kill -9 2>/dev/null; echo killed";
 
     private static volatile long sLastDaemonStartMs = 0;
@@ -357,8 +381,7 @@ public class AdbLocalClient {
                 try (Dadb dadb = connect(context, PROBE_IDLE_TIMEOUT_MS)) {
                     // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
-                    String psOut = dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    String psOut = dadb.shell(DAEMON_PS + " 2>&1").getAllOutput().trim();
                 int daemonPid = SurfaceDaemonReusePolicy.singleProcessPid(psOut);
                 String versionMarker = daemonPid > 0
                     ? dadb.shell("cat "
@@ -410,8 +433,7 @@ public class AdbLocalClient {
 
                     // Verification: is the process alive after 3s?
                     Thread.sleep(3000);
-                    String psCheck = dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    String psCheck = dadb.shell(DAEMON_PS + " 2>&1").getAllOutput().trim();
                     if (!psCheck.isEmpty()) {
                         AppLogger.i(TAG, "MirrorDaemon ACTIVE ✓  " + psCheck);
                     } else {

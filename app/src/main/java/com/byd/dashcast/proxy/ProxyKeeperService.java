@@ -172,6 +172,7 @@ public final class ProxyKeeperService extends Service {
         if (ok) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
             mHudListenerArmed = false;   // fresh daemon → re-arm the HUD listener on the next tick
+            mArmAttempts = 0;            // and give it the full retry budget again
             AppLogger.i(TAG, "keeper reconnect ✅ pid="
                     + ProxyClient.getDaemonPid());
         } else {
@@ -183,6 +184,34 @@ public final class ProxyKeeperService extends Service {
     /** Set once we've registered the daemon HUD push-feedback listener for the current daemon
      *  connection; reset on reconnect / respawn so it re-arms against the fresh daemon. */
     private volatile boolean mHudListenerArmed = false;
+
+    /** Failed arm attempts against the CURRENT daemon connection. See {@link #ARM_MAX_ATTEMPTS}. */
+    private volatile int mArmAttempts = 0;
+
+    /**
+     * How many times to retry arming before giving up until the next reconnect.
+     *
+     * A car with no {@code BYDAutoSettingDevice} fails every attempt, and retrying it forever would
+     * cost a binder round-trip and a journal line every {@link #HEARTBEAT_MS} for as long as the
+     * app runs — the one way this retry could be worse than the bug it fixes. 30 attempts is five
+     * minutes at the current heartbeat, which covers a daemon that is merely slow to come up.
+     */
+    private static final int ARM_MAX_ATTEMPTS = 30;
+
+    /**
+     * Whether {@code canListenStart} actually registered the listener.
+     *
+     * The verb answers with a status string, and only two of its answers mean the listener is
+     * live: {@code "registered (…)"} and {@code "already-registered"}. Everything else —
+     * {@code "register-in-flight"}, {@code "ERR register timeout"}, any {@code "ERR …"} — is a
+     * daemon that is not yet listening, and the retry is safe because
+     * {@code CanFeedbackListener.startSetting} short-circuits on both {@code sRegistered} and
+     * {@code sRegisterInFlight}, so it can never register a duplicate device listener.
+     */
+    static boolean isListenerArmed(String reply) {
+        return reply != null
+                && (reply.startsWith("registered") || reply.startsWith("already-registered"));
+    }
 
     /** Serial executor for arming the HUD listener — reused across heartbeats instead of
      *  spawning a new "hud-listener-arm" Thread per arm (which churned one thread per heartbeat
@@ -208,11 +237,31 @@ public final class ProxyKeeperService extends Service {
             mArmExecutor.execute(() -> {
                 // Fail fast on a cold daemon instead of blocking this worker ~23s (mirrors F6).
                 ProxyClient.setNonBlockingReconnect(true);
+                String r = null;
                 try {
-                    ProxyClient.canListenStart();
+                    r = ProxyClient.canListenStart();
                 } catch (Throwable t) {
-                    mHudListenerArmed = false;   // allow a retry on the next alive tick
+                    r = null;
                     AppLogger.w(TAG, "HUD listener arm failed: " + t.getMessage());
+                }
+                // Latch on the daemon's VERDICT, not on having made the attempt. The flag was set
+                // before the call and only cleared when the call THREW, so a daemon that answered
+                // "register-in-flight" or "ERR register timeout" — the normal shape of a daemon
+                // still coming up — left the listener unarmed for the life of the process, with
+                // no exception anywhere. HUD push-feedback is push-only and captured once at
+                // nav-start, so every bug report from that car then carried no HUD state at all.
+                if (isListenerArmed(r)) {
+                    mArmAttempts = 0;
+                    return;
+                }
+                if (++mArmAttempts < ARM_MAX_ATTEMPTS) {
+                    mHudListenerArmed = false;   // retry on the next alive tick
+                    AppLogger.w(TAG, "HUD listener not armed (" + r + ") — retry in "
+                            + (HEARTBEAT_MS / 1000) + "s, attempt " + mArmAttempts
+                            + "/" + ARM_MAX_ATTEMPTS);
+                } else {
+                    AppLogger.w(TAG, "HUD listener not armed (" + r + ") after "
+                            + ARM_MAX_ATTEMPTS + " attempts — giving up until the next reconnect");
                 }
             });
         } catch (java.util.concurrent.RejectedExecutionException ree) {
