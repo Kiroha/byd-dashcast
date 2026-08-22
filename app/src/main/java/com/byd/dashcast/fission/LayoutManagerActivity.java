@@ -418,13 +418,18 @@ public class LayoutManagerActivity extends Activity {
                     String name = et.getText().toString().trim();
                     if (name.isEmpty()) name = getString(R.string.lm_layout_default_name_fmt, mPresets.size() + 1);
                     mEditing.name = name;
+                    // Store a SNAPSHOT, not the live object. mEditing is what the canvas drags,
+                    // so putting it in mPresets made the saved layout a window onto the editor:
+                    // every later move was already "saved", the next LayoutPrefs.save wrote it to
+                    // disk, and Cancel cancelled nothing. The canvas keeps the live object.
+                    LayoutPreset snapshot = mEditing.copy();
                     boolean replaced = false;
                     for (int i = 0; i < mPresets.size(); i++) {
-                        if (mPresets.get(i).id.equals(mEditing.id)) {
-                            mPresets.set(i, mEditing); replaced = true; break;
+                        if (mPresets.get(i).id.equals(snapshot.id)) {
+                            mPresets.set(i, snapshot); replaced = true; break;
                         }
                     }
-                    if (!replaced) mPresets.add(mEditing);
+                    if (!replaced) mPresets.add(snapshot);
                     LayoutPrefs.save(this, mPresets);
                     mAdapter.update(mPresets, mActiveId);
                     setCanvasTitle(mEditing.name);
@@ -472,22 +477,33 @@ public class LayoutManagerActivity extends Activity {
             return;
         }
         Toast.makeText(this, getString(R.string.lm_activating_fmt, preset.name), Toast.LENGTH_SHORT).show();
+        // Activation takes seconds, and the user is free to leave this screen while it runs. What
+        // must survive that is the record of what is now on the cluster; only the view work must
+        // not. Splitting them is why the app context is captured here.
+        final android.content.Context appCtx = getApplicationContext();
         FissionOrchestrator.activateLayoutManually(this, preset, (ok, error) -> {
-            if (isFinishing() || isDestroyed()) return;
             if (error == null) {
                 // Unchanged contract: the activated layout only becomes the favourite when the
-                // activation actually ran to completion.
-                mActiveId = preset.id;
-                LayoutPrefs.setFavoriteId(LayoutManagerActivity.this, mActiveId);
-                mAdapter.update(mPresets, mActiveId);
+                // activation actually ran to completion. It is written before the lifecycle guard
+                // because the layout really IS running — a screen that closed mid-activation must
+                // not leave the favourite pointing at the previous one.
+                LayoutPrefs.setFavoriteId(appCtx, preset.id);
             } else {
-                // Journal in English, translate only the toast. Precisely: the "activateLayout
+                // Journalled before the guard for the same reason: losing the failure line because
+                // the user navigated away costs a diagnostic round trip with a tester.
+                //
+                // In English, with only the toast translated. Precisely: the "activateLayout
                 // failed:" prefix and every ERR_* code are English and greppable corpus-wide,
                 // and an exception carries its class name — also English. What can still be
                 // localised is an exception's own MESSAGE, because doStartSlot throws
                 // fo_err_attach_fmt. So classify on the prefix and the class name, never on the
                 // message tail.
                 AppLogger.e(TAG, "activateLayout failed: " + error);
+            }
+            if (isFinishing() || isDestroyed()) return;   // from here down it is all UI
+            if (error == null) {
+                mActiveId = preset.id;
+                mAdapter.update(mPresets, mActiveId);
             }
             String text = (error != null)
                     ? activationErrorText(error, preset.name)
