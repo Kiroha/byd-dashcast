@@ -14,6 +14,28 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.35-beta (versionCode 625)
+
+**Eleven P2 defects from the re-audit of 1.8.33 — and five of them are the same shape: a finding already marked as fixed, whose fix only covered half the defect.**
+
+**A release built without the platform keystore was unsigned, not debug-signed (AUD-156).** Three separate texts of mine — a build comment, the console line and the README — said it fell back to debug signing and would install and run. `apksigner` answers DOES NOT VERIFY: an unsigned APK does not install at all. Explicit fallback now, the artefact is renamed `-release-debugsigned` so it cannot be confused with a publishable build, and the warning uses `logger.quiet` because `logger.lifecycle` is swallowed by `gradlew -q` — which is why I had not seen it when verifying the original fix.
+
+**The R8 mapping archive lived where `clean` deletes it (AUD-152).** Moved outside the build directory to `dist/mappings/`, verified by building then cleaning. The other half of AUD-152 had never been done at all: the `retrace` procedure is now in SECURITY.md, with a before/after taken from an actual run against the 1.8.34 mapping.
+
+**A refused CAN activation left an arrow nothing could clear (AUD-003).** `isHudActive` was assigned only after `setNaviActive(true)` returned. On a car that refuses that register the flag stayed false, so the watchdog was never armed, `closeNavigation` became a permanent no-op, and the guidance writes — which sit outside that guard — kept going. Session state and CAN acknowledgement are separate latches now, and a refusal is retried every 5 s instead of on every guidance frame.
+
+**The abandoned keyboard draft survived (AUD-007).** The clear ran in `onDestroy`, but the bridge is `singleTask`: reopening it is onStop/onStart and onDestroy never runs. So a destination typed and abandoned was still replayed in the next session — exactly what the fix was written to prevent.
+
+**The status badges (AUD-148).** The fix reached only the services list, and it took the OFF badge from 6.9:1 to 3.37:1 contrast — the one state a triager scans for became the least legible thing on screen. Recomputed with alpha compositing: 7.03:1 day, 6.42:1 night. Hidden displays get a proper third pill instead of an orange glyph inside a green one at 1.59:1. And the auto-launch badge in the app list, white on amber at 1.63:1, is now 10.56:1.
+
+**One unguarded call was silently disabling all storage hygiene on DiLink 5.1.** `getExternalFilesDir()` throws on some Android 13 ROMs — known here since 1.6.101 — and it was the first statement of `pruneOldFiles`, outside any try. Its caller swallows the exception, so nothing crashed and nothing ran: no log rotation, no report purge, **and not the voice-model reclaim promised to testers in 1.8.33**, on the ROM family most likely to still be holding it.
+
+**Diagnostic reports.** The screenshot pull waited with no timeout on a ~31 s daemon bootstrap per capture, on the thread sending the report — bounded at 20 s. The screen had no exit while that ran, with Back swallowed; a 45 s watchdog restores Cancel, in all thirteen languages. And the relay endpoint could be re-pointed by a properties file dropped in Download, world-writable, without being counted or validated — counted and https-only now.
+
+**Two report bundles skipped redaction entirely, and a third turned up while checking.** `BydApkExtractionBundle` carried a private copy of the shared zipper minus the redaction pass, uploading its getprop and dumpsys sweeps raw under the consent notice that promises the opposite. Grepping instead of assuming found the same omission in `AaosDiagnosticBundle` — which the shared zipper's own documentation claims to protect. Both now go through it, and it is the only `ZipOutputStream` left in the source tree.
+
+393 unit tests. `assembleDebug`, `assembleRelease` and lint green with 0 errors and 0 missing translations.
+
 ### 1.8.34-beta (versionCode 624)
 
 **The bug reporter was not removing positions, and the consent notice promised it was.** Found by a full re-audit of 1.8.33, and confirmed by running the compiled redactor rather than by reading it: three of the four location line shapes that occur in real reports passed straight through in clear.
