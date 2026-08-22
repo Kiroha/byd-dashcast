@@ -1,5 +1,6 @@
 package com.byd.dashcast.infrastructure
 
+import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -35,7 +36,12 @@ class SurfaceDaemonStartCommandTest {
         )
 
         assertTrue(command.contains("--nice-name=byd.mirror.daemon"))
-        assertTrue(command.contains("com.byd.dashcast.proxy.daemon.SurfaceDaemon"))
+        // The class NAME, not a copy of it. This assertion used to compare one string literal to
+        // an identical string literal, so it could only ever pass: rename or move SurfaceDaemon
+        // and the daemon becomes unstartable — app_process resolves the entry point by name — while
+        // the test that exists to prevent exactly that stays green. Going through the class makes
+        // the compiler follow the rename, and the assertion fails the moment the literal drifts.
+        assertTrue(command.contains(SurfaceDaemon::class.java.name))
     }
 
     @Test
