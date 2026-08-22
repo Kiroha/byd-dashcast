@@ -514,10 +514,6 @@
     <string name="bug_wizard_pick_issue">Pick an issue above</string>
     <string name="bug_wizard_selected_fmt">Selected: %1$s</string>
     <string name="toast_adb_port_refused">ADB unreachable (port 5555) — mirroring unavailable on this device</string>
-    <string name="hud_visual_title">HUD visual check</string>
-    <string name="hud_visual_yes">Yes</string>
-    <string name="hud_visual_no">No</string>
-    <string name="hud_visual_unsure">Not sure</string>
     <string name="aaos_cluster_unsupported_title">Cluster projection blocked</string>
     <string name="aaos_cluster_unsupported_msg">Your car runs BYD\'s Android Automotive system (DX_BYD_AUTO), where the instrument cluster is locked by the manufacturer: BYD reserves it for the built-in navigation and blocks app projection. This is a vehicle restriction (not a DashCast limitation) — there is no workaround.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Cluster projection not available</string>

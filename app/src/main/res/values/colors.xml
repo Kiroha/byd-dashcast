@@ -77,6 +77,11 @@
          they follow the night theme, which the hard-coded #2BD576 never did. -->
     <color name="md_pill_ok_fill">#1F2E7D32</color>
     <color name="md_pill_ok_stroke">#562E7D32</color>
+    <!-- Same reasoning as the warn pill below: on its own tinted ground md_status_ok measures
+         4.26:1, under the 4.5 AA needs for 11sp bold. #1B5E20 is the same hue one step darker and
+         measures 6.54:1. md_status_ok itself is NOT changed — it is the app-wide accent (log rows,
+         sysinfo text, the active-layout card stroke) and it is fine everywhere else. -->
+    <color name="md_pill_ok_text">#1B5E20</color>
     <color name="md_pill_off_fill">#1F74777F</color>
     <color name="md_pill_off_stroke">#5674777F</color>
     <!-- Warn pill: a state the API cannot see, not a fault. Fill and stroke follow the sibling

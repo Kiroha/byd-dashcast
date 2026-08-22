@@ -61,6 +61,6 @@
         android:paddingBottom="4dp"
         android:textSize="11sp"
         android:textStyle="bold"
-        android:textColor="@color/md_status_ok"
+        android:textColor="@color/md_pill_ok_text"
         android:background="@drawable/bg_status_pill_ok"/>
 </LinearLayout>

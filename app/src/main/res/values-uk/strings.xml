@@ -503,10 +503,6 @@
     <string name="bug_wizard_pick_issue">Виберіть проблему вище</string>
     <string name="bug_wizard_selected_fmt">Вибрано: %1$s</string>
     <string name="toast_adb_port_refused">ADB недоступний (порт 5555) — дзеркалювання недоступне на цьому пристрої</string>
-    <string name="hud_visual_title">Візуальна перевірка HUD</string>
-    <string name="hud_visual_yes">Так</string>
-    <string name="hud_visual_no">Ні</string>
-    <string name="hud_visual_unsure">Не впевнений</string>
     <string name="aaos_cluster_unsupported_title">Проєкцію на приладову панель заблоковано</string>
     <string name="aaos_cluster_unsupported_msg">Ваш автомобіль використовує систему Android Automotive від BYD (DX_BYD_AUTO). На цьому пристрої приладову панель заблоковано виробником: BYD резервує її для вбудованої навігації та блокує проєкцію застосунків. Це обмеження автомобіля (а не DashCast) — обхідного шляху немає.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Проєкція на приладову панель недоступна</string>

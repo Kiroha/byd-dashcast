@@ -503,10 +503,6 @@
     <string name="bug_wizard_pick_issue">Yukarıdan bir sorun seç</string>
     <string name="bug_wizard_selected_fmt">Seçildi: %1$s</string>
     <string name="toast_adb_port_refused">ADB\'ye erişilemiyor (bağlantı noktası 5555) — bu cihazda ayna kullanılamıyor</string>
-    <string name="hud_visual_title">HUD görsel kontrolü</string>
-    <string name="hud_visual_yes">Evet</string>
-    <string name="hud_visual_no">Hayır</string>
-    <string name="hud_visual_unsure">Emin değilim</string>
     <string name="aaos_cluster_unsupported_title">Gösterge paneli yansıtması engellendi</string>
     <string name="aaos_cluster_unsupported_msg">Aracınız BYD\'nin Android Automotive sistemini (DX_BYD_AUTO) kullanıyor. Bu ünitede gösterge paneli üretici tarafından kilitlenmiştir: BYD bunu yerleşik navigasyona ayırır ve uygulama yansıtmasını engeller. Bu, aracın bir kısıtlamasıdır (DashCast\'in değil) — bir geçici çözüm yoktur.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Gösterge paneli yansıtması kullanılamıyor</string>
