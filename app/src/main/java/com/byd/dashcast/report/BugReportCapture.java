@@ -355,15 +355,19 @@ public final class BugReportCapture {
             // through the transport and every redaction pass. The size is only knowable on the
             // device, so the shell just flags the cut with a marker and finish()'s caller appends
             // the same banner readFile() uses — one wording, two paths.
+            //
+            // `head -c` runs ONLY when the dump is actually over the cap. Under it — which is
+            // every real report — the command stays the plain `cat` it has always been, so a ROM
+            // whose head lacks -c cannot silently reduce every DL5.1 report to head's default ten
+            // lines. In the overflow branch `|| cat` is the same safety net: better a report too
+            // big than a report gutted.
             cmd += " ; _sz=$(wc -c < " + p + " 2>/dev/null | tr -d ' \\n')"
                  + " ; [ -n \"$_sz\" ] || _sz=0"
-                 // `|| cat` keeps a ROM whose head has no -c producing a full body rather than
-                 // an empty one: head prints its usage to stderr and exits non-zero, and only
-                 // then does cat run.
-                 + " ; { head -c " + REPORT_BODY_MAX_BYTES + " " + p + " 2>/dev/null"
-                 + " || cat " + p + " 2>/dev/null ; }"
                  + " ; if [ \"$_sz\" -gt " + REPORT_BODY_MAX_BYTES + " ] ; then"
-                 + " echo ; echo \"" + TRUNC_MARKER + " $_sz\" ; fi"
+                 + " { head -c " + REPORT_BODY_MAX_BYTES + " " + p + " 2>/dev/null"
+                 + " || cat " + p + " 2>/dev/null ; }"
+                 + " ; echo ; echo \"" + TRUNC_MARKER + " $_sz\""
+                 + " ; else cat " + p + " 2>/dev/null ; fi"
                  + " ; rm -f " + p + " 2>/dev/null";
         }
 
