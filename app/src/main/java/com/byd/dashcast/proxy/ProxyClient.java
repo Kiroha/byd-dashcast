@@ -182,8 +182,48 @@ public final class ProxyClient {
     /** Fetched after a connect() failure to surface the daemon's first error line(s). */
     private static final String READ_LOG_CMD = "tail -n 20 " + DAEMON_LOG + " 2>/dev/null";
 
-    /** Covers dadb's first-command authorization window (15 s) plus callback delivery. */
-    private static final int  BOOTSTRAP_TIMEOUT_MS = 16_000;
+    /**
+     * How long we wait for the bootstrap shell command to come back.
+     *
+     * DERIVED, not chosen. This used to be a hand-written 16_000 with the comment "covers dadb's
+     * first-command authorization window (15 s) plus callback delivery" — which named only ONE of
+     * the two windows dadb can actually use. {@code bootstrap()} passes
+     * {@link AdbLocalClient#BOOTSTRAP_IDLE_TIMEOUT_MS} (8 s), but
+     * {@code AdbTimeoutPolicy.effectiveIdleTimeoutMs} raises it to
+     * {@code max(requested, firstOperationMs)} whenever the operation has not already succeeded —
+     * and on a first-ever install, with a fresh key awaiting authorization on the head unit, that
+     * firstOperationMs is {@link AdbLocalClient#NEW_KEY_AUTH_IDLE_TIMEOUT_MS} = 30 s, not 15 s.
+     *
+     * So the latch expired at 16 s while the socket underneath was still legitimately waiting, and
+     * we returned "ERR bootstrap timed out" for a bootstrap that had not yet had the chance to run
+     * — on exactly the path a first-time user hits. Note this never freed the worker thread early
+     * (the ADB call keeps running either way); it only produced a false verdict, and a false
+     * verdict here sends the caller down the kill-and-respawn path for no reason.
+     *
+     * WHAT THIS DOES AND DOES NOT BOUND. It bounds ONE ATTEMPT's idle window. It is emphatically
+     * not the bound on the whole operation, and an earlier draft of this comment claimed it was —
+     * wrongly. {@code AdbLocalClient.connect} retries authorization up to five times, each with its
+     * own effective idle timeout plus a {@code HANDSHAKE_GATE_WAIT_MS} acquire and a 2 s sleep
+     * between attempts, so a genuinely unauthorized fresh key can occupy well over two minutes.
+     * The latch also starts at SUBMIT time onto a fixed four-thread pool with an unbounded queue,
+     * so a saturated pool can expire it before the bootstrap task has begun. Both still produce a
+     * false "ERR bootstrap timed out".
+     *
+     * What the derivation buys is narrower and real: the latch can no longer be shorter than the
+     * single idle window the socket is actually configured with, which was the specific defect —
+     * a 16 s latch over a 30 s fresh-key window, failing every first install. In the success case
+     * the callback releases the latch long before this, so the larger value costs nothing there;
+     * it only delays the verdict in genuine failures, which is correct.
+     *
+     * COUPLED, and not only to the two constants below. Raising this raises
+     * {@link #CONNECT_JOIN_TIMEOUT_MS} with it, and that value is how long a blocking
+     * {@code connect()} can hold its caller's thread. Before changing it, check every caller that
+     * blocks on connect under a budget — in particular the eviction probes in
+     * {@code ClusterSessionTracker} and the {@code goAsync()} token in {@code BootReceiver}.
+     */
+    private static final int  BOOTSTRAP_TIMEOUT_MS =
+            Math.max(AdbLocalClient.FIRST_OPERATION_IDLE_TIMEOUT_MS,
+                     AdbLocalClient.NEW_KEY_AUTH_IDLE_TIMEOUT_MS) + 1_000;
     /**
      * The daemon's {@code ActivityThread.systemMain()} call takes 5–8 s cold on
      * a DiLink 3.0 SoC (it brings up the framework runtime inside app_process),
@@ -1301,7 +1341,7 @@ public final class ProxyClient {
 
     // ─── Main-thread ANR guard for the reconnect bootstrap ───────────────────
     // connect() blocks the caller for up to BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS
-    // (~23s) bootstrapping a cold uid-2000 daemon. That MUST never run on the UI
+    // (see CONNECT_JOIN_TIMEOUT_MS) bootstrapping a cold uid-2000 daemon. That MUST never run on the UI
     // looper (frozen instrument cluster = ANR). This single-thread executor runs the
     // blocking bootstrap off-thread when a verb is (defensively) called on main.
     private static final java.util.concurrent.ExecutorService sReconnectExecutor =
@@ -1316,7 +1356,7 @@ public final class ProxyClient {
     // Threads that own their own transport fallback (e.g. the ShellGateway serial
     // executor, which routes to AdbLocalClient on any failure) can opt out of the
     // blocking bootstrap: a binder that dies mid-transact would otherwise stall that
-    // single worker ~23s before the fallback runs. When set, callWithRetry's reconnect
+    // single worker for a full bootstrap (CONNECT_JOIN_TIMEOUT_MS) before the fallback runs. When set, callWithRetry's reconnect
     // is kicked async (daemon still revives) and the verb fails fast instead.
     private static final ThreadLocal<Boolean> sNonBlockingReconnect =
             ThreadLocal.withInitial(() -> Boolean.FALSE);

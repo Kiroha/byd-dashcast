@@ -403,7 +403,8 @@ public final class HudController {
         if (ctx == null) return;
         Log.i(TAG, "nav stale >" + STALE_MS + "ms with no update — clearing frozen HUD");
         // Fail fast: this runs on the dedicated hud-nav-watchdog thread and holds `this`
-        // (updateNavigation is also synchronized on this). A ~23s blocking daemon bootstrap
+        // (updateNavigation is also synchronized on this). A blocking daemon bootstrap
+        // (ProxyClient.CONNECT_JOIN_TIMEOUT_MS)
         // inside closeNavigation's CAN write would stall guidance frames — opt this thread out
         // of the blocking reconnect (mirrors F6). The watchdog thread does nothing else, so no
         // reset is needed.

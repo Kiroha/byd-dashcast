@@ -1,5 +1,7 @@
 package com.byd.dashcast.app
 
+import android.os.Looper
+import android.os.Handler
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -83,10 +85,25 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         if (prewarmDaemon) {
+        // Upper bound on how long the best-effort daemon pre-warm may hold the
+        // goAsync() token open. Comfortably inside the ~60 s a background broadcast
+        // gets, and well above the ~1.9 s measured happy path.
+        val PREWARM_TOKEN_BUDGET_MS = 20_000L
+
             // Phase 5 — pre-warm the proxy daemon at boot so the first user
             // action doesn't pay the ~1.9 s bootstrap cost (measured cold
             // sendInfo in build-178 device log = 1916 ms; warm = 3 ms).
             val done = takeToken()
+            // The token is released on a timer as well as on completion, whichever comes first.
+            // BOOT_COMPLETED is an ordered background broadcast with roughly 60 s before the
+            // receiver is ANR'd, and goAsync().finish() waits for every token. A blocking
+            // ProxyClient.connect can hold this one for BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS,
+            // which leaves too little of that budget for the other tokens. The pre-warm is
+            // best-effort -- nothing on the boot path consumes its result, and its measured happy
+            // path is ~1.9 s -- so a slow one must not be allowed to hold boot open.
+            val prewarmReleased = java.util.concurrent.atomic.AtomicBoolean(false)
+            val releaseOnce = Runnable { if (prewarmReleased.compareAndSet(false, true)) done.run() }
+            Handler(Looper.getMainLooper()).postDelayed(releaseOnce, PREWARM_TOKEN_BUDGET_MS)
             Thread({
                 try {
                     AppLogger.i("BootReceiver", "daemon pre-warm starting...")
@@ -99,7 +116,7 @@ class BootReceiver : BroadcastReceiver() {
                     // Pre-warm failure must never block boot.
                     AppLogger.w("BootReceiver", "daemon pre-warm threw: " + t.message)
                 } finally {
-                    done.run()
+                    releaseOnce.run()
                 }
             }, "daemon-prewarm").start()
         }
