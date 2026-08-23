@@ -1340,6 +1340,72 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 631 = 1.8.41-beta (supersedes 1.8.40-beta, which shipped a lost update INSIDE the fix
+        // for the lost-file bug 1.8.39 shipped. Two changes, one of them behaviour-neutral.
+        //
+        // The regression. 1.8.40's fix for R1-3 moved clear()'s latch resets to AFTER the blocking
+        // ADB round-trip, so they would only run if the delete had actually happened. Correct
+        // intent, and it opened a lost update: the ProxyKeeperService heartbeat is 10 s and the ADB
+        // TCP + RSA handshake is hundreds of ms to seconds, so a heartbeat lands inside that window
+        // routinely. When it does, maybeCapture stamps sLastCaptureMs and queues a captureRound
+        // BEHIND the in-flight clear on the single-threaded executor. The clear then completed and
+        // wrote a bare `= 0L`, erasing that fresh stamp, and the queued round wrote new JPEGs
+        // afterwards. Net state: files on disk with everCaptured == false, so shouldAppPrune
+        // returns false and the max-age sweep never runs. It self-heals on the next heartbeat while
+        // projection continues — but if projection ends first (and the live caller is the bug
+        // wizard, right after a 20 s-budgeted pull, i.e. exactly when the executor is contended and
+        // a session is ending) the flag stays false for the rest of the process and screenshots of
+        // both driver-facing screens persist past MAX_AGE_MIN, after a user who consented to ONE
+        // send. That is the precise harm R1-3 was written to prevent, re-entered through R1-3's own
+        // door. 1.8.39 could not do this: it reset synchronously, before enqueuing.
+        //
+        // Fixed by snapshotting both latches before enqueuing and compare-and-setting inside the
+        // executor: reset only if nothing else wrote them meanwhile. The executor is single-
+        // threaded so a plain CAS is sufficient. R1-3's own property — do not reset when the delete
+        // failed — is preserved. Also narrowed the comment that claimed this covers the
+        // setEnabled(false) path: it does not, because maybeCapture early-returns on !isEnabled, so
+        // no prune is scheduled again regardless of the latches. Unchanged behaviour there; called
+        // out rather than overclaimed.
+        //
+        // The behaviour-neutral half, and the more important lesson. Both guard comments written to
+        // prevent the FIRST regression had themselves rotted into falsehood. ProxyDaemonMain still
+        // narrated the reverted 10 s design four lines above SLOW_POLL_MS = 3_000L, and ProxyClient
+        // still claimed the daemon polls at 1 s and delivers "within ~1s" — which makes the 5 s
+        // rebroadcast budget read as 5x headroom when it is 1.67x. A reader reasoning from either
+        // comment gets the wrong margin, in opposite directions, from the pair specifically written
+        // to stop that happening.
+        //
+        // So the coupling is no longer prose. REBROADCAST_BUDGET_MS and TRIGGER_SLOW_POLL_MS now
+        // live together in ProxyBootstrapPolicy and are derived from each other
+        // (poll = budget - delivery margin); ProxyDaemonMain and ProxyClient both reference the
+        // shared constants instead of restating literals. The invariant cannot be violated by
+        // editing one side any more. This copies CanBatchOperation.MAX_BATCH_SIZE, which client and
+        // daemon already both reference across this same process boundary
+        // (ProxyDaemonMain.java:1109) — proof the pattern works from app_process. The derived value
+        // is unchanged at 3000 ms, so this half changes no behaviour at all.
+        //
+        // Verified clean under the same adversarial attack and unchanged: the daemon heal divider
+        // (boundary hand-walked tick by tick — the gap is exactly 30 s, and RAMP_TICKS being an
+        // exact multiple of the divisor is load-bearing), the daemonStaleMs arithmetic on BOTH the
+        // 15 s ramp and 90 s steady cadences, the seven-parameter call site checked position by
+        // position, the launch-diagnostic gate, and the AppLogger capacity hint. The first
+        // regression test pinned only the steady arm; the ramp arm is now pinned too.
+        //
+        // Open and NOT resolved here, so it is not mistaken for verified: the 3 s poll leaves a 2 s
+        // delivery margin that has never been measured, and emitBroadcast uses a plain
+        // sendBroadcast with no FLAG_RECEIVER_FOREGROUND. Wants an on-car check.
+        //
+        // Also known-open and deliberately NOT in this release, because every same-session fix this
+        // cycle has needed a second pass to catch its own defect: ProxyClient's 16 s bootstrap latch
+        // loses to a 30 s ADB idle timeout on a fresh-key first install (strands 1 of 4 pool
+        // threads); eviction's documented 2 s "hard ceiling" is checked only between probes so one
+        // probe can block a full 32 s bootstrap on the Stop path; and the OTA checker runs on every
+        // launch with no throttle and no connectivity check anywhere in the app, pulls ten full
+        // release objects to read one tag, and never deletes the APK it downloads.
+        //
+        // NOT VALIDATED ON A CAR. 450 unit tests (3 added), lint 0 errors and byte-identical to the
+        // 1.8.38 baseline (0/14/16). No daemon protocol change, no binder or uid-gate change, no
+        // user-visible string.)
         // 630 = 1.8.40-beta (supersedes 1.8.39-beta, which shipped two regressions of its own
         // making. An adversarial re-read of 1.8.39's five patches found three defects; two had
         // shipped. Both shipped ones share one failure mode, and it is the lesson of this release:
@@ -1638,8 +1704,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 630
-        versionName "1.8.40-beta"
+        versionCode 631
+        versionName "1.8.41-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
