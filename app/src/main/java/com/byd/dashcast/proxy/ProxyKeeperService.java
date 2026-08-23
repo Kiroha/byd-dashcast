@@ -242,8 +242,7 @@ public final class ProxyKeeperService extends Service {
         mHudListenerArmed = true;
         try {
             mArmExecutor.execute(() -> {
-                // Fail fast on a cold daemon instead of blocking this worker for a full bootstrap
-                // (ProxyClient.CONNECT_JOIN_TIMEOUT_MS) (mirrors F6).
+                // Fail fast on a cold daemon instead of blocking this worker ~23s (mirrors F6).
                 ProxyClient.setNonBlockingReconnect(true);
                 String r = null;
                 try {

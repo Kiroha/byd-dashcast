@@ -357,7 +357,7 @@ object ClusterShotRecorder {
             //
             // The .get() had no timeout, and the work behind it walks every shot through
             // ProxyClient.readFileChunk. With a cold or dead uid-2000 daemon each of those pays the
-            // blocking bootstrap (ProxyClient.CONNECT_JOIN_TIMEOUT_MS) — once per screenshot — on the thread that is trying to send
+            // ~31 s blocking bootstrap — once per screenshot — on the thread that is trying to send
             // a bug report. The scenario is not exotic: it is precisely the daemon-down case the
             // report exists to capture, and the user is sitting in front of a Send button that has
             // already disabled itself.
