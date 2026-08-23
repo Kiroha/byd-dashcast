@@ -1340,6 +1340,32 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 628 = 1.8.38-beta (the translations twelve locales were still missing, and the reason
+        // four audit passes walked past them. 167 translations across 16 strings and 12 languages.
+        // The Layouts navigation label was the English word in 12 locales out of 12 — the French
+        // base included — along with the Advanced settings heading, the Beta Channel label, and the
+        // entire Hotspot screen: Back, Start, Stop, Toggle, Received, Sent, Uptime and its two
+        // progress states, plus the display row headline and the welcome subtitle.
+        //
+        // lint's MissingTranslation has two blind spots and both were live here. A string that
+        // EXISTS in a locale file but holds the English text satisfies the check — it verifies
+        // presence, not content. And a hardcoded literal in Kotlin is structurally invisible to it,
+        // because it only reads resource files: WelcomeActivity OVERWROTE the localised
+        // @string/welcome_subtitle with "BYD CLUSTER MIRROR · v…", so the welcome screen answered
+        // in English whatever language the tester had chosen. It goes through welcome_subtitle_fmt
+        // now. To find the first class, compare each locale against values-en/, NOT against
+        // values/ — values/ is FRENCH in this project, which is a measurement I got backwards once.
+        //
+        // Deliberately NOT translated, and written down so the next reader does not "fix" them:
+        // real loanwords (Hotspot, Auto, Apps, Media, Nav, DPI, px, Cluster) where translating
+        // reads worse; welcome_select_lang, which is bilingual by design because it precedes the
+        // language choice; Layouts in German and Italian, where the English word is the standard
+        // software term; and log_chip_* / sysinfo_svc_* (Info/Warn/Error, RUN/OFF/CONN), which are
+        // 11sp bold inside width-constrained pills where "Предупреждение" would overflow.
+        //
+        // No behaviour change beyond the strings themselves. 445 tests, lint 0 errors,
+        // 0 MissingTranslation, 0 ExtraTranslation; every locale file re-parsed as XML and checked
+        // for unescaped ASCII apostrophes.)
         // 627 = 1.8.37-beta (the audit's fourth and last pass, and the one that mattered least —
         // which is the finding. Three passes had already gone file by file; this one went after the
         // defect classes that per-file review is structurally blind to, and came back almost empty.
@@ -1494,8 +1520,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 627
-        versionName "1.8.37-beta"
+        versionCode 628
+        versionName "1.8.38-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
