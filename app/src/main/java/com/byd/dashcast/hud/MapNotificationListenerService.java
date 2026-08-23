@@ -322,6 +322,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         { "tournez à gauche",         CanBusController.ICON_TURN_LEFT        },
         { "rechts abbiegen",          CanBusController.ICON_TURN_RIGHT       }, // DE
         { "links abbiegen",           CanBusController.ICON_TURN_LEFT        }, // DE
+        // Roundabout — BEFORE the exit block, and this order is load-bearing.
+        //
+        // The lookup is first-match-wins over this array (see the loop that scans it), and a real
+        // roundabout instruction almost always names an exit: "At the roundabout, take the 3rd
+        // exit", "Au rond-point, prenez la 3e sortie", "Im Kreisverkehr, nehmen Sie die 3.
+        // Ausfahrt". With "exit"/"sortie"/"ausfahrt" tested first, every one of those drew a
+        // motorway-exit arrow on the instrument cluster instead of a roundabout — the wrong glyph,
+        // in front of a driver, at the moment they need it. The same specificity rule the rest of
+        // this table already documents ("most specific first", "must not shadow more specific
+        // keys") simply had not been applied to this pair.
+        { "roundabout",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
+        { "rond-point",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
+        { "kreisverkehr",             CanBusController.ICON_ROUNDABOUT_CW_1_LAP  }, // DE
         // Exit / ramp
         { "exit right",               CanBusController.ICON_DETOUR_RIGHT     },
         { "exit left",                CanBusController.ICON_DETOUR_LEFT      },
@@ -335,10 +348,6 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         { "merge left",               CanBusController.ICON_SLIGHT_LEFT      },
         { "merge",                    CanBusController.ICON_SLIGHT_RIGHT     },
         { "rejoin",                   CanBusController.ICON_SLIGHT_RIGHT     }, // "rejoindre" and "rejoignez"
-        // Roundabout
-        { "roundabout",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
-        { "rond-point",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
-        { "kreisverkehr",             CanBusController.ICON_ROUNDABOUT_CW_1_LAP  }, // DE
         // Straight / continue (last — very generic, must not shadow more specific keys)
         { "head north",               CanBusController.ICON_STRAIGHT_SOLID   },
         { "head south",               CanBusController.ICON_STRAIGHT_SOLID   },
@@ -905,7 +914,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
     }
 
-    private static int resolveIconFromText(String lower) {
+    /**
+     * Package-private, not private, so NavKeywordOrderTest can drive it. The order of
+     * TEXT_KEYWORD_MAP is load-bearing — first match wins — and an ordering mistake there puts the
+     * wrong arrow on a driver's instrument cluster with nothing anywhere to say so.
+     */
+    static int resolveIconFromText(String lower) {
         for (Object[] entry : TEXT_KEYWORD_MAP) {
             if (lower.contains((String) entry[0])) return (int) entry[1];
         }
