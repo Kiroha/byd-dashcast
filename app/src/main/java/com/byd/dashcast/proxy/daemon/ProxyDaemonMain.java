@@ -527,26 +527,18 @@ public final class ProxyDaemonMain {
                 // operation arrives over inotify anyway.
                 //
                 // So: keep full 1 Hz sensitivity through the window the failure appears in, then
-                // fall to 10 s. Worst case after the ramp is that a trigger write is noticed 10 s
-                // late INSTEAD OF 1 s late, and only when the FileObserver has ALSO failed. That
-                // lengthens a cold bootstrap; it cannot break an already-connected projection,
-                // and the app-side retry path (ProxyClient.callWithRetry pre-flight reconnect)
-                // is unchanged.
-                final int  RAMP_TICKS    = 60;      // ~60 s of 1 Hz polling after daemon start
-                final long SLOW_POLL_MS  = 3_000L;  // steady state -- see the hard bound below
+                // fall back to the steady-state period below.
                 //
-                // ⚠ SLOW_POLL_MS IS BOUNDED BY ProxyClient's REBROADCAST BUDGET. DO NOT RAISE IT
-                // WITHOUT CHANGING THAT NUMBER TOO.
-                //
-                // ProxyClient.callWithRetry waits 5_000 ms for our binder broadcast after touching
-                // the trigger file, and its comment names THIS poll as the reason that budget is
-                // safe. REBROADCAST only ever runs against an already-alive same-build daemon --
-                // i.e. one that is always far past RAMP_TICKS -- so the steady-state interval is
-                // the one that has to fit inside the app's 5 s wait, not the ramp interval.
-                // A first version of this ramp used 10 s here, which is > 5 s: it made the cheap
-                // rebroadcast recovery time out deterministically and fall through to the ~31 s
-                // kill-and-respawn bootstrap, in exactly the DL5-inotify-failure case this poll
-                // exists to cover. 3 s leaves 2 s of margin for broadcast delivery.
+                // That steady-state period is NOT a free choice and is deliberately not written
+                // here as a literal. REBROADCAST only ever runs against an already-alive same-build
+                // daemon -- one always far past RAMP_TICKS -- so it is the steady-state interval,
+                // not the ramp interval, that must fit inside the app's rebroadcast wait. Both
+                // numbers now live in ProxyBootstrapPolicy and are derived from each other, so the
+                // invariant cannot be broken by editing one side. See the doc there for the
+                // regression that made this necessary.
+                final int  RAMP_TICKS   = 60;   // ~60 s of 1 Hz polling after daemon start
+                final long SLOW_POLL_MS =
+                        com.byd.dashcast.proxy.ProxyBootstrapPolicy.TRIGGER_SLOW_POLL_MS;
                 while (true) {
                     try {
                         Thread.sleep(tick < RAMP_TICKS ? 1_000L : SLOW_POLL_MS);
@@ -577,7 +569,9 @@ public final class ProxyDaemonMain {
         };
         t.setDaemon(true);
         t.start();
-        log("self-heal heartbeat armed (1s poll + 10s heal for 60s, then 3s poll + 30s heal)");
+        log("self-heal heartbeat armed (1s poll + 10s heal for 60s, then "
+                + (com.byd.dashcast.proxy.ProxyBootstrapPolicy.TRIGGER_SLOW_POLL_MS / 1000)
+                + "s poll + 30s heal)");
     }
 
     private static void healTriggerFile() {
