@@ -1340,6 +1340,68 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 630 = 1.8.40-beta (supersedes 1.8.39-beta, which shipped two regressions of its own
+        // making. An adversarial re-read of 1.8.39's five patches found three defects; two had
+        // shipped. Both shipped ones share one failure mode, and it is the lesson of this release:
+        // A TIMING CONSTANT WAS CHANGED WITHOUT AUDITING WHAT ELSE HAD BEEN CALIBRATED AGAINST IT.
+        // Neither coupling was visible at the patch site; both were documented in a comment
+        // somewhere else in the tree.
+        //
+        // The serious one. 1.8.39 ramped the uid-2000 daemon's trigger-file poll from 1 s to 10 s
+        // after the first minute. But ProxyClient.callWithRetry waits 5_000 ms for that daemon's
+        // binder rebroadcast, and the comment at ProxyClient.java:502-512 names THIS poll's 1 s
+        // period as the reason that budget is safe. REBROADCAST only ever runs against a daemon
+        // that is already alive and the same build — i.e. one whose uptime is measured in days and
+        // which is therefore always far past a 60 s ramp. So on a DL5 unit where the FileObserver
+        // has silently stopped delivering (the ONLY case the poll exists for), the app gave up at
+        // 5 s while the trigger was noticed at up to 10 s. 5 s < 10 s unconditionally: the cheap
+        // rebroadcast recovery failed deterministically and fell through to the ~31 s
+        // kill-and-respawn bootstrap. 1.8.39's own release notes asserted the ramp "preserves 1 Hz
+        // through the exact window the DL5 inotify failure appears in" — wrong, because the ramp is
+        // anchored on DAEMON start while that failure surfaces on APP restart against a long-lived
+        // daemon. Fixed by making the post-ramp poll 3 s rather than by raising ProxyClient's
+        // budget: the invariant holds with 2 s of margin and no critical file is touched. The
+        // constant now carries an explicit warning naming the coupling. Wakeups are 60/min ->
+        // 20/min instead of the claimed 6/min, which is the right trade for a working recovery
+        // path. Heal cadence is unchanged (10 s during the ramp, 30 s after) and its divisor branch
+        // is gone, since at 3 s one divisor covers both sides.
+        //
+        // The second. 1.8.39 stretched the screenshot cadence to 90 s but left the prune's
+        // daemon-staleness bound at a fixed 30 s. That stamp is refreshed only by a successful
+        // capture, so it now went stale BETWEEN captures and the app-side prune fired at t=30 s and
+        // t=60 s of every cycle: roughly 80 ADB TCP + RSA handshakes per hour of projection, where
+        // 1.8.38 had exactly zero. That is the precise cost the same release had just removed for
+        // idle cars, reintroduced during projection — the window it set out to protect. Root cause
+        // was one parameter serving two different concepts in shouldAppPrune; it now takes
+        // intervalMs AND daemonStaleMs separately, and the recorder passes one capture cycle plus a
+        // margin. Idle behaviour is provably unchanged: the clusterId <= 0 arm short-circuits
+        // before the new bound is read. Two regression tests pin both cadences.
+        //
+        // The latent one. clear() reset its latches synchronously but deleted asynchronously and
+        // swallowed every failure, so with the transport down — the common state when a report is
+        // being filed — the JPEGs survived on disk while everCaptured went permanently false and
+        // the max-age sweep never ran again. Those are screenshots of both driver-facing screens,
+        // kept after the user asked for them to be cleared. runShellBlocking now reports success
+        // and the latches reset only if the delete actually ran.
+        //
+        // Verified clean under the same attack and unchanged here: the launch-diagnostic gate (both
+        // call sites, no third caller, no state mutated, off the main thread, the AAOS
+        // start-fixed-activity probe still unconditional), the AppLogger capacity hint (snapshot
+        // and sTotalChars under one lock, symmetric accounting, no overflow, byte-identical
+        // output), and the capture ramp's own latch.
+        //
+        // Also in this release: docs/perf-audit gains a second-pass section covering the packages
+        // no lane had owned. update/ had never been audited by anyone, and it shows — the OTA check
+        // runs on every app launch with no interval throttle, no connectivity check anywhere in the
+        // app (a repo-wide grep for ConnectivityManager/NetworkCapabilities returns zero) and no
+        // opt-out; it pulls ten full GitHub release objects, each with its complete markdown
+        // changelog, to read one tag; and the downloaded APK is never deleted — there is no
+        // .delete() in update/ at all, and it sits in the external files dir where the framework
+        // will never reclaim it. Those are written up, NOT fixed here.
+        //
+        // NOT VALIDATED ON A CAR. 447 unit tests (2 added), lint 0 errors and byte-identical to the
+        // 1.8.38 baseline (0/14/16). No daemon protocol change, no binder or uid-gate change, no
+        // user-visible string.)
         // 629 = 1.8.39-beta (five things the app did while nothing was happening. A performance
         // audit of the whole tree; these are the five cheapest of its thirty findings, and four of
         // them are work performed on a stationary car with an unchanged screen.
@@ -1576,8 +1638,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 629
-        versionName "1.8.39-beta"
+        versionCode 630
+        versionName "1.8.40-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
