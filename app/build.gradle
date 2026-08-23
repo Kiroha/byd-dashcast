@@ -1340,6 +1340,81 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 632 = 1.8.42-beta (the first release in four that does not exist to fix its predecessor's
+        // fix. An eleven-pass audit loop — find, verify against two independent skeptics, fix,
+        // commit, attack the fix with the next pass — converged: pass 11 produced five candidates
+        // and none survived. Six findings fixed across passes 6-10.
+        //
+        // TWO OF THEM ARE UNBOUNDED RETENTION OF DRIVER-FACING DATA, and they are the most
+        // consequential results of the whole audit.
+        //
+        // Bug reports accumulated forever, in every version ever shipped. AppLogger.pruneOldFiles
+        // swept "byd_log_", "byd_report_" and "BYD_RE_Sniffer_"; BugReportCapture writes
+        // "byd_bugreport_". startsWith is a prefix test and those two names diverge at character
+        // five, so no bug report ever matched. Each is up to REPORT_BODY_MAX_BYTES (4 MB) holding a
+        // 5000-line logcat, an events logcat, ~20 dumpsys sections and the entire journal; on
+        // DL3/DL4 they sit in the external files dir, which any app with READ_EXTERNAL_STORAGE can
+        // read on API 29; and nothing deleted them after a successful upload. The keep-3 rotation
+        // already did the right thing — it was simply never asked to look at them.
+        //
+        // The screenshot max-age sweep stopped working in 1.8.39, and that one is mine. AUD-PERF-P2
+        // gated the app-side prune on everCaptured = sLastCaptureMs != 0L, an in-memory field, so
+        // after any process death (OTA reinstall, force-stop, LMK, swipe-away) a fresh process read
+        // 0, concluded nothing had ever been captured, and never swept again. That sweep is the
+        // ONLY thing enforcing MAX_AGE_MIN on those files. JPEGs of BOTH driver-facing screens have
+        // therefore been sitting in /data/local/tmp indefinitely on 1.8.39, 1.8.40 and 1.8.41,
+        // past the five-minute bound the code documents. I removed ~2880 wasted ADB handshakes a
+        // day and broke a retention bound on pictures of the driver's screens; that was a bad
+        // trade, it shipped, and testers should know their cars have been keeping those files.
+        // The latch is persisted now (ClusterPrefs.KEY_SHOTS_ON_DISK), answering "might shots be on
+        // disk?" rather than "did THIS process capture?", and prune reports what survived so the
+        // latch self-clears once the directory is empty — the retention bound is real without
+        // reintroducing the waste. The second half of that hole is closed too: setEnabled(false)
+        // wrote the pref before clearing and maybeCapture early-returned above the prune, so the
+        // user's own "stop recording my screens" was what stranded the recordings when the rm
+        // failed. Capturing is gated now; sweeping is not.
+        //
+        // ONE IS SAFETY-ADJACENT. The cluster keyboard bridge, finding no editable focused on the
+        // cluster, returned the display-0 candidate instead of nothing. Every keystroke then went
+        // into some head-unit app's field via ACTION_SET_TEXT — a full atomic replace of whatever
+        // was there — and pressing Done fired ACTION_IME_ENTER on it. The driver believes they are
+        // typing a destination into the cluster app; instead they overwrite and SUBMIT a field on
+        // the centre screen, which for a nav search box means starting a route nobody asked for.
+        // It logged nothing, because the "no focused editable on cluster" warning only fires when
+        // the scan returns null — exactly what the fallback prevented. That fallback only made
+        // sense below API 30, where getDisplayId does not exist; this bridge is DL5-only and DL5 is
+        // API 32, so on every car that can reach the code it bought nothing.
+        //
+        // ALSO: a cluster disconnect arriving while MainActivity was detached was dropped forever.
+        // onStop detaches the listener, and onStop is the NORMAL state during projection — the user
+        // sends an app to the cluster and leaves DashCast. setListener replayed only the connected
+        // edge, so the Activity came back showing the app as live on a display that no longer
+        // existed, and ClusterPrefs still held that package, which the next connect restores. The
+        // edge is latched and replayed now.
+        //
+        // AND ONE FIX TO A FIX, recorded because it is the method that made the rest work: the test
+        // written to guard the bug-report prefix contract declared its OWN copy of the prefix list
+        // and could not fail on the drift it existed to catch. It now asserts against the
+        // production constants, with PRUNED_PREFIXES referencing BugReportCapture.PREFIX directly
+        // so the two cannot diverge, and it is verified by mutation — remove the prefix and one
+        // test goes red.
+        //
+        // That is the audit's one durable lesson, learned six times: PROSE INVARIANTS ROT AT THE
+        // SPEED OF THE CODE, AND ONLY STRUCTURAL EXPRESSION HELD. Every load-bearing
+        // comment-enforced coupling in this tree has gone stale at least once, twice in comments
+        // written to prevent the previous rot. What held: PRUNED_PREFIXES referencing
+        // BugReportCapture.PREFIX, and TRIGGER_SLOW_POLL_MS derived from REBROADCAST_BUDGET_MS.
+        // Neither can drift, because neither restates anything.
+        //
+        // Method, since it is the reason this release is not another correction: of twelve patches
+        // written during this audit, six carried a defect found only by adversarial review and
+        // three reached testers. 565c7e72 was REVERTED outright rather than patched a third time.
+        // Every commit in this release has been attacked by a later pass, and the last pass came
+        // back clean. ~61 findings remain open and catalogued in docs/perf-audit/report.md.
+        //
+        // NOT VALIDATED ON A CAR. 453 unit tests, lint 0 errors and byte-identical to the 1.8.38
+        // baseline (0/14/16). No daemon protocol change, no binder or uid-gate change, no
+        // user-visible string.)
         // 631 = 1.8.41-beta (supersedes 1.8.40-beta, which shipped a lost update INSIDE the fix
         // for the lost-file bug 1.8.39 shipped. Two changes, one of them behaviour-neutral.
         //
@@ -1704,8 +1779,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 631
-        versionName "1.8.41-beta"
+        versionCode 632
+        versionName "1.8.42-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
