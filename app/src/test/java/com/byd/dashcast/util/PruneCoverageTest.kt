@@ -1,46 +1,55 @@
 package com.byd.dashcast.util
 
+import com.byd.dashcast.report.BugReportCapture
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The bug this pins: bug reports are named `byd_bugreport_*` and the prune prefix list contained
- * `byd_report_`. `startsWith` is a prefix test and those two names diverge at character 5, so every
- * bug report ever generated — up to 4 MB each, holding a 5000-line logcat and the whole journal —
- * stayed on disk forever, in a directory any app with READ_EXTERNAL_STORAGE can read on API 29.
+ * Pins the artefact naming contract: every prefix the app WRITES must be covered by the prefix list
+ * the sweeper MATCHES.
  *
- * The existing ReportStoreTest could not catch it: it seeds `byd_bugreport_*.txt` INSIDE the
- * `reports/` subdirectory, while production writes them one level up in the external files root.
- * So the ring was tested against files production does not put there.
+ * The bug this exists for: the sweeper listed `byd_report_` while BugReportCapture writes
+ * `byd_bugreport_`. `startsWith` is a prefix test and those names diverge at character 5, so no bug
+ * report ever matched — each up to 4 MB of logcat, dumpsys and journal, kept forever, in a directory
+ * any app with READ_EXTERNAL_STORAGE can read on API 29.
  *
- * This asserts the naming contract directly, independent of any directory.
+ * The first version of this test declared its OWN copy of the prefix list and asserted against that,
+ * which meant it could not fail on the drift it claimed to guard: trimming the real list in
+ * AppLogger would have left all of it green. It now asserts against the production constants
+ * themselves, so it fails the moment either end of the contract moves.
  */
 class PruneCoverageTest {
 
-    /** Every artefact prefix the app writes must be covered by the sweeper's prefix list. */
-    private val prunedPrefixes = arrayOf("byd_log_", "byd_report_", "byd_bugreport_", "BYD_RE_Sniffer_")
-
-    private fun isCovered(fileName: String): Boolean =
-        prunedPrefixes.any { fileName.startsWith(it) }
+    private fun coveredByPruner(writtenPrefix: String): Boolean =
+        AppLogger.PRUNED_PREFIXES.any { writtenPrefix.startsWith(it) }
 
     @Test
-    fun `bug report files are covered by the prune prefix list`() {
-        assertTrue(isCovered("byd_bugreport_20260728_222626.txt"))
+    fun `bug reports are covered by the pruner`() {
+        assertTrue(
+            "BugReportCapture.PREFIX='${BugReportCapture.PREFIX}' is not covered by " +
+                "AppLogger.PRUNED_PREFIXES=${AppLogger.PRUNED_PREFIXES.toList()} — bug reports " +
+                "would accumulate on disk forever",
+            coveredByPruner(BugReportCapture.PREFIX)
+        )
     }
 
     @Test
-    fun `the other written artefacts stay covered`() {
-        assertTrue(isCovered("byd_log_20260728_101010.txt"))
-        assertTrue(isCovered("byd_report_20260728_101010.txt"))
-        assertTrue(isCovered("BYD_RE_Sniffer_20260523_204155.txt"))
+    fun `every other written artefact is covered by the pruner`() {
+        for (written in listOf(AppLogger.PREFIX_LOG, AppLogger.PREFIX_REPORT, AppLogger.PREFIX_SNIFFER)) {
+            assertTrue("'$written' is written but never swept", coveredByPruner(written))
+        }
     }
 
     /**
-     * The regression itself: `byd_report_` does NOT cover `byd_bugreport_`. If someone ever trims
-     * the list back to the shorter prefix believing it subsumes the longer one, this fails.
+     * Guards the specific near-miss: if someone concludes the shorter prefix subsumes the longer one
+     * and trims the list, this fails. Asserted against the production constants, not literals.
      */
     @Test
-    fun `byd_report_ does not subsume byd_bugreport_`() {
-        assertTrue(!"byd_bugreport_x.txt".startsWith("byd_report_"))
+    fun `the report prefix does not subsume the bug-report prefix`() {
+        assertTrue(
+            "PREFIX_REPORT unexpectedly covers BugReportCapture.PREFIX — if that is now true by " +
+                "design, the pruned list may have been trimmed on a false assumption",
+            !BugReportCapture.PREFIX.startsWith(AppLogger.PREFIX_REPORT)
+        )
     }
 }
