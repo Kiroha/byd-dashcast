@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="Typos">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">Contrôleur de tableau de bord</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Continuer sans changer</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -47,7 +48,7 @@
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Langue</string>
     <string name="menu_check_updates">🔄 Rechercher des mises à jour</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Canal bêta</string>
     <string name="settings_prerelease_hint">Permet de recevoir les versions de test avant leur publication officielle</string>
     <string name="cluster_label_88">8,8 pouces  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pouces (cmd=30) — Seal EU</string>
@@ -208,7 +209,7 @@
     <!-- v1.2.37 / v1.2.42 — Hotspot screen (TetherFi-only since v1.2.42) -->
     <string name="main_nav_hotspot">Hotspot</string>
     <!-- v1.4.9-beta — Layouts manager -->
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Dispositions</string>
     <string name="layout_manager_title">Gestion des layouts</string>
     <string name="layout_manager_new">Nouveau layout</string>
     <string name="layout_canvas_hint">Tirez pour dessiner une zone</string>
@@ -246,7 +247,7 @@
     <string name="hotspot_clients_title">Clients connectés</string>
     <string name="hotspot_clients_empty">Aucun client connecté</string>
     <string name="hotspot_client_default_name">Appareil %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
+    <string name="hotspot_stat_uptime">Durée d’activité</string>
     <string name="hotspot_stat_rx">Reçus</string>
     <string name="hotspot_stat_tx">Envoyés</string>
     <string name="settings_use_own_sim">J\'utilise ma propre carte SIM</string>
@@ -309,7 +310,7 @@
     <string name="sysinfo_disp_main">Main</string>
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtual (mirror)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Écran %1$d — %2$s</string>
     <string name="sysinfo_disp_hidden">Caché (PRIVATE)</string>
     <string name="sysinfo_disp_hidden_sub">Non visible via DisplayManager API</string>
     <string name="sysinfo_svc_run">RUN</string>
@@ -427,7 +428,7 @@
     <string name="lm_draw_zone_first">Dessinez au moins une zone</string>
     <string name="lm_error_fmt">Erreur : %1$s</string>
     <string name="lm_free_mode_toast">Mode libre activé</string>
-    <string name="lm_layout_default_name_fmt">Layout %1$d</string>
+    <string name="lm_layout_default_name_fmt">Disposition %1$d</string>
     <string name="lm_layout_name_hint">Nom du layout</string>
     <string name="lm_layout_save_title">Enregistrer le layout</string>
     <string name="lm_layout_saved_toast">Layout enregistré ✓</string>

@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">Controllo quadro strumenti</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Continua senza modificare</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -44,7 +45,7 @@
     <string name="menu_log">📜 Log</string>
     <string name="menu_language">🌐 Lingua</string>
     <string name="menu_check_updates">🔄 Cerca aggiornamenti</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Canale beta</string>
     <string name="settings_prerelease_hint">Ricevi build di test prima delle versioni ufficiali</string>
     <string name="cluster_label_88">8,8 pollici  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pollici (cmd=30) — Seal EU</string>
@@ -182,7 +183,7 @@
     <string name="sysinfo_disp_main">Principale</string>
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtuale (mirror)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Schermo %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Monitora pidof · 500 ms</string>
@@ -209,7 +210,7 @@
     <string name="log_saved_toast">Registro salvato: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Avanzate</string>
     <string name="settings_legacy_path">Daemon proxy non funzionante. Usa percorso legacy</string>
     <string name="settings_legacy_path_support">Instrada tutti i comandi privilegiati attraverso la shell ADB legacy invece del daemon proxy. Attiva se il daemon non risponde o causa problemi.</string>
 
@@ -258,16 +259,16 @@
     <string name="layout_mirror_next">App Layout successiva</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Indietro</string>
     <string name="hotspot_hero_title">Hotspot 4G tramite TetherFi</string>
     <string name="hotspot_hero_subtitle">Condividi i tuoi dati mobili con pochi tocchi</string>
     <string name="hotspot_intro">L\'hotspot integrato non è raggiungibile su DiLink 3. DashCast utilizza invece TetherFi (open source), che crea un punto di accesso Wi-Fi Direct + proxy SOCKS5 — nessuna autorizzazione di sistema richiesta, e la SIM del veicolo viene usata come uplink.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Rilevamento…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi installato — versione %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi non è installato. Tocca «Installa» per scaricare l\'ultima versione.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Avvia</string>
+    <string name="hotspot_tf_stop">Ferma</string>
+    <string name="hotspot_tf_toggle">Attiva/Disattiva</string>
     <string name="hotspot_tf_open">Apri TetherFi</string>
     <string name="hotspot_tf_install">Installa TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — inviato</string>
@@ -275,8 +276,8 @@
     <string name="hotspot_tf_open_failed">Apri TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Watchdog automatico</string>
     <string name="hotspot_watchdog_hint">Riavvia automaticamente l\'hotspot se cade (controlla ogni 30 s).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Spento</string>
+    <string name="hotspot_watchdog_probing">⏳ verifica…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi disinstallato — watchdog arrestato</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s n.%2$d 🟢 hotspot ATTIVO (riavvii=%3$d)</string>
@@ -288,9 +289,9 @@
     <string name="hotspot_clients_title">Client connessi</string>
     <string name="hotspot_clients_empty">Nessun client connesso</string>
     <string name="hotspot_client_default_name">Dispositivo %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Tempo attivo</string>
+    <string name="hotspot_stat_rx">Ricevuti</string>
+    <string name="hotspot_stat_tx">Inviati</string>
     <string name="settings_use_own_sim">Uso la mia scheda SIM</string>
     <string name="settings_use_own_sim_support">Mostra il pulsante «Hotspot» nella barra di navigazione così puoi condividere i tuoi dati mobili tramite TetherFi (solo DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Daemon proxy</string>
@@ -324,7 +325,7 @@
     <string name="settings_fission_mode_support">Proiezione multi-app sul cluster con zone personalizzate. Richiede il daemon proxy.</string>
     <string name="fission_editor_edit">Modifica</string>
     <string name="fission_editor_delete">Elimina</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Layout</string>
     <string name="layout_manager_title">Gestione layout</string>
     <string name="layout_manager_new">Nuovo layout</string>
     <string name="layout_canvas_hint">Trascina per disegnare una zona</string>

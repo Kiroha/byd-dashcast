@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">متحكّم لوحة القيادة</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">متابعة بدون تغيير</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,7 +42,7 @@
     <string name="menu_log">📜 السجلات</string>
     <string name="menu_language">🌐 اللغة</string>
     <string name="menu_check_updates">🔄 التحقق من التحديثات</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">قناة بيتا</string>
     <string name="settings_prerelease_hint">استلام إصدارات تجريبية قبل الإصدار الرسمي</string>
     <string name="cluster_label_88">8,8 بوصة  (cmd=29)</string>
     <string name="cluster_label_123">12,3 بوصة (cmd=30) — Seal EU</string>
@@ -187,7 +188,7 @@
     <string name="sysinfo_disp_main">الرئيسية</string>
     <string name="sysinfo_disp_cluster">العنقود</string>
     <string name="sysinfo_disp_virtual">افتراضية (مرآة)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">شاشة %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">يراقب pidof · 500 مللي ثانية</string>
@@ -214,7 +215,7 @@
     <string name="log_saved_toast">تم حفظ السجل: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">متقدم</string>
     <string name="settings_legacy_path">الوكيل الخفي لا يعمل. استخدم المسار القديم</string>
     <string name="settings_legacy_path_support">يوجّه جميع الأوامر المميزة عبر صدفة ADB القديمة بدلاً من الوكيل الخفي. فعّله إذا كان الخفي لا يستجيب أو يسبب مشاكل.</string>
 
@@ -263,16 +264,16 @@
     <string name="layout_mirror_next">تطبيق التخطيط التالي</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">رجوع</string>
     <string name="hotspot_hero_title">نقطة اتصال 4G عبر TetherFi</string>
     <string name="hotspot_hero_subtitle">شارك بياناتك المحمولة بنقرتين</string>
     <string name="hotspot_intro">نقطة الاتصال المدمجة غير متاحة على DiLink 3. بدلاً من ذلك، يقود DashCast تطبيق TetherFi (مفتوح المصدر) الذي ينشئ نقطة وصول Wi-Fi Direct + وكيل SOCKS5 — دون الحاجة إلى إذن النظام، وتُستخدم شريحة SIM الخاصة بمركبتك كوصلة صاعدة.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ جارٍ الكشف…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi مثبَّت — الإصدار %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi غير مثبَّت. اضغط «تثبيت» لجلب أحدث إصدار.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">بدء</string>
+    <string name="hotspot_tf_stop">إيقاف</string>
+    <string name="hotspot_tf_toggle">تبديل</string>
     <string name="hotspot_tf_open">فتح TetherFi</string>
     <string name="hotspot_tf_install">تثبيت TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — تم الإرسال</string>
@@ -280,8 +281,8 @@
     <string name="hotspot_tf_open_failed">فتح TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">مراقبة تلقائية</string>
     <string name="hotspot_watchdog_hint">يعيد تشغيل نقطة الاتصال تلقائيًا إذا انقطعت (يفحص كل 30 ث).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">متوقف</string>
+    <string name="hotspot_watchdog_probing">⏳ جارٍ الفحص…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ تم إلغاء تثبيت TetherFi — توقّفت المراقبة</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 نقطة الاتصال تعمل (عمليات إعادة التشغيل=%3$d)</string>
@@ -293,9 +294,9 @@
     <string name="hotspot_clients_title">العملاء المتصلون</string>
     <string name="hotspot_clients_empty">لا يوجد عملاء متصلون</string>
     <string name="hotspot_client_default_name">جهاز %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">مدة التشغيل</string>
+    <string name="hotspot_stat_rx">المستلَم</string>
+    <string name="hotspot_stat_tx">المُرسَل</string>
     <string name="settings_use_own_sim">أستخدم شريحة SIM الخاصة بي</string>
     <string name="settings_use_own_sim_support">يُظهر زر «نقطة الاتصال» في شريط التنقل حتى تتمكن من مشاركة بياناتك المحمولة عبر TetherFi (DiLink 3 فقط).</string>
     <string name="proxy_keeper_channel_name">عفريت البروكسي</string>
@@ -325,7 +326,7 @@
     <string name="settings_fission_mode_support">إسقاط تطبيقات متعددة على المجموعة بمناطق مخصصة. يتطلب خادم الوكيل.</string>
     <string name="fission_editor_edit">تعديل</string>
     <string name="fission_editor_delete">حذف</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">التخطيطات</string>
     <string name="layout_manager_title">إدارة التخطيطات</string>
     <string name="layout_manager_new">تخطيط جديد</string>
     <string name="layout_canvas_hint">اسحب لرسم منطقة</string>

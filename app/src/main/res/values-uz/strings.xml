@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Asboblar paneli boshqaruvchisi</string>
+    <string name="welcome_subtitle">Asboblar panelini boshqarish</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Tilni tanlang\nPlease select your language</string>
     <string name="welcome_continue_without_change">Oʻzgartirmasdan davom etish</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,7 +42,7 @@
     <string name="menu_log">📜 Jurnallar</string>
     <string name="menu_language">🌐 Til</string>
     <string name="menu_check_updates">🔄 Yangilanishlarni tekshirish</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Beta kanal</string>
     <string name="settings_prerelease_hint">Rasmiy chiqarilishidan oldin sinov versiyalarini oling</string>
     <string name="cluster_label_88">8,8 dyuym  (cmd=29)</string>
     <string name="cluster_label_123">12,3 dyuym (cmd=30) — Seal EU</string>
@@ -182,7 +183,7 @@
     <string name="sysinfo_disp_main">Asosiy</string>
     <string name="sysinfo_disp_cluster">Klaster</string>
     <string name="sysinfo_disp_virtual">Virtual (oyna)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Ekran %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof kuzatilmoqda · 500 ms</string>
@@ -209,7 +210,7 @@
     <string name="log_saved_toast">Jurnal saqlandi: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Qo‘shimcha</string>
     <string name="settings_legacy_path">Proksi-demon ishlamayapti. Eski yo\'ldan foydalaning</string>
     <string name="settings_legacy_path_support">Barcha imtiyozli buyruqlarni proksi-demon o\'rniga eski ADB qobig\'i orqali yo\'naltiradi. Demon javob bermasa yoki muammo tug\'dirsa, yoqing.</string>
 
@@ -258,16 +259,16 @@
     <string name="layout_mirror_next">Keyingi tartib ilovasi</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Orqaga</string>
     <string name="hotspot_hero_title">TetherFi orqali 4G hotspot</string>
     <string name="hotspot_hero_subtitle">Mobil internetingizni bir necha teginishda ulashing</string>
     <string name="hotspot_intro">O\'rnatilgan hotspot DiLink 3-da mavjud emas. Buning o\'rniga DashCast tizim ruxsatisiz Wi-Fi Direct kirish nuqtasi + SOCKS5 proksi yaratadigan TetherFi\'ni (ochiq kodli) boshqaradi va avtomobil SIM-kartasi yuqori oqim sifatida ishlatiladi.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Aniqlanmoqda…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi o\'rnatilgan — versiya %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi o\'rnatilmagan. So\'nggi versiyani olish uchun «O\'rnatish» tugmasini bosing.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Boshlash</string>
+    <string name="hotspot_tf_stop">To‘xtatish</string>
+    <string name="hotspot_tf_toggle">Almashtirish</string>
     <string name="hotspot_tf_open">TetherFi\'ni ochish</string>
     <string name="hotspot_tf_install">TetherFi\'ni o\'rnatish</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — yuborildi</string>
@@ -275,8 +276,8 @@
     <string name="hotspot_tf_open_failed">TetherFi\'ni ochish: %1$s</string>
     <string name="hotspot_watchdog_title">Avto-kuzatuv</string>
     <string name="hotspot_watchdog_hint">Hotspot uzilsa, uni avtomatik qayta ishga tushiradi (har 30 s da tekshiradi).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">O‘chiq</string>
+    <string name="hotspot_watchdog_probing">⏳ tekshirilmoqda…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi o\'chirildi — kuzatuv to\'xtatildi</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot YONIQ (qayta ishga tushirishlar=%3$d)</string>
@@ -288,9 +289,9 @@
     <string name="hotspot_clients_title">Ulangan mijozlar</string>
     <string name="hotspot_clients_empty">Ulangan mijozlar yo\'q</string>
     <string name="hotspot_client_default_name">Qurilma %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Ishlash vaqti</string>
+    <string name="hotspot_stat_rx">Qabul qilindi</string>
+    <string name="hotspot_stat_tx">Yuborildi</string>
     <string name="settings_use_own_sim">Men o\'z SIM-kartamdan foydalanaman</string>
     <string name="settings_use_own_sim_support">Mobil internetingizni TetherFi orqali ulashishingiz uchun navigatsiya panelida «Hotspot» tugmasini ko\'rsatadi (faqat DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Proksi demoni</string>
@@ -320,7 +321,7 @@
     <string name="settings_fission_mode_support">Klasterdagi maxsus zonalar bilan ko\'p ilovali proyeksiya. Proksi daemonni talab qiladi.</string>
     <string name="fission_editor_edit">Tahrirlash</string>
     <string name="fission_editor_delete">O\'chirish</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Maketlar</string>
     <string name="layout_manager_title">Tartiblarni boshqarish</string>
     <string name="layout_manager_new">Yangi tartib</string>
     <string name="layout_canvas_hint">Zona chizish uchun torting</string>
@@ -374,7 +375,7 @@
     <string name="lm_draw_zone_first">Kamida bitta zona chizing</string>
     <string name="lm_error_fmt">Xato: %1$s</string>
     <string name="lm_free_mode_toast">Erkin rejim yoqildi</string>
-    <string name="lm_layout_default_name_fmt">Tartib %1$d</string>
+    <string name="lm_layout_default_name_fmt">Maket %1$d</string>
     <string name="lm_layout_name_hint">Tartib nomi</string>
     <string name="lm_layout_save_title">Tartibni saqlash</string>
     <string name="lm_layout_saved_toast">Tartib saqlandi ✓</string>

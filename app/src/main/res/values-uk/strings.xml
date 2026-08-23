@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Контролер панелі приладів</string>
+    <string name="welcome_subtitle">Керування приладовою панеллю</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Виберіть мову\nPlease select your language</string>
     <string name="welcome_continue_without_change">Продовжити без змін</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -44,7 +45,7 @@
     <string name="menu_log">📜 Журнали</string>
     <string name="menu_language">🌐 Мова</string>
     <string name="menu_check_updates">🔄 Перевірити оновлення</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Бета-канал</string>
     <string name="settings_prerelease_hint">Отримувати тестові збірки до офіційного випуску</string>
     <string name="cluster_label_88">8,8 дюйма  (cmd=29)</string>
     <string name="cluster_label_123">12,3 дюйма (cmd=30) — Seal EU</string>
@@ -182,7 +183,7 @@
     <string name="sysinfo_disp_main">Основний</string>
     <string name="sysinfo_disp_cluster">Кластер</string>
     <string name="sysinfo_disp_virtual">Віртуальний (дзеркало)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Екран %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Спостерігає pidof · 500 мс</string>
@@ -209,7 +210,7 @@
     <string name="log_saved_toast">Журнал збережено: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Додатково</string>
     <string name="settings_legacy_path">Проксі-демон не працює. Використати застарілий шлях</string>
     <string name="settings_legacy_path_support">Спрямовує всі привілейовані команди через застарілу оболонку ADB замість проксі-демона. Увімкніть, якщо демон не відповідає або спричиняє проблеми.</string>
 
@@ -258,16 +259,16 @@
     <string name="layout_mirror_next">Наступний застосунок макета</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Назад</string>
     <string name="hotspot_hero_title">Точка доступу 4G через TetherFi</string>
     <string name="hotspot_hero_subtitle">Діліться мобільним інтернетом кількома дотиками</string>
     <string name="hotspot_intro">Вбудована точка доступу недоступна на DiLink 3. Натомість DashCast керує TetherFi (відкритий код), який створює точку доступу Wi-Fi Direct + проксі SOCKS5 — без системних дозволів, а SIM-карта автомобіля використовується як канал зв\'язку.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Визначення…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi встановлено — версія %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi не встановлено. Натисніть «Встановити», щоб завантажити останню версію.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Запустити</string>
+    <string name="hotspot_tf_stop">Зупинити</string>
+    <string name="hotspot_tf_toggle">Перемкнути</string>
     <string name="hotspot_tf_open">Відкрити TetherFi</string>
     <string name="hotspot_tf_install">Встановити TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — надіслано</string>
@@ -275,8 +276,8 @@
     <string name="hotspot_tf_open_failed">Відкрити TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Авто-спостереження</string>
     <string name="hotspot_watchdog_hint">Автоматично перезапускає точку доступу в разі збою (перевірка кожні 30 с).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Вимк.</string>
+    <string name="hotspot_watchdog_probing">⏳ перевірка…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi видалено — спостереження зупинено</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 точка доступу УВІМК (перезапуски=%3$d)</string>
@@ -288,9 +289,9 @@
     <string name="hotspot_clients_title">Підключені клієнти</string>
     <string name="hotspot_clients_empty">Немає підключених клієнтів</string>
     <string name="hotspot_client_default_name">Пристрій %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Час роботи</string>
+    <string name="hotspot_stat_rx">Отримано</string>
+    <string name="hotspot_stat_tx">Надіслано</string>
     <string name="settings_use_own_sim">Я використовую власну SIM-карту</string>
     <string name="settings_use_own_sim_support">Показує кнопку «Точка доступу» на панелі навігації, щоб ви могли роздавати мобільний інтернет через TetherFi (лише DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Проксі-демон</string>
@@ -320,7 +321,7 @@
     <string name="settings_fission_mode_support">Мультидодаток на кластері з власними зонами. Потребує проксі-демон.</string>
     <string name="fission_editor_edit">Редагувати</string>
     <string name="fission_editor_delete">Видалити</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Макети</string>
     <string name="layout_manager_title">Керування макетами</string>
     <string name="layout_manager_new">Новий макет</string>
     <string name="layout_canvas_hint">Перетягніть, щоб намалювати зону</string>

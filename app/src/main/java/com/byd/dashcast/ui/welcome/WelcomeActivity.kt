@@ -42,9 +42,13 @@ class WelcomeActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_welcome)
 
-        // Dynamic version subtitle: "BYD CLUSTER MIRROR · v<versionName>"
+        // Dynamic version subtitle. Through a resource, not a literal: this line OVERWRITES the
+        // localised @string/welcome_subtitle the layout sets, so whatever the tester had chosen as
+        // their language, the welcome screen answered in English. A hardcoded Kotlin literal is
+        // also invisible to lint's MissingTranslation, which is why four audit passes walked past
+        // it — the check can only see strings that live in a resource file.
         val subtitle = findViewById<TextView>(R.id.tv_welcome_subtitle)
-        subtitle?.text = "BYD CLUSTER MIRROR · v" + BuildConfig.VERSION_NAME
+        subtitle?.text = getString(R.string.welcome_subtitle_fmt, BuildConfig.VERSION_NAME)
 
         setLanguageButton(R.id.btn_lang_fr, LocaleHelper.LANG_FR)
         setLanguageButton(R.id.btn_lang_en, LocaleHelper.LANG_EN)

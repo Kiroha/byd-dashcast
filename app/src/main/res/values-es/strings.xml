@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">Controlador del cuadro de mandos</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Continuar sin cambiar</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,7 +42,7 @@
     <string name="menu_log">📜 Registros</string>
     <string name="menu_language">🌐 Idioma</string>
     <string name="menu_check_updates">🔄 Buscar actualizaciones</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Canal beta</string>
     <string name="settings_prerelease_hint">Recibe compilaciones de prueba antes del lanzamiento oficial</string>
     <string name="cluster_label_88">8,8 pulgadas  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pulgadas (cmd=30) — Seal EU</string>
@@ -182,7 +183,7 @@
     <string name="sysinfo_disp_main">Principal</string>
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtual (espejo)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Pantalla %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Observa pidof · 500 ms</string>
@@ -209,7 +210,7 @@
     <string name="log_saved_toast">Registro guardado: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Avanzado</string>
     <string name="settings_legacy_path">El daemon proxy no funciona. Usar ruta heredada</string>
     <string name="settings_legacy_path_support">Enruta todos los comandos privilegiados a través del shell ADB heredado en lugar del daemon proxy. Actívalo si el daemon no responde o causa problemas.</string>
 
@@ -258,16 +259,16 @@
     <string name="layout_mirror_next">Aplicación siguiente del layout</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Atrás</string>
     <string name="hotspot_hero_title">Hotspot 4G mediante TetherFi</string>
     <string name="hotspot_hero_subtitle">Comparte tus datos móviles con un par de toques</string>
     <string name="hotspot_intro">El hotspot integrado no es accesible en DiLink 3. En su lugar, DashCast controla TetherFi (código abierto), que crea un punto de acceso Wi-Fi Direct + proxy SOCKS5 — sin permisos del sistema, y usa la SIM de tu vehículo como enlace ascendente.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Detectando…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi instalado — versión %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi no está instalado. Toca «Instalar» para obtener la última versión.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Iniciar</string>
+    <string name="hotspot_tf_stop">Detener</string>
+    <string name="hotspot_tf_toggle">Alternar</string>
     <string name="hotspot_tf_open">Abrir TetherFi</string>
     <string name="hotspot_tf_install">Instalar TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — enviado</string>
@@ -275,8 +276,8 @@
     <string name="hotspot_tf_open_failed">Abrir TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Vigilancia automática</string>
     <string name="hotspot_watchdog_hint">Reinicia el hotspot automáticamente si se cae (comprueba cada 30 s).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Apagado</string>
+    <string name="hotspot_watchdog_probing">⏳ comprobando…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi desinstalado — vigilancia detenida</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s n.º%2$d 🟢 hotspot ACTIVO (reinicios=%3$d)</string>
@@ -288,9 +289,9 @@
     <string name="hotspot_clients_title">Clientes conectados</string>
     <string name="hotspot_clients_empty">No hay clientes conectados</string>
     <string name="hotspot_client_default_name">Dispositivo %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Tiempo activo</string>
+    <string name="hotspot_stat_rx">Recibido</string>
+    <string name="hotspot_stat_tx">Enviado</string>
     <string name="settings_use_own_sim">Uso mi propia tarjeta SIM</string>
     <string name="settings_use_own_sim_support">Muestra el botón «Hotspot» en la barra de navegación para que puedas compartir tus datos móviles mediante TetherFi (solo DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Daemon proxy</string>
@@ -324,7 +325,7 @@
     <string name="settings_fission_mode_support">Proyección multiaplicación en el cluster con zonas personalizadas. Requiere daemon proxy.</string>
     <string name="fission_editor_edit">Editar</string>
     <string name="fission_editor_delete">Eliminar</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Diseños</string>
     <string name="layout_manager_title">Gestor de layouts</string>
     <string name="layout_manager_new">Nuevo layout</string>
     <string name="layout_canvas_hint">Arrastra para trazar una zona</string>
@@ -374,7 +375,7 @@
     <string name="lm_draw_zone_first">Dibuja al menos una zona</string>
     <string name="lm_error_fmt">Error: %1$s</string>
     <string name="lm_free_mode_toast">Modo libre activado</string>
-    <string name="lm_layout_default_name_fmt">Layout %1$d</string>
+    <string name="lm_layout_default_name_fmt">Diseño %1$d</string>
     <string name="lm_layout_name_hint">Nombre del layout</string>
     <string name="lm_layout_save_title">Guardar layout</string>
     <string name="lm_layout_saved_toast">Layout guardado ✓</string>

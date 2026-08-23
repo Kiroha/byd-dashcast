@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Sterownik tablicy rozdzielczej</string>
+    <string name="welcome_subtitle">Sterowanie zestawem wskaźników</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nWybierz swój język</string>
     <string name="welcome_continue_without_change">Kontynuuj bez zmian</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -47,7 +48,7 @@
     <string name="menu_log">📜 Dziennik</string>
     <string name="menu_language">🌐 Język</string>
     <string name="menu_check_updates">🔄 Sprawdź aktualizacje</string>
-    <string name="settings_prerelease_label">Kanał Beta</string>
+    <string name="settings_prerelease_label">Kanał beta</string>
     <string name="settings_prerelease_hint">Otrzymuj testowe wersje przed oficjalnymi wydaniami</string>
     <string name="cluster_label_88">8,8 cala  (cmd=29)</string>
     <string name="cluster_label_123">12,3 cala (cmd=30) — Seal EU</string>
@@ -160,7 +161,7 @@
     <string name="hotspot_watchdog_title">Automatyczny watchdog</string>
     <string name="hotspot_watchdog_hint">Automatycznie restartuje hotspot, jeśli się rozłączy (sonduje co 30 s).</string>
     <string name="hotspot_watchdog_idle">Wył.</string>
-    <string name="hotspot_watchdog_probing">⏳ sondowanie…</string>
+    <string name="hotspot_watchdog_probing">⏳ sprawdzanie…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi odinstalowany — watchdog zatrzymany</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot UP (restarty=%3$d)</string>
@@ -174,9 +175,9 @@
     <string name="hotspot_clients_title">Podłączeni klienci</string>
     <string name="hotspot_clients_empty">Brak podłączonych klientów</string>
     <string name="hotspot_client_default_name">Urządzenie %1$s</string>
-    <string name="hotspot_stat_uptime">Czas pracy</string>
-    <string name="hotspot_stat_rx">Odebrane</string>
-    <string name="hotspot_stat_tx">Wysłane</string>
+    <string name="hotspot_stat_uptime">Czas działania</string>
+    <string name="hotspot_stat_rx">Odebrano</string>
+    <string name="hotspot_stat_tx">Wysłano</string>
     <string name="settings_use_own_sim">Używam własnej karty SIM</string>
     <string name="settings_use_own_sim_support">Pokazuje przycisk „Hotspot” w pasku nawigacji, aby udostępniać dane mobilne przez TetherFi (tylko DiLink 3).</string>
     <string name="main_cluster_label">STAN KLASTRA</string>
@@ -253,7 +254,7 @@
     <string name="log_saved_toast">Dziennik zapisany: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Zaawansowane</string>
     <string name="settings_legacy_path">Daemon proxy nie działa. Użyj starej ścieżki</string>
     <string name="settings_legacy_path_support">Kieruje wszystkie uprzywilejowane polecenia przez starą powłokę ADB zamiast przez daemon proxy. Włącz, jeśli daemon nie odpowiada lub powoduje problemy.</string>
 
@@ -329,7 +330,7 @@
     <string name="settings_fission_mode_support">Wieloaplikacyjna projekcja na klastrze z niestandardowymi strefami. Wymaga demona proxy.</string>
     <string name="fission_editor_edit">Edytuj</string>
     <string name="fission_editor_delete">Usuń</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Układy</string>
     <string name="layout_manager_title">Menedżer układów</string>
     <string name="layout_manager_new">Nowy układ</string>
     <string name="layout_canvas_hint">Przeciągnij, aby narysować strefę</string>
@@ -383,7 +384,7 @@
     <string name="lm_draw_zone_first">Narysuj co najmniej jedną strefę</string>
     <string name="lm_error_fmt">Błąd: %1$s</string>
     <string name="lm_free_mode_toast">Tryb wolny włączony</string>
-    <string name="lm_layout_default_name_fmt">Layout %1$d</string>
+    <string name="lm_layout_default_name_fmt">Układ %1$d</string>
     <string name="lm_layout_name_hint">Nazwa layoutu</string>
     <string name="lm_layout_save_title">Zapisz layout</string>
     <string name="lm_layout_saved_toast">Layout zapisany ✓</string>

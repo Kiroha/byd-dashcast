@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">Kombiinstrument-Steuerung</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Ohne Änderung fortfahren</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -44,7 +45,7 @@
     <string name="menu_log">📜 Protokolle</string>
     <string name="menu_language">🌐 Sprache</string>
     <string name="menu_check_updates">🔄 Nach Updates suchen</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Beta-Kanal</string>
     <string name="settings_prerelease_hint">Testversionen vor offiziellem Release erhalten</string>
     <string name="cluster_label_88">8,8 Zoll  (cmd=29)</string>
     <string name="cluster_label_123">12,3 Zoll (cmd=30) — Seal EU</string>
@@ -182,7 +183,7 @@
     <string name="sysinfo_disp_main">Hauptbildschirm</string>
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtuell (Spiegel)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Anzeige %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Beobachtet pidof · 500 ms</string>
@@ -209,7 +210,7 @@
     <string name="log_saved_toast">Protokoll gespeichert: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Erweitert</string>
     <string name="settings_legacy_path">Proxy-Daemon funktioniert nicht. Legacy-Pfad verwenden</string>
     <string name="settings_legacy_path_support">Leitet alle privilegierten Befehle über die Legacy-ADB-Shell statt über den Proxy-Daemon. Aktivieren, wenn der Daemon nicht reagiert oder Probleme verursacht.</string>
 
@@ -258,16 +259,16 @@
     <string name="layout_mirror_next">Nächste Layout-App</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Zurück</string>
     <string name="hotspot_hero_title">4G-Hotspot über TetherFi</string>
     <string name="hotspot_hero_subtitle">Teile deine mobilen Daten mit wenigen Tipps</string>
     <string name="hotspot_intro">Der integrierte Hotspot ist auf DiLink 3 nicht erreichbar. DashCast steuert stattdessen TetherFi (Open Source), das einen Wi-Fi-Direct-Zugangspunkt + SOCKS5-Proxy erstellt — keine Systemberechtigung erforderlich, und die SIM deines Fahrzeugs wird als Uplink genutzt.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Wird erkannt…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi installiert — Version %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi ist nicht installiert. Tippe auf „Installieren“, um die neueste Version zu laden.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Starten</string>
+    <string name="hotspot_tf_stop">Stoppen</string>
+    <string name="hotspot_tf_toggle">Umschalten</string>
     <string name="hotspot_tf_open">TetherFi öffnen</string>
     <string name="hotspot_tf_install">TetherFi installieren</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — gesendet</string>
@@ -275,8 +276,8 @@
     <string name="hotspot_tf_open_failed">TetherFi öffnen: %1$s</string>
     <string name="hotspot_watchdog_title">Auto-Watchdog</string>
     <string name="hotspot_watchdog_hint">Startet den Hotspot automatisch neu, wenn er abbricht (prüft alle 30 s).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Aus</string>
+    <string name="hotspot_watchdog_probing">⏳ Prüfung…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi deinstalliert — Watchdog gestoppt</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 Hotspot AN (Neustarts=%3$d)</string>
@@ -288,9 +289,9 @@
     <string name="hotspot_clients_title">Verbundene Clients</string>
     <string name="hotspot_clients_empty">Keine verbundenen Clients</string>
     <string name="hotspot_client_default_name">Gerät %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Laufzeit</string>
+    <string name="hotspot_stat_rx">Empfangen</string>
+    <string name="hotspot_stat_tx">Gesendet</string>
     <string name="settings_use_own_sim">Ich verwende meine eigene SIM-Karte</string>
     <string name="settings_use_own_sim_support">Zeigt die „Hotspot“-Schaltfläche in der Navigationsleiste, damit du deine mobilen Daten über TetherFi teilen kannst (nur DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Proxy-Daemon</string>
