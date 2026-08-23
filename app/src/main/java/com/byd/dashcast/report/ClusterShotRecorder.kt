@@ -49,7 +49,17 @@ object ClusterShotRecorder {
     /** uid-2000-owned scratch dir; the app cannot read it on A13 (pulled via the daemon at send). */
     const val SHOTS_DIR = "/data/local/tmp/dashcast_shots"
 
-    private const val INTERVAL_MS = 15_000L
+    // AUD-PERF-P1 — cadence ramp. This recorder rides the 10 s ProxyKeeperService heartbeat and
+    // is ON by default, so a flat 15 s threshold meant ~3 capture rounds/min — six full-display
+    // captures and six JPEG encodes every minute — for the entire duration of every projection,
+    // on a passively-cooled SoC whose GPU is shared with the IVI stack. Nothing checked whether
+    // the screen had changed, so a car stopped at a light re-encoded an identical frame every
+    // 20 s. The incidents these shots exist for happen in the first couple of minutes after a
+    // launch, so keep the old cadence there and back off afterwards. MAX_AGE_MIN retention and
+    // the ring bound are unchanged.
+    private const val INTERVAL_MS        = 15_000L   // during the post-launch ramp window
+    private const val INTERVAL_STEADY_MS = 90_000L   // steady state
+    private const val RAMP_WINDOW_MS     = 120_000L
     private const val PRUNE_INTERVAL_MS = 30_000L
     private const val KEEP_PER_TAG = 6
     private const val MAX_AGE_MIN = 5
@@ -60,6 +70,11 @@ object ClusterShotRecorder {
     private val sExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "cluster-shot-recorder").apply { isDaemon = true }
     }
+
+    // AUD-PERF-P1 — latched when a cluster projection comes up, cleared when it goes away.
+    // Drives the cadence ramp above; measured from when the cluster actually appeared, not from
+    // process start (the keeper heartbeat long outlives any single projection session).
+    @Volatile private var sProjectionStartMs = 0L
 
     @Volatile private var sLastCaptureMs = 0L
     @Volatile private var sLastPruneMs = 0L
@@ -85,7 +100,8 @@ object ClusterShotRecorder {
      *  - a max-age prune (~[PRUNE_INTERVAL_MS]) that runs EVEN WHEN NOT PROJECTING, so shots from a
      *    just-ended session auto-clean within [MAX_AGE_MIN] min (they are deliberately kept past the
      *    projection stop so a post-incident report can still include them);
-     *  - a capture round (~[INTERVAL_MS]) only while a cluster projection is active.
+     *  - a capture round only while a cluster projection is active, at ~[INTERVAL_MS] for the
+     *    first [RAMP_WINDOW_MS] of that projection and ~[INTERVAL_STEADY_MS] thereafter.
      */
     @JvmStatic
     fun maybeCapture(ctx: Context) {
@@ -94,12 +110,26 @@ object ClusterShotRecorder {
         val now = SystemClock.elapsedRealtime()
 
         val clusterId = ClusterService.getInstance()?.displayId ?: -1
+        // AUD-PERF-P1 — latch/clear the projection-start instant, then pick the ramped interval.
+        if (clusterId > 0) {
+            if (sProjectionStartMs == 0L) sProjectionStartMs = now
+        } else {
+            sProjectionStartMs = 0L
+        }
+        val intervalMs =
+            if (sProjectionStartMs != 0L && now - sProjectionStartMs < RAMP_WINDOW_MS) INTERVAL_MS
+            else INTERVAL_STEADY_MS
         if (ClusterShotSchedulePolicy.shouldCapture(
-            clusterId, now, sLastCaptureMs, INTERVAL_MS)) {
+            clusterId, now, sLastCaptureMs, intervalMs)) {
             sLastCaptureMs = now
             sExecutor.execute { captureRound(app, clusterId) }
         } else if (ClusterShotSchedulePolicy.shouldAppPrune(
-            clusterId, now, sLastPruneMs, sLastDaemonPruneMs, PRUNE_INTERVAL_MS)) {
+            clusterId, now, sLastPruneMs, sLastDaemonPruneMs, PRUNE_INTERVAL_MS,
+            // AUD-PERF-P2 — sLastCaptureMs is stamped before the capture is submitted, so this is
+            // true even for a capture that later failed: a failed round still wrote nothing but
+            // still means the daemon may hold shots. Only a process that never projected at all
+            // skips the prune, which is precisely the case that was pure waste.
+            /* everCaptured = */ sLastCaptureMs != 0L)) {
             sLastPruneMs = now
             sExecutor.execute { prune(app) }
         }

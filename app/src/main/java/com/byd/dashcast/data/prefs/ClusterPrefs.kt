@@ -66,6 +66,9 @@ object ClusterPrefs {
     /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
     const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
 
+    /** Diagnostic opt-in: post-launch cluster state dump (AUD-PERF-P3). See the accessor below. */
+    const val KEY_LAUNCH_DIAGNOSTICS = "launch_diagnostics"
+
     // ── Fission layout automation ─────────────────────────────────────────────
     /** When true: favourite layout is activated automatically when FissionActivity opens,
      *  and all bound apps are launched immediately. */
@@ -288,6 +291,26 @@ object ClusterPrefs {
     @JvmStatic
     fun setNavRawCaptureEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_NAV_RAW_CAPTURE, enabled).apply()
+    }
+
+    /**
+     * AUD-PERF-P3 — is the post-launch cluster state dump enabled? OFF by default.
+     *
+     * `ClusterService.verifyClusterDisplayState` shells a pipeline containing
+     * `dumpsys SurfaceFlinger`, which serialises SurfaceFlinger's entire layer tree under SF's
+     * global lock — 1.5 s into the projected app's cold start, i.e. exactly when SF is busiest
+     * and the driver-facing panel is least able to absorb a stall. It also forks ~10 processes.
+     * Its own javadoc calls it "diagnostic only (no behaviour change)" and nothing consumes the
+     * output but a journal line, so every projection start used to pay for evidence almost no
+     * report ever needed. Turn it on from the Diagnostics screen when triaging a placement bug.
+     */
+    @JvmStatic
+    fun isLaunchDiagnosticsEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_LAUNCH_DIAGNOSTICS, false)
+
+    @JvmStatic
+    fun setLaunchDiagnosticsEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_LAUNCH_DIAGNOSTICS, enabled).apply()
     }
 
     @JvmStatic

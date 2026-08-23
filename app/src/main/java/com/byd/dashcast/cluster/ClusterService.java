@@ -1240,8 +1240,15 @@ public class ClusterService extends Service
             // bug report shows whether the app stayed put and in which mode it rendered.
             // Runs on the diagnostic executor so its 1.5 s sleep never holds the move-task
             // worker (frees it immediately for a queued eviction / task-move).
+            // AUD-PERF-P3 — opt-in (Diagnostics screen), OFF by default. This dump shells
+            // `dumpsys SurfaceFlinger`, taking SF's global lock 1.5 s into the projected app's
+            // cold start. NOTE: tryClusterFixedActivityExperiment above is deliberately NOT
+            // gated by this — despite the name it invokes `cmd car_service start-fixed-activity`,
+            // which has a real effect on AAOS units, so gating it could regress DX_BYD_AUTO.
+            if (ClusterPrefs.isLaunchDiagnosticsEnabled(this)) {
                 sDiagExecutor.execute(() -> verifyClusterDisplayState(
                     displayId, packageName, operation));
+            }
         });
     }
 
@@ -1298,7 +1305,14 @@ public class ClusterService extends Service
         // AAOS-only experiment + post-launch verify — diagnostic, off the critical path.
         if (!operation.isValid()) return false;
         tryClusterFixedActivityExperiment(displayId, packageName, operation);
-        sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName, operation));
+        // AUD-PERF-P3 — opt-in (Diagnostics screen), OFF by default. This dump shells
+        // `dumpsys SurfaceFlinger`, taking SF's global lock 1.5 s into the projected app's
+        // cold start. NOTE: tryClusterFixedActivityExperiment above is deliberately NOT
+        // gated by this — despite the name it invokes `cmd car_service start-fixed-activity`,
+        // which has a real effect on AAOS units, so gating it could regress DX_BYD_AUTO.
+        if (ClusterPrefs.isLaunchDiagnosticsEnabled(this)) {
+            sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName, operation));
+        }
         return ok;
     }
 

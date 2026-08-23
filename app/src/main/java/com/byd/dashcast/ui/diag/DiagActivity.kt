@@ -145,6 +145,24 @@ class DiagActivity : Activity() {
             }
         })
 
+        // AUD-PERF-P3 — opt-in post-launch cluster state dump. OFF by default because it runs
+        // `dumpsys SurfaceFlinger` on EVERY projection start, which serialises SF's whole layer
+        // tree under SF's global lock while the projected app is still cold-starting. Same
+        // placement rationale as the capture toggle above: a technical action on the English-only
+        // screen, so it costs no translated string.
+        root.addView(CheckBox(this).apply {
+            text = "Dump cluster state after each launch (placement diagnostic)"
+            isChecked = ClusterPrefs.isLaunchDiagnosticsEnabled(this@DiagActivity)
+            setOnCheckedChangeListener { _, checked ->
+                ClusterPrefs.setLaunchDiagnosticsEnabled(this@DiagActivity, checked)
+                log(if (checked)
+                    "Launch diagnostics ON — each cluster launch now dumps WM tasks + SurfaceFlinger " +
+                        "layers to the journal 1.5s after starting. Costs a SurfaceFlinger global-lock " +
+                        "hold per launch; turn it OFF once you have the report."
+                else "Launch diagnostics OFF (default).")
+            }
+        })
+
         // Provisioning entry point. It lives here rather than in Settings on purpose: it is a
         // technical action, and DiagActivity is the screen app/lint.xml documents as the
         // English-only exception, so it costs no translated string. A new Settings row would have
