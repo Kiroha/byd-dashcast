@@ -14,18 +14,18 @@ class ClusterShotSchedulePolicyTest {
 
     @Test
     fun `recent daemon prune suppresses active app prune`() {
-        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 45_000, 30_000, true))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 45_000, 30_000, 30_000, true))
     }
 
     @Test
     fun `failed active capture keeps app prune fallback`() {
-        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, true))
+        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, 30_000, true))
     }
 
     @Test
     fun `app keeps pruning after projection stops`() {
-        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 0, 59_000, 30_000, true))
-        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 45_000, 0, 30_000, true))
+        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 0, 59_000, 30_000, 30_000, true))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 45_000, 0, 30_000, 30_000, true))
     }
 
     /**
@@ -36,19 +36,45 @@ class ClusterShotSchedulePolicyTest {
     @Test
     fun `never having captured suppresses the prune entirely`() {
         // Idle (no projection) — the branch that used to return true unconditionally.
-        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 0, 0, 30_000, false))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 0, 0, 30_000, 30_000, false))
         // Still suppressed however long the car has been idle.
-        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 9_999_000, 0, 0, 30_000, false))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 9_999_000, 0, 0, 30_000, 30_000, false))
         // Suppressed while projecting too, until the first capture stamps sLastCaptureMs.
-        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, false))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, 30_000, false))
     }
 
     /** Once a capture has happened the prior behaviour is preserved exactly. */
     @Test
     fun `after a first capture the prune behaves as before`() {
-        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 0, 0, 30_000, true))
-        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, true))
+        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 0, 0, 30_000, 30_000, true))
+        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, 30_000, true))
         // The interval gate still wins over everCaptured.
-        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 45_000, 0, 30_000, true))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 60_000, 45_000, 0, 30_000, 30_000, true))
+    }
+
+    /**
+     * REGRESSION (shipped in 1.8.39-beta): the capture-cadence ramp stretched captures to 90 s
+     * while the daemon-staleness bound stayed at 30 s, so the app-side prune — an ADB TCP + RSA
+     * handshake each time — fired twice per cycle DURING projection, where before it never fired
+     * at all. daemonStaleMs must track the capture cadence.
+     */
+    @Test
+    fun `projecting on the ramped cadence never app-prunes between captures`() {
+        val capture = 90_000L
+        val stale = capture + 30_000L          // what the recorder now passes
+        // 30s and 60s after a capture: the old fixed 30s bound fired here. It must not.
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(2, 30_000, 0, 0, 30_000, stale, true))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(2, 60_000, 0, 0, 30_000, stale, true))
+        // Captures genuinely failing — stamp older than a full cycle plus margin: prune again.
+        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(2, 130_000, 0, 0, 30_000, stale, true))
+    }
+
+    /** Idle behaviour must be untouched by that fix: the clusterId<=0 arm short-circuits. */
+    @Test
+    fun `idle prune cadence is unaffected by the daemon-staleness bound`() {
+        assertTrue(ClusterShotSchedulePolicy.shouldAppPrune(-1, 30_000, 0, 0, 30_000, 120_000, true))
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 20_000, 0, 0, 30_000, 120_000, true))
+        // and still nothing at all before a first capture
+        assertFalse(ClusterShotSchedulePolicy.shouldAppPrune(-1, 30_000, 0, 0, 30_000, 120_000, false))
     }
 }
