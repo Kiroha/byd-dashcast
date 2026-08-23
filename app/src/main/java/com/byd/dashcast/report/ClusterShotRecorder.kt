@@ -236,18 +236,32 @@ object ClusterShotRecorder {
     @JvmStatic
     fun clear(ctx: Context) {
         val app = ctx.applicationContext
+        // Snapshot BEFORE enqueuing. See the compare-and-set below.
+        val captureAtEnqueue = sLastCaptureMs
+        val daemonPruneAtEnqueue = sLastDaemonPruneMs
         sExecutor.execute {
-            // AUD-PERF-P2 REGRESSION FIX — reset the latches only if the delete actually ran.
-            // These used to be cleared synchronously, before the async shell call, and every
-            // failure is swallowed. When the transport is down -- which is the common state when
-            // a report is being filed -- the JPEGs survived on disk while everCaptured went
-            // permanently false, so the max-age prune that would have swept them never ran again.
-            // They are screenshots of both driver-facing screens, kept after the user asked for
-            // them to be cleared. On failure the latches now stay set, so pruning continues.
+            // Reset the latches only if the delete actually ran. They used to be cleared
+            // synchronously before the async shell call, and every failure here is swallowed, so
+            // with the transport down -- the common state when a report is being filed -- the
+            // JPEGs survived on disk while everCaptured went false, and the max-age prune that
+            // would have swept them never ran again. They are screenshots of both driver-facing
+            // screens, kept after the user asked for them to be cleared.
             if (runShellBlocking(app, "rm -f $SHOTS_DIR/shot_*.jpg 2>/dev/null; true", "clear")) {
-                sLastCaptureMs = 0L
-                sLastDaemonPruneMs = 0L
+                // ...but reset ONLY if nothing captured while we were blocked. Deferring the reset
+                // to after a blocking ADB round-trip opened a lost update: a keeper heartbeat
+                // landing in that window stamps sLastCaptureMs and queues a captureRound BEHIND
+                // this task, so a bare `= 0L` here would erase that stamp while the queued round
+                // then writes fresh JPEGs. everCaptured would read false with files on disk, and
+                // if projection ends before the next heartbeat the max-age sweep never runs --
+                // re-entering the exact harm this fix exists to prevent. The executor is
+                // single-threaded, so a plain compare-and-set is sufficient.
+                if (sLastCaptureMs == captureAtEnqueue) sLastCaptureMs = 0L
+                if (sLastDaemonPruneMs == daemonPruneAtEnqueue) sLastDaemonPruneMs = 0L
             }
+            // NOTE: this does NOT cover setEnabled(false), which writes the pref before calling
+            // here; maybeCapture then early-returns on !isEnabled, so no prune is ever scheduled
+            // again regardless of the latches. A failed delete on that path still strands the
+            // files. Unchanged behaviour, called out so the claim above is not read as covering it.
         }
     }
 

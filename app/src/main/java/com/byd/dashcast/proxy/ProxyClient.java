@@ -500,16 +500,20 @@ public final class ProxyClient {
             // monitors the way Object.wait() does, so we have to drop LOCK manually.
             //
             // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
-            // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
-            // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
-            // the fallback am-start triggers quickly rather than blocking 15s.
+            // (REBROADCAST), ProxyDaemonMain's trigger-file poll delivers the
+            // broadcast within one poll period. That period and this budget are the
+            // same decision and now live together in ProxyBootstrapPolicy, derived
+            // from each other -- do NOT restate either as a literal here again; the
+            // prose version of this coupling drifted and shipped a regression.
+            // Use this shorter timeout so the fallback am-start triggers quickly
+            // rather than blocking 15s.
             // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
             // on DiLink SoCs). A classified transport failure gets only a 2s grace
             // in case the detached daemon started just before the socket failed.
             long waitMs = ProxyBootstrapPolicy.binderWaitMs(
                     upper,
                     AdbLocalClient.isAdbTransportUnreachable(),
-                    5_000L,
+                    ProxyBootstrapPolicy.REBROADCAST_BUDGET_MS,
                     TRANSPORT_FAILURE_BINDER_GRACE_MS,
                     BROADCAST_WAIT_MS);
             try {

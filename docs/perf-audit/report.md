@@ -512,3 +512,81 @@ comment elsewhere in the tree.
 The rule this yields, recorded for next time: **when a patch changes an interval, grep for every
 other constant that mentions it before shipping.**
 
+---
+
+## 10. Third pass — and the pattern is now undeniable
+
+Ran after **v1.8.40-beta was published**. Three lanes: adversarial attack on the *corrective* patches,
+a systematic sweep for the defect class that had already bitten twice, and the last thick files.
+
+### 10.1 A third defect, in the fix for the second defect
+
+**S1-5 — SHIPPED in 1.8.40.** The R1-3 fix moved `clear()`'s latch resets *after* a blocking ADB
+round-trip. That opened a lost update: a keeper heartbeat landing in that window stamps
+`sLastCaptureMs` and queues a `captureRound` **behind** the in-flight clear; the clear then wrote a
+bare `= 0L`, erasing the fresh stamp, while the queued round wrote new JPEGs. `everCaptured` read
+false with files on disk — and if projection ended before the next heartbeat, the max-age sweep never
+ran. **Exactly the harm R1-3 was written to prevent, re-entered through R1-3's own door.** 1.8.39
+could not do this: it reset synchronously, before enqueuing.
+
+Fixed with a compare-and-set against a snapshot taken before enqueue. `S1-5b` (the fix's comment
+claimed coverage of the `setEnabled(false)` path that it does not have) is corrected in place.
+
+**FIX A and FIX B survived the attack.** The heal-divider boundary was hand-walked tick by tick — the
+gap is exactly 30 s, and `RAMP_TICKS` being an exact multiple of the divisor is load-bearing. The
+`daemonStaleMs` arithmetic is correct on *both* cadences, including the ramp arm the first regression
+test had left unpinned (now pinned). The 7-parameter call site was checked position by position.
+
+One open item, honestly unresolved: the 3 s bound is sound in algebra but its **2 s delivery margin is
+unmeasured**, and `emitBroadcast` uses a plain `sendBroadcast` without `FLAG_RECEIVER_FOREGROUND`. It
+wants an on-car check.
+
+### 10.2 The defect class, mapped
+
+A lane enumerated ~105 timing/size constants and built a coupling map. **Both guard comments written
+to prevent the first regression had themselves rotted** — the daemon still narrated the reverted 10 s
+design four lines above `SLOW_POLL_MS = 3_000L`, and `ProxyClient` still claimed a 1 s poll, making
+5 s look like 5× headroom when it was 1.67×. Prose is not an enforcement mechanism.
+
+**Fixed structurally.** `REBROADCAST_BUDGET_MS` and `TRIGGER_SLOW_POLL_MS` now live together in
+`ProxyBootstrapPolicy`, derived from each other, so the invariant cannot be broken by editing one
+side. This copies `CanBatchOperation.MAX_BATCH_SIZE`, which client and daemon both *reference* rather
+than restate — the pattern already proven across the process boundary in this repo.
+
+Two genuine pre-existing couplings, **not** mine and **not** yet fixed:
+
+- **S2-1 (BROKEN NOW)** — `ProxyClient`'s 16 s bootstrap latch is sized against a 15 s ADB idle
+  timeout, but `AdbTimeoutPolicy` can raise the effective timeout to **30 s** on a fresh-key first
+  install. The latch always expires first, returns `"ERR bootstrap timed out"` before the script has
+  run, and strands one of only four pool threads; repeated taps exhaust the pool.
+- **S2-2 (MARGINAL, safety-adjacent)** — eviction's documented 2 s "hard ceiling" is checked only
+  *between* probes, and a probe can block for a full 32 s bootstrap. On the Stop-projection path that
+  means the OEM cluster stays gone for tens of seconds — in exactly the dead-daemon state the
+  eviction pipeline exists for. Fix is one line: `setNonBlockingReconnect(true)` on the landing
+  executor.
+- **S2-4 (LATENT)** — `REPORT_BODY_MAX_BYTES` is enforced on the shell dump only; the journal is
+  appended afterwards, so the real body is 4 MB + journal, while the comment justifying the redaction
+  cost claims it is capped.
+
+### 10.3 The remaining files
+
+`infrastructure/launch/**` and `infrastructure/task/**` — never opened by any pass — came back
+**clean**, as did `FissionOrchestrator`, `BugReportCapture`, `BugWizardActivity`, `HotspotActivity`
+and `HotspotKeeper`. Findings concentrate in the two files nobody had read end to end:
+`Phase4TaskVerbs` (a fresh `Process` **and** reader `Thread` per `execShell`, 2–5 per launch, inside
+the long-lived daemon) and `SysInfoActivity` (a main-thread `getRunningServices()` binder call, and
+the full report — three blocking socket probes plus an 8 s `dumpsys` — auto-generated on *every*
+screen open).
+
+### 10.4 The honest tally
+
+Across three passes, of **six** patches I wrote, **four** carried a defect found only by an
+adversarial re-read, and **three of those shipped**. Every one was a coupling invisible at the patch
+site. The rule from §9.4 was necessary but not sufficient — grepping for coupled constants finds the
+*first* order problem; it did not catch a lost update introduced by changing *when* a write happens.
+
+Sharpened rule: **when a patch changes an interval, grep for every constant calibrated against it;
+when a patch changes when a write happens, enumerate every concurrent writer of that field.** And
+prefer making a coupling structural over documenting it — every prose guard in this codebase that was
+load-bearing has rotted at least once.
+
