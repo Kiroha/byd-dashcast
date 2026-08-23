@@ -420,10 +420,41 @@ public class ClusterService extends Service
         mDisplayHelper.start();
     }
 
+    /**
+     * Set when the cluster display disconnects with no listener attached, so the edge can be
+     * replayed on re-attach. Volatile: written from the display callback thread, read in
+     * setListener on the main thread.
+     */
+    private volatile boolean mMissedDisconnect = false;
+
     public void setListener(Listener listener) {
         mListener = listener;
         int knownId = mDisplayHelper.getKnownClusterDisplayId();
+        // Replay a disconnect that happened while nobody was listening.
+        //
+        // MainActivity detaches in onStop, which is the app's NORMAL state during projection --
+        // the user sends an app to the cluster and then leaves DashCast. If the cluster display
+        // goes away in that window (ACC off/on, OEM teardown, activation timeout) the callback at
+        // onDashboardDisplayDisconnected was simply dropped: nothing latched it, and this method
+        // only ever replayed the CONNECTED edge. The Activity came back still showing the app as
+        // live on a display that no longer exists -- green state, "<app> -> Cluster", mirror
+        // button, and a mirror restart aimed at a dead display. Worse, ClusterPrefs still recorded
+        // that package as the cluster app, and that persisted value is what the next successful
+        // connect restores, so the lie outlived the process.
+        //
+        // Nothing automatic corrected it. The five other places that clear the persisted package
+        // are all user-initiated (send-to-main, kill, clear, restore-BYD, origin-cluster), and
+        // onStart's re-sync is one-sided by construction: `if (curDispId > 0)`, no else.
+        if (listener != null && mMissedDisconnect && knownId <= 0) {
+            mMissedDisconnect = false;
+            AppLogger.i(TAG, "setListener: replaying cluster disconnect missed while detached");
+            listener.onClusterDisplayDisconnected();
+            return;
+        }
         if (knownId > 0 && mListener != null) {
+            // A disconnect followed by a reconnect while detached nets out to "still up" -- do not
+            // deliver a spurious off-state on top of the connected replay below.
+            mMissedDisconnect = false;
             Display d = null;
             try {
                 android.hardware.display.DisplayManager dm =
@@ -1607,7 +1638,14 @@ public class ClusterService extends Service
             titleRes = R.string.notif_cluster_disconnected;
         }
         updateNotification(getString(titleRes));
-        if (mListener != null) mListener.onClusterDisplayDisconnected();
+        if (mListener != null) {
+            mListener.onClusterDisplayDisconnected();
+        } else {
+            // Nobody is listening (MainActivity is stopped). Latch it so setListener can replay
+            // the edge on re-attach; otherwise the UI and the persisted cluster package stay
+            // wrong for the rest of the session and beyond. See setListener for the full note.
+            mMissedDisconnect = true;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
