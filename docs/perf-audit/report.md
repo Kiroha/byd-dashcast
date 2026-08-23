@@ -313,9 +313,9 @@ Add a Settings switch alongside the existing `reconnect_popup_enabled` / `quick_
                      }
 ```
 
-**Expected gain (ESTIMATED).** Daemon wakeups **60/min → 6/min** after the first minute — **~77 700 fewer wakeups and stat() calls per day**.
+**Expected gain (ESTIMATED).** Daemon wakeups **60/min → 20/min** after the first minute — **~57 600 fewer wakeups and stat() calls per day**. (Originally specified as 6/min via a 10 s poll; corrected to 3 s — see the regression-risk note below.)
 
-**Regression risk.** After the ramp, a trigger-file write is noticed up to 10 s later instead of 1 s **only if the FileObserver has also failed**. That lengthens a cold bootstrap; it cannot break an already-connected projection. The ramp preserves 1 Hz through the exact window the DL5 inotify failure appears in.
+**Regression risk.** ⚠️ **THIS PARAGRAPH WAS WRONG AND THE SHIPPED 1.8.39-beta PATCH WAS DEFECTIVE BECAUSE OF IT.** It claimed the ramp preserved 1 Hz through the window the DL5 inotify failure appears in. It does not: the ramp is anchored on *daemon* start, but that failure surfaces on *app* restart against a daemon alive for days — always far past the ramp. Worse, [`ProxyClient.java:502-512`](../../app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java#L502-L512) waits only **5 000 ms** for the daemon's rebroadcast, and its comment names *this poll's 1 s period* as the reason that budget is safe. A 10 s post-ramp poll is unconditionally larger, so the cheap recovery path would time out **every time it was needed** and fall through to a ~31 s kill-and-respawn. **Corrected: the post-ramp poll is 3 s, not 10 s** — the invariant holds with 2 s of margin and `ProxyClient` is untouched. See §9.
 
 **Verify.** Perfetto `sched` filtered to `dashcast-self-heal` — count `sched_wakeup`/min before/after. Confirm the FileObserver path still works by touching the trigger file and watching `binder_driver` for the rebroadcast.
 
@@ -428,7 +428,8 @@ Recorded rather than quietly amended.
 4. **Lane C mischaracterised the daemon self-heal loop** as a backup for the FileObserver; the in-code comment calls the poll the *primary* DL5 recovery path. The fix became a ramp rather than a flat backoff.
 5. **Lane C's timing on P3 was overstated** — the diagnostic fires at +1.5 s after launch, not concurrently with it. Still a frame hazard during cold start; claim tempered, finding retained.
 6. **Lane D's P28 magnitude was downgraded.** It called the backgrounded mirror *"likely the single largest steady-state GPU cost."* That does not follow: the sink is a `TextureView`'s `SurfaceTexture`, a BufferQueue consumer that only drains when the RenderThread draws. With the Activity stopped, nothing consumes, so after ~2–3 buffers SF cannot dequeue and drops rather than compositing indefinitely. The waste — a display token and SF virtual display held open — is real but **bounded**. Gain is now measurement-gated, not asserted.
-7. **The a11y config's own comments contradict its config** — line 8 says *"Only FOCUSED events"* (two are subscribed); line 10 says *"no content retrieval"* while lines 17/19 set `flagRetrieveInteractiveWindows` and `canRetrieveWindowContent="true"`. The retrieval flags are **justified** (an in-code note explains `getWindows()` needs them), but the stale comment hides a real cost.
+7. **I under-called the a11y retrieval flags.** I wrote that `flagRetrieveInteractiveWindows` / `canRetrieveWindowContent` were "justified" because `getWindows()` needs them. True only *while projecting*: the flag is held permanently, and in AOSP it makes WindowManager recompute and Binder-push the full cross-display window list on **every** window or z-order change system-wide. On a unit whose OEM re-fronts its own activity every 1–2 s that is continuous idle work done by `system_server` on our behalf. It can be set and cleared at runtime on the same condition the handler already tests. Recorded as R2-2.
+8. **The a11y config's own comments contradict its config**
 
 ---
 
@@ -437,3 +438,77 @@ Recorded rather than quietly amended.
 All findings are **`ESTIMATED`**. Run `measure.md` on a head unit and paste the artefacts; each finding's `CONFIDENCE` and tag are then rewritten to `MEASURED` with observed numbers — **including any the data refutes, which will be struck rather than quietly dropped.**
 
 **No code has been modified. Awaiting explicit per-item GO.**
+
+---
+
+## 9. Second pass — verification of the shipped fixes, and the packages nobody owned
+
+Ran **after v1.8.39-beta was already published**: one lane tasked adversarially with breaking the
+five shipped fixes, one on the packages no first-pass lane owned, one on the gaps the first-pass
+lanes declared in their own summaries.
+
+### 9.1 Three defects in my own shipped patches
+
+| ID | Severity | What |
+|---|---|---|
+| **R1-2** | **SHIPPED REGRESSION** | P1 stretched captures to 90 s but left the prune's daemon-staleness bound at a fixed 30 s. That stamp is refreshed only by a successful capture, so it went stale *between* captures and the app-side prune fired at t=30 s and t=60 s of every cycle — **~80 ADB TCP+RSA handshakes per hour of projection, where 1.8.38 had zero.** It handed back a slice of P2's saving during the exact window P1 set out to protect. |
+| **R1-5** | **SHIPPED REGRESSION** | P4's 10 s post-ramp poll silently invalidated a documented cross-file timing contract: `ProxyClient` waits 5 000 ms for the daemon rebroadcast *because* that poll was 1 s. REBROADCAST only ever runs against an already-alive daemon, i.e. always post-ramp — so on DL5 units where inotify has died, the cheap recovery would time out **deterministically** and fall through to a ~31 s kill-and-respawn. |
+| **R1-3** | Latent | `clear()` reset the latches synchronously but deleted asynchronously and swallowed failures. With the transport down — the common state when a report is filed — up to 12 screenshots of both driver-facing screens survived on disk while `everCaptured` went permanently false, so the max-age sweep never ran again. |
+
+Clean under attack: **P3** (both call sites gated, no third caller, no state mutated, runs
+off-main-thread, `tryClusterFixedActivityExperiment` confirmed still unconditional), **P5**
+(snapshot and `sTotalChars` read under the same lock, accounting symmetric, no overflow, output
+byte-identical), **P1's latch** (single-threaded caller; no path reports ≤0 then returns to the same
+projection), and the release mechanics.
+
+**All three are fixed**, with regression tests pinning both the projecting and the idle cadence. The
+root cause of R1-2 was one parameter serving two different concepts in `shouldAppPrune`; it is now
+two. R1-5 is fixed with a **3 s** post-ramp poll rather than by raising `ProxyClient`'s budget —
+preserving the invariant with margin and touching no critical file — and the constant now carries an
+explicit warning naming the coupling.
+
+### 9.2 The packages nobody audited
+
+No first-pass lane owned `update/`, `system/`, `model/`, `domain/`, `platform/`, most of `util/`, or
+`app/`. **Zero periodic work exists in any of them** — every `postDelayed` there is one-shot and
+user- or boot-triggered. The cost is elsewhere:
+
+- **R2-1** (power HIGH) — the OTA check runs on **every** fresh `MainActivity` creation with **no
+  interval throttle, no connectivity check anywhere in the app** (repo-wide grep for
+  `ConnectivityManager`/`NetworkCapabilities` returns **0**) and no auto-check opt-out. On a dead
+  link it burns a 10 s connect timeout. `MainActivity.kt:384`, `update/UpdateChecker.java:107`.
+- **R2-2** (power MED) — `FLAG_RETRIEVE_INTERACTIVE_WINDOWS` held permanently; see §7.7.
+- **R2-3** (power MED) — the check fetches `per_page=10` full release objects, each with its complete
+  markdown changelog, then `break`s on the first match; ~9 are parsed for nothing, into an uncapped
+  `ByteArrayOutputStream`. `update/UpdateChecker.java:54`.
+- **R2-4** (startup MED) — `DashCastApp.onCreate` moves every prefs touch to a background thread
+  *"so the cold-start critical path is free of disk I/O"*, then calls `clearLegacyOverscanPrefs()`
+  on the main thread at `:77`, forcing a synchronous parse of the largest prefs file in the app.
+- **R2-5** (memory MED) — the downloaded OTA APK is **never deleted**; `grep` confirms no `.delete()`
+  anywhere in `update/`. It sits in the external files dir, not `cacheDir`, so the framework never
+  reclaims it: tens of MB resident forever on any unit that has taken an OTA.
+- **R2-6**, **R2-7** (LOW) — a 500 ms sleep-before-read in the daemon binder poll; the TetherFi check
+  re-hitting the API on every `HotspotActivity.onResume` with no cache.
+
+### 9.3 The declared blind spots
+
+`DashboardDisplayHelper` and `AppStartupTasks` came back **clean**. `ClusterManager`'s 21
+interval-bearing sites — flagged in `architecture.md` as the repo's largest concentration — are
+**almost all activation-scoped and self-terminating**; only the late-arrival watch's 2 s poll (R3-2)
+has an idle-adjacent tail, and only after a failed activation. Also found: a mirror stop/restart per
+cold-start resize pass (R3-1), `commit()` on the shared 4-thread ADB executor in `ReportChannel`
+(R3-3), the 57-container Settings layout (R3-4), and unreleased View listeners in
+`MirrorCoordinator.destroy()` (R3-5).
+
+### 9.4 What this pass says about the first one
+
+The first pass produced 30 findings and five patches. **Three of those five carried a defect that
+only an adversarial re-read found, and two of them shipped.** Two of the three share one failure
+mode: **a timing constant was changed without auditing what else had been calibrated against it.**
+P1's cadence was coupled to a prune bound in another file; P4's poll period was coupled to a timeout
+in another *process*. Neither coupling was visible at the patch site, and both were documented in a
+comment elsewhere in the tree.
+
+The rule this yields, recorded for next time: **when a patch changes an interval, grep for every
+other constant that mentions it before shipping.**
+
