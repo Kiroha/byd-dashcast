@@ -1340,6 +1340,62 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 629 = 1.8.39-beta (five things the app did while nothing was happening. A performance
+        // audit of the whole tree; these are the five cheapest of its thirty findings, and four of
+        // them are work performed on a stationary car with an unchanged screen.
+        //
+        // The framing finding first, because it reshapes what "performance" means here: DashCast
+        // has NO frame pipeline. No MediaCodec, no MediaProjection, no per-frame code anywhere.
+        // Projection relocates a third-party task onto the OEM cluster display and SurfaceFlinger
+        // does every frame. So the app cannot make the cluster faster — it can only steal CPU, GPU
+        // and thermal headroom from the app that owns those frames. Every fix below is that.
+        //
+        // The screenshot recorder was the biggest one, and three independent audit lanes found it
+        // separately. It rides the 10 s keeper heartbeat with a 15 s threshold, is ON by default,
+        // and captures BOTH displays — two SurfaceFlinger captures and two JPEG encodes roughly
+        // every 20 s, for the entire duration of every projection, with no check for whether the
+        // screen changed. A car stopped at a light re-encoded an identical frame ~180 times an
+        // hour. Now 15 s for the first two minutes of a projection (where launch incidents are)
+        // then 90 s. Retention, ring bound and consent are untouched.
+        //
+        // Its prune tick was worse in kind: shouldAppPrune ended `clusterId <= 0 || ...`, so when
+        // NOT projecting it returned true unconditionally every 30 s, forever. Each one opens a
+        // full ADB TCP probe + RSA handshake to run a `cd ... || exit 0` against a directory that
+        // was never created — ~2 880 handshakes a day on a car that never projects. It now waits
+        // for a first capture. The daemon already bounds the ring in-process, so nothing is lost.
+        //
+        // Every cluster launch shelled `dumpsys SurfaceFlinger`, which serialises SF's whole layer
+        // tree under SF's GLOBAL LOCK, 1.5 s into the projected app's cold start — the moment the
+        // driver-facing panel can least absorb a stall — plus ~10 process forks. Its own javadoc
+        // called it "diagnostic only (no behaviour change)" and nothing read the output but a
+        // journal line. Now opt-in from the Diagnostics screen, off by default. Deliberately NOT
+        // gated with it: tryClusterFixedActivityExperiment, which despite the name invokes
+        // `cmd car_service start-fixed-activity` and has a real effect on AAOS units. Both call
+        // sites are gated, not just the one the audit first reported.
+        //
+        // The uid-2000 daemon ran `while(true) { Thread.sleep(1000) }` for its whole life — and it
+        // outlives the app, survives its kills, and lives as long as the head unit stays up. That
+        // is ~86 400 wakeups and ~86 400 stat() calls per day. It is the PRIMARY recovery path when
+        // inotify silently stops on DL5 (not a backup, as it first looked), so this is a ramp, not
+        // a backoff: full 1 Hz for the first 60 s, where that failure appears, then 10 s. The heal
+        // pass stays at ~10 s during the ramp and ~30 s after, so its wall-clock cadence holds.
+        //
+        // And AppLogger.get() sized its StringBuilder at entries*80 = 400 K for content that can
+        // reach MAX_TOTAL_CHARS = 2 M, so it doubled four times, copying the whole char[] each
+        // time, peaking around 12 MB — on every bug report and every log share, i.e. exactly when
+        // the user is already in trouble. The exact figure was one field away in sTotalChars. It is
+        // floored at the old value so it can only ever over-reserve, never under.
+        //
+        // The audit itself is in docs/perf-audit/ (architecture, measurement protocol, 30 ranked
+        // findings, backlog). Everything in it is ESTIMATED: no car was profiled, and measure.md
+        // names the one measurement that confirms or refutes each finding. Notably it also records
+        // what is already CLEAN — AppLogger's byte budget, the executor shutdowns, the receiver
+        // unregisters, the Parcel balance and the touch pre-allocation all still hold.
+        //
+        // NOT VALIDATED ON A CAR. The daemon ramp in particular only truly exercises on a head
+        // unit. 445 unit tests, lint 0 errors and byte-identical to the 1.8.38 baseline
+        // (0/14/16), no MissingTranslation, no new lint finding in any touched file. No daemon
+        // protocol change, no binder or uid-gate change, no user-visible string.)
         // 628 = 1.8.38-beta (the translations twelve locales were still missing, and the reason
         // four audit passes walked past them. 167 translations across 16 strings and 12 languages.
         // The Layouts navigation label was the English word in 12 locales out of 12 — the French
@@ -1520,8 +1576,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 628
-        versionName "1.8.38-beta"
+        versionCode 629
+        versionName "1.8.39-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
