@@ -589,6 +589,25 @@ public class AdbLocalClient {
     private static void noteTransportFailure(Context context, Throwable error) {
         String state = AdbTransportFailure.INSTANCE.classify(error);
         if (state == null) return;
+        // Never downgrade HANDSHAKE to NO_LISTENER.
+        //
+        // connect() classifies this SAME exception with classify(e, true) — it holds the proof that
+        // a plain TCP connect to adbd succeeded milliseconds earlier — and publishes XPORT_HANDSHAKE.
+        // The exception then propagates to the caller's catch, which lands here and re-classifies it
+        // WITHOUT that proof; the one and only difference the flag makes is this exact pair, so the
+        // verdict flips to NO_LISTENER and markTransport() overwrites the better answer. The tester
+        // is then told to run `adb tcpip 5555` for a port that answered a fraction of a second ago —
+        // precisely the misdiagnosis AdbTransportFailure's own doc says the flag was added to stop.
+        // The fix was threaded into connect() and never into the sites downstream of it.
+        //
+        // Only this pair is guarded: every other classification here is made from the exception
+        // alone and is not second-guessing a better-informed one.
+        if (XPORT_NO_LISTENER.equals(state) && XPORT_HANDSHAKE.equals(sTransportState)) {
+            AppLogger.d(TAG, "keeping XPORT_HANDSHAKE — connect() classified this with a passing"
+                    + " TCP probe; re-classifying without it would say NO_LISTENER");
+            sOperationSucceeded = false;
+            return;
+        }
         if (XPORT_UNRESPONSIVE.equals(state)) {
             confirmUnresponsiveTransport(context, error);
             return;
