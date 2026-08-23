@@ -1340,6 +1340,39 @@ android {
         // notification, and only when parsing failed, which is exactly when a report gets sent.
         // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
         // credential patterns in any dex or resource.)
+        // 627 = 1.8.37-beta (the audit's fourth and last pass, and the one that mattered least —
+        // which is the finding. Three passes had already gone file by file; this one went after the
+        // defect classes that per-file review is structurally blind to, and came back almost empty.
+        // All 37 Binder transactions were compared field by field across the client/daemon boundary
+        // — write order against read order, type for type, the exception protocol on both sides
+        // including the error branches — and every one is consistent. That is the class that
+        // corrupts silently without ever throwing, and it has bitten this project before
+        // (writeInterfaceToken puts TWO fields on the wire). The uid gate was checked on every
+        // `case`, not sampled: TXN_EXEC and TXN_READ_FILE_CHUNK are out of reach of a third-party
+        // app. Eleven of my own fixes were re-read adversarially with no regression found; two
+        // accusations against today's work were raised and both refuted, one of them by decompiling
+        // the dadb jar to enumerate where AdbConnectException is actually constructed. I verified
+        // that refutation's premises myself rather than take the verdict.
+        //
+        // What this release actually carries is the previous pass's fixes. AUD-233 — the cluster
+        // resize editor, a screen nobody had ever reviewed, could write a TEN-PIXEL-WIDE window to a
+        // live instrument cluster: its min-size fallback recomputed from the down-rect with neither
+        // the bounds clamp nor the min-size check reapplied. Its coordinate space was also frozen at
+        // 1920x720 (a placeholder from a mirror that had never started), wrong on the 1280x480
+        // panels this project has met on a car, and its soft-snap was gated per axis instead of per
+        // edge so dragging one handle moved the opposite one. The arithmetic moved to
+        // ResizeRectPolicy because none of it was reachable while it sat in a touch handler; ten
+        // tests, five of which go red when the defects are restored, including the sliver at its
+        // exact coordinates. AUD-234 — every roundabout drew a motorway-exit arrow, because "exit"
+        // sat above "roundabout" in a first-match-wins table and real instructions say both.
+        // AUD-235 — three defects in Phase4ProcessVerbs, the one daemon file no reviewer had ever
+        // opened (its agent was killed by a safety classifier), including a repeat of AUD-225 fixed
+        // one file over the day before. AUD-236 — a dialog shown on a destroyed Activity.
+        // 445 unit tests, lint 0/0. Every behavioural fix mutation-verified.
+        //
+        // NOT in this release, and deliberately: the i18n cluster. main_nav_layouts is still the
+        // English word "Layouts" in 12 locales out of 12, and lint cannot see it because the string
+        // exists — it is simply not translated.)
         // 626 = 1.8.36-beta (the last 23 P3s of the 1.8.33 re-audit, re-opened against the tree
         // as it is now rather than as the audit found it: 45 commits had landed since, and seven of
         // the twenty-three no longer held — five were misreadings, two were already fixed. The
@@ -1461,8 +1494,8 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 626
-        versionName "1.8.36-beta"
+        versionCode 627
+        versionName "1.8.37-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
