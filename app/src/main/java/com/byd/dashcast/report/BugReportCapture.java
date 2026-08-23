@@ -41,7 +41,10 @@ import java.util.Locale;
 public final class BugReportCapture {
 
     private static final String TAG       = "BugReportCapture";
-    private static final String PREFIX    = "byd_bugreport_";
+    /** Filename prefix for generated bug reports. Public because {@code AppLogger.PRUNED_PREFIXES}
+     *  must reference it — the sweeper and this name are one contract, and duplicating the
+     *  literal is what let them drift apart and strand every report on disk. */
+    public static final String PREFIX    = "byd_bugreport_";
 
     /**
      * Line-count cap kept ONLY as the fallback for a ROM whose logcat refuses {@code -t <time>}.

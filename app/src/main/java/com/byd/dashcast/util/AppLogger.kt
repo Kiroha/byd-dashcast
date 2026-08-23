@@ -28,6 +28,28 @@ import java.util.Locale
  */
 object AppLogger {
 
+    // ── Artefact naming contract ──────────────────────────────────────────────────────────────
+    //
+    // Every file this app leaves on disk is named with one of these prefixes, and [PRUNED_PREFIXES]
+    // is what the sweeper matches against. The two halves MUST stay in step: they drifted once and
+    // the result was that every bug report ever generated stayed on disk forever, because the list
+    // said "byd_report_" while BugReportCapture writes "byd_bugreport_" and startsWith() is a
+    // prefix test. Both halves are now named constants so PruneCoverageTest can assert the
+    // relationship between them rather than restate it — a test that owns its own copy of the list
+    // cannot fail on the drift it exists to catch.
+    @JvmField val PREFIX_LOG    = "byd_log_"
+    @JvmField val PREFIX_REPORT = "byd_report_"
+    @JvmField val PREFIX_SNIFFER = "BYD_RE_Sniffer_"
+
+    /** The prefixes [pruneOldFiles] sweeps. Must cover every prefix the app writes. */
+    @JvmField val PRUNED_PREFIXES = arrayOf(
+        PREFIX_LOG,
+        PREFIX_REPORT,
+        // BugReportCapture.PREFIX — not covered by PREFIX_REPORT; see the note above.
+        com.byd.dashcast.report.BugReportCapture.PREFIX,
+        PREFIX_SNIFFER,
+    )
+
     // ── Niveau de log ─────────────────────────────────────────────────────────
     enum class Level { DEBUG, INFO, WARN, ERROR }
 
@@ -320,7 +342,7 @@ object AppLogger {
      * @return the created File, or null on error
      */
     @JvmStatic
-    fun saveToFile(context: Context): File? = writeFile(context, "byd_log_", get())
+    fun saveToFile(context: Context): File? = writeFile(context, PREFIX_LOG, get())
 
     /**
      * Generic helper — writes [content] to a timestamped
@@ -388,7 +410,7 @@ object AppLogger {
             "LOG\n" +
             "════════════════════════════════════\n" +
             get()
-        val f = writeFile(context, "byd_report_", combined)
+        val f = writeFile(context, PREFIX_REPORT, combined)
         if (f != null) {
             shareFile(
                 context, f,
@@ -541,14 +563,7 @@ object AppLogger {
     @JvmStatic
     fun pruneOldFiles(context: Context?, keepPerPrefix: Int): Int {
         if (context == null || keepPerPrefix < 1) return 0
-        // "byd_bugreport_" is NOT covered by "byd_report_" — startsWith() is a prefix test and
-        // the two names diverge at character 5. That one-word gap meant every bug report ever
-        // generated stayed on disk forever: up to REPORT_BODY_MAX_BYTES (4 MB) each, holding a
-        // 5000-line logcat, an events logcat, ~20 dumpsys sections and the whole journal. On
-        // API 29 they live in the external files dir, which any app with READ_EXTERNAL_STORAGE
-        // can read. Nothing deleted them after a successful upload either. The keep-3 rotation
-        // below already does the right thing; it was simply never asked to look at them.
-        val prefixes = arrayOf("byd_log_", "byd_report_", "byd_bugreport_", "BYD_RE_Sniffer_")
+        val prefixes = PRUNED_PREFIXES
         var deleted = 0
         val dirs = arrayOf(externalFilesDirOrNull(context), context.filesDir)
         for (dir in dirs) {
