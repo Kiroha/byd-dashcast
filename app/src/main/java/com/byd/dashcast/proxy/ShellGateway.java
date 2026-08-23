@@ -152,8 +152,7 @@ public final class ShellGateway {
                 return;
             }
             // This dedicated single thread has its own legacy fallback (below), so it must
-            // never pay the blocking daemon bootstrap inside callWithRetry (ProxyClient
-            // .CONNECT_JOIN_TIMEOUT_MS -- do not restate the number, it has drifted before) when a binder
+            // never pay the ~23s blocking daemon bootstrap inside callWithRetry when a binder
             // dies mid-transact — that would stall every queued overscan/pidof op. Opt out:
             // the reconnect is kicked async and the verb fails fast into the legacy fallback.
             ProxyClient.setNonBlockingReconnect(true);

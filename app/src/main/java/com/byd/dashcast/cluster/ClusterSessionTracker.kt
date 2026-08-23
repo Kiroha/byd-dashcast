@@ -124,24 +124,12 @@ class ClusterSessionTracker(context: Context) {
         // stranded on the cluster (the one this whole pipeline exists for) from the ones that are
         // simply gone or already home.
         sLandingExecutor.execute {
-            // Same opt-out, same reason as the landing loop below -- and this probe is the one
-            // that runs FIRST. Wrapping only the landing loop left this one blocking, on the same
-            // single-thread executor, charged against the same evictionStartedAt budget, once per
-            // package. With a dead daemon binder that alone was a full bootstrap per package
-            // before the loop the budget supposedly governs had even started.
-            ProxyClient.setNonBlockingReconnect(true)
             val location = try {
                 ProxyClient.findTaskLocationForPackage(pkg)
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "evict: probe failed for $pkg (${t.javaClass.simpleName}) "
                         + "— evicting anyway, an app left on the cluster is the worse outcome")
                 TaskLocation.unknown()
-            } finally {
-                // Restored immediately: everything after this point (the main-thread post, and
-                // forceStopThenNext later) must be free to bring a cold daemon back. The executor
-                // thread is reused across packages, so leaving it set would silently disarm the
-                // next package's reconnect too.
-                ProxyClient.setNonBlockingReconnect(false)
             }
             val skip = when (location.matchDisplay(0)) {
                 // Already home: the user may well be using it right now. Never kill it.
@@ -200,31 +188,6 @@ class ClusterSessionTracker(context: Context) {
             // was when we killed it — only that we had asked it to move. Never conclude from a
             // request again.
             var lastSeen = "never-probed"
-            // LANDING_BUDGET_MS is documented as a "hard ceiling" because every millisecond spent
-            // here delays the OEM cluster coming back after the driver pressed Stop. It was not
-            // one. The budget is only consulted BETWEEN probes, and each probe
-            // (ProxyClient.findTaskLocationForPackage) goes through callWithRetry, whose pre-flight
-            // reconnect BLOCKS on this thread -- this is not the main thread and had no opt-out --
-            // for up to BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS (the leader's own wait; the
-            // CONNECT_JOIN_TIMEOUT_MS figure is the follower's join budget, which is longer still).
-            // One probe could therefore hold the entire eviction
-            // for tens of seconds, and it did so precisely when the daemon binder was dead: the
-            // very state that strands an app on the cluster and makes eviction necessary in the
-            // first place. The driver was left looking at a blank cluster far past the 2 s the
-            // policy promises.
-            //
-            // setNonBlockingReconnect is the ThreadLocal opt-out this project already uses at
-            // exactly this kind of site (ClusterShotRecorder.pullShotsInto, HotspotKeeper,
-            // ShellGateway). A dead binder now fails the probe fast; the catch below already treats
-            // any probe failure as UNKNOWN and keeps waiting, bounded, which is the designed
-            // behaviour. The budget becomes real.
-            //
-            // Scoped to the PROBE LOOP only, deliberately. forceStopThenNext below is a real
-            // operation that must be allowed to bring the daemon back if it is cold -- killing an
-            // app left on the cluster matters more than the 2 s budget, and the budget has already
-            // been spent by then. Restored in a finally because the executor thread is reused.
-            ProxyClient.setNonBlockingReconnect(true)
-            try {
             while (true) {
                 probes++
                 val match = try {
@@ -243,9 +206,6 @@ class ClusterSessionTracker(context: Context) {
                 if (step == ClusterEvictionPolicy.Step.LANDED) { landed = true; break }
                 if (step == ClusterEvictionPolicy.Step.GIVE_UP) break
                 if (!sleepQuietly(ClusterEvictionPolicy.POLL_INTERVAL_MS)) break
-            }
-            } finally {
-                ProxyClient.setNonBlockingReconnect(false)
             }
 
             val waitedMs = SystemClock.elapsedRealtime() - waitStartedAt
