@@ -289,10 +289,10 @@ object ClusterShotRecorder {
                 // condition as the in-memory latches: never cleared when the delete did not run.
                 ClusterPrefs.setShotsOnDisk(app, false)
             }
-            // NOTE: this does NOT cover setEnabled(false), which writes the pref before calling
-            // here; maybeCapture then early-returns on !isEnabled, so no prune is ever scheduled
-            // again regardless of the latches. A failed delete on that path still strands the
-            // files. Unchanged behaviour, called out so the claim above is not read as covering it.
+            // setEnabled(false) IS covered, as of the same change that removed the early return in
+            // maybeCapture: the prune branch stays reachable while disabled (clusterId forced to
+            // -1), so a failed rm here leaves the persisted latch set and the max-age sweep keeps
+            // running until the directory is genuinely empty.
         }
     }
 
