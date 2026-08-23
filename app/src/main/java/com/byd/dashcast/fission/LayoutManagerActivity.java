@@ -350,7 +350,16 @@ public class LayoutManagerActivity extends Activity {
                 pkgs[i]   = sorted.get(i).getKey();
                 labels[i] = sorted.get(i).getValue() + "  —  " + pkgs[i];
             }
-            runOnUiThread(() -> new AlertDialog.Builder(this)
+            runOnUiThread(() -> {
+                // Same guard activateLayout already carries, and for the same reason: this runnable
+                // is posted from a background query of the package manager, which on a head unit
+                // with a few hundred packages takes long enough for the user to leave. Showing a
+                // dialog on a destroyed Activity throws
+                // WindowManager$BadTokenException("Unable to add window — token is not valid"),
+                // an uncaught RuntimeException on the main thread, and a crash here blanks the
+                // driver's cluster with the rest of the process.
+                if (isFinishing() || isDestroyed()) return;
+                new AlertDialog.Builder(this)
                     .setTitle(getString(R.string.fission_slot_pick_pkg))
                     .setItems(labels, (d2, idx) -> {
                         pickedPkg[0] = pkgs[idx];
@@ -361,7 +370,8 @@ public class LayoutManagerActivity extends Activity {
                         tvBound.setText(getString(R.string.fission_slot_pkg_none));
                     })
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show());
+                    .show();
+            });
         });
     }
 
