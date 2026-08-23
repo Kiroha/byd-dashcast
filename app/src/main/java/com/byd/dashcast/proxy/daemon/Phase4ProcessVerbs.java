@@ -38,14 +38,28 @@ public final class Phase4ProcessVerbs {
     private static final int    TXN_SEND_INFO2          = 3;
     private static final int    TXN_REGISTER_CALLBACK   = 4;
 
-    private static volatile IBinder sAutoContainerBinder;
-    private static volatile String  sAutoContainerDescriptor;
+    /**
+     * The binder and the descriptor it advertised, together.
+     *
+     * They used to be two independent static fields, read at two different moments, and that cost
+     * correctness twice. The `catch { return b; }` on linkToDeath below returned a usable binder
+     * while never assigning the descriptor, so on a ROM where linkToDeath fails every subsequent
+     * transaction wrote a NULL interface token. And even on the happy path, binderDied() could null
+     * the descriptor between a caller obtaining the binder and reading the descriptor for it.
+     * One immutable pair, resolved once, closes both.
+     */
+    private static final class Container {
+        final IBinder binder;
+        final String descriptor;
+        Container(IBinder binder, String descriptor) { this.binder = binder; this.descriptor = descriptor; }
+    }
+
+    private static volatile Container sAutoContainer;
 
     private static final IBinder.DeathRecipient sAutoContainerDeath = new IBinder.DeathRecipient() {
         @Override public void binderDied() {
             synchronized (Phase4ProcessVerbs.class) {
-                sAutoContainerBinder     = null;
-                sAutoContainerDescriptor = null;
+                sAutoContainer = null;
             }
         }
     };
@@ -55,14 +69,14 @@ public final class Phase4ProcessVerbs {
      * Descriptor is read at runtime so OEM rebrands still work.
      * Cache is invalidated via a DeathRecipient when the host process dies.
      */
-    private static IBinder autoContainerBinder() throws Throwable {
-        IBinder b = sAutoContainerBinder;
-        if (b != null && b.isBinderAlive()) return b;
+    private static Container autoContainer() throws Throwable {
+        Container c = sAutoContainer;
+        if (c != null && c.binder.isBinderAlive()) return c;
         synchronized (Phase4ProcessVerbs.class) {
-            b = sAutoContainerBinder;
-            if (b != null && b.isBinderAlive()) return b;
+            c = sAutoContainer;
+            if (c != null && c.binder.isBinderAlive()) return c;
             Class<?> sm = Class.forName("android.os.ServiceManager");
-            b = (IBinder) sm.getMethod("getService", String.class).invoke(null, AUTOCONTAINER_SVC);
+            IBinder b = (IBinder) sm.getMethod("getService", String.class).invoke(null, AUTOCONTAINER_SVC);
             if (b == null) throw new IllegalStateException("no '" + AUTOCONTAINER_SVC + "' service");
             String descr;
             Parcel d0 = Parcel.obtain();
@@ -77,11 +91,18 @@ public final class Phase4ProcessVerbs {
             if (descr == null || descr.isEmpty()) {
                 throw new IllegalStateException(AUTOCONTAINER_SVC + " advertised empty descriptor");
             }
-            try { b.linkToDeath(sAutoContainerDeath, 0); }
-            catch (Throwable t) { return b; }
-            sAutoContainerDescriptor = descr;
-            sAutoContainerBinder = b;
-            return b;
+            Container fresh = new Container(b, descr);
+            // linkToDeath is best-effort: it throws when the binder died between getService and
+            // here. The pair is still complete and usable, so hand it back — it is simply not
+            // cached, and the isBinderAlive() check above re-resolves on the next call. What must
+            // NOT happen, and used to, is returning a binder with no descriptor to go with it.
+            try {
+                b.linkToDeath(sAutoContainerDeath, 0);
+            } catch (Throwable t) {
+                return fresh;
+            }
+            sAutoContainer = fresh;
+            return fresh;
         }
     }
 
@@ -200,12 +221,12 @@ public final class Phase4ProcessVerbs {
 
     private static int transactAutoContainerSendInfo(int type, int info, String str,
                                                      boolean readResult) throws Throwable {
-        IBinder b = autoContainerBinder();
-        String descr = sAutoContainerDescriptor;
+        Container c = autoContainer();
+        IBinder b = c.binder;
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(descr);
+            data.writeInterfaceToken(c.descriptor);
             data.writeInt(type);
             data.writeInt(info);
             data.writeString(str == null ? "" : str);
@@ -227,15 +248,15 @@ public final class Phase4ProcessVerbs {
     /**
      * Equivalent of {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — same binder
      * the OEM's own nav app uses to push a serialized {@code NaviInfo} FlatBuffer (type=4) to the
-     * HUD. Reuses the cached binder resolved by {@link #autoContainerBinder()}.
+     * HUD. Reuses the cached binder resolved by {@link #autoContainer()}.
      */
     public static void autoContainerSendInfo2(int type, byte[] data) throws Throwable {
-        IBinder b = autoContainerBinder();
-        String descr = sAutoContainerDescriptor;
+        Container c = autoContainer();
+        IBinder b = c.binder;
         Parcel dataParcel = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            dataParcel.writeInterfaceToken(descr);
+            dataParcel.writeInterfaceToken(c.descriptor);
             dataParcel.writeInt(type);
             dataParcel.writeByteArray(data);
             if (!b.transact(TXN_SEND_INFO2, dataParcel, reply, 0)) {
@@ -248,14 +269,51 @@ public final class Phase4ProcessVerbs {
         }
     }
 
-    /** Force-stop a package via IActivityManager reflection. */
+    /**
+     * Force-stop a package via IActivityManager reflection.
+     *
+     * <p>Retries once on a dead proxy. The AutoContainer cache a few lines up invalidates itself
+     * through a DeathRecipient; this one never did, so after a system_server restart — which this
+     * daemon outlives, being a separate shell-started process — the cached proxy stayed dead and
+     * every force-stop failed silently until the daemon itself respawned. Force-stopping a package
+     * is idempotent, so a single retry costs nothing when the first attempt genuinely landed.
+     */
     public static void forceStopPackage(String packageName, int userId) throws Throwable {
         if (packageName == null || packageName.isEmpty()) {
             throw new IllegalArgumentException("packageName empty");
         }
+        try {
+            invokeForceStop(packageName, userId);
+        } catch (Throwable t) {
+            if (!isDeadObject(t)) throw t;
+            synchronized (Phase4ProcessVerbs.class) {
+                sActivityManager = null;
+                sForceStopPackage = null;   // the Method belongs to the dead proxy's class
+            }
+            invokeForceStop(packageName, userId);
+        }
+    }
+
+    private static void invokeForceStop(String packageName, int userId) throws Throwable {
         Object am = activityManager();
         Method m = forceStopMethod(am);
-        m.invoke(am, packageName, userId);
+        try {
+            m.invoke(am, packageName, userId);
+        } catch (java.lang.reflect.InvocationTargetException ite) {
+            // Unwrap so the caller — and isDeadObject above — sees the real failure, not the
+            // reflection wrapper.
+            throw ite.getCause() != null ? ite.getCause() : ite;
+        }
+    }
+
+    /** True for a binder that died under us, at any depth of the cause chain. */
+    private static boolean isDeadObject(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (c instanceof android.os.DeadObjectException) return true;
+            if (c.getClass().getName().endsWith("DeadSystemException")) return true;
+            if (c == c.getCause()) break;
+        }
+        return false;
     }
 
     // ─── AutoContainer callback (diagnostic, never called before this release) ────────────
@@ -293,12 +351,12 @@ public final class Phase4ProcessVerbs {
                 }
             }
         }
-        IBinder b = autoContainerBinder();
-        String descr = sAutoContainerDescriptor;
+        Container c = autoContainer();
+        IBinder b = c.binder;
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(descr);
+            data.writeInterfaceToken(c.descriptor);
             data.writeStrongBinder(cb);
             if (!b.transact(TXN_REGISTER_CALLBACK, data, reply, 0)) {
                 throw new IllegalStateException("AutoContainer registerCallback transaction not handled");
@@ -330,7 +388,20 @@ public final class Phase4ProcessVerbs {
 
         @Override
         protected synchronized boolean onTransact(int code, Parcel data, Parcel reply, int flags) {
-            byte[] raw = data.marshall();
+            // marshall() is ILLEGAL on a parcel carrying binder objects, and it sat OUTSIDE the
+            // try below — so a push that happened to carry one threw out of onTransact, losing the
+            // log line this callback exists for and answering the OEM with an exception instead of
+            // writeNoException(). Exactly the defect AUD-225 fixed in FissionHostSvcVerbs; it was
+            // corrected there and left here. Best-effort now, and the throw is itself evidence: it
+            // can only happen when a Binder is present.
+            String rawHex;
+            try {
+                byte[] raw = data.marshall();
+                rawHex = "raw(" + raw.length + "B)=" + toHex(raw);
+            } catch (Throwable marshallFail) {
+                rawHex = "raw=<unavailable: " + marshallFail.getClass().getSimpleName()
+                        + " — the push carries binder objects>";
+            }
             data.setDataPosition(0);
             long now = System.currentTimeMillis();
             boolean logIt = (now - mLastLogAt) >= MIN_LOG_INTERVAL_MS;
@@ -342,7 +413,7 @@ public final class Phase4ProcessVerbs {
                 mLastLogAt = now;
                 mSuppressedSinceLog = 0;
                 StringBuilder sb = new StringBuilder("AutoContainer callback: code=").append(code)
-                        .append(" raw(").append(raw.length).append("B)=").append(toHex(raw));
+                        .append(' ').append(rawHex);
                 try {
                     // Skip whatever the caller wrote as an interface token — not validated against
                     // any expected descriptor, just consumed so the following best-effort reads
