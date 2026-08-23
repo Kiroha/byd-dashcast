@@ -105,11 +105,19 @@ object ClusterShotRecorder {
      */
     @JvmStatic
     fun maybeCapture(ctx: Context) {
-        if (!isEnabled(ctx)) return
         val app = ctx.applicationContext
         val now = SystemClock.elapsedRealtime()
 
-        val clusterId = ClusterService.getInstance()?.displayId ?: -1
+        // The !isEnabled check used to return HERE, above the prune branch. That made the user's own
+        // "stop capturing my screens" the thing that stranded the existing recordings: setEnabled
+        // writes the pref first, then calls clear(), whose rm goes over ADB and swallows failure --
+        // and from that moment no prune was ever scheduled again. Capturing is gated below;
+        // sweeping is not, because sweeping is what the user just asked for.
+        val enabled = isEnabled(app)
+
+        // Forced to -1 when disabled so shouldCapture cannot fire and the prune takes its
+        // "not projecting" arm, which is exactly the state we want to keep sweeping in.
+        val clusterId = if (enabled) (ClusterService.getInstance()?.displayId ?: -1) else -1
         // AUD-PERF-P1 — latch/clear the projection-start instant, then pick the ramped interval.
         if (clusterId > 0) {
             if (sProjectionStartMs == 0L) sProjectionStartMs = now
@@ -119,9 +127,12 @@ object ClusterShotRecorder {
         val intervalMs =
             if (sProjectionStartMs != 0L && now - sProjectionStartMs < RAMP_WINDOW_MS) INTERVAL_MS
             else INTERVAL_STEADY_MS
-        if (ClusterShotSchedulePolicy.shouldCapture(
+        if (enabled && ClusterShotSchedulePolicy.shouldCapture(
             clusterId, now, sLastCaptureMs, intervalMs)) {
             sLastCaptureMs = now
+            // Persist BEFORE the capture is submitted, so a process death between here and the
+            // write on disk still leaves a latch that makes the next process sweep.
+            ClusterPrefs.setShotsOnDisk(app, true)
             sExecutor.execute { captureRound(app, clusterId) }
         } else if (ClusterShotSchedulePolicy.shouldAppPrune(
             clusterId, now, sLastPruneMs, sLastDaemonPruneMs, PRUNE_INTERVAL_MS,
@@ -134,11 +145,13 @@ object ClusterShotRecorder {
             // stamp this old only happens when captures are actually failing. Idle behaviour is
             // untouched -- the `clusterId <= 0` arm short-circuits before this is read.
             /* daemonStaleMs = */ intervalMs + PRUNE_INTERVAL_MS,
-            // AUD-PERF-P2 — sLastCaptureMs is stamped before the capture is submitted, so this is
-            // true even for a capture that later failed: a failed round still wrote nothing but
-            // still means the daemon may hold shots. Only a process that never projected at all
-            // skips the prune, which is precisely the case that was pure waste.
-            /* everCaptured = */ sLastCaptureMs != 0L)) {
+            // "Might there be shots on disk?" -- NOT "did THIS process capture?". The in-memory
+            // form of this question is what broke the retention bound: sLastCaptureMs is reset by
+            // every process restart, so a fresh process answered "no" while the JPEGs were still
+            // sitting there, and the max-age sweep never ran again. The persisted latch answers
+            // the question the sweep actually needs answered, and prune() below clears it once the
+            // directory is genuinely empty so an idle car still stops paying for this.
+            /* everCaptured = */ sLastCaptureMs != 0L || ClusterPrefs.shotsOnDisk(app))) {
             sLastPruneMs = now
             sExecutor.execute { prune(app) }
         }
@@ -225,11 +238,26 @@ object ClusterShotRecorder {
      *  pattern from the mirrordaemon-log pruner. */
     private fun prune(ctx: Context) {
         val keepPlus1 = KEEP_PER_TAG + 1
-        val cmd = "cd $SHOTS_DIR 2>/dev/null || exit 0; " +
+        // `cd ... && { ... }` rather than `cd ... || exit 0`: the early exit would skip the REMAIN
+        // line below, so a car whose shot dir was never created would report nothing, leave the
+        // latch set, and prune every 30 s forever. With this form the count always runs, and an
+        // absent directory correctly reports REMAIN:0.
+        val cmd = "cd $SHOTS_DIR 2>/dev/null && { " +
                 "for t in d0 cluster; do " +
                 "ls -t shot_\${t}_*.jpg 2>/dev/null | tail -n +$keepPlus1 | xargs -r rm -f; done; " +
-                "find $SHOTS_DIR -name 'shot_*.jpg' -mmin +$MAX_AGE_MIN -delete 2>/dev/null; true"
-        runShellBlocking(ctx, cmd, "prune")
+                "find $SHOTS_DIR -name 'shot_*.jpg' -mmin +$MAX_AGE_MIN -delete 2>/dev/null; }; " +
+                // Report what survived so the persisted latch can clear itself. Without this the
+                // latch would stay set forever and an idle car would prune every 30 s for the life
+                // of the process -- reintroducing the wasted ADB handshakes this whole area exists
+                // to have removed.
+                "echo \"REMAIN:\$(ls $SHOTS_DIR/shot_*.jpg 2>/dev/null | wc -l | tr -d ' ')\""
+        val out = runShellForOutput(ctx, cmd, "prune")
+        // Fail-safe: only a clearly-parsed zero clears the latch. Anything else -- a failed shell,
+        // unexpected output, a transport error -- leaves it SET, i.e. keeps sweeping. The safe
+        // direction here is to do too much cleaning, never too little.
+        if (out != null && out.contains("REMAIN:0")) {
+            ClusterPrefs.setShotsOnDisk(ctx, false)
+        }
     }
 
     /** Deletes all captured shots. Called on projection stop, when disabled, and after a send. */
@@ -257,11 +285,25 @@ object ClusterShotRecorder {
                 // single-threaded, so a plain compare-and-set is sufficient.
                 if (sLastCaptureMs == captureAtEnqueue) sLastCaptureMs = 0L
                 if (sLastDaemonPruneMs == daemonPruneAtEnqueue) sLastDaemonPruneMs = 0L
+                // The rm removed everything, so the persisted latch goes down too. Same success
+                // condition as the in-memory latches: never cleared when the delete did not run.
+                ClusterPrefs.setShotsOnDisk(app, false)
             }
             // NOTE: this does NOT cover setEnabled(false), which writes the pref before calling
             // here; maybeCapture then early-returns on !isEnabled, so no prune is ever scheduled
             // again regardless of the latches. A failed delete on that path still strands the
             // files. Unchanged behaviour, called out so the claim above is not read as covering it.
+        }
+    }
+
+    /** @return the shell output, or null if the call threw. */
+    private fun runShellForOutput(ctx: Context, command: String, operation: String): String? {
+        return try {
+            AdbLocalClient.executeShellWithResultBlocking(ctx, command)
+        } catch (t: Throwable) {
+            if (t is InterruptedException) Thread.currentThread().interrupt()
+            AppLogger.w(TAG, "$operation failed: ${t.message}")
+            null
         }
     }
 

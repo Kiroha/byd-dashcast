@@ -66,6 +66,9 @@ object ClusterPrefs {
     /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
     const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
 
+    /** True while cluster/main screenshots may still be on disk. See the accessors below. */
+    const val KEY_SHOTS_ON_DISK = "shots_on_disk"
+
     /** Diagnostic opt-in: post-launch cluster state dump (AUD-PERF-P3). See the accessor below. */
     const val KEY_LAUNCH_DIAGNOSTICS = "launch_diagnostics"
 
@@ -304,6 +307,26 @@ object ClusterPrefs {
      * output but a journal line, so every projection start used to pay for evidence almost no
      * report ever needed. Turn it on from the Diagnostics screen when triaging a placement bug.
      */
+    /**
+     * Do cluster/main screenshots possibly still exist in the daemon's scratch dir?
+     *
+     * This has to be PERSISTED, not a process-local flag. The max-age sweep is the only thing that
+     * enforces MAX_AGE_MIN on those JPEGs, and it was gated on an in-memory `sLastCaptureMs != 0L`.
+     * After any process death -- an OTA reinstall, a force-stop, a low-memory kill, a swipe-away --
+     * a fresh process read 0, concluded nothing had ever been captured, and never swept again.
+     * Pictures of BOTH driver-facing screens then sat on disk indefinitely, past the bound the
+     * recorder's own KDoc promises. Persisting the latch is what makes that bound real.
+     */
+    @JvmStatic
+    fun shotsOnDisk(ctx: Context): Boolean =
+        try { prefs(ctx).getBoolean(KEY_SHOTS_ON_DISK, false) } catch (t: Throwable) { true }
+
+    /** Fail-safe: a write failure leaves the latch SET, i.e. keeps sweeping. */
+    @JvmStatic
+    fun setShotsOnDisk(ctx: Context, onDisk: Boolean) {
+        try { edit(ctx).putBoolean(KEY_SHOTS_ON_DISK, onDisk).apply() } catch (t: Throwable) { }
+    }
+
     @JvmStatic
     fun isLaunchDiagnosticsEnabled(ctx: Context): Boolean =
         prefs(ctx).getBoolean(KEY_LAUNCH_DIAGNOSTICS, false)

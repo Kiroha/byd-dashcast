@@ -541,7 +541,14 @@ object AppLogger {
     @JvmStatic
     fun pruneOldFiles(context: Context?, keepPerPrefix: Int): Int {
         if (context == null || keepPerPrefix < 1) return 0
-        val prefixes = arrayOf("byd_log_", "byd_report_", "BYD_RE_Sniffer_")
+        // "byd_bugreport_" is NOT covered by "byd_report_" — startsWith() is a prefix test and
+        // the two names diverge at character 5. That one-word gap meant every bug report ever
+        // generated stayed on disk forever: up to REPORT_BODY_MAX_BYTES (4 MB) each, holding a
+        // 5000-line logcat, an events logcat, ~20 dumpsys sections and the whole journal. On
+        // API 29 they live in the external files dir, which any app with READ_EXTERNAL_STORAGE
+        // can read. Nothing deleted them after a successful upload either. The keep-3 rotation
+        // below already does the right thing; it was simply never asked to look at them.
+        val prefixes = arrayOf("byd_log_", "byd_report_", "byd_bugreport_", "BYD_RE_Sniffer_")
         var deleted = 0
         val dirs = arrayOf(externalFilesDirOrNull(context), context.filesDir)
         for (dir in dirs) {
