@@ -553,6 +553,25 @@ public class ClusterImeWatcherService extends AccessibilityService {
             if (bestAny != null) bestAny.recycle();
             return bestNonDefault;
         }
+        // bestAny is a display-0 candidate — a HEAD UNIT field, not the cluster. Returning it made
+        // the bridge silently retarget: every keystroke went into some other app's editable via
+        // ACTION_SET_TEXT (a full atomic replace of whatever was already there), and pressing Done
+        // fired ACTION_IME_ENTER on it. The driver believes they are typing a destination into the
+        // cluster app; instead they overwrite and SUBMIT a field somewhere on the head unit, which
+        // for a nav search box means starting a route nobody asked for. Nothing logged it either:
+        // the "no focused editable on cluster" warning only fires when the scan returns null, which
+        // is exactly what this fallback prevented.
+        //
+        // The fallback only ever made sense pre-API-30, where AccessibilityWindowInfo.getDisplayId
+        // does not exist and `displayId` stays hardcoded at 0 above, so a genuine cluster window is
+        // indistinguishable from a head-unit one. This bridge is DL5-only (API 32) — every car that
+        // can reach this code CAN report a display id, so there the fallback bought nothing and
+        // risked everything. Above API 29 a missing cluster editable is now reported honestly as
+        // null and the existing warnings run.
+        if (Build.VERSION.SDK_INT >= 30) {
+            if (bestAny != null) bestAny.recycle();
+            return null;
+        }
         return bestAny;
     }
 
