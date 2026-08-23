@@ -18,7 +18,7 @@ import android.view.View
  *
  * Ergonomic targets (car HMI, not phone): 8 handles total (4 corners + 4
  * mid-edges), visual size ~24dp, hit radius ~56dp. Soft-snap to the cluster
- * edges, center and quarters with a tolerance of [SNAP_TOL_PX] px, plus a hard
+ * edges, center and quarters with a tolerance of [ResizeRectPolicy.SNAP_TOL_PX] px, plus a hard
  * 10-px grid step to avoid sub-pixel battles.
  *
  * Calls [View.setSystemGestureExclusionRects] on every frame change so Android's
@@ -36,7 +36,6 @@ class ResizeFrameView @JvmOverloads constructor(
 
     private var mClusterW = 1920
     private var mClusterH = 720
-    private val mMinSize = 200 // cluster px
     private val mSnapXs = intArrayOf(0, 480, 960, 1440, 1920) // recomputed in setClusterSize
     private val mSnapYs = intArrayOf(0, 180, 360, 540, 720)
 
@@ -197,66 +196,16 @@ class ResizeFrameView @JvmOverloads constructor(
         val sy = height.toFloat() / mClusterH
         val dx = Math.round((x - mDownX) / sx)
         val dy = Math.round((y - mDownY) / sy)
-        var l = mDownRect.left
-        var t = mDownRect.top
-        var r = mDownRect.right
-        var b = mDownRect.bottom
-        when (mActiveHandle) {
-            HANDLE_TL -> { l += dx; t += dy }
-            HANDLE_TR -> { r += dx; t += dy }
-            HANDLE_BL -> { l += dx; b += dy }
-            HANDLE_BR -> { r += dx; b += dy }
-            HANDLE_T -> { t += dy }
-            HANDLE_B -> { b += dy }
-            HANDLE_L -> { l += dx }
-            HANDLE_R -> { r += dx }
-            HANDLE_MOVE -> {
-                val w = r - l
-                val h = b - t
-                l += dx; t += dy
-                if (l < 0) l = 0
-                if (t < 0) t = 0
-                if (l + w > mClusterW) l = mClusterW - w
-                if (t + h > mClusterH) t = mClusterH - h
-                r = l + w; b = t + h
-            }
-        }
-        // Clamp + min-size for resize handles
-        if (mActiveHandle != HANDLE_MOVE) {
-            if (l < 0) l = 0
-            if (t < 0) t = 0
-            if (r > mClusterW) r = mClusterW
-            if (b > mClusterH) b = mClusterH
-            if (r - l < mMinSize) {
-                if (mActiveHandle == HANDLE_TL || mActiveHandle == HANDLE_BL || mActiveHandle == HANDLE_L)
-                    l = r - mMinSize
-                else r = l + mMinSize
-            }
-            if (b - t < mMinSize) {
-                if (mActiveHandle == HANDLE_TL || mActiveHandle == HANDLE_TR || mActiveHandle == HANDLE_T)
-                    t = b - mMinSize
-                else b = t + mMinSize
-            }
-        }
-        // Hard grid step (avoids sub-pixel jitter from the daemon).
-        l = snapStep(l); t = snapStep(t); r = snapStep(r); b = snapStep(b)
-        // Soft snap to anchors (edges, center, quarters).
-        if (mActiveHandle != HANDLE_T && mActiveHandle != HANDLE_B) l = softSnap(l, mSnapXs)
-        if (mActiveHandle != HANDLE_T && mActiveHandle != HANDLE_B) r = softSnap(r, mSnapXs)
-        if (mActiveHandle != HANDLE_L && mActiveHandle != HANDLE_R) t = softSnap(t, mSnapYs)
-        if (mActiveHandle != HANDLE_L && mActiveHandle != HANDLE_R) b = softSnap(b, mSnapYs)
-        // Final clamp (in case snap pushed past the bounds).
-        if (l < 0) l = 0
-        if (t < 0) t = 0
-        if (r > mClusterW) r = mClusterW
-        if (b > mClusterH) b = mClusterH
-        if (r - l < mMinSize || b - t < mMinSize) {
-            // Reject the snap by reverting to grid-only.
-            l = snapStep(mDownRect.left + (if (mActiveHandle == HANDLE_TL || mActiveHandle == HANDLE_BL || mActiveHandle == HANDLE_L || mActiveHandle == HANDLE_MOVE) dx else 0))
-            t = snapStep(mDownRect.top + (if (mActiveHandle == HANDLE_TL || mActiveHandle == HANDLE_TR || mActiveHandle == HANDLE_T || mActiveHandle == HANDLE_MOVE) dy else 0))
-            r = snapStep(mDownRect.right + (if (mActiveHandle == HANDLE_TR || mActiveHandle == HANDLE_BR || mActiveHandle == HANDLE_R || mActiveHandle == HANDLE_MOVE) dx else 0))
-            b = snapStep(mDownRect.bottom + (if (mActiveHandle == HANDLE_BL || mActiveHandle == HANDLE_BR || mActiveHandle == HANDLE_B || mActiveHandle == HANDLE_MOVE) dy else 0))
-        }
+        // All of the rect arithmetic lives in ResizeRectPolicy now — it is what gets written to a
+        // real instrument cluster, and it was untestable while it sat inline in this touch handler.
+        // The full audit found two defects in it here: soft-snap gated per axis instead of per edge
+        // (so dragging one handle moved the opposite edge), and a min-size "fallback" that bypassed
+        // the clamp and the min-size check it existed to restore — traced to a 10px-wide sliver
+        // committed to the cluster. Both are fixed and pinned in ResizeRectPolicyTest.
+        val out = ResizeRectPolicy.compute(
+            mDownRect.left, mDownRect.top, mDownRect.right, mDownRect.bottom,
+            mActiveHandle, dx, dy, mClusterW, mClusterH, mSnapXs, mSnapYs)
+        val l = out[0]; val t = out[1]; val r = out[2]; val b = out[3]
         mFrame.set(l, t, r, b)
         updateGestureExclusion()
         invalidate()
@@ -339,17 +288,7 @@ class ResizeFrameView @JvmOverloads constructor(
         private const val HANDLE_MOVE = 9
 
         /** Snap tolerance, cluster px (≈ 3% of 720 height). */
-        private const val SNAP_TOL_PX = 24
         /** Hard grid step, cluster px. */
-        private const val GRID_STEP = 10
 
-        private fun snapStep(v: Int): Int = Math.round(v.toFloat() / GRID_STEP) * GRID_STEP
-
-        private fun softSnap(v: Int, anchors: IntArray): Int {
-            for (a in anchors) {
-                if (Math.abs(v - a) <= SNAP_TOL_PX) return a
-            }
-            return v
-        }
     }
 }
