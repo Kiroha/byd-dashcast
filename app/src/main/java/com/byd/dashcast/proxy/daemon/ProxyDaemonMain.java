@@ -516,9 +516,28 @@ public final class ProxyDaemonMain {
                 // FUTURE writes, not the file that was there when we started.
                 long lastTriggerMtime = new File(TRIGGER_FILE).lastModified();
                 int tick = 0;
+                // AUD-PERF-P4 — cadence ramp.
+                //
+                // This poll is the PRIMARY recovery path when the FileObserver silently stops
+                // delivering on DL5 (see the class doc above), so it is not something to simply
+                // slow down. But that inotify failure manifests during bootstrap, and this loop
+                // used to run at 1 Hz for the entire life of a process that outlives the app and
+                // survives its kills: on a head unit that stays up for days that is ~86 400
+                // wakeups and ~86 400 stat() calls PER DAY, forever, for an event that in normal
+                // operation arrives over inotify anyway.
+                //
+                // So: keep full 1 Hz sensitivity through the window the failure appears in, then
+                // fall to 10 s. Worst case after the ramp is that a trigger write is noticed 10 s
+                // late INSTEAD OF 1 s late, and only when the FileObserver has ALSO failed. That
+                // lengthens a cold bootstrap; it cannot break an already-connected projection,
+                // and the app-side retry path (ProxyClient.callWithRetry pre-flight reconnect)
+                // is unchanged.
+                final int RAMP_TICKS = 60;      // ~60 s of 1 Hz polling after daemon start
+                final int HEAL_EVERY_RAMP = 10; // heal ~10 s during the ramp
+                final int HEAL_EVERY_SLOW = 3;  // heal ~30 s after it (3 x 10 s)
                 while (true) {
                     try {
-                        Thread.sleep(1_000L);
+                        Thread.sleep(tick < RAMP_TICKS ? 1_000L : 10_000L);
                     } catch (InterruptedException ignore) {
                         return;
                     }
@@ -534,8 +553,11 @@ public final class ProxyDaemonMain {
                             emitBroadcast();
                         }
                     } catch (Throwable th) { log("trigger poll: " + th); }
-                    // Every 10 ticks (10s): full self-heal (file + pid lock).
-                    if (++tick % 10 == 0) {
+                    // Full self-heal (file + pid lock). Held at ~10 s during the ramp and ~30 s
+                    // after it, so the heal cadence stays roughly constant in wall-clock terms
+                    // even though the poll interval changes underneath it.
+                    ++tick;
+                    if (tick % (tick < RAMP_TICKS ? HEAL_EVERY_RAMP : HEAL_EVERY_SLOW) == 0) {
                         try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
                         try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
                     }
@@ -544,7 +566,7 @@ public final class ProxyDaemonMain {
         };
         t.setDaemon(true);
         t.start();
-        log("self-heal heartbeat armed (1s poll + 10s heal)");
+        log("self-heal heartbeat armed (1s poll + 10s heal for 60s, then 10s poll + 30s heal)");
     }
 
     private static void healTriggerFile() {

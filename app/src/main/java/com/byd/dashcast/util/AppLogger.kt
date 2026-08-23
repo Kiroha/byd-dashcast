@@ -262,10 +262,28 @@ object AppLogger {
         // duration of formatting 3000 entries (~5-10 ms). Aligned with
         // getEntries() which already uses the snapshot pattern.
         val snapshot: Array<Entry>
+        val totalChars: Long
         synchronized(LOCK) {
             snapshot = sEntries.toTypedArray()
+            totalChars = sTotalChars
         }
-        val sb = StringBuilder(snapshot.size * 80)
+        // AUD-PERF-P5 — size the builder from the REAL retained char count, not a guess.
+        // `snapshot.size * 80` yields 400 K for a full buffer whose retained content can reach
+        // MAX_TOTAL_CHARS (2 M), so the builder doubled four times, copying the whole char[] on
+        // each growth and peaking around 12 MB — on every bug report and every log share, i.e.
+        // exactly when the user is already in trouble. sTotalChars is already maintained under
+        // LOCK for the eviction budget, so the exact number was one field away. The ~40 chars per
+        // entry cover the "[timestamp][LEVEL][tag] " prefix and the trailing newline.
+        // Capacity hint only: the produced String is byte-identical to before.
+        // sTotalChars counts only the MESSAGE text, so add ~40/entry for the
+        // "[timestamp][LEVEL][tag] " prefix and the newline. coerceAtLeast(size * 80) keeps this
+        // strictly non-regressive: with unusually short messages the computed hint could land
+        // below the old fixed guess, and this can then only ever over-reserve, never under.
+        val hint = (totalChars + snapshot.size * 40L)
+            .coerceAtLeast(snapshot.size * 80L)
+            .coerceIn(256L, Int.MAX_VALUE.toLong())
+            .toInt()
+        val sb = StringBuilder(hint)
         for (e in snapshot) {
             sb.append("[").append(fmt.format(Date(e.timestamp))).append("]")
                 .append("[").append(e.level.name).append("]")
