@@ -10,8 +10,9 @@ object ProxyBootstrapPolicy {
      * This number and [TRIGGER_SLOW_POLL_MS] are ONE decision split across two processes, and they
      * used to be two unrelated literals joined only by a prose comment. That cost a shipped
      * regression: the daemon's poll was raised from 1 s to 10 s while this budget stayed at 5 s, so
-     * the rebroadcast recovery timed out deterministically and fell through to a ~31 s
-     * kill-and-respawn -- in exactly the DL5 inotify-failure case the poll exists to cover. The
+     * the rebroadcast recovery timed out deterministically and fell through to a full
+     * kill-and-respawn bootstrap -- in exactly the DL5 inotify-failure case the poll exists to
+     * cover. The
      * comments meant to prevent that had themselves gone stale and misstated both numbers.
      *
      * They are now derived from each other, so the invariant cannot be broken by editing one side.

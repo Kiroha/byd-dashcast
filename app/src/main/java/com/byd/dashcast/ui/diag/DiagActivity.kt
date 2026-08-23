@@ -384,7 +384,7 @@ class DiagActivity : Activity() {
                 log("Done. Send a bug report now so these results reach us.")
             } finally {
                 // Always re-enable: runShell has no client-side timeout and can take the blocking
-                // reconnect path (~31 s) on a car with no daemon, and anything thrown outside the
+                // reconnect path (ProxyClient.CONNECT_JOIN_TIMEOUT_MS) on a car with no daemon, and anything thrown outside the
                 // per-probe catch would otherwise leave every button dead until the screen is recreated.
                 releaseBusy()
             }
