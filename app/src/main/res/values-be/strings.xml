@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Кантролер панэлі прыбораў</string>
+    <string name="welcome_subtitle">Кіраванне прыборнай панэллю</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Выберыце мову\nPlease select your language</string>
     <string name="welcome_continue_without_change">Працягнуць без зменаў</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,7 +42,7 @@
     <string name="menu_log">📜 Журналы</string>
     <string name="menu_language">🌐 Мова</string>
     <string name="menu_check_updates">🔄 Праверыць абнаўленні</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Бэта-канал</string>
     <string name="settings_prerelease_hint">Атрымліваць тэставыя зборкі да афіцыйнага выпуску</string>
     <string name="cluster_label_88">8,8 цалі  (cmd=29)</string>
     <string name="cluster_label_123">12,3 цалі (cmd=30) — Seal EU</string>
@@ -182,7 +183,7 @@
     <string name="sysinfo_disp_main">Асноўны</string>
     <string name="sysinfo_disp_cluster">Кластар</string>
     <string name="sysinfo_disp_virtual">Віртуальны (люстэрка)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Экран %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Назірае pidof · 500 мс</string>
@@ -209,7 +210,7 @@
     <string name="log_saved_toast">Журнал захаваны: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Пашыраныя</string>
     <string name="settings_legacy_path">Проксі-дэман не працуе. Выкарыстаць састарэлы шлях</string>
     <string name="settings_legacy_path_support">Накіроўвае ўсе прывілеяваныя каманды праз састарэлую абалонку ADB замест проксі-дэмана. Уключыце, калі дэман не адказвае або выклікае праблемы.</string>
 
@@ -258,16 +259,16 @@
     <string name="layout_mirror_next">Наступная праграма макета</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Назад</string>
     <string name="hotspot_hero_title">Кропка доступу 4G праз TetherFi</string>
     <string name="hotspot_hero_subtitle">Дзяліцеся мабільным інтэрнэтам некалькімі дотыкамі</string>
     <string name="hotspot_intro">Убудаваная кропка доступу недаступная на DiLink 3. Замест гэтага DashCast кіруе TetherFi (адкрыты код), які стварае кропку доступу Wi-Fi Direct + проксі SOCKS5 — без сістэмных дазволаў, а SIM-карта аўтамабіля выкарыстоўваецца як канал сувязі.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ вызначэнне…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi усталяваны — версія %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi не ўсталяваны. Націсніце «Усталяваць», каб загрузіць апошнюю версію.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Пуск</string>
+    <string name="hotspot_tf_stop">Спыніць</string>
+    <string name="hotspot_tf_toggle">Пераключыць</string>
     <string name="hotspot_tf_open">Адкрыць TetherFi</string>
     <string name="hotspot_tf_install">Усталяваць TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — адпраўлена</string>
@@ -275,8 +276,8 @@
     <string name="hotspot_tf_open_failed">Адкрыць TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Аўта-назіранне</string>
     <string name="hotspot_watchdog_hint">Аўтаматычна перазапускае кропку доступу пры збоі (праверка кожныя 30 с).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Выкл.</string>
+    <string name="hotspot_watchdog_probing">⏳ праверка…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi выдалены — назіранне спынена</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 кропка доступу ЎКЛ (перазапускі=%3$d)</string>
@@ -288,9 +289,9 @@
     <string name="hotspot_clients_title">Падключаныя кліенты</string>
     <string name="hotspot_clients_empty">Няма падключаных кліентаў</string>
     <string name="hotspot_client_default_name">Прылада %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Час працы</string>
+    <string name="hotspot_stat_rx">Атрымана</string>
+    <string name="hotspot_stat_tx">Адпраўлена</string>
     <string name="settings_use_own_sim">Я выкарыстоўваю ўласную SIM-карту</string>
     <string name="settings_use_own_sim_support">Паказвае кнопку «Кропка доступу» на панэлі навігацыі, каб вы маглі раздаваць мабільны інтэрнэт праз TetherFi (толькі DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Проксі-дэман</string>
@@ -320,7 +321,7 @@
     <string name="settings_fission_mode_support">Мультыдадатак на кластары з уласнымі зонамі. Патрабуе проксі-дэман.</string>
     <string name="fission_editor_edit">Рэдагаваць</string>
     <string name="fission_editor_delete">Выдаліць</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Кампаноўкі</string>
     <string name="layout_manager_title">Кіраванне макетамі</string>
     <string name="layout_manager_new">Новы макет</string>
     <string name="layout_canvas_hint">Перацягніце, каб намаляваць зону</string>
@@ -374,7 +375,7 @@
     <string name="lm_draw_zone_first">Намалюйце прынамсі адну зону</string>
     <string name="lm_error_fmt">Памылка: %1$s</string>
     <string name="lm_free_mode_toast">Вольны рэжым уключаны</string>
-    <string name="lm_layout_default_name_fmt">Макет %1$d</string>
+    <string name="lm_layout_default_name_fmt">Кампаноўка %1$d</string>
     <string name="lm_layout_name_hint">Назва макета</string>
     <string name="lm_layout_save_title">Захаваць макет</string>
     <string name="lm_layout_saved_toast">Макет захаваны ✓</string>
