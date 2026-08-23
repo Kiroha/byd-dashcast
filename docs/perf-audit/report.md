@@ -590,3 +590,68 @@ when a patch changes when a write happens, enumerate every concurrent writer of 
 prefer making a coupling structural over documenting it — every prose guard in this codebase that was
 load-bearing has rotted at least once.
 
+---
+
+## 11. The fix loop — passes 6 to 11, and convergence
+
+Passes 1–5 were discovery only, which was a misreading of the brief: the intent was
+find → verify → **fix** → commit → next pass, repeating until a pass finds nothing. Passes 6–11 ran
+that loop properly. Each pass carried an exclusion list of everything already found, and every
+candidate had to survive two independent skeptics (one refuting by default, one checking
+reachability at the stated severity) before being touched.
+
+| Pass | Candidates | Confirmed | Fixed as |
+|---|---|---|---|
+| 6 | 6 | 1 | `7e99d414` — screenshot max-age sweep |
+| 7 | 4 | 2 | `7e99d414` — bug reports never pruned |
+| 8 | 6 | 1 | `51eac609` — the test that could not fail |
+| 9 | 5 | 2 | `304d82ca` — dropped disconnect edge + stale NOTE |
+| 10 | 3 | 1 | `8b52fe62` — IME bridge retargeting display 0 |
+| **11** | **5** | **0** | **converged** |
+
+### What the loop actually caught
+
+Two of the six were **unbounded retention of driver-facing data**, and they are the most
+consequential findings of the whole audit:
+
+- **Bug reports accumulated forever.** The sweeper matched `byd_report_`; the files are named
+  `byd_bugreport_`. `startsWith` is a prefix test and the names diverge at character 5. Each file is
+  up to 4 MB of logcat, dumpsys and journal, in a directory any app with `READ_EXTERNAL_STORAGE` can
+  read on API 29, and nothing deleted them after a successful upload. Pre-existing, every version.
+- **The screenshot max-age sweep stopped working** — a regression I introduced in AUD-PERF-P2 by
+  gating it on an in-memory latch that every process restart cleared. Shipped in 1.8.39–1.8.41.
+
+One was **safety-adjacent**: the cluster keyboard bridge, finding no editable on the cluster,
+returned a **display-0** node and typed the driver's destination into a head-unit app — then fired
+`ACTION_IME_ENTER` on it. A route nobody asked for, with no log line, because the warning only fires
+when the scan returns null.
+
+### What the loop says about the fixes themselves
+
+Three of the six findings were defects in *this audit's own patches*: a test that duplicated the list
+it was meant to guard and so could not fail; a comment asserting the opposite of code four lines
+above it; and, in pass 4, a destructive defect that caused `565c7e72` to be reverted outright rather
+than patched a third time.
+
+Across the whole audit, of twelve patches written, **six carried a defect found only by adversarial
+review, and three reached testers**. The single durable lesson is narrow and repeatable:
+
+> **Prose invariants rot at the speed of the code. Only structural expression held.**
+
+Every comment-enforced coupling in this codebase that was load-bearing has gone stale at least once —
+including, twice, comments written specifically to prevent the previous rot. What held instead:
+`PRUNED_PREFIXES` referencing `BugReportCapture.PREFIX` directly, and `TRIGGER_SLOW_POLL_MS` derived
+from `REBROADCAST_BUDGET_MS`. Neither can drift, because neither restates anything.
+
+The corollary, learned the hard way in pass 8: **a test that restates the contract cannot guard it.**
+The first `PruneCoverageTest` declared its own copy of the prefix list and stayed green through the
+exact mutation it existed to catch. The rewrite asserts against the production constants and was
+verified by mutation — remove the prefix and it goes red.
+
+### Still open
+
+~61 findings remain unfixed and are catalogued in §2, §9 and §10 above. Nothing in this section
+supersedes them. The highest-value untouched items are `ClusterSessionTracker` never rehydrating
+(stranded-app recovery does not survive process death), `ProxyDaemonMain`'s `writeException` misuse
+(daemon failures arrive at the app as success), the French default resource set, and the OTA cluster.
+
