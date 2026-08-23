@@ -108,8 +108,37 @@ class ClusterResizeActivity : Activity(),
         ClusterMirrorManager.unlockHiddenApis()
         mMirror = ClusterMirrorManager()
 
-        val cw = mMirror.getClusterWidth()
-        val ch = mMirror.getClusterHeight()
+        // The REAL panel geometry, not the mirror's placeholder.
+        //
+        // This used to read mMirror.getClusterWidth()/Height() on an instance created two lines
+        // above, before startMirror() had ever run on it — so it always got ClusterMirrorManager's
+        // 1920x720 default, and setClusterSize() below is called exactly once and never revisited.
+        // On any other panel the whole editor session then worked in the wrong coordinate space:
+        // every preset, every snap anchor and every clamp was computed against a rect larger than
+        // the display, and the result went to ProxyClient.moveAndResize on the live cluster. The
+        // project has already met a 1280x480 DL3 panel on a car (INC-20260715-141429).
+        //
+        // Same resolution order DashboardLauncher uses: getRealSize, then the daemon-resolved
+        // registry for DL4 (where the OEM whitelist makes getDisplay() return null even though the
+        // display exists), then the literal. The strictly-positive guard mirrors
+        // ClusterMirrorManager.startMirror: a transient 0x0 during teardown must not become the
+        // editor's coordinate space.
+        val panel = android.graphics.Point(1920, 720)
+        run {
+            val dm0 = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val disp = dm0?.getDisplay(mDisplayId)
+            if (disp != null) {
+                val sz = android.graphics.Point()
+                disp.getRealSize(sz)
+                if (sz.x > 0 && sz.y > 0) panel.set(sz.x, sz.y)
+            } else {
+                val info = ClusterDisplayRegistry.forDisplayId(mDisplayId)
+                if (info != null && info.width > 0 && info.height > 0) panel.set(info.width, info.height)
+            }
+            AppLogger.i(TAG, "resize editor coordinate space = ${panel.x}x${panel.y} (display $mDisplayId)")
+        }
+        val cw = panel.x
+        val ch = panel.y
         val extra = intent.getIntArrayExtra(EXTRA_INIT_LTRB)
         mInitRect = if (extra == null || extra.size != 4) intArrayOf(0, 0, cw, ch) else extra
         mFrame.setClusterSize(cw, ch)
