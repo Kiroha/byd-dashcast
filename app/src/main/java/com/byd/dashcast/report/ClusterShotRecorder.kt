@@ -125,6 +125,15 @@ object ClusterShotRecorder {
             sExecutor.execute { captureRound(app, clusterId) }
         } else if (ClusterShotSchedulePolicy.shouldAppPrune(
             clusterId, now, sLastPruneMs, sLastDaemonPruneMs, PRUNE_INTERVAL_MS,
+            // AUD-PERF-P1/P2 REGRESSION FIX — the daemon-staleness bound tracks the CAPTURE
+            // cadence; it is deliberately NOT PRUNE_INTERVAL_MS. sLastDaemonPruneMs is refreshed
+            // only by a successful capture, so once the ramp stretched captures to 90 s a fixed
+            // 30 s bound went stale between every pair of captures and this branch fired at t=30
+            // and t=60 of each cycle: ~80 app prunes per hour of projection where there had been
+            // zero, each one an ADB TCP + RSA handshake. One capture cycle plus a margin means a
+            // stamp this old only happens when captures are actually failing. Idle behaviour is
+            // untouched -- the `clusterId <= 0` arm short-circuits before this is read.
+            /* daemonStaleMs = */ intervalMs + PRUNE_INTERVAL_MS,
             // AUD-PERF-P2 — sLastCaptureMs is stamped before the capture is submitted, so this is
             // true even for a capture that later failed: a failed round still wrote nothing but
             // still means the daemon may hold shots. Only a process that never projected at all
@@ -226,20 +235,31 @@ object ClusterShotRecorder {
     /** Deletes all captured shots. Called on projection stop, when disabled, and after a send. */
     @JvmStatic
     fun clear(ctx: Context) {
-        sLastCaptureMs = 0L
-        sLastDaemonPruneMs = 0L
         val app = ctx.applicationContext
         sExecutor.execute {
-            runShellBlocking(app, "rm -f $SHOTS_DIR/shot_*.jpg 2>/dev/null; true", "clear")
+            // AUD-PERF-P2 REGRESSION FIX — reset the latches only if the delete actually ran.
+            // These used to be cleared synchronously, before the async shell call, and every
+            // failure is swallowed. When the transport is down -- which is the common state when
+            // a report is being filed -- the JPEGs survived on disk while everCaptured went
+            // permanently false, so the max-age prune that would have swept them never ran again.
+            // They are screenshots of both driver-facing screens, kept after the user asked for
+            // them to be cleared. On failure the latches now stay set, so pruning continues.
+            if (runShellBlocking(app, "rm -f $SHOTS_DIR/shot_*.jpg 2>/dev/null; true", "clear")) {
+                sLastCaptureMs = 0L
+                sLastDaemonPruneMs = 0L
+            }
         }
     }
 
-    private fun runShellBlocking(ctx: Context, command: String, operation: String) {
-        try {
+    /** @return true if the shell call completed without throwing. */
+    private fun runShellBlocking(ctx: Context, command: String, operation: String): Boolean {
+        return try {
             AdbLocalClient.executeShellWithResultBlocking(ctx, command)
+            true
         } catch (t: Throwable) {
             if (t is InterruptedException) Thread.currentThread().interrupt()
             AppLogger.w(TAG, "$operation failed: ${t.message}")
+            false
         }
     }
 

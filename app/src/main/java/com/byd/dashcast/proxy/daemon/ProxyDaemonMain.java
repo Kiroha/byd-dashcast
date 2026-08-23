@@ -532,12 +532,24 @@ public final class ProxyDaemonMain {
                 // lengthens a cold bootstrap; it cannot break an already-connected projection,
                 // and the app-side retry path (ProxyClient.callWithRetry pre-flight reconnect)
                 // is unchanged.
-                final int RAMP_TICKS = 60;      // ~60 s of 1 Hz polling after daemon start
-                final int HEAL_EVERY_RAMP = 10; // heal ~10 s during the ramp
-                final int HEAL_EVERY_SLOW = 3;  // heal ~30 s after it (3 x 10 s)
+                final int  RAMP_TICKS    = 60;      // ~60 s of 1 Hz polling after daemon start
+                final long SLOW_POLL_MS  = 3_000L;  // steady state -- see the hard bound below
+                //
+                // ⚠ SLOW_POLL_MS IS BOUNDED BY ProxyClient's REBROADCAST BUDGET. DO NOT RAISE IT
+                // WITHOUT CHANGING THAT NUMBER TOO.
+                //
+                // ProxyClient.callWithRetry waits 5_000 ms for our binder broadcast after touching
+                // the trigger file, and its comment names THIS poll as the reason that budget is
+                // safe. REBROADCAST only ever runs against an already-alive same-build daemon --
+                // i.e. one that is always far past RAMP_TICKS -- so the steady-state interval is
+                // the one that has to fit inside the app's 5 s wait, not the ramp interval.
+                // A first version of this ramp used 10 s here, which is > 5 s: it made the cheap
+                // rebroadcast recovery time out deterministically and fall through to the ~31 s
+                // kill-and-respawn bootstrap, in exactly the DL5-inotify-failure case this poll
+                // exists to cover. 3 s leaves 2 s of margin for broadcast delivery.
                 while (true) {
                     try {
-                        Thread.sleep(tick < RAMP_TICKS ? 1_000L : 10_000L);
+                        Thread.sleep(tick < RAMP_TICKS ? 1_000L : SLOW_POLL_MS);
                     } catch (InterruptedException ignore) {
                         return;
                     }
@@ -553,11 +565,10 @@ public final class ProxyDaemonMain {
                             emitBroadcast();
                         }
                     } catch (Throwable th) { log("trigger poll: " + th); }
-                    // Full self-heal (file + pid lock). Held at ~10 s during the ramp and ~30 s
-                    // after it, so the heal cadence stays roughly constant in wall-clock terms
-                    // even though the poll interval changes underneath it.
-                    ++tick;
-                    if (tick % (tick < RAMP_TICKS ? HEAL_EVERY_RAMP : HEAL_EVERY_SLOW) == 0) {
+                    // Full self-heal (file + pid lock) every 10 ticks: ~10 s during the 1 s ramp
+                    // and ~30 s at the 3 s steady rate, which is the cadence we want on each side,
+                    // so a single divisor covers both and no branch is needed here.
+                    if (++tick % 10 == 0) {
                         try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
                         try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
                     }
@@ -566,7 +577,7 @@ public final class ProxyDaemonMain {
         };
         t.setDaemon(true);
         t.start();
-        log("self-heal heartbeat armed (1s poll + 10s heal for 60s, then 10s poll + 30s heal)");
+        log("self-heal heartbeat armed (1s poll + 10s heal for 60s, then 3s poll + 30s heal)");
     }
 
     private static void healTriggerFile() {
