@@ -1,6 +1,7 @@
 package com.byd.dashcast.util
 
 import android.content.Context
+import com.byd.dashcast.report.BugReportCapture
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -565,9 +566,8 @@ object AppLogger {
         if (context == null || keepPerPrefix < 1) return 0
         val prefixes = PRUNED_PREFIXES
         var deleted = 0
-        val dirs = arrayOf(externalFilesDirOrNull(context), context.filesDir)
-        for (dir in dirs) {
-            if (dir == null || !dir.exists()) continue
+        for (dir in sweepRoots(context)) {
+            if (!dir.exists()) continue
             val entries = dir.listFiles() ?: continue
             for (prefix in prefixes) {
                 val matches = ArrayList<File>()
@@ -683,6 +683,36 @@ object AppLogger {
      * know the external directory is unavailable so they can keep working on internal storage,
      * which for the sweep means the vosk/ and voice_libs/ deletions still happen.
      */
+    /**
+     * Every directory this app can leave a prunable file in, deduplicated.
+     *
+     * Split out and made visible because it is a DECISION, not plumbing, and it was wrong in a way
+     * no diff-shaped review could see. On the DL5.1 / Android 13 ROMs where getExternalFilesDir()
+     * throws, [externalFilesDirOrNull] answers null and the sweep used to skip external storage
+     * entirely — while BugReportCapture.newFile answers the SAME throw by writing to
+     * [BugReportCapture.canonicalExternalFilesDir] and succeeding. The writer and the sweeper
+     * disagreed about where reports live, on the one platform family the fallback exists for, so
+     * every report written there was a report never pruned.
+     *
+     * Deduplicated by canonical path because on a healthy ROM getExternalFilesDir() returns exactly
+     * the canonical path, and sweeping the same directory twice would double-count the deletions
+     * this function's caller reports.
+     */
+    @JvmStatic
+    internal fun sweepRoots(context: Context): List<File> {
+        val roots = ArrayList<File>(3)
+        val seen = HashSet<String>()
+        fun add(f: File?) {
+            if (f == null) return
+            val key = try { f.canonicalPath } catch (_: Throwable) { f.absolutePath }
+            if (seen.add(key)) roots.add(f)
+        }
+        add(externalFilesDirOrNull(context))
+        add(try { BugReportCapture.canonicalExternalFilesDir(context) } catch (_: Throwable) { null })
+        add(context.filesDir)
+        return roots
+    }
+
     private fun externalFilesDirOrNull(context: Context): File? = try {
         context.getExternalFilesDir(null)
     } catch (t: Throwable) {

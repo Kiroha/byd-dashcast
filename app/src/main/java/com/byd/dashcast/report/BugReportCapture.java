@@ -516,6 +516,23 @@ public final class BugReportCapture {
         }
     }
 
+    /**
+     * The external files dir built by hand, bypassing the AppOps-gated getter.
+     *
+     * Public and shared because the WRITER and the SWEEPER must agree on it. They did not:
+     * {@link #newFile} falls back here when getExternalFilesDir() throws, and reports land here on
+     * the DL5.1 / Android 13 ROMs where it does — while AppLogger.pruneOldFiles resolved the same
+     * throw to null and skipped external storage entirely. So on the one platform family this
+     * fallback exists for, every report written was a report never pruned, which is exactly the
+     * unbounded growth pruneOldFiles was added to stop.
+     *
+     * Same contract shape as {@link #PREFIX} and AppLogger.PRUNED_PREFIXES: one definition, two
+     * readers. Duplicating the literal is what let them drift the first time.
+     */
+    public static File canonicalExternalFilesDir(Context app) {
+        return new File("/storage/emulated/0/Android/data/" + app.getPackageName() + "/files");
+    }
+
     private static File newFile(Context app) {
         String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date());
         File dir = null;
@@ -533,7 +550,7 @@ public final class BugReportCapture {
                     + ") — using canonical external path");
         }
         if (dir == null) {
-            dir = new File("/storage/emulated/0/Android/data/" + app.getPackageName() + "/files");
+            dir = canonicalExternalFilesDir(app);
         }
         if (!dir.exists()) {
             try { dir.mkdirs(); } catch (Throwable ignore) { /* best-effort */ }
