@@ -1049,6 +1049,9 @@ public final class Phase4TaskVerbs {
                         android.util.Log.d("Phase4TaskVerbs",
                                 "WATCHDOG superseded pkg=" + packageName
                                         + " generation=" + generation);
+                        ProxyDaemonMain.log("WATCHDOG superseded pkg=" + packageName
+                                + " generation=" + generation + " poll=" + poll
+                                + " reanchors=" + reanchorCount);
                         return;
                     }
 
@@ -1078,12 +1081,18 @@ public final class Phase4TaskVerbs {
                                 "WATCHDOG adopted new task pkg=" + packageName
                                         + " oldTask=" + currentTaskId
                                         + " newTask=" + location.getTaskId());
+                        ProxyDaemonMain.log("WATCHDOG adopted task pkg=" + packageName
+                                + " old=" + currentTaskId + " new=" + location.getTaskId()
+                                + " display=" + location.getDisplayId() + " poll=" + poll);
                         currentTaskId = location.getTaskId();
                     }
 
                     FissionWatchdogPolicy.Action action = policy.onPoll(poll, match);
                     if (action == FissionWatchdogPolicy.Action.COMPLETE) {
-                        android.util.Log.d("Phase4TaskVerbs",
+                        ProxyDaemonMain.log("WATCHDOG complete pkg=" + packageName
+                                + " task=" + currentTaskId + " polls=" + poll
+                                + " reanchors=" + reanchorCount + " final=" + match);
+                        android.util.Log.i("Phase4TaskVerbs",
                                 "WATCHDOG complete pkg=" + packageName
                                         + " task=" + currentTaskId
                                         + " polls=" + poll
@@ -1101,6 +1110,11 @@ public final class Phase4TaskVerbs {
                     String mode = setTaskWindowingModeFreeform(currentTaskId);
                     String resize = resizeTaskRect(currentTaskId, 0, 0, width, height);
                     String focus = setFocusedRootTask(currentTaskId);
+                    ProxyDaemonMain.log("WATCHDOG re-anchor pkg=" + packageName
+                            + " task=" + currentTaskId + " from=" + location.getDisplayId()
+                            + " to=" + targetDisplayId + " poll=" + poll + " n=" + reanchorCount
+                            + " move=" + FissionWatchdogPolicy.brief(move)
+                            + " focus=" + FissionWatchdogPolicy.brief(focus));
                     android.util.Log.i("Phase4TaskVerbs",
                             "WATCHDOG re-anchor pkg=" + packageName
                                     + " task=" + currentTaskId
@@ -1115,6 +1129,7 @@ public final class Phase4TaskVerbs {
             } catch (Throwable error) {
                 android.util.Log.w("Phase4TaskVerbs",
                         "WATCHDOG unexpected pkg=" + packageName + ": " + error);
+                ProxyDaemonMain.log("WATCHDOG unexpected pkg=" + packageName + ": " + error);
             } finally {
                 sWatchdogs.finish(packageName, generation);
             }
