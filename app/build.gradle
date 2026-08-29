@@ -1833,8 +1833,29 @@ android {
         // makes the next report able to say.
         // 504 unit tests, lint unchanged (14 warnings, all pre-existing elsewhere, 0 on the files
         // touched).)
-        versionCode 633
-        versionName "1.8.43-beta"
+        // 634 = 1.8.44-beta (supersedes 1.8.43-beta, published minutes earlier and withdrawn.
+        //
+        // Two reasons, and both are the same mistake this release series exists to correct.
+        //
+        // 1.8.43's cluster-layer pattern matched nothing. `layerStack=[1-9]` cannot match a layer
+        // line on this ROM, which pads the field — `layerStack=   0, z=`. It was "verified by
+        // simulation" against a dump I wrote myself, unpadded, so the check confirmed my assumption
+        // instead of the ROM. Fixed with ` *` and a test using the real padded form.
+        //
+        // And 1.8.43's own release notes told testers "position, VIN and addresses were being
+        // removed correctly" while only Wi-Fi names had leaked. That is false. Redaction did not
+        // exist before 1.8.31-beta, and 7e704a31 measured 229 of 245 positions still leaving the
+        // car before 1.8.34-beta. An adversarial check of those notes against the diff caught it,
+        // and it landed after publication because the release was cut before the check returned.
+        // The notes are rewritten and 1.8.43 is marked withdrawn.
+        //
+        // Everything else is 1.8.43 unchanged: nine report blind spots and the Android Auto fix.
+        // The version bump is still load-bearing — three fixes live in the uid-2000 daemon, which
+        // only replaces itself when this number changes.
+        //
+        // NOT VALIDATED ON A CAR. 504 unit tests, lint unchanged.)
+        versionCode 634
+        versionName "1.8.44-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
