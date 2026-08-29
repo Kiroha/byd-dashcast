@@ -657,6 +657,17 @@ class BugWizardActivity : Activity() {
                 reportFile.copyTo(File(work, reportFile.name), overwrite = true)
                 val n = ClusterShotRecorder.pullShotsInto(this, work)
                 if (n > 0) {
+                    // Say what is actually in the envelope, in the envelope. The redaction footer
+                    // was written before this method knew a single shot existed, so without this
+                    // the file's own privacy statement describes half of what is being sent.
+                    // Appended to the STAGED copy, which is recreated on every attempt, so a retry
+                    // cannot stack the note twice.
+                    try {
+                        File(work, reportFile.name)
+                            .appendText(ReportAttachmentNote.forShots(n))
+                    } catch (t: Throwable) {
+                        AppLogger.w(TAG, "could not note attachments in the report: ${t.message}")
+                    }
                     // The archive must NOT land beside the work directory. cacheDir is not declared
                     // in file_paths.xml, so FileProvider.getUriForFile throws on anything inside it
                     // — and shareFallback swallows that exception, shows an error toast and calls

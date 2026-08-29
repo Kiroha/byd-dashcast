@@ -157,6 +157,9 @@ class RedactionCallSiteTest {
         // the redaction block would take this with it — which is the point.
         assertTrue("the report must state its own redaction status",
             body.contains("════════ REDACTION ════════"))
+        // A report can be honest about its text and silent about its envelope. The footer now
+        // says which of the two it speaks for, so a bundle's screenshots cannot hide behind it.
+        assertTrue("the footer must state its scope", body.contains("scope: text only"))
         assertFalse("and it must not be the fail-open message",
             body.contains("was NOT filtered"))
     }
