@@ -1110,11 +1110,15 @@ public final class Phase4TaskVerbs {
                     String mode = setTaskWindowingModeFreeform(currentTaskId);
                     String resize = resizeTaskRect(currentTaskId, 0, 0, width, height);
                     String focus = setFocusedRootTask(currentTaskId);
-                    ProxyDaemonMain.log("WATCHDOG re-anchor pkg=" + packageName
-                            + " task=" + currentTaskId + " from=" + location.getDisplayId()
-                            + " to=" + targetDisplayId + " poll=" + poll + " n=" + reanchorCount
-                            + " move=" + FissionWatchdogPolicy.brief(move)
-                            + " focus=" + FissionWatchdogPolicy.brief(focus));
+                    // Thinned, not dropped: the terminal WATCHDOG complete line carries the
+                    // total, and the transcript reaches a report as tail -200.
+                    if (FissionWatchdogPolicy.shouldMirrorReanchor(reanchorCount)) {
+                        ProxyDaemonMain.log("WATCHDOG re-anchor pkg=" + packageName
+                                + " task=" + currentTaskId + " from=" + location.getDisplayId()
+                                + " to=" + targetDisplayId + " poll=" + poll + " n=" + reanchorCount
+                                + " move=" + FissionWatchdogPolicy.brief(move)
+                                + " focus=" + FissionWatchdogPolicy.brief(focus));
+                    }
                     android.util.Log.i("Phase4TaskVerbs",
                             "WATCHDOG re-anchor pkg=" + packageName
                                     + " task=" + currentTaskId
