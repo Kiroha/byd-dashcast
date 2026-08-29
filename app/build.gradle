@@ -1854,8 +1854,29 @@ android {
         // only replaces itself when this number changes.
         //
         // NOT VALIDATED ON A CAR. 504 unit tests, lint unchanged.)
-        versionCode 634
-        versionName "1.8.44-beta"
+        // 635 = 1.8.45-beta (the address rule never matched this ROM's BSSIDs.
+        //
+        // 1.8.44 was cut to withdraw a false privacy sentence from 1.8.43 and shipped another one.
+        // Both said the hardware address next to each leaked network name had been correctly
+        // hidden. It had not: this ROM masks two groups itself — `BSSID 14:0c:76:**:**:3f` — and
+        // the MAC rule wanted six hex pairs, so it matched none of them. 150 occurrences, 53
+        // distinct access points, with per-AP signal strength and the set they were seen together
+        // in. The 14 the footer credited were the fully-hex HESSID fields alone.
+        //
+        // Also fixed: our own second redaction pass, which every report with screenshots goes
+        // through, was rewriting the footer's own `wifi-ssid=0` / `=ERR` into a token — destroying
+        // the one signal f8424f87 exists to carry, on the default path.
+        // Also fixed: the z-order pass covered 18 of 86 layers and they were the bottom of the
+        // stack; and the tag-filtered logcat's `-t 1500` covered 3.8 seconds on this unit and came
+        // back empty.
+        //
+        // Found by auditing my own commits AFTER publishing them. Every one of the four has the
+        // same root as the two caught yesterday: a check written against text I chose instead of
+        // text the car emits. Two of my own tests asserted the broken behaviour was correct.
+        //
+        // NOT VALIDATED ON A CAR. 508 unit tests, lint unchanged.)
+        versionCode 635
+        versionName "1.8.45-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
