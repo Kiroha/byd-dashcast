@@ -93,42 +93,18 @@ public final class BugReportCapture {
     }
 
     /**
-     * Captures a bug-report file. {@code metaHeader} (the user's Title/Steps/Result
-     * block) is written at the very top so it is readable without scrolling.
-     * Runs the shell dump in the background; {@code cb} fires on the main thread.
+     * The shell dump, as one string, so what it asks for can be asserted.
+     *
+     * <p>Extracted for one reason: every defect this command has had was a silently
+     * empty section, never a crash. A `head` exhausted on the wrong display, a filterspec
+     * naming tags this ROM does not carry, a grep alternation missing the service that
+     * actually logs — each produced a report that looked complete and answered nothing,
+     * and none of them could fail a test while the command was a local variable.
+     *
+     * @param p the path every section appends to.
      */
-    public static void capture(Context context, String metaHeader, Callback cb) {
-        final Context app = context.getApplicationContext();
-        final File outFile = newFile(app);
-
-        // Android 13+ (DL5.1 / trinket): the shell (uid 2000) is DENIED write access to the
-        // app's /sdcard/Android/data/<pkg> dir by scoped storage, so redirecting the dump
-        // there fails with EACCES and only the journal survives (INC-20260715-191229). uid 2000
-        // DOES own /data/local/tmp, so on A13 stage the dump there and `cat` it back through the
-        // same shell round-trip (the app cannot read /data/local/tmp on A13, but the shell can);
-        // finish() then writes the final report into the app's own external dir (which the app
-        // CAN write). On Android 10 (DL3/DL4) uid 2000 can still write the external dir, so keep
-        // writing straight into the final file — no extra round-trip, zero behaviour change.
-        final boolean stageInTmp = Build.VERSION.SDK_INT >= 33;
-        final String p = stageInTmp
-                ? "/data/local/tmp/" + outFile.getName()
-                : outFile.getAbsolutePath();
-
-        // A transport already classified as unreachable cannot produce a shell dump. Do not
-        // enqueue behind wedged ADB workers: create the guaranteed journal-only report off-main.
-        if (AdbLocalClient.isAdbTransportUnreachable()) {
-            final String diagnosis = AdbLocalClient.adbTransportDiagnosis();
-            Thread offline = new Thread(() ->
-                finish(app, outFile, metaHeader, cb, diagnosis, null),
-                "bugreport-offline");
-            offline.setDaemon(true);
-            offline.start();
-            return;
-        }
-
-        // One-shot shell dump. logcat -t bounds the size; dumpsys grabs the
-        // cluster/display/window state that matters for projection bugs.
-        String cmd =
+    static String buildShellDump(String p) {
+        return
               "echo '=== DASHCAST BUG REPORT ===' > " + p
             + " ; date >> " + p
             // ── PERF SNAPSHOT (kept near the top so it's readable without scrolling) ──
@@ -353,6 +329,45 @@ public final class BugReportCapture {
             + " ; echo '--- PROXYDAEMON LOG ---' >> " + p
             + " ; cat /data/local/tmp/dashcast_proxy.log 2>/dev/null | tail -200 >> " + p
             + " ; echo '=== END SHELL DUMP ===' >> " + p;
+    }
+
+    /**
+     * Captures a bug-report file. {@code metaHeader} (the user's Title/Steps/Result
+     * block) is written at the very top so it is readable without scrolling.
+     * Runs the shell dump in the background; {@code cb} fires on the main thread.
+     */
+    public static void capture(Context context, String metaHeader, Callback cb) {
+        final Context app = context.getApplicationContext();
+        final File outFile = newFile(app);
+
+        // Android 13+ (DL5.1 / trinket): the shell (uid 2000) is DENIED write access to the
+        // app's /sdcard/Android/data/<pkg> dir by scoped storage, so redirecting the dump
+        // there fails with EACCES and only the journal survives (INC-20260715-191229). uid 2000
+        // DOES own /data/local/tmp, so on A13 stage the dump there and `cat` it back through the
+        // same shell round-trip (the app cannot read /data/local/tmp on A13, but the shell can);
+        // finish() then writes the final report into the app's own external dir (which the app
+        // CAN write). On Android 10 (DL3/DL4) uid 2000 can still write the external dir, so keep
+        // writing straight into the final file — no extra round-trip, zero behaviour change.
+        final boolean stageInTmp = Build.VERSION.SDK_INT >= 33;
+        final String p = stageInTmp
+                ? "/data/local/tmp/" + outFile.getName()
+                : outFile.getAbsolutePath();
+
+        // A transport already classified as unreachable cannot produce a shell dump. Do not
+        // enqueue behind wedged ADB workers: create the guaranteed journal-only report off-main.
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            final String diagnosis = AdbLocalClient.adbTransportDiagnosis();
+            Thread offline = new Thread(() ->
+                finish(app, outFile, metaHeader, cb, diagnosis, null),
+                "bugreport-offline");
+            offline.setDaemon(true);
+            offline.start();
+            return;
+        }
+
+        // One-shot shell dump. logcat -t bounds the size; dumpsys grabs the
+        // cluster/display/window state that matters for projection bugs.
+        String cmd = buildShellDump(p);
 
         if (stageInTmp) {
             // Sweep leftovers BEFORE this run writes anything. The `rm -f` below only runs when
