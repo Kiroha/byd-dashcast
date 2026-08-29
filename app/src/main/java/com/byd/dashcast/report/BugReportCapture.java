@@ -208,7 +208,7 @@ public final class BugReportCapture {
             // the same reasoning above). Output is bounded by `tail -300` regardless, so a wider
             // window costs capture time only, never report size.
             + " ; logcat -d -t 20000 -v threadtime 2>/dev/null"
-            + "   | grep -iE 'BydProjectionService|projectionmanager|AutoDisplayService|AutoSharedDisplay|START_MAP_VIEW|MeterActivity|stopContentProjection|byd_map_package'"
+            + "   | grep -iE 'BydProjectionService|projectionmanager|AutoDisplayService|AutoSharedDisplay|START_MAP_VIEW|MeterActivity|stopContentProjection|byd_map_package|xdja_AutoContainerService'"
             + "   | tail -300 >> " + p + " 2>&1"
             // ── CLUSTER / DISPLAY STATE ──
             + " ; echo '--- DISPLAYS ---' >> " + p
@@ -318,13 +318,29 @@ public final class BugReportCapture {
             + " ; echo '--- SETTINGS (cluster/display/nav/car) ---' >> " + p
             + " ; (settings list global ; settings list secure ; settings list system) 2>/dev/null"
             + "   | grep -iE 'cluster|display|nav|car|projection|instrument' | head -80 >> " + p
-            // SurfaceFlinger: full layer z-order (ALL packages, not only byd) + per-display
-            // composition state — to see whether a third-party layer exists on the cluster layerStack.
-            + " ; echo '--- SURFACEFLINGER (all layers, z-order) ---' >> " + p
-            + " ; dumpsys SurfaceFlinger 2>/dev/null | head -150 >> " + p
-            // SurfaceFlinger cluster/mirror layers — reveals a leftover mirror token after a stop.
+            // SurfaceFlinger, twice — and until now neither pass ever reached the cluster.
+            //
+            // INC-20260826-194829: both sections together held 27 `layerStack=` lines and all 27
+            // said 0. The first burned 66 of its 150 lines on `connections (count=66)` and stopped
+            // 13 lines into a list of 86 visible layers; the second spent its 40 on display 0,
+            // because a bare `layerStack` matches every layer there before reaching the cluster.
+            // Meanwhile the mirror WAS alive — the daemon's own dump names byd_myapp_mirror in the
+            // same report. SurfaceFlinger is the only window onto a mirror created with
+            // SurfaceControl.createDisplay (it never appears in `dumpsys display`), so the one
+            // leak check this report has was structurally blind on DiLink 3.
+            //
+            // Anchored past the preamble rather than truncated into it.
+            + " ; echo '--- SURFACEFLINGER (visible layers, z-order) ---' >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null | sed -n '/Visible layers/,$p' | head -150 >> " + p
+            // The cluster pass, narrowed so it cannot be spent on display 0: `layerStack=[1-9]`
+            // skips the default display entirely, which is what a bare `layerStack` could not do.
+            // The bound is a backstop at four times the real size, not a window — the same grep
+            // without one is what SurfaceDaemon.auditMirrorInSurfaceFlinger already uses, and it
+            // finds the mirror token every time.
             + " ; echo '--- SURFACEFLINGER (cluster/mirror layers) ---' >> " + p
-            + " ; dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'byd|mirror|xdja|fission|layerStack|displayId' | head -40 >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null"
+            + "   | grep -iE 'byd_myapp_mirror|DisplayDevice|layerStack=[1-9]|xdja|fission|ScreenProjection|Composition Display State'"
+            + "   | head -200 >> " + p
             // ── DAEMON LOGS ──
             // 400, not 200: two captures (INC-20260614-131051/-131118) already contained
             // exactly 200 lines, i.e. the window was full and the start of the session was
