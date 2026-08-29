@@ -90,18 +90,32 @@ public final class CanFeedbackListener {
         synchronized (sBuf) { sBuf.clear(); sDropped = 0; }
         sLastValue.clear();
         sLastBuf.clear();
+        sLastBufLog.clear();
+        sBufSkipped.clear();
         sT0 = android.os.SystemClock.elapsedRealtime();
     }
 
     /** Last buffer (hex) seen per feature id — nav guidance icon/distance/road is likely a buffer. */
     private static final java.util.Map<Integer, String> sLastBuf =
             new java.util.concurrent.ConcurrentHashMap<>();
+    /** When each id last wrote a BUFFER line (elapsedRealtime ms). See {@link HudBufferThrottlePolicy}. */
+    private static final java.util.Map<Integer, Long> sLastBufLog =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    /** Buffer pushes suppressed since that id's last recorded line — reported on the next one. */
+    private static final java.util.Map<Integer, Integer> sBufSkipped =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-     * Handles a push (int value + optional byte buffer). Logs ONLY on a CHANGE (dedups the noisy
-     * 0x99000198/0x12D heartbeats). The rich nav guidance (turn direction, distance, next road) is
-     * often carried in the byte BUFFER, not intValue (which is 0/1 for many features) — so log the
-     * buffer hex too when present + changed.
+     * Handles a push (int value + optional byte buffer). The rich nav guidance (turn direction,
+     * distance, next road) is often carried in the byte BUFFER, not intValue (which is 0/1 for
+     * many features) — so the buffer hex is logged too when present and changed.
+     *
+     * <p>Changed-payload dedup is necessary but not sufficient: it identifies an EVENT and does
+     * nothing against a STREAM. 0x99000198 pushes at ~25 Hz with a fast tick inside its six bytes,
+     * so its hex differs every time and it took 903 of the 1000 buffer lines in
+     * INC-20260826-194829. Buffer lines are therefore rate-limited per id by
+     * {@link HudBufferThrottlePolicy}, and each recorded line carries the count it stands for. A
+     * change of the INTEGER value is never throttled — that is a state change, not a sample.
      */
     private static void onEvent(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
         int v = (value != null) ? value.intValue : Integer.MIN_VALUE;
@@ -113,7 +127,18 @@ public final class CanFeedbackListener {
             String hex = toHex(buf);
             String pb = sLastBuf.put(featureId, hex);
             if (!hex.equals(pb) || intChanged) {
-                record(String.format(java.util.Locale.US, "evt 0x%08X=%d buf=%s", featureId, v, hex));
+                long now = android.os.SystemClock.elapsedRealtime();
+                Long last = sLastBufLog.get(featureId);
+                if (!HudBufferThrottlePolicy.shouldRecord(
+                        intChanged, last == null ? 0L : last.longValue(), now)) {
+                    Integer seen = sBufSkipped.get(featureId);
+                    sBufSkipped.put(featureId, seen == null ? 1 : seen.intValue() + 1);
+                    return;
+                }
+                sLastBufLog.put(featureId, Long.valueOf(now));
+                Integer seen = sBufSkipped.remove(featureId);
+                record(String.format(java.util.Locale.US, "evt 0x%08X=%d buf=%s%s", featureId, v, hex,
+                        HudBufferThrottlePolicy.sinceSuffix(seen == null ? 0 : seen.intValue())));
                 return;
             }
             return;
