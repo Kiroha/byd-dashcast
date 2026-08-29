@@ -418,14 +418,44 @@ object Redactor {
         MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
         TELEGRAM_TOKEN, TELEGRAM_TOKEN_BARE)
 
-    /** What a pass removed, per rule. Empty when the text was already clean. */
-    class Result(@JvmField val text: String, @JvmField val counts: Map<String, Int>) {
+    /**
+     * Every name a pass can report on, including the cross-pass [redactReporter], which is not in
+     * [RULES]. De-duplicated because four rules share `wifi-ssid` on purpose, and sorted so the
+     * footer line is stable from one report to the next and diffable across a corpus.
+     */
+    private val ALL_RULE_NAMES: List<String> =
+        (RULES.map { it.name } + "reporter").distinct().sorted()
+
+    /**
+     * What a pass removed, per rule. [counts] holds only rules that actually removed something —
+     * an absent key means "this rule fired nothing", which is what most callers want to assert.
+     * [failed] names the rules whose regex threw, which is a different thing entirely.
+     */
+    class Result(
+        @JvmField val text: String,
+        @JvmField val counts: Map<String, Int>,
+        /** Rules whose pass threw. Their protection was not applied to this text. */
+        @JvmField val failed: Set<String> = emptySet(),
+    ) {
         val total: Int get() = counts.values.sum()
-        /** One line for the report, so a maintainer can see that something was removed. */
+
+        /**
+         * One line for the report, naming EVERY rule — including the ones that found nothing.
+         *
+         * The old line listed only what had matched, which made two opposite worlds produce the
+         * same text. INC-20260826-194829 printed `redaction: gps=1, mac=14, vin-prop=1` while 59
+         * neighbourhood network names went out in the clear, because the SSID rules wanted a `:`
+         * that this ROM never writes. A reader had no way to tell "no Wi-Fi names in this report"
+         * from "the Wi-Fi rule is broken" — and that is why the gap survived 178 reports.
+         *
+         * So an explicit `=0` is now evidence that a rule ran and found nothing, and `=ERR` says
+         * the rule threw and its protection was NOT applied. The line is longer on purpose: it is
+         * the only place a silently dead rule can show itself.
+         */
         fun summary(): String =
-            if (counts.isEmpty()) "redaction: nothing matched"
-            else "redaction: " + counts.entries.sortedBy { it.key }
-                .joinToString(", ") { it.key + "=" + it.value }
+            "redaction: " + ALL_RULE_NAMES.joinToString(", ") { name ->
+                name + "=" + if (failed.contains(name)) "ERR" else (counts[name] ?: 0).toString()
+            }
     }
 
 
@@ -482,12 +512,14 @@ object Redactor {
      * [salt] exists for the tests; leave it out in production so each report gets its own and no
      * token survives from one report to the next. A rule that throws is skipped rather than
      * allowed to sink the report — losing one rule's protection is bad, losing the report is worse,
-     * and the summary line will show that rule's count missing.
+     * and the summary line names the rule `=ERR`, so a lost protection reads as a failure rather
+     * than as a clean report.
      */
     @JvmStatic
     @JvmOverloads
     fun redact(text: String, salt: String = freshSalt()): Result {
         val counts = LinkedHashMap<String, Int>()
+        val failed = LinkedHashSet<String>()
         var out = text
         val tok: (String) -> String = { v -> token(salt, v) }
         // Before the rules: the cross-pass needs the handle to still be findable inside the
@@ -497,6 +529,7 @@ object Redactor {
             out = t
             if (n > 0) counts["reporter"] = n
         } catch (_: Throwable) {
+            failed.add("reporter")
         }
         for (r in RULES) {
             try {
@@ -514,10 +547,13 @@ object Redactor {
                 // of two patterns.
                 if (n > 0) counts[r.name] = (counts[r.name] ?: 0) + n
             } catch (_: Throwable) {
-                // Deliberately silent about the value; the missing count is the signal.
+                // Still deliberately silent about the VALUE — printing it would defeat the rule.
+                // The FAILURE, though, is now named: a rule that threw reports `=ERR`, which no
+                // longer reads like a rule that simply found nothing. See [Result.summary].
+                failed.add(r.name)
             }
         }
-        return Result(out, counts)
+        return Result(out, counts, failed)
     }
 
     /** Short, stable within one pass, meaningless outside it. */

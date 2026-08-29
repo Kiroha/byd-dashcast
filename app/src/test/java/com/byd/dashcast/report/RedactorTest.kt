@@ -134,7 +134,38 @@ class RedactorTest {
         val clean = "Device: DL5.1 trinket\nVersion: 1.8.28-beta build 618\nCluster launch OK"
         val r = redact(clean)
         assertEquals(clean, r.text)
-        assertTrue(r.summary().contains("nothing matched"))
+        assertEquals(0, r.total)
+        // "Clean" is now stated rule by rule rather than as one word. A zero is a claim: this rule
+        // ran over this text and found nothing.
+        assertTrue(r.summary(), r.summary().contains("wifi-ssid=0"))
+        assertTrue(r.summary(), r.summary().contains("mac=0"))
+        assertFalse("nothing threw", r.summary().contains("ERR"))
+    }
+
+    @Test
+    fun `the summary names every rule, so a dead one cannot hide behind a clean report`() {
+        // The regression this test exists for: INC-20260826-194829 printed
+        // `redaction: gps=1, mac=14, vin-prop=1` while 59 network names went out in the clear,
+        // because the summary listed only the rules that had matched. A reader could not tell a
+        // report with no Wi-Fi names from a broken Wi-Fi rule, and the gap survived 178 reports.
+        val summary = redact("nothing sensitive here").summary()
+        for (name in listOf(
+            "account", "activation", "bot_token", "email", "gps", "mac",
+            "reporter", "vin-cloud", "vin-key", "vin-prop", "vin-raw", "wifi-ssid",
+        )) {
+            assertTrue("$name is missing from: $summary", summary.contains("$name="))
+        }
+    }
+
+    @Test
+    fun `a rule that threw is not confused with a rule that found nothing`() {
+        // Rules are private and none of them throws on purpose, so the contract is asserted on
+        // Result itself — which is the thing BugReportCapture writes into the footer.
+        val r = Redactor.Result("text", mapOf("mac" to 2), setOf("gps"))
+        assertTrue(r.summary(), r.summary().contains("gps=ERR"))
+        assertTrue(r.summary(), r.summary().contains("mac=2"))
+        assertTrue("a rule that simply found nothing still reads as zero",
+            r.summary().contains("wifi-ssid=0"))
     }
 
     @Test
