@@ -2,6 +2,7 @@ package com.byd.dashcast.proxy.daemon
 
 import com.byd.dashcast.infrastructure.task.TaskLocation
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -127,5 +128,25 @@ class FissionWatchdogPolicyTest {
         assertEquals("-", FissionWatchdogPolicy.brief(null))
         assertEquals("-", FissionWatchdogPolicy.brief(""))
         assertEquals("-", FissionWatchdogPolicy.brief("   \n  "))
+    }
+    /**
+     * The transcript reaches a report as `tail -200`. Mirroring all 180 possible re-anchors would
+     * evict the daemon's boot lines and version-gate verdict from that window — in exactly the
+     * session the mirroring exists to document.
+     */
+    @Test
+    fun `a re-anchor storm cannot flood the daemon transcript out of the report`() {
+        val mirrored = (1..FissionWatchdogPolicy.MAX_POLLS)
+            .count { FissionWatchdogPolicy.shouldMirrorReanchor(it) }
+        assertTrue("a full storm must stay well inside the 200-line window, was $mirrored",
+            mirrored <= 20)
+    }
+
+    @Test
+    fun `the first few re-anchors are always shown`() {
+        for (n in 1..5) assertTrue("$n", FissionWatchdogPolicy.shouldMirrorReanchor(n))
+        assertFalse(FissionWatchdogPolicy.shouldMirrorReanchor(6))
+        assertTrue("one in twenty keeps showing it continues",
+            FissionWatchdogPolicy.shouldMirrorReanchor(20))
     }
 }

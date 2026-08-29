@@ -33,6 +33,19 @@ internal class FissionWatchdogPolicy {
         const val MAX_POLLS = 180                 // 90 s hard bound
 
         /**
+         * Whether re-anchor number [n] should also be written to the daemon transcript.
+         *
+         * The transcript reaches a bug report as `tail -200`, and a watchdog that never settles
+         * re-anchors up to [MAX_POLLS] times. Mirroring all of them would push the daemon's boot
+         * lines, its binder handshake and its version-gate verdict out of the window — in exactly
+         * the session the mirroring was added to document. The first few show the shape, then one
+         * in twenty shows it continuing, and the terminal `WATCHDOG complete` line carries the
+         * total regardless, so nothing is lost by thinning the middle.
+         */
+        @JvmStatic
+        fun shouldMirrorReanchor(n: Int): Boolean = n <= 5 || n % 20 == 0
+
+        /**
          * One verb transcript, shortened to fit a daemon-transcript line.
          *
          * The watchdog's own log lines carry four multi-line verb transcripts. Mirroring them
