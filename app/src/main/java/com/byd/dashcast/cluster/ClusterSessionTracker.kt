@@ -57,6 +57,19 @@ class ClusterSessionTracker(context: Context) {
     /** Thread-safe copy — `synchronizedSet` protects the mutators, not iteration. */
     private fun snapshot(): List<String> = synchronized(mPkgs) { ArrayList(mPkgs) }
 
+    /**
+     * Set when an eviction ends with an app we could not kill still holding a task on display 0.
+     *
+     * Keeping that task is correct — it is the app's way home — but it is left RESUMED and on top,
+     * and INC-20260816 is what that costs: the OEM Android Auto host reclaimed the foreground and
+     * the centre screen could not be used until the head unit was rebooted. The caller reads this
+     * after the cluster has been handed back and puts the launcher in front.
+     */
+    private val mRestoreHome = HomeRestoreRequest()
+
+    /** Reads and clears the request. One eviction, at most one home launch. */
+    fun consumeHomeRestoreRequest(): Boolean = mRestoreHome.consume()
+
     // ── Bulk operations ───────────────────────────────────────────────────────
 
     /**
@@ -74,6 +87,7 @@ class ClusterSessionTracker(context: Context) {
      * tracked set is a session history, so most of its entries are usually nothing to evict.
      */
     fun evictAllThen(svc: ClusterService?, main: String?, second: String?, onAllDone: Runnable) {
+        mRestoreHome.reset()
         if (svc == null) {
             // Nothing here can verify anything: no service to move with, and probing from the main
             // thread is not an option. Stay with the two packages the caller knows were on screen
@@ -83,6 +97,10 @@ class ClusterSessionTracker(context: Context) {
                 onAllDone.run()
                 return
             }
+            // No home cover from this path, deliberately. It is blind by definition — there is
+            // no service to move with and no probe to reason from — so it cannot establish the one
+            // precondition the cover requires: that the app is alive ON display 0. Asserting that
+            // without evidence is the defect this whole pipeline was rewritten to stop making.
             for (p in blind) AdbLocalClient.forceStopApp(mAppCtx, p, null)
             Handler(Looper.getMainLooper()).postDelayed(onAllDone, 800L)
             return
@@ -235,6 +253,18 @@ class ClusterSessionTracker(context: Context) {
         AdbLocalClient.forceStopApp(mAppCtx, pkg, object : AdbLocalClient.Callback {
             override fun onSuccess(r: String?) {
                 evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
+            }
+
+            override fun onEvictionOutcome(outcome: EvictionOutcomePolicy.Outcome) {
+                // Reported by forceStopApp from the probe it took itself, immediately before the
+                // kill. Deciding again here from the landing-wait's last probe was the first
+                // version's bug: on the give-up branch that copy is stale by construction and can
+                // never say KEEP_AND_RESTORE_HOME, even when the task did land on display 0.
+                if (outcome == EvictionOutcomePolicy.Outcome.KEEP_AND_RESTORE_HOME) {
+                    AppLogger.i(TAG, "evict: $pkg survived the kill on display 0 — "
+                            + "the home screen will be restored in front of it")
+                }
+                mRestoreHome.arm(outcome)
             }
 
             override fun onError(e: String?) {

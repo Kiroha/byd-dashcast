@@ -1328,6 +1328,40 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    /**
+     * Puts the head unit's home screen back in front when an eviction left an app we could not
+     * kill sitting resumed on display 0.
+     *
+     * INC-20260816: the tester projected Android Auto, pressed Stop, and the centre screen was
+     * unusable until he rebooted — the OEM drawer and the home screen each lasted about 0.3 s
+     * before Android Auto returned. Keeping that task is correct and stays (destroying it is what
+     * made the app unreachable in INC-20260815-181820); what was missing is covering it. The app
+     * is left on the display with a live phone session, which is a foreground for the OEM host to
+     * reclaim, and we handed it over.
+     *
+     * Gated on [ClusterSessionTracker.consumeHomeRestoreRequest], which is only ever set when a
+     * force-stop went unverified AND the task was seen on display 0 — so for every package whose
+     * kill succeeds, which is nearly all of them, this is not reached and Stop behaves exactly as
+     * before. The visible consequence where it DOES fire is that Stop leaves you on the launcher
+     * rather than on DashCast's app list. That is the trade, and it is the better half of it.
+     *
+     * Fails silently on purpose: a home screen that will not start must never be the reason the
+     * projection teardown reports failure.
+     */
+    private fun restoreHomeIfRequested() {
+        if (!mSessionTracker.consumeHomeRestoreRequest()) return
+        try {
+            startActivity(
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            AppLogger.i(TAG, "home screen restored on display 0 after an unverified kill")
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "could not restore the home screen: ${t.message}")
+        }
+    }
+
     private fun continueRestoreBydDashboard(capturedClusterPkg: String?, capturedSecondPkg: String?) {
         // v1.2.81 — every classic cluster app is moved back to display 0 AND force-stopped.
         // evictAllThen now covers the whole tracked set, so the unverified moveToMainDisplay() that
@@ -1347,6 +1381,7 @@ class MainActivity : AppCompatActivity(),
                         if (mServiceBound && mClusterService != null) {
                             mClusterService!!.stopProjectionNoAdb()
                         }
+                        restoreHomeIfRequested()
                         mSplitController?.clearSplitState()
                         // v0.9.73 — projection just stopped → OFF state.
                         setDashboardOffState()
@@ -1361,6 +1396,12 @@ class MainActivity : AppCompatActivity(),
                         btnRestoreCluster.isEnabled = true
                         Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
                         AppLogger.log(TAG, "Restore FAILED: $error")
+                        // The hazardous state was created by the EVICTION, which has already
+                        // finished. Whether the separate cluster-restore call then succeeded says
+                        // nothing about it — and that call has several documented flaky paths, so
+                        // hanging the cover on its success would drop it exactly when a Stop is
+                        // already going badly.
+                        restoreHomeIfRequested()
                     }
                 }
             })
@@ -1502,6 +1543,7 @@ class MainActivity : AppCompatActivity(),
                         if (mServiceBound && mClusterService != null) {
                             mClusterService!!.stopProjectionNoAdb()
                         }
+                        restoreHomeIfRequested()
                         mSplitController?.clearSplitState()
                         updateDashboardStatus(null)
                         showAppList()
@@ -1515,6 +1557,12 @@ class MainActivity : AppCompatActivity(),
                         btnRestoreCluster.isEnabled = true
                         Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
                         AppLogger.log(TAG, "originCluster FAILED: $error")
+                        // The hazardous state was created by the EVICTION, which has already
+                        // finished. Whether the separate cluster-restore call then succeeded says
+                        // nothing about it — and that call has several documented flaky paths, so
+                        // hanging the cover on its success would drop it exactly when a Stop is
+                        // already going badly.
+                        restoreHomeIfRequested()
                     }
                 }
             })

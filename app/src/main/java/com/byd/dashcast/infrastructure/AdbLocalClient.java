@@ -321,6 +321,19 @@ public class AdbLocalClient {
         void onSuccess(String report);
         /** Called if the connection fails (port closed, timeout, refused…). */
         void onError(String error);
+        /**
+         * What {@link #forceStopApp} decided to do with the task, from the SAME round trip that
+         * fed the kill. Default no-op, so the dozen callers that do not care are untouched.
+         *
+         * <p>It exists because the caller must NOT re-derive this. Review of the first version
+         * caught exactly that: {@code ClusterSessionTracker} decided from the last probe of its
+         * landing-wait loop while this method decided from a fresher one taken immediately before
+         * the kill, and on the give-up branch the tracker's copy could never say
+         * {@code KEEP_AND_RESTORE_HOME} even when the task had in fact landed on display 0. One
+         * probe, one decision, carried to whoever needs it.
+         */
+        default void onEvictionOutcome(
+                com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome outcome) { }
     }
 
     // LOT 4 — BitmapCallback interface removed: only used by captureClusterDisplay
@@ -1424,6 +1437,8 @@ public class AdbLocalClient {
                             }
                             AppLogger.log(TAG, "forceStopApp typed verified (" + dt + "ms): "
                                 + packageName + " taskId=" + taskId);
+                            if (callback != null) callback.onEvictionOutcome(
+                                com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome.REMOVE_TASK);
                             if (callback != null) callback.onSuccess(
                                 "force-stop OK (typed, verified)");
                         } else {
@@ -1436,9 +1451,10 @@ public class AdbLocalClient {
                             // must go, exactly as before this change. ABSENT/UNKNOWN keep too: a
                             // failed lookup is not evidence, and destroying on one is the original
                             // defect.
-                            boolean onCluster =
-                                    loc.getStatus() == com.byd.dashcast.infrastructure.task.TaskLocation.Status.FOUND
-                                    && loc.getDisplayId() > 0;
+                            com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome outcome =
+                                    com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(false, loc);
+                            boolean onCluster = outcome
+                                    == com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome.REMOVE_TASK;
                             if (onCluster && taskId >= 0) {
                                 ProxyClient.removeTask(taskId);
                                 AppLogger.w(TAG, "forceStopApp verification failed for "
@@ -1448,11 +1464,13 @@ public class AdbLocalClient {
                             } else if (taskId >= 0) {
                                 AppLogger.w(TAG, "forceStopApp verification failed for "
                                     + packageName + ": " + detail + " — keeping task " + taskId
-                                    + " (display " + loc.getDisplayId() + ") as its way back");
+                                    + " (display " + loc.getDisplayId() + ") as its way back"
+                                    + " [" + outcome + "]");
                             } else {
                                 AppLogger.w(TAG, "forceStopApp verification failed for "
                                     + packageName + ": " + detail + " — no task to keep or remove");
                             }
+                            if (callback != null) callback.onEvictionOutcome(outcome);
                             if (callback != null) callback.onError(detail);
                         }
                         return;
