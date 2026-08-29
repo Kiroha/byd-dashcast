@@ -238,14 +238,17 @@ class RedactorTest {
     fun `a network name in a wpa_supplicant frame is removed`() {
         val r = redact(
             "08-26 19:48:24.516 15836 15836 D wpa_supplicant: wlan0: BSS: Add new id 530 " +
-                "BSSID 1a:2b:3c:4d:5e:6f SSID 'Neighbour-1A2B' freq 2437 HESSID a1:b2:c3:d4:e5:f6"
+                "BSSID 1a:2b:3c:**:**:6f SSID 'Neighbour-1A2B' freq 2437 HESSID a1:b2:c3:d4:e5:f6"
         )
         assertFalse("the network name is what leaked", r.text.contains("Neighbour-1A2B"))
         assertTrue(r.text.contains("<ssid:"))
         assertEquals("one network on this line", 1, r.counts["wifi-ssid"])
-        // The address rule already worked on this exact line; the name survived between two
-        // redacted addresses, which is what made the gap so easy to miss.
-        assertEquals("BSSID and HESSID are addresses", 2, r.counts["mac"])
+        // The BSSID is written with two groups masked BY THE ROM. Until 1.8.45 the address rule
+        // could not match that at all, and this test said otherwise because it used a shape the
+        // car never writes — 150 addresses left one report while a green suite said 14 were
+        // removed.
+        assertEquals("both the masked BSSID and the plain HESSID are addresses", 2, r.counts["mac"])
+        assertFalse("the masked address must not survive", r.text.contains("1a:2b:3c:**:**:6f"))
         assertTrue("the frame stays readable", r.text.contains("BSS: Add new id 530"))
         assertTrue("the quotes are kept", r.text.contains("SSID '<ssid:"))
         assertTrue("the band survives", r.text.contains("freq 2437"))
@@ -254,7 +257,7 @@ class RedactorTest {
     @Test
     fun `a network name in a LOWI scan record is removed`() {
         val r = redact(
-            "08-26 19:48:24.402 1101 1101 D LOWI-9.3.0.1.: [MEAS_INFO] RSSI: -71, CPL: 0, " +
+            "08-26 19:48:24.402 1101 1101 D LOWI-9.0.0.87.a: [LOWI-Scan] RSSI: -71, CPL: 0, " +
                 "AGE: 122,  SSID Neighbour-1A2B, TSFDelta: 0x1ac"
         )
         assertFalse(r.text.contains("Neighbour-1A2B"))
@@ -267,7 +270,7 @@ class RedactorTest {
     fun `the space-separated rules leave the neighbouring keys alone`() {
         // BSSID and HESSID end in the letters S-S-I-D followed by a space, which is exactly what
         // the new rules match on. The lookbehind is the only thing keeping them out.
-        val r = redact("BSSID 1a:2b:3c:4d:5e:6f HESSID a1:b2:c3:d4:e5:f6")
+        val r = redact("BSSID 1a:2b:3c:**:**:6f HESSID a1:b2:c3:**:**:f6")
         assertEquals("neither is a network name", null, r.counts["wifi-ssid"])
         assertEquals(2, r.counts["mac"])
         assertTrue(r.text.contains("BSSID "))
@@ -523,5 +526,31 @@ class RedactorTest {
         val r = redact(line)
         assertEquals(null, r.counts["gps"])
         assertEquals(line, r.text)
+    }
+    // ── the footer has to survive the second pass we run over our own report ────────────────
+
+    /**
+     * A report with screenshots is redacted AGAIN on the way into the bundle. `wifi-ssid=59` read
+     * as a field to the unquoted SSID rule, so the footer came back as `wifi-ssid=<ssid:a88f>` —
+     * turning the always-emit footer, whose whole purpose is to show a rule reporting 0 or ERR,
+     * into something indistinguishable from a redaction that happened.
+     */
+    @Test
+    fun `redacting a finished report twice does not rewrite its own footer`() {
+        for (footer in listOf(
+            "redaction: mac=14, wifi-ssid=59",
+            "redaction: mac=0, wifi-ssid=0",
+            "redaction: mac=0, wifi-ssid=ERR",
+        )) {
+            assertEquals(footer, redact(footer).text)
+        }
+    }
+
+    @Test
+    fun `an address this ROM masked itself is still an address`() {
+        val r = redact("wlan0: BSS: Add new id 530 BSSID 14:0c:76:**:**:3f freq 2437")
+        assertEquals(1, r.counts["mac"])
+        assertFalse(r.text, r.text.contains("14:0c:76"))
+        assertTrue("the frame stays readable", r.text.contains("BSS: Add new id 530"))
     }
 }
