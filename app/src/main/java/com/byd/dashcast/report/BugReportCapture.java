@@ -463,7 +463,11 @@ public final class BugReportCapture {
                     + ") — this report was NOT filtered";
             AppLogger.e(TAG, "redaction failed — shipping unfiltered", t);
         }
-        content = content + "\n════════ REDACTION ════════\n" + redactionNote + "\n";
+        // The pass above can only speak for the text. A bundle carries screenshots the
+        // redactor never sees, and the wizard appends their count below once it knows.
+        content = content + "\n════════ REDACTION ════════\n" + redactionNote
+                + "\nscope: text only — any file attached alongside this report is NOT "
+                + "covered by the pass above.\n";
 
         final String body = content;
 
