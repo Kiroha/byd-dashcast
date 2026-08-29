@@ -2,6 +2,7 @@ package com.byd.dashcast.proxy.daemon
 
 import com.byd.dashcast.infrastructure.task.TaskLocation
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FissionWatchdogPolicyTest {
@@ -98,5 +99,33 @@ class FissionWatchdogPolicyTest {
         )
 
         assertEquals(TaskLocation.Status.UNKNOWN, selected.status)
+    }
+    // ── what the daemon transcript gets to see ───────────────────────────────────────────────
+
+    /**
+     * The watchdog used to be unobservable: `WATCHDOG started .. max=90s` was its only trace in
+     * INC-20260826-194829's 10,097 lines, because every other line went to android.util.Log and
+     * no DashCast tag reaches this ROM's logcat. Its lines are now mirrored into the daemon
+     * transcript, which means the four verb transcripts they carry have to be cut down first.
+     */
+    @Test
+    fun `a verb transcript is reduced to its first line`() {
+        assertEquals("OK setFocusedTask(26)",
+            FissionWatchdogPolicy.brief("OK setFocusedTask(26)\nignored detail\nmore"))
+    }
+
+    @Test
+    fun `a long first line is truncated visibly`() {
+        val out = FissionWatchdogPolicy.brief("x".repeat(200))
+        assertEquals(62, out.length)
+        assertTrue("the cut must be visible, not silent", out.endsWith(".."))
+    }
+
+    @Test
+    fun `nothing to report reads as a dash rather than an empty gap`() {
+        // A blank field in a transcript line reads as a parsing accident. A dash is a statement.
+        assertEquals("-", FissionWatchdogPolicy.brief(null))
+        assertEquals("-", FissionWatchdogPolicy.brief(""))
+        assertEquals("-", FissionWatchdogPolicy.brief("   \n  "))
     }
 }

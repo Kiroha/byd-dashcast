@@ -32,6 +32,21 @@ internal class FissionWatchdogPolicy {
         const val POST_REANCHOR_GUARD_POLLS = 30  // 15 s
         const val MAX_POLLS = 180                 // 90 s hard bound
 
+        /**
+         * One verb transcript, shortened to fit a daemon-transcript line.
+         *
+         * The watchdog's own log lines carry four multi-line verb transcripts. Mirroring them
+         * whole into the daemon file log would trade one unreadable channel for another, and a
+         * pathological session re-anchors up to [MAX_POLLS] times.
+         */
+        @JvmStatic
+        fun brief(s: String?): String {
+            if (s.isNullOrEmpty()) return "-"
+            val firstLine = s.lineSequence().first().trim()
+            if (firstLine.isEmpty()) return "-"
+            return if (firstLine.length > 60) firstLine.substring(0, 60) + ".." else firstLine
+        }
+
         /** Prefer any known task outside the slot; otherwise keep the newest query ordering. */
         @JvmStatic
         fun selectTask(locations: List<TaskLocation>?, targetDisplayId: Int): TaskLocation {
