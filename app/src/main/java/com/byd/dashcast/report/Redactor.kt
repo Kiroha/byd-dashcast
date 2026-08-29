@@ -123,7 +123,7 @@ object Redactor {
         // every pass. `[^\s,"<]` on the first character: without it, `\s*` backtracked to zero and
         // the "value" captured was the separating space. `[A-Za-z]` in the lookbehind keeps it off
         // BSSID, which is an address and belongs to [MAC].
-        Regex("""(?<![A-Za-z<])(SSID\s*[:=]\s*)(?!")([^\s,"<][^,"\n]{0,31})""",
+        Regex("""(?<![A-Za-z<-])(SSID\s*[:=]\s*)(?!")([^\s,"<][^,"\n]{0,31})""",
             RegexOption.IGNORE_CASE),
     ) { m, tok ->
         if (isToken(m.groupValues[2].trim())) m.value
@@ -139,8 +139,9 @@ object Redactor {
      *
      *     BSS: Add new id 530 BSSID 20:66:cf:**:**:00 SSID 'Freebox-3C9F3C' freq 2437 HESSID <mac:267c>
      *
-     * [MAC] redacted the BSSID and the HESSID on that same line, and the name sitting between them
-     * survived. Nothing failed in CI because every SSID test was written against the `SSID:` form,
+     * [MAC] redacted the HESSID on that same line and the name sitting between them survived. The
+     * BSSID did NOT survive by accident either — see [MAC]: this ROM masks two of its groups and
+     * the address rule could not match that shape at all until 1.8.45. Nothing failed in CI because every SSID test was written against the `SSID:` form,
      * which this ROM never emits — 0 occurrences in a 10,097-line report.
      *
      * An empty `SSID ''` is deliberately left alone: `{1,32}` cannot match it, a nameless network
@@ -172,7 +173,7 @@ object Redactor {
      */
     private val SSID_SPACED_BARE = Rule(
         "wifi-ssid",
-        Regex("""(?<![A-Za-z<])(SSID[ \t]+)(?!['"])([^\s,'"<][^,'"\n]{0,31})""",
+        Regex("""(?<![A-Za-z<-])(SSID[ \t]+)(?!['"])([^\s,'"<][^,'"\n]{0,31})""",
             RegexOption.IGNORE_CASE),
     ) { m, tok ->
         if (isToken(m.groupValues[2].trim())) m.value
@@ -188,7 +189,16 @@ object Redactor {
      */
     private val MAC = Rule(
         "mac",
-        Regex("""\b(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b"""),
+        // `**` groups are part of the address, not a redaction of ours. This ROM prints
+        // `BSSID 14:0c:76:**:**:3f` and the previous pattern — six hex pairs, nothing else — could
+        // not match a single one of them. In INC-20260826-194829 that is 150 occurrences, 53
+        // distinct access points, shipped with their per-AP signal strength: an OUI, a last octet
+        // and a co-observation set is a Wi-Fi geolocation fingerprint for people who never
+        // consented. The 14 the footer credited were the fully-hex HESSID fields alone.
+        //
+        // No `\b` at the ends: there is no word boundary beside `*`. The lookarounds do the same
+        // job for every character an address group can start or end with.
+        Regex("""(?<![0-9a-fA-F:*])(?:(?:[0-9a-fA-F]{2}|\*\*):){5}(?:[0-9a-fA-F]{2}|\*\*)(?![0-9a-fA-F:*])"""),
     ) { m, tok ->
         val v = m.value.lowercase()
         if (v == "ff:ff:ff:ff:ff:ff" || v == "00:00:00:00:00:00") m.value
