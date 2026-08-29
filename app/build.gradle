@@ -1779,8 +1779,62 @@ android {
         // the main thread and the cache is repaired for the next caller.
         // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
         // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
-        versionCode 632
-        versionName "1.8.42-beta"
+        // 633 = 1.8.43-beta (nine defects found by analysing ONE bug report, INC-20260826-194829,
+        // plus the Android Auto regression that report could not have shown.
+        //
+        // The pattern behind the nine is the point: not one was a crash. Every one produced a
+        // report that looked complete and answered nothing, and not one could fail a test before
+        // it was fixed.
+        //
+        // THE SSID RULES WANTED A COLON AND THIS ROM WRITES A SPACE. 39 neighbourhood network names
+        // went out in the clear to the diagnostics group. On its own wpa_supplicant line the MAC
+        // rule redacted the BSSID and the HESSID and the name between them survived, because both
+        // SSID rules required `SSID:` — a form this ROM emits 0 times in a 10,097-line report.
+        // Every SSID test was written against it, so CI stayed green.
+        //
+        // AND THE FOOTER COULD NOT HAVE TOLD ANYONE. It listed only the rules that MATCHED, so a
+        // dead rule and a clean report printed the same line. That is why the above survived 178
+        // reports. Every rule now reports: `=0` means it ran and found nothing, `=ERR` means it
+        // threw. The footer also states its scope, and a bundle now declares its screenshots as
+        // NOT redacted — twelve of them carried four minutes of street-level position and the
+        // driver's saved Home pin, beside a footer that spoke only about text.
+        //
+        // THE HUD EVENT LOG KEPT THE OLDEST THOUSAND EVENTS. `if (size < CAP) add()` is the
+        // opposite of a ring: it went deaf at t=35.9s of a six-minute session and said nothing.
+        // Newest-wins now, and the drain declares what it dropped. Separately, one 25 Hz sensor
+        // took 903 of those 1000 lines because payload dedup identifies an event and does nothing
+        // against a stream — rate-limited per id, each line carrying the count it stands for.
+        // 1000 lines become 132; the window covers ~4.5 minutes instead of 36 seconds.
+        //
+        // THE WATCHDOG WAS UNOBSERVABLE, and that is why the Android Auto incident could not be
+        // settled. `WATCHDOG started` was its only trace in 10,097 lines: everything else went to
+        // android.util.Log, and NO DashCast tag reaches this ROM's logcat at all — 0 hits in 4,664
+        // captured lines while the same pid in the same second appears under a framework tag. Its
+        // lines now go to the daemon transcript, which survives a logcat flood.
+        //
+        // Both SurfaceFlinger passes stopped before the cluster (a bare `layerStack` matches every
+        // display-0 layer first), and the wizard grepped `realActivity`, which API 29 never prints
+        // — hence a report headed "Application inconnue" about a session whose cluster task was
+        // unambiguously Waze.
+        //
+        // AND THE ONE THAT REPAIRS A CAR: Stop projection left Android Auto owning the centre
+        // screen until reboot. We relaunch it on display 0 to fix its routing, the kill fails
+        // because it is persistent, and since 1.8.30 we correctly KEEP its task — but left it
+        // resumed and on top with a live phone session, which is a foreground for the OEM host to
+        // reclaim, handed to it by us. Keep the task, then put the launcher in front of it. Gated
+        // so every package whose kill succeeds behaves exactly as before.
+        //
+        // THE VERSION BUMP IS LOAD-BEARING, not hygiene: three of these fixes live in the uid-2000
+        // daemon, which only replaces itself when this number changes.
+        //
+        // NOT VALIDATED ON A CAR. In particular it is unproven whether startActivity(HOME) wins at
+        // that moment on Android 10; if the OEM host re-fronts over the launcher too, the Android
+        // Auto fix is insufficient and the next step is bigger. The watchdog logging above is what
+        // makes the next report able to say.
+        // 504 unit tests, lint unchanged (14 warnings, all pre-existing elsewhere, 0 on the files
+        // touched).)
+        versionCode 633
+        versionName "1.8.43-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
