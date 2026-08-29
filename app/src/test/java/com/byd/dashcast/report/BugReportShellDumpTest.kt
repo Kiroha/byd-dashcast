@@ -20,7 +20,14 @@ class BugReportShellDumpTest {
     fun `the cluster SurfaceFlinger pass cannot be spent on the default display`() {
         // INC-20260826-194829: a bare `layerStack` matched every layer on display 0, so the pass
         // exhausted its window there and all 27 captured lines said layerStack=0.
-        assertTrue(cmd.contains("layerStack=[1-9]"))
+        assertTrue(cmd.contains("layerStack= *[1-9]"))
+        // SurfaceFlinger pads this field on the real ROM (`layerStack=   0, z=`), so a pattern
+        // without the spaces matches no layer line at all. The first version had none and was
+        // checked against a hand-written sample that used the unpadded form.
+        assertTrue("the pattern must tolerate SurfaceFlinger's padding",
+            Regex("layerStack= *[1-9]").containsMatchIn("   isEnabled=true layerStack=   1, z=3"))
+        assertFalse("and must still skip the default display",
+            Regex("layerStack= *[1-9]").containsMatchIn("   isEnabled=true layerStack=   0, z=3"))
         assertFalse("a bare layerStack alternative matches display 0 first",
             cmd.contains("|layerStack|"))
     }
