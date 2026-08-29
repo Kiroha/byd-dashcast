@@ -360,13 +360,15 @@ class BugWizardActivity : Activity() {
         }
         // Parse the foreground activity on the actual cluster display (#1 on legacy DL3,
         // #2 on D50F_LC, and any future non-default PRESENTATION display).
+        // -A 30, not 15: on API 29 the component line sits exactly 15 lines below the display
+        // header, so the old window ended on it and any stack with a second task pushed it out.
         val cmd = "dumpsys activity activities" +
-            " | grep -E 'Display #$displayId|displayId=$displayId' -A 15" +
-            " | grep 'realActivity'" +
+            " | grep -E 'Display #$displayId|displayId=$displayId' -A 30" +
+            " | grep -E '${ForegroundPackageLine.GREP_ALTERNATION}'" +
             " | head -1"
         AdbLocalClient.executeShellWithResult(this, cmd, object : AdbLocalClient.Callback {
             override fun onSuccess(out: String) {
-                val pkg = parseRealActivity(out.trim())
+                val pkg = ForegroundPackageLine.parse(out.trim())
                 val label = if (pkg != null) labelFor(pkg) else null
                 runOnUiThread { onDetectionResult(pkg, label) }
             }
@@ -906,13 +908,5 @@ class BugWizardActivity : Activity() {
             R.array.bug_issues_simple,
             R.array.bug_issues_other)
 
-        /** Parses "realActivity=com.waze/.FreeMapAppActivity" → "com.waze". */
-        private fun parseRealActivity(line: String): String? {
-            val eq = line.indexOf("realActivity=")
-            if (eq < 0) return null
-            val s = line.substring(eq + "realActivity=".length).trim()
-            val slash = s.indexOf('/')
-            return if (slash > 0) s.substring(0, slash) else (if (s.isEmpty()) null else s)
-        }
     }
 }
