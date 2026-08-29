@@ -308,14 +308,20 @@ public final class BugReportCapture {
             // Anchored past the preamble rather than truncated into it.
             + " ; echo '--- SURFACEFLINGER (visible layers, z-order) ---' >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null | sed -n '/Visible layers/,$p' | head -150 >> " + p
-            // The cluster pass, narrowed so it cannot be spent on display 0: `layerStack=[1-9]`
+            // The cluster pass, narrowed so it cannot be spent on display 0: `layerStack= *[1-9]`
             // skips the default display entirely, which is what a bare `layerStack` could not do.
+            //
+            // The spaces are not decoration. SurfaceFlinger pads the per-layer field on this ROM —
+            // `layerStack=   0, z=` — while the composition-display block prints it unpadded. The
+            // first version of this pattern had no ` *` and was "verified" against a hand-written
+            // sample that used the unpadded form, so it matched ZERO lines of the real dump in
+            // INC-20260826-194829. Checked against the report itself this time.
             // The bound is a backstop at four times the real size, not a window — the same grep
             // without one is what SurfaceDaemon.auditMirrorInSurfaceFlinger already uses, and it
             // finds the mirror token every time.
             + " ; echo '--- SURFACEFLINGER (cluster/mirror layers) ---' >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null"
-            + "   | grep -iE 'byd_myapp_mirror|DisplayDevice|layerStack=[1-9]|xdja|fission|ScreenProjection|Composition Display State'"
+            + "   | grep -iE 'byd_myapp_mirror|DisplayDevice|layerStack= *[1-9]|xdja|fission|ScreenProjection|Composition Display State'"
             + "   | head -200 >> " + p
             // ── DAEMON LOGS ──
             // 400, not 200: two captures (INC-20260614-131051/-131118) already contained
