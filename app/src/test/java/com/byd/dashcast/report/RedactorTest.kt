@@ -196,6 +196,70 @@ class RedactorTest {
         assertTrue("the key itself stays readable", r.text.contains("BSSID: "))
     }
 
+    // ── the space-separated forms, which shipped 39 names in INC-20260826-194829 ─────────────
+    //
+    // Both lines below are the VERBATIM shapes taken from that report, with invented network
+    // names and addresses. The shape is the whole point: every SSID test above uses `SSID:`, a
+    // form this ROM emits exactly zero times in a 10,097-line report, so the rules passed CI
+    // while the real frames walked straight through them.
+
+    @Test
+    fun `a network name in a wpa_supplicant frame is removed`() {
+        val r = redact(
+            "08-26 19:48:24.516 15836 15836 D wpa_supplicant: wlan0: BSS: Add new id 530 " +
+                "BSSID 1a:2b:3c:4d:5e:6f SSID 'Neighbour-1A2B' freq 2437 HESSID a1:b2:c3:d4:e5:f6"
+        )
+        assertFalse("the network name is what leaked", r.text.contains("Neighbour-1A2B"))
+        assertTrue(r.text.contains("<ssid:"))
+        assertEquals("one network on this line", 1, r.counts["wifi-ssid"])
+        // The address rule already worked on this exact line; the name survived between two
+        // redacted addresses, which is what made the gap so easy to miss.
+        assertEquals("BSSID and HESSID are addresses", 2, r.counts["mac"])
+        assertTrue("the frame stays readable", r.text.contains("BSS: Add new id 530"))
+        assertTrue("the quotes are kept", r.text.contains("SSID '<ssid:"))
+        assertTrue("the band survives", r.text.contains("freq 2437"))
+    }
+
+    @Test
+    fun `a network name in a LOWI scan record is removed`() {
+        val r = redact(
+            "08-26 19:48:24.402 1101 1101 D LOWI-9.3.0.1.: [MEAS_INFO] RSSI: -71, CPL: 0, " +
+                "AGE: 122,  SSID Neighbour-1A2B, TSFDelta: 0x1ac"
+        )
+        assertFalse(r.text.contains("Neighbour-1A2B"))
+        assertEquals(1, r.counts["wifi-ssid"])
+        assertTrue("the comma-separated structure survives", r.text.contains(", TSFDelta: 0x1ac"))
+        assertTrue("the signal strength is diagnostic and stays", r.text.contains("RSSI: -71"))
+    }
+
+    @Test
+    fun `the space-separated rules leave the neighbouring keys alone`() {
+        // BSSID and HESSID end in the letters S-S-I-D followed by a space, which is exactly what
+        // the new rules match on. The lookbehind is the only thing keeping them out.
+        val r = redact("BSSID 1a:2b:3c:4d:5e:6f HESSID a1:b2:c3:d4:e5:f6")
+        assertEquals("neither is a network name", null, r.counts["wifi-ssid"])
+        assertEquals(2, r.counts["mac"])
+        assertTrue(r.text.contains("BSSID "))
+        assertTrue(r.text.contains("HESSID "))
+    }
+
+    @Test
+    fun `an empty network name is left alone`() {
+        // `SSID ''` appears in the corpus for hidden networks. It identifies nobody, and its
+        // presence in the frame is itself the diagnostic.
+        val r = redact("BSS: Add new id 12 SSID '' freq 2437")
+        assertEquals(null, r.counts["wifi-ssid"])
+        assertTrue(r.text.contains("SSID ''"))
+    }
+
+    @Test
+    fun `a space-separated name is not relabelled on a second pass`() {
+        val once = redact("SSID 'HomeNet' freq 2437")
+        val twice = Redactor.redact(once.text, SALT)
+        assertEquals(once.text, twice.text)
+        assertEquals(0, twice.total)
+    }
+
     // ── the classes a second, larger measurement pass found ──────────────────────────────────
 
     @Test
