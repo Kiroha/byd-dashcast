@@ -131,6 +131,55 @@ object Redactor {
     }
 
     /**
+     * `SSID '<name>'` — what this ROM's `wpa_supplicant` actually prints, with a SPACE where both
+     * rules above require a `:` or an `=`.
+     *
+     * INC-20260826-194829 shipped 39 neighbourhood network names to a Telegram group because of
+     * that one character. Its own line is the proof that the gap was never a deliberate limit:
+     *
+     *     BSS: Add new id 530 BSSID 20:66:cf:**:**:00 SSID 'Freebox-3C9F3C' freq 2437 HESSID <mac:267c>
+     *
+     * [MAC] redacted the BSSID and the HESSID on that same line, and the name sitting between them
+     * survived. Nothing failed in CI because every SSID test was written against the `SSID:` form,
+     * which this ROM never emits — 0 occurrences in a 10,097-line report.
+     *
+     * An empty `SSID ''` is deliberately left alone: `{1,32}` cannot match it, a nameless network
+     * identifies no one, and its presence in the frame is itself the diagnostic.
+     */
+    private val SSID_SPACED_QUOTED = Rule(
+        "wifi-ssid",
+        Regex("""(?<![A-Za-z<])(SSID[ \t]+')([^'\n]{1,32})(')""", RegexOption.IGNORE_CASE),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2])) m.value
+        else m.groupValues[1] + "<ssid:" + tok(m.groupValues[2]) + ">" + m.groupValues[3]
+    }
+
+    /**
+     * `SSID <name>,` — the Qualcomm LOWI scan record, where the name is bare and the comma is the
+     * field separator:
+     *
+     *     ..., CPL: 0, AGE: 122,  SSID Freebox-8D6410, TSFDelta: 0x1ac...
+     *
+     * Same two lookbehind guards as [SSID_BARE], for the same two reasons: `[A-Za-z]` keeps it off
+     * `BSSID` and `HESSID`, which are addresses and belong to [MAC], and `<` keeps it off the
+     * `<ssid:...>` token this rule writes.
+     *
+     * `[ \t]` rather than `\s`, so it cannot reach across a line ending and swallow the first field
+     * of the next record. Like [SSID_BARE] it runs to the comma rather than to the first space,
+     * which means a line such as `SSID not found` has its two words tokenised. That trade is taken
+     * on purpose: the cost is one unreadable status word, and the cost the other way round is a
+     * network name published in a group chat.
+     */
+    private val SSID_SPACED_BARE = Rule(
+        "wifi-ssid",
+        Regex("""(?<![A-Za-z<])(SSID[ \t]+)(?!['"])([^\s,'"<][^,'"\n]{0,31})""",
+            RegexOption.IGNORE_CASE),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2].trim())) m.value
+        else m.groupValues[1] + "<ssid:" + tok(m.groupValues[2].trim()) + ">"
+    }
+
+    /**
      * Any six-group MAC. Unambiguous in this corpus: 369 hits, all of them real addresses.
      *
      * Broadcast and all-zero are deliberately kept. They identify nobody, and their presence in a
@@ -310,7 +359,8 @@ object Redactor {
 
     /**
      * Order matters. The two VIN rules are anchored and run first; [SSID] must precede [SSID_BARE]
-     * so the quoted form is consumed by the rule that keeps its quotes; [MAC] is broad but unambiguous,
+     * and [SSID_SPACED_QUOTED] must precede [SSID_SPACED_BARE], so in each pair the quoted form is
+     * consumed by the rule that keeps its quotes; [MAC] is broad but unambiguous,
      * so it can run afterwards without eating anything the earlier rules produced — the tokens they
      * write contain no colon-separated hex.
      */
@@ -364,7 +414,8 @@ object Redactor {
 
     private val RULES = listOf(
         VIN_PROP, VIN_CLOUD, VIN_KEY, VIN_RAW, ACTIVATION,
-        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
+        GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, SSID_SPACED_QUOTED, SSID_SPACED_BARE,
+        MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
         TELEGRAM_TOKEN, TELEGRAM_TOKEN_BARE)
 
     /** What a pass removed, per rule. Empty when the text was already clean. */
