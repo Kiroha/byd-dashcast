@@ -61,8 +61,12 @@ class BugReportShellDumpTest {
         val sf = cmd.split("SURFACEFLINGER").drop(1).joinToString("\n")
         assertTrue("the SF sections must still exist", sf.isNotEmpty())
         assertFalse("40 lines could not clear display 0", sf.contains("head -40"))
-        assertFalse("neither could 150 from the top of the dump",
-            sf.contains("SurfaceFlinger 2>/dev/null | head -150"))
+        // The old form of this assertion checked a literal that inserting `sed` between its
+        // halves already broke, so it passed while `head -150` was still there. Check the number.
+        assertFalse("150 raw lines is ~18 of 86 layers on this ROM, all from the bottom",
+            sf.contains("head -150"))
+        assertTrue("the z-order pass must reduce to one line per layer, or 300 is no better",
+            sf.contains("grep -E '^[+*] |layerStack='"))
     }
 
     @Test

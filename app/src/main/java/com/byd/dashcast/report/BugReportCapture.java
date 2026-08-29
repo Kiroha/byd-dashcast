@@ -170,7 +170,13 @@ public final class BugReportCapture {
             // the unfiltered one is exactly what a watchdog log flood evicts, which is how
             // INC-20260804-171617 lost its framework evidence. Plain alphanumeric tag — no
             // filterspec risk.
-            + " ; logcat -d -t 1500 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:V ClusterManager:V Phase4TaskVerbs:I '*:S' >> " + p + " 2>&1"
+            // Bound the OUTPUT, not the input — the same shape the OEM pass below uses, and for
+            // the same reason. `-t 1500` tails the BUFFER and the tag filter is applied after, so
+            // on a unit logging ~400 lines/s the window covered the last 3.8 seconds: in
+            // INC-20260826-194829 this section came back with two buffer separators and zero lines.
+            // It is the section that would have carried the WindowManager evidence for the Android
+            // Auto fix.
+            + " ; logcat -d -t 20000 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:V ClusterManager:V Phase4TaskVerbs:I '*:S' | tail -300 >> " + p + " 2>&1"
             // The OEM's own cluster projection manager, matched by CONTENT rather than by tag.
             // INC-20260804-171617 (DiLink 5.0) was root-caused to that service re-fronting its map
             // onto the cluster display ~1-2 s after every launch, yet the report contained ZERO of
@@ -305,9 +311,15 @@ public final class BugReportCapture {
             // SurfaceControl.createDisplay (it never appears in `dumpsys display`), so the one
             // leak check this report has was structurally blind on DiLink 3.
             //
-            // Anchored past the preamble rather than truncated into it.
+            // Anchored past the preamble rather than truncated into it — and reduced to one line
+            // per layer, because the anchor alone was not enough. This ROM prints ~10 lines per
+            // layer, so `head -150` covered 18 of the 86 the header counts, and they are the BOTTOM
+            // of the stack (Display Root, wallpaper). The cluster is emitted last, so the pass that
+            // exists to show what is on top could never reach it. Corpus range is 60-116 layers;
+            // 150 raw lines was never enough on any car.
             + " ; echo '--- SURFACEFLINGER (visible layers, z-order) ---' >> " + p
-            + " ; dumpsys SurfaceFlinger 2>/dev/null | sed -n '/Visible layers/,$p' | head -150 >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null | sed -n '/Visible layers/,$p'"
+            + "   | grep -E '^[+*] |layerStack=' | head -300 >> " + p
             // The cluster pass, narrowed so it cannot be spent on display 0: `layerStack= *[1-9]`
             // skips the default display entirely, which is what a bare `layerStack` could not do.
             //
