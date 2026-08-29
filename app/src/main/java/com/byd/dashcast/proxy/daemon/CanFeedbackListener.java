@@ -3,9 +3,7 @@ package com.byd.dashcast.proxy.daemon;
 import android.content.Context;
 import android.hardware.bydauto.setting.AbsBYDAutoSettingListener;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.ArrayDeque;
 
 /**
  * CanFeedbackListener — registers a BYD <em>setting</em> feedback listener INSIDE the daemon
@@ -39,7 +37,22 @@ public final class CanFeedbackListener {
         CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.SET_HUD_SWITCH_STATUS_FEEDBACK,
         CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS
     };
-    private static final List<String> sBuf = Collections.synchronizedList(new ArrayList<String>());
+    /**
+     * The event log, newest-wins.
+     *
+     * <p>It used to be an {@code ArrayList} filled by {@code if (size < CAP) add(line)} — which is
+     * the opposite of a ring: once full it kept the OLDEST thousand events and silently ignored
+     * everything after. INC-20260826-194829 is what that produced: exactly 1000 lines covering
+     * t=0.1s to t=35.9s of a six-minute session, with no banner saying the recording had stopped.
+     * The report's own {@code [last-known]} snapshot, which is not capped, named six feature ids
+     * that appear nowhere in those 1000 lines — proof the pushes had kept coming.
+     *
+     * <p>A recording that goes deaf is survivable. One that goes deaf while looking complete is
+     * not, so {@link #drain} now says how many events it dropped.
+     */
+    private static final ArrayDeque<String> sBuf = new ArrayDeque<>(CAP + 1);
+    /** Events discarded to keep {@link #sBuf} at {@link #CAP}. Reset by {@link #drain}/{@link #clear}. */
+    private static int sDropped;
     private static volatile Object  sListener;     // our AbsBYDAutoSettingListener subclass (strong ref)
     private static volatile Object  sInstrListener;// our AbsBYDAutoInstrumentListener subclass (strong ref)
     private static volatile boolean sRegistered;
@@ -62,7 +75,8 @@ public final class CanFeedbackListener {
         String line = String.format(java.util.Locale.US, "[t=%6.1f] %s",
                 (android.os.SystemClock.elapsedRealtime() - sT0) / 1000.0, s);
         synchronized (sBuf) {
-            if (sBuf.size() < CAP) sBuf.add(line);
+            sBuf.addLast(line);
+            while (sBuf.size() > CAP) { sBuf.pollFirst(); sDropped++; }
         }
     }
 
@@ -73,7 +87,7 @@ public final class CanFeedbackListener {
 
     /** Clears the event log + last-known maps and resets the timestamp clock (fresh recording). */
     public static void clear() {
-        synchronized (sBuf) { sBuf.clear(); }
+        synchronized (sBuf) { sBuf.clear(); sDropped = 0; }
         sLastValue.clear();
         sLastBuf.clear();
         sT0 = android.os.SystemClock.elapsedRealtime();
@@ -290,8 +304,16 @@ public final class CanFeedbackListener {
     public static String drain() {
         StringBuilder sb = new StringBuilder();
         synchronized (sBuf) {
+            // First line, not a footnote: a reader who does not know the window closed will date
+            // the whole session from the last timestamp they see.
+            if (sDropped > 0) {
+                sb.append("[capped — ").append(sDropped)
+                  .append(" event(s) dropped, the ").append(sBuf.size())
+                  .append(" most recent kept]\n");
+            }
             for (String s : sBuf) sb.append(s).append('\n');
             sBuf.clear();
+            sDropped = 0;
         }
         if (!sLastValue.isEmpty()) {
             sb.append("[last-known]");
