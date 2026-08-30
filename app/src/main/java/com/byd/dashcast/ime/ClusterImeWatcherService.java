@@ -485,6 +485,43 @@ public class ClusterImeWatcherService extends AccessibilityService {
     }
 
     /**
+     * Manual counterpart to the focus/touch launch paths. Resolves and binds the currently focused
+     * cluster editable before opening the bridge, so a session cleared by the previous bridge close
+     * is not left permanently unbound. Returns false when the service cannot perform the lookup;
+     * callers may then open the bridge directly to preserve its accessibility-settings fallback.
+     */
+    public static boolean prepareAndLaunchBridgeManually() {
+        final ClusterImeWatcherService self = sInstance;
+        if (self == null || self.mWorker == null) return false;
+        final int activeDisplayId = activeClusterDisplayId();
+        if (activeDisplayId <= 0) return false;
+        return self.mWorker.post(new Runnable() {
+            @Override public void run() {
+                AccessibilityNodeInfo node = null;
+                try {
+                    node = self.findFocusedEditableOnDisplay(activeDisplayId, null);
+                    CharSequence targetPackage = node == null ? null : node.getPackageName();
+                    if (targetPackage == null || targetPackage.length() == 0) {
+                        self.mRelaySession.clear();
+                        AppLogger.w(TAG, "manual bridge launch: no focused cluster editable");
+                    } else {
+                        self.mRelaySession.bind(activeDisplayId, targetPackage.toString());
+                    }
+                } catch (Throwable t) {
+                    self.mRelaySession.clear();
+                    AppLogger.e(TAG, "manual bridge target lookup failed", t);
+                } finally {
+                    if (node != null) {
+                        try { node.recycle(); } catch (Throwable ignored) { }
+                    }
+                }
+                self.mLastLaunchAt = SystemClock.uptimeMillis();
+                self.launchBridge();
+            }
+        });
+    }
+
+    /**
      * Walk every interactive window across every display, prefer those on a
      * non-default display (the cluster on DL3/DL5) and SKIP our own bridge
      * package (so we never overwrite the local EditText instead of the
