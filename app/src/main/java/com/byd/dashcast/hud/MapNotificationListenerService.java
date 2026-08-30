@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -224,6 +226,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static final Pattern RX_ETA_CLOCK =
             Pattern.compile("\\b([01]?\\d|2[0-3]):([0-5]\\d)\\s*(am|pm)?\\b",
                     Pattern.CASE_INSENSITIVE);
+        private static final Pattern RX_ETA_MARKER = Pattern.compile(
+            "(?iu)(?<![\\p{L}\\p{N}])(?:eta|arriv(?:e|al|ée?|ee|o|ato|ata)|llegada|ankunft|"
+                + "прибыт\\p{L}*|прибут\\p{L}*|прыбы\\p{L}*|przyjazd|varış|varis|"
+                + "الوصول|келу|yetib)(?![\\p{L}\\p{N}])");
 
     // ─── Roundabout exit number — "3rd exit", "take the 2nd exit", "sortie 3" ─
     private static final Pattern RX_ROUNDABOUT_EXIT =
@@ -1040,20 +1046,60 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static int[] parseEtaClock(String text) {
         if (text == null) return null;
         Matcher m = RX_ETA_CLOCK.matcher(text);
-        if (!m.find()) return null;
-        try {
-            int h   = Integer.parseInt(m.group(1));
-            int min = Integer.parseInt(m.group(2));
-            String ap = m.group(3);
-            if (ap != null) {
-                ap = ap.toLowerCase(Locale.ROOT);
-                if (ap.equals("pm") && h < 12) h += 12;
-                else if (ap.equals("am") && h == 12) h = 0;
+        List<EtaClockCandidate> candidates = new ArrayList<>();
+        while (m.find()) {
+            try {
+                int h = Integer.parseInt(m.group(1));
+                int min = Integer.parseInt(m.group(2));
+                String ap = m.group(3);
+                if (ap != null) {
+                    ap = ap.toLowerCase(Locale.ROOT);
+                    if (ap.equals("pm") && h < 12) h += 12;
+                    else if (ap.equals("am") && h == 12) h = 0;
+                }
+                if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
+                    candidates.add(new EtaClockCandidate(h, min, m.start(), m.end()));
+                }
+            } catch (NumberFormatException ignored) { }
+        }
+        if (candidates.isEmpty()) return null;
+        if (candidates.size() == 1) return candidates.get(0).value();
+
+        EtaClockCandidate closest = null;
+        int closestGap = Integer.MAX_VALUE;
+        Matcher marker = RX_ETA_MARKER.matcher(text);
+        while (marker.find()) {
+            for (EtaClockCandidate candidate : candidates) {
+                int gap = candidate.end <= marker.start()
+                        ? marker.start() - candidate.end
+                        : candidate.start >= marker.end()
+                                ? candidate.start - marker.end() : 0;
+                if (gap < closestGap) {
+                    closest = candidate;
+                    closestGap = gap;
+                }
             }
-            if (h < 0 || h > 23 || min < 0 || min > 59) return null;
-            return new int[] { h, min };
-        } catch (NumberFormatException e) {
-            return null;
+        }
+        // Summary layouts without an arrival label conventionally place ETA last. Keeping that
+        // fallback preserves bare vendor formats while no longer mistaking a leading duration.
+        return (closest != null ? closest : candidates.get(candidates.size() - 1)).value();
+    }
+
+    private static final class EtaClockCandidate {
+        final int hour;
+        final int minute;
+        final int start;
+        final int end;
+
+        EtaClockCandidate(int hour, int minute, int start, int end) {
+            this.hour = hour;
+            this.minute = minute;
+            this.start = start;
+            this.end = end;
+        }
+
+        int[] value() {
+            return new int[] { hour, minute };
         }
     }
 
