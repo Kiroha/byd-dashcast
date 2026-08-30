@@ -612,11 +612,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
         if (n == null) return;
 
-        // Only process ongoing navigation notifications.
-        if ((n.flags & Notification.FLAG_ONGOING_EVENT) == 0
-                && !Notification.CATEGORY_NAVIGATION.equals(n.category)) {
-            return;
-        }
+        if (!isNavigationNotification(n)) return;
 
         // NOTE: whether this counts as nav activity is decided LOWER DOWN, once we know if it looks
         // like guidance (a resolved maneuver or a real distance) — see the guidance-signal gate after
@@ -815,6 +811,13 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         return iconId > 0 && distanceMeters >= 0;
     }
 
+    /** Same eligibility rule for posting and removal, including non-ongoing nav categories. */
+    static boolean isNavigationNotification(Notification notification) {
+        return notification != null
+                && ((notification.flags & Notification.FLAG_ONGOING_EVENT) != 0
+                    || Notification.CATEGORY_NAVIGATION.equals(notification.category));
+    }
+
     /**
      * Key of the notification currently driving the HUD, or null when none is.
      *
@@ -843,7 +846,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     public void onNotificationRemoved(StatusBarNotification sbn) {
         if (sbn == null || !isNavPackage(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
-        if (n == null || (n.flags & Notification.FLAG_ONGOING_EVENT) == 0) return;
+        if (!isNavigationNotification(n)) return;
 
         String key = sbn.getKey();
         String driving = sDrivingKey;
