@@ -102,7 +102,8 @@ object ReportChannel {
     @JvmStatic fun relayUrl(): String = sApp?.let { relayUrl(it) } ?: ""
 
     @JvmStatic fun hasTelegram(): Boolean = botToken().isNotEmpty() && chatId().isNotEmpty()
-    @JvmStatic fun hasAzure(): Boolean = azureUrl().isNotEmpty() && azureSas().isNotEmpty()
+    @JvmStatic fun hasAzure(): Boolean =
+        validatedAzureHost(azureUrl()) != null && azureSas().isNotEmpty()
 
     @JvmStatic fun botToken(ctx: Context): String = read(ctx, K_BOT_TOKEN, "")
     @JvmStatic fun chatId(ctx: Context): String = read(ctx, K_CHAT_ID, "")
@@ -120,7 +121,7 @@ object ReportChannel {
     /** True when the container can be used: a URL and a SAS. */
     @JvmStatic
     fun hasAzure(ctx: Context): Boolean =
-        azureUrl(ctx).isNotEmpty() && azureSas(ctx).isNotEmpty()
+        validatedAzureHost(azureUrl(ctx)) != null && azureSas(ctx).isNotEmpty()
 
     /** True when this device has been paired, i.e. at least one credential set is on the device. */
     @JvmStatic
@@ -158,11 +159,18 @@ object ReportChannel {
     /** Stores the Azure pair. Same contract as [saveTelegram]. */
     @JvmStatic
     fun saveAzure(ctx: Context, url: String, sas: String): Boolean {
+        val normalizedUrl = url.trim()
+        val normalizedSas = sas.trim().removePrefix("?")
+        if ((normalizedUrl.isNotEmpty() && validatedAzureHost(normalizedUrl) == null) ||
+            (normalizedUrl.isEmpty() && normalizedSas.isNotEmpty())) {
+            AppLogger.w(TAG, "azure url rejected: invalid https endpoint")
+            return false
+        }
         val p = prefs(ctx) ?: return false
         return try {
             p.edit()
-                .putString(K_AZURE_URL, url.trim())
-                .putString(K_AZURE_SAS, sas.trim().removePrefix("?"))
+                .putString(K_AZURE_URL, normalizedUrl)
+                .putString(K_AZURE_SAS, normalizedSas)
                 .commit()
                 .also { AppLogger.i(TAG, "azure credentials stored on device") }
         } catch (t: Throwable) {
@@ -212,6 +220,8 @@ object ReportChannel {
         internal val text: String,
         val hasTelegram: Boolean,
         val hasAzure: Boolean,
+        val azureHost: String?,
+        val hasInvalidAzure: Boolean,
         val relayHost: String?,
         val hasInvalidRelay: Boolean
     ) {
@@ -222,10 +232,11 @@ object ReportChannel {
             append("Source: ").append(sourcePath)
             append("\nContains:")
             if (hasTelegram) append(" Telegram credentials;")
-            if (hasAzure) append(" Azure credentials;")
+            if (hasAzure) append(" Azure credentials; host ").append(azureHost).append(';')
+            if (hasInvalidAzure) append(" invalid Azure URL (will be ignored);")
             if (relayHost != null) append(" relay host ").append(relayHost).append(';')
             if (hasInvalidRelay) append(" invalid relay URL (will be ignored);")
-            if (!hasTelegram && !hasAzure && relayHost == null && !hasInvalidRelay) {
+            if (!hasTelegram && !hasAzure && !hasInvalidAzure && relayHost == null && !hasInvalidRelay) {
                 append(" no supported settings;")
             }
             if (requiresSourceDeletion) {
@@ -391,13 +402,18 @@ object ReportChannel {
 
     private fun candidate(sourcePath: String, text: String): ProvisioningCandidate {
         val values = parseProperties(text)
+        val azureUrl = values["azure.blobUrl"].orEmpty().trim()
+        val azureSas = values["azure.sas"].orEmpty().trim().removePrefix("?")
+        val azureHost = if (azureSas.isNotEmpty()) validatedAzureHost(azureUrl) else null
         val relay = values["relay.url"].orEmpty().trim()
         val relayHost = validatedRelayHost(relay)
         return ProvisioningCandidate(
             sourcePath = sourcePath,
             text = text,
             hasTelegram = values["bugReport.botToken"].orEmpty().isNotEmpty(),
-            hasAzure = values["azure.sas"].orEmpty().isNotEmpty(),
+            hasAzure = azureSas.isNotEmpty() && azureHost != null,
+            azureHost = azureHost,
+            hasInvalidAzure = azureSas.isNotEmpty() && azureHost == null,
             relayHost = relayHost,
             hasInvalidRelay = relay.isNotEmpty() && relayHost == null
         )
@@ -415,10 +431,19 @@ object ReportChannel {
         return values
     }
 
-    private fun validatedRelayHost(value: String): String? = try {
+    @androidx.annotation.VisibleForTesting
+    @JvmStatic
+    internal fun validatedAzureHost(value: String): String? = validatedHttpsHost(value, true)
+
+    private fun validatedRelayHost(value: String): String? = validatedHttpsHost(value, false)
+
+    private fun validatedHttpsHost(value: String, rejectQuery: Boolean): String? = try {
         val uri = URI(value)
         uri.host?.takeIf {
-            uri.scheme.equals("https", ignoreCase = true) && it.isNotBlank() && uri.userInfo == null
+            uri.scheme.equals("https", ignoreCase = true) &&
+                it.isNotBlank() &&
+                uri.userInfo == null &&
+                (!rejectQuery || (uri.rawQuery == null && uri.rawFragment == null))
         }
     } catch (_: Throwable) {
         null

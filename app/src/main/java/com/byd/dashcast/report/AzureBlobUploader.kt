@@ -1,6 +1,5 @@
 package com.byd.dashcast.report
 
-import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.util.AppLogger
 
 import java.io.File
@@ -15,10 +14,9 @@ import java.util.Locale
  * sized to fit under it). The OEM artefacts we actually want are far bigger — the cluster Qt theme
  * bundles alone are ~126 MB and ~118 MB.
  *
- * <p><b>Credentials.</b> The container URL and its SAS token come from `local.properties` via
- * [BuildConfig] (the same mechanism as the bug-report bot), so they never enter git. The SAS is
- * expected to be **create/write only, no read, no list** and time-limited: a token shipped inside an
- * APK must be assumed public, so it must not be able to read back what other cars uploaded.
+ * <p><b>Credentials.</b> The container URL and its SAS token are provisioned at runtime through
+ * [ReportChannel] and kept in encrypted device storage. The SAS is expected to be **create/write
+ * only, no read, no list** and time-limited.
  *
  * <p><b>Why block upload.</b> A car uploads over a mobile link that drops. Each 4 MB block is a
  * separate request with its own retries, and only the final commit makes the blob visible — a failed
@@ -89,8 +87,9 @@ object AzureBlobUploader {
             AppLogger.i(TAG, "uploaded ${file.name} (${total / 1024} KB) in ${blockIds.size} block(s)")
             cb.onUploaded(blobUrl)
         } catch (t: Throwable) {
-            AppLogger.w(TAG, "upload failed: ${t.javaClass.simpleName}: ${t.message}")
-            cb.onFailed("${t.javaClass.simpleName}: ${t.message}")
+            val failure = safeFailureMessage(t, sas)
+            AppLogger.w(TAG, "upload failed: $failure")
+            cb.onFailed(failure)
         }
     }
 
@@ -178,6 +177,15 @@ object AzureBlobUploader {
 
     private fun urlEncode(s: String): String =
         java.net.URLEncoder.encode(s, "UTF-8")
+
+    @JvmStatic
+    internal fun safeFailureMessage(error: Throwable, sas: String): String =
+        error.javaClass.simpleName + ": " + scrubSas(error.message, sas)
+
+    private fun scrubSas(text: String?, sas: String): String {
+        val value = text ?: return ""
+        return if (sas.isEmpty()) value else value.replace(sas, "<sas>")
+    }
 
     /** Keeps the blob name to characters that need no escaping in a URL path. */
     private fun sanitise(name: String): String =
