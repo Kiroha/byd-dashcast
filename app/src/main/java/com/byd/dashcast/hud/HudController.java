@@ -41,6 +41,8 @@ import java.util.concurrent.TimeUnit;
 public final class HudController {
 
     private static final String TAG = "HudController";
+    static final String AMAP_BROADCAST_ACTION = "AUTONAVI_STANDARD_BROADCAST_SEND";
+    static final String AMAP_RECEIVER_PACKAGE = "com.example.amapservice";
 
     public static final HudController INSTANCE = new HudController();
 
@@ -453,7 +455,7 @@ public final class HudController {
     private void sendAmapBroadcast(Context ctx, HudNavigationData d) {
         try {
             int amapIcon = mapToAmapIcon(d.iconId);
-            Intent intent = new Intent("AUTONAVI_STANDARD_BROADCAST_SEND");
+            Intent intent = newAmapIntent();
             intent.putExtra("KEY_TYPE",            10001);
             intent.putExtra("TYPE",                8);
             intent.putExtra("EXTRA_STATE",         8);
@@ -487,7 +489,7 @@ public final class HudController {
     /** Sends {@code AUTONAVI_STANDARD_BROADCAST_SEND} (TYPE=9) to stop navigation. */
     private void sendAmapStopBroadcast(Context ctx) {
         try {
-            Intent intent = new Intent("AUTONAVI_STANDARD_BROADCAST_SEND");
+            Intent intent = newAmapIntent();
             intent.putExtra("KEY_TYPE",            10001);
             intent.putExtra("TYPE",                9);
             intent.putExtra("EXTRA_STATE",         1);
@@ -503,6 +505,11 @@ public final class HudController {
         } catch (Exception e) {
             Log.e(TAG, "AMap stop broadcast failed", e);
         }
+    }
+
+    /** Package verified from the OEM AmapService APK's dynamic receiver registration. */
+    static Intent newAmapIntent() {
+        return new Intent(AMAP_BROADCAST_ACTION).setPackage(AMAP_RECEIVER_PACKAGE);
     }
 
     /**
