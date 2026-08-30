@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.byd.dashcast.util.AppLogger
+import java.net.URI
 
 /**
  * Where the reporting credentials come from — device storage, not the binary.
@@ -206,46 +207,97 @@ object ReportChannel {
     /** Kept for the Diagnostics label; the search covers [IMPORT_PATHS]. */
     const val IMPORT_PATH = "/sdcard/Download/dashcast_channel.properties"
 
-    /**
-     * Imports credentials from the first of [IMPORT_PATHS] that exists.
-     *
-     * This is the provisioning route D2 chose as the primary one for a fleet whose owners already
-     * sideload over ADB — it needs no new screen, no new translated string, and no paste on a car
-     * touchscreen, an interaction this application has no precedent for.
-     *
-     * **The file is read with `executeShellWithResultUnlogged`, and that is not a detail.** The
-     * ordinary shell helper echoes stdout into AppLogger, which BugReportCapture appends to every
-     * bug report. Reading a credential file through it would copy the token into every artefact
-     * uploaded afterwards — a leak strictly worse than the one being fixed, because it repeats on
-     * every report instead of sitting in one binary. The D2 analysis flagged exactly this trap in
-     * the design it recommended.
-     *
-     * The file is deliberately NOT deleted after import: the README documents a full uninstall as a
-     * normal step, and that clears the encrypted store, so the file is what makes re-pairing
-     * possible without another round trip to the maintainer.
-     *
-     * @param done invoked with a human-readable outcome that never contains a credential.
-     */
+    class ProvisioningCandidate internal constructor(
+        val sourcePath: String,
+        internal val text: String,
+        val hasTelegram: Boolean,
+        val hasAzure: Boolean,
+        val relayHost: String?,
+        val hasInvalidRelay: Boolean
+    ) {
+        val requiresSourceDeletion: Boolean
+            get() = isSharedImportPath(sourcePath)
+
+        fun confirmationSummary(): String = buildString {
+            append("Source: ").append(sourcePath)
+            append("\nContains:")
+            if (hasTelegram) append(" Telegram credentials;")
+            if (hasAzure) append(" Azure credentials;")
+            if (relayHost != null) append(" relay host ").append(relayHost).append(';')
+            if (hasInvalidRelay) append(" invalid relay URL (will be ignored);")
+            if (!hasTelegram && !hasAzure && relayHost == null && !hasInvalidRelay) {
+                append(" no supported settings;")
+            }
+            if (requiresSourceDeletion) {
+                append("\n\nThe shared file will be deleted before its secrets are stored.")
+            }
+        }
+    }
+
+    private const val SOURCE_PREFIX = "__DASHCAST_PROVISIONING_SOURCE__="
+
+    /** Reads and applies the first provisioning file. Shared-storage sources are removed first. */
     @JvmStatic
     @JvmOverloads
     fun importFromDevice(ctx: Context, paths: List<String> = IMPORT_PATHS, done: (String) -> Unit) {
+        inspectFromDevice(ctx, paths) { candidate, outcome ->
+            if (candidate == null) done(outcome)
+            else applyCandidate(ctx, candidate, done)
+        }
+    }
+
+    /** Reads a provisioning candidate without storing anything or exposing credential values. */
+    @JvmStatic
+    @JvmOverloads
+    fun inspectFromDevice(
+        ctx: Context,
+        paths: List<String> = IMPORT_PATHS,
+        done: (ProvisioningCandidate?, String) -> Unit
+    ) {
         com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
             ctx.applicationContext,
-            paths.joinToString(" || ") { "cat '" + it + "' 2>/dev/null" },
+            buildReadCommand(paths),
             object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
-                    val text = out ?: ""
-                    if (text.isBlank()) {
-                        done("no " + IMPORT_NAME + " found (looked in Download and /data/local/tmp)")
+                    val candidate = parseCandidate(out)
+                    if (candidate == null) {
+                        done(null, "no " + IMPORT_NAME
+                                + " found (looked in Download and /data/local/tmp)")
                         return
                     }
-                    val applied = applyProperties(ctx, text)
-                    // Counts only — never the keys' values.
-                    done(if (applied > 0) "paired: $applied credential set(s) stored on this device"
-                         else "provisioning file found but no usable credentials in it")
+                    done(candidate, "provisioning file ready for confirmation")
                 }
                 override fun onError(err: String?) {
-                    done("could not read " + IMPORT_NAME + " (" + (err ?: "no detail") + ")")
+                    done(null, "could not read " + IMPORT_NAME
+                            + " (" + (err ?: "no detail") + ")")
+                }
+            })
+    }
+
+    /** Stores a previously inspected candidate, deleting any shared plaintext source first. */
+    @JvmStatic
+    fun applyCandidate(ctx: Context, candidate: ProvisioningCandidate, done: (String) -> Unit) {
+        fun store() {
+            val applied = applyProperties(ctx, candidate.text)
+            done(if (applied > 0) "paired: $applied setting set(s) stored on this device"
+                 else "provisioning file found but no usable settings in it")
+        }
+        if (!candidate.requiresSourceDeletion) {
+            store()
+            return
+        }
+        val quoted = shellQuote(candidate.sourcePath)
+        val command = "rm -f $quoted 2>/dev/null; [ ! -e $quoted ] && echo REMOVED"
+        com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
+            ctx.applicationContext,
+            command,
+            object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
+                override fun onSuccess(out: String?) {
+                    if (out?.lineSequence()?.any { it.trim() == "REMOVED" } == true) store()
+                    else done("shared provisioning file could not be removed; nothing was imported")
+                }
+                override fun onError(err: String?) {
+                    done("shared provisioning file could not be removed; nothing was imported")
                 }
             })
     }
@@ -261,17 +313,11 @@ object ReportChannel {
      * value is preserved (Azure SAS strings contain them). A partial file is not an error — storing
      * Telegram without Azure is a valid outcome.
      *
-     * @return how many credential sets were stored: 0, 1 or 2. Never the values themselves.
+    * @return how many credential/endpoint sets were stored: 0 through 3. Never the values.
      */
     @JvmStatic
     fun applyProperties(ctx: Context, text: String): Int {
-        val kv = HashMap<String, String>()
-        for (line in text.lineSequence()) {
-            val t = line.trim()
-            if (t.isEmpty() || t.startsWith("#") || !t.contains('=')) continue
-            val i = t.indexOf('=')
-            kv[t.substring(0, i).trim()] = t.substring(i + 1).trim()
-        }
+        val kv = parseProperties(text)
         var applied = 0
         val tok = kv["bugReport.botToken"].orEmpty()
         if (tok.isNotEmpty()) {
@@ -301,12 +347,15 @@ object ReportChannel {
         // legitimate relay needs cleartext.
         val relay = kv["relay.url"].orEmpty().trim()
         if (relay.isNotEmpty()) {
-            if (!relay.startsWith("https://", ignoreCase = true)) {
-                AppLogger.w(TAG, "relay url rejected: not https")
+            if (validatedRelayHost(relay) == null) {
+                AppLogger.w(TAG, "relay url rejected: invalid https endpoint")
             } else {
                 try {
-                    prefs(ctx)?.edit()?.putString(K_RELAY_URL, relay)?.apply()
-                    applied++
+                    val p = prefs(ctx)
+                    if (p != null) {
+                        p.edit().putString(K_RELAY_URL, relay).apply()
+                        applied++
+                    }
                 } catch (t: Throwable) {
                     AppLogger.w(TAG, "relay url not stored (" + t.javaClass.simpleName + ")")
                 }
@@ -314,6 +363,72 @@ object ReportChannel {
         }
         return applied
     }
+
+    @androidx.annotation.VisibleForTesting
+    @JvmStatic
+    fun candidateForTesting(sourcePath: String, text: String): ProvisioningCandidate =
+        candidate(sourcePath, text)
+
+    private fun buildReadCommand(paths: List<String>): String = buildString {
+        for (path in paths) {
+            val quotedPath = shellQuote(path)
+            append("if [ -f ").append(quotedPath).append(" ]; then ")
+            append("printf '%s\\n' ").append(shellQuote(SOURCE_PREFIX + path)).append("; ")
+            append("cat ").append(quotedPath).append(" 2>/dev/null; exit 0; fi; ")
+        }
+        append("exit 0")
+    }
+
+    private fun parseCandidate(output: String?): ProvisioningCandidate? {
+        if (output.isNullOrEmpty()) return null
+        val newline = output.indexOf('\n')
+        val header = if (newline >= 0) output.substring(0, newline) else output
+        if (!header.startsWith(SOURCE_PREFIX)) return null
+        val source = header.substring(SOURCE_PREFIX.length)
+        val text = if (newline >= 0) output.substring(newline + 1) else ""
+        return candidate(source, text)
+    }
+
+    private fun candidate(sourcePath: String, text: String): ProvisioningCandidate {
+        val values = parseProperties(text)
+        val relay = values["relay.url"].orEmpty().trim()
+        val relayHost = validatedRelayHost(relay)
+        return ProvisioningCandidate(
+            sourcePath = sourcePath,
+            text = text,
+            hasTelegram = values["bugReport.botToken"].orEmpty().isNotEmpty(),
+            hasAzure = values["azure.sas"].orEmpty().isNotEmpty(),
+            relayHost = relayHost,
+            hasInvalidRelay = relay.isNotEmpty() && relayHost == null
+        )
+    }
+
+    private fun parseProperties(text: String): Map<String, String> {
+        val values = HashMap<String, String>()
+        for (line in text.lineSequence()) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || !trimmed.contains('=')) continue
+            val separator = trimmed.indexOf('=')
+            values[trimmed.substring(0, separator).trim()] =
+                trimmed.substring(separator + 1).trim()
+        }
+        return values
+    }
+
+    private fun validatedRelayHost(value: String): String? = try {
+        val uri = URI(value)
+        uri.host?.takeIf {
+            uri.scheme.equals("https", ignoreCase = true) && it.isNotBlank() && uri.userInfo == null
+        }
+    } catch (_: Throwable) {
+        null
+    }
+
+    private fun shellQuote(value: String): String =
+        "'" + value.replace("'", "'\"'\"'") + "'"
+
+    private fun isSharedImportPath(path: String): Boolean =
+        path == IMPORT_PATHS[0] || path == IMPORT_PATHS[1]
 
     /**
      * Pairs on its own when a provisioning file is present and the device is not paired yet.
