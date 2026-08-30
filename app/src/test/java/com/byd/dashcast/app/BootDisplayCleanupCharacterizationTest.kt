@@ -2,6 +2,7 @@ package com.byd.dashcast.app
 
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.data.prefs.ClusterPrefs
+import com.byd.dashcast.infrastructure.task.TaskLocation
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -15,9 +16,7 @@ import org.robolectric.annotation.Config
 /**
  * PRE-0 characterisation net — `BootDisplayCleanup` (audit AUD-006).
  *
- * This test freezes CURRENT behaviour, defects included. It is not a specification: it is a
- * seismograph. If a later change makes one of these assertions fail, that change altered
- * behaviour that something else relies on, and the failure is the signal to stop and think.
+ * Pins the liveness gate plus the privileged location/move decision used after a real boot.
  *
  * What is pinned here and why it matters:
  *
@@ -26,17 +25,6 @@ import org.robolectric.annotation.Config
  *    cluster. Running the cleanup then moves the driver's navigation off the cluster mid-drive.
  *    The guard keys on `ClusterService.isRunning()`; if anyone changes what that flag means, the
  *    AUD-006 fix silently stops protecting anything — and only this test would notice.
- *
- *  - The "no running task counts as cleaned" semantics. `moveTaskToDisplayZero` returns TRUE when
- *    it finds no task for a package ("already gone, skipping"), so the package is dropped from the
- *    persisted set. That is deliberate, but it is also the project's most common regression shape
- *    — a false success read from a query that returned nothing. Pinning it here means any future
- *    change to that reading is a visible, deliberate decision.
- *
- *    Note on coverage: the genuine partial-failure branch (a move that throws, which must KEEP the
- *    set for a retry) is NOT exercised. Robolectric provides a working `ActivityTaskManager`
- *    returning an empty task list, so the reflection never fails here. That branch stays uncovered
- *    and is called out rather than faked.
  *
  * Runs at SDK 29 = the project's `targetSdkVersion`, i.e. the API level the head units actually
  * run, rather than the higher `compileSdkVersion`.
@@ -74,17 +62,71 @@ class BootDisplayCleanupCharacterizationTest {
     }
 
     @Test
-    fun `cleanup clears the set when no running task matches the packages`() {
-        ClusterPrefs.setSessionClusterPkgs(ctx, setOf("com.example.nav", "com.example.media"))
-        ClusterService.sIsRunning = false
+    fun `an absent task is complete without a move`() {
+        val operations = FakeOperations(TaskLocation.absent())
 
-        BootDisplayCleanup.cleanup(ctx)
+        assertTrue(BootDisplayCleanup.cleanPackage("com.example.nav", operations))
+        assertEquals(0, operations.moves)
+    }
 
-        // Current behaviour, pinned as-is: with no matching task, moveTaskToDisplayZero reports
-        // success ("already gone, skipping"), every package is considered handled, and the
-        // persisted set is cleared. This is the "empty query reads as success" shape — deliberate
-        // here, but the exact thing a later refactor could flip without noticing.
-        assertTrue(ClusterPrefs.getSessionClusterPkgs(ctx).isEmpty())
+    @Test
+    fun `cleanup clears only packages with a verified safe final state`() {
+        ClusterPrefs.setSessionClusterPkgs(ctx, setOf("com.example.nav", "com.example.unknown"))
+        val operations = PerPackageOperations(
+            mapOf(
+                "com.example.nav" to ArrayDeque(listOf(TaskLocation.found(42, 3), TaskLocation.found(42, 0))),
+                "com.example.unknown" to ArrayDeque(listOf(TaskLocation.unknown()))
+            )
+        )
+
+        BootDisplayCleanup.cleanup(ctx, operations)
+
+        assertEquals(setOf("com.example.unknown"), ClusterPrefs.getSessionClusterPkgs(ctx))
+    }
+
+    @Test
+    fun `a task already on display zero is complete without a move`() {
+        val operations = FakeOperations(TaskLocation.found(42, 0))
+
+        assertTrue(BootDisplayCleanup.cleanPackage("com.example.nav", operations))
+        assertEquals(0, operations.moves)
+    }
+
+    @Test
+    fun `a task on a secondary display is cleared only after verified landing`() {
+        val operations = FakeOperations(
+            TaskLocation.found(42, 3),
+            TaskLocation.found(42, 0)
+        )
+
+        assertTrue(BootDisplayCleanup.cleanPackage("com.example.nav", operations))
+        assertEquals(1, operations.moves)
+    }
+
+    @Test
+    fun `unknown location or an unverified move stays pending`() {
+        val unknown = FakeOperations(TaskLocation.unknown())
+        assertTrue(!BootDisplayCleanup.cleanPackage("com.example.nav", unknown))
+        assertEquals(0, unknown.moves)
+
+        val didNotLand = FakeOperations(
+            TaskLocation.found(42, 3),
+            TaskLocation.found(42, 3)
+        )
+        assertTrue(!BootDisplayCleanup.cleanPackage("com.example.nav", didNotLand))
+        assertEquals(1, didNotLand.moves)
+    }
+
+    @Test
+    fun `a disappearing task is complete even when the move reported failure`() {
+        val operations = FakeOperations(
+            TaskLocation.found(42, 3),
+            TaskLocation.absent(),
+            moveResult = false
+        )
+
+        assertTrue(BootDisplayCleanup.cleanPackage("com.example.nav", operations))
+        assertEquals(1, operations.moves)
     }
 
     @Test
@@ -103,5 +145,30 @@ class BootDisplayCleanupCharacterizationTest {
         assertTrue(ClusterService.isRunning())
         ClusterService.sIsRunning = false
         assertTrue(!ClusterService.isRunning())
+    }
+
+    private class FakeOperations(
+        vararg locations: TaskLocation,
+        private val moveResult: Boolean = true
+    ) : BootDisplayCleanup.Operations {
+        private val queue = ArrayDeque(locations.toList())
+        var moves = 0
+
+        override fun locate(packageName: String): TaskLocation =
+            if (queue.isEmpty()) TaskLocation.unknown() else queue.removeFirst()
+
+        override fun moveToDisplayZero(packageName: String): Boolean {
+            moves++
+            return moveResult
+        }
+    }
+
+    private class PerPackageOperations(
+        private val locations: Map<String, ArrayDeque<TaskLocation>>
+    ) : BootDisplayCleanup.Operations {
+        override fun locate(packageName: String): TaskLocation =
+            locations[packageName]?.removeFirstOrNull() ?: TaskLocation.unknown()
+
+        override fun moveToDisplayZero(packageName: String): Boolean = true
     }
 }
