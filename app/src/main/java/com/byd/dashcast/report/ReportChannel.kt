@@ -240,9 +240,13 @@ object ReportChannel {
                 append(" no supported settings;")
             }
             if (requiresSourceDeletion) {
-                append("\n\nThe shared file will be deleted before its secrets are stored.")
+                append("\n\nThe shared file will be deleted only after its secrets are stored.")
             }
         }
+    }
+
+    internal fun interface SharedSourceDeleter {
+        fun delete(sourcePath: String, done: (Boolean) -> Unit)
     }
 
     private const val SOURCE_PREFIX = "__DASHCAST_PROVISIONING_SOURCE__="
@@ -285,32 +289,51 @@ object ReportChannel {
             })
     }
 
-    /** Stores a previously inspected candidate, deleting any shared plaintext source first. */
+    /** Stores a previously inspected candidate, then removes any shared plaintext source. */
     @JvmStatic
     fun applyCandidate(ctx: Context, candidate: ProvisioningCandidate, done: (String) -> Unit) {
-        fun store() {
-            val applied = applyProperties(ctx, candidate.text)
-            done(if (applied > 0) "paired: $applied setting set(s) stored on this device"
-                 else "provisioning file found but no usable settings in it")
-        }
-        if (!candidate.requiresSourceDeletion) {
-            store()
+        applyCandidate(ctx, candidate, SharedSourceDeleter { sourcePath, deleted ->
+            val quoted = shellQuote(sourcePath)
+            val command = "rm -f $quoted 2>/dev/null; [ ! -e $quoted ] && echo REMOVED"
+            com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
+                ctx.applicationContext,
+                command,
+                object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
+                    override fun onSuccess(out: String?) {
+                        deleted(out?.lineSequence()?.any { it.trim() == "REMOVED" } == true)
+                    }
+                    override fun onError(err: String?) = deleted(false)
+                })
+        }, done)
+    }
+
+    internal fun applyCandidate(
+        ctx: Context,
+        candidate: ProvisioningCandidate,
+        sourceDeleter: SharedSourceDeleter,
+        done: (String) -> Unit,
+    ) {
+        val applied = applyProperties(ctx, candidate.text)
+        val expected = (if (candidate.hasTelegram) 1 else 0) +
+            (if (candidate.hasAzure) 1 else 0) +
+            (if (candidate.relayHost != null) 1 else 0)
+        if (expected == 0) {
+            done("provisioning file found but no usable settings in it")
             return
         }
-        val quoted = shellQuote(candidate.sourcePath)
-        val command = "rm -f $quoted 2>/dev/null; [ ! -e $quoted ] && echo REMOVED"
-        com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResultUnlogged(
-            ctx.applicationContext,
-            command,
-            object : com.byd.dashcast.infrastructure.AdbLocalClient.Callback {
-                override fun onSuccess(out: String?) {
-                    if (out?.lineSequence()?.any { it.trim() == "REMOVED" } == true) store()
-                    else done("shared provisioning file could not be removed; nothing was imported")
-                }
-                override fun onError(err: String?) {
-                    done("shared provisioning file could not be removed; nothing was imported")
-                }
-            })
+        if (applied != expected) {
+            done("provisioning storage incomplete ($applied/$expected); source file was kept")
+            return
+        }
+        val success = "paired: $applied setting set(s) stored on this device"
+        if (!candidate.requiresSourceDeletion) {
+            done(success)
+            return
+        }
+        sourceDeleter.delete(candidate.sourcePath) { removed ->
+            done(if (removed) success
+                 else "$success; shared provisioning file could not be removed")
+        }
     }
 
     /**
@@ -364,8 +387,8 @@ object ReportChannel {
                 try {
                     val p = prefs(ctx)
                     if (p != null) {
-                        p.edit().putString(K_RELAY_URL, relay).apply()
-                        applied++
+                        if (p.edit().putString(K_RELAY_URL, relay).commit()) applied++
+                        else AppLogger.w(TAG, "relay url was not committed")
                     }
                 } catch (t: Throwable) {
                     AppLogger.w(TAG, "relay url not stored (" + t.javaClass.simpleName + ")")
