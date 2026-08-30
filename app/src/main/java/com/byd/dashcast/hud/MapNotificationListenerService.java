@@ -686,8 +686,8 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             if (iconId > 0) {
                 iconSrc = "text";
             } else {
-                iconId = CanBusController.ICON_STRAIGHT_SOLID; // safe default
-                iconSrc = "default";
+                iconId = -1;
+                iconSrc = "unresolved";
             }
         }
 
@@ -714,7 +714,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         // bogus "straight, 0 m" arrow and (b) recorded as a false "parse-fail" that mislabelled a
         // no-route case as a parser bug (INC-20260726-140441). Nothing recorded here ⇒ NavSeen stays
         // "no", so the reporter correctly tells the driver to start a route.
-        boolean looksLikeGuidance = distance > 0 || !"default".equals(iconSrc);
+        boolean looksLikeGuidance = hasGuidanceSignal(iconId, distance);
         if (!looksLikeGuidance) return;
 
         // A supported nav app posted a GUIDANCE frame ⇒ a route IS running. Recorded now (before the
@@ -722,20 +722,25 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         // could not fully parse it" — the latter is a real parser bug, never gated away as user error.
         noteNavActivity(sbn.getPackageName(), false);
 
-        if (distance < 0) {
-            // This printed the whole notification — current road, upcoming street, destination,
-            // ETA — with no gate, thirty lines above the comment that calls exactly that content
-            // location PII and notes that it flows into every bug report. It goes to logcat, and
-            // BugReportCapture copies logcat whole, so the opt-in that exists to control raw nav
-            // text did not in fact control it. Worse, it fires precisely when parsing failed —
-            // the situation people open a bug report about — so it was correlated with sending.
-            if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
-                Log.d(TAG, "no distance found in: " + combined);
+        if (!isCompleteGuidance(iconId, distance)) {
+            if (iconId <= 0) {
+                if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+                    Log.d(TAG, "no maneuver found in: " + combined);
+                } else {
+                    Log.d(TAG, "no maneuver found (len=" + combined.length()
+                            + ", raw nav capture off — enable it in Diagnostics to see the text)");
+                }
             } else {
-                Log.d(TAG, "no distance found (len=" + combined.length()
-                        + ", raw nav capture off — enable it in Diagnostics to see the text)");
+                // This printed the whole notification — current road, upcoming street,
+                // destination, ETA — with no gate. Preserve the opt-in privacy boundary.
+                if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+                    Log.d(TAG, "no distance found in: " + combined);
+                } else {
+                    Log.d(TAG, "no distance found (len=" + combined.length()
+                            + ", raw nav capture off — enable it in Diagnostics to see the text)");
+                }
             }
-            return; // guidance-looking but no usable distance → recorded above as parse-fail
+            return;
         }
 
         // 3. Road name — look for "onto X" / "sur X" pattern.
@@ -789,6 +794,16 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         // from the nav app's other ongoing notifications. See onNotificationRemoved.
         sDrivingKey = sbn.getKey();
         postNavUpdate(data);
+    }
+
+    /** A partial frame still proves that navigation is active, but must not drive the HUD. */
+    static boolean hasGuidanceSignal(int iconId, int distanceMeters) {
+        return iconId > 0 || distanceMeters > 0;
+    }
+
+    /** Direction and distance must both be known before emitting driver-facing guidance. */
+    static boolean isCompleteGuidance(int iconId, int distanceMeters) {
+        return iconId > 0 && distanceMeters >= 0;
     }
 
     /**
