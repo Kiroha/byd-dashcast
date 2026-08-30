@@ -76,7 +76,7 @@ class NavTextParsersCharacterizationTest {
         assertEquals("", road("Continue straight ahead"))
     }
 
-    // ── ETA clock — pinned WITH its known defect (audit L05-HUD-15 / AUD-P2) ─────────────────
+    // ── ETA clock ───────────────────────────────────────────────────────────────────────────
 
     @Test
     fun `eta clock reads a wall clock and applies am pm`() {
@@ -92,11 +92,14 @@ class NavTextParsersCharacterizationTest {
     }
 
     @Test
-    fun `KNOWN DEFECT eta clock takes the FIRST clock-shaped token, whatever it means`() {
-        // The audit flagged this: the regex matches any HH:MM in the string, so a duration or a
-        // departure time is read as an arrival time and shown to the driver as the ETA.
-        // Pinned as-is so the day someone fixes it, this test goes red and the fix is deliberate.
-        assertArrayEquals(intArrayOf(1, 20), eta("1:20 remaining · arrive 15:45"))
+    fun `eta clock prefers the time associated with arrival over a duration`() {
+        assertArrayEquals(intArrayOf(15, 45), eta("1:20 remaining · arrive 15:45"))
+        assertArrayEquals(intArrayOf(15, 45), eta("15:45 arrivée · durée 1:20"))
+    }
+
+    @Test
+    fun `multiple bare clocks retain the vendor summary convention that ETA is last`() {
+        assertArrayEquals(intArrayOf(15, 45), eta("1:20 · 15:45"))
     }
 
     // ── Roundabout exit ──────────────────────────────────────────────────────────────────────
