@@ -72,6 +72,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // (same pattern as OpenBYD MapNotificationListenerService lastNotification* fields).
     private String lastTitle   = "";
     private String lastText    = "";
+    private String lastBigText = "";
     private String lastSubText = "";
 
     // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
@@ -631,7 +632,8 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String subText = charSeqToString(extras.getCharSequence("android.subText"));
 
         // Notification-level deduplication: skip if content hasn't changed since last call.
-        if (title.equals(lastTitle) && text.equals(lastText) && subText.equals(lastSubText)) {
+        if (title.equals(lastTitle) && text.equals(lastText)
+            && bigText.equals(lastBigText) && subText.equals(lastSubText)) {
             // AUD-003 — but first, keep the HUD alive. This is a re-post of the very frame already
             // displayed, so the arrow up there is still correct and the staleness watchdog must not
             // read "no update" as "frozen". Only when that frame actually reached the HUD: an
@@ -642,6 +644,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
         lastTitle   = title;
         lastText    = text;
+        lastBigText = bigText;
         lastSubText = subText;
         // New content: it has not reached the HUD yet, and may never — unparseable frames return
         // early below. Set true only where the frame is actually dispatched.
@@ -854,6 +857,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         postNavClose();
         lastTitle   = "";
         lastText    = "";
+        lastBigText = "";
         lastSubText = "";
     }
 
