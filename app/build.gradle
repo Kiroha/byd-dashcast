@@ -1875,8 +1875,22 @@ android {
         // text the car emits. Two of my own tests asserted the broken behaviour was correct.
         //
         // NOT VALIDATED ON A CAR. 508 unit tests, lint unchanged.)
-        versionCode 635
-        versionName "1.8.45-beta"
+        // 636 = 1.8.46-beta (twelve adversarially re-verified fixes across the two privileged
+        // daemons, fission resource ownership, display/input/IME routing, HUD parsing, report
+        // provisioning/redaction and post-crash task recovery.
+        //
+        // No product capability is removed: arbitrary app projection, auto-start, custom HTTPS
+        // relays, the non-TRUSTED VirtualDisplay compatibility fallback, automatic cluster IME and
+        // rolling diagnostic screenshots remain available. The changes reject only unverified
+        // identities, destinations or parser output that could act on the wrong process/display.
+        //
+        // Every finding was re-read against the current source before editing, received a focused
+        // regression test, and landed as its own detailed commit. Final validation on the combined
+        // tree: 534 unit tests, zero failures; lint unchanged at 14 warnings / 16 hints.
+        //
+        // NOT VALIDATED ON A CAR.)
+        versionCode 636
+        versionName "1.8.46-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
