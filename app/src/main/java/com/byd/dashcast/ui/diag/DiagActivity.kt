@@ -311,7 +311,7 @@ class DiagActivity : Activity() {
                         override fun onUploaded(url: String) {
                             log("✓ uploaded to Azure:\n$url")
                             log("Done — tell the maintainer the file name above.")
-                            BydApkExtractionBundle.cleanup(lastWork); lastWork = null
+                            BydApkExtractionBundle.cleanup(lastWork, zip); lastWork = null
                             resetButton()
                         }
                         override fun onFailed(message: String) {
@@ -347,7 +347,7 @@ class DiagActivity : Activity() {
                 object : TelegramBugReporter.Callback {
                     override fun onSent() {
                         log("✓ sent. Done — you can leave this screen.")
-                        BydApkExtractionBundle.cleanup(lastWork); lastWork = null
+                        BydApkExtractionBundle.cleanup(lastWork, zip); lastWork = null
                         resetButton()
                     }
                     override fun onFailed(message: String) {

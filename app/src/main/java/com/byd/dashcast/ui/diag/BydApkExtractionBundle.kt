@@ -506,10 +506,16 @@ object BydApkExtractionBundle {
      * so, vdex or odex, so the payloads this bundle exists to carry come out byte-identical.
      */
 
-    /** Best-effort cleanup of a working dir + its zip, to bound cache growth across runs. */
-    fun cleanup(work: File?) {
+    /** Best-effort cleanup of a working dir and an explicitly consumed archive. */
+    fun cleanup(work: File?, consumedArchive: File? = null) {
+        if (consumedArchive != null) {
+            try { consumedArchive.delete() } catch (_: Throwable) {}
+        }
         if (work == null) return
-        try { File(work.parentFile, work.name + ".zip").delete() } catch (_: Throwable) {}
+        val defaultArchive = File(work.parentFile, work.name + ".zip")
+        if (consumedArchive == null || consumedArchive.absolutePath != defaultArchive.absolutePath) {
+            try { defaultArchive.delete() } catch (_: Throwable) {}
+        }
         try { work.deleteRecursively() } catch (_: Throwable) {}
     }
 }
