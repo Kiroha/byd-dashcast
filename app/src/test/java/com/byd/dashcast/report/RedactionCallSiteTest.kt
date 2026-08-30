@@ -94,29 +94,23 @@ class RedactionCallSiteTest {
         }
     }
 
-    /**
-     * The size escape hatch, pinned deliberately rather than by accident.
-     *
-     * A text file over MAX_REDACTABLE_BYTES is streamed unfiltered. That is a real, in-design
-     * limit — but it is exactly the kind of threshold that gets widened later "to be safe" without
-     * anyone noticing it widens the hole too. If this test starts failing, the question to answer
-     * is whether the new limit is still acceptable, not how to make the test pass.
-     */
     @Test
-    fun `an oversized text file is streamed unfiltered — a known, bounded gap`() {
+    fun `an oversized text file is redacted without loading the whole file`() {
         val work = File(ctx.cacheDir, "zip_work_huge").apply { mkdirs() }
         val filler = "x".repeat(1024 * 1024)
         val huge = File(work, "huge.txt")
         huge.writeText(canaryText() + "\n")
         repeat(9) { huge.appendText(filler) }          // > 8 MB
-        assertTrue("the fixture must actually exceed the cap", huge.length() > 8L * 1024 * 1024)
+        assertTrue("the fixture must exercise streaming redaction", huge.length() > 8L * 1024 * 1024)
 
         val zip = HudCaptureSupport.zipDir(work, File(ctx.cacheDir, "out_huge.zip"))
         ZipFile(zip).use { z ->
             val head = ByteArray(2048)
             z.getInputStream(z.getEntry("huge.txt")).use { it.read(head) }
-            assertTrue("over the cap the file is passed through as-is",
-                String(head).contains(vin))
+            val storedHead = String(head)
+            assertClean("the oversized archived text", storedHead)
+            assertTrue("the sensitive value must be replaced rather than silently dropped",
+                storedHead.contains("<vin:") || storedHead.contains("<ssid:"))
         }
     }
 
