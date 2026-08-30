@@ -147,17 +147,28 @@ public final class ProxyDaemonMain {
      *  addService (SELinux blocks untrusted apps). Public so ProxyClient can cross-check. */
     public static final String SERVICE_NAME = "byd_proxy_daemon";
 
-    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
-     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    /** Our app's uid. Resolution is retried from the Binder gate after transient PM failures. */
     private static volatile int sAppUid = -1;
 
-    /** True if {@code uid} may drive the privileged ProxyBinder verbs. Falls OPEN when the app uid
-     *  could not be resolved, so it can never block the legitimate app→daemon path. */
+    /** True if {@code uid} may drive the privileged ProxyBinder verbs. */
     private static boolean isAllowedCaller(int uid) {
-        if (sAppUid == -1) return true;              // unresolved → fall open, never break
-        if (uid == 1000) return true;                // system
-        if (uid == Process.myUid()) return true;     // the daemon's own uid (shell 2000)
-        return (uid % 100000) == (sAppUid % 100000); // our app (user-agnostic appId match)
+        int appUid = sAppUid;
+        if (appUid < 0) appUid = resolveAppUid();
+        return DaemonCallerPolicy.isAllowed(uid, Process.myUid(), appUid);
+    }
+
+    private static int resolveAppUid() {
+        Context context = sSystemContext;
+        if (context == null) return -1;
+        try {
+            int resolved = context.getPackageManager()
+                    .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+            sAppUid = resolved;
+            return resolved;
+        } catch (Throwable t) {
+            log("app uid resolution failed; privileged app calls remain denied: " + t);
+            return -1;
+        }
     }
 
     /** Best-effort registration of the proxy binder in the global ServiceManager (uid-2000/system
@@ -241,15 +252,10 @@ public final class ProxyDaemonMain {
             // createPackageContext is unavailable.
             sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.adoptIdentity(systemContext);
 
-            // Resolve our app's uid once so the ProxyBinder caller-gate can reject untrusted callers
-            // (the binder is registered in ServiceManager just below). Fall open on any failure.
-            try {
-                sAppUid = systemContext.getPackageManager()
-                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
-                log("app uid resolved: " + sAppUid);
-            } catch (Throwable t) {
-                log("app uid resolution failed (fall open): " + t);
-            }
+            // Resolve before publication. A transient failure is retried by isAllowedCaller();
+            // until then only system and the daemon itself may use privileged verbs.
+            int resolvedAppUid = resolveAppUid();
+            if (resolvedAppUid >= 0) log("app uid resolved: " + resolvedAppUid);
             // Best-effort ServiceManager registration for the app-side authenticity cross-check.
             registerInServiceManager(sBinder);
 
@@ -646,8 +652,8 @@ public final class ProxyDaemonMain {
             // Caller-identity gate: the binder is now discoverable via ServiceManager (for the
             // app-side authenticity cross-check) and TXN_EXEC runs arbitrary shell as uid 2000, so
             // only the app (+ system / the daemon's own uid) may drive any verb. The per-case
-            // enforceInterface below is NOT authentication. Falls OPEN if the app uid is unresolved
-            // → can never block the legitimate app→daemon path.
+            // enforceInterface below is NOT authentication. If PackageManager is temporarily
+            // unavailable, isAllowedCaller retries resolution and fails closed for app callers.
             int callingUid = Binder.getCallingUid();
             if (!isAllowedCaller(callingUid)) {
                 log("ProxyBinder: rejected transact code=" + code + " from uid=" + callingUid);

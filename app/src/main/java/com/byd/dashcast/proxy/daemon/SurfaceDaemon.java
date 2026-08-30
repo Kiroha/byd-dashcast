@@ -91,17 +91,28 @@ public class SurfaceDaemon {
      *  tail is pasted into every bug report. Triagers grep it across historical reports. */
     private static final String TAG = "MirrorDaemon";
 
-    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
-     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    /** Our app's uid. Resolution is retried from the Binder gate after transient PM failures. */
     private static volatile int sAppUid = -1;
 
-    /** True if {@code uid} may drive the privileged MirrorBinder verbs. Falls OPEN when the app
-     *  uid could not be resolved, so it can never block the legitimate app→daemon path. */
+    /** True if {@code uid} may drive the privileged MirrorBinder verbs. */
     private static boolean isAllowedCaller(int uid) {
-        if (sAppUid == -1) return true;                     // unresolved → fall open, never break
-        if (uid == 1000) return true;                       // system
-        if (uid == android.os.Process.myUid()) return true; // the daemon's own uid (shell 2000)
-        return (uid % 100000) == (sAppUid % 100000);        // our app (user-agnostic appId match)
+        int appUid = sAppUid;
+        if (appUid < 0) appUid = resolveAppUid();
+        return DaemonCallerPolicy.isAllowed(uid, android.os.Process.myUid(), appUid);
+    }
+
+    private static int resolveAppUid() {
+        Context context = sSysContext;
+        if (context == null) return -1;
+        try {
+            int resolved = context.getPackageManager()
+                    .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+            sAppUid = resolved;
+            return resolved;
+        } catch (Throwable t) {
+            out("app uid resolution failed; privileged app calls remain denied: " + t.getMessage());
+            return -1;
+        }
     }
 
     // Actions broadcast
@@ -298,16 +309,10 @@ public class SurfaceDaemon {
             final IBinder daemonBinder = new MirrorBinder();
             out("MirrorBinder created");
 
-            // Resolve our app's uid once so onTransact can reject untrusted callers (the binder is
-            // also discoverable via ServiceManager). Fall open on any failure (sAppUid stays -1),
-            // so this can never break the legitimate app→daemon path.
-            try {
-                sAppUid = context.getPackageManager()
-                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
-                out("app uid resolved: " + sAppUid);
-            } catch (Throwable t) {
-                out("app uid resolution failed (fall open): " + t.getMessage());
-            }
+            // Resolve before publication. A transient failure is retried by isAllowedCaller();
+            // until then only system and the daemon itself may use privileged verbs.
+            int resolvedAppUid = resolveAppUid();
+            if (resolvedAppUid >= 0) out("app uid resolved: " + resolvedAppUid);
 
             writeVersionFile();
 
