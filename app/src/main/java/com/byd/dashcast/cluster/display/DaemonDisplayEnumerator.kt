@@ -184,16 +184,8 @@ object DaemonDisplayEnumerator {
      * display's state / owner / PRIVATE flag via [ClusterDisplayInfo.toString].
      */
     @JvmStatic
-    fun pickCluster(displays: List<ClusterDisplayInfo>): ClusterDisplayInfo? {
-        var fallback: ClusterDisplayInfo? = null
-        for (d in displays) {
-            if (d.id == 0) continue
-            if (d.isPrivate || d.isThirdPartyOwned()) continue // not ours to drive
-            if (ClusterDisplayNames.isKnownClusterName(d.name)) return d
-            if (fallback == null && !d.isStateOff()) fallback = d
-        }
-        return fallback
-    }
+    fun pickCluster(displays: List<ClusterDisplayInfo>): ClusterDisplayInfo? =
+        ClusterDisplaySelectionPolicy.pick(displays)
 
     /**
      * Pure companion to [pickCluster]: the non-default displays that exist in the dump but were

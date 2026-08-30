@@ -26,6 +26,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import com.byd.dashcast.cluster.display.ClusterDisplayInfo;
+import com.byd.dashcast.cluster.display.ClusterDisplaySelectionPolicy;
 import com.byd.dashcast.util.concurrent.DeathLease;
 import com.byd.dashcast.util.concurrent.BoundedSerialExecutor;
 import java.io.File;
@@ -1162,33 +1164,42 @@ public class SurfaceDaemon {
 
     // ── Fission helpers ───────────────────────────────────────────────────────
 
-    /** Returns the cluster display (id ≥ 1). Refuses to return display 0 under any circumstances. */
+    /** Returns a daemon-visible cluster display after applying the shared ownership/safety policy. */
     private static Display resolveClusterDisplay() {
         Context dmCtx = (sSysContext != null) ? sSysContext : sContext;
         if (dmCtx == null) { out("[Fission] resolveClusterDisplay: no context"); return null; }
         DisplayManager dm = dmCtx.getSystemService(DisplayManager.class);
         if (dm == null) return null;
-        Display d = dm.getDisplay(1);
-        if (d != null) {
-            if (d.getDisplayId() == 0) {
-                out("SAFETY: resolveClusterDisplay: display(1) resolved to id=0 — REFUSED");
-                return null;
-            }
-            return d;
-        }
-        for (Display candidate : dm.getDisplays()) {
+        Display[] visible = dm.getDisplays();
+        if (visible == null || visible.length == 0) return null;
+        java.util.ArrayList<ClusterDisplayInfo> infos = new java.util.ArrayList<>(visible.length);
+        java.util.HashMap<Integer, Display> byId = new java.util.HashMap<>();
+        for (Display candidate : visible) {
+            int id = candidate.getDisplayId();
             String name = candidate.getName();
-            if (name == null) continue;
-            if (name.toLowerCase(Locale.US).contains("cluster")
-                    || name.toLowerCase(Locale.US).contains("fission")) {
-                if (candidate.getDisplayId() == 0) {
-                    out("SAFETY: resolveClusterDisplay: name-match resolved to id=0 — REFUSED");
-                    continue;
-                }
-                return candidate;
-            }
+            int ownerUid = ClusterDisplayInfo.OWNER_UID_UNKNOWN;
+            String ownerPackage = null;
+            try {
+                Object value = Display.class.getMethod("getOwnerUid").invoke(candidate);
+                if (value instanceof Integer) ownerUid = (Integer) value;
+            } catch (Throwable ignored) {}
+            try {
+                Object value = Display.class.getMethod("getOwnerPackageName").invoke(candidate);
+                if (value != null) ownerPackage = String.valueOf(value);
+            } catch (Throwable ignored) {}
+            boolean isPrivate = (candidate.getFlags() & Display.FLAG_PRIVATE) != 0;
+            String state = candidate.getState() == Display.STATE_OFF ? "OFF" : "";
+            infos.add(new ClusterDisplayInfo(
+                    id, name == null ? "" : name, 0, 0, id,
+                    isPrivate, ownerUid, ownerPackage, state));
+            byId.put(id, candidate);
         }
-        return null;
+        ClusterDisplayInfo selected = ClusterDisplaySelectionPolicy.pick(infos);
+        if (selected == null) {
+            out("[Fission] resolveClusterDisplay: no usable candidate in " + infos);
+            return null;
+        }
+        return byId.get(selected.getId());
     }
 
     /** Creates an overlay SurfaceView on the cluster display and returns its Surface. */

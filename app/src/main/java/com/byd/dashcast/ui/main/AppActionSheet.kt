@@ -104,8 +104,12 @@ object AppActionSheet {
 
         rowResize.setOnClickListener {
             val svc = host.getClusterServiceIfBound()
-            var displayId = svc?.getDisplayId() ?: 1
-            if (displayId < 0) displayId = 1
+            val displayId = svc?.getDisplayId() ?: -1
+            if (displayId <= 0) {
+                Toast.makeText(ctx, R.string.toast_activate_timeout, Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                return@setOnClickListener
+            }
             val resizeIntent = Intent(ctx, ClusterResizeActivity::class.java)
             resizeIntent.putExtra(ClusterResizeActivity.EXTRA_PACKAGE, app.packageName)
             resizeIntent.putExtra(ClusterResizeActivity.EXTRA_DISPLAY_ID, displayId)

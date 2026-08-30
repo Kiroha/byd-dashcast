@@ -68,7 +68,7 @@ class ClusterResizeActivity : Activity(),
      */
     private var mLiveMode = false
     private lateinit var mPkg: String
-    private var mDisplayId = 1
+    private var mDisplayId = -1
     private lateinit var mInitRect: IntArray // [l,t,r,b]
 
     private lateinit var mMirror: ClusterMirrorManager
@@ -88,10 +88,15 @@ class ClusterResizeActivity : Activity(),
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_cluster_resize)
 
-        mDisplayId = intent.getIntExtra(EXTRA_DISPLAY_ID, 1)
+        mDisplayId = intent.getIntExtra(EXTRA_DISPLAY_ID, -1)
         val pkg = intent.getStringExtra(EXTRA_PACKAGE)
         if (pkg.isNullOrEmpty()) {
             Toast.makeText(this, R.string.resize_no_package, Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        if (mDisplayId <= 0) {
+            Toast.makeText(this, R.string.toast_activate_timeout, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
