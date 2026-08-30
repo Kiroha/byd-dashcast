@@ -18,6 +18,7 @@ import android.view.accessibility.AccessibilityWindowInfo;
 import android.annotation.SuppressLint;
 import java.util.List;
 
+import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.ime.KeyboardBridgeActivity;
 import com.byd.dashcast.platform.Platform;
@@ -86,6 +87,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
      * not what the user had typed when the request was made.
      */
     private volatile Runnable mPostedSetText;
+    private final ClusterImeRelaySession mRelaySession = new ClusterImeRelaySession();
 
     /**
      * Applies [text] to the cluster's focused editable. Takes its text as a parameter — never from
@@ -94,7 +96,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
     private void applyTextOnCluster(CharSequence text) {
         {
             if (text == null) return;
-            AccessibilityNodeInfo node = findClusterFocusedEditable();
+            AccessibilityNodeInfo node = findBoundClusterFocusedEditable();
             if (node == null) {
                 AppLogger.w(TAG, "setTextOnCluster no-op: no focused editable on cluster");
                 return;
@@ -175,6 +177,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         mWorker = null;
         mWorkerThread = null;
         mPendingText = null;
+        mRelaySession.clear();
         super.onDestroy();
     }
 
@@ -188,7 +191,8 @@ public class ClusterImeWatcherService extends AccessibilityService {
         // actually live. Outside of that window the cluster display is dormant
         // and any focus event from a secondary display is none of our business
         // (other in-vehicle systems, external HDMI, etc.).
-        if (!com.byd.dashcast.cluster.ClusterService.isRunning()) return;
+        int activeDisplayId = activeClusterDisplayId();
+        if (activeDisplayId <= 0) return;
 
         try {
             // Cluster filter: focus events from the head-unit display are
@@ -202,17 +206,20 @@ public class ClusterImeWatcherService extends AccessibilityService {
             } catch (Throwable t) {
                 evDisplayId = -1;
             }
-            if (evDisplayId <= 0) return; // 0 = head unit, -1 = unknown
+            if (evDisplayId != activeDisplayId) return;
 
             // Inspect the source node — must be editable (EditText, search bar, ...)
             AccessibilityNodeInfo src = event.getSource();
             if (src == null) return;
+            String targetPackage;
             try {
                 if (!isEditable(src)) return;
-                String pkg = String.valueOf(src.getPackageName());
+                CharSequence sourcePackage = src.getPackageName();
+                if (sourcePackage == null) return;
+                targetPackage = sourcePackage.toString();
                 // Never relaunch when the focus event is from OUR OWN bridge
                 // (avoids an infinite popup loop if the user taps it).
-                if (TextUtils.equals(pkg, getPackageName())) return;
+                if (TextUtils.equals(targetPackage, getPackageName())) return;
             } finally {
                 src.recycle();
             }
@@ -223,6 +230,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
             if (KeyboardBridgeActivity.isShowing()) return;
             mLastLaunchAt = now;
 
+            mRelaySession.bind(evDisplayId, targetPackage);
             launchBridge();
         } catch (Throwable t) {
             // Never let an a11y crash kill the host app. Log once and move on.
@@ -295,7 +303,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
 
     /**
      * v1.2.12 — Push {@code text} as the full content of the currently-focused
-     * editable node on any cluster (non-default) display. Returns {@code true}
+    * editable node bound to the active cluster relay session. Returns {@code true}
      * iff a node was found AND {@link AccessibilityNodeInfo#performAction}
      * accepted {@link AccessibilityNodeInfo#ACTION_SET_TEXT}.
      *
@@ -321,6 +329,10 @@ public class ClusterImeWatcherService extends AccessibilityService {
         android.os.Handler worker = self.mWorker;
         if (worker == null) {
             AppLogger.w(TAG, "setTextOnCluster no-op: worker not ready");
+            return false;
+        }
+        if (!self.mRelaySession.hasTargetOn(activeClusterDisplayId())) {
+            AppLogger.w(TAG, "setTextOnCluster no-op: projection target is no longer active");
             return false;
         }
         final CharSequence captured = text == null ? "" : text;
@@ -355,6 +367,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         ClusterImeWatcherService self = sInstance;
         if (self == null) return;
         self.mPendingText = null;
+        self.mRelaySession.clear();
         android.os.Handler worker = self.mWorker;
         Runnable posted = self.mPostedSetText;
         if (worker != null && posted != null) worker.removeCallbacks(posted);
@@ -380,6 +393,10 @@ public class ClusterImeWatcherService extends AccessibilityService {
             AppLogger.w(TAG, "performImeEnterOnCluster no-op: worker not ready");
             return false;
         }
+        if (!self.mRelaySession.hasTargetOn(activeClusterDisplayId())) {
+            AppLogger.w(TAG, "performImeEnterOnCluster no-op: projection target is no longer active");
+            return false;
+        }
         // AUD-007 — capture NOW, on the caller's thread, at the instant the user pressed Done.
         //
         // The old code cancelled the debounced setter and then, on the worker, re-read
@@ -401,7 +418,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 if (flush != null) {
                     try { self.applyTextOnCluster(flush); } catch (Throwable ignored) { }
                 }
-                AccessibilityNodeInfo node = self.findClusterFocusedEditable();
+                AccessibilityNodeInfo node = self.findBoundClusterFocusedEditable();
                 if (node == null) {
                     AppLogger.w(TAG, "performImeEnterOnCluster no-op: no focused editable on cluster");
                     return;
@@ -445,12 +462,20 @@ public class ClusterImeWatcherService extends AccessibilityService {
         if (now - self.mLastLaunchAt < DEBOUNCE_MS) return; // debounce
         android.os.Handler worker = self.mWorker;
         if (worker == null) return;
+        final int activeDisplayId = activeClusterDisplayId();
+        if (activeDisplayId <= 0) return;
         final ClusterImeWatcherService svc = self;
         worker.post(new Runnable() {
             @Override public void run() {
                 if (KeyboardBridgeActivity.isShowing()) return;
-                AccessibilityNodeInfo node = svc.findClusterFocusedEditable();
+                AccessibilityNodeInfo node = svc.findFocusedEditableOnDisplay(activeDisplayId, null);
                 if (node == null) return;
+                CharSequence candidatePackage = node.getPackageName();
+                if (candidatePackage == null) {
+                    try { node.recycle(); } catch (Throwable ignored) { }
+                    return;
+                }
+                svc.mRelaySession.bind(activeDisplayId, candidatePackage.toString());
                 try { node.recycle(); } catch (Throwable ignored) { }
                 svc.mLastLaunchAt = android.os.SystemClock.uptimeMillis();
                 AppLogger.d(TAG, "checkAndLaunchBridgeIfNeeded — cluster editable detected after touch, launching bridge");
@@ -479,10 +504,17 @@ public class ClusterImeWatcherService extends AccessibilityService {
      * the bridge's own EditText would otherwise compete for {@code
      * findFocus(FOCUS_INPUT)} and win on the default display.
      */
-    private AccessibilityNodeInfo findClusterFocusedEditable() {
+    private AccessibilityNodeInfo findBoundClusterFocusedEditable() {
+        int activeDisplayId = activeClusterDisplayId();
+        String expectedPackage = mRelaySession.packageOn(activeDisplayId);
+        if (expectedPackage == null) return null;
+        return findFocusedEditableOnDisplay(activeDisplayId, expectedPackage);
+    }
+
+    private AccessibilityNodeInfo findFocusedEditableOnDisplay(
+            int targetDisplayId, String expectedPackage) {
+        if (targetDisplayId <= 0) return null;
         final String selfPkg = getPackageName();
-        AccessibilityNodeInfo bestNonDefault = null;
-        AccessibilityNodeInfo bestAny = null;
         try {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.util.SparseArray<List<AccessibilityWindowInfo>> all;
@@ -492,87 +524,27 @@ public class ClusterImeWatcherService extends AccessibilityService {
                     all = null;
                 }
                 if (all != null) {
-                    for (int i = 0; i < all.size(); i++) {
-                        int displayId = all.keyAt(i);
-                        List<AccessibilityWindowInfo> wins = all.valueAt(i);
-                        if (wins == null) continue;
-                        for (AccessibilityWindowInfo w : wins) {
-                            AccessibilityNodeInfo cand;
-                            try {
-                                cand = pickFocusedEditableFrom(w, selfPkg);
-                            } finally {
-                                if (w != null) w.recycle();
-                            }
-                            if (cand == null) continue;
-                            if (displayId != 0 && bestNonDefault == null) {
-                                bestNonDefault = cand;
-                            } else if (bestAny == null) {
-                                bestAny = cand;
-                            } else {
-                                cand.recycle();
-                            }
-                        }
-                    }
-                }
-            }
-            // Fallback (or supplement): default-display walk.
-            if (bestNonDefault == null) {
-                List<AccessibilityWindowInfo> windows;
-                try {
-                    windows = getWindows();
-                } catch (Throwable t) {
-                    windows = null;
-                }
-                if (windows != null) {
-                    for (AccessibilityWindowInfo w : windows) {
-                        AccessibilityNodeInfo cand;
-                        int displayId = 0;
+                    List<AccessibilityWindowInfo> wins = all.get(targetDisplayId);
+                    if (wins == null) return null;
+                    AccessibilityNodeInfo found = null;
+                    for (AccessibilityWindowInfo w : wins) {
+                        AccessibilityNodeInfo candidate;
                         try {
-                            cand = pickFocusedEditableFrom(w, selfPkg);
-                            if (Build.VERSION.SDK_INT >= 30 && w != null) {
-                                try { displayId = w.getDisplayId(); } catch (Throwable ignored) { }
-                            }
+                            candidate = pickFocusedEditableFrom(w, selfPkg, expectedPackage);
                         } finally {
                             if (w != null) w.recycle();
                         }
-                        if (cand == null) continue;
-                        if (displayId > 0 && bestNonDefault == null) {
-                            bestNonDefault = cand;
-                        } else if (bestAny == null) {
-                            bestAny = cand;
-                        } else {
-                            cand.recycle();
-                        }
+                        if (candidate == null) continue;
+                        if (found == null) found = candidate;
+                        else candidate.recycle();
                     }
+                    return found;
                 }
             }
         } catch (Throwable t) {
             AppLogger.e(TAG, "findClusterFocusedEditable scan failed", t);
         }
-        if (bestNonDefault != null) {
-            if (bestAny != null) bestAny.recycle();
-            return bestNonDefault;
-        }
-        // bestAny is a display-0 candidate — a HEAD UNIT field, not the cluster. Returning it made
-        // the bridge silently retarget: every keystroke went into some other app's editable via
-        // ACTION_SET_TEXT (a full atomic replace of whatever was already there), and pressing Done
-        // fired ACTION_IME_ENTER on it. The driver believes they are typing a destination into the
-        // cluster app; instead they overwrite and SUBMIT a field somewhere on the head unit, which
-        // for a nav search box means starting a route nobody asked for. Nothing logged it either:
-        // the "no focused editable on cluster" warning only fires when the scan returns null, which
-        // is exactly what this fallback prevented.
-        //
-        // The fallback only ever made sense pre-API-30, where AccessibilityWindowInfo.getDisplayId
-        // does not exist and `displayId` stays hardcoded at 0 above, so a genuine cluster window is
-        // indistinguishable from a head-unit one. This bridge is DL5-only (API 32) — every car that
-        // can reach this code CAN report a display id, so there the fallback bought nothing and
-        // risked everything. Above API 29 a missing cluster editable is now reported honestly as
-        // null and the existing warnings run.
-        if (Build.VERSION.SDK_INT >= 30) {
-            if (bestAny != null) bestAny.recycle();
-            return null;
-        }
-        return bestAny;
+        return null;
     }
 
     /** Helper for {@link #findClusterFocusedEditable()} — returns the
@@ -580,7 +552,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
      *  exists and is NOT from our own bridge package; null otherwise.
      *  Always recycles the window root internally. */
     private static AccessibilityNodeInfo pickFocusedEditableFrom(
-            AccessibilityWindowInfo w, String selfPkg) {
+            AccessibilityWindowInfo w, String selfPkg, String expectedPackage) {
         if (w == null) return null;
         AccessibilityNodeInfo root = w.getRoot();
         if (root == null) return null;
@@ -599,9 +571,21 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 focused.recycle();
                 return null;
             }
+                if (expectedPackage != null
+                    && (pkg == null || !expectedPackage.contentEquals(pkg))) {
+                focused.recycle();
+                return null;
+            }
             return focused;
         } finally {
             root.recycle();
         }
+    }
+
+    private static int activeClusterDisplayId() {
+        ClusterService service = ClusterService.getInstance();
+        if (service == null || !service.isProjectionActive()) return -1;
+        int displayId = service.getDisplayId();
+        return displayId > 0 ? displayId : -1;
     }
 }
