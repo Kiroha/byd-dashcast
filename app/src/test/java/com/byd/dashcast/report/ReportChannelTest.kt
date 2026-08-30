@@ -1,5 +1,6 @@
 package com.byd.dashcast.report
 
+import android.content.SharedPreferences
 import org.junit.After
 import org.junit.Before
 import org.junit.Assert.assertEquals
@@ -233,6 +234,62 @@ class ReportChannelTest {
             "bugReport.botToken=t\nbugReport.chatId=c"
         )
         assertFalse(candidate.requiresSourceDeletion)
+    }
+
+    @Test
+    fun `shared provisioning is stored before source deletion`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/sdcard/Download/${ReportChannel.IMPORT_NAME}",
+            "bugReport.botToken=t\nbugReport.chatId=c"
+        )
+        var storedBeforeDeletion = false
+        var outcome = ""
+
+        ReportChannel.applyCandidate(
+            ctx,
+            candidate,
+            ReportChannel.SharedSourceDeleter { _, deleted ->
+                storedBeforeDeletion = ReportChannel.hasTelegram(ctx)
+                deleted(false)
+            },
+        ) { outcome = it }
+
+        assertTrue(storedBeforeDeletion)
+        assertTrue(ReportChannel.hasTelegram(ctx))
+        assertTrue(outcome.contains("stored on this device"))
+        assertTrue(outcome.contains("could not be removed"))
+    }
+
+    @Test
+    fun `failed storage never deletes the shared source`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/sdcard/Download/${ReportChannel.IMPORT_NAME}",
+            "bugReport.botToken=t\nbugReport.chatId=c"
+        )
+        var deletionAttempted = false
+        var outcome = ""
+        val delegate = ctx.getSharedPreferences(
+            "test_report_channel_failing",
+            android.content.Context.MODE_PRIVATE
+        )
+        ReportChannel.setPrefsForTesting(object : SharedPreferences by delegate {
+            override fun edit(): SharedPreferences.Editor {
+                val editor = delegate.edit()
+                return object : SharedPreferences.Editor by editor {
+                    override fun putString(key: String?, value: String?): SharedPreferences.Editor = this
+                    override fun commit(): Boolean = false
+                }
+            }
+        })
+
+        ReportChannel.applyCandidate(
+            ctx,
+            candidate,
+            ReportChannel.SharedSourceDeleter { _, _ -> deletionAttempted = true },
+        ) { outcome = it }
+
+        assertFalse(deletionAttempted)
+        assertTrue(outcome.contains("storage incomplete"))
     }
 
     @Test
