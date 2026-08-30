@@ -2,6 +2,8 @@ package com.byd.dashcast.hud
 
 import com.byd.dashcast.system.CanBusController
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -63,5 +65,42 @@ class ClusterNavPusherTest {
     fun `unknown ids fall back to straight, never a turn`() {
         assertEquals(9, ClusterNavPusher.toAmapIcon(0))
         assertEquals(9, ClusterNavPusher.toAmapIcon(9999))
+    }
+
+    @Test
+    fun `only the confirmed AutoContainer success code enables navigation mode`() {
+        assertTrue("legacy daemon has no result field", ClusterNavPusher.activationAccepted(null))
+        assertTrue(ClusterNavPusher.activationAccepted(0))
+        assertFalse(ClusterNavPusher.activationAccepted(-1))
+        assertFalse(ClusterNavPusher.activationAccepted(1))
+    }
+
+    @Test
+    fun `production enable reads the native result before setting local state`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/hud").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/hud/ClusterNavPusher.kt"
+        ).readText()
+        val enable = source.substringAfter("fun enable()")
+            .substringBefore("internal fun activationAccepted")
+
+        val resultCall = enable.indexOf("autoContainerSendInfoResultCompatible")
+        val acceptedGate = enable.indexOf("if (!activationAccepted(result))")
+        val stateCommit = enable.indexOf("enabled = true")
+        assertTrue(resultCall >= 0)
+        assertTrue(acceptedGate > resultCall)
+        assertTrue(stateCommit > acceptedGate)
+
+        val proxy = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java"
+        ).readText()
+        val compatible = proxy.substringAfter("autoContainerSendInfoResultCompatible")
+            .substringBefore("/**", "")
+        assertTrue(compatible.indexOf("callWithRetry") in
+            0 until compatible.indexOf("supportsProtocol(20)"))
     }
 }

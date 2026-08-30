@@ -139,13 +139,20 @@ object ClusterNavPusher {
     fun enable() {
         if (enabled) return
         try {
-            ProxyClient.autoContainerSendInfo(TYPE_NAV_MODE, 0, "")
+            val result = ProxyClient.autoContainerSendInfoResultCompatible(TYPE_NAV_MODE, 0, "")
+            if (!activationAccepted(result)) {
+                Log.w(TAG, "cluster nav-mode rejected (sendInfo(5,0) rc=$result)")
+                return
+            }
             enabled = true
             Log.i(TAG, "cluster nav-mode enabled (sendInfo(5,0))")
         } catch (t: Throwable) {
             Log.w(TAG, "cluster nav-mode enable failed: ${t.message}")
         }
     }
+
+    internal fun activationAccepted(nativeResult: Int?): Boolean =
+        nativeResult == null || nativeResult == 0
 
     /** Pushes one guidance frame onto the cluster. Best-effort; never throws. */
     @JvmStatic

@@ -764,6 +764,23 @@ public final class ProxyClient {
     }
 
     /**
+     * Sends AutoContainer info after transport recovery, preserving a native result when the
+     * connected daemon supports it. Returns {@code null} only for a legacy daemon whose wire
+     * contract predates result codes.
+     */
+    public static Integer autoContainerSendInfoResultCompatible(int type, int info, String str)
+            throws ProxyException {
+        final String safeStr = str == null ? "" : str;
+        return callWithRetry("autoContainerSendInfoResultCompatible", () -> {
+            if (supportsProtocol(20)) {
+                return ProxyProcessVerbs.autoContainerSendInfoResult(type, info, safeStr);
+            }
+            ProxyProcessVerbs.autoContainerSendInfo(type, info, safeStr);
+            return null;
+        });
+    }
+
+    /**
      * Typed verb for {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — same binder
      * the OEM's own navigation app uses to push a serialized {@code byd.fbs.naviInfo.NaviInfo}
      * FlatBuffer (type=4) to the instrument-cluster HUD. Reaches the daemon's cached AutoContainer
@@ -1041,10 +1058,10 @@ public final class ProxyClient {
                 () -> ProxyCanVerbs.canSettingInt(featureId, value));
     }
 
-    /** Executes an ordered CAN write group in one Binder transaction (protocol v19+). */
+    /** Executes an ordered CAN write group with truthful applied-count semantics (protocol v24+). */
     public static int canBatch(java.util.List<com.byd.dashcast.system.CanBatchOperation> operations)
             throws ProxyException {
-        if (!supportsProtocol(19)) throw new ProxyException("CAN batch unsupported by daemon");
+        if (!supportsProtocol(24)) throw new ProxyException("truthful CAN batch unsupported by daemon");
         try {
             // Do not use callWithRetry here: a RemoteException can arrive after the daemon applied
             // a prefix of the group. Replaying the whole batch would violate exactly-once grouping.
