@@ -870,17 +870,30 @@ public final class FissionOrchestrator {
     }
 
     public void resizeSlotAsync(String pkg, Rect rect) {
-        SlotState slot = mSlots.get(pkg);
-        if (slot != null) slot.rect = new Rect(rect);
+        final Rect requestedRect = new Rect(rect);
         submitQuietly("resizeSlotAsync " + pkg, () -> {
-            if (mDaemonBinder == null) return;
+            boolean resized = false;
             try {
-                FissionClient.resizeSlot(mDaemonBinder, pkg,
-                        rect.left, rect.top, rect.width(), rect.height());
+                if (mDaemonBinder != null) {
+                    resized = FissionClient.resizeSlot(mDaemonBinder, pkg,
+                            requestedRect.left, requestedRect.top,
+                            requestedRect.width(), requestedRect.height());
+                }
             } catch (Exception e) {
                 AppLogger.e(TAG, "resizeSlot error", e);
             }
+            SlotState slot = mSlots.get(pkg);
+            if (!applyAcceptedResize(slot, requestedRect, resized)) {
+                AppLogger.w(TAG, "resizeSlot rejected pkg=" + pkg);
+            }
+            post(() -> mCallbacks.onSlotsChanged(mSlots.values()));
         });
+    }
+
+    static boolean applyAcceptedResize(SlotState slot, Rect requestedRect, boolean accepted) {
+        if (!accepted || slot == null || requestedRect == null) return false;
+        slot.rect = new Rect(requestedRect);
+        return true;
     }
 
     public void switchToLayoutAsync(LayoutPreset newLayout) {

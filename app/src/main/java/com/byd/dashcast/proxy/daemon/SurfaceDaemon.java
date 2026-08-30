@@ -1069,28 +1069,69 @@ public class SurfaceDaemon {
         int w = data.readInt(), h = data.readInt();
         out("[Fission] RESIZE_SLOT pkg=" + pkg + " (" + x + "," + y + "," + w + "×" + h + ")");
         SlotInfo slot = sSlots.get(pkg);
-        if (slot == null) { reply.writeNoException(); reply.writeInt(0); return true; }
+        if (slot == null || slot.isReleased() || w <= 0 || h <= 0) {
+            reply.writeNoException(); reply.writeInt(0); return true;
+        }
+        final int oldX = slot.x, oldY = slot.y, oldW = slot.w, oldH = slot.h;
         final CountDownLatch latch = new CountDownLatch(1);
-        new android.os.Handler(Looper.getMainLooper()).post(() -> {
+        final java.util.concurrent.atomic.AtomicBoolean overlayResized =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        Runnable resizeOverlay = () -> {
             try {
-                WindowManager.LayoutParams lp = createOverlayLayoutParams(null, w, h);
-                lp.x = x; lp.y = y;
-                slot.overlayWM.updateViewLayout(slot.overlayView, lp);
-                ((SurfaceView) slot.overlayView).getHolder().setFixedSize(w, h);
-                slot.x = x; slot.y = y; slot.w = w; slot.h = h;
+                applySlotOverlayGeometry(slot, x, y, w, h);
+                overlayResized.set(true);
             } catch (Exception e) {
                 out("[Fission] RESIZE_SLOT overlay error: " + e.getMessage());
+                try { applySlotOverlayGeometry(slot, oldX, oldY, oldW, oldH); }
+                catch (Exception rollbackError) {
+                    out("[Fission] RESIZE_SLOT overlay rollback error: " + rollbackError.getMessage());
+                }
             } finally { latch.countDown(); }
-        });
-        try { latch.await(1, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
-        if (latch.getCount() == 0) {
-            try { slot.vd.resize(w, h, 160); }
-            catch (Exception e) { out("[Fission] RESIZE_SLOT VD error: " + e.getMessage()); }
-        } else {
-            out("[Fission] RESIZE_SLOT overlay timed out — VD resize skipped to avoid size mismatch");
+        };
+        android.os.Handler mainHandler = new android.os.Handler(Looper.getMainLooper());
+        if (!mainHandler.post(resizeOverlay)) {
+            reply.writeNoException(); reply.writeInt(0); return true;
         }
+        boolean completed = false;
+        try { completed = latch.await(1, TimeUnit.SECONDS); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+        if (!completed) {
+            mainHandler.removeCallbacks(resizeOverlay);
+            out("[Fission] RESIZE_SLOT overlay timed out — VD resize skipped to avoid size mismatch");
+            mainHandler.post(() -> {
+                try { applySlotOverlayGeometry(slot, oldX, oldY, oldW, oldH); }
+                catch (Exception rollbackError) {
+                    out("[Fission] RESIZE_SLOT timeout rollback error: " + rollbackError.getMessage());
+                }
+            });
+            reply.writeNoException(); reply.writeInt(0); return true;
+        }
+        if (!overlayResized.get()) {
+            reply.writeNoException(); reply.writeInt(0); return true;
+        }
+        try {
+            if (slot.isReleased() || slot.vd == null) throw new IllegalStateException("slot released");
+            slot.vd.resize(w, h, 160);
+        } catch (Exception e) {
+            out("[Fission] RESIZE_SLOT VD error: " + e.getMessage());
+            mainHandler.post(() -> {
+                try { applySlotOverlayGeometry(slot, oldX, oldY, oldW, oldH); }
+                catch (Exception rollbackError) {
+                    out("[Fission] RESIZE_SLOT overlay rollback error: " + rollbackError.getMessage());
+                }
+            });
+            reply.writeNoException(); reply.writeInt(0); return true;
+        }
+        slot.x = x; slot.y = y; slot.w = w; slot.h = h;
         reply.writeNoException(); reply.writeInt(1);
         return true;
+    }
+
+    private static void applySlotOverlayGeometry(SlotInfo slot, int x, int y, int w, int h) {
+        WindowManager.LayoutParams lp = createOverlayLayoutParams(null, w, h);
+        lp.x = x; lp.y = y;
+        slot.overlayWM.updateViewLayout(slot.overlayView, lp);
+        ((SurfaceView) slot.overlayView).getHolder().setFixedSize(w, h);
     }
 
     /**

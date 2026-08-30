@@ -110,17 +110,21 @@ public class FissionClient {
         } finally { data.recycle(); reply.recycle(); }
     }
 
-    public static void resizeSlot(IBinder binder, String pkg,
-                                  int x, int y, int w, int h) throws Exception {
+    public static boolean resizeSlot(IBinder binder, String pkg,
+                                     int x, int y, int w, int h) throws Exception {
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR);
             data.writeString(pkg);
             data.writeInt(x); data.writeInt(y);
             data.writeInt(w); data.writeInt(h);
-            binder.transact(SurfaceDaemon.TRANSACT_RESIZE_SLOT, data, reply, 0);
+            if (!binder.transact(SurfaceDaemon.TRANSACT_RESIZE_SLOT, data, reply, 0)) {
+                throw new IllegalStateException("RESIZE_SLOT transaction not handled");
+            }
             reply.readException();
-            AppLogger.d(TAG, "RESIZE_SLOT pkg=" + pkg + " ok=" + reply.readInt());
+            boolean resized = reply.readInt() != 0;
+            AppLogger.d(TAG, "RESIZE_SLOT pkg=" + pkg + " ok=" + resized);
+            return resized;
         } finally { data.recycle(); reply.recycle(); }
     }
 
