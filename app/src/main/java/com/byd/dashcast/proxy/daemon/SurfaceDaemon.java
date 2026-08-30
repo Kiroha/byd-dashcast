@@ -187,12 +187,28 @@ public class SurfaceDaemon {
         WindowManager overlayWM;
         VirtualDisplay vd;
         int displayId;
+        private DeathLease ownerLease;
+        private boolean released;
 
         SlotInfo(String pkg, int x, int y, int w, int h) {
             this.pkg = pkg; this.x = x; this.y = y; this.w = w; this.h = h;
         }
 
+        synchronized void setOwnerLease(DeathLease lease) {
+            if (released) lease.close();
+            else ownerLease = lease;
+        }
+
+        synchronized boolean isReleased() {
+            return released;
+        }
+
         synchronized void release() {
+            if (released) return;
+            released = true;
+            DeathLease lease = ownerLease;
+            ownerLease = null;
+            if (lease != null) lease.close();
             if (vd != null) {
                 try { vd.release(); }
                 catch (Exception e) { out("[Fission] slot[" + pkg + "] VD release error: " + e.getMessage()); }
@@ -963,6 +979,9 @@ public class SurfaceDaemon {
         String pkg = data.readString();
         int x = data.readInt(), y = data.readInt();
         int w = data.readInt(), h = data.readInt();
+        // Added after the original wire fields. Null keeps compatibility with clients built
+        // before process-owned slots were introduced.
+        IBinder owner = data.dataAvail() > 0 ? data.readStrongBinder() : null;
         // build= on the BLOCK HEADER, not only in main(): the startup line is the first line of
         // the daemon log and the report ships the LAST 400, so on a long-lived daemon it is
         // always out of frame — which is exactly the reused-stale-daemon case it was added for.
@@ -984,10 +1003,29 @@ public class SurfaceDaemon {
         // app. Phase4DisplayVerbs' VirtualDisplay registry — same process, same shape — has always
         // done this; this map had drifted from it.
         { SlotInfo replaced = sSlots.put(pkg, slot); if (replaced != null) replaced.release(); }
+        if (owner != null && !attachSlotOwner(pkg, slot, owner)) {
+            if (sSlots.remove(pkg, slot)) slot.release();
+            reply.writeNoException(); reply.writeInt(0); return true;
+        }
         out("[Fission] ATTACH_SLOT OK pkg=" + pkg + " displayId=" + displayId);
         reply.writeNoException(); reply.writeInt(1);
         reply.writeParcelable(surface, 0); reply.writeInt(displayId);
         return true;
+    }
+
+    private static boolean attachSlotOwner(String key, SlotInfo slot, IBinder owner) {
+        try {
+            DeathLease lease = DeathLease.attach(new BinderDeathOwner(owner), () -> {
+                out("[Fission] slot owner died — releasing " + key);
+                if (sSlots.remove(key, slot)) slot.release();
+            });
+            slot.setOwnerLease(lease);
+            return !slot.isReleased() && sSlots.get(key) == slot;
+        } catch (Throwable t) {
+            out("[Fission] slot owner link failed for " + key + ": "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+            return false;
+        }
     }
 
     private static boolean handleReleaseSlot(Parcel data, Parcel reply) {
