@@ -6,6 +6,7 @@ import android.view.Surface;
 import android.view.MotionEvent;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.DaemonBinderResolver;
+import com.byd.dashcast.proxy.FissionResourceOwner;
 import com.byd.dashcast.proxy.MirrorResourceOwner;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.daemon.SurfaceDaemon;
@@ -59,6 +60,9 @@ public class FissionClient {
             data.writeString(pkg);
             data.writeInt(x); data.writeInt(y);
             data.writeInt(w); data.writeInt(h);
+            // Additive tail field: old daemons ignore it; current daemons tie the slot lifetime
+            // to this app process so a crash cannot orphan an overlay and VirtualDisplay.
+            data.writeStrongBinder(FissionResourceOwner.token());
             binder.transact(SurfaceDaemon.TRANSACT_ATTACH_SLOT, data, reply, 0);
             reply.readException();
             if (reply.readInt() != 1) return -1;
