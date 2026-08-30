@@ -187,10 +187,8 @@ public final class CanWriteVerbs {
     /**
      * Makes an SDK REJECTION visible. The BYD SDK does not throw when it refuses a feature — it
      * logs its own "no permission to use the feature: 0x… with this device: …!" line and returns a
-     * non-zero code, which every caller here was discarding. The batch writer returns void, and the
-     * HUD bench prints a HARDCODED "rc=0" whenever no exception was thrown, so a refused write has
-     * been indistinguishable from an accepted one in every bug report and bench zip we have
-     * collected — the single biggest reason the NO results were never explainable.
+    * non-zero code, which callers historically discarded. That made a refused write
+    * indistinguishable from an accepted one in bug reports and bench zips.
      *
      * <p>One line, at the only place every write actually reaches the SDK, so it covers the batch
      * path, the single-write path and production alike. Throttled per (feature, rc) so a per-frame

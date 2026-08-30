@@ -15,16 +15,16 @@ class CanBatchOperation private constructor(
     private val bytes: ByteArray? = rawBytes?.copyOf()
 
     interface Writer {
-        @Throws(Throwable::class) fun setNaviStatus(status: Int)
-        @Throws(Throwable::class) fun setInstrumentInt(featureId: Int, value: Int)
-        @Throws(Throwable::class) fun setInstrumentBytes(featureId: Int, bytes: ByteArray)
-        @Throws(Throwable::class) fun setSettingInt(featureId: Int, value: Int)
+        @Throws(Throwable::class) fun setNaviStatus(status: Int): Int
+        @Throws(Throwable::class) fun setInstrumentInt(featureId: Int, value: Int): Int
+        @Throws(Throwable::class) fun setInstrumentBytes(featureId: Int, bytes: ByteArray): Int
+        @Throws(Throwable::class) fun setSettingInt(featureId: Int, value: Int): Int
     }
 
     fun getBytes(): ByteArray? = bytes?.copyOf()
 
     @Throws(Throwable::class)
-    fun execute(writer: Writer) {
+    fun execute(writer: Writer): Int =
         when (type) {
             TYPE_NAVI_STATUS -> writer.setNaviStatus(intValue)
             TYPE_INSTRUMENT_INT -> writer.setInstrumentInt(featureId, intValue)
@@ -32,7 +32,6 @@ class CanBatchOperation private constructor(
             TYPE_SETTING_INT -> writer.setSettingInt(featureId, intValue)
             else -> throw IllegalStateException("unknown CAN operation type $type")
         }
-    }
 
     companion object {
         const val TYPE_NAVI_STATUS = 1
@@ -60,5 +59,17 @@ class CanBatchOperation private constructor(
         @JvmStatic
         fun fromWire(type: Int, featureId: Int, intValue: Int, bytes: ByteArray?): CanBatchOperation =
             CanBatchOperation(type, featureId, intValue, bytes)
+
+        /** Executes an ordered prefix and stops before the first SDK-rejected write. */
+        @JvmStatic
+        @Throws(Throwable::class)
+        fun executeAcceptedPrefix(operations: List<CanBatchOperation>, writer: Writer): Int {
+            var applied = 0
+            for (operation in operations) {
+                if (operation.execute(writer) != 0) break
+                applied++
+            }
+            return applied
+        }
     }
 }

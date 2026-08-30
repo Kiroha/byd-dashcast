@@ -179,7 +179,8 @@ public final class ProxyDaemonContract {
     public static final int TXN_FIND_TASK_LOCATION      = IBinder.FIRST_CALL_TRANSACTION + 28; // 29
 
     /** Ordered list of {@code CanBatchOperation} records → {@code int appliedCount}.
-     *  The daemon executes records sequentially and stops at the first thrown SDK error. */
+        *  The daemon executes records sequentially and stops at the first thrown SDK error or
+        *  non-zero native result code. Truthful native-result semantics require protocol v24. */
     public static final int TXN_CAN_BATCH               = IBinder.FIRST_CALL_TRANSACTION + 29; // 30
 
     /** {@code int type, int info, String str} → {@code int nativeResult}.

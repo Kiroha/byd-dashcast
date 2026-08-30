@@ -40,31 +40,31 @@ public final class CanBusController {
 
     private static final CanBatchOperation.Writer LEGACY_WRITER =
             new CanBatchOperation.Writer() {
-        @Override public void setNaviStatus(int status) throws ProxyClient.ProxyException {
-            ProxyClient.canNaviStatus(status);
+        @Override public int setNaviStatus(int status) throws ProxyClient.ProxyException {
+            return ProxyClient.canNaviStatus(status);
         }
-        @Override public void setInstrumentInt(int featureId, int value)
+        @Override public int setInstrumentInt(int featureId, int value)
                 throws ProxyClient.ProxyException {
-            ProxyClient.canInstrumentInt(featureId, value);
+            return ProxyClient.canInstrumentInt(featureId, value);
         }
-        @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+        @Override public int setInstrumentBytes(int featureId, byte[] bytes)
                 throws ProxyClient.ProxyException {
-            ProxyClient.canInstrumentBytes(featureId, bytes);
+            return ProxyClient.canInstrumentBytes(featureId, bytes);
         }
-        @Override public void setSettingInt(int featureId, int value)
+        @Override public int setSettingInt(int featureId, int value)
                 throws ProxyClient.ProxyException {
-            ProxyClient.canSettingInt(featureId, value);
+            return ProxyClient.canSettingInt(featureId, value);
         }
     };
 
-    /** Executes one pre-existing atomic write group, using one Binder RTT on protocol v19+. */
+    /** Executes one write group, using truthful batch semantics on protocol v24+. */
     public static void sendBatch(List<CanBatchOperation> operations)
             throws ProxyClient.ProxyException {
         if (operations == null || operations.isEmpty()) return;
         if (operations.size() > CanBatchOperation.MAX_BATCH_SIZE) {
             throw new ProxyClient.ProxyException("CAN batch too large: " + operations.size());
         }
-        if (ProxyClient.supportsProtocol(19)) {
+        if (ProxyClient.supportsProtocol(24)) {
             int applied = ProxyClient.canBatch(operations);
             if (applied != operations.size()) {
                 throw new ProxyClient.ProxyException(
@@ -73,7 +73,11 @@ public final class CanBusController {
             return;
         }
         try {
-            for (CanBatchOperation operation : operations) operation.execute(LEGACY_WRITER);
+            int applied = CanBatchOperation.executeAcceptedPrefix(operations, LEGACY_WRITER);
+            if (applied != operations.size()) {
+                throw new ProxyClient.ProxyException(
+                        "legacy CAN batch incomplete: " + applied + "/" + operations.size());
+            }
         } catch (ProxyClient.ProxyException proxyError) {
             throw proxyError;
         } catch (Throwable error) {
