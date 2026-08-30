@@ -81,6 +81,18 @@ class ReportChannelTest {
     }
 
     @Test
+    fun `an insecure or credential-bearing Azure URL is rejected`() {
+        assertFalse(ReportChannel.saveAzure(ctx, "http://blob.example/container", "sp=cw&sig=x"))
+        assertFalse(ReportChannel.saveAzure(
+            ctx,
+            "https://blob.example/container?sv=2024&sig=secret",
+            "sp=cw&sig=x"
+        ))
+        assertFalse(ReportChannel.hasAzure(ctx))
+        assertEquals("", ReportChannel.azureUrl(ctx))
+    }
+
+    @Test
     fun `values are trimmed so a pasted trailing newline cannot break the request`() {
         ReportChannel.saveTelegram(ctx, "  tok  \n", " -100 \n", " 2 ", " 4 ")
         assertEquals("tok", ReportChannel.botToken(ctx))
@@ -195,9 +207,23 @@ class ReportChannelTest {
         assertTrue(candidate.requiresSourceDeletion)
         assertTrue(summary.contains("Telegram credentials"))
         assertTrue(summary.contains("Azure credentials"))
+        assertTrue(summary.contains("blob.example"))
         assertTrue(summary.contains("relay.example"))
         assertFalse(summary.contains(token))
         assertFalse(summary.contains("SECRET-SIGNATURE"))
+    }
+
+    @Test
+    fun `an invalid Azure endpoint is disclosed but not treated as credentials`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/data/local/tmp/${ReportChannel.IMPORT_NAME}",
+            "azure.blobUrl=http://blob.example/container\nazure.sas=sp=cw&sig=secret"
+        )
+
+        assertFalse(candidate.hasAzure)
+        assertTrue(candidate.hasInvalidAzure)
+        assertTrue(candidate.confirmationSummary().contains("invalid Azure URL"))
+        assertFalse(candidate.confirmationSummary().contains("sig=secret"))
     }
 
     @Test
