@@ -5,6 +5,7 @@ import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.infrastructure.task.TaskLocation
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -59,6 +60,36 @@ class BootDisplayCleanupCharacterizationTest {
 
         // Untouched: the guard returns before reading, moving or rewriting anything.
         assertEquals(setOf("ru.yandex.yandexnavi"), ClusterPrefs.getSessionClusterPkgs(ctx))
+    }
+
+    @Test
+    fun `startup cleanup is suppressed while a session resume is pending`() {
+        assertFalse(BootDisplayCleanup.shouldRunAtStartup(false, true))
+        assertFalse(BootDisplayCleanup.shouldRunAtStartup(true, false))
+        assertTrue(BootDisplayCleanup.shouldRunAtStartup(false, false))
+    }
+
+    @Test
+    fun `cleanup aborts when projection starts after task lookup`() {
+        ClusterPrefs.setSessionClusterPkgs(ctx, setOf("com.example.nav"))
+        val operations = object : BootDisplayCleanup.Operations {
+            var moves = 0
+
+            override fun locate(packageName: String): TaskLocation {
+                ClusterService.sIsRunning = true
+                return TaskLocation.found(42, 3)
+            }
+
+            override fun moveToDisplayZero(packageName: String): Boolean {
+                moves++
+                return true
+            }
+        }
+
+        BootDisplayCleanup.cleanup(ctx, operations)
+
+        assertEquals(0, operations.moves)
+        assertEquals(setOf("com.example.nav"), ClusterPrefs.getSessionClusterPkgs(ctx))
     }
 
     @Test

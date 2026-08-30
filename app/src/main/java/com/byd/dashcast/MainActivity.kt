@@ -211,12 +211,15 @@ class MainActivity : AppCompatActivity(),
 
         // Safety-net: if projection auto-start is disabled, move any leftover cluster apps
         // back to Display 0. Auto-launch pending package consumed in the cluster-connect callback.
+        val bootAutoStartEnabled = ClusterPrefs.isBootAutoStartEnabled(this)
+        var sessionResumePending = false
         mPendingAutoLaunchPkg = ClusterPrefs.getAutoLaunchPkg(this)
         // Session-resume: re-activate the last cluster package if a previous projection was
         // interrupted. Read the session set HERE — before the cleanup thread clears it.
-        if (mPendingAutoLaunchPkg == null && !ClusterPrefs.isBootAutoStartEnabled(this)) {
+        if (mPendingAutoLaunchPkg == null && !bootAutoStartEnabled) {
             val prevSession = ClusterPrefs.getSessionClusterPkgs(this)
             if (prevSession.isNotEmpty()) {
+            sessionResumePending = true
                 val lastPkg = ClusterPrefs.getLastClusterPkg(this)
                 mPendingAutoLaunchPkg = if (lastPkg != null && prevSession.contains(lastPkg))
                     lastPkg
@@ -238,15 +241,17 @@ class MainActivity : AppCompatActivity(),
             AppLogger.i(TAG, "Layout auto-start configured — suppressing single-app auto-launch of « "
                     + mPendingAutoLaunchPkg + " » (the layout owns startup launching)")
         }
-        if (!ClusterPrefs.isBootAutoStartEnabled(this)) {
+        if (BootDisplayCleanup.shouldRunAtStartup(bootAutoStartEnabled, sessionResumePending)) {
             // Off-load the (binder-reflection) cleanup to a named daemon thread.
             val appCtx = applicationContext
             val cleanupThread = Thread({ BootDisplayCleanup.cleanup(appCtx) }, "boot-cleanup-fallback")
             cleanupThread.isDaemon = true
             cleanupThread.start()
-        } else {
+        } else if (bootAutoStartEnabled) {
             // Auto-start enabled: clear the persisted set (apps managed normally).
             ClusterPrefs.clearSessionClusterPkgs(this)
+        } else {
+            AppLogger.i(TAG, "Session resume owns startup — skipping display cleanup")
         }
 
         // Unlock hidden Android APIs (SurfaceControl, etc.) before any startMirror call.
