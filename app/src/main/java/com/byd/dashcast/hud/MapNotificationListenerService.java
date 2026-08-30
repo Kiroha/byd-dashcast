@@ -74,6 +74,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private String lastText    = "";
     private String lastBigText = "";
     private String lastSubText = "";
+    private String lastNotificationKey;
 
     // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
     // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
@@ -628,8 +629,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String subText = charSeqToString(extras.getCharSequence("android.subText"));
 
         // Notification-level deduplication: skip if content hasn't changed since last call.
-        if (title.equals(lastTitle) && text.equals(lastText)
-            && bigText.equals(lastBigText) && subText.equals(lastSubText)) {
+        if (isSameNotificationContent(
+            sbn.getKey(), lastNotificationKey,
+            title, lastTitle, text, lastText,
+            bigText, lastBigText, subText, lastSubText)) {
             // AUD-003 — but first, keep the HUD alive. This is a re-post of the very frame already
             // displayed, so the arrow up there is still correct and the staleness watchdog must not
             // read "no update" as "frozen". Only when that frame actually reached the HUD: an
@@ -642,6 +645,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastText    = text;
         lastBigText = bigText;
         lastSubText = subText;
+        lastNotificationKey = sbn.getKey();
         // New content: it has not reached the HUD yet, and may never — unparseable frames return
         // early below. Set true only where the frame is actually dispatched.
         lastContentReachedHud = false;
@@ -811,6 +815,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         return iconId > 0 && distanceMeters >= 0;
     }
 
+    static boolean isSameNotificationContent(
+            String key, String previousKey,
+            String title, String previousTitle,
+            String text, String previousText,
+            String bigText, String previousBigText,
+            String subText, String previousSubText) {
+        return java.util.Objects.equals(key, previousKey)
+                && title.equals(previousTitle)
+                && text.equals(previousText)
+                && bigText.equals(previousBigText)
+                && subText.equals(previousSubText);
+    }
+
     /** Same eligibility rule for posting and removal, including non-ongoing nav categories. */
     static boolean isNavigationNotification(Notification notification) {
         return notification != null
@@ -857,11 +874,52 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
         Log.d(TAG, "nav notification removed → closeNavigation");
         sDrivingKey = null;
+        if (replayRemainingNavigation(key)) return;
         postNavClose();
+        resetNotificationIdentity();
+    }
+
+    private boolean replayRemainingNavigation(String removedKey) {
+        StatusBarNotification[] active;
+        try {
+            active = getActiveNotifications();
+        } catch (Throwable t) {
+            Log.w(TAG, "remaining navigation rescan failed: " + t.getMessage());
+            return false;
+        }
+        for (StatusBarNotification candidate : remainingNavigationNotifications(active, removedKey)) {
+            resetNotificationIdentity();
+            onNotificationPosted(candidate);
+            if (sDrivingKey != null) {
+                Log.d(TAG, "restored remaining navigation notification after removal");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static List<StatusBarNotification> remainingNavigationNotifications(
+            StatusBarNotification[] active, String removedKey) {
+        java.util.ArrayList<StatusBarNotification> candidates = new java.util.ArrayList<>();
+        if (active == null) return candidates;
+        for (StatusBarNotification notification : active) {
+                if (notification == null
+                    || java.util.Objects.equals(removedKey, notification.getKey())) continue;
+            if (!isNavPackage(notification.getPackageName())) continue;
+            if (!isNavigationNotification(notification.getNotification())) continue;
+            candidates.add(notification);
+        }
+        candidates.sort((left, right) -> Long.compare(right.getPostTime(), left.getPostTime()));
+        return candidates;
+    }
+
+    private void resetNotificationIdentity() {
         lastTitle   = "";
         lastText    = "";
         lastBigText = "";
         lastSubText = "";
+        lastNotificationKey = null;
+        lastContentReachedHud = false;
     }
 
     // ─── HUD write dispatch (serial writer thread) ────────────────────────
