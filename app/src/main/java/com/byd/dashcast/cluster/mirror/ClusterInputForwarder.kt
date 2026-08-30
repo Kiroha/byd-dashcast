@@ -75,6 +75,8 @@ class ClusterInputForwarder(context: Context) {
      * this flag is even read, so a daemon binder arriving later is unaffected.
      */
     @Volatile private var mDirectInjectDenied = false
+    @Volatile private var mMotionTargetUnavailableLogged = false
+    @Volatile private var mKeyTargetUnavailableLogged = false
 
     // 1.2.31 — pre-allocated pointer arrays reused across touch events. MotionEvent.obtain(...)
     // only reads the first `pointerCount` entries (AOSP copies the data → safe to reuse). Access
@@ -284,13 +286,23 @@ class ClusterInputForwarder(context: Context) {
                         mTouchDownTime, now, action, n, mProps, mCoords,
                         0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0
                     )
-                    // setDisplayId is a @hide API — using the Method cached in the constructor.
-                    if (mSetDisplayIdMethod != null) {
+                    var targetApplied = false
+                    val targetMethod = mSetDisplayIdMethod
+                    if (targetMethod != null) {
                         try {
-                            mSetDisplayIdMethod!!.invoke(ev, mClusterDisplayId)
+                            targetMethod.invoke(ev, mClusterDisplayId)
+                            targetApplied = true
                         } catch (e: Exception) {
                             AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.message)
                         }
+                    }
+                    if (!InputDisplayRoutingPolicy.canInject(mClusterDisplayId, targetApplied)) {
+                        if (!mMotionTargetUnavailableLogged) {
+                            mMotionTargetUnavailableLogged = true
+                            AppLogger.w(TAG, "direct touch injection disabled: cluster display "
+                                    + "could not be applied to MotionEvent")
+                        }
+                        return
                     }
                     val injected = mInjectMethod?.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC)
                     // v1.6.147 — the return value used to be discarded, so a direct path that
@@ -366,13 +378,21 @@ class ClusterInputForwarder(context: Context) {
             val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0)
             val up = KeyEvent(now, now + 1, KeyEvent.ACTION_UP, keyCode, 0)
             // 1.2.30 — route to the cluster display so the cluster-side focused window gets the key.
+            var targetApplied = false
             if (mSetDisplayIdKeyMethod != null) {
                 try {
                     mSetDisplayIdKeyMethod!!.invoke(down, mClusterDisplayId)
                     mSetDisplayIdKeyMethod!!.invoke(up, mClusterDisplayId)
-                } catch (ignored: Exception) {
-                    // inject anyway
+                    targetApplied = true
+                } catch (ignored: Exception) { }
+            }
+            if (!InputDisplayRoutingPolicy.canInject(mClusterDisplayId, targetApplied)) {
+                if (!mKeyTargetUnavailableLogged) {
+                    mKeyTargetUnavailableLogged = true
+                    AppLogger.w(TAG, "direct key injection disabled: cluster display could not "
+                            + "be applied to KeyEvent")
                 }
+                return
             }
             mInjectMethod?.invoke(mInputManager, down, INJECT_INPUT_EVENT_MODE_ASYNC)
             mInjectMethod?.invoke(mInputManager, up, INJECT_INPUT_EVENT_MODE_ASYNC)
@@ -417,12 +437,20 @@ class ClusterInputForwarder(context: Context) {
         if (!mAvailable || mDirectInjectDenied) return
         try {
             // v1.2.11 — route to the cluster display so the cluster-side focused window gets the key.
+            var targetApplied = false
             if (mSetDisplayIdKeyMethod != null) {
                 try {
                     mSetDisplayIdKeyMethod!!.invoke(kev, mClusterDisplayId)
-                } catch (ignored: Exception) {
-                    // inject anyway
+                    targetApplied = true
+                } catch (ignored: Exception) { }
+            }
+            if (!InputDisplayRoutingPolicy.canInject(mClusterDisplayId, targetApplied)) {
+                if (!mKeyTargetUnavailableLogged) {
+                    mKeyTargetUnavailableLogged = true
+                    AppLogger.w(TAG, "direct key injection disabled: cluster display could not "
+                            + "be applied to KeyEvent")
                 }
+                return
             }
             mInjectMethod?.invoke(mInputManager, kev, INJECT_INPUT_EVENT_MODE_ASYNC)
         } catch (e: Exception) {
