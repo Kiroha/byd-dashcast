@@ -133,7 +133,7 @@ public class ClusterService extends Service
     private ClusterMirrorManager   mMirrorManager;
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
-    private boolean                mProjectionActive = false;
+    private volatile boolean       mProjectionActive = false;
     private volatile boolean       mDestroyed        = false;
     private final LifecycleGate    mOperationGate    = new LifecycleGate();
     private LaunchCallback         mPendingDashboardCallback;
