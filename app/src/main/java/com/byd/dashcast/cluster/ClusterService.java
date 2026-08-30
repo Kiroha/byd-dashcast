@@ -107,6 +107,7 @@ public class ClusterService extends Service
     private static final int    NOTIF_ID   = 1;
 
     public static volatile boolean sIsRunning = false;
+    private static final Object sTaskMoveOwnershipLock = new Object();
     public static boolean isRunning() { return sIsRunning; }
 
     private static volatile ClusterService sInstance = null;
@@ -184,7 +185,21 @@ public class ClusterService extends Service
     @Override
     public void onCreate() {
         super.onCreate();
-        sIsRunning = true;
+        claimTaskMoveOwnership();
+        boolean initialized = false;
+        try {
+            initializeAfterOwnershipClaim();
+            initialized = true;
+        } finally {
+            if (!initialized) {
+                mProjectionActive = false;
+                if (sInstance == this) sInstance = null;
+                releaseTaskMoveOwnership();
+            }
+        }
+    }
+
+    private void initializeAfterOwnershipClaim() {
         sInstance  = this;
 
         mDisplayHelper  = new DashboardDisplayHelper(this, this);
@@ -328,35 +343,38 @@ public class ClusterService extends Service
     public void onDestroy() {
         mOperationGate.invalidate();
         mDestroyed = true;
-        super.onDestroy();
-        sIsRunning = false;
-        if (sInstance == this) sInstance = null;
-        mListener  = null;
-        // NOTE: the rolling screenshots are deliberately NOT wiped here — a tester often stops a
-        // broken projection and THEN files the report, so the shots must survive the stop. They
-        // self-clean via the recorder's max-age prune (runs on the keeper heartbeat even when idle)
-        // and after a send. See ClusterShotRecorder.
-        if (mPendingDashboardCallback != null) {
-            LaunchCallback pending = mPendingDashboardCallback;
-            mPendingDashboardCallback = null;
-            pending.onResult(false);
-        }
-        mMainHandler.removeCallbacksAndMessages(null);
         try {
-            com.byd.dashcast.cluster.dpi.ClusterDpiManager.restore(
-                    this, mDisplayHelper.getKnownClusterDisplayId());
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "DPI restore (onDestroy) failed: " + t.getMessage());
+            super.onDestroy();
+            if (sInstance == this) sInstance = null;
+            mListener  = null;
+            // NOTE: the rolling screenshots are deliberately NOT wiped here — a tester often stops a
+            // broken projection and THEN files the report, so the shots must survive the stop. They
+            // self-clean via the recorder's max-age prune (runs on the keeper heartbeat even when idle)
+            // and after a send. See ClusterShotRecorder.
+            if (mPendingDashboardCallback != null) {
+                LaunchCallback pending = mPendingDashboardCallback;
+                mPendingDashboardCallback = null;
+                pending.onResult(false);
+            }
+            mMainHandler.removeCallbacksAndMessages(null);
+            try {
+                com.byd.dashcast.cluster.dpi.ClusterDpiManager.restore(
+                        this, mDisplayHelper.getKnownClusterDisplayId());
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "DPI restore (onDestroy) failed: " + t.getMessage());
+            }
+            mMirrorManager.release();
+            if (mProjectionActive) {
+                mDisplayHelper.stop();
+            }
+            // Same reason as stopProjectionNoAdb: the registry is process-wide and outlives this
+            // service, so a geometry left behind here would be picked up by the next mirror attempt
+            // even though no projection is running. No-op on DL3/DL5.
+            ClusterDisplayRegistry.clear();
+            AppLogger.log(TAG, "ClusterService destroyed");
+        } finally {
+            releaseTaskMoveOwnership();
         }
-        mMirrorManager.release();
-        if (mProjectionActive) {
-            mDisplayHelper.stop();
-        }
-        // Same reason as stopProjectionNoAdb: the registry is process-wide and outlives this
-        // service, so a geometry left behind here would be picked up by the next mirror attempt
-        // even though no projection is running. No-op on DL3/DL5.
-        ClusterDisplayRegistry.clear();
-        AppLogger.log(TAG, "ClusterService destroyed");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -366,6 +384,31 @@ public class ClusterService extends Service
     @Override
     public boolean isProjectionActive() {
         return mProjectionActive;
+    }
+
+    @FunctionalInterface
+    public interface StoppedTaskMove {
+        boolean run() throws Exception;
+    }
+
+    /** Runs one cleanup move atomically with respect to service ownership acquisition. */
+    public static boolean runTaskMoveWhileStopped(StoppedTaskMove move) throws Exception {
+        synchronized (sTaskMoveOwnershipLock) {
+            if (sIsRunning) return false;
+            return move.run();
+        }
+    }
+
+    static void claimTaskMoveOwnership() {
+        synchronized (sTaskMoveOwnershipLock) {
+            sIsRunning = true;
+        }
+    }
+
+    static void releaseTaskMoveOwnership() {
+        synchronized (sTaskMoveOwnershipLock) {
+            sIsRunning = false;
+        }
     }
 
     @Override

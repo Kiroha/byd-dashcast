@@ -20,6 +20,11 @@ object BootDisplayCleanup {
 
     private const val TAG = "BootDisplayCleanup"
 
+    internal fun shouldRunAtStartup(
+        bootAutoStartEnabled: Boolean,
+        sessionResumePending: Boolean,
+    ): Boolean = !bootAutoStartEnabled && !sessionResumePending
+
     @JvmStatic
     fun cleanup(context: Context) {
         cleanup(context, null)
@@ -46,7 +51,11 @@ object BootDisplayCleanup {
         AppLogger.i(TAG, "Cleaning up " + pkgs.size + " apps → Display 0: " + pkgs)
         val operations = suppliedOperations ?: RuntimeOperations(context.applicationContext)
         for (pkg in pkgs) {
-            if (cleanPackage(pkg, operations)) {
+            if (ClusterService.isRunning()) {
+                AppLogger.i(TAG, "ClusterService started during cleanup — leaving remaining tasks in place")
+                break
+            }
+            if (cleanPackage(pkg, operations) { ClusterService.isRunning() }) {
                 remaining.remove(pkg)
             }
         }
@@ -63,8 +72,14 @@ object BootDisplayCleanup {
         fun moveToDisplayZero(packageName: String): Boolean
     }
 
-    internal fun cleanPackage(packageName: String, operations: Operations): Boolean {
+    internal fun cleanPackage(
+        packageName: String,
+        operations: Operations,
+        projectionRunning: () -> Boolean = { false },
+    ): Boolean {
+        if (projectionRunning()) return false
         val before = operations.locate(packageName)
+        if (projectionRunning()) return false
         return when (before.status) {
             TaskLocation.Status.ABSENT -> {
                 AppLogger.d(TAG, "No running task for $packageName — cleanup complete")
@@ -116,8 +131,11 @@ object BootDisplayCleanup {
         }
 
         override fun moveToDisplayZero(packageName: String): Boolean {
+            if (ClusterService.isRunning()) return false
             val binder = awaitSurfaceDaemon() ?: return false
-            return TaskMoveResult.isSuccess(FissionClient.moveToDisplay0(binder, packageName))
+            return ClusterService.runTaskMoveWhileStopped {
+                TaskMoveResult.isSuccess(FissionClient.moveToDisplay0(binder, packageName))
+            }
         }
 
         private fun awaitSurfaceDaemon(): android.os.IBinder? {
