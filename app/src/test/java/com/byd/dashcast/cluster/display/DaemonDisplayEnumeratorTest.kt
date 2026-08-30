@@ -169,6 +169,15 @@ class DaemonDisplayEnumeratorTest {
     }
 
     @Test
+    fun `prefers the production shared display even when a plain cluster name comes first`() {
+        val displays = listOf(
+            ClusterDisplayInfo(2, "fission_bg_XDJAScreenProjection", 1920, 720, 2),
+            ClusterDisplayInfo(3, "shared_fission_bg_XDJAScreenProjection_0", 1920, 720, 3)
+        )
+        assertEquals(3, DaemonDisplayEnumerator.pickCluster(displays)?.id)
+    }
+
+    @Test
     fun `falls back to the first non-default display when no name matches`() {
         val displays = listOf(
             ClusterDisplayInfo(0, "Built-in Screen", 1920, 1080, 0),

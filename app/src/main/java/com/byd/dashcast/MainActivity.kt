@@ -489,8 +489,13 @@ class MainActivity : AppCompatActivity(),
         mUsageTracker.trackStop(mCurrentDashboardPkg)
         // Remove from tracker before launch to avoid a concurrent eviction force-stopping it.
         mSessionTracker.remove(pkgName)
-        var displayId = svc.getDisplayId()
-        if (displayId < 0) displayId = 1
+        val displayId = svc.getDisplayId()
+        if (displayId <= 0) {
+            AppLogger.w(TAG, "quickSwitchToApp: cluster display unavailable — reactivating")
+            mAppRepo.findByPackage(pkgName)?.let { mPendingAppAfterActivation = it }
+            activateCluster()
+            return
+        }
         svc.moveTaskToDisplay(pkgName, displayId, object : ClusterService.LaunchCallback {
             override fun onResult(launched: Boolean) {
                 if (launched) {
@@ -1009,8 +1014,13 @@ class MainActivity : AppCompatActivity(),
         // has been stopped (see the guard below).
         fun proceedMove() {
             mSessionTracker.remove(pkgName)
-            var clusterDisplayId = svc.getDisplayId()
-            if (clusterDisplayId < 0) clusterDisplayId = 1 // Seal EU hardcoded fallback
+            val clusterDisplayId = svc.getDisplayId()
+            if (clusterDisplayId <= 0) {
+                AppLogger.w(TAG, "proceedMove: cluster display disappeared — reactivating")
+                mPendingAppAfterActivation = app
+                activateCluster()
+                return
+            }
             val targetDisplayId = clusterDisplayId
             svc.moveTaskToDisplay(pkgName, targetDisplayId, object : ClusterService.LaunchCallback {
                 override fun onResult(launched: Boolean) {
