@@ -11,6 +11,8 @@ import com.byd.dashcast.report.Redactor
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.OutputStreamWriter
+import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -102,7 +104,7 @@ object HudCaptureSupport {
                 val rel = f.relativeTo(work).path
                 zos.putNextEntry(ZipEntry(rel))
                 if (isRedactableText(f)) {
-                    zos.write(redactedBytes(f))
+                    writeRedactedText(f, zos)
                 } else {
                     FileInputStream(f).use { it.copyTo(zos) }
                 }
@@ -127,22 +129,50 @@ object HudCaptureSupport {
      */
     private val REDACTABLE = setOf("txt", "log", "json", "xml", "properties", "csv", "md", "")
 
-    private fun isRedactableText(f: File): Boolean =
-        f.extension.lowercase() in REDACTABLE && f.length() <= MAX_REDACTABLE_BYTES
+    private fun isRedactableText(f: File): Boolean = f.extension.lowercase() in REDACTABLE
 
-    /** Beyond this a file is streamed unfiltered: holding it twice in memory is the worse failure. */
-    private const val MAX_REDACTABLE_BYTES = 8L * 1024 * 1024
+    /** Smaller files retain whole-document redaction; larger ones are processed incrementally. */
+    private const val MAX_IN_MEMORY_REDACTION_BYTES = 8L * 1024 * 1024
 
     /**
-     * Fails OPEN, like the bug-report path: a redaction that throws must not cost the bundle. The
-     * per-rule isolation inside Redactor already contains a single bad pattern; this catches the
-     * rest, and the archive still carries the file rather than a hole.
+     * Redacts text without a size bypass. Whole-document mode preserves reporter cross-line
+     * correlation for ordinary files; oversized captures use one stable salt and one line at a
+     * time so memory is bounded by their longest line. A failed rule omits the affected content
+     * instead of copying plaintext into an archive whose consent notice promises redaction.
      */
-    private fun redactedBytes(f: File): ByteArray = try {
-        Redactor.redact(f.readText()).text.toByteArray()
-    } catch (_: Throwable) {
-        f.readBytes()
+    private fun writeRedactedText(f: File, output: ZipOutputStream) {
+        if (f.length() <= MAX_IN_MEMORY_REDACTION_BYTES) {
+            val bytes = try {
+                val result = Redactor.redact(f.readText())
+                if (result.failed.isEmpty()) result.text.toByteArray()
+                else REDACTION_FAILURE_MARKER.toByteArray()
+            } catch (_: Throwable) {
+                REDACTION_FAILURE_MARKER.toByteArray()
+            }
+            output.write(bytes)
+            return
+        }
+
+        val salt = UUID.randomUUID().toString()
+        val writer = OutputStreamWriter(output, Charsets.UTF_8)
+        try {
+            f.bufferedReader().use { reader ->
+                while (true) {
+                    val line = reader.readLine() ?: break
+                    val result = Redactor.redact(line, salt)
+                    writer.write(if (result.failed.isEmpty()) result.text else REDACTION_FAILURE_MARKER)
+                    writer.write('\n'.code)
+                }
+            }
+            writer.flush()
+        } catch (_: Throwable) {
+            writer.write(REDACTION_FAILURE_MARKER)
+            writer.write('\n'.code)
+            writer.flush()
+        }
     }
+
+    private const val REDACTION_FAILURE_MARKER = "[text omitted: redaction failed]"
 
     /**
      * Pulls a device-side file (e.g. a raw logcat under {@code /data/local/tmp}) through the daemon
