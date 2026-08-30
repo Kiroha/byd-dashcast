@@ -67,15 +67,10 @@ object DaemonBinderResolver {
             override fun onReceive(context: Context, intent: Intent) {
                 val extras = intent.extras ?: return
                 val binder = extras.getBinder("daemon_binder") ?: return
-                // The DAEMON_READY broadcast is implicitly exported (targetSdk 29) and only
-                // sender-side permission-protected, so a co-installed app could spoof it with a
-                // fake binder. Adopt the broadcast binder ONLY if it matches the one the real
-                // daemon registered in the global ServiceManager — only uid-2000/system can
-                // addService (SELinux blocks untrusted apps), so that entry is trustworthy, and
-                // BinderProxy identity is stable for the same remote binder. If the daemon didn't
-                // register one (getService null — addService failed on this ROM), fall back to the
-                // broadcast binder (prior behaviour) so this can never break the daemon path; the
-                // fetch()/ServiceManager path below is itself already trustworthy.
+                // DaemonBroadcastRegistrar requires android.permission.DUMP from the sender, which
+                // authenticates the uid-2000 shell daemon even when addService is unavailable.
+                // When ServiceManager does have an entry, retain the stronger Binder-identity
+                // cross-check as defence in depth.
                 val registered = lookupRegisteredBinder()
                 if (registered != null && registered !== binder) {
                     AppLogger.w(TAG, "DAEMON_READY binder ≠ ServiceManager entry — ignoring (spoofed?)")

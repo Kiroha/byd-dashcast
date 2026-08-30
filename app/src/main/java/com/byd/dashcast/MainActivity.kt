@@ -42,6 +42,7 @@ import com.byd.dashcast.infrastructure.task.TaskLocation
 import com.byd.dashcast.model.AppInfo
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonBinderResolver
+import com.byd.dashcast.proxy.DaemonBroadcastRegistrar
 import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ShellGateway
@@ -257,7 +258,9 @@ class MainActivity : AppCompatActivity(),
         AppStartupTasks.run(applicationContext, killOrphanSniffer)
 
         // Receiver to retrieve the SurfaceDaemon Binder (uid=2000)
-        registerReceiver(mDaemonReadyReceiver, IntentFilter(SurfaceDaemon.ACTION_DAEMON_READY))
+        DaemonBroadcastRegistrar.register(
+            this, mDaemonReadyReceiver, IntentFilter(SurfaceDaemon.ACTION_DAEMON_READY)
+        )
 
         // Floating mirror button — started once, visibility controlled by show()/hide().
         // Deferred to post-first-frame: FloatingRemoteButton.onStartCommand inflates a
