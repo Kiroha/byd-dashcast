@@ -36,6 +36,7 @@ import com.byd.dashcast.data.apps.AppRepository
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.fission.FissionOrchestrator
 import com.byd.dashcast.fission.LayoutPrefs
+import com.byd.dashcast.ime.ClusterImeWatcherService
 import com.byd.dashcast.ime.KeyboardBridgeActivity
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.infrastructure.task.TaskLocation
@@ -368,7 +369,9 @@ class MainActivity : AppCompatActivity(),
             btnKeyboardBridge.visibility = if (isDl5) View.VISIBLE else View.GONE
             btnKeyboardBridge.setOnClickListener {
                 try {
-                    startActivity(Intent(this, KeyboardBridgeActivity::class.java))
+                    if (!ClusterImeWatcherService.prepareAndLaunchBridgeManually()) {
+                        startActivity(Intent(this, KeyboardBridgeActivity::class.java))
+                    }
                 } catch (e: Exception) {
                     AppLogger.e("MainActivity", "KeyboardBridge launch failed", e)
                 }

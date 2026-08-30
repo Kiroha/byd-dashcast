@@ -39,4 +39,29 @@ class ClusterImeRelaySessionTest {
         assertFalse(session.accepts(2, "com.example.first"))
         assertEquals("com.example.second", session.packageOn(5))
     }
+
+    @Test
+    fun `manual button binds through the watcher before launching the bridge`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/ime").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+
+        val main = java.io.File(root, "app/src/main/java/com/byd/dashcast/MainActivity.kt").readText()
+        val click = main.substringAfter("btnKeyboardBridge.setOnClickListener")
+            .substringBefore("mSessionTracker =")
+        val prepareCall = click.indexOf("prepareAndLaunchBridgeManually()")
+        val fallbackLaunch = click.indexOf("startActivity(Intent(this, KeyboardBridgeActivity::class.java))")
+        assertTrue("manual launch must ask the watcher to bind first", prepareCall >= 0)
+        assertTrue("the direct launch is only the unavailable-service fallback",
+            fallbackLaunch > prepareCall)
+
+        val watcher = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java"
+        ).readText()
+        val method = watcher.substringAfter("public static boolean prepareAndLaunchBridgeManually()")
+            .substringBefore("\n    /**")
+        assertTrue("manual target must be bound before the bridge opens",
+            method.indexOf("mRelaySession.bind") in 0 until method.indexOf("launchBridge()"))
+    }
 }
