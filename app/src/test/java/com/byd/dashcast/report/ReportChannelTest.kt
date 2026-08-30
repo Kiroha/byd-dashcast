@@ -179,4 +179,39 @@ class ReportChannelTest {
         assertTrue(ReportChannel.isPairedOnDevice(ctx))
         assertFalse(ReportChannel.hasAzure(ctx))
     }
+
+    @Test
+    fun `a shared candidate preview names destinations without exposing secrets`() {
+        val token = "123456:SECRET-TOKEN"
+        val sas = "sv=2024&sp=cw&sig=SECRET-SIGNATURE"
+        val candidate = ReportChannel.candidateForTesting(
+            "/sdcard/Download/${ReportChannel.IMPORT_NAME}",
+            "bugReport.botToken=$token\nazure.sas=$sas\n" +
+                "azure.blobUrl=https://blob.example/container\n" +
+                "relay.url=https://relay.example/api/report"
+        )
+
+        val summary = candidate.confirmationSummary()
+        assertTrue(candidate.requiresSourceDeletion)
+        assertTrue(summary.contains("Telegram credentials"))
+        assertTrue(summary.contains("Azure credentials"))
+        assertTrue(summary.contains("relay.example"))
+        assertFalse(summary.contains(token))
+        assertFalse(summary.contains("SECRET-SIGNATURE"))
+    }
+
+    @Test
+    fun `a shell-private candidate does not require source deletion`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/data/local/tmp/${ReportChannel.IMPORT_NAME}",
+            "bugReport.botToken=t\nbugReport.chatId=c"
+        )
+        assertFalse(candidate.requiresSourceDeletion)
+    }
+
+    @Test
+    fun `a malformed https relay is not stored or counted`() {
+        assertEquals(0, ReportChannel.applyProperties(ctx, "relay.url=https://"))
+        assertEquals("", ReportChannel.relayUrl(ctx))
+    }
 }

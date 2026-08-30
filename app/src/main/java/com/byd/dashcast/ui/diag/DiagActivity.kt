@@ -2,6 +2,7 @@ package com.byd.dashcast.ui.diag
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -170,10 +171,39 @@ class DiagActivity : Activity() {
         root.addView(Button(this).apply {
             text = "Pair reporting channel — put ${ReportChannel.IMPORT_NAME} in Download"
             setOnClickListener {
-                isEnabled = false
+                val pairingButton = this
+                pairingButton.isEnabled = false
                 log("pairing…")
-                ReportChannel.importFromDevice(this@DiagActivity) { outcome ->
-                    runOnUiThread { log(outcome); isEnabled = true }
+                ReportChannel.inspectFromDevice(this@DiagActivity) { candidate, outcome ->
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        if (candidate == null) {
+                            log(outcome)
+                            pairingButton.isEnabled = true
+                            return@runOnUiThread
+                        }
+                        AlertDialog.Builder(this@DiagActivity)
+                            .setTitle("Confirm reporting channel")
+                            .setMessage(candidate.confirmationSummary())
+                            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                                log("pairing cancelled — nothing stored")
+                                pairingButton.isEnabled = true
+                            }
+                            .setPositiveButton(android.R.string.ok) { _, _ ->
+                                ReportChannel.applyCandidate(
+                                    this@DiagActivity, candidate
+                                ) { result ->
+                                    runOnUiThread {
+                                        if (!isFinishing && !isDestroyed) {
+                                            log(result)
+                                            pairingButton.isEnabled = true
+                                        }
+                                    }
+                                }
+                            }
+                            .setOnCancelListener { pairingButton.isEnabled = true }
+                            .show()
+                    }
                 }
             }
         })
