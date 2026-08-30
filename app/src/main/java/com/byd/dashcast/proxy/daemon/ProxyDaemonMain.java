@@ -88,6 +88,7 @@ public final class ProxyDaemonMain {
     *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
     *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
     *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
+    *  v24: TXN_CAN_BATCH appliedCount stops at the first non-zero native SDK result.
     *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
     *  v21: adds TXN_CANCEL_FISSION_WATCHDOG (teardown cannot race post-launch re-anchoring).
     *  v22: adds TXN_AUTOCONTAINER_SEND_INFO2 (raw sendInfo2 byte[] channel — NaviInfo HUD injection).
@@ -96,7 +97,7 @@ public final class ProxyDaemonMain {
     *  never called before this release) and TXN_PROJECTION_TRACE_START/DRAIN (60s registry sampler
     *  around a normal projection cycle). All three read-only or purely observational.
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "23";
+    private static final String PROTOCOL_VERSION = "24";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -1113,35 +1114,39 @@ public final class ProxyDaemonMain {
                         if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
                         com.byd.dashcast.system.CanBatchOperation.Writer writer =
                                 new com.byd.dashcast.system.CanBatchOperation.Writer() {
-                            @Override public void setNaviStatus(int status) throws Throwable {
-                                CanWriteVerbs.setInt(ctx,
+                            @Override public int setNaviStatus(int status) throws Throwable {
+                                return CanWriteVerbs.setInt(ctx,
                                         CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, status);
                             }
-                            @Override public void setInstrumentInt(int featureId, int value)
+                            @Override public int setInstrumentInt(int featureId, int value)
                                     throws Throwable {
-                                CanWriteVerbs.setInt(ctx, featureId, value);
+                                return CanWriteVerbs.setInt(ctx, featureId, value);
                             }
-                            @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+                            @Override public int setInstrumentBytes(int featureId, byte[] bytes)
                                     throws Throwable {
-                                CanWriteVerbs.setBytes(ctx, featureId,
+                                return CanWriteVerbs.setBytes(ctx, featureId,
                                         bytes == null ? new byte[0] : bytes);
                             }
-                            @Override public void setSettingInt(int featureId, int value)
+                            @Override public int setSettingInt(int featureId, int value)
                                     throws Throwable {
-                                CanWriteVerbs.settingSetInt(ctx, featureId, value);
+                                return CanWriteVerbs.settingSetInt(ctx, featureId, value);
                             }
                         };
+                        java.util.ArrayList<com.byd.dashcast.system.CanBatchOperation> operations =
+                                new java.util.ArrayList<>(count);
                         for (int i = 0; i < count; i++) {
                             int type = data.readInt();
                             int featureId = data.readInt();
                             int intValue = data.readInt();
                             byte[] bytes = data.createByteArray();
-                            com.byd.dashcast.system.CanBatchOperation.fromWire(
-                                    type, featureId, intValue, bytes).execute(writer);
+                            operations.add(com.byd.dashcast.system.CanBatchOperation.fromWire(
+                                    type, featureId, intValue, bytes));
                         }
+                        int applied = com.byd.dashcast.system.CanBatchOperation
+                                .executeAcceptedPrefix(operations, writer);
                         if (reply != null) {
                             reply.writeNoException();
-                            reply.writeInt(count);
+                            reply.writeInt(applied);
                         }
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
