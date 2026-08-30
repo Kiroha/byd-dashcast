@@ -4,6 +4,7 @@ import com.byd.dashcast.util.AppLogger
 
 import java.io.File
 import java.io.FileInputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -29,7 +30,7 @@ object AzureBlobUploader {
     /** Azure allows far larger blocks, but small ones keep a retry cheap on a flaky car link. */
     private const val BLOCK_SIZE = 4 * 1024 * 1024
 
-    private const val ATTEMPTS_PER_BLOCK = 3
+    private const val ATTEMPTS_PER_REQUEST = 3
     private const val CONNECT_TIMEOUT_MS = 30_000
     private const val READ_TIMEOUT_MS = 120_000
 
@@ -97,7 +98,7 @@ object AzureBlobUploader {
 
     private fun putBlock(url: String, buf: ByteArray, len: Int) {
         var lastError: Throwable? = null
-        for (attempt in 1..ATTEMPTS_PER_BLOCK) {
+        for (attempt in 1..ATTEMPTS_PER_REQUEST) {
             try {
                 val c = open(url, "PUT")
                 c.setFixedLengthStreamingMode(len)
@@ -117,25 +118,72 @@ object AzureBlobUploader {
         throw lastError ?: IllegalStateException("block upload failed")
     }
 
+    internal fun interface ConnectionFactory {
+        fun open(url: String, method: String): HttpURLConnection
+    }
+
+    internal fun interface RetrySleeper {
+        fun sleep(delayMs: Long)
+    }
+
     /** Commits the uploaded blocks; until this succeeds the blob does not exist. */
-    private fun commit(url: String, blockIds: List<String>) {
+    private fun commit(url: String, blockIds: List<String>) = commitWithRetry(
+        url,
+        blockIds,
+        ConnectionFactory { requestUrl, method -> open(requestUrl, method) },
+        RetrySleeper { delayMs ->
+            try {
+                Thread.sleep(delayMs)
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
+            }
+        }
+    )
+
+    internal fun commitWithRetry(
+        url: String,
+        blockIds: List<String>,
+        connectionFactory: ConnectionFactory,
+        sleeper: RetrySleeper,
+    ) {
         val xml = StringBuilder("<?xml version=\"1.0\" encoding=\"utf-8\"?><BlockList>")
         for (id in blockIds) xml.append("<Latest>").append(id).append("</Latest>")
         xml.append("</BlockList>")
         val body = xml.toString().toByteArray(Charsets.UTF_8)
-        val c = open(url, "PUT")
-        c.setRequestProperty("Content-Type", "application/xml")
-        c.setRequestProperty("x-ms-blob-content-type", "application/zip")
-        c.setFixedLengthStreamingMode(body.size)
-        c.doOutput = true
-        c.outputStream.use { it.write(body) }
-        val code = c.responseCode
-        val detail = if (code in 200..299) "" else errorDetail(c)
-        c.disconnect()
-        if (code !in 200..299) {
-            throw IllegalStateException("commit failed: HTTP $code$detail")
+        for (attempt in 1..ATTEMPTS_PER_REQUEST) {
+            var connection: HttpURLConnection? = null
+            try {
+                connection = connectionFactory.open(url, "PUT")
+                connection.setRequestProperty("Content-Type", "application/xml")
+                connection.setRequestProperty("x-ms-blob-content-type", "application/zip")
+                connection.setFixedLengthStreamingMode(body.size)
+                connection.doOutput = true
+                connection.outputStream.use { it.write(body) }
+                val code = connection.responseCode
+                if (code in 200..299) return
+                val failure = CommitHttpException(
+                    code,
+                    "commit failed: HTTP $code${errorDetail(connection)}"
+                )
+                if (!isTransientCommitStatus(code) || attempt == ATTEMPTS_PER_REQUEST) throw failure
+            } catch (failure: Throwable) {
+                if (failure is InterruptedException) throw failure
+                val retryable = failure is IOException ||
+                    (failure is CommitHttpException && isTransientCommitStatus(failure.statusCode))
+                if (!retryable || attempt == ATTEMPTS_PER_REQUEST) throw failure
+            } finally {
+                connection?.disconnect()
+            }
+            sleeper.sleep(1500L * attempt)
         }
     }
+
+    private class CommitHttpException(val statusCode: Int, message: String) :
+        IllegalStateException(message)
+
+    private fun isTransientCommitStatus(code: Int): Boolean =
+        code == 408 || code == 429 || code >= 500
 
     private fun open(url: String, method: String): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {
