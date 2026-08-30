@@ -1501,10 +1501,10 @@ public final class ProxyClient {
             }
         };
         IntentFilter filter = new IntentFilter(ProxyDaemonContract.ACTION_PROXY_CONNECTED);
-        // 2-arg form: targetSdk=29 so platform does not enforce RECEIVER_EXPORTED.
-        // If targetSdk is ever raised to 33+, switch to the 3-arg overload with
-        // Context.RECEIVER_EXPORTED (the broadcaster is in another process / uid).
-        appCtx.registerReceiver(sReceiver, filter);
+        // The daemon runs as uid 2000 (com.android.shell), which holds DUMP. Requiring that
+        // sender permission preserves the broadcast fallback on ROMs where addService fails,
+        // without allowing an ordinary co-installed app to supply a fake Binder.
+        DaemonBroadcastRegistrar.register(appCtx, sReceiver, filter);
         AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonContract.ACTION_PROXY_CONNECTED);
     }
 
