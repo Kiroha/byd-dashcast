@@ -28,6 +28,7 @@ import android.view.View;
 import android.view.WindowManager;
 import com.byd.dashcast.cluster.display.ClusterDisplayInfo;
 import com.byd.dashcast.cluster.display.ClusterDisplaySelectionPolicy;
+import com.byd.dashcast.cluster.mirror.InputDisplayRoutingPolicy;
 import com.byd.dashcast.util.concurrent.DeathLease;
 import com.byd.dashcast.util.concurrent.BoundedSerialExecutor;
 import java.io.File;
@@ -174,6 +175,8 @@ public class SurfaceDaemon {
     /** v1.2.7 — first-event trace flag; reset on each setupMirror to log once per session. */
     private static volatile boolean sMotionFirstLogged = false;
     private static volatile boolean sKeyFirstLogged    = false;
+    private static volatile boolean sMotionTargetUnavailableLogged = false;
+    private static volatile boolean sKeyTargetUnavailableLogged = false;
 
     // ── Fission slot state ────────────────────────────────────────────────────
     @SuppressLint("StaticFieldLeak") // application context, daemon process-scoped, safe
@@ -842,7 +845,18 @@ public class SurfaceDaemon {
             return;
         }
         try {
-            if (sSetDisplayId != null) sSetDisplayId.invoke(ev, sClusterDisplayId);
+            boolean targetApplied = false;
+            if (sSetDisplayId != null) {
+                sSetDisplayId.invoke(ev, sClusterDisplayId);
+                targetApplied = true;
+            }
+            if (!InputDisplayRoutingPolicy.canInject(sClusterDisplayId, targetApplied)) {
+                if (!sMotionTargetUnavailableLogged) {
+                    sMotionTargetUnavailableLogged = true;
+                    out("injectMotion REFUSED: cluster display could not be applied to MotionEvent");
+                }
+                return;
+            }
             Object r = sInjectMethod.invoke(sInputManager, ev, 0 /* ASYNC */);
             if (!sMotionFirstLogged) {
                 sMotionFirstLogged = true;
@@ -867,9 +881,19 @@ public class SurfaceDaemon {
             // Without this, keys go to the globally focused window (= our own
             // KeyboardBridgeActivity on display 0) and never reach the cluster
             // app. Mirrors the touch-injection displayId pattern.
+            boolean targetApplied = false;
             if (sSetDisplayIdKey != null) {
-                try { sSetDisplayIdKey.invoke(kev, sClusterDisplayId); }
-                catch (Exception ignored) { /* fall through, inject anyway */ }
+                try {
+                    sSetDisplayIdKey.invoke(kev, sClusterDisplayId);
+                    targetApplied = true;
+                } catch (Exception ignored) { }
+            }
+            if (!InputDisplayRoutingPolicy.canInject(sClusterDisplayId, targetApplied)) {
+                if (!sKeyTargetUnavailableLogged) {
+                    sKeyTargetUnavailableLogged = true;
+                    out("injectKey REFUSED: cluster display could not be applied to KeyEvent");
+                }
+                return;
             }
             sInjectMethod.invoke(sInputManager, kev, 0 /* ASYNC */);
             if (!sKeyFirstLogged) {
