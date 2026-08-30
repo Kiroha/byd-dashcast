@@ -18,6 +18,9 @@ on:
   release:
     types: [published, released]
 
+permissions:
+  contents: read
+
 concurrency:
   group: tg-stable-${{ github.event.release.tag_name }}
   cancel-in-progress: true
@@ -28,15 +31,30 @@ jobs:
     # Extra guard: ignore accidental triggers on pre-releases.
     # telegram-changelog.yml handles those, and its guard is the exact mirror of
     # this one, so exactly one of the two workflows ever posts.
-    if: ${{ !github.event.release.prerelease }}
+    if: ${{ !github.event.release.prerelease && !contains(join(github.event.release.assets.*.name, ','), '-debug.apk') }}
     steps:
+      - name: Check out the release scanner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Verify release APK assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p assets
+          gh release download "$TAG" --repo "$REPO" --dir assets --pattern '*.apk' --clobber
+          python3 .github/scripts/scan_release_assets.py assets
+
       - name: Send changelog to Telegram (reopen → post → pin → close)
         env:
-          TG_TOKEN:    ${{ secrets.TG_CHANGELOG_BOT_TOKEN }}
-          TG_CHAT_ID:  ${{ secrets.TG_CHANGELOG_CHAT_ID }}
-          TG_THREAD:   ${{ secrets.TG_STABLE_THREAD_ID }}
-          RELEASE_TAG:  ${{ github.event.release.tag_name }}
-          RELEASE_URL:  ${{ github.event.release.html_url }}
+          TG_TOKEN: ${{ secrets.TG_CHANGELOG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHANGELOG_CHAT_ID }}
+          TG_THREAD: ${{ secrets.TG_STABLE_THREAD_ID }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
           python3 << 'EOF'
