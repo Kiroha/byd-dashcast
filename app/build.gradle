@@ -1889,8 +1889,21 @@ android {
         // tree: 534 unit tests, zero failures; lint unchanged at 14 warnings / 16 hints.
         //
         // NOT VALIDATED ON A CAR.)
-        versionCode 636
-        versionName "1.8.46-beta"
+        // 637 = 1.8.47-beta (post-release adversarial audit of 1.8.46: fifteen confirmed fixes
+        // across release artifact quarantine, boot/session ownership, cluster IME targeting,
+        // Azure provisioning and retries, CAN/AutoContainer result propagation, fission resize,
+        // HUD notification identity/failover, diagnostic archive cleanup and ADB-key backup.
+        //
+        // No feature is removed. Old daemon compatibility is explicit: truthful CAN batching is
+        // negotiated at protocol 24, older daemons use ordered result-preserving writes, and
+        // AutoContainer keeps its pre-v20 result-less fallback. Distributed APKs are release-only;
+        // the scanner examines every ZIP entry and blocks Telegram announcements on any finding.
+        //
+        // Final source validation before this bump: 567 unit tests, zero failures/skips; release
+        // lint zero errors (14 warnings / 16 hints); R8 release build and platform signature green.
+        // NOT VALIDATED ON A CAR.)
+        versionCode 637
+        versionName "1.8.47-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
