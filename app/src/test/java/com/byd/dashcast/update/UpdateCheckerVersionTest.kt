@@ -29,6 +29,27 @@ class UpdateCheckerVersionTest {
     }
 
     @Test
+    fun `release tags use a strict grammar`() {
+        assertTrue(OtaVersionPolicy.isValidReleaseVersion("1.8.47-beta"))
+        assertTrue(OtaVersionPolicy.isValidReleaseVersion("1.7.0"))
+        assertFalse(OtaVersionPolicy.isValidReleaseVersion("1-not-a-version"))
+        assertFalse(OtaVersionPolicy.isValidReleaseVersion("1.8.x"))
+    }
+
+    @Test
+    fun `semantic maximum does not depend on release creation order`() {
+        assertTrue(OtaVersionPolicy.compareVersions("1.8.47-beta", "1.8.9-beta") > 0)
+        assertTrue(OtaVersionPolicy.compareVersions("1.8.47", "1.8.47-beta") > 0)
+        assertTrue(OtaVersionPolicy.compareVersions("1.8.47-rc2", "1.8.47-beta") > 0)
+    }
+
+    @Test
+    fun `stable promotion supersedes the beta with the same base version`() {
+        assertTrue(OtaVersionPolicy.isNewer("1.8.47", "1.8.47-beta", 637))
+        assertFalse(OtaVersionPolicy.isNewer("1.8.47-beta", "1.8.47", 638))
+    }
+
+    @Test
     fun `signer comparison is order independent and rejects a different signer`() {
         val first = byteArrayOf(1, 2, 3)
         val second = byteArrayOf(4, 5, 6)
