@@ -192,6 +192,8 @@ public class SurfaceDaemon {
         WindowManager overlayWM;
         VirtualDisplay vd;
         int displayId;
+        final java.util.concurrent.atomic.AtomicLong resizeGeneration =
+            new java.util.concurrent.atomic.AtomicLong();
         private DeathLease ownerLease;
         private boolean released;
 
@@ -1072,20 +1074,22 @@ public class SurfaceDaemon {
         if (slot == null || slot.isReleased() || w <= 0 || h <= 0) {
             reply.writeNoException(); reply.writeInt(0); return true;
         }
-        final int oldX = slot.x, oldY = slot.y, oldW = slot.w, oldH = slot.h;
+        final long generation;
+        final int oldX, oldY, oldW, oldH;
+        synchronized (slot) {
+            generation = slot.resizeGeneration.incrementAndGet();
+            oldX = slot.x; oldY = slot.y; oldW = slot.w; oldH = slot.h;
+        }
         final CountDownLatch latch = new CountDownLatch(1);
         final java.util.concurrent.atomic.AtomicBoolean overlayResized =
                 new java.util.concurrent.atomic.AtomicBoolean(false);
         Runnable resizeOverlay = () -> {
             try {
+                if (!isCurrentResize(pkg, slot, generation)) return;
                 applySlotOverlayGeometry(slot, x, y, w, h);
                 overlayResized.set(true);
             } catch (Exception e) {
                 out("[Fission] RESIZE_SLOT overlay error: " + e.getMessage());
-                try { applySlotOverlayGeometry(slot, oldX, oldY, oldW, oldH); }
-                catch (Exception rollbackError) {
-                    out("[Fission] RESIZE_SLOT overlay rollback error: " + rollbackError.getMessage());
-                }
             } finally { latch.countDown(); }
         };
         android.os.Handler mainHandler = new android.os.Handler(Looper.getMainLooper());
@@ -1098,33 +1102,53 @@ public class SurfaceDaemon {
         if (!completed) {
             mainHandler.removeCallbacks(resizeOverlay);
             out("[Fission] RESIZE_SLOT overlay timed out — VD resize skipped to avoid size mismatch");
-            mainHandler.post(() -> {
-                try { applySlotOverlayGeometry(slot, oldX, oldY, oldW, oldH); }
-                catch (Exception rollbackError) {
-                    out("[Fission] RESIZE_SLOT timeout rollback error: " + rollbackError.getMessage());
-                }
-            });
+            scheduleResizeRollback(mainHandler, pkg, slot, generation, oldX, oldY, oldW, oldH);
             reply.writeNoException(); reply.writeInt(0); return true;
         }
         if (!overlayResized.get()) {
+            scheduleResizeRollback(mainHandler, pkg, slot, generation, oldX, oldY, oldW, oldH);
             reply.writeNoException(); reply.writeInt(0); return true;
         }
         try {
-            if (slot.isReleased() || slot.vd == null) throw new IllegalStateException("slot released");
+            if (!isCurrentResize(pkg, slot, generation) || slot.vd == null) {
+                throw new IllegalStateException("slot superseded or released");
+            }
             slot.vd.resize(w, h, 160);
         } catch (Exception e) {
             out("[Fission] RESIZE_SLOT VD error: " + e.getMessage());
-            mainHandler.post(() -> {
-                try { applySlotOverlayGeometry(slot, oldX, oldY, oldW, oldH); }
-                catch (Exception rollbackError) {
-                    out("[Fission] RESIZE_SLOT overlay rollback error: " + rollbackError.getMessage());
-                }
-            });
+            scheduleResizeRollback(mainHandler, pkg, slot, generation, oldX, oldY, oldW, oldH);
             reply.writeNoException(); reply.writeInt(0); return true;
         }
-        slot.x = x; slot.y = y; slot.w = w; slot.h = h;
+        synchronized (slot) {
+            if (!isCurrentResize(pkg, slot, generation)) {
+                reply.writeNoException(); reply.writeInt(0); return true;
+            }
+            slot.x = x; slot.y = y; slot.w = w; slot.h = h;
+        }
         reply.writeNoException(); reply.writeInt(1);
         return true;
+    }
+
+    private static boolean isCurrentResize(String pkg, SlotInfo slot, long generation) {
+        return sSlots.get(pkg) == slot && !slot.isReleased()
+                && slot.resizeGeneration.get() == generation;
+    }
+
+    private static void scheduleResizeRollback(
+            android.os.Handler mainHandler, String pkg, SlotInfo slot, long generation,
+            int x, int y, int w, int h) {
+        final long rollbackGeneration;
+        synchronized (slot) {
+            if (!isCurrentResize(pkg, slot, generation)) return;
+            rollbackGeneration = slot.resizeGeneration.incrementAndGet();
+        }
+        mainHandler.post(() -> {
+            if (!isCurrentResize(pkg, slot, rollbackGeneration)) return;
+            try { applySlotOverlayGeometry(slot, x, y, w, h); }
+            catch (Exception rollbackError) {
+                out("[Fission] RESIZE_SLOT overlay rollback error: " + rollbackError.getMessage());
+            }
+        });
     }
 
     private static void applySlotOverlayGeometry(SlotInfo slot, int x, int y, int w, int h) {

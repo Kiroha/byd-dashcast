@@ -32,4 +32,21 @@ class FissionResizeStateTest {
         requested.setEmpty()
         assertEquals(Rect(20, 30, 1000, 600), slot.rect)
     }
+
+    @Test
+    fun `daemon rollback is guarded by a resize generation`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/proxy/daemon").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/proxy/daemon/SurfaceDaemon.java"
+        ).readText()
+        val resize = source.substringAfter("private static boolean handleResizeSlot")
+            .substringBefore("private static void applySlotOverlayGeometry")
+
+        assertTrue(resize.contains("resizeGeneration.incrementAndGet()"))
+        assertTrue(resize.contains("isCurrentResize(pkg, slot, generation)"))
+        assertTrue(source.contains("isCurrentResize(pkg, slot, rollbackGeneration)"))
+    }
 }
