@@ -138,6 +138,7 @@ class ClusterManager(context: Context) {
         // 1.2.29 — defensive cancel() at entry: on retry, re-entering registered a new listener
         // without unregistering the old, leaking listeners and double-launching on the cluster.
         cancel()
+        val gen = mActivationGeneration
         // A fresh attempt invalidates any previous DL4 "unsupported firmware" verdict. Reset
         // here rather than in cancel(): the verdict must survive from the timeout that produced
         // it until the UI/notification has had a chance to read it.
@@ -157,6 +158,7 @@ class ClusterManager(context: Context) {
             val svcRetried = java.util.concurrent.atomic.AtomicBoolean(false)
             val cb = object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "DL5 activation ADB(cmd=16): $out")
                     if (out != null && out.contains("does not exist") && svcRetried.compareAndSet(false, true)) {
                         val tried = AdbLocalClient.autoContainerSvcName(mContext)
@@ -166,13 +168,18 @@ class ClusterManager(context: Context) {
                         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "", this)
                         return
                     }
-                    mHandler.postDelayed({ resolveDl5Display(dm, callback) }, 500)
+                    mHandler.postDelayed({
+                        if (gen == mActivationGeneration) resolveDl5Display(dm, callback, gen)
+                    }, 500)
                 }
 
                 override fun onError(err: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "DL5 activation ADB(cmd=16) ERROR: $err")
                     // Still attempt to resolve a display — they may be already up.
-                    mHandler.postDelayed({ resolveDl5Display(dm, callback) }, 500)
+                    mHandler.postDelayed({
+                        if (gen == mActivationGeneration) resolveDl5Display(dm, callback, gen)
+                    }, 500)
                 }
             }
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "", cb)
@@ -221,7 +228,9 @@ class ClusterManager(context: Context) {
         if (found != null && sQtInProjectionMode) {
             // True fast path: VD up AND Qt already projecting — just hand the display back.
             AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id=${found.displayId})")
-            mHandler.post { callback.onDisplayReady(found, found.displayId) }
+            mHandler.post {
+                if (gen == mActivationGeneration) callback.onDisplayReady(found, found.displayId)
+            }
             return
         }
         if (found != null) {
@@ -229,7 +238,7 @@ class ClusterManager(context: Context) {
             if (!adasFix) {
                 // Default warm path: VD present, Qt in native mode → sendInfo(16) only.
                 AppLogger.i(TAG, "VD present id=${found.displayId} but Qt in native mode — warm path (16 only)")
-                sendWarmCmd16(found, callback)
+                sendWarmCmd16(found, callback, gen)
                 return
             }
 
@@ -246,15 +255,17 @@ class ClusterManager(context: Context) {
             val adasListenerHolder = arrayOfNulls<DisplayManager.DisplayListener>(1)
 
             val fallback = Runnable {
+                if (gen != mActivationGeneration) return@Runnable
                 dm.unregisterDisplayListener(adasListenerHolder[0])
                 mActiveDisplayListener = null
                 mActiveDisplayManager = null
                 AppLogger.w(TAG, "ADAS warm path: no VD change after cmd 30 ($adasRemapTimeoutMs ms) — fallback cmd 16 on original id=${originalDisplay.displayId}")
-                sendWarmCmd16(originalDisplay, callback)
+                sendWarmCmd16(originalDisplay, callback, gen)
             }
 
             adasListenerHolder[0] = object : DisplayManager.DisplayListener {
                 override fun onDisplayAdded(displayId: Int) {
+                    if (gen != mActivationGeneration) return
                     val d = dm.getDisplay(displayId)
                     if (!isClusterDisplay(d)) return
                     // New cluster VD appeared after cmd 30 — this is the correct display.
@@ -263,7 +274,9 @@ class ClusterManager(context: Context) {
                     mActiveDisplayListener = null
                     mActiveDisplayManager = null
                     AppLogger.i(TAG, "ADAS warm path: new VD id=$displayId — stabilizing $atmStabilizeMs ms for ATM then cmd 16")
-                    mHandler.postDelayed({ sendWarmCmd16(d, callback) }, atmStabilizeMs)
+                    mHandler.postDelayed({
+                        if (gen == mActivationGeneration) sendWarmCmd16(d, callback, gen)
+                    }, atmStabilizeMs)
                 }
 
                 override fun onDisplayRemoved(displayId: Int) {}
@@ -278,16 +291,18 @@ class ClusterManager(context: Context) {
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 object : AdbLocalClient.Callback {
                     override fun onSuccess(out: String?) {
+                        if (gen != mActivationGeneration) return
                         AppLogger.i(TAG, "ADAS warm path ADB(cmd=30): $out")
                     }
 
                     override fun onError(err: String?) {
+                        if (gen != mActivationGeneration) return
                         AppLogger.e(TAG, "ADAS warm path ADB(cmd=30) ERROR: $err")
                         mHandler.removeCallbacks(fallback)
                         dm.unregisterDisplayListener(adasListenerHolder[0])
                         mActiveDisplayListener = null
                         mActiveDisplayManager = null
-                        sendWarmCmd16(originalDisplay, callback)
+                        sendWarmCmd16(originalDisplay, callback, gen)
                     }
                 })
             return
@@ -306,8 +321,6 @@ class ClusterManager(context: Context) {
 
         // Captured so a stale sendInfo callback from a cancelled activation cannot flip
         // mActivationCmd16Dispatched for the CURRENT one.
-        val gen = mActivationGeneration
-
         // Do not start AppStartManagement in foreground: it briefly opens a visible BYD app.
         AppLogger.i(TAG, "Starting activation sequence without foreground AppStartManagement launch")
         mHandler.postDelayed({ sendActivationSequence(gen) }, 2000)
@@ -717,16 +730,22 @@ class ClusterManager(context: Context) {
     // ── Warm path helper ──────────────────────────────────────────────────────
 
     /** Sends sendInfo(16) and notifies the callback when done (or on error). */
-    private fun sendWarmCmd16(display: Display, callback: DisplayReadyCallback) {
+    private fun sendWarmCmd16(display: Display, callback: DisplayReadyCallback, gen: Int) {
         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "warm path ADB(cmd=16): $out")
                     notifyProjectionActive()
-                    mHandler.post { callback.onDisplayReady(display, display.displayId) }
+                    mHandler.post {
+                        if (gen == mActivationGeneration) {
+                            callback.onDisplayReady(display, display.displayId)
+                        }
+                    }
                 }
 
                 override fun onError(err: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: $err")
                     // Report display anyway — caller decides what to do.
                     mHandler.post { callback.onDisplayReady(display, display.displayId) }
@@ -819,6 +838,7 @@ class ClusterManager(context: Context) {
      * DL3/DL5 is unchanged — the value is carried and never acted upon.
      */
     private fun sendActivationSequence(gen: Int) {
+        if (gen != mActivationGeneration) return
         // No display exists yet on this path, so the geometry half of the guard cannot run —
         // only the configured type is available to protect an 8.8" car here.
         val adasFix = adasFixEffective()
@@ -829,11 +849,15 @@ class ClusterManager(context: Context) {
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 object : AdbLocalClient.Callback {
                     override fun onSuccess(out: String?) {
+                        if (gen != mActivationGeneration) return
                         AppLogger.i(TAG, "activation ADB(cmd=30): $out")
-                        mHandler.postDelayed({ sendActivationCmd16ThenCmd35(gen) }, 3000)
+                        mHandler.postDelayed({
+                            if (gen == mActivationGeneration) sendActivationCmd16ThenCmd35(gen)
+                        }, 3000)
                     }
 
                     override fun onError(err: String?) {
+                        if (gen != mActivationGeneration) return
                         AppLogger.e(TAG, "activation ADB(cmd=30) ERROR: $err")
                         // cmd=30 failed — still attempt 16 → 35.
                         sendActivationCmd16ThenCmd35(gen)
@@ -847,35 +871,45 @@ class ClusterManager(context: Context) {
 
     /** Sends sendInfo(16) → 3s delay → sendInfo(35) (VirtualDisplay creation trigger). */
     private fun sendActivationCmd16ThenCmd35(gen: Int) {
+        if (gen != mActivationGeneration) return
         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "activation ADB(cmd=16): $out")
                     markCmd16Dispatched(gen)
-                    mHandler.postDelayed({ sendActivationCmd35(gen) }, 3000)
+                    mHandler.postDelayed({
+                        if (gen == mActivationGeneration) sendActivationCmd35(gen)
+                    }, 3000)
                 }
 
                 override fun onError(err: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "activation ADB(cmd=16) ERROR: $err")
                     // Dispatched-and-failed still counts: the latch only certifies that we are no
                     // longer waiting to SEND cmd 16, so the DL4 probe may resolve.
                     markCmd16Dispatched(gen)
                     // Still attempt sendInfo(35) even if cmd=16 failed.
-                    mHandler.postDelayed({ sendActivationCmd35(gen) }, 3000)
+                    mHandler.postDelayed({
+                        if (gen == mActivationGeneration) sendActivationCmd35(gen)
+                    }, 3000)
                 }
             })
     }
 
     /** Sends sendInfo(35) — triggers Qt JNI → AutoDisplayService.createVirtualDisplay(). */
     private fun sendActivationCmd35(gen: Int) {
+        if (gen != mActivationGeneration) return
         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "activation ADB(cmd=35): $out")
                     // Defensive: cmd 35 can only run after cmd 16, so the latch is already set.
                     markCmd16Dispatched(gen)
                 }
                 override fun onError(err: String?) {
+                    if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: $err")
                     markCmd16Dispatched(gen)
                 }
@@ -981,7 +1015,11 @@ class ClusterManager(context: Context) {
      * DL5: pick the first PRESENTATION display (typically id=3) and notify. Falls back to any
      * non-default display, then to a short polling window if nothing is up yet.
      */
-    private fun resolveDl5Display(dm: DisplayManager, callback: DisplayReadyCallback) {
+    private fun resolveDl5Display(
+        dm: DisplayManager,
+        callback: DisplayReadyCallback,
+        gen: Int,
+    ) {
         val d = findClusterDisplay(dm)
         if (d != null) {
             AppLogger.i(TAG, "DL5 cluster display ready: id=${d.displayId} name=${d.name}")
@@ -993,6 +1031,7 @@ class ClusterManager(context: Context) {
         val deadline = SystemClock.uptimeMillis() + 3000
         mHandler.postDelayed(object : Runnable {
             override fun run() {
+                if (gen != mActivationGeneration) return
                 val dd = findClusterDisplay(dm)
                 if (dd != null) {
                     AppLogger.i(TAG, "DL5 cluster display (late) id=${dd.displayId}")
