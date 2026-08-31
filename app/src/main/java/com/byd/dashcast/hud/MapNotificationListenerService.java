@@ -65,8 +65,9 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // keeps at most one drain task and one pending state during notification bursts.
     // appContext is the process-scoped application context (safe to retain — not
     // the service instance, so no leak).
-    private LatestValueDispatcher<HudNavigationData> hudDispatcher;
+    private LatestValueDispatcher<PendingHudUpdate> hudDispatcher;
     private volatile Context appContext;
+    private final HudDeliveryTracker hudDeliveryTracker = new HudDeliveryTracker();
 
     // Notification-level deduplication — avoid reprocessing identical notification content
     // (same pattern as OpenBYD MapNotificationListenerService lastNotification* fields).
@@ -79,9 +80,6 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
     // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
     private String lastLoggedNav = "";
-
-    /** AUD-003 — whether the currently deduplicated content actually made it onto the HUD. */
-    private boolean lastContentReachedHud = false;
 
     // Throttle for the "unsupported nav app" diagnostic — the same app is logged at most once per
     // ~30 s so a "no arrow" bug report always carries a RECENT line explaining why (e.g. Telenav).
@@ -554,14 +552,17 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             t.setDaemon(true);
             return t;
         });
-        hudDispatcher = new LatestValueDispatcher<>(executor,
-            data -> HudController.INSTANCE.updateNavigation(processContext, data));
+        hudDispatcher = new LatestValueDispatcher<>(executor, pending -> {
+            if (HudController.INSTANCE.updateNavigation(processContext, pending.data)) {
+                hudDeliveryTracker.markDelivered(pending.generation);
+            }
+        });
     }
 
     @Override
     public void onDestroy() {
         clearTrackedNavigation();
-        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        LatestValueDispatcher<PendingHudUpdate> dispatcher = hudDispatcher;
         hudDispatcher = null;
         Context ctx = appContext;
         appContext = null;
@@ -640,7 +641,9 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             // read "no update" as "frozen". Only when that frame actually reached the HUD: an
             // identical re-post of something that never parsed proves nothing, and letting it
             // refresh liveness would disarm the watchdog for the case it exists for.
-            if (lastContentReachedHud) HudController.INSTANCE.noteNavFrameSeen();
+            if (hudDeliveryTracker.currentContentWasDelivered()) {
+                HudController.INSTANCE.noteNavFrameSeen();
+            }
             return;
         }
         lastTitle   = title;
@@ -648,9 +651,9 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastBigText = bigText;
         lastSubText = subText;
         lastNotificationKey = sbn.getKey();
-        // New content: it has not reached the HUD yet, and may never — unparseable frames return
-        // early below. Set true only where the frame is actually dispatched.
-        lastContentReachedHud = false;
+        // New content gets a generation before parsing. It is acknowledged only after the serial
+        // writer confirms a guidance output; unparseable or failed frames remain unacknowledged.
+        final long deliveryGeneration = hudDeliveryTracker.beginContent();
 
         // OPT-IN raw capture (Diagnostics → "Capture raw nav-notification text"): the ACTUAL text a
         // supported nav app posts, clipped — logged here for EVERY distinct notification content,
@@ -796,15 +799,11 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         // Fully parsed into a HudNavigationData ⇒ we understood the frame, not just received it.
         noteNavActivity(sbn.getPackageName(), true);
 
-        // AUD-003 — this content reached the HUD, so a later identical re-post proves the
-        // displayed arrow is still current and may refresh the staleness watchdog.
-        lastContentReachedHud = true;
-
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
         // Remember WHICH notification is driving the HUD, so the removal path can tell it apart
         // from the nav app's other ongoing notifications. See onNotificationRemoved.
         sDrivingKey = sbn.getKey();
-        postNavUpdate(data);
+        postNavUpdate(data, deliveryGeneration);
     }
 
     /** A partial frame still proves that navigation is active, but must not drive the HUD. */
@@ -921,7 +920,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastBigText = "";
         lastSubText = "";
         lastNotificationKey = null;
-        lastContentReachedHud = false;
+        hudDeliveryTracker.invalidate();
     }
 
     private void clearTrackedNavigation() {
@@ -935,10 +934,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
      * Queue a nav update on the serial HUD writer thread. If updates arrive faster than the daemon
      * drains them, only the newest pending state survives and at most one drain task stays queued.
      */
-    private void postNavUpdate(HudNavigationData data) {
+    private void postNavUpdate(HudNavigationData data, long generation) {
         if (data == null) return;
-        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
-        if (dispatcher != null) dispatcher.submit(data);
+        LatestValueDispatcher<PendingHudUpdate> dispatcher = hudDispatcher;
+        if (dispatcher != null) dispatcher.submit(new PendingHudUpdate(data, generation));
     }
 
     /**
@@ -950,7 +949,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private void postNavClose() {
         final Context ctx = appContext;
         if (ctx == null) return;
-        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        LatestValueDispatcher<PendingHudUpdate> dispatcher = hudDispatcher;
         if (dispatcher == null) {
             HudController.INSTANCE.closeNavigation(ctx);
             return;
@@ -958,6 +957,16 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         if (!dispatcher.cancelPendingAndExecute(
                 () -> HudController.INSTANCE.closeNavigation(ctx))) {
             HudController.INSTANCE.closeNavigation(ctx);
+        }
+    }
+
+    private static final class PendingHudUpdate {
+        final HudNavigationData data;
+        final long generation;
+
+        PendingHudUpdate(HudNavigationData data, long generation) {
+            this.data = data;
+            this.generation = generation;
         }
     }
 

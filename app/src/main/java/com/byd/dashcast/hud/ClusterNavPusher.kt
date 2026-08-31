@@ -154,9 +154,9 @@ object ClusterNavPusher {
     internal fun activationAccepted(nativeResult: Int?): Boolean =
         nativeResult == null || nativeResult == 0
 
-    /** Pushes one guidance frame onto the cluster. Best-effort; never throws. */
+    /** Pushes one guidance frame onto the cluster and reports whether the active channel accepted it. */
     @JvmStatic
-    fun push(d: HudNavigationData) {
+    fun push(d: HudNavigationData): Boolean {
         // Self-heal: the caller enables nav mode when the CAN path activates, but the cluster must not
         // depend on CAN succeeding — on a car with no windshield HUD this is the ONLY arrow surface,
         // and a container that never received sendInfo(5,0) accepts every frame and renders nothing.
@@ -171,8 +171,10 @@ object ClusterNavPusher {
                 routeRemainDist = d.remainingDistanceMeters ?: 0,
                 roungAboutNum = roundaboutExitNum(d.iconId))
             ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, payload)
+            return enabled
         } catch (t: Throwable) {
             Log.w(TAG, "cluster push failed: ${t.message}")
+            return false
         }
     }
 
