@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
+        <include domain="sharedpref" path="byd_prefs.xml" />
         <exclude domain="file" path="adb.key" />
         <exclude domain="file" path="adb.pub" />
+        <exclude domain="sharedpref" path="dashcast_report_channel.xml" />
+        <exclude domain="sharedpref" path="dashcast_report_consent.xml" />
+        <exclude domain="sharedpref" path="dashcast_bug_report.xml" />
+        <exclude domain="external" path="." />
     </cloud-backup>
     <device-transfer>
+        <include domain="sharedpref" path="byd_prefs.xml" />
         <exclude domain="file" path="adb.key" />
         <exclude domain="file" path="adb.pub" />
+        <exclude domain="sharedpref" path="dashcast_report_channel.xml" />
+        <exclude domain="sharedpref" path="dashcast_report_consent.xml" />
+        <exclude domain="sharedpref" path="dashcast_bug_report.xml" />
+        <exclude domain="external" path="." />
     </device-transfer>
 </data-extraction-rules>
