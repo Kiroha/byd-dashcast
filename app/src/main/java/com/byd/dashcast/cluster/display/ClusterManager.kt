@@ -80,6 +80,7 @@ class ClusterManager(context: Context) {
      * `wm overscan reset`, duplicate notification update, duplicate MainActivity callback).
      */
     @Volatile private var mActivationGeneration = 0
+    @Volatile private var mReadyGeneration = -1
 
     /**
      * True once cmd 16 — the command that actually switches Qt from native rendering into
@@ -331,14 +332,11 @@ class ClusterManager(context: Context) {
 
         listenerHolder[0] = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
+                if (gen != mActivationGeneration) return
                 val d = dm.getDisplay(displayId)
                 AppLogger.i(TAG, "onDisplayAdded id=$displayId display=$d")
                 if (isClusterDisplay(d)) {
-                    mHandler.removeCallbacksAndMessages(null)
-                    // Invalidate any daemon probe still in flight: it cannot be removed from the
-                    // handler queue (it lives on the shell worker) and would otherwise deliver a
-                    // second onDisplayReady for the same activation.
-                    mActivationGeneration++
+                    if (!claimDisplayReady(gen)) return
                     dm.unregisterDisplayListener(listenerHolder[0])
                     mActiveDisplayListener = null
                     mActiveDisplayManager = null
@@ -361,10 +359,10 @@ class ClusterManager(context: Context) {
         // Named (not an inline lambda) so the DL4 daemon resolution can cancel THIS message alone
         // instead of flushing the whole handler queue — see resolveViaDaemon.
         val timeoutRunnable = Runnable {
+            if (gen != mActivationGeneration || mReadyGeneration == gen) return@Runnable
             dm.unregisterDisplayListener(listenerHolder[0])
             mActiveDisplayListener = null
             mActiveDisplayManager = null
-            mHandler.removeCallbacksAndMessages(null)
             AppLogger.w(TAG, "Timeout: cluster VirtualDisplay not detected after $timeoutMs ms")
             if (isDiLink4Safe()) {
                 // Honest verdict, recorded ONLY when we actually know: the daemon successfully
@@ -452,7 +450,7 @@ class ClusterManager(context: Context) {
 
         val probe = object : Runnable {
             override fun run() {
-                if (gen != mActivationGeneration) return
+                if (gen != mActivationGeneration || mReadyGeneration == gen) return
                 if (SystemClock.uptimeMillis() >= deadline) return
                 // Self-heal: AdbLocalClient.executeShellWithResultBlocking has no client-side
                 // timeout, so a wedged ADB socket can swallow the enumerate callback entirely.
@@ -510,6 +508,7 @@ class ClusterManager(context: Context) {
                             // its first guard returns on the deadline check.
                             return@post
                         }
+                        if (!claimDisplayReady(gen)) return@post
                         mDl4SawCluster = true
                         // A probe still in flight when the timeout fired can land after the
                         // verdict was computed. Never leave a "firmware unsupported" claim
@@ -550,13 +549,10 @@ class ClusterManager(context: Context) {
         // that puts Qt into projection — and DashCast then launched the user's app onto a cluster
         // still rendering the native OEM UI, with no log line saying cmd 16 had been skipped.
         // Only the global timeout actually has to go: the app-side display poll self-terminates
-        // on its poll count, the daemon probe on its deadline, and the cmd-16 watchdog is
-        // one-shot. The generation bump below neutralises all three regardless.
+        // on its poll count, the daemon probe stops after readiness, and the cmd-16 watchdog is
+        // one-shot. The one-shot readiness claim prevents duplicate callbacks without cancelling
+        // cmd 16/cmd 35 that still belong to this activation.
         mHandler.removeCallbacks(timeoutRunnable)
-        // Invalidate this activation: an enumerate still in flight (it lives on the shell worker
-        // and cannot be removed from the handler queue) would otherwise deliver a second
-        // onDisplayReady — duplicate `wm overscan reset`, notification update and launch.
-        mActivationGeneration++
         try {
             dm.unregisterDisplayListener(listenerHolder[0])
         } catch (ignore: Throwable) {
@@ -621,15 +617,13 @@ class ClusterManager(context: Context) {
                 // Inert on DL3/DL5: nothing bumps the generation there except cancel(), which
                 // already flushes this runnable off the handler. On DL4 it stops the poll from
                 // delivering a second onDisplayReady after the daemon resolved the display.
-                if (gen != mActivationGeneration) return
+                if (gen != mActivationGeneration || mReadyGeneration == gen) return
                 pollCount[0]++
                 if (pollCount[0] * POLL_INTERVAL_MS >= CLUSTER_DISPLAY_TIMEOUT_MS) return
 
                 val found = findClusterDisplay(dm)
                 if (found != null) {
-                    mHandler.removeCallbacksAndMessages(null)
-                    // Same reason as onDisplayAdded: kill any daemon probe still in flight.
-                    mActivationGeneration++
+                    if (!claimDisplayReady(gen)) return
                     dm.unregisterDisplayListener(listenerHolder[0])
                     mActiveDisplayListener = null
                     mActiveDisplayManager = null
@@ -924,6 +918,13 @@ class ClusterManager(context: Context) {
         if (gen == mActivationGeneration) mActivationCmd16Dispatched = true
     }
 
+    @Synchronized
+    private fun claimDisplayReady(gen: Int): Boolean {
+        if (gen != mActivationGeneration || mReadyGeneration == gen) return false
+        mReadyGeneration = gen
+        return true
+    }
+
     // ── Cluster display detection ─────────────────────────────────────────
 
     private fun findClusterDisplay(dm: DisplayManager): Display? {
@@ -1058,6 +1059,7 @@ class ClusterManager(context: Context) {
         // Invalidate any in-flight daemon probe / sendInfo callback from this activation: they
         // run on background threads and cannot be removed from the handler queue.
         mActivationGeneration++
+        mReadyGeneration = -1
         mActivationCmd16Dispatched = false
         mDl4ProbeInFlight = false
         mDl4ProbeStartedAt = 0L
