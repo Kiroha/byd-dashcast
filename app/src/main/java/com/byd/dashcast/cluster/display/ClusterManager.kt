@@ -741,8 +741,9 @@ class ClusterManager(context: Context) {
                 override fun onError(err: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: $err")
-                    // Report display anyway — caller decides what to do.
-                    mHandler.post { callback.onDisplayReady(display, display.displayId) }
+                    mHandler.post {
+                        if (gen == mActivationGeneration) callback.onDisplayTimeout()
+                    }
                 }
             })
     }
