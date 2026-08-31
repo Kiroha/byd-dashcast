@@ -991,10 +991,11 @@ public final class FissionOrchestrator {
         final int displayId;
         if (existingId > 0) {
             post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_reuse_fmt, label)));
-            try {
-                FissionClient.resizeSlot(mDaemonBinder, pkg,
-                        rect.left, rect.top, rect.width(), rect.height());
-            } catch (Exception ignored) {}
+            boolean resized = FissionClient.resizeSlot(mDaemonBinder, pkg,
+                    rect.left, rect.top, rect.width(), rect.height());
+            if (!resized) {
+                throw new IllegalStateException("existing slot resize rejected for " + pkg);
+            }
             displayId = existingId;
             AppLogger.i(TAG, "FISSION REUSE_SLOT pkg=" + pkg + " displayId=" + displayId);
         } else {
