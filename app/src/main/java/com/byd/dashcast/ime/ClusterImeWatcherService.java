@@ -76,7 +76,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
     private android.os.HandlerThread mWorkerThread;
     private android.os.Handler       mWorker;
     /** Latest text submitted by {@link #setTextOnCluster(CharSequence)}. */
-    private volatile CharSequence    mPendingText;
+    private final ImePendingText mPendingText = new ImePendingText();
     /** Coalescing window for rapid keystrokes — last-writer-wins. */
     private static final long        SET_TEXT_DEBOUNCE_MS = 80L;
     /**
@@ -88,28 +88,41 @@ public class ClusterImeWatcherService extends AccessibilityService {
      */
     private volatile Runnable mPostedSetText;
     private final ClusterImeRelaySession mRelaySession = new ClusterImeRelaySession();
+    private final ImeActionGate mImeActionGate = new ImeActionGate();
 
     /**
      * Applies [text] to the cluster's focused editable. Takes its text as a parameter — never from
      * a field — so a request cannot be overwritten between being made and being run.
      */
-    private void applyTextOnCluster(CharSequence text) {
+    private boolean applyTextOnCluster(CharSequence text) {
+        return applyTextOnCluster(text, null);
+    }
+
+    private boolean applyTextOnCluster(
+            CharSequence text, ImeActionGate.Operation operation) {
         {
-            if (text == null) return;
+            if (text == null) return false;
             AccessibilityNodeInfo node = findBoundClusterFocusedEditable();
             if (node == null) {
                 AppLogger.w(TAG, "setTextOnCluster no-op: no focused editable on cluster");
-                return;
+                return false;
             }
             try {
+                if (operation != null && !mImeActionGate.isCurrent(operation)) return false;
+                if (!mRelaySession.accepts(activeClusterDisplayId(), node.getPackageName())) {
+                    AppLogger.w(TAG, "setTextOnCluster no-op: relay session changed");
+                    return false;
+                }
                 Bundle args = new Bundle();
                 args.putCharSequence(
                         AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
                         text);
                 boolean ok = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
                 if (!ok) AppLogger.w(TAG, "setTextOnCluster ACTION_SET_TEXT refused");
+                return ok;
             } catch (Throwable t) {
                 AppLogger.e(TAG, "setTextOnCluster failed", t);
+                return false;
             } finally {
                 try { node.recycle(); } catch (Throwable ignored) { }
             }
@@ -168,6 +181,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         try {
             if (sInstance == this) sInstance = null;
         } catch (Throwable ignored) { }
+        mImeActionGate.cancelCurrent();
         // v1.2.24 — Tear down the worker so the HandlerThread does not leak
         // past service unbind (system may rebind us repeatedly).
         try {
@@ -176,7 +190,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         } catch (Throwable ignored) { }
         mWorker = null;
         mWorkerThread = null;
-        mPendingText = null;
+        mPendingText.clear();
         mRelaySession.clear();
         super.onDestroy();
     }
@@ -336,7 +350,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
             return false;
         }
         final CharSequence captured = text == null ? "" : text;
-        self.mPendingText = captured;
+        self.mPendingText.set(captured);
         // AUD-007 — bind the text to the runnable instead of leaving it in a field the runnable
         // will re-read. Cancel only the setter WE posted; a stale handle is harmless.
         Runnable previous = self.mPostedSetText;
@@ -366,7 +380,8 @@ public class ClusterImeWatcherService extends AccessibilityService {
     public static void clearPendingText() {
         ClusterImeWatcherService self = sInstance;
         if (self == null) return;
-        self.mPendingText = null;
+        self.mImeActionGate.cancelCurrent();
+        self.mPendingText.clear();
         self.mRelaySession.clear();
         android.os.Handler worker = self.mWorker;
         Runnable posted = self.mPostedSetText;
@@ -379,11 +394,16 @@ public class ClusterImeWatcherService extends AccessibilityService {
      * (Search / Send / Done depending on the field's {@code imeOptions}).
      * Falls back to a synthesized click on API &lt; 30.
      */
-    public static boolean performImeEnterOnCluster() {
+    public interface ImeActionCallback {
+        void onComplete(boolean accepted);
+    }
+
+    public static void performImeEnterOnCluster(ImeActionCallback callback) {
         ClusterImeWatcherService self = sInstance;
         if (self == null) {
             AppLogger.w(TAG, "performImeEnterOnCluster no-op: a11y service not bound");
-            return false;
+            completeImeAction(callback, false);
+            return;
         }
         // v1.2.24 — Hop to the worker so we never block the UI thread on the
         // a11y tree walk. Flush any pending setText first so Enter sees the
@@ -391,11 +411,20 @@ public class ClusterImeWatcherService extends AccessibilityService {
         final android.os.Handler worker = self.mWorker;
         if (worker == null) {
             AppLogger.w(TAG, "performImeEnterOnCluster no-op: worker not ready");
-            return false;
+            completeImeAction(callback, false);
+            return;
         }
         if (!self.mRelaySession.hasTargetOn(activeClusterDisplayId())) {
             AppLogger.w(TAG, "performImeEnterOnCluster no-op: projection target is no longer active");
-            return false;
+            completeImeAction(callback, false);
+            return;
+        }
+        final ImeActionGate.Operation operation = self.mImeActionGate.begin(
+                accepted -> completeImeAction(callback, accepted));
+        if (operation == null) {
+            AppLogger.w(TAG, "performImeEnterOnCluster ignored: action already in flight");
+            completeImeAction(callback, false);
+            return;
         }
         // AUD-007 — capture NOW, on the caller's thread, at the instant the user pressed Done.
         //
@@ -405,24 +434,37 @@ public class ClusterImeWatcherService extends AccessibilityService {
         // setTextOnCluster(""). So the flush ran with an empty string: the destination the user
         // had typed was wiped and the Enter went out on an empty field. The keyboard bridge's one
         // job, typing a destination and validating it, returned nothing.
-        final CharSequence flush = self.mPendingText;
-        self.mPendingText = null;
+        final ImePendingText.Snapshot pendingText = self.mPendingText.snapshot();
+        final CharSequence flush = pendingText.text;
         Runnable pendingSetter = self.mPostedSetText;
         if (pendingSetter != null) {
             worker.removeCallbacks(pendingSetter);
             self.mPostedSetText = null;
         }
-        worker.post(new Runnable() {
+        boolean posted;
+        try {
+            posted = worker.post(new Runnable() {
             @Override public void run() {
                 // Flush the text as it was when Done was pressed.
                 if (flush != null) {
-                    try { self.applyTextOnCluster(flush); } catch (Throwable ignored) { }
+                    try {
+                        if (!self.applyTextOnCluster(flush, operation)) {
+                            self.mImeActionGate.finish(operation, false);
+                            return;
+                        }
+                    } catch (Throwable ignored) {
+                        self.mImeActionGate.finish(operation, false);
+                        return;
+                    }
                 }
+                if (!self.mImeActionGate.isCurrent(operation)) return;
                 AccessibilityNodeInfo node = self.findBoundClusterFocusedEditable();
                 if (node == null) {
                     AppLogger.w(TAG, "performImeEnterOnCluster no-op: no focused editable on cluster");
+                    self.mImeActionGate.finish(operation, false);
                     return;
                 }
+                boolean accepted = false;
                 try {
                     int actionId;
                     if (Build.VERSION.SDK_INT >= 30) {
@@ -430,15 +472,36 @@ public class ClusterImeWatcherService extends AccessibilityService {
                     } else {
                         actionId = AccessibilityNodeInfo.ACTION_CLICK;
                     }
-                    node.performAction(actionId);
+                    if (self.mImeActionGate.isCurrent(operation)
+                            && self.mRelaySession.accepts(
+                                activeClusterDisplayId(), node.getPackageName())) {
+                        accepted = node.performAction(actionId);
+                    }
+                    if (!accepted) AppLogger.w(TAG, "performImeEnterOnCluster action refused");
                 } catch (Throwable t) {
                     AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
                 } finally {
                     try { node.recycle(); } catch (Throwable ignored) { }
                 }
+                if (accepted) self.mPendingText.clearIfCurrent(pendingText.generation);
+                self.mImeActionGate.finish(operation, accepted);
             }
-        });
-        return true;
+            });
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "performImeEnterOnCluster dispatch failed", t);
+            self.mImeActionGate.finish(operation, false);
+            return;
+        }
+        if (!posted) self.mImeActionGate.finish(operation, false);
+    }
+
+    private static void completeImeAction(ImeActionCallback callback, boolean accepted) {
+        if (callback == null) return;
+        try {
+            callback.onComplete(accepted);
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "IME completion callback failed", t);
+        }
     }
 
     /**
