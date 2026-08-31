@@ -32,4 +32,19 @@ class ClusterActivationGenerationWiringTest {
                 body.contains("gen == mActivationGeneration"))
         }
     }
+
+    @Test
+    fun `display readiness never flushes the activation command queue`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/cluster/display").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(
+            root,
+            "app/src/main/java/com/byd/dashcast/cluster/display/ClusterManager.kt"
+        ).readText()
+
+        assertTrue(Regex("(?m)^\\s*mHandler\\.removeCallbacksAndMessages\\(null\\)")
+            .findAll(source).count() == 1)
+        assertTrue(source.split("claimDisplayReady(gen)").size - 1 == 3)
+    }
 }
