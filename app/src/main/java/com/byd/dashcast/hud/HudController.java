@@ -126,14 +126,13 @@ public final class HudController {
      * <p>If {@code data.distanceMeters} is negative the update is discarded
      * (invalid parse result from the notification listener).
      */
-    public synchronized void updateNavigation(Context ctx, HudNavigationData data) {
-        if (data.distanceMeters < 0) return;
-        if (!isDiLink3Hud(ctx)) return;   // DL3-only feature (video-proven); DL5.1/AAOS excluded
+    public synchronized boolean updateNavigation(Context ctx, HudNavigationData data) {
+        if (data.distanceMeters < 0) return false;
+        if (!isDiLink3Hud(ctx)) return false;   // DL3-only feature (video-proven); DL5.1/AAOS excluded
 
-        // Liveness for the staleness watchdog — refreshed on EVERY notification (even deduped
-        // ones), so the watchdog fires only when nav updates truly STOP, not on an unchanged frame.
+        // Keep the process context before arming the watchdog, but advance its liveness timestamp
+        // only after a guidance output confirms delivery below.
         appContext = ctx.getApplicationContext();
-        lastUpdateMs = SystemClock.elapsedRealtime();
 
         ensureHudActive();
 
@@ -216,10 +215,15 @@ public final class HudController {
         //     (sendInfo2(4, NaviInfo)). Independent of CAN: this is what lights the instrument
         //     cluster, and it is the only arrow source on cars with no windshield HUD. Sent every
         //     update like the OEM does; guarded, never throws.
-        ClusterNavPusher.push(data);
+        boolean clusterGuidanceDelivered = ClusterNavPusher.push(data);
 
         // 5. AMap broadcast — unconditional, the cluster compositor needs it every step.
         sendAmapBroadcast(ctx, data);
+        boolean canGuidanceDelivered = data.iconId == lastIconId
+            && data.distanceMeters == lastDistance;
+        boolean delivered = canGuidanceDelivered || clusterGuidanceDelivered;
+        if (delivered) lastUpdateMs = SystemClock.elapsedRealtime();
+        return delivered;
     }
 
     /**
