@@ -24,6 +24,25 @@ class AdbKeyBackupRulesTest {
         assertTrue(manifest.contains("android:dataExtractionRules=\"@xml/data_extraction_rules\""))
     }
 
+    @Test
+    fun `backup allowlist contains only locale and setup preferences`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/AndroidManifest.xml").isFile }
+        assertTrue("could not locate the repo root", root != null)
+
+        for (name in listOf("backup_rules.xml", "data_extraction_rules.xml")) {
+            val file = File(root, "app/src/main/res/xml/$name")
+            val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+            val includes = document.getElementsByTagName("include")
+            assertTrue(includes.length >= 1)
+            for (index in 0 until includes.length) {
+                val attributes = includes.item(index).attributes
+                assertTrue(attributes.getNamedItem("domain").nodeValue == "sharedpref")
+                assertTrue(attributes.getNamedItem("path").nodeValue == "byd_prefs.xml")
+            }
+        }
+    }
+
     private fun excludedFiles(file: File): Set<String> {
         val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
         val exclusions = document.getElementsByTagName("exclude")
