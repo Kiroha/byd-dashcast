@@ -56,7 +56,7 @@ public class UpdateChecker {
     private static final String RELEASES_LATEST_API =
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases/latest";
     private static final String RELEASES_LIST_API =
-            "https://api.github.com/repos/Kiroha/byd-dashcast/releases?per_page=10";
+            "https://api.github.com/repos/Kiroha/byd-dashcast/releases?per_page=100&page=";
     private static final String APK_CACHE_NAME = "dashcast-update.apk";
     private static final long MAX_APK_BYTES = 100L * 1024L * 1024L;
 
@@ -157,27 +157,25 @@ public class UpdateChecker {
                 .getBoolean(SettingsActivity.PREF_OTA_PRERELEASE,
                         SettingsActivity.DEFAULT_OTA_PRERELEASE);
 
-        // 1. Fetch latest release info from GitHub API.
-        // Always use the list endpoint: /releases/latest only returns non-prerelease
-        // releases, so it gives HTTP 404 when all releases are tagged as pre-release
-        // (which is the case for this repo's beta channel). The list endpoint works
-        // for both stable and pre-release, and lets us filter properly.
+        // 1. Fetch release info from GitHub API. Stable-only users use GitHub's dedicated
+        // endpoint, which cannot be pushed off page 1 by frequent betas. Beta users scan every
+        // page and choose the semantic maximum instead of trusting release creation order.
+        JSONArray list = includePrerelease
+                ? fetchAllReleases()
+                : new JSONArray().put(new JSONObject(httpGet(RELEASES_LATEST_API)));
         JSONObject release = null;
-        String json = httpGet(RELEASES_LIST_API);
-        JSONArray list = new JSONArray(json);
+        String selectedVersion = null;
         for (int i = 0; i < list.length(); i++) {
             JSONObject r = list.getJSONObject(i);
-            // Skip non-app releases: a valid app tag starts with 'v' followed by a digit
-            // (v1.2.3) or directly with a digit (1.2.3). The case that motivated this filter,
-            // the "voice-libs-v1" asset release, outlived the voice subsystem itself — that
-            // release still exists on GitHub, so the guard still earns its place.
             String t = r.getString("tag_name");
             String stripped = t.startsWith("v") ? t.substring(1) : t;
-            if (stripped.isEmpty() || !Character.isDigit(stripped.charAt(0))) continue;
-            // Honour the "include pre-releases" preference.
+            if (!OtaVersionPolicy.isValidReleaseVersion(stripped)) continue;
             if (!includePrerelease && r.optBoolean("prerelease", false)) continue;
-            release = r;
-            break;
+            if (selectedVersion == null
+                    || OtaVersionPolicy.compareVersions(stripped, selectedVersion) > 0) {
+                release = r;
+                selectedVersion = stripped;
+            }
         }
         if (release == null) {
             AppLogger.i(TAG, "No eligible release found (includePrerelease=" + includePrerelease + ")");
@@ -230,6 +228,15 @@ public class UpdateChecker {
 
         final ReleaseAsset finalAsset = selectedAsset;
         if (listener != null) ui.post(() -> listener.onUpdateFound(finalAsset));
+    }
+
+    private static JSONArray fetchAllReleases() throws Exception {
+        JSONArray all = new JSONArray();
+        for (int page = 1; ; page++) {
+            JSONArray batch = new JSONArray(httpGet(RELEASES_LIST_API + page));
+            for (int i = 0; i < batch.length(); i++) all.put(batch.getJSONObject(i));
+            if (batch.length() < 100) return all;
+        }
     }
 
     // ── Version comparison ────────────────────────────────────────────────────
