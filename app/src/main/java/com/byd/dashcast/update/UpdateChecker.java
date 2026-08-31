@@ -10,7 +10,9 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInstaller;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +28,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.util.Arrays;
 
 /**
  * OTA update checker.
@@ -54,12 +58,32 @@ public class UpdateChecker {
     private static final String RELEASES_LIST_API =
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases?per_page=10";
     private static final String APK_CACHE_NAME = "dashcast-update.apk";
+    private static final long MAX_APK_BYTES = 100L * 1024L * 1024L;
+
+    public static final class ReleaseAsset {
+        public final String version;
+        public final String changelog;
+        public final String downloadUrl;
+        public final String name;
+        public final long size;
+        public final String sha256;
+
+        ReleaseAsset(String version, String changelog, String downloadUrl,
+                     String name, long size, String sha256) {
+            this.version = version;
+            this.changelog = changelog;
+            this.downloadUrl = downloadUrl;
+            this.name = name;
+            this.size = size;
+            this.sha256 = sha256;
+        }
+    }
 
     // ── Progress callback (all methods called on the main thread) ─────────────
 
     public interface ProgressListener {
         /** A newer version was found; download is about to start. */
-        void onUpdateFound(String version, String changelog, String downloadUrl);
+        void onUpdateFound(ReleaseAsset asset);
         /** Download progress, 0-100. -1 = indeterminate (Content-Length unknown). */
         void onDownloadProgress(int percent);
         /** Download complete; installation is starting. */
@@ -76,7 +100,8 @@ public class UpdateChecker {
      * Call from MainActivity.onCreate() (fresh launch) or from the overflow menu.
      * @param listener optional UI callback; all methods dispatched on the main thread.
      */
-    public static void startDownload(final Context context, final String apkUrl, final ProgressListener listener) {
+    public static void startDownload(final Context context, final ReleaseAsset asset,
+                                     final ProgressListener listener) {
         if (!sDownloading.compareAndSet(false, true)) {
             AppLogger.w(TAG, "startDownload: download already in progress — ignored");
             return;
@@ -85,7 +110,8 @@ public class UpdateChecker {
         new Thread(() -> {
             try {
                 File apkFile = resolveApkFile(context);
-                downloadToFile(apkUrl, apkFile, listener, ui);
+                downloadToFile(asset, apkFile, listener, ui);
+                validateDownloadedApk(context, apkFile, asset);
                 AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
                 if (listener != null) ui.post(listener::onInstalling);
                 installApk(context, apkFile);
@@ -174,22 +200,36 @@ public class UpdateChecker {
 
         // 2. Find APK asset URL
         JSONArray assets = release.getJSONArray("assets");
-        String apkUrl = null;
+        String expectedName = "DashCast-v" + latestVer + "-release.apk";
+        ReleaseAsset selectedAsset = null;
         for (int i = 0; i < assets.length(); i++) {
             JSONObject asset = assets.getJSONObject(i);
-            if (asset.getString("name").endsWith(".apk")) {
-                apkUrl = asset.getString("browser_download_url");
-                break;
+            String name = asset.optString("name", "");
+            if (expectedName.equals(name)) {
+                long size = asset.optLong("size", -1L);
+                if (size <= 0L || size > MAX_APK_BYTES) {
+                    throw new Exception("Invalid APK asset size: " + size);
+                }
+                String digest = asset.optString("digest", "");
+                String sha256 = digest.startsWith("sha256:") ? digest.substring(7) : "";
+                selectedAsset = new ReleaseAsset(
+                        latestVer,
+                        changelog,
+                        asset.getString("browser_download_url"),
+                        name,
+                        size,
+                        sha256);
             }
         }
-        if (apkUrl == null) {
-            AppLogger.e(TAG, "No APK asset found in release " + latestVer);
-            if (listener != null) ui.post(() -> listener.onError("No APK asset in release " + latestVer));
+        if (selectedAsset == null) {
+            AppLogger.e(TAG, "No exact release APK found in release " + latestVer);
+            if (listener != null) ui.post(() -> listener.onError(
+                    "No verified release APK in release " + latestVer));
             return;
         }
 
-        final String finalApkUrl = apkUrl;
-        if (listener != null) ui.post(() -> listener.onUpdateFound(latestVer, changelog, finalApkUrl));
+        final ReleaseAsset finalAsset = selectedAsset;
+        if (listener != null) ui.post(() -> listener.onUpdateFound(finalAsset));
     }
 
     // ── Version comparison ────────────────────────────────────────────────────
@@ -229,8 +269,9 @@ public class UpdateChecker {
         }
     }
 
-    private static void downloadToFile(String urlStr, File dest,
+    private static void downloadToFile(ReleaseAsset asset, File dest,
                                        ProgressListener listener, Handler ui) throws Exception {
+        String urlStr = asset.downloadUrl;
         HttpURLConnection conn = openConnection(urlStr);
         try {
             int code = conn.getResponseCode();
@@ -253,6 +294,10 @@ public class UpdateChecker {
             if (code != 200) throw new Exception("Download HTTP " + code);
 
             long total = conn.getContentLengthLong(); // -1 if unknown
+            if (total > 0 && total != asset.size) {
+                throw new Exception("APK Content-Length mismatch: expected="
+                        + asset.size + " actual=" + total);
+            }
             long downloaded = 0;
             int lastPercent = -2; // -2 so first call with -1 (indeterminate) always fires
 
@@ -261,6 +306,9 @@ public class UpdateChecker {
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = in.read(buf)) != -1) {
+                    if (downloaded + n > asset.size || downloaded + n > MAX_APK_BYTES) {
+                        throw new Exception("APK download exceeds declared size " + asset.size);
+                    }
                     out.write(buf, 0, n);
                     downloaded += n;
                     if (listener != null) {
@@ -273,6 +321,10 @@ public class UpdateChecker {
                     }
                 }
             }
+            if (downloaded != asset.size) {
+                throw new Exception("APK download size mismatch: expected="
+                        + asset.size + " actual=" + downloaded);
+            }
         } finally {
             conn.disconnect();
         }
@@ -283,8 +335,86 @@ public class UpdateChecker {
         conn.setConnectTimeout(10_000);
         conn.setReadTimeout(60_000);
         conn.setRequestProperty("User-Agent", "DashCast/" + BuildConfig.VERSION_NAME);
-        conn.setInstanceFollowRedirects(true);
+        conn.setInstanceFollowRedirects(false);
         return conn;
+    }
+
+    private static void validateDownloadedApk(Context context, File apkFile,
+                                              ReleaseAsset asset) throws Exception {
+        if (!asset.sha256.isEmpty()) {
+            String actual = sha256(apkFile);
+            if (!asset.sha256.equalsIgnoreCase(actual)) {
+                throw new Exception("APK SHA-256 mismatch");
+            }
+        }
+        PackageManager pm = context.getPackageManager();
+        PackageInfo downloaded = pm.getPackageArchiveInfo(
+                apkFile.getAbsolutePath(), PackageManager.GET_SIGNING_CERTIFICATES);
+        PackageInfo installed = pm.getPackageInfo(
+                context.getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES);
+        if (downloaded == null || downloaded.applicationInfo == null) {
+            throw new Exception("Downloaded file is not a readable APK");
+        }
+        if (!context.getPackageName().equals(downloaded.packageName)) {
+            throw new Exception("APK package mismatch");
+        }
+        if (!asset.version.equals(downloaded.versionName)) {
+            throw new Exception("APK versionName mismatch");
+        }
+        if (downloaded.getLongVersionCode() <= BuildConfig.VERSION_CODE) {
+            throw new Exception("APK versionCode is not newer");
+        }
+        if ((downloaded.applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            throw new Exception("Debuggable APK refused");
+        }
+        Signature[] downloadedSigners = downloaded.signingInfo == null
+                ? null : downloaded.signingInfo.getApkContentsSigners();
+        Signature[] installedSigners = installed.signingInfo == null
+                ? null : installed.signingInfo.getApkContentsSigners();
+        if (!sameSignerSet(downloadedSigners, installedSigners)) {
+            throw new Exception("APK signer mismatch");
+        }
+    }
+
+    static boolean sameSignerSet(Signature[] left, Signature[] right) {
+        if (left == null || right == null || left.length == 0 || left.length != right.length) {
+            return false;
+        }
+        byte[][] leftBytes = new byte[left.length][];
+        byte[][] rightBytes = new byte[right.length][];
+        for (int i = 0; i < left.length; i++) leftBytes[i] = left[i].toByteArray();
+        for (int i = 0; i < right.length; i++) rightBytes[i] = right[i].toByteArray();
+        return sameByteSet(leftBytes, rightBytes);
+    }
+
+    static boolean sameByteSet(byte[][] leftBytes, byte[][] rightBytes) {
+        if (leftBytes == null || rightBytes == null
+                || leftBytes.length == 0 || leftBytes.length != rightBytes.length) {
+            return false;
+        }
+        java.util.Comparator<byte[]> comparator = (a, b) -> {
+            int length = Math.min(a.length, b.length);
+            for (int i = 0; i < length; i++) {
+                int cmp = Integer.compare(a[i] & 0xff, b[i] & 0xff);
+                if (cmp != 0) return cmp;
+            }
+            return Integer.compare(a.length, b.length);
+        };
+        Arrays.sort(leftBytes, comparator);
+        Arrays.sort(rightBytes, comparator);
+        return Arrays.deepEquals(leftBytes, rightBytes);
+    }
+
+    private static String sha256(File file) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream in = new FileInputStream(file)) {
+            byte[] buffer = new byte[64 * 1024];
+            int count;
+            while ((count = in.read(buffer)) != -1) digest.update(buffer, 0, count);
+        }
+        StringBuilder out = new StringBuilder(64);
+        for (byte value : digest.digest()) out.append(String.format("%02x", value & 0xff));
+        return out.toString();
     }
 
     private static String readStream(InputStream is) throws Exception {
