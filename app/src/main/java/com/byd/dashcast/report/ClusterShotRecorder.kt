@@ -17,9 +17,10 @@ import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.util.AppLogger
+import com.byd.dashcast.util.concurrent.AbandonableTaskGate
+import com.byd.dashcast.util.concurrent.RecoverableSerialExecutor
 import java.io.File
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -67,9 +68,10 @@ object ClusterShotRecorder {
 
     private const val PREF_ENABLED = "capture_screenshots_enabled"
 
-    private val sExecutor = Executors.newSingleThreadExecutor { r ->
+    private val sExecutor = RecoverableSerialExecutor { r ->
         Thread(r, "cluster-shot-recorder").apply { isDaemon = true }
     }
+    private val sPullGate = AbandonableTaskGate()
 
     // AUD-PERF-P1 — latched when a cluster projection comes up, cleared when it goes away.
     // Drives the cadence ramp above; measured from when the cluster actually appeared, not from
@@ -393,7 +395,12 @@ object ClusterShotRecorder {
      */
     @JvmStatic
     fun pullShotsInto(ctx: Context, destDir: File): Int {
-        var pendingPull: java.util.concurrent.Future<Int>? = null
+        val attempt = sPullGate.tryAcquire()
+        if (attempt == null) {
+            AppLogger.w(TAG, "previous timed-out screenshot pull still blocked — skipping attachments")
+            return 0
+        }
+        var pendingPull: RecoverableSerialExecutor.Submission<Int>? = null
         return try {
             // Two bounds, because the screenshots are an OPTIONAL attachment and the report is not.
             //
@@ -408,37 +415,35 @@ object ClusterShotRecorder {
             // of site (BugReportCapture.hudStateSnapshot:455/464). The verbs fail fast instead of
             // waiting for a bootstrap, and a missing screenshot is strictly better than a report
             // that never leaves. Restored in a finally because the pooled thread is reused.
-            pendingPull = sExecutor.submit<Int> {
-                ProxyClient.setNonBlockingReconnect(true)
+            pendingPull = sExecutor.submit(java.util.concurrent.Callable {
+                if (!attempt.enter()) return@Callable 0
                 try {
-                    pullShotsIntoNow(ctx.applicationContext, destDir)
+                    ProxyClient.setNonBlockingReconnect(true)
+                    try {
+                        pullShotsIntoNow(ctx.applicationContext, destDir, attempt::shouldContinue)
+                    } finally {
+                        ProxyClient.setNonBlockingReconnect(false)
+                    }
                 } finally {
-                    ProxyClient.setNonBlockingReconnect(false)
+                    attempt.complete()
                 }
-            }
-            pendingPull.get(PULL_BUDGET_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            })
+            pendingPull.future.get(PULL_BUDGET_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
         } catch (te: java.util.concurrent.TimeoutException) {
-            // Whatever landed in destDir before the budget expired is still attached — that part is
-            // deliberate and unchanged. What was missing is the cancel.
-            //
-            // sExecutor is ONE thread, shared with captureRound and prune, and that sharing is
-            // load-bearing: prune runs `rm -f shot_*.jpg` over the very files a pull is copying, so
-            // serialising them is what stops a purge deleting a shot mid-copy. Do NOT "fix" this by
-            // giving the pull its own executor — that trades a starvation window for a
-            // delete-during-copy race.
-            //
-            // The consequence of the sharing is that a wedged pull holds the only worker, so every
-            // periodic capture and prune queues behind it for as long as it runs. Cancelling bounds
-            // that to the budget wherever the work is interruptible. Where it is not — a blocking
-            // binder transact into a wedged daemon — the interrupt is a request, not a guarantee,
-            // and the old behaviour stands.
-            pendingPull?.cancel(true)
+            attempt.cancel()
+            pendingPull?.let { sExecutor.retire(it) }
+            attempt.releaseIfNotRunning()
             AppLogger.w(TAG, "pull shots exceeded ${PULL_BUDGET_MS}ms — sending without them")
             0
         } catch (ie: InterruptedException) {
+            attempt.cancel()
+            pendingPull?.let { sExecutor.retire(it) }
+            attempt.releaseIfNotRunning()
             Thread.currentThread().interrupt()
             0
         } catch (t: Throwable) {
+            attempt.cancel()
+            attempt.releaseIfNotRunning()
             AppLogger.w(TAG, "pull shots failed: ${t.message}")
             0
         }
@@ -454,18 +459,32 @@ object ClusterShotRecorder {
      */
     private const val PULL_BUDGET_MS = 20_000L
 
-    private fun pullShotsIntoNow(ctx: Context, destDir: File): Int {
+    private fun pullShotsIntoNow(
+        ctx: Context,
+        destDir: File,
+        shouldContinue: () -> Boolean,
+    ): Int {
         val shots = listRemoteShots(ctx)
         if (shots.isEmpty()) return 0
         if (!destDir.exists()) destDir.mkdirs()
         var n = 0
         for (remote in shots) {
+            if (!shouldContinue()) break
+            var partial: File? = null
             try {
                 val name = remote.substringAfterLast('/')
-                val bytes = HudCaptureSupport.pullRemoteFile(remote, File(destDir, name))
-                if (bytes > 0) n++
+                val destination = File(destDir, name)
+                partial = File(destDir, ".$name.${System.nanoTime()}.pull")
+                val bytes = HudCaptureSupport.pullRemoteFile(remote, partial)
+                if (!shouldContinue()) break
+                if (bytes > 0 && partial.renameTo(destination)) {
+                    partial = null
+                    n++
+                }
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "pull $remote failed: ${t.message}")
+            } finally {
+                partial?.delete()
             }
         }
         return n
