@@ -78,6 +78,9 @@ public class KeyboardBridgeActivity extends Activity {
 
     /** AUD-007 — true while this activity edits its own field; such edits are not relayed. */
     private boolean mSuppressRelay = false;
+    private long mInputGeneration = 0L;
+    private boolean mImeActionInFlight = false;
+    private long mImeActionGeneration = 0L;
     private InputMethodManager mImm;
 
     @Override
@@ -125,21 +128,38 @@ public class KeyboardBridgeActivity extends Activity {
                         || actionId == EditorInfo.IME_ACTION_GO
                         || actionId == EditorInfo.IME_ACTION_SEARCH
                         || actionId == EditorInfo.IME_ACTION_SEND) {
-                    boolean ok = false;
+                    if (mImeActionInFlight) return true;
+                    mImeActionInFlight = true;
+                    final long actionGeneration = ++mImeActionGeneration;
+                    final String submitted = mInput == null || mInput.getText() == null
+                            ? "" : mInput.getText().toString();
+                        final long submittedGeneration = mInputGeneration;
                     try {
-                        ok = ClusterImeWatcherService.performImeEnterOnCluster();
+                        ClusterImeWatcherService.performImeEnterOnCluster(
+                                new ClusterImeWatcherService.ImeActionCallback() {
+                            @Override public void onComplete(final boolean accepted) {
+                                runOnUiThread(new Runnable() {
+                                    @Override public void run() {
+                                        if (actionGeneration != mImeActionGeneration) return;
+                                        mImeActionInFlight = false;
+                                        if (!accepted || isFinishing() || isDestroyed()
+                                                || mInput == null || mInput.getText() == null
+                                            || submittedGeneration != mInputGeneration
+                                                || !submitted.contentEquals(mInput.getText())) {
+                                            return;
+                                        }
+                                        mSuppressRelay = true;
+                                        try { mInput.setText(""); } catch (Throwable ignored) { }
+                                        finally { mSuppressRelay = false; }
+                                    }
+                                });
+                            }
+                        });
                     } catch (Throwable t) {
+                        if (actionGeneration == mImeActionGeneration) {
+                            mImeActionInFlight = false;
+                        }
                         AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
-                    }
-                    if (ok) {
-                        // AUD-007 — reset the LOCAL field for the next session, without relaying
-                        // it. This clear is housekeeping, not something the user typed, and the
-                        // TextWatcher below would otherwise forward it to the cluster as
-                        // setTextOnCluster("") — landing after the Enter and wiping the field the
-                        // user had just validated. Half of this finding was this line.
-                        mSuppressRelay = true;
-                        try { mInput.setText(""); } catch (Throwable ignored) { }
-                        finally { mSuppressRelay = false; }
                     }
                     return true;
                 }
@@ -469,6 +489,8 @@ public class KeyboardBridgeActivity extends Activity {
      * nothing.
      */
     private void endSession() {
+        mImeActionGeneration++;
+        mImeActionInFlight = false;
         try { ClusterImeWatcherService.clearPendingText(); } catch (Throwable ignored) { }
         if (mInput != null) {
             mSuppressRelay = true;
@@ -494,6 +516,7 @@ public class KeyboardBridgeActivity extends Activity {
             // AUD-007 — a change this activity made to its own field is not a change the user
             // made, and must not travel to the cluster.
             if (mSuppressRelay) return;
+            mInputGeneration++;
             try {
                 ClusterImeWatcherService.setTextOnCluster(s == null ? "" : s.toString());
             } catch (Throwable t) {
