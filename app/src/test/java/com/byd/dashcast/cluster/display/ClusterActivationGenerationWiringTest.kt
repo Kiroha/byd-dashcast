@@ -47,4 +47,21 @@ class ClusterActivationGenerationWiringTest {
             .findAll(source).count() == 1)
         assertTrue(source.split("claimDisplayReady(gen)").size - 1 == 3)
     }
+
+    @Test
+    fun `warm cmd16 failure cannot report the display ready`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/cluster/display").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(
+            root,
+            "app/src/main/java/com/byd/dashcast/cluster/display/ClusterManager.kt"
+        ).readText()
+        val warm = source.substringAfter("private fun sendWarmCmd16")
+            .substringBefore("private fun latchPanelGeometry")
+        val error = warm.substringAfter("override fun onError")
+
+        assertTrue(error.contains("callback.onDisplayTimeout()"))
+        assertTrue(!error.contains("callback.onDisplayReady"))
+    }
 }
