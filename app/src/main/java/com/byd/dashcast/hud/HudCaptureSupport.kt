@@ -180,11 +180,16 @@ object HudCaptureSupport {
      * the app uid. Returns the number of bytes written.
      */
     fun pullRemoteFile(remotePath: String, dest: File): Long {
+        return pullRemoteFile(remotePath, dest) { true }
+    }
+
+    fun pullRemoteFile(remotePath: String, dest: File, shouldContinue: () -> Boolean): Long {
         val chunkSize = 256 * 1024
         var offset = 0L
         FileOutputStream(dest).use { fos ->
-            while (true) {
+            while (shouldContinue()) {
                 val chunk = ProxyClient.readFileChunk(remotePath, offset, chunkSize)
+                if (!shouldContinue()) break
                 if (chunk.isEmpty()) break
                 fos.write(chunk)
                 offset += chunk.size
