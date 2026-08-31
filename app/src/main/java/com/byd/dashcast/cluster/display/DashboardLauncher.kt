@@ -34,6 +34,33 @@ class DashboardLauncher(context: Context) {
 
     fun getDashboardDisplayId(): Int = mDashboardDisplayId
 
+    /** Builds the same display/freeform options used by normal dashboard launches. */
+    fun createLaunchOptions(displayId: Int, requestedBounds: Rect? = null): ActivityOptions {
+        ensureLaunchMethodsCached()
+        val options = ActivityOptions.makeCustomAnimation(mContext, 0, 0)
+        val setDisplayId = sCachedSetLaunchDisplayId
+            ?: throw NoSuchMethodException("setLaunchDisplayId absent on this ROM")
+        setDisplayId.invoke(options, displayId)
+        sCachedSetLaunchWindowingMode?.invoke(options, 5)
+
+        val bounds = requestedBounds ?: run {
+            val size = Point(1920, 720)
+            val dm = mContext.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val targetDisplay = dm?.getDisplay(displayId)
+            if (targetDisplay != null) {
+                targetDisplay.getRealSize(size)
+            } else {
+                val info = ClusterDisplayRegistry.forDisplayId(displayId)
+                if (info != null && info.width > 0 && info.height > 0) {
+                    size.set(info.width, info.height)
+                }
+            }
+            Rect(0, 0, size.x, size.y)
+        }
+        sCachedSetLaunchBounds?.invoke(options, bounds)
+        return options
+    }
+
     /** Launches an app on the main display (display ID 0). */
     fun launchOnMainDisplay(packageName: String): Boolean {
         val launchIntent = mContext.packageManager.getLaunchIntentForPackage(packageName)

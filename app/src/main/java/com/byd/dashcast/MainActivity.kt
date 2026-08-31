@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.content.pm.LauncherApps
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -41,6 +43,7 @@ import com.byd.dashcast.ime.KeyboardBridgeActivity
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.infrastructure.task.TaskLocation
 import com.byd.dashcast.model.AppInfo
+import com.byd.dashcast.model.AppShortcut
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.DaemonBroadcastRegistrar
@@ -112,6 +115,7 @@ class MainActivity : AppCompatActivity(),
     private val mAppRepo = AppRepository()
     private var mPendingAutoLaunchPkg: String? = null
     private var mPendingAppAfterActivation: AppInfo? = null
+    private var mPendingShortcutAfterActivation: Pair<AppInfo, AppShortcut>? = null
     private var mMissingAutoLayoutToastShown = false
     private val mDashboardSelectionTracker = DashboardSelectionTracker()
 
@@ -710,6 +714,11 @@ class MainActivity : AppCompatActivity(),
             }
 
             // Pending app from "activate cluster" dialog.
+            val pendingShortcut = mPendingShortcutAfterActivation
+            if (pendingShortcut != null) {
+                mPendingShortcutAfterActivation = null
+                onLaunchShortcut(pendingShortcut.first, pendingShortcut.second)
+            }
             val pending = mPendingAppAfterActivation
             if (pending != null) {
                 mPendingAppAfterActivation = null
@@ -816,6 +825,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToDashboard(app: AppInfo) {
+        mPendingShortcutAfterActivation = null
         // A running Layout app already owns a dedicated VD. A normal launch here would start a
         // competing classic projection; instead, make this app the tactile mirror target.
         if (FissionOrchestrator.isLayoutPackage(app.packageName)) {
@@ -828,53 +838,7 @@ class MainActivity : AppCompatActivity(),
             return
         }
         val selectionGeneration = selection.generation
-        // DX_BYD_AUTO (Android Automotive): the instrument cluster is owned by the AAOS
-        // cluster-rendering pipeline and is unreachable to us (the automotive display HIDL stub
-        // is absent AND SELinux denies the HAL even to uid 2000 — proven on-car, 1.6.74). App
-        // projection is impossible here, so explain it clearly instead of looping forever on a
-        // silent activation failure. (Only DX_BYD_AUTO is FEATURE_AUTOMOTIVE; DL3/DL5 are not.)
-        if (com.byd.dashcast.hud.AaosClusterProbe.isAaos(this)) {
-            AppLogger.i(TAG, "onSendToDashboard: AAOS detected — cluster projection unsupported, informing user")
-            AlertDialog.Builder(this)
-                .setTitle(R.string.aaos_cluster_unsupported_title)
-                .setMessage(R.string.aaos_cluster_unsupported_msg)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-            return
-        }
-        // DL3 single-OS fission (ro.build.system.fission_single_os==1): the cluster is rendered
-        // natively (Qt/fission) with NO projectable Android display (only Display 0; AutoContainer
-        // creates none → "no AutoContainerNative") — proven by working(=0)/failing(=1) on-car diff.
-        // App projection is impossible here, so explain it instead of looping 12s on activation.
-        // STRICT + safe: only DL3 (isDiLink3) AND single-OS — a real DL5.1 (also single-OS but
-        // isDiLink3=false) and a normal 1-for-2 DL3 (fission_single_os==0) are NOT affected.
-        if (com.byd.dashcast.platform.Platform.get().isDiLink3(this)
-                && com.byd.dashcast.platform.Platform.isClusterSingleOs()) {
-            AppLogger.i(TAG, "onSendToDashboard: DL3 single-OS fission (fission_single_os=1) — cluster projection unsupported, informing user")
-            AlertDialog.Builder(this)
-                .setTitle(R.string.dl3_singleos_cluster_unsupported_title)
-                .setMessage(R.string.dl3_singleos_cluster_unsupported_msg)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-            return
-        }
-        // DiLink 4.0 whose firmware hides the cluster display from BOTH the app process and the
-        // uid-2000 daemon. On DL4 the OEM patched DisplayManagerService.getDisplayIdsInternal
-        // with an app whitelist we are not on, so an empty app-side enumeration proves nothing —
-        // this only fires once a SUCCESSFUL daemon `dumpsys display` also listed no cluster
-        // display (ClusterManager records the verdict at the activation timeout; a shell that
-        // merely failed to answer leaves it false). Without this the tester just re-triggers a
-        // 20 s activation that cannot succeed. STRICT: isDiLink4() is false on DL3 and DL5.
-        if (com.byd.dashcast.platform.Platform.get().isDiLink4(this)
-                && com.byd.dashcast.cluster.display.ClusterManager.isDl4ProjectionUnavailable()) {
-            AppLogger.i(TAG, "onSendToDashboard: DL4 — cluster display invisible to app AND daemon, informing user")
-            AlertDialog.Builder(this)
-                .setTitle(R.string.dl4_cluster_unsupported_title)
-                .setMessage(R.string.dl4_cluster_unsupported_msg)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-            return
-        }
+        if (rejectUnsupportedDashboardProjection()) return
         val svc = mClusterService
         if (svc == null) {
             // v1.2.76 — auto-trigger activateCluster() and replay the app once the service is up.
@@ -1091,6 +1055,167 @@ class MainActivity : AppCompatActivity(),
         } else {
             proceedMove()
         }
+    }
+
+    override fun onLaunchShortcut(app: AppInfo, shortcut: AppShortcut) {
+        mDashboardSelectionTracker.begin(null)
+        mPendingAppAfterActivation = null
+        mPendingShortcutAfterActivation = null
+        if (rejectUnsupportedDashboardProjection()) return
+
+        val layoutTarget = if (FissionOrchestrator.isLayoutPackage(app.packageName)) {
+            FissionOrchestrator.selectLayoutMirrorPackage(app.packageName)
+        } else null
+        val service = mClusterService
+        val targetDisplayId = layoutTarget?.displayId ?: (service?.displayId ?: -1)
+        if (targetDisplayId <= 0) {
+            if (layoutTarget != null) return
+            mPendingShortcutAfterActivation = app to shortcut
+            activateCluster()
+            return
+        }
+
+        val split = if (layoutTarget == null) mSplitController else null
+        var splitBounds: Rect? = null
+        var splitOccupantToStop: String? = null
+        if (split != null && split.isInSplitMode() && mCurrentDashboardPkg != null) {
+            if (app.packageName == mCurrentDashboardPkg ||
+                app.packageName == split.getSecondDashboardPkg()) {
+                Toast.makeText(applicationContext, getString(R.string.toast_app_already_cluster),
+                    Toast.LENGTH_SHORT).show()
+                return
+            }
+            val dimensions = split.getClusterDimensions()
+            val left = if (split.getCurrentSplitSlot() == 1) dimensions[0] / 2 else 0
+            val right = if (split.getCurrentSplitSlot() == 1) dimensions[0] else dimensions[0] / 2
+            splitBounds = Rect(left, 0, right, dimensions[1])
+            splitOccupantToStop = split.getSecondDashboardPkg()
+        }
+
+        fun launch() {
+            if (layoutTarget == null &&
+                (mClusterService !== service || service?.displayId != targetDisplayId)) {
+                mPendingShortcutAfterActivation = app to shortcut
+                activateCluster()
+                return
+            }
+            try {
+                val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
+                    ?: throw IllegalStateException("LauncherApps unavailable")
+                val layoutBounds = layoutTarget?.let { Rect(0, 0, it.width, it.height) }
+                val options = mDashboardLauncher.createLaunchOptions(
+                    targetDisplayId, splitBounds ?: layoutBounds)
+                launcherApps.startShortcut(
+                    app.packageName,
+                    shortcut.id,
+                    null,
+                    options.toBundle(),
+                    android.os.Process.myUserHandle(),
+                )
+                ClusterPrefs.incrementLaunchCount(this, app.packageName)
+                if (layoutTarget != null) {
+                    selectLayoutMirror(app.packageName)
+                    return
+                }
+                val activeSplitBounds = splitBounds
+                if (split != null && activeSplitBounds != null) {
+                    mLastLaunchTime = System.currentTimeMillis()
+                    split.setSecondDashboardApp(app.appName)
+                    split.setSecondDashboardPkg(app.packageName)
+                    mSessionTracker.remove(app.packageName)
+                    mSessionTracker.add(app.packageName)
+                    updateControlLabel()
+                    return
+                }
+                if (app.packageName == mMainDisplayPkg) {
+                    mMainDisplayPkg = null
+                    mAppListCoordinator.setMainPackage(null)
+                    ClusterPrefs.setMainPkg(this, null)
+                }
+                mLastLaunchTime = System.currentTimeMillis()
+                mUsageTracker.trackStop(mCurrentDashboardPkg)
+                mSessionTracker.remove(app.packageName)
+                mCurrentDashboardApp = app.appName
+                mCurrentDashboardPkg = app.packageName
+                mSessionTracker.add(app.packageName)
+                ClusterPrefs.addRecentApp(this, app.packageName, app.appName)
+                mUsageTracker.trackStart()
+                ClusterPrefs.setClusterPkg(this, app.packageName)
+                ClusterPrefs.setClusterName(this, app.appName)
+                ClusterPrefs.setLastCluster(this, app.packageName, app.appName)
+                mAppListCoordinator.setCurrentPackage(app.packageName)
+                updateDashboardStatus(app.appName)
+                updateControlLabel()
+                startClusterMirror()
+                mScreenshotHandler.postDelayed({
+                    if (isFinishing || isDestroyed) return@postDelayed
+                    if (app.packageName != mCurrentDashboardPkg) return@postDelayed
+                    service?.enforceTaskOnDisplay(app.packageName, targetDisplayId)
+                }, 2500L)
+                mInsetApplicator.apply(app.packageName)
+            } catch (error: Exception) {
+                AppLogger.e(TAG, "shortcut launch failed ${app.packageName}/${shortcut.id}", error)
+                Toast.makeText(applicationContext,
+                    getString(R.string.toast_app_launch_failed, app.appName), Toast.LENGTH_LONG).show()
+            }
+        }
+
+        val previous = mCurrentDashboardPkg
+        if (splitOccupantToStop != null) {
+            AdbLocalClient.forceStopApp(this, splitOccupantToStop, object : AdbLocalClient.Callback {
+                override fun onSuccess(report: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                }
+                override fun onError(error: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                }
+            })
+        } else if (layoutTarget == null && splitBounds == null &&
+            previous != null && previous != app.packageName
+                && service != null && !service.isMoveTaskToDisplaySupported()) {
+            AdbLocalClient.forceStopApp(this, previous, object : AdbLocalClient.Callback {
+                override fun onSuccess(report: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                }
+                override fun onError(error: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                }
+            })
+        } else {
+            launch()
+        }
+    }
+
+    private fun rejectUnsupportedDashboardProjection(): Boolean {
+        if (com.byd.dashcast.hud.AaosClusterProbe.isAaos(this)) {
+            AppLogger.i(TAG, "Dashboard projection unavailable on AAOS")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.aaos_cluster_unsupported_title)
+                .setMessage(R.string.aaos_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return true
+        }
+        if (Platform.get().isDiLink3(this) && Platform.isClusterSingleOs()) {
+            AppLogger.i(TAG, "Dashboard projection unavailable on DL3 single-OS")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dl3_singleos_cluster_unsupported_title)
+                .setMessage(R.string.dl3_singleos_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return true
+        }
+        if (Platform.get().isDiLink4(this) &&
+            com.byd.dashcast.cluster.display.ClusterManager.isDl4ProjectionUnavailable()) {
+            AppLogger.i(TAG, "Dashboard projection unavailable on DL4")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dl4_cluster_unsupported_title)
+                .setMessage(R.string.dl4_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return true
+        }
+        return false
     }
 
     override fun onSendToMain(app: AppInfo) {
