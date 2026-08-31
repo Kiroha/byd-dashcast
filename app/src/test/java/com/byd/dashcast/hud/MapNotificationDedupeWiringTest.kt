@@ -42,4 +42,20 @@ class MapNotificationDedupeWiringTest {
         ))
     }
 
+    @Test
+    fun `listener disconnect clears dedupe state before closing`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/hud").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.java"
+        ).readText()
+        val disconnected = source.substringAfter("public void onListenerDisconnected()")
+            .substringBefore("@Override", "")
+
+        assertTrue(disconnected.indexOf("clearTrackedNavigation()") in
+            0 until disconnected.indexOf("postNavClose()"))
+    }
+
 }

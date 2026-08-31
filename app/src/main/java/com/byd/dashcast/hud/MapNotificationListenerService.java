@@ -560,6 +560,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     @Override
     public void onDestroy() {
+        clearTrackedNavigation();
         LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
         hudDispatcher = null;
         Context ctx = appContext;
@@ -599,6 +600,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         super.onListenerDisconnected();
         // System unbound the listener (e.g. permission revoked, system crash).
         // Close the HUD so the cluster doesn't stay frozen on the last nav state.
+        clearTrackedNavigation();
         postNavClose();
     }
 
@@ -920,6 +922,11 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastSubText = "";
         lastNotificationKey = null;
         lastContentReachedHud = false;
+    }
+
+    private void clearTrackedNavigation() {
+        sDrivingKey = null;
+        resetNotificationIdentity();
     }
 
     // ─── HUD write dispatch (serial writer thread) ────────────────────────
