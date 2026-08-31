@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 
 /**
  * The bot token, on both of the paths that can carry it out of the car.
@@ -142,5 +144,37 @@ class BotTokenRedactionTest {
     fun `the scrub survives a null message`() {
         // Throwable.message is nullable, and this runs inside the catch that must never throw.
         assertEquals("", TelegramBugReporter.scrubToken(null, token))
+    }
+
+    @Test
+    fun `direct Telegram multipart length matches every serialized byte`() {
+        val file = kotlin.io.path.createTempFile("telegram-body", ".zip").toFile()
+        try {
+            file.writeBytes(ByteArray(8193) { (it % 251).toByte() })
+            val bytes = ByteArrayOutputStream()
+            DataOutputStream(bytes).use { out ->
+                TelegramBugReporter.writeMultipart(
+                    out,
+                    "boundary-123",
+                    "-10042",
+                    "7",
+                    "échec détaillé",
+                    file,
+                )
+            }
+
+            assertEquals(
+                bytes.size().toLong(),
+                TelegramBugReporter.multipartLength(
+                    "boundary-123",
+                    "-10042",
+                    "7",
+                    "échec détaillé",
+                    file,
+                ),
+            )
+        } finally {
+            file.delete()
+        }
     }
 }

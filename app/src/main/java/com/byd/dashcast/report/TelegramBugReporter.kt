@@ -124,6 +124,10 @@ object TelegramBugReporter {
         val boundary = "----dashcast" + System.currentTimeMillis()
         val token = ReportChannel.botToken()
         val chatId = ReportChannel.chatId()
+        val numericThread = thread.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+        val cappedCaption = caption?.let {
+            if (it.length > 1024) it.substring(0, 1024) else it
+        }
         var conn: HttpURLConnection? = null
         try {
             val url = URL("https://api.telegram.org/bot$token/sendDocument")
@@ -133,21 +137,12 @@ object TelegramBugReporter {
             conn.connectTimeout = 15000
             conn.readTimeout = 30000
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            conn.setFixedLengthStreamingMode(
+                multipartLength(boundary, chatId, numericThread, cappedCaption, file)
+            )
 
             DataOutputStream(BufferedOutputStream(conn.outputStream)).use { out ->
-                writeField(out, boundary, "chat_id", chatId)
-                // Only a numeric id is a message_thread_id. In relay mode the topic travels as a
-                // name, and forwarding "hud" here would make Telegram reject the whole upload.
-                if (thread.isNotEmpty() && thread.all { it.isDigit() }) {
-                    writeField(out, boundary, "message_thread_id", thread)
-                }
-                if (!caption.isNullOrEmpty()) {
-                    // Telegram caption hard limit is 1024 chars.
-                    val cap = if (caption.length > 1024) caption.substring(0, 1024) else caption
-                    writeField(out, boundary, "caption", cap)
-                }
-                writeFileField(out, boundary, "document", file)
-                out.writeBytes("--$boundary--\r\n")
+                writeMultipart(out, boundary, chatId, numericThread, cappedCaption, file)
                 out.flush()
             }
 
@@ -182,6 +177,43 @@ object TelegramBugReporter {
         out.writeBytes("Content-Disposition: form-data; name=\"$name\"\r\n\r\n")
         out.write(value.toByteArray(Charsets.UTF_8))
         out.writeBytes("\r\n")
+    }
+
+    internal fun writeMultipart(
+        out: DataOutputStream,
+        boundary: String,
+        chatId: String,
+        numericThread: String?,
+        caption: String?,
+        file: File,
+    ) {
+        writeField(out, boundary, "chat_id", chatId)
+        if (numericThread != null) writeField(out, boundary, "message_thread_id", numericThread)
+        if (!caption.isNullOrEmpty()) writeField(out, boundary, "caption", caption)
+        writeFileField(out, boundary, "document", file)
+        out.writeBytes("--$boundary--\r\n")
+    }
+
+    internal fun multipartLength(
+        boundary: String,
+        chatId: String,
+        numericThread: String?,
+        caption: String?,
+        file: File,
+    ): Long {
+        fun fieldLength(name: String, value: String): Long =
+            ("--$boundary\r\n" +
+                "Content-Disposition: form-data; name=\"$name\"\r\n\r\n").length.toLong() +
+                value.toByteArray(Charsets.UTF_8).size + 2L
+        val fileHeader = "--$boundary\r\n" +
+            "Content-Disposition: form-data; name=\"document\"; filename=\"${file.name}\"\r\n" +
+            "Content-Type: application/octet-stream\r\n\r\n"
+        var total = fieldLength("chat_id", chatId)
+        if (numericThread != null) total += fieldLength("message_thread_id", numericThread)
+        if (!caption.isNullOrEmpty()) total += fieldLength("caption", caption)
+        total += fileHeader.length.toLong() + file.length() + 2L
+        total += "--$boundary--\r\n".length
+        return total
     }
 
     private fun writeFileField(out: DataOutputStream, boundary: String, name: String, file: File) {
