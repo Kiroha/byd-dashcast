@@ -61,11 +61,10 @@ object OtaProgressUi {
                 }
             }
 
-            override fun onUpdateFound(
-                version: String, changelog: String,
-                downloadUrl: String
-            ) {
+            override fun onUpdateFound(asset: UpdateChecker.ReleaseAsset) {
                 if (activity.isFinishing || activity.isDestroyed) return
+                val version = asset.version
+                val changelog = asset.changelog
 
                 val pad = (activity.resources.displayMetrics.density * 20).toInt()
 
@@ -134,7 +133,7 @@ object OtaProgressUi {
                         sv.visibility = View.GONE
                         tvVersion.text = activity.getString(R.string.ota_downloading)
                         progressLayout.visibility = View.VISIBLE
-                        UpdateChecker.startDownload(activity, downloadUrl, self)
+                        UpdateChecker.startDownload(activity, asset, self)
                     }
                 }
                 dlgHolder!!.show()
