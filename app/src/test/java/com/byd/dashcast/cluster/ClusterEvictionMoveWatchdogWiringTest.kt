@@ -23,5 +23,7 @@ class ClusterEvictionMoveWatchdogWiringTest {
         assertTrue(move.contains("main.postDelayed(timeout, MOVE_CALLBACK_TIMEOUT_MS)"))
         assertTrue(move.contains("continueAfterMove(false, \"callback-timeout\")"))
         assertTrue(move.contains("continueAfterMove(ok, \"callback\")"))
+        assertTrue(source.contains("sEvictionGate.tryBeginDestructive(candidate.token)"))
+        assertTrue(source.contains("postDeferredLaunch(completion?.deferredLaunch)"))
     }
 }
