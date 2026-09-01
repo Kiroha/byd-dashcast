@@ -15,10 +15,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
+import org.robolectric.Shadows
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -226,6 +228,32 @@ class BugWizardSavedStateTest {
 
         controller.destroy()
         report.delete()
+    }
+
+    @Test
+    fun `independent wizard waits without adopting or closing with another submission`() {
+        val otherToken = BugWizardSubmissionGate.claim()!!
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java)
+            .create(issuePageState(""))
+            .start().resume().visible()
+        val activity = controller.get()
+        val issues = activity.findViewById<LinearLayout>(R.id.ll_wizard_issues)
+        val send = (0 until issues.childCount).map(issues::getChildAt)
+            .filterIsInstance<MaterialButton>().last()
+
+        send.performClick()
+
+        assertEquals(otherToken, BugWizardSubmissionGate.activeToken())
+        assertTrue(!send.isEnabled)
+        assertTrue(!activity.isFinishing)
+
+        BugWizardSubmissionGate.release(otherToken)
+        Shadows.shadowOf(activity.mainLooper).idleFor(600, TimeUnit.MILLISECONDS)
+
+        assertTrue(send.isEnabled)
+        assertTrue(!activity.isFinishing)
+
+        controller.destroy()
     }
 
     private fun issuePageState(

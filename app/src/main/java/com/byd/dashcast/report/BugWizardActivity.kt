@@ -65,6 +65,7 @@ class BugWizardActivity : Activity() {
     private var mPendingGate = BugWizardGate.NONE
     private var mSubmissionToken = ""
     private var mSubmissionMonitor: Runnable? = null
+    private var mOtherSubmissionMonitor: Runnable? = null
     private var mPendingReportPath = ""
     private var mPendingReportCaption = ""
 
@@ -641,8 +642,7 @@ class BugWizardActivity : Activity() {
     private fun submitReport() {
         if (mSending || mSelectedIssue == null) return
         BugWizardSubmissionGate.activeToken()?.let { token ->
-            mSubmissionToken = token
-            showSubmissionContinuingUi()
+            showOtherSubmissionBusy()
             return
         }
         ReportConsent.askThen(this) { doSubmitReport() }
@@ -652,8 +652,7 @@ class BugWizardActivity : Activity() {
         if (mSending || mSelectedIssue == null) return
         val token = BugWizardSubmissionGate.claim()
         if (token == null) {
-            mSubmissionToken = BugWizardSubmissionGate.activeToken().orEmpty()
-            showSubmissionContinuingUi()
+            showOtherSubmissionBusy()
             return
         }
         mSubmissionToken = token
@@ -952,6 +951,7 @@ class BugWizardActivity : Activity() {
         // The posted Runnable holds this Activity; a send that outlives the screen must not.
         disarmSendWatchdog()
         disarmSubmissionMonitor()
+        disarmOtherSubmissionMonitor()
         val retainConsentForRecreation =
             mPendingGate == BugWizardGate.SHOTS_CONSENT && isChangingConfigurations
         if (!retainConsentForRecreation && mSubmissionToken.isNotEmpty() &&
@@ -1024,9 +1024,37 @@ class BugWizardActivity : Activity() {
         mTvStatus.postDelayed(monitor, SUBMISSION_MONITOR_MS)
     }
 
+    private fun showOtherSubmissionBusy() {
+        // Never adopt the other wizard's token: its completion belongs to that submission and
+        // must not close or discard this instance's independent draft.
+        mBtnSend?.isEnabled = false
+        mTvStatus.visibility = View.VISIBLE
+        mTvStatus.setText(R.string.bug_status_sending)
+        disarmOtherSubmissionMonitor()
+        val monitor = object : Runnable {
+            override fun run() {
+                if (!isUiAlive()) return
+                if (BugWizardSubmissionGate.activeToken() == null) {
+                    mOtherSubmissionMonitor = null
+                    mTvStatus.visibility = View.GONE
+                    mBtnSend?.isEnabled = mSelectedIssue != null
+                    return
+                }
+                mTvStatus.postDelayed(this, SUBMISSION_MONITOR_MS)
+            }
+        }
+        mOtherSubmissionMonitor = monitor
+        mTvStatus.postDelayed(monitor, SUBMISSION_MONITOR_MS)
+    }
+
     private fun disarmSubmissionMonitor() {
         mSubmissionMonitor?.let { mTvStatus.removeCallbacks(it) }
         mSubmissionMonitor = null
+    }
+
+    private fun disarmOtherSubmissionMonitor() {
+        mOtherSubmissionMonitor?.let { mTvStatus.removeCallbacks(it) }
+        mOtherSubmissionMonitor = null
     }
 
     @Suppress("DEPRECATION")
