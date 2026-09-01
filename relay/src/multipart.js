@@ -60,4 +60,14 @@ async function* streamMultipart(body, plan, expectedLength) {
     yield plan.suffix;
 }
 
-module.exports = { createMultipartPlan, parseContentLength, streamMultipart };
+async function drainStream(body) {
+    if (!body) return;
+    const reader = body.getReader();
+    try {
+        while (!(await reader.read()).done) { /* discard response bytes */ }
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+module.exports = { createMultipartPlan, drainStream, parseContentLength, streamMultipart };
