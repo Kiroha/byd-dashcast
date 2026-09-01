@@ -1,11 +1,29 @@
 package com.byd.dashcast.report
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class StagedReportCleanupTest {
+
+    @Test
+    fun `concurrent captures receive unique prefix-compatible names`() {
+        val names = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+        val threads = List(8) {
+            Thread {
+                repeat(100) { names += BugReportCapture.newFileName() }
+            }
+        }
+        threads.forEach(Thread::start)
+        threads.forEach(Thread::join)
+
+        assertEquals(800, names.size)
+        assertTrue(names.all {
+            it.startsWith(BugReportCapture.PREFIX) && it.endsWith(".txt")
+        })
+    }
 
     @Test
     fun `periodic cleanup is age bounded and never wildcard removes active reports`() {
