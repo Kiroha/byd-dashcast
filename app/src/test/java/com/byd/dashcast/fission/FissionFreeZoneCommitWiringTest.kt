@@ -16,7 +16,7 @@ class FissionFreeZoneCommitWiringTest {
         val activation = source.substringAfter("private void doActivatePreset")
             .substringBefore("private void attachFreeZones")
 
-        val switch = activation.indexOf("doSwitchToLayout(preset, null)")
+        val switch = activation.indexOf("switchActiveLayout(preset, null)")
         val release = activation.indexOf("releaseFreeZones()")
         val attach = activation.indexOf("attachFreeZones(preset)")
         assertTrue("bound slots must commit before old free zones are released",

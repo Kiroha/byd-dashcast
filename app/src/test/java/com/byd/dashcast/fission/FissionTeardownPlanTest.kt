@@ -101,6 +101,23 @@ class FissionTeardownPlanTest {
         )
     }
 
+    @Test
+    fun releaseFailuresAreReturnedAsRetryableOwnership() {
+        val operations = object : FissionTeardownPlan.Operations {
+            override fun moveToDisplay0(packageName: String) = "OK"
+            override fun forceStopAndWait(packageName: String) = true
+            override fun releaseSlot(packageName: String) {
+                if (packageName == "stuck.pkg") throw IllegalStateException("binder died")
+            }
+            override fun onStepError(packageName: String, step: String, error: Throwable) = Unit
+        }
+
+        val unreleased = FissionTeardownPlan.run(
+            listOf("released.pkg", "stuck.pkg"), false, operations)
+
+        assertEquals(setOf("stuck.pkg"), unreleased)
+    }
+
     private class RecordingOperations(private val events: MutableList<String>) :
         FissionTeardownPlan.Operations {
         override fun moveToDisplay0(pkg: String): String {

@@ -14,8 +14,13 @@ object FissionTeardownPlan {
     }
 
     @JvmStatic
-    fun run(packages: Collection<String?>?, keepVirtualDisplays: Boolean, operations: Operations?) {
-        if (packages == null || operations == null) return
+    fun run(
+        packages: Collection<String?>?,
+        keepVirtualDisplays: Boolean,
+        operations: Operations?,
+    ): Set<String> {
+        if (packages == null || operations == null) return emptySet()
+        val unreleased = linkedSetOf<String>()
         for (packageName in packages) {
             if (packageName.isNullOrEmpty()) continue
             try {
@@ -35,9 +40,11 @@ object FissionTeardownPlan {
                 try {
                     operations.releaseSlot(packageName)
                 } catch (error: Throwable) {
+                    unreleased += packageName
                     operations.onStepError(packageName, "release", error)
                 }
             }
         }
+        return unreleased
     }
 }
