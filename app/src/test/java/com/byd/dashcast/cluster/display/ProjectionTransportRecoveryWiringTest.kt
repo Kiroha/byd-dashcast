@@ -28,6 +28,7 @@ class ProjectionTransportRecoveryWiringTest {
         assertTrue(transport.contains("terminateHungDaemonViaAdb(context, identity)"))
         val typed = adb.substringAfter("if (typedObserver != null) {")
             .substringBefore("if (isAdbTransportUnreachable())")
+        assertTrue(adb.contains("typedObserver == null || ProxyClient.supportsProtocol(25)"))
         assertTrue(typed.contains("ProxyClient.setNonBlockingReconnect(true)"))
         assertTrue(typed.contains("typedObserver.shouldAbortFallback()"))
         assertTrue(typed.contains("fallback suppressed"))
