@@ -109,7 +109,13 @@ def scan_apks(asset_dir: Path) -> list[str]:
                     findings.append(f"{apk_name} :: archive :: too many entries")
                     continue
                 total_uncompressed = sum(
-                    entry.file_size for entry in entries if not entry.is_dir()
+                    entry.file_size
+                    for entry in entries
+                    if not (
+                        entry.is_dir()
+                        and entry.file_size == 0
+                        and entry.compress_size == 0
+                    )
                 )
                 if total_uncompressed > MAX_TOTAL_UNCOMPRESSED_BYTES:
                     findings.append(
@@ -119,6 +125,11 @@ def scan_apks(asset_dir: Path) -> list[str]:
                 manifest_found = False
                 for entry in entries:
                     if entry.is_dir():
+                        if entry.file_size != 0 or entry.compress_size != 0:
+                            findings.append(
+                                f"{apk_name} :: {single_line(entry.filename)} :: "
+                                "non-empty directory entry"
+                            )
                         continue
                     name = entry.filename
                     if name == "AndroidManifest.xml":
