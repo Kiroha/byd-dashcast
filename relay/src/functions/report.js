@@ -1,4 +1,14 @@
 const { app } = require('@azure/functions');
+const { Readable } = require('node:stream');
+const {
+    createMultipartPlan,
+    parseContentLength,
+    streamMultipart,
+} = require('../multipart');
+
+// Required for request.body to remain a live stream instead of a host-buffered payload.
+// Supported by @azure/functions >=4.3 and Functions runtime >=4.28.
+app.setup({ enableHttpStream: true });
 
 /**
  * DashCast report relay.
@@ -94,9 +104,11 @@ app.http('report', {
         // Telegram truncates past 1024 characters and answers with an error rather than trimming.
         if (caption.length > 1024) caption = caption.slice(0, 1021) + '...';
 
-        const body = Buffer.from(await request.arrayBuffer());
-        if (body.length < MIN_BYTES) return bad(400, 'body too small to be a report');
-        if (body.length > MAX_BYTES) return bad(413, 'body too large');
+        const bodyLength = parseContentLength(request.headers.get('content-length'));
+        if (bodyLength == null) return bad(400, 'valid Content-Length required');
+        if (bodyLength < MIN_BYTES) return bad(400, 'body too small to be a report');
+        if (bodyLength > MAX_BYTES) return bad(413, 'body too large');
+        if (!request.body) return bad(400, 'request body missing');
 
         // Configuration is checked LAST, once the request is known to be a report.
         //
@@ -113,18 +125,23 @@ app.http('report', {
             return bad(503, 'relay not configured');
         }
 
-        const form = new FormData();
-        form.append('chat_id', chatId);
         const thread = process.env[TOPICS[topic]];
-        if (thread) form.append('message_thread_id', thread);
-        if (caption) form.append('caption', caption);
-        form.append('document', new Blob([body]), filename);
+        const multipart = createMultipartPlan({
+            chatId, thread, caption, filename, bodyLength,
+        });
 
         let res;
         try {
             res = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {
                 method: 'POST',
-                body: form,
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${multipart.boundary}`,
+                    'Content-Length': String(multipart.contentLength),
+                },
+                body: Readable.from(streamMultipart(request.body, multipart, bodyLength), {
+                    objectMode: false,
+                }),
+                duplex: 'half',
             });
         } catch (e) {
             context.error(safe('telegram unreachable: ' + e.message));
@@ -142,7 +159,7 @@ app.http('report', {
             return bad(502, `telegram refused: HTTP ${res.status}`);
         }
 
-        context.log(safe(`relayed ${filename} (${body.length} bytes) to ${topic}`));
+        context.log(safe(`relayed ${filename} (${bodyLength} bytes) to ${topic}`));
         return { status: 200, jsonBody: { ok: true } };
     },
 });
