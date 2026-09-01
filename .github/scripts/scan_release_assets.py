@@ -20,8 +20,74 @@ PATTERNS = {
     "slack token": re.compile(rb"xox[abprs]-[A-Za-z0-9-]{10,}"),
 }
 
+# Minimum byte length accepted by each regex above. Retaining one byte less than the longest
+# minimum is sufficient: a match beginning earlier was already complete in the previous window.
+PATTERN_MIN_BYTES = {
+    "telegram bot token": 41,
+    "azure SAS signature": 44,
+    "openai key": 35,
+    "github token": 34,
+    "aws access key": 20,
+    "slack token": 15,
+}
+
+MAX_APK_BYTES = 256 * 1024 * 1024
+MAX_ENTRY_COUNT = 10_000
+MAX_TOTAL_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
+MAX_ENTRY_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
+MAX_COMPRESSION_RATIO = 200
+MIN_RATIO_CHECK_BYTES = 1024 * 1024
+SCAN_CHUNK_BYTES = 64 * 1024
+SCAN_OVERLAP_BYTES = max(PATTERN_MIN_BYTES.values()) - 1
+
 EXPECTED_PACKAGE = "com.byd.dashcast"
 EXPECTED_CERT_SHA256 = "c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8"
+
+
+def apk_size_finding(apk: Path) -> str | None:
+    try:
+        return "APK exceeds scan size limit" if apk.stat().st_size > MAX_APK_BYTES else None
+    except OSError:
+        return "unreadable APK"
+
+
+def suspicious_compression(entry: zipfile.ZipInfo) -> bool:
+    if entry.file_size <= 0:
+        return False
+    if entry.compress_size <= 0:
+        return True
+    return (
+        entry.file_size >= MIN_RATIO_CHECK_BYTES
+        and entry.file_size > entry.compress_size * MAX_COMPRESSION_RATIO
+    )
+
+
+def scan_entry(archive: zipfile.ZipFile, entry: zipfile.ZipInfo) -> tuple[set[str], bool]:
+    labels: set[str] = set()
+    manifest_debuggable = False
+    tail = b""
+    read_bytes = 0
+    needles = (b"debuggable", "debuggable".encode("utf-16-le"))
+    with archive.open(entry) as content:
+        while True:
+            chunk = content.read(SCAN_CHUNK_BYTES)
+            if not chunk:
+                break
+            read_bytes += len(chunk)
+            if read_bytes > entry.file_size or read_bytes > MAX_ENTRY_UNCOMPRESSED_BYTES:
+                raise ValueError("entry expanded beyond declared or allowed size")
+            window = tail + chunk
+            for label, pattern in PATTERNS.items():
+                if label not in labels and pattern.search(window):
+                    labels.add(label)
+            if entry.filename == "AndroidManifest.xml" and any(
+                needle in window for needle in needles
+            ):
+                manifest_debuggable = True
+            tail = window[-SCAN_OVERLAP_BYTES:]
+    if read_bytes != entry.file_size:
+        raise ValueError("entry size does not match central directory")
+    return labels, manifest_debuggable
 
 
 def scan_apks(asset_dir: Path) -> list[str]:
@@ -32,28 +98,58 @@ def scan_apks(asset_dir: Path) -> list[str]:
 
     for apk in apks:
         apk_name = single_line(apk.name)
+        size_finding = apk_size_finding(apk)
+        if size_finding:
+            findings.append(f"{apk_name} :: {size_finding}")
+            continue
         try:
             with zipfile.ZipFile(apk) as archive:
+                entries = archive.infolist()
+                if len(entries) > MAX_ENTRY_COUNT:
+                    findings.append(f"{apk_name} :: archive :: too many entries")
+                    continue
+                total_uncompressed = sum(
+                    entry.file_size for entry in entries if not entry.is_dir()
+                )
+                if total_uncompressed > MAX_TOTAL_UNCOMPRESSED_BYTES:
+                    findings.append(
+                        f"{apk_name} :: archive :: expanded size exceeds scan limit"
+                    )
+                    continue
                 manifest_found = False
-                for entry in archive.infolist():
+                for entry in entries:
                     if entry.is_dir():
                         continue
                     name = entry.filename
-                    try:
-                        with archive.open(entry) as content:
-                            blob = content.read()
-                    except (KeyError, OSError, RuntimeError, zipfile.BadZipFile):
-                        findings.append(f"{apk_name} :: {single_line(name)} :: unreadable entry")
-                        continue
-                    for label, pattern in PATTERNS.items():
-                        if pattern.search(blob):
-                            findings.append(f"{apk_name} :: {single_line(name)} :: {label}")
-
                     if name == "AndroidManifest.xml":
                         manifest_found = True
-                        needles = (b"debuggable", "debuggable".encode("utf-16-le"))
-                        if any(needle in blob for needle in needles):
-                            findings.append(f"{apk_name} :: manifest :: possibly debuggable")
+                    if entry.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
+                        findings.append(
+                            f"{apk_name} :: {single_line(name)} :: entry exceeds scan size limit"
+                        )
+                        continue
+                    if suspicious_compression(entry):
+                        findings.append(
+                            f"{apk_name} :: {single_line(name)} :: suspicious compression ratio"
+                        )
+                        continue
+                    try:
+                        labels, manifest_debuggable = scan_entry(archive, entry)
+                    except (
+                        KeyError,
+                        OSError,
+                        RuntimeError,
+                        ValueError,
+                        NotImplementedError,
+                        zipfile.BadZipFile,
+                    ):
+                        findings.append(f"{apk_name} :: {single_line(name)} :: unreadable entry")
+                        continue
+                    for label in labels:
+                        findings.append(f"{apk_name} :: {single_line(name)} :: {label}")
+
+                    if manifest_debuggable:
+                        findings.append(f"{apk_name} :: manifest :: possibly debuggable")
                 if not manifest_found:
                     findings.append(f"{apk_name} :: manifest :: missing")
         except (OSError, zipfile.BadZipFile):
@@ -74,6 +170,9 @@ def verify_release_contract(
         return [f"release :: expected exactly one APK asset, found {len(apks)}"]
 
     apk = apks[0]
+    size_finding = apk_size_finding(apk)
+    if size_finding:
+        return [f"{single_line(apk.name)} :: {size_finding}"]
     version = (tag or "").removeprefix("v")
     if not version:
         match = re.fullmatch(r"DashCast-v(.+)-release\.apk", apk.name)
