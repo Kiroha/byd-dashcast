@@ -108,6 +108,9 @@ public final class ProxyDaemonMain {
      *  after app restart (setsid'd daemon outlives the app process) and ask
      *  for a binder rebroadcast instead of paying the ~1 s app_process cost. */
     private static final String PID_FILE = "/data/local/tmp/dashcast_proxy.pid";
+        private static final String STARTUP_LOCK_FILE =
+            "/data/local/tmp/dashcast_proxy_startup.lock";
+        private static ProxyDaemonStartupLock sStartupLock;
 
         /** Random identity for this exact daemon process, paired with the PID for safe recovery. */
         private static final String INSTANCE_FILE = "/data/local/tmp/dashcast_proxy_instance";
@@ -242,6 +245,7 @@ public final class ProxyDaemonMain {
                 System.exit(4);
                 return;
             }
+            releaseStartupLock();
             installPidShutdownHook();
             Looper.prepareMainLooper();
 
@@ -391,32 +395,44 @@ public final class ProxyDaemonMain {
      *  <p>This replaces the broken shell-side {@code flock} (see v1.2.69
      *  cascade) with an in-JVM check that has no toybox/util-linux dependency. */
     private static boolean acquirePidLock() {
+        ProxyDaemonStartupLock startupLock = null;
         try {
+            startupLock = ProxyDaemonStartupLock.tryAcquire(new File(STARTUP_LOCK_FILE));
+            if (startupLock == null) return false;
             File pidFile = new File(PID_FILE);
-            // createNewFile() is atomic (O_CREAT|O_EXCL) — eliminates TOCTOU between
-            // exists() check and FileOutputStream creation.
-            boolean created = pidFile.createNewFile();
-            if (!created) {
+            if (pidFile.exists()) {
                 // File already existed — check if a live daemon owns it.
                 String existing = readSmallFile(pidFile).trim();
                 if (!existing.isEmpty()) {
                     int otherPid = -1;
                     try { otherPid = Integer.parseInt(existing); } catch (NumberFormatException ignore) {}
                     if (otherPid > 0 && otherPid != Process.myPid() && isLiveDaemon(otherPid)) {
+                        startupLock.close();
                         return false;
                     }
                 }
-                // Stale or empty file — fall through and overwrite with our PID.
             }
-            try (FileOutputStream fos = new FileOutputStream(pidFile)) {
-                fos.write(Integer.toString(Process.myPid()).getBytes());
-            }
+            // PID and nonce are one startup transaction. Remove only after the cross-process
+            // lock proves no peer can concurrently claim either marker.
+            try { new File(INSTANCE_FILE).delete(); } catch (Throwable ignore) {}
+            startupLock.publishPid(pidFile, Integer.toString(Process.myPid()));
+            sStartupLock = startupLock;
             return true;
         } catch (Throwable t) {
-            log("acquirePidLock error (allowing start): " + t);
-            // Fail-open: better to risk a duplicate (caught by stale-kill) than
-            // to refuse to start because /data/local/tmp had a transient glitch.
-            return true;
+            if (startupLock != null) {
+                try { startupLock.close(); } catch (Throwable ignore) {}
+            }
+            log("acquirePidLock error: " + t);
+            return false;
+        }
+    }
+
+    private static void releaseStartupLock() {
+        ProxyDaemonStartupLock lock = sStartupLock;
+        sStartupLock = null;
+        if (lock == null) return;
+        try { lock.close(); } catch (Throwable error) {
+            log("releaseStartupLock failed: " + error);
         }
     }
 
@@ -449,9 +465,8 @@ public final class ProxyDaemonMain {
     }
 
     private static boolean writeInstanceFile() {
-        try (FileOutputStream fos = new FileOutputStream(new File(INSTANCE_FILE))) {
-            fos.write(INSTANCE_TOKEN.getBytes());
-            return true;
+        try {
+            return ProxyInstanceMarker.ensureOwned(new File(INSTANCE_FILE), INSTANCE_TOKEN);
         } catch (Throwable error) {
             log("writeInstanceFile failed: " + error);
             return false;
