@@ -111,6 +111,7 @@ class ClusterSessionTracker(context: Context) {
             // precondition the cover requires: that the app is alive ON display 0. Asserting that
             // without evidence is the defect this whole pipeline was rewritten to stop making.
             val main = Handler(Looper.getMainLooper())
+            val blindTokens = ArrayList<PackageEvictionGenerationGate.Token>(blind.size)
             lateinit var timeout: Runnable
             val barrier = BoundedCompletionBarrier(blind.size, Runnable {
                 main.removeCallbacks(timeout)
@@ -118,12 +119,16 @@ class ClusterSessionTracker(context: Context) {
             })
             timeout = Runnable {
                 if (barrier.timeout()) {
-                    AppLogger.w(TAG, "blind eviction timeout — late callbacks are ignored")
+                    for (token in blindTokens) {
+                        sEvictionGate.discardDeferredLaunch(token)
+                    }
+                    AppLogger.w(TAG, "blind eviction timeout — prior deferred launches discarded")
                 }
             }
             main.postDelayed(timeout, BLIND_EVICTION_TIMEOUT_MS)
             for (p in blind) {
                 val token = sEvictionGate.beginEviction(p)
+                blindTokens += token
                 add(p)
                 if (!sEvictionGate.tryBeginDestructive(token)) {
                     barrier.complete(Runnable {})

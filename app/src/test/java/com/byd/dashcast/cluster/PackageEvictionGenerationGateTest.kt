@@ -34,4 +34,22 @@ class PackageEvictionGenerationGateTest {
         completion!!.deferredLaunch!!.run()
         assertTrue(launched)
     }
+
+    @Test
+    fun `timeout drops only launches requested before its atomic cut`() {
+        val gate = PackageEvictionGenerationGate()
+        val token = gate.beginEviction("com.example.nav")
+        var oldLaunch = false
+        var newLaunch = false
+        assertTrue(gate.tryBeginDestructive(token))
+        assertFalse(gate.prepareLaunch("com.example.nav", Runnable { oldLaunch = true }))
+
+        assertTrue(gate.discardDeferredLaunch(token))
+        assertFalse(gate.prepareLaunch("com.example.nav", Runnable { newLaunch = true }))
+        val completion = gate.finishDestructive(token, Runnable {})!!
+        completion.deferredLaunch!!.run()
+
+        assertFalse(oldLaunch)
+        assertTrue(newLaunch)
+    }
 }

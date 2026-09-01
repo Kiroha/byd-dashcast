@@ -52,6 +52,15 @@ internal class PackageEvictionGenerationGate {
         return true
     }
 
+    /** Drops work requested before a UI timeout without releasing the physical force-stop. */
+    @Synchronized
+    fun discardDeferredLaunch(token: Token): Boolean {
+        val state = states[token.packageName] ?: return false
+        if (state.destructiveGeneration != token.generation) return false
+        state.deferredLaunch = null
+        return true
+    }
+
     @Synchronized
     fun finishDestructive(token: Token, onCurrent: Runnable): Completion? {
         val state = states[token.packageName] ?: return null

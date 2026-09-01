@@ -28,5 +28,6 @@ class ClusterEvictionMoveWatchdogWiringTest {
         val blind = source.substringAfter("if (svc == null)")
             .substringBefore("val pkgs =")
         assertTrue(blind.contains("forceStopAppForBlindEviction"))
+        assertTrue(blind.contains("sEvictionGate.discardDeferredLaunch(token)"))
     }
 }
