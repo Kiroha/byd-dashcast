@@ -161,7 +161,7 @@ public final class FissionOrchestrator {
 
     /** Keeps the headless orchestrator reachable while its executor works. */
     @SuppressWarnings("unused")
-    private static FissionOrchestrator sAutoStartOrchestrator;
+    private static volatile FissionOrchestrator sAutoStartOrchestrator;
 
     /** Listener notified (on the main thread) when the headless orchestrator's slot set changes. */
     public interface LayoutChangeListener { void onLayoutPackagesChanged(); }
@@ -378,12 +378,7 @@ public final class FissionOrchestrator {
         FissionOrchestrator orch = new FissionOrchestrator(appCtx,
                 headlessProjectionState(), headlessCallbacks("auto-start"));
         orch.mAutoStartAttempt = true;
-        // Tear down any previous headless orchestrator before orphaning it, or its
-        // fission-exec thread leaks (the static ref was overwritten without a stop()).
-        FissionOrchestrator prevAuto = sAutoStartOrchestrator;
-        if (prevAuto != null) { prevAuto.stopAll(); prevAuto.shutdown(); }
-        sAutoStartOrchestrator = orch;
-        orch.initAsync(fav, true, false);
+        replaceHeadlessAfterStop(orch, fav);
         return AutoStartResult.STARTED;
     }
 
@@ -568,16 +563,38 @@ public final class FissionOrchestrator {
             AppLogger.d(TAG, "launchFavoriteLayoutApps skipped: classic projection active");
             return;
         }
+        if (!sActivationInFlight.compareAndSet(false, true)) {
+            AppLogger.w(TAG, "launchFavoriteLayoutApps skipped: activation already in flight");
+            return;
+        }
+        sActivationStartedMs = android.os.SystemClock.elapsedRealtime();
         AppLogger.i(TAG, "manual launch layout apps: « " + fav.name + " »");
 
         FissionOrchestrator orch = new FissionOrchestrator(appCtx,
                 headlessProjectionState(), headlessCallbacks("launch-layout"));
-        // Tear down any previous headless orchestrator before orphaning it, or its
-        // fission-exec thread leaks (the static ref was overwritten without a stop()).
-        FissionOrchestrator prevAuto = sAutoStartOrchestrator;
-        if (prevAuto != null) { prevAuto.stopAll(); prevAuto.shutdown(); }
-        sAutoStartOrchestrator = orch;
-        orch.initAsync(fav, true, false);
+        orch.mAutoStartAttempt = true;
+        replaceHeadlessAfterStop(orch, fav);
+    }
+
+    /** Publishes and starts {@code next} only after the current slot owner has fully stopped. */
+    private static void replaceHeadlessAfterStop(FissionOrchestrator next, LayoutPreset layout) {
+        final FissionOrchestrator previous = sAutoStartOrchestrator;
+        if (previous == null) {
+            sAutoStartOrchestrator = next;
+            next.initAsync(layout, true, false);
+            return;
+        }
+        previous.stopAll(() -> {
+            previous.shutdown();
+            if (sAutoStartOrchestrator != previous) {
+                next.shutdown();
+                sActivationInFlight.set(false);
+                AppLogger.i(TAG, "headless replacement cancelled while prior teardown completed");
+                return;
+            }
+            sAutoStartOrchestrator = next;
+            next.initAsync(layout, true, false);
+        });
     }
 
     /**
@@ -587,6 +604,7 @@ public final class FissionOrchestrator {
     public static void stopAutoOrchestrator(Runnable onComplete) {
         FissionOrchestrator o = sAutoStartOrchestrator;
         sAutoStartOrchestrator = null;
+        sActivationInFlight.set(false);
         if (o != null) {
             AppLogger.i(TAG, "stopping headless auto-start orchestrator");
             o.stopAll(() -> {
