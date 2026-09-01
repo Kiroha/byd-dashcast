@@ -396,7 +396,7 @@ public final class ProxyClient {
         }
         IBinder cachedBinder = sBinder;
         if (cachedBinder != null && cachedBinder.isBinderAlive()) {
-            return sDaemonUid >= 0 || handshake(cachedBinder);
+            return sDaemonUid >= 0 || handshakeAndVerify(cachedBinder);
         }
         // Fast path: an already-live binder is reused without touching the daemon
         // process — critical to avoid the cascade of kill-and-respawn cycles that
@@ -404,12 +404,21 @@ public final class ProxyClient {
         // ActivityThread.systemMain() in app_process which is very heavy).
         SingleFlight.Ticket<Boolean> ticket;
         CountDownLatch binderSignal = null;
+        IBinder lateBinder = null;
         synchronized (LOCK) {
-            if (isConnected()) {
-                return true;
+            IBinder currentBinder = sBinder;
+            if (currentBinder != null && currentBinder.isBinderAlive()) {
+                if (sDaemonUid >= 0) return true;
+                // The receiver published this Binder after the lock-free snapshot above. WHOAMI
+                // must run outside LOCK, just like the ordinary fast path.
+                lateBinder = currentBinder;
+                ticket = null;
+            } else {
+                ticket = sConnectSingleFlight.join();
             }
-            ticket = sConnectSingleFlight.join();
-            if (!ticket.isLeader()) {
+            if (lateBinder != null) {
+                // Drop LOCK before the synchronous Binder transaction below.
+            } else if (!ticket.isLeader()) {
                 // The leader already owns receiver setup, bootstrap, metrics, and Binder wait.
                 // Drop LOCK before waiting so the broadcast receiver can publish the Binder.
             } else {
@@ -449,6 +458,8 @@ public final class ProxyClient {
                 }
             }
         }
+
+        if (lateBinder != null) return handshakeAndVerify(lateBinder);
 
         if (!ticket.isLeader()) {
             try {
@@ -554,7 +565,7 @@ public final class ProxyClient {
                     }
                     return false;
                 }
-                result = isConnected();
+                result = isConnected() && sDaemonUid >= 0;
                 if (result) {
                     AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
                             + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
@@ -1504,6 +1515,11 @@ public final class ProxyClient {
                     if (sBinder != null && sBinder != bp.binder) {
                         try { sBinder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
                     }
+                    // Invalidate identity BEFORE publishing the replacement Binder. Lock-free
+                    // readers must never observe a new Binder paired with the previous daemon's UID.
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
                     sBinder = bp.binder;
                     // Hook the new binder so a future death immediately clears
                     // our cached reference (P2). Best-effort: if linkToDeath
@@ -1514,10 +1530,6 @@ public final class ProxyClient {
                     catch (RemoteException re) {
                         AppLogger.w(TAG, "linkToDeath failed: " + re.getMessage());
                     }
-                    // Invalidate WHOAMI cache — handshake() will refresh it.
-                    sDaemonUid = -1;
-                    sDaemonPid = -1;
-                    sDaemonVer = null;
                     AppLogger.i(TAG, "live binder received from daemon");
                     CountDownLatch latch = sBinderLatch;
                     if (latch != null) latch.countDown();
@@ -1546,6 +1558,16 @@ public final class ProxyClient {
         }
     }
 
+    /** Runs WHOAMI and confirms its published identity still belongs to the expected Binder. */
+    private static boolean handshakeAndVerify(IBinder expectedBinder) {
+        if (!handshake(expectedBinder)) return false;
+        synchronized (LOCK) {
+            return sBinder == expectedBinder
+                    && expectedBinder.isBinderAlive()
+                    && sDaemonUid >= 0;
+        }
+    }
+
     /** Issue WHOAMI without holding {@link #LOCK}; publish only if the Binder is still current. */
     private static boolean handshake(IBinder expectedBinder) {
         if (expectedBinder == null || !expectedBinder.isBinderAlive()) return false;
@@ -1558,6 +1580,9 @@ public final class ProxyClient {
             int daemonUid = reply.readInt();
             int daemonPid = reply.readInt();
             String daemonVer = reply.readString();
+            if (daemonUid < 0 || daemonPid <= 0 || daemonVer == null || daemonVer.isEmpty()) {
+                throw new IllegalStateException("invalid WHOAMI response");
+            }
             synchronized (LOCK) {
                 if (sBinder != expectedBinder || !expectedBinder.isBinderAlive()) return false;
                 sDaemonUid = daemonUid;
@@ -1565,8 +1590,8 @@ public final class ProxyClient {
                 sDaemonVer = daemonVer;
                 return true;
             }
-        } catch (RemoteException e) {
-            AppLogger.w(TAG, "handshake failed: " + e.getMessage());
+        } catch (Exception e) {
+            AppLogger.w(TAG, "handshake failed (" + e.getClass().getSimpleName() + ")");
             synchronized (LOCK) {
                 if (sBinder == expectedBinder) {
                     sBinder = null;
