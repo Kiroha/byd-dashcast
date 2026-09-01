@@ -122,6 +122,12 @@ async function handleReport(request, context, dependencies = {}) {
         const filename = request.headers.get('x-dashcast-filename') || '';
         if (!FILENAME.test(filename)) return bad(400, 'bad filename');
 
+        const contentType = (request.headers.get('content-type') || '')
+            .split(';', 1)[0].trim().toLowerCase();
+        if (contentType !== 'application/octet-stream') {
+            return bad(400, 'application/octet-stream required');
+        }
+
         let caption = '';
         try {
             const raw = request.headers.get('x-dashcast-caption');

@@ -9,6 +9,7 @@ process.env.TELEGRAM_CHAT_ID = '-100123456789';
 function headers(bodyLength) {
     return new Headers({
         'content-length': String(bodyLength),
+        'content-type': 'application/octet-stream',
         'x-dashcast-topic': 'bug',
         'x-dashcast-filename': 'report.zip',
     });
@@ -22,6 +23,22 @@ function context() {
         error: (message) => logs.push(String(message)),
     };
 }
+
+test('handler rejects a report with the wrong media type before forwarding', async () => {
+    const requestHeaders = headers(64);
+    requestHeaders.set('content-type', 'text/plain');
+    let forwarded = false;
+    const result = await handleReport({
+        headers: requestHeaders,
+        body: new ReadableStream(),
+    }, context(), {
+        fetch: async () => { forwarded = true; },
+    });
+
+    assert.equal(result.status, 400);
+    assert.equal(result.jsonBody.error, 'application/octet-stream required');
+    assert.equal(forwarded, false);
+});
 
 test('handler aborts a stalled Telegram upload at its deadline', async () => {
     let incomingCancelled = false;
