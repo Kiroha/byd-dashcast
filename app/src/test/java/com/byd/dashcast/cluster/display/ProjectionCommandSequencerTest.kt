@@ -2,9 +2,22 @@ package com.byd.dashcast.cluster.display
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProjectionCommandSequencerTest {
+
+    @Test
+    fun `new session invalidates old display ownership immediately`() {
+        val sequencer = ProjectionCommandSequencer()
+        val old = sequencer.beginSession()
+        assertTrue(sequencer.isCurrent(old))
+
+        val current = sequencer.beginSession()
+
+        assertFalse(sequencer.isCurrent(old))
+        assertTrue(sequencer.isCurrent(current))
+    }
 
     @Test
     fun `new activation waits for in-flight stop and discards its restore callback`() {

@@ -35,6 +35,9 @@ internal class ProjectionCommandSequencer {
     @Synchronized
     fun beginSession(): Session = Session(++generation)
 
+    @Synchronized
+    fun isCurrent(session: Session): Boolean = session.generation == generation
+
     fun endSession(session: Session) {
         val next = synchronized(this) {
             if (session.generation == generation) generation++
@@ -98,6 +101,9 @@ internal object ProjectionCommandBus {
     private val sequencer = ProjectionCommandSequencer()
 
     fun beginSession(): ProjectionCommandSequencer.Session = sequencer.beginSession()
+
+    fun isCurrent(session: ProjectionCommandSequencer.Session): Boolean =
+        sequencer.isCurrent(session)
 
     fun endSession(session: ProjectionCommandSequencer.Session) {
         sequencer.endSession(session)

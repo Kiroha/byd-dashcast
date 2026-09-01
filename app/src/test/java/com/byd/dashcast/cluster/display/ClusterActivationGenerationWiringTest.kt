@@ -29,7 +29,8 @@ class ClusterActivationGenerationWiringTest {
         )) {
             val body = source.substringAfter(method).substringBefore("\n    /**")
             assertTrue("$method has no generation guard", body.contains("gen != mActivationGeneration") ||
-                body.contains("gen == mActivationGeneration"))
+                body.contains("gen == mActivationGeneration") ||
+                body.contains("isCurrentActivation(gen)"))
         }
     }
 

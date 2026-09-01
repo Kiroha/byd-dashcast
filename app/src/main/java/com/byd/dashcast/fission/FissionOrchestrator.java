@@ -131,6 +131,7 @@ public final class FissionOrchestrator {
     private volatile LayoutPreset mActiveLayout = null;
     private volatile String mSelectedMirrorPackage = null;
     private volatile boolean mAutoStartAttempt = false;
+    private volatile com.byd.dashcast.cluster.display.ClusterManager mClusterActivationManager;
 
     /**
      * Daemon slot keys of the layout zones that have NO app bound ("free zones"), created by
@@ -625,6 +626,7 @@ public final class FissionOrchestrator {
     /** Called on Activity.onDestroy() — shuts down executor and releases slots if finishing. */
     public void destroy(boolean isFinishing) {
         mDestroyed = true;
+        abandonClusterActivation();
         mMainHandler.removeCallbacksAndMessages(null);
         if (isFinishing && !mSlots.isEmpty()) {
             final IBinder binder = mDaemonBinder;
@@ -714,16 +716,23 @@ public final class FissionOrchestrator {
         AppLogger.i(TAG, "auto-layout: Qt in native mode — activating cluster projection first");
         post(() -> {
             mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_projection));
-            new com.byd.dashcast.cluster.display.ClusterManager(mAppCtx)
-                    .activateClusterDisplay(
+            abandonClusterActivation();
+            final com.byd.dashcast.cluster.display.ClusterManager manager =
+                new com.byd.dashcast.cluster.display.ClusterManager(mAppCtx);
+            mClusterActivationManager = manager;
+            manager.activateClusterDisplay(
                             new com.byd.dashcast.cluster.display.ClusterManager.DisplayReadyCallback() {
                         @Override public void onDisplayReady(android.view.Display display,
                                                               int displayId) {
+                    if (mClusterActivationManager != manager || mDestroyed) return;
                             AppLogger.i(TAG, "auto-layout: cluster projection ready (display="
                                     + displayId + ")");
                             next.run();
                         }
                         @Override public void onDisplayTimeout() {
+                            if (mClusterActivationManager != manager || mDestroyed) return;
+                            mClusterActivationManager = null;
+                            manager.abandon();
                             AppLogger.w(TAG, "auto-layout: cluster activation timed out — aborted");
                             post(() -> mCallbacks.onStatusMessage(null));
                             markAutoStartFailed("cluster activation timeout");
@@ -737,6 +746,12 @@ public final class FissionOrchestrator {
                                                                   int displayId) {}
                     });
         });
+    }
+
+    private void abandonClusterActivation() {
+        com.byd.dashcast.cluster.display.ClusterManager manager = mClusterActivationManager;
+        mClusterActivationManager = null;
+        if (manager != null) manager.abandon();
     }
 
     /**
@@ -774,6 +789,7 @@ public final class FissionOrchestrator {
     }
 
     public void stopAll(Runnable onComplete) {
+        abandonClusterActivation();
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)));
         boolean accepted = submitQuietly("stopAll", () -> {
             // Free zones hold no app and are not in mSlots, so the teardown plan below never
