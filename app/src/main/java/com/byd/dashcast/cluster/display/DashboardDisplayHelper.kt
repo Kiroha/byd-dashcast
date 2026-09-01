@@ -122,7 +122,7 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
             AppLogger.d(TAG, "stop: no projection session to restore")
             return
         }
-        ProjectionCommandBus.sendInfo(
+        ProjectionCommandBus.sendBarrier(
             mContext, session, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
