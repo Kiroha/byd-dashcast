@@ -104,6 +104,22 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             send = source.index("Send changelog to Telegram")
             self.assertLess(scan, send, name)
 
+    def test_privileged_workflows_never_execute_scanner_from_release_tag(self) -> None:
+        workflows = SCRIPT.parent.parent / "workflows"
+        for name in (
+            "release-secret-scan.yml",
+            "telegram-changelog.yml",
+            "telegram-stable-release.yml",
+        ):
+            source = (workflows / name).read_text(encoding="utf-8")
+            checkout = source.index("uses: actions/checkout@v4")
+            scanner = source.index("python3 .github/scripts/scan_release_assets.py assets")
+            trusted_checkout = source[checkout:scanner]
+
+            self.assertIn("ref: ${{ github.event.repository.default_branch }}", trusted_checkout, name)
+            self.assertIn("persist-credentials: false", trusted_checkout, name)
+            self.assertNotIn("ref: ${{ github.event.release.tag_name }}", trusted_checkout, name)
+
 
 if __name__ == "__main__":
     unittest.main()
