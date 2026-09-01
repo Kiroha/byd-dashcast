@@ -69,6 +69,12 @@ object RelayUploader {
     /** Telegram's caption limit, applied here because the caption travels as an HTTP header. */
     const val CAPTION_MAX_CHARS = 1024
 
+    sealed class SendResult {
+        data object Sent : SendResult()
+        data class SafeFailure(val message: String) : SendResult()
+        data class AmbiguousFailure(val message: String) : SendResult()
+    }
+
     /** A device value wins, so a test deployment needs no build. */
     @JvmStatic
     fun url(): String {
@@ -91,11 +97,22 @@ object RelayUploader {
      * @return null on success, or a human-readable failure the caller can show and fall back on.
      */
     @JvmStatic
-    fun send(file: File, caption: String?, topic: String): String? {
+    fun send(file: File, caption: String?, topic: String): String? =
+        when (val result = sendResult(file, caption, topic)) {
+            SendResult.Sent -> null
+            is SendResult.SafeFailure -> result.message
+            is SendResult.AmbiguousFailure -> result.message
+        }
+
+    @JvmStatic
+    fun sendResult(file: File, caption: String?, topic: String): SendResult {
         val endpoint = url()
-        if (endpoint.isEmpty()) return "relay not configured"
-        if (!file.isFile) return "report file missing"
-        if (file.length() > MAX_BYTES) return "report too large for the relay (${file.length()} bytes)"
+        if (endpoint.isEmpty()) return SendResult.SafeFailure("relay not configured")
+        if (!file.isFile) return SendResult.SafeFailure("report file missing")
+        if (file.length() > MAX_BYTES) {
+            return SendResult.SafeFailure(
+                "report too large for the relay (${file.length()} bytes)")
+        }
 
         // One retry, and only for a failure that a second attempt can plausibly fix.
         //
@@ -109,16 +126,27 @@ object RelayUploader {
         // tester who has just described a problem should not have to send it twice, and one
         // failure in the reporting channel is what teaches people to stop reporting.
         val first = attempt(endpoint, file, caption, topic)
-        if (first == null || !first.retryable) return first?.message
+        if (first == null) return SendResult.Sent
+        if (!first.retryable) return first.toResult()
         AppLogger.w(TAG, "relay attempt 1 failed (${first.message}) — retrying once")
         try { Thread.sleep(RETRY_DELAY_MS) } catch (_: InterruptedException) {
-            Thread.currentThread().interrupt(); return first.message
+            Thread.currentThread().interrupt(); return first.toResult()
         }
-        return attempt(endpoint, file, caption, topic)?.message
+        return attempt(endpoint, file, caption, topic)?.toResult() ?: SendResult.Sent
     }
 
     /** Failure of one attempt: the message to report, and whether trying again could help. */
-    private class Failure(val message: String, val retryable: Boolean)
+    private class Failure(
+        val message: String,
+        val retryable: Boolean,
+        val ambiguous: Boolean = false,
+    ) {
+        fun toResult(): SendResult = if (ambiguous) {
+            SendResult.AmbiguousFailure(message)
+        } else {
+            SendResult.SafeFailure(message)
+        }
+    }
 
     /** Long enough for a function to finish waking, short enough not to feel like a hang. */
     const val RETRY_DELAY_MS = 2_000L
@@ -171,7 +199,15 @@ object RelayUploader {
                 // 4xx means the request itself is wrong — a filename we mangled, a body too small,
                 // an unknown topic. Sending the identical bytes again would fail identically and
                 // only add load to a public endpoint. 5xx is the relay's own trouble and can pass.
-                Failure("relay refused: HTTP $code $detail".trim(), retryable = code >= 500)
+                // A 504 is specifically the relay losing certainty after its Telegram request;
+                // unknown 500/502 failures have the same ambiguity. 503 is the safe exception:
+                // the Function host or configuration rejected the request before forwarding.
+                val ambiguous = code >= 500 && code != 503
+                Failure(
+                    "relay refused: HTTP $code $detail".trim(),
+                    retryable = code == 503,
+                    ambiguous = ambiguous,
+                )
             }
         } catch (t: Throwable) {
             // No HTTP status at all. WHEN it happened decides whether trying again is safe.
@@ -189,7 +225,7 @@ object RelayUploader {
             val msg = t.message ?: t.javaClass.simpleName
             if (bodyWritten) {
                 Failure("relay did not answer ($msg) — the report may already have been sent",
-                        retryable = false)
+                        retryable = false, ambiguous = true)
             } else {
                 Failure(msg, retryable = true)
             }

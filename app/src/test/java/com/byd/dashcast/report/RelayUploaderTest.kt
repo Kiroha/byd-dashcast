@@ -263,14 +263,18 @@ class RelayUploaderTest {
         val f = java.io.File.createTempFile("relay", ".txt")
         f.writeText("x".repeat(200))
         try {
-            val err = RelayUploader.send(f, "caption", RelayUploader.TOPIC_BUG)
+            val result = RelayUploader.sendResult(f, "caption", RelayUploader.TOPIC_BUG)
+            assertTrue(result is RelayUploader.SendResult.AmbiguousFailure)
+            val err = (result as RelayUploader.SendResult.AmbiguousFailure).message
             done.await(5, java.util.concurrent.TimeUnit.SECONDS)
             // The retry sleeps RETRY_DELAY_MS before reconnecting, so if it were going to fire it
             // would have by now — send() has already returned.
             assertEquals("the report must be posted exactly once", 1, accepted.get())
-            assertTrue("the failure must be reported", err != null && err.isNotEmpty())
+            assertTrue("the failure must be reported", err.isNotEmpty())
             assertTrue("and it must warn that the send may have worked: $err",
-                err!!.contains("may already have been sent"))
+                err.contains("may already have been sent"))
+            assertFalse("an ambiguous relay result must never be sent directly too",
+                TelegramBugReporter.shouldFallbackToDirect(result, true))
         } finally {
             f.delete()
             server.close()
@@ -325,5 +329,16 @@ class RelayUploaderTest {
         } finally {
             f.delete()
         }
+    }
+
+    @Test
+    fun `only safe relay failures permit configured direct fallback`() {
+        val safe = RelayUploader.SendResult.SafeFailure("connection refused")
+        val ambiguous = RelayUploader.SendResult.AmbiguousFailure("may already have been sent")
+
+        assertTrue(TelegramBugReporter.shouldFallbackToDirect(safe, true))
+        assertFalse(TelegramBugReporter.shouldFallbackToDirect(safe, false))
+        assertFalse(TelegramBugReporter.shouldFallbackToDirect(ambiguous, true))
+        assertFalse(TelegramBugReporter.shouldFallbackToDirect(RelayUploader.SendResult.Sent, true))
     }
 }
