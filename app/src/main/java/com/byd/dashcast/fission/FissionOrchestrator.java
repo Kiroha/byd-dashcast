@@ -635,8 +635,17 @@ public final class FissionOrchestrator {
                 for (String pkg : pkgs) {
                     // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
                     if (binder != null) FissionClient.moveToDisplay0(binder, pkg);
-                    if (!keepVds && binder != null) {
-                        try { FissionClient.releaseSlot(binder, pkg); } catch (Throwable ignored) {}
+                    if (!keepVds) {
+                        if (binder != null) {
+                            try {
+                                FissionClient.releaseSlot(binder, pkg);
+                                FissionReleaseDebt.settled(pkg);
+                            } catch (Throwable error) {
+                                FissionReleaseDebt.record(pkg);
+                            }
+                        } else {
+                            FissionReleaseDebt.record(pkg);
+                        }
                     }
                     ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
                 }
@@ -751,10 +760,6 @@ public final class FissionOrchestrator {
                 doStartSlot(pkg, label, rect, surfaceHolder);
             } catch (Exception e) {
                 AppLogger.e(TAG, "startSlot error pkg=" + pkg, e);
-                mSlots.remove(pkg);
-                if (mDaemonBinder != null) {
-                    try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
-                }
                 post(() -> {
                     mCallbacks.onSlotsChanged(mSlots.values());
                     mCallbacks.onSlotError(pkg, e.getMessage());
@@ -790,7 +795,8 @@ public final class FissionOrchestrator {
             boolean keepVds = com.byd.dashcast.data.prefs.ClusterPrefs
                     .isFissionPrecreateSlots(mAppCtx);
             final IBinder binder = mDaemonBinder;
-            FissionTeardownPlan.run(packages, keepVds, new FissionTeardownPlan.Operations() {
+                java.util.Set<String> unreleased = FissionTeardownPlan.run(
+                    packages, keepVds, new FissionTeardownPlan.Operations() {
                 @Override public String moveToDisplay0(String pkg) {
                     if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
                     String result = FissionClient.moveToDisplay0(binder, pkg);
@@ -810,6 +816,7 @@ public final class FissionOrchestrator {
                 @Override public void releaseSlot(String pkg) throws Exception {
                     if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
                     FissionClient.releaseSlot(binder, pkg);
+                    FissionReleaseDebt.settled(pkg);
                 }
 
                 @Override public void onStepError(String pkg, String step, Throwable error) {
@@ -817,6 +824,7 @@ public final class FissionOrchestrator {
                             + ": " + error.getMessage());
                 }
             });
+            FissionReleaseDebt.recordAll(unreleased);
             mSlots.clear();
             mSelectedMirrorPackage = null;
             if (binder != null) {
@@ -874,8 +882,15 @@ public final class FissionOrchestrator {
             // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
             if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
             if (mDaemonBinder != null) {
-                try { FissionClient.releaseSlot(mDaemonBinder, pkg); }
-                catch (Exception e) { AppLogger.e(TAG, "releaseSlot error", e); }
+                try {
+                    FissionClient.releaseSlot(mDaemonBinder, pkg);
+                    FissionReleaseDebt.settled(pkg);
+                } catch (Exception e) {
+                    FissionReleaseDebt.record(pkg);
+                    AppLogger.e(TAG, "releaseSlot error", e);
+                }
+            } else {
+                FissionReleaseDebt.record(pkg);
             }
             ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
             mSlots.remove(pkg);
@@ -938,6 +953,7 @@ public final class FissionOrchestrator {
         IBinder b = FissionClient.getBinderFromServiceManager();
         if (b != null) {
             mDaemonBinder = b;
+            retryReleaseDebt(b);
             post(() -> mCallbacks.onDaemonBinderAcquired(b));
             AppLogger.d(TAG, "Daemon binder found in ServiceManager");
         }
@@ -951,6 +967,7 @@ public final class FissionOrchestrator {
         IBinder b = FissionClient.getBinderFromServiceManager();
         if (b != null && sDaemonFreshnessChecked) {
             mDaemonBinder = b;
+            retryReleaseDebt(b);
             final IBinder fb0 = b;
             post(() -> mCallbacks.onDaemonBinderAcquired(fb0));
             return true;
@@ -985,6 +1002,7 @@ public final class FissionOrchestrator {
             b = FissionClient.getBinderFromServiceManager();
             if (b != null) {
                 mDaemonBinder = b;
+                retryReleaseDebt(b);
                 final IBinder fb = b;
                 post(() -> mCallbacks.onDaemonBinderAcquired(fb));
                 AppLogger.d(TAG, "Daemon binder acquired after " + ((i + 1) * 500) + "ms");
@@ -993,6 +1011,14 @@ public final class FissionOrchestrator {
         }
         AppLogger.e(TAG, "Daemon binder NOT found after 8s");
         return false;
+    }
+
+    private void retryReleaseDebt(IBinder binder) {
+        java.util.Set<String> remaining = FissionReleaseDebt.retry(
+                key -> FissionClient.releaseSlot(binder, key));
+        if (!remaining.isEmpty()) {
+            AppLogger.w(TAG, "slot release debt still pending: " + remaining);
+        }
     }
 
     private void doStartSlot(String pkg, String label, Rect rect, SurfaceHolder surfaceHolder)
@@ -1112,7 +1138,12 @@ public final class FissionOrchestrator {
                 // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
                 if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
                 if (mDaemonBinder != null) {
-                    try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
+                    try {
+                        FissionClient.releaseSlot(mDaemonBinder, pkg);
+                        FissionReleaseDebt.settled(pkg);
+                    } catch (Exception error) {
+                        FissionReleaseDebt.record(pkg);
+                    }
                 }
                 ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
                 mSlots.remove(pkg);
@@ -1126,7 +1157,8 @@ public final class FissionOrchestrator {
     /** Worker-thread rollback for slots successfully acquired by the failed switch attempt. */
     private void rollbackStartedSlot(String pkg) {
         final IBinder binder = mDaemonBinder;
-        FissionTeardownPlan.run(java.util.Collections.singletonList(pkg), false,
+        java.util.Set<String> unreleased = FissionTeardownPlan.run(
+            java.util.Collections.singletonList(pkg), false,
                 new FissionTeardownPlan.Operations() {
             @Override public String moveToDisplay0(String packageName) {
                 if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
@@ -1140,6 +1172,7 @@ public final class FissionOrchestrator {
             @Override public void releaseSlot(String packageName) throws Exception {
                 if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
                 FissionClient.releaseSlot(binder, packageName);
+                FissionReleaseDebt.settled(packageName);
             }
 
             @Override public void onStepError(String packageName, String step, Throwable error) {
@@ -1147,6 +1180,7 @@ public final class FissionOrchestrator {
                         + packageName + ": " + error.getMessage());
             }
         });
+        FissionReleaseDebt.recordAll(unreleased);
         mSlots.remove(pkg);
         mSelectedMirrorPackage = LayoutSlotSelection.resolve(
                 mSelectedMirrorPackage, orderedSlotPackages());
@@ -1268,7 +1302,10 @@ public final class FissionOrchestrator {
                 return;
             }
             if (purgeStaleDaemonSlots) {
-                try { FissionClient.deactivateLayout(mDaemonBinder); } catch (Exception ignored) {}
+                try {
+                    FissionClient.deactivateLayout(mDaemonBinder);
+                    FissionReleaseDebt.clearAll();
+                } catch (Exception ignored) {}
             }
             // One ATTACH_SLOT per bound app — keyed BY PACKAGE in the daemon, so the slot can
             // afterwards be queried, resized and released. The batch ACTIVATE_LAYOUT this
@@ -1359,10 +1396,19 @@ public final class FissionOrchestrator {
         if (mFreeZoneKeys.isEmpty()) return;
         for (String key : new ArrayList<>(mFreeZoneKeys)) {
             if (mDaemonBinder != null) {
-                try { FissionClient.releaseSlot(mDaemonBinder, key); } catch (Exception ignored) {}
+                try {
+                    FissionClient.releaseSlot(mDaemonBinder, key);
+                    FissionReleaseDebt.settled(key);
+                    mFreeZoneKeys.remove(key);
+                } catch (Exception error) {
+                    FissionReleaseDebt.record(key);
+                    AppLogger.e(TAG, "free-zone release failed for " + key + ": "
+                            + error.getMessage());
+                }
+            } else {
+                FissionReleaseDebt.record(key);
             }
         }
-        mFreeZoneKeys.clear();
     }
 
     /**
