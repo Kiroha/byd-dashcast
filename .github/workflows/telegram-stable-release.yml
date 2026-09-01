@@ -34,7 +34,7 @@ jobs:
     if: ${{ !github.event.release.prerelease && !contains(join(github.event.release.assets.*.name, ','), '-debug.apk') }}
     steps:
       - name: Check out the release scanner
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
                     # Run policy from the reviewed default branch, never from the release tag being judged.
                     ref: ${{ github.event.repository.default_branch }}
@@ -48,7 +48,7 @@ jobs:
         run: |
           mkdir -p assets
           gh release download "$TAG" --repo "$REPO" --dir assets --pattern '*.apk' --clobber
-          python3 .github/scripts/scan_release_assets.py assets
+          python3 .github/scripts/scan_release_assets.py assets --tag "$TAG"
 
       - name: Send changelog to Telegram (reopen → post → pin → close)
         env:
