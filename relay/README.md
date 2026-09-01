@@ -149,6 +149,7 @@ X-DashCast-Caption:  base64(utf8(caption))    — base64 because a caption has n
 body:                the report bytes, 64 B .. 45 MB
 
 200 {"ok":true} · 400 bad request · 413 too large · 502 Telegram refused · 503 relay unconfigured
+· 504 Telegram timeout
 ```
 
 `503` is deliberately distinct from `400`: a misconfigured relay must not look like a rejected

@@ -45,6 +45,7 @@ app.setup({ enableHttpStream: true });
  *   body: the report bytes
  *
  *   200 {"ok":true}  ·  400 bad request  ·  413 too large  ·  502 Telegram refused it
+ *   504 Telegram forwarding timed out
  *
  * ## Application settings
  *
@@ -60,6 +61,11 @@ const MAX_BYTES = 45 * 1024 * 1024;
 
 // A report is never empty. Anything this small is a probe, not a report.
 const MIN_BYTES = 64;
+
+// Bounds every phase of the outbound exchange, including streaming the car upload and draining
+// Telegram's response. Below Azure Consumption's five-minute function ceiling, but long enough
+// for the largest accepted report on a slow mobile connection.
+const TELEGRAM_TIMEOUT_MS = 180_000;
 
 const TOPICS = { bug: 'TELEGRAM_THREAD_BUG', hud: 'TELEGRAM_THREAD_HUD' };
 
@@ -85,10 +91,31 @@ function safe(text) {
         .replace(/bot\d{6,12}:[A-Za-z0-9_-]{20,}/g, 'bot<redacted>');
 }
 
-app.http('report', {
-    methods: ['POST'],
-    authLevel: 'anonymous',
-    handler: async (request, context) => {
+function createAbortDeadline(parentSignal, timeoutMs) {
+    const controller = new AbortController();
+    let timedOut = false;
+    const onParentAbort = () => controller.abort(parentSignal.reason);
+    if (parentSignal) {
+        if (parentSignal.aborted) onParentAbort();
+        else parentSignal.addEventListener('abort', onParentAbort, { once: true });
+    }
+    const timer = setTimeout(() => {
+        timedOut = true;
+        const error = new Error('Telegram forwarding deadline exceeded');
+        error.name = 'TimeoutError';
+        controller.abort(error);
+    }, timeoutMs);
+    return {
+        signal: controller.signal,
+        timedOut: () => timedOut,
+        dispose: () => {
+            clearTimeout(timer);
+            if (parentSignal) parentSignal.removeEventListener('abort', onParentAbort);
+        },
+    };
+}
+
+async function handleReport(request, context, dependencies = {}) {
         const topic = (request.headers.get('x-dashcast-topic') || 'bug').toLowerCase();
         if (!Object.prototype.hasOwnProperty.call(TOPICS, topic)) return bad(400, 'unknown topic');
 
@@ -131,37 +158,65 @@ app.http('report', {
             chatId, thread, caption, filename, bodyLength,
         });
 
-        let res;
+        const deadline = createAbortDeadline(
+            request.signal,
+            dependencies.telegramTimeoutMs || TELEGRAM_TIMEOUT_MS,
+        );
+        const outboundBody = Readable.from(
+            streamMultipart(request.body, multipart, bodyLength, deadline.signal),
+            { objectMode: false },
+        );
         try {
-            res = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {
+            const fetchImpl = dependencies.fetch || globalThis.fetch;
+            const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendDocument`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': `multipart/form-data; boundary=${multipart.boundary}`,
                     'Content-Length': String(multipart.contentLength),
                 },
-                body: Readable.from(streamMultipart(request.body, multipart, bodyLength), {
-                    objectMode: false,
-                }),
+                body: outboundBody,
                 duplex: 'half',
+                signal: deadline.signal,
             });
+
+            if (!res.ok) {
+                // Status and Telegram's description only — and scrubbed on the way out regardless.
+                let detail = '';
+                try {
+                    const j = await res.json();
+                    detail = j && j.description ? String(j.description) : '';
+                } catch { /* body was not JSON */ }
+                if (deadline.signal.aborted) {
+                    throw deadline.signal.reason || new Error('Telegram response aborted');
+                }
+                context.error(safe(`telegram refused: HTTP ${res.status} ${detail}`));
+                return bad(502, `telegram refused: HTTP ${res.status}`);
+            }
+
+            await drainStream(res.body);
+            context.log(safe(`relayed ${filename} (${bodyLength} bytes) to ${topic}`));
+            return { status: 200, jsonBody: { ok: true } };
         } catch (e) {
+            if (deadline.timedOut()) {
+                context.error(safe(`telegram timeout after ${dependencies.telegramTimeoutMs || TELEGRAM_TIMEOUT_MS}ms`));
+                return bad(504, 'telegram timeout');
+            }
+            if (request.signal && request.signal.aborted) {
+                context.log('incoming report disconnected before forwarding completed');
+                return bad(499, 'client disconnected');
+            }
             context.error(safe('telegram unreachable: ' + e.message));
             return bad(502, 'telegram unreachable');
+        } finally {
+            deadline.dispose();
+            if (!outboundBody.readableEnded && !outboundBody.destroyed) outboundBody.destroy();
         }
+}
 
-        if (!res.ok) {
-            // Status and Telegram's description only — and scrubbed on the way out regardless.
-            let detail = '';
-            try {
-                const j = await res.json();
-                detail = j && j.description ? String(j.description) : '';
-            } catch { /* body was not JSON */ }
-            context.error(safe(`telegram refused: HTTP ${res.status} ${detail}`));
-            return bad(502, `telegram refused: HTTP ${res.status}`);
-        }
-
-        await drainStream(res.body);
-        context.log(safe(`relayed ${filename} (${bodyLength} bytes) to ${topic}`));
-        return { status: 200, jsonBody: { ok: true } };
-    },
+app.http('report', {
+    methods: ['POST'],
+    authLevel: 'anonymous',
+    handler: handleReport,
 });
+
+module.exports = { createAbortDeadline, handleReport };
