@@ -1,6 +1,8 @@
 package com.byd.dashcast.update
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,5 +61,15 @@ class UpdateCheckerVersionTest {
         assertFalse(UpdateChecker.sameByteSet(
             arrayOf(first), arrayOf(second)))
         assertFalse(UpdateChecker.sameByteSet(null, arrayOf(first)))
+    }
+
+    @Test
+    fun `release assets require an exact GitHub SHA-256 digest`() {
+        val hex = "A1".repeat(32)
+        assertEquals(hex.lowercase(), UpdateChecker.parseSha256Digest("sha256:$hex"))
+        assertNull(UpdateChecker.parseSha256Digest(""))
+        assertNull(UpdateChecker.parseSha256Digest("sha256:abc"))
+        assertNull(UpdateChecker.parseSha256Digest("sha512:${"a".repeat(64)}"))
+        assertNull(UpdateChecker.parseSha256Digest("sha256:${"g".repeat(64)}"))
     }
 }

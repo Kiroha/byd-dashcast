@@ -209,7 +209,10 @@ public class UpdateChecker {
                     throw new Exception("Invalid APK asset size: " + size);
                 }
                 String digest = asset.optString("digest", "");
-                String sha256 = digest.startsWith("sha256:") ? digest.substring(7) : "";
+                String sha256 = parseSha256Digest(digest);
+                if (sha256 == null) {
+                    throw new Exception("Missing or invalid SHA-256 for release APK");
+                }
                 selectedAsset = new ReleaseAsset(
                         latestVer,
                         changelog,
@@ -348,11 +351,12 @@ public class UpdateChecker {
 
     private static void validateDownloadedApk(Context context, File apkFile,
                                               ReleaseAsset asset) throws Exception {
-        if (!asset.sha256.isEmpty()) {
-            String actual = sha256(apkFile);
-            if (!asset.sha256.equalsIgnoreCase(actual)) {
-                throw new Exception("APK SHA-256 mismatch");
-            }
+        if (asset.sha256 == null || !asset.sha256.matches("(?i)[0-9a-f]{64}")) {
+            throw new Exception("Release APK has no verified SHA-256");
+        }
+        String actual = sha256(apkFile);
+        if (!asset.sha256.equalsIgnoreCase(actual)) {
+            throw new Exception("APK SHA-256 mismatch");
         }
         PackageManager pm = context.getPackageManager();
         PackageInfo downloaded = pm.getPackageArchiveInfo(
@@ -410,6 +414,11 @@ public class UpdateChecker {
         Arrays.sort(leftBytes, comparator);
         Arrays.sort(rightBytes, comparator);
         return Arrays.deepEquals(leftBytes, rightBytes);
+    }
+
+    static String parseSha256Digest(String digest) {
+        if (digest == null || !digest.matches("(?i)sha256:[0-9a-f]{64}")) return null;
+        return digest.substring("sha256:".length()).toLowerCase(java.util.Locale.ROOT);
     }
 
     private static String sha256(File file) throws Exception {
