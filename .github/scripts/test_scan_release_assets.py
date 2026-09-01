@@ -119,6 +119,29 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             )
             runner.assert_not_called()
 
+    def test_main_skips_android_tools_after_archive_rejection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with zipfile.ZipFile(root / "DashCast.apk", "w", zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("AndroidManifest.xml", b"release")
+                archive.writestr("classes.dex", b"0" * 4096)
+            argv = [
+                str(SCRIPT),
+                str(root),
+                "--tag", "v1",
+                "--aapt", "/tmp/aapt",
+                "--apksigner", "/tmp/apksigner",
+            ]
+            with (
+                patch.object(scanner, "MIN_RATIO_CHECK_BYTES", 1),
+                patch.object(scanner, "MAX_COMPRESSION_RATIO", 2),
+                patch.object(scanner, "verify_release_contract") as verify,
+                patch.object(sys, "argv", argv),
+            ):
+                self.assertEqual(1, scanner.main())
+
+            verify.assert_not_called()
+
     def test_entry_count_and_total_expanded_size_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
