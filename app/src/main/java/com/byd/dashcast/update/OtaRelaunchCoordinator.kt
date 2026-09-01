@@ -35,6 +35,7 @@ object OtaRelaunchCoordinator {
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit(commit = true) { remove(KEY_REQUESTED_AT) }
+        OtaArtifactCleanup.cleanup(context)
     }
 
     @JvmStatic
@@ -58,6 +59,9 @@ object OtaRelaunchCoordinator {
                 return false
             }
         }
+        // STATUS_SUCCESS / MY_PACKAGE_REPLACED proves the installer is finished. The staged
+        // PackageInstaller data is independent; the downloaded source can no longer be read.
+        OtaArtifactCleanup.cleanup(app)
         try {
             val launch = app.packageManager.getLaunchIntentForPackage(app.packageName)
             if (launch == null) {
