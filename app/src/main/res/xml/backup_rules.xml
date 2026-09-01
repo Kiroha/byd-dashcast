@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <include domain="sharedpref" path="byd_prefs.xml" />
-    <exclude domain="file" path="adb.key" />
-    <exclude domain="file" path="adb.pub" />
-    <exclude domain="sharedpref" path="dashcast_report_channel.xml" />
-    <exclude domain="sharedpref" path="dashcast_report_consent.xml" />
-    <exclude domain="sharedpref" path="dashcast_bug_report.xml" />
-    <exclude domain="external" path="." />
 </full-backup-content>
