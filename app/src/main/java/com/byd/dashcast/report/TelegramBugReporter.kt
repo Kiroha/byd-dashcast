@@ -29,6 +29,13 @@ object TelegramBugReporter {
     interface Callback {
         fun onSent()
         fun onFailed(message: String)
+        fun onAmbiguous(message: String)
+    }
+
+    internal sealed class DeliveryResult {
+        data object Sent : DeliveryResult()
+        data class Failed(val message: String) : DeliveryResult()
+        data class Ambiguous(val message: String) : DeliveryResult()
     }
 
     /**
@@ -62,9 +69,13 @@ object TelegramBugReporter {
     @JvmStatic
     fun send(context: Context, file: File, caption: String?, threadOverride: String, cb: Callback) {
         Thread({
-            val error = doSend(file, caption, threadOverride)
+            val result = doSend(file, caption, threadOverride)
             post {
-                if (error == null) cb.onSent() else cb.onFailed(error)
+                when (result) {
+                    DeliveryResult.Sent -> cb.onSent()
+                    is DeliveryResult.Failed -> cb.onFailed(result.message)
+                    is DeliveryResult.Ambiguous -> cb.onAmbiguous(result.message)
+                }
             }
         }, "tg-bugreport").start()
     }
@@ -81,21 +92,38 @@ object TelegramBugReporter {
      * a device that still holds a working bot token from an earlier provisioning. So a relay
      * failure falls through to the direct path, and only both failing is a failure.
      */
-    private fun doSend(file: File, caption: String?, thread: String): String? {
+    private fun doSend(file: File, caption: String?, thread: String): DeliveryResult {
         if (RelayUploader.isConfigured()) {
             val topic = if (isHudThread(thread)) RelayUploader.TOPIC_HUD else RelayUploader.TOPIC_BUG
             val relayResult = RelayUploader.sendResult(file, caption, topic)
-            if (relayResult == RelayUploader.SendResult.Sent) return null
-            val relayError = when (relayResult) {
-                is RelayUploader.SendResult.SafeFailure -> relayResult.message
-                is RelayUploader.SendResult.AmbiguousFailure -> relayResult.message
-                RelayUploader.SendResult.Sent -> return null
+            return resolveRelayResult(relayResult, ReportChannel.hasTelegram()) {
+                doSendDirect(file, caption, thread)
             }
-            if (!shouldFallbackToDirect(relayResult, ReportChannel.hasTelegram())) return relayError
-            AppLogger.w(TAG, "relay failed safely ($relayError) — falling back to the direct bot path")
         }
-        return doSendDirect(file, caption, thread)
+        return directResult(doSendDirect(file, caption, thread))
     }
+
+    @JvmStatic
+    internal fun resolveRelayResult(
+        relayResult: RelayUploader.SendResult,
+        directConfigured: Boolean,
+        directSend: () -> String?,
+    ): DeliveryResult = when (relayResult) {
+        RelayUploader.SendResult.Sent -> DeliveryResult.Sent
+        is RelayUploader.SendResult.AmbiguousFailure ->
+            DeliveryResult.Ambiguous(relayResult.message)
+        is RelayUploader.SendResult.SafeFailure -> {
+            if (!directConfigured) DeliveryResult.Failed(relayResult.message)
+            else {
+                AppLogger.w(TAG, "relay failed safely (${relayResult.message}) — " +
+                    "falling back to the direct bot path")
+                directResult(directSend())
+            }
+        }
+    }
+
+    private fun directResult(error: String?): DeliveryResult =
+        if (error == null) DeliveryResult.Sent else DeliveryResult.Failed(error)
 
     @JvmStatic
     internal fun shouldFallbackToDirect(

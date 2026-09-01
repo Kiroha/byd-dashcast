@@ -100,6 +100,14 @@ class BugReportActivity : Activity() {
                                 AppLogger.w(TAG, "bot send failed, share fallback: $message")
                                 shareFallback(file)
                             }
+                            override fun onAmbiguous(message: String) {
+                                AppLogger.w(TAG, "report delivery uncertain; file kept: $message")
+                                tvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
+                                Toast.makeText(this@BugReportActivity,
+                                    getString(R.string.bug_kept_locally_fmt, file.name),
+                                    Toast.LENGTH_LONG).show()
+                                finish()
+                            }
                         })
                 } else {
                     shareFallback(file)

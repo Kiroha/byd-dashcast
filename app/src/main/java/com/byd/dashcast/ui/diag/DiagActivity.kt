@@ -571,6 +571,11 @@ class DiagActivity : Activity() {
                         progress("✗ upload failed: $message")
                         keepExtractionLocally(owner, zip, progress)
                     }
+
+                    override fun onAmbiguous(message: String) {
+                        progress("? upload outcome unknown: $message\nkept at ${zip.absolutePath}")
+                        completeExtraction(owner)
+                    }
                 })
         }
 

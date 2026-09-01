@@ -727,6 +727,11 @@ class BugWizardActivity : Activity() {
                                     BugWizardSubmissionGate.release(token)
                                     AppLogger.w(TAG, "headless report upload failed: $message")
                                 }
+                                override fun onAmbiguous(message: String) {
+                                    BugWizardSubmissionGate.release(token)
+                                    AppLogger.w(TAG, "headless report delivery uncertain; file kept: "
+                                        + message)
+                                }
                             })
                     } else {
                         BugWizardSubmissionGate.release(token)
@@ -788,6 +793,11 @@ class BugWizardActivity : Activity() {
                         return
                     }
                     shareFallback(file)
+                }
+                override fun onAmbiguous(message: String) {
+                    BugWizardSubmissionGate.release(mSubmissionToken)
+                    AppLogger.w(TAG, "report delivery uncertain; file kept: $message")
+                    if (isUiAlive()) finishAmbiguousDelivery(file)
                 }
             })
         } else {
@@ -915,6 +925,11 @@ class BugWizardActivity : Activity() {
                             override fun onFailed(message: String) {
                                 BugWizardSubmissionGate.release(token)
                                 AppLogger.w(TAG, "headless bundle upload failed: $message")
+                            }
+                            override fun onAmbiguous(message: String) {
+                                BugWizardSubmissionGate.release(token)
+                                AppLogger.w(TAG, "headless bundle delivery uncertain; file kept: "
+                                    + message)
                             }
                         })
                 } else {
@@ -1185,6 +1200,14 @@ class BugWizardActivity : Activity() {
             Toast.makeText(this, getString(R.string.bug_status_error_fmt, e.message.orEmpty()),
                 Toast.LENGTH_LONG).show()
         }
+        finish()
+    }
+
+    private fun finishAmbiguousDelivery(file: File) {
+        disarmSendWatchdog()
+        mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
+        Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),
+            Toast.LENGTH_LONG).show()
         finish()
     }
 
