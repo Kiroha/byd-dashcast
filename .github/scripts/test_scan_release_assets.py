@@ -78,6 +78,18 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 ["DashCast.apk :: lib/duplicate.so :: telegram bot token"],
             )
 
+    def test_nonempty_directory_named_entry_is_rejected(self) -> None:
+        token = b"123456789:AAabcdefghijklmnopqrstuvwxyzABCDE12345"
+        with tempfile.TemporaryDirectory() as directory:
+            with zipfile.ZipFile(Path(directory) / "DashCast.apk", "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"release")
+                archive.writestr("assets/payload/", token)
+
+            self.assertEqual(
+                scanner.scan_apks(Path(directory)),
+                ["DashCast.apk :: assets/payload/ :: non-empty directory entry"],
+            )
+
     def test_secret_split_across_scan_chunks_is_detected(self) -> None:
         token = b"123456789:AAabcdefghijklmnopqrstuvwxyzABCDE12345"
         padding = b"x" * (scanner.SCAN_CHUNK_BYTES - 10)
