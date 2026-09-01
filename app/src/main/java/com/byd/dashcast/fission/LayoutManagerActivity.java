@@ -600,27 +600,11 @@ public class LayoutManagerActivity extends Activity {
         mActiveId = null;
         for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
         mAdapter.update(mPresets, mActiveId);
-        // Stop the orchestrator first — it owns the slots now, so each layout app is moved back
-        // to display 0 and killed, and it stops believing its slots are alive (it would
-        // otherwise skip re-creating them on the next activation). The daemon purge then
-        // guarantees nothing is left over from an earlier run.
-        FissionOrchestrator.stopAutoOrchestrator(this::purgeDaemonSlotsAsync);
+        // The global purge is part of the old owner's serialized teardown; activation stays gated
+        // until it completes, so it cannot delete slots attached by a newer layout.
+        FissionOrchestrator.stopAutoOrchestratorAndPurge(this, null);
         Toast.makeText(this, R.string.lm_free_mode_toast, Toast.LENGTH_SHORT).show();
         return true;
-    }
-
-    /** Off-main-thread DEACTIVATE_LAYOUT; no-op once this activity's executor is gone. */
-    private void purgeDaemonSlotsAsync() {
-        if (mExec.isShutdown()) return;
-        try {
-            mExec.execute(() -> {
-                IBinder binder = FissionClient.getBinderFromServiceManager();
-                if (binder == null) return;
-                try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
-            });
-        } catch (java.util.concurrent.RejectedExecutionException ignored) {
-            // Activity destroyed between the check and the submit — nothing left to clean up.
-        }
     }
 
     private void setCurrentLayoutAsFavorite() {

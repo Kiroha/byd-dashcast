@@ -603,21 +603,54 @@ public final class FissionOrchestrator {
      * every Layout package has completed move → verified force-stop → optional slot release.
      */
     public static void stopAutoOrchestrator(Runnable onComplete) {
+        stopAutoOrchestrator(false, null, onComplete);
+    }
+
+    /** Stops all tracked slots, then globally purges daemon slots before activation can resume. */
+    public static void stopAutoOrchestratorAndPurge(Context context, Runnable onComplete) {
+        stopAutoOrchestrator(true, context.getApplicationContext(), onComplete);
+    }
+
+    private static void stopAutoOrchestrator(boolean purgeDaemonSlots, Context context,
+                                             Runnable onComplete) {
         FissionOrchestrator o = sAutoStartOrchestrator;
         sAutoStartOrchestrator = null;
-        sActivationInFlight.set(false);
+        if (purgeDaemonSlots) {
+            sActivationInFlight.set(true);
+            sActivationStartedMs = android.os.SystemClock.elapsedRealtime();
+        } else {
+            sActivationInFlight.set(false);
+        }
+        Runnable complete = () -> {
+            if (purgeDaemonSlots) sActivationInFlight.set(false);
+            notifyLayoutChanged();
+            if (onComplete != null) onComplete.run();
+        };
         if (o != null) {
             AppLogger.i(TAG, "stopping headless auto-start orchestrator");
-            o.stopAll(() -> {
-                notifyLayoutChanged();
-                if (onComplete != null) onComplete.run();
-            });
+            if (purgeDaemonSlots) o.stopAllAndPurge(complete);
+            else o.stopAll(complete);
             // stopAll() submitted its teardown to mExec but never shut it down; this
             // throwaway orchestrator is dropped here (never destroy()'d), so shut the
             // executor down gracefully or its worker thread leaks per headless stop.
             o.shutdown();
-        } else if (onComplete != null) {
-            new Handler(Looper.getMainLooper()).post(onComplete);
+        } else if (purgeDaemonSlots) {
+            Thread purge = new Thread(() -> {
+                IBinder binder = FissionClient.getBinderFromServiceManager();
+                if (binder != null) {
+                    try {
+                        FissionClient.deactivateLayout(binder);
+                        FissionReleaseDebt.clearAll();
+                    } catch (Exception error) {
+                        AppLogger.e(TAG, "global slot purge failed: " + error.getMessage());
+                    }
+                }
+                new Handler(Looper.getMainLooper()).post(complete);
+            }, "fission-global-purge");
+            purge.setDaemon(true);
+            purge.start();
+        } else {
+            new Handler(Looper.getMainLooper()).post(complete);
         }
     }
 
@@ -789,6 +822,14 @@ public final class FissionOrchestrator {
     }
 
     public void stopAll(Runnable onComplete) {
+        stopAll(false, onComplete);
+    }
+
+    private void stopAllAndPurge(Runnable onComplete) {
+        stopAll(true, onComplete);
+    }
+
+    private void stopAll(boolean purgeDaemonSlots, Runnable onComplete) {
         abandonClusterActivation();
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)));
         boolean accepted = submitQuietly("stopAll", () -> {
@@ -797,7 +838,7 @@ public final class FissionOrchestrator {
             // cluster. No-op unless a manual activation created some.
             releaseFreeZones();
             final List<String> packages = new ArrayList<>(mSlots.keySet());
-            if (!mProjecting && packages.isEmpty()) {
+            if (!purgeDaemonSlots && !mProjecting && packages.isEmpty()) {
                 mMainHandler.post(() -> {
                     mCallbacks.onStatusMessage(null);
                     if (onComplete != null) onComplete.run();
@@ -843,6 +884,14 @@ public final class FissionOrchestrator {
             FissionReleaseDebt.recordAll(unreleased);
             mSlots.clear();
             mSelectedMirrorPackage = null;
+            if (purgeDaemonSlots && binder != null) {
+                try {
+                    FissionClient.deactivateLayout(binder);
+                    FissionReleaseDebt.clearAll();
+                } catch (Exception error) {
+                    AppLogger.e(TAG, "global slot purge failed: " + error.getMessage());
+                }
+            }
             if (binder != null) {
                 try { FissionClient.stopMirror(binder); } catch (Throwable ignored) {}
             }
