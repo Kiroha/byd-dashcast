@@ -63,6 +63,16 @@ public class AdbLocalClient {
             return t;
         }
     });
+    /** At most main+split are blindly evicted; dedicated workers prevent shared-pool starvation. */
+    private static final ExecutorService sBlindEvictionExecutor =
+            Executors.newFixedThreadPool(2, new ThreadFactory() {
+                private final AtomicInteger seq = new AtomicInteger(1);
+                @Override public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "adb-blind-evict-" + seq.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
 
     private static final String TAG = "AdbLocalClient";
 
@@ -1416,14 +1426,29 @@ public class AdbLocalClient {
      */
     public static void forceStopApp(final Context context, final String packageName,
             final Callback callback) {
-        sExecutor.execute(new Runnable() {
+        forceStopAppInternal(context, packageName, callback, sExecutor, true,
+            SHELL_IDLE_TIMEOUT_MS);
+        }
+
+        /** Service-less teardown: bypass potentially wedged Binder and shared ADB work. */
+        public static void forceStopAppForBlindEviction(final Context context,
+            final String packageName, final Callback callback) {
+        forceStopAppInternal(context, packageName, callback, sBlindEvictionExecutor, false,
+            PROBE_IDLE_TIMEOUT_MS);
+        }
+
+        private static void forceStopAppInternal(final Context context, final String packageName,
+            final Callback callback, ExecutorService executor, final boolean allowTyped,
+            final int socketTimeoutMs) {
+        executor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "forceStop " + packageName + " ...");
                 // Phase 7: typed daemon path — findTask + removeTask + forceStopPackage.
                 // Replaces the 3-step ADB shell chain (dumpsys recents + am task remove
                 // + TaskRemover app_process + am force-stop). Falls through to ADB on
                 // any failure so semantics are fully preserved for callers.
-                if (!DaemonConfig.isLegacyPathEnabled(context) && ProxyClient.isConnected()) {
+                if (allowTyped && !DaemonConfig.isLegacyPathEnabled(context)
+                    && ProxyClient.isConnected()) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         // ORDER MATTERS, and it is the reverse of what it used to be.
@@ -1502,7 +1527,7 @@ public class AdbLocalClient {
                 java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> legacyLocations =
                     java.util.Collections.singletonList(
                         com.byd.dashcast.infrastructure.task.TaskLocation.unknown());
-                try (Dadb dadb = connect(context)) {
+                try (Dadb dadb = connect(context, socketTimeoutMs)) {
                     try {
                     String activities = dadb.shell(
                         "dumpsys activity activities 2>/dev/null").getAllOutput();

@@ -142,7 +142,8 @@ class ClusterSessionTracker(context: Context) {
                     barrier.complete(Runnable {})
                 }
                 try {
-                    AdbLocalClient.forceStopApp(mAppCtx, p, object : AdbLocalClient.Callback {
+                    AdbLocalClient.forceStopAppForBlindEviction(
+                        mAppCtx, p, object : AdbLocalClient.Callback {
                         override fun onSuccess(result: String?) = completeBlind(true, null)
                         override fun onError(error: String?) = completeBlind(false, error)
                     })
