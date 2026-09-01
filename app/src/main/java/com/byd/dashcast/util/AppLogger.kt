@@ -573,6 +573,8 @@ object AppLogger {
                 val matches = ArrayList<File>()
                 for (f in entries) {
                     if (f != null && f.isFile && f.name.startsWith(prefix)) {
+                        if (com.byd.dashcast.report.BugWizardPendingDelivery
+                                .protects(context, f)) continue
                         matches.add(f)
                     }
                 }

@@ -40,4 +40,7 @@ internal object BugWizardPendingDelivery {
     fun clear(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().commit()
     }
+
+    fun protects(context: Context, file: File): Boolean =
+        load(context)?.path == file.absolutePath
 }
