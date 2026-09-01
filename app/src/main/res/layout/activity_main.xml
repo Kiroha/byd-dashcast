@@ -520,12 +520,11 @@
             <!-- ═══════════════════════════════════════ -->
             <!-- LEFT PANE: apps                         -->
             <!-- ═══════════════════════════════════════ -->
-            <!-- v1.2.83 — width = 2 × favorite-tile width (80dp each) so that
-                 the Favorites strip and the 2-column grid line up vertically.
-                 Anything narrower would clip the favorite tiles. -->
+            <!-- Regular-mode baseline; MainActivity switches to fixed 160dp in compact mode. -->
             <LinearLayout
                 android:id="@+id/ll_app_list_section"
-                android:layout_width="160dp"
+                android:layout_width="0dp"
+                android:layout_weight="1.4"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:layout_marginEnd="8dp">

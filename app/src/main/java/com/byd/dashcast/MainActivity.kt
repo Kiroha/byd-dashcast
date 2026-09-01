@@ -57,6 +57,7 @@ import com.byd.dashcast.ui.InsetOverlayView
 import com.byd.dashcast.ui.main.ActivateTimeoutManager
 import com.byd.dashcast.ui.main.AppActionSheet
 import com.byd.dashcast.ui.main.AppListCoordinator
+import com.byd.dashcast.ui.main.AppsPanelLayoutPolicy
 import com.byd.dashcast.ui.main.ClusterControlCoordinator
 import com.byd.dashcast.ui.main.DisplayStatePollCoordinator
 import com.byd.dashcast.ui.main.DashboardSelectionTracker
@@ -300,7 +301,8 @@ class MainActivity : AppCompatActivity(),
         vRootOverlay = findViewById(R.id.root_overlay)
         llCategoryFilters = findViewById(R.id.ll_category_filters)
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true)
+        val showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS,
+            SettingsActivity.DEFAULT_SHOW_CATEGORY_FILTERS)
         llCategoryFilters.visibility = if (showFilters) View.VISIBLE else View.GONE
 
         // Button "Restore cluster" — quick stop or full origin-restore per PREF_QUICK_STOP.
@@ -386,6 +388,7 @@ class MainActivity : AppCompatActivity(),
 
         // Wire coordinator layer (status dot, mirror lifecycle, fullscreen state machine).
         setupCoordinators()
+        applyCompactAppsPanelMode()
 
         // Restore main-display pkg into the adapter now that mAppListCoordinator exists.
         if (mMainDisplayPkg != null) {
@@ -454,27 +457,30 @@ class MainActivity : AppCompatActivity(),
         return false
     }
 
-    /**
-     * v1.2.45 — Apply the "compact apps panel" preference (left column fixed 160dp, 2-col grid,
-     * chips hidden). Idempotent.
-     */
+    /** Applies the regular or compact apps-panel preference. Idempotent. */
     private fun applyCompactAppsPanelMode() {
-        // Left apps column is always a fixed 160dp width with span=2.
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL,
+            SettingsActivity.DEFAULT_COMPACT_APPS_PANEL)
+        val filtersEnabled = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS,
+            SettingsActivity.DEFAULT_SHOW_CATEGORY_FILTERS)
+        val config = AppsPanelLayoutPolicy.resolve(compact, filtersEnabled)
+
         val lp = llAppListSection.layoutParams
         if (lp is LinearLayout.LayoutParams) {
-            val targetW = (160 * resources.displayMetrics.density).toInt()
-            if (lp.width != targetW || lp.weight != 0f) {
+            val targetW = config.fixedWidthDp?.let {
+                (it * resources.displayMetrics.density).toInt()
+            } ?: 0
+            if (lp.width != targetW || lp.weight != config.weight) {
                 lp.width = targetW
-                lp.weight = 0f
+                lp.weight = config.weight
                 llAppListSection.layoutParams = lp
             }
         }
 
-        // Always 2-column grid to match the favorites strip.
-        mAppListCoordinator.ensureGridSpanCount(2)
-
-        // Category-filter chips: too wide for a 160dp column, force-hidden.
-        findViewById<View?>(R.id.ll_category_filters)?.visibility = View.GONE
+        mAppListCoordinator.ensureGridSpanCount(config.gridSpanCount)
+        llCategoryFilters.visibility =
+            if (config.showCategoryFilters) View.VISIBLE else View.GONE
     }
 
     private fun handleShowMirrorIntent(intent: Intent?) {
@@ -546,9 +552,7 @@ class MainActivity : AppCompatActivity(),
         }
         mPermissionBannerCoordinator?.refresh()
         // Refresh category filter visibility (may have been toggled in Settings)
-        val showFilters = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true)
-        llCategoryFilters.visibility = if (showFilters) View.VISIBLE else View.GONE
+        applyCompactAppsPanelMode()
         // Retrieve the daemon Binder from ServiceManager if not yet available.
         if (mDaemonBinder == null) {
             tryGetDaemonBinderFromServiceManager()
