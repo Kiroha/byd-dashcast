@@ -30,6 +30,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * v1.2.71 — Fullscreen editor that lets the user position/resize a fission-cluster
@@ -197,8 +198,7 @@ class ClusterResizeActivity : Activity(),
             val r = mInitRect
             mFrame.setFrame(r[0], r[1], r[2], r[3])
             updateCoordsLabel(r[0], r[1], r[2], r[3])
-            scheduleApply(r[0], r[1], r[2], r[3], /*commit*/ true)
-            finish()
+            if (dispatchFinalApply(r[0], r[1], r[2], r[3])) finish()
         }
         mOk.setOnClickListener {
             // v1.2.84 — Valider applies the current frame to the cluster but does NOT close the
@@ -365,20 +365,47 @@ class ClusterResizeActivity : Activity(),
             mLastApplyTs = System.currentTimeMillis()
             pending
         }
-        val l = rect[0]
-        val t = rect[1]
-        val r = rect[2]
-        val b = rect[3]
-        sResizeExec.execute {
-            try {
-                if (!ProxyClient.isConnected()) {
-                    ProxyClient.connect(this)
+        enqueueApply(rect)
+    }
+
+    /** Queues the terminal Cancel restore outside the Activity handler before teardown can run. */
+    private fun dispatchFinalApply(l: Int, t: Int, r: Int, b: Int): Boolean {
+        val rect = intArrayOf(l, t, r, b)
+        synchronized(mApplyLock) {
+            mUi.removeCallbacks(mApplyRunnable)
+            mPendingRect = null
+            mApplyScheduled = false
+        }
+        if (!enqueueApply(rect)) return false
+        persistRect(l, t, r, b)
+        return true
+    }
+
+    private fun enqueueApply(rect: IntArray): Boolean {
+        val app = applicationContext
+        val pkg = mPkg
+        val displayId = mDisplayId
+        val applied = rect.copyOf()
+        return try {
+            sResizeExec.execute {
+                val l = applied[0]
+                val t = applied[1]
+                val r = applied[2]
+                val b = applied[3]
+                try {
+                    if (!ProxyClient.isConnected()) {
+                        ProxyClient.connect(app)
+                    }
+                    val log = ProxyClient.moveAndResize(pkg, displayId, l, t, r, b)
+                    AppLogger.d(TAG, "moveAndResize [$l,$t,$r,$b] → $log")
+                } catch (th: Throwable) {
+                    AppLogger.w(TAG, "moveAndResize failed: " + th.message)
                 }
-                val log = ProxyClient.moveAndResize(mPkg, mDisplayId, l, t, r, b)
-                AppLogger.d(TAG, "moveAndResize [$l,$t,$r,$b] → $log")
-            } catch (th: Throwable) {
-                AppLogger.w(TAG, "moveAndResize failed: " + th.message)
             }
+            true
+        } catch (rejected: RejectedExecutionException) {
+            AppLogger.e(TAG, "moveAndResize dispatch rejected", rejected)
+            false
         }
     }
 
