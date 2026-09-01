@@ -64,4 +64,24 @@ class ClusterImeRelaySessionTest {
         assertTrue("manual target must be bound before the bridge opens",
             method.indexOf("mRelaySession.bind") in 0 until method.indexOf("launchBridge()"))
     }
+
+    @Test
+    fun `queued touch probe revalidates projection and service before opening bridge`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/ime").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java"
+        ).readText()
+        val touchProbe = source.substringAfter("public static void checkAndLaunchBridgeIfNeeded")
+            .substringBefore("public static boolean prepareAndLaunchBridgeManually")
+        val launch = source.substringAfter("private void launchBridge()")
+            .substringBefore("// ─────────────────────────────────────────────────────────────────────────")
+
+        assertTrue(touchProbe.split(
+            "sInstance != svc || activeClusterDisplayId() != activeDisplayId").size - 1 >= 2)
+        assertTrue(launch.indexOf("sInstance != this") < launch.indexOf("startActivity(i)"))
+        assertTrue(launch.indexOf("mRelaySession.hasTargetOn") < launch.indexOf("startActivity(i)"))
+    }
 }

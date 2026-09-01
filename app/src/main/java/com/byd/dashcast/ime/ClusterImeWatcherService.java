@@ -273,6 +273,12 @@ public class ClusterImeWatcherService extends AccessibilityService {
     }
 
     private void launchBridge() {
+        int activeDisplayId = activeClusterDisplayId();
+        if (sInstance != this || !mRelaySession.hasTargetOn(activeDisplayId)) {
+            mRelaySession.clear();
+            AppLogger.d(TAG, "launchBridge ignored: relay target is no longer active");
+            return;
+        }
         try {
             Intent i = new Intent(this, KeyboardBridgeActivity.class);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
@@ -530,16 +536,18 @@ public class ClusterImeWatcherService extends AccessibilityService {
         final ClusterImeWatcherService svc = self;
         worker.post(new Runnable() {
             @Override public void run() {
+                if (sInstance != svc || activeClusterDisplayId() != activeDisplayId) return;
                 if (KeyboardBridgeActivity.isShowing()) return;
                 AccessibilityNodeInfo node = svc.findFocusedEditableOnDisplay(activeDisplayId, null);
                 if (node == null) return;
-                CharSequence candidatePackage = node.getPackageName();
-                if (candidatePackage == null) {
+                try {
+                    if (sInstance != svc || activeClusterDisplayId() != activeDisplayId) return;
+                    CharSequence candidatePackage = node.getPackageName();
+                    if (candidatePackage == null) return;
+                    svc.mRelaySession.bind(activeDisplayId, candidatePackage.toString());
+                } finally {
                     try { node.recycle(); } catch (Throwable ignored) { }
-                    return;
                 }
-                svc.mRelaySession.bind(activeDisplayId, candidatePackage.toString());
-                try { node.recycle(); } catch (Throwable ignored) { }
                 svc.mLastLaunchAt = android.os.SystemClock.uptimeMillis();
                 AppLogger.d(TAG, "checkAndLaunchBridgeIfNeeded — cluster editable detected after touch, launching bridge");
                 svc.launchBridge();
