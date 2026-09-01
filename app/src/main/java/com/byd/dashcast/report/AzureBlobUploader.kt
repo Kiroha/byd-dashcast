@@ -122,12 +122,17 @@ object AzureBlobUploader {
                 val code = connection.responseCode
                 val detail = if (code in 200..299) "" else errorDetail(connection)
                 if (code in 200..299) return
-                lastError = IllegalStateException("HTTP $code$detail")
+                val failure = BlockHttpException(code, "HTTP $code$detail")
+                if (!isTransientHttpStatus(code) || attempt == ATTEMPTS_PER_REQUEST) throw failure
+                lastError = failure
             } catch (t: Throwable) {
                 if (t is InterruptedException) {
                     Thread.currentThread().interrupt()
                     throw t
                 }
+                val retryable = t is IOException ||
+                    (t is BlockHttpException && isTransientHttpStatus(t.statusCode))
+                if (!retryable || attempt == ATTEMPTS_PER_REQUEST) throw t
                 lastError = t
             } finally {
                 connection?.disconnect()
@@ -152,6 +157,9 @@ object AzureBlobUploader {
     internal fun interface RetrySleeper {
         fun sleep(delayMs: Long)
     }
+
+    private class BlockHttpException(val statusCode: Int, message: String) :
+        IllegalStateException(message)
 
     /** Commits the uploaded blocks; until this succeeds the blob does not exist. */
     private fun commit(url: String, blockIds: List<String>) = commitWithRetry(
@@ -193,11 +201,11 @@ object AzureBlobUploader {
                     code,
                     "commit failed: HTTP $code${errorDetail(connection)}"
                 )
-                if (!isTransientCommitStatus(code) || attempt == ATTEMPTS_PER_REQUEST) throw failure
+                if (!isTransientHttpStatus(code) || attempt == ATTEMPTS_PER_REQUEST) throw failure
             } catch (failure: Throwable) {
                 if (failure is InterruptedException) throw failure
                 val retryable = failure is IOException ||
-                    (failure is CommitHttpException && isTransientCommitStatus(failure.statusCode))
+                    (failure is CommitHttpException && isTransientHttpStatus(failure.statusCode))
                 if (!retryable || attempt == ATTEMPTS_PER_REQUEST) throw failure
             } finally {
                 connection?.disconnect()
@@ -209,7 +217,7 @@ object AzureBlobUploader {
     private class CommitHttpException(val statusCode: Int, message: String) :
         IllegalStateException(message)
 
-    private fun isTransientCommitStatus(code: Int): Boolean =
+    private fun isTransientHttpStatus(code: Int): Boolean =
         code == 408 || code == 429 || code >= 500
 
     private fun open(url: String, method: String): HttpURLConnection =
