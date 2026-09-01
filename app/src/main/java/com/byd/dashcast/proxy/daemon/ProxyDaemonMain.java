@@ -597,6 +597,7 @@ public final class ProxyDaemonMain {
                     if (++tick % 10 == 0) {
                         try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
                         try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
+                        healInstanceFile();
                     }
                 }
             }
@@ -640,6 +641,16 @@ public final class ProxyDaemonMain {
                 System.exit(0);
             }
         } catch (Throwable ignore) {}
+    }
+
+    private static void healInstanceFile() {
+        try {
+            if (ProxyInstanceMarker.ensureOwned(new File(INSTANCE_FILE), INSTANCE_TOKEN)) return;
+            log("self-heal: instance marker belongs to another generation → suicide");
+        } catch (Throwable error) {
+            log("self-heal: cannot restore instance marker → suicide: " + error);
+        }
+        System.exit(4);
     }
 
     /** Reflective hop to obtain a usable system {@link Context} from inside {@code app_process}. */
