@@ -2,6 +2,7 @@ const { app } = require('@azure/functions');
 const { Readable } = require('node:stream');
 const {
     createMultipartPlan,
+    drainStream,
     parseContentLength,
     streamMultipart,
 } = require('../multipart');
@@ -159,6 +160,7 @@ app.http('report', {
             return bad(502, `telegram refused: HTTP ${res.status}`);
         }
 
+        await drainStream(res.body);
         context.log(safe(`relayed ${filename} (${bodyLength} bytes) to ${topic}`));
         return { status: 200, jsonBody: { ok: true } };
     },

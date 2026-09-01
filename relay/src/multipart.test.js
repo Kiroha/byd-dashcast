@@ -6,6 +6,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const {
     createMultipartPlan,
+    drainStream,
     parseContentLength,
     streamMultipart,
 } = require('./multipart');
@@ -31,6 +32,22 @@ test('content length parser accepts only safe decimal integers', () => {
     assert.equal(parseContentLength('-1'), null);
     assert.equal(parseContentLength('1.5'), null);
     assert.equal(parseContentLength('9007199254740993'), null);
+});
+
+test('successful upstream response is completely drained', async () => {
+    let pulls = 0;
+    const responseBody = new ReadableStream({
+        pull(controller) {
+            pulls++;
+            if (pulls <= 3) controller.enqueue(Buffer.from('response'));
+            else controller.close();
+        },
+    });
+
+    await drainStream(responseBody);
+
+    assert.equal(pulls, 4);
+    assert.equal(responseBody.locked, false);
 });
 
 test('function enables Azure request streaming before route registration', () => {
