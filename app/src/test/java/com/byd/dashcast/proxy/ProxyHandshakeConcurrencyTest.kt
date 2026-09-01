@@ -29,6 +29,8 @@ class ProxyHandshakeConcurrencyTest {
         setStatic("sDaemonPid", -1)
         setStatic("sDaemonVer", null)
         setStatic("sDaemonInstance", null)
+        setStatic("sDeath", null)
+        setStatic("sDeathBinder", null)
     }
 
     @Test
@@ -167,6 +169,24 @@ class ProxyHandshakeConcurrencyTest {
 
         assertTrue(receiverPublish.indexOf("sDaemonUid = -1") <
             receiverPublish.indexOf("sBinder = bp.binder"))
+    }
+
+    @Test
+    fun `death recipient clears only the binder it captured`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+        val death = source.substringAfter("private static void linkDeathLocked")
+            .substringBefore("private static void unlinkDeathLocked")
+        val receiver = source.substringAfter("// Unhook the previous death recipient")
+            .substringBefore("AppLogger.i(TAG, \"live binder received from daemon\")")
+
+        assertTrue(death.contains("if (sBinder != watchedBinder) return"))
+        assertTrue(death.contains("sBinder = null"))
+        assertTrue(receiver.contains("unlinkDeathLocked(sBinder)"))
+        assertTrue(receiver.contains("linkDeathLocked(sBinder)"))
     }
 
     private fun setStatic(name: String, value: Any?) {

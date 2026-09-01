@@ -277,26 +277,42 @@ public final class ProxyClient {
      * (a full IPC roundtrip per call) — it can rely on the cheaper local
      * {@link IBinder#isBinderAlive()} check (build 195 / P2).
      */
-    private static final DeathRecipient sDeath = new DeathRecipient() {
-        @Override public void binderDied() {
-            synchronized (LOCK) {
-                AppLogger.w(TAG, "daemon binder died — clearing cached reference");
-                IBinder dead = sBinder;
-                if (dead != null) {
-                    try { dead.unlinkToDeath(this, 0); } catch (Throwable ignore) {}
+    private static DeathRecipient sDeath;
+    private static IBinder sDeathBinder;
+
+    /** LOCK must be held. Registers a recipient that can clear only {@code watchedBinder}. */
+    private static void linkDeathLocked(final IBinder watchedBinder) throws RemoteException {
+        DeathRecipient recipient = new DeathRecipient() {
+            @Override public void binderDied() {
+                synchronized (LOCK) {
+                    if (sBinder != watchedBinder) return;
+                    AppLogger.w(TAG, "daemon binder died — clearing matching cached reference");
+                    try { watchedBinder.unlinkToDeath(this, 0); } catch (Throwable ignore) {}
+                    if (sDeath == this) {
+                        sDeath = null;
+                        sDeathBinder = null;
+                    }
+                    sBinder = null;
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
+                    sDaemonInstance = null;
+                    ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_ZOMBIES);
                 }
-                sBinder = null;
-                sDaemonUid = -1;
-                sDaemonPid = -1;
-                sDaemonVer = null;
-                sDaemonInstance = null;
-                // v1.2.78 — Couche 4: count the zombie. Best-effort: sAppCtx
-                // may still be null if no connect() has ever succeeded, in
-                // which case ProxyMetrics is a no-op.
-                ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_ZOMBIES);
             }
-        }
-    };
+        };
+        watchedBinder.linkToDeath(recipient, 0);
+        sDeath = recipient;
+        sDeathBinder = watchedBinder;
+    }
+
+    /** LOCK must be held. Unlinks only the recipient registered for {@code binder}. */
+    private static void unlinkDeathLocked(IBinder binder) {
+        if (binder == null || binder != sDeathBinder || sDeath == null) return;
+        try { binder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+        sDeath = null;
+        sDeathBinder = null;
+    }
 
     private ProxyClient() {}
 
@@ -369,7 +385,7 @@ public final class ProxyClient {
         synchronized (LOCK) {
             IBinder dead = sBinder;
             if (dead == null) return; // already invalidated, nothing to do
-            try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+            unlinkDeathLocked(dead);
             sBinder = null;
             sDaemonUid = -1;
             sDaemonPid = -1;
@@ -873,7 +889,7 @@ public final class ProxyClient {
             synchronized (LOCK) {
                 IBinder dead = sBinder;
                 if (dead != null) {
-                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    unlinkDeathLocked(dead);
                 }
                 sBinder = null;
             }
@@ -1257,7 +1273,7 @@ public final class ProxyClient {
             synchronized (LOCK) {
                 IBinder dead = sBinder;
                 if (dead != null) {
-                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    unlinkDeathLocked(dead);
                 }
                 sBinder = null;
                 sDaemonUid = -1;
@@ -1330,7 +1346,7 @@ public final class ProxyClient {
             synchronized (LOCK) {
                 if (sBinder == expected.binder && sDaemonPid == expected.pid
                         && expected.instance.equals(sDaemonInstance)) {
-                    try { expected.binder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    unlinkDeathLocked(expected.binder);
                     sBinder = null;
                     sDaemonUid = -1;
                     sDaemonPid = -1;
@@ -1504,7 +1520,7 @@ public final class ProxyClient {
             synchronized (LOCK) {
                 IBinder dead = sBinder;
                 if (dead != null && !dead.isBinderAlive()) {
-                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    unlinkDeathLocked(dead);
                     sBinder = null;
                 }
             }
@@ -1519,7 +1535,7 @@ public final class ProxyClient {
                 synchronized (LOCK) {
                     IBinder dead = sBinder;
                     if (dead != null && !dead.isBinderAlive()) {
-                        try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                        unlinkDeathLocked(dead);
                         sBinder = null;
                     }
                 }
@@ -1589,7 +1605,7 @@ public final class ProxyClient {
                     }
                     // Unhook the previous death recipient (if any) before swapping.
                     if (sBinder != null && sBinder != bp.binder) {
-                        try { sBinder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                        unlinkDeathLocked(sBinder);
                     }
                     // Invalidate identity BEFORE publishing the replacement Binder. Lock-free
                     // readers must never observe a new Binder paired with the previous daemon's UID.
@@ -1603,7 +1619,7 @@ public final class ProxyClient {
                     // fails (binder already dead between isBinderAlive above
                     // and here — vanishingly unlikely), isBinderAlive() on
                     // the next call still gives the right answer.
-                    try { sBinder.linkToDeath(sDeath, 0); }
+                    try { linkDeathLocked(sBinder); }
                     catch (RemoteException re) {
                         AppLogger.w(TAG, "linkToDeath failed: " + re.getMessage());
                     }
