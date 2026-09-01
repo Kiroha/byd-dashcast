@@ -242,7 +242,7 @@ object ReportChannel {
             if (hasInvalidAzure) append(" invalid Azure URL (will be ignored);")
             if (relayHost != null) append(" relay host ").append(relayHost).append(';')
             if (hasInvalidRelay) append(" invalid relay URL (will be ignored);")
-                if (!hasTelegram && !hasInvalidTelegram && !hasAzure && !hasInvalidAzure &&
+            if (!hasTelegram && !hasInvalidTelegram && !hasAzure && !hasInvalidAzure &&
                     relayHost == null && !hasInvalidRelay) {
                 append(" no supported settings;")
             }
