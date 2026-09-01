@@ -35,6 +35,8 @@ internal object BugWizardGate {
     const val HUD_NO_ROUTE = 7
     const val HUD_UNSUPPORTED_NAV = 8
     const val SHOTS_CONSENT = 9
+    const val RESUME_BUNDLE = 10
+    const val DELIVERY_RETRY = 11
 }
 
 internal object BugWizardStateStore {

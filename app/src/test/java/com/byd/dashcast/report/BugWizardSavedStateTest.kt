@@ -15,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.RobolectricTestRunner
@@ -29,6 +30,7 @@ class BugWizardSavedStateTest {
     @After
     fun resetSubmissionGate() {
         BugWizardSubmissionGate.resetForTest()
+        BugWizardPendingDelivery.clear(RuntimeEnvironment.getApplication())
     }
 
     @Test
@@ -254,6 +256,66 @@ class BugWizardSavedStateTest {
         assertTrue(!activity.isFinishing)
 
         controller.destroy()
+    }
+
+    @Test
+    fun `process death during upload restores explicit retry without automatic send`() {
+        val report = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("completed report")
+        }
+        assertTrue(BugWizardPendingDelivery.save(
+            RuntimeEnvironment.getApplication(),
+            report,
+            "redacted caption",
+            BugWizardPendingDelivery.DELIVERING,
+        ))
+
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java)
+            .create(issuePageState(""))
+            .start().resume().visible()
+        val activity = controller.get()
+        val issues = activity.findViewById<LinearLayout>(R.id.ll_wizard_issues)
+        val send = (0 until issues.childCount).map(issues::getChildAt)
+            .filterIsInstance<MaterialButton>().last()
+        val status = activity.findViewById<TextView>(R.id.tv_wizard_status)
+
+        assertTrue(send.isEnabled)
+        assertTrue(!activity.findViewById<MaterialButton>(R.id.btn_wizard_back).isEnabled)
+        assertTrue(activity.findViewById<View>(R.id.btn_wizard_cancel).isEnabled)
+        assertEquals(activity.getString(R.string.bug_kept_locally_fmt, report.name),
+            status.text.toString())
+        assertNull(BugWizardSubmissionGate.activeToken())
+
+        controller.destroy()
+        report.delete()
+    }
+
+    @Test
+    fun `fresh wizard can retry durable delivery without an Activity bundle`() {
+        val report = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("completed report")
+        }
+        BugWizardPendingDelivery.save(
+            RuntimeEnvironment.getApplication(),
+            report,
+            "redacted caption",
+            BugWizardPendingDelivery.DELIVERING,
+        )
+
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java)
+            .create().start().resume().visible()
+        val activity = controller.get()
+        val issues = activity.findViewById<LinearLayout>(R.id.ll_wizard_issues)
+        val buttons = (0 until issues.childCount).map(issues::getChildAt)
+            .filterIsInstance<MaterialButton>()
+
+        assertEquals(2, activity.findViewById<ViewFlipper>(R.id.bug_wizard_flipper).displayedChild)
+        assertEquals(1, buttons.size)
+        assertTrue(buttons.single().isEnabled)
+        assertNull(BugWizardSubmissionGate.activeToken())
+
+        controller.destroy()
+        report.delete()
     }
 
     private fun issuePageState(
