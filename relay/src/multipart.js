@@ -34,15 +34,23 @@ function createMultipartPlan({ chatId, thread, caption, filename, bodyLength }) 
     };
 }
 
-async function* streamMultipart(body, plan, expectedLength) {
+async function* streamMultipart(body, plan, expectedLength, signal) {
     if (!body) throw new Error('request body missing');
     yield plan.prefix;
     const reader = body.getReader();
     let received = 0;
     let complete = false;
+    const onAbort = () => {
+        reader.cancel('multipart forwarding aborted').catch(() => { /* already closed */ });
+    };
+    if (signal) {
+        if (signal.aborted) onAbort();
+        else signal.addEventListener('abort', onAbort, { once: true });
+    }
     try {
         while (true) {
             const { done, value } = await reader.read();
+            if (signal && signal.aborted) throw signal.reason || new Error('forwarding aborted');
             if (done) break;
             const chunk = Buffer.from(value);
             received += chunk.length;
@@ -52,6 +60,7 @@ async function* streamMultipart(body, plan, expectedLength) {
         if (received !== expectedLength) throw new Error('request body does not match Content-Length');
         complete = true;
     } finally {
+        if (signal) signal.removeEventListener('abort', onAbort);
         if (!complete) {
             try { await reader.cancel('multipart forwarding stopped'); } catch { /* already closed */ }
         }
