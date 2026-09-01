@@ -134,8 +134,10 @@ class ReportChannelTest {
     fun `a partial pair is not usable`() {
         // Deferred until the build-time fallback was removed: while it existed an empty device
         // value fell through to the build value, so this case was masked on a configured machine.
-        ReportChannel.saveTelegram(ctx, "t", "", "", "")
+        assertFalse(ReportChannel.saveTelegram(ctx, "t", "", "", ""))
         assertFalse("a token with no destination is not usable", ReportChannel.hasTelegram(ctx))
+        assertEquals("", ReportChannel.botToken(ctx))
+        assertFalse(ReportChannel.isPairedOnDevice(ctx))
         ReportChannel.saveAzure(ctx, "https://example/c", "")
         assertFalse("a url with no sas is not usable", ReportChannel.hasAzure(ctx))
     }
@@ -183,6 +185,69 @@ class ReportChannelTest {
     fun `a blob with nothing usable stores nothing`() {
         assertEquals(0, ReportChannel.applyProperties(ctx, "# empty\n\n"))
         assertFalse(ReportChannel.isPairedOnDevice(ctx))
+    }
+
+    @Test
+    fun `token-only Telegram provisioning is rejected and shared source is retained`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/sdcard/Download/${ReportChannel.IMPORT_NAME}",
+            "bugReport.botToken=secret-token"
+        )
+        var deletionAttempted = false
+        var outcome = ""
+
+        assertFalse(candidate.hasTelegram)
+        assertTrue(candidate.hasInvalidTelegram)
+        assertTrue(candidate.confirmationSummary().contains("incomplete Telegram"))
+        assertEquals(0, ReportChannel.applyProperties(ctx, "bugReport.botToken=secret-token"))
+        ReportChannel.applyCandidate(
+            ctx,
+            candidate,
+            ReportChannel.SharedSourceDeleter { _, _ -> deletionAttempted = true },
+        ) { outcome = it }
+
+        assertFalse(deletionAttempted)
+        assertFalse(ReportChannel.isPairedOnDevice(ctx))
+        assertEquals("", ReportChannel.botToken(ctx))
+        assertTrue(outcome.contains("no usable settings"))
+    }
+
+    @Test
+    fun `chat-only Telegram provisioning is also rejected`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/sdcard/Download/${ReportChannel.IMPORT_NAME}",
+            "bugReport.chatId=-100123"
+        )
+
+        assertFalse(candidate.hasTelegram)
+        assertTrue(candidate.hasInvalidTelegram)
+        assertEquals(0, ReportChannel.applyProperties(ctx, "bugReport.chatId=-100123"))
+        assertFalse(ReportChannel.isPairedOnDevice(ctx))
+    }
+
+    @Test
+    fun `valid Azure is stored without consuming incomplete Telegram as a set`() {
+        val candidate = ReportChannel.candidateForTesting(
+            "/sdcard/Download/${ReportChannel.IMPORT_NAME}",
+            "bugReport.botToken=unused-secret\n" +
+                "azure.blobUrl=https://blob.example/container\n" +
+                "azure.sas=sp=cw&sig=secret"
+        )
+        var deletionAttempted = false
+
+        ReportChannel.applyCandidate(
+            ctx,
+            candidate,
+            ReportChannel.SharedSourceDeleter { _, deleted ->
+                deletionAttempted = true
+                deleted(true)
+            },
+        ) { }
+
+        assertTrue(deletionAttempted)
+        assertTrue(ReportChannel.hasAzure(ctx))
+        assertFalse(ReportChannel.hasTelegram(ctx))
+        assertEquals("", ReportChannel.botToken(ctx))
     }
 
     @Test
