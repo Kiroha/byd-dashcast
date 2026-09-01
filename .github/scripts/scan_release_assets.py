@@ -125,9 +125,10 @@ def archive_directory_finding(apk: Path) -> str | None:
             if disk != 0 or directory_disk != 0 or disk_entries != entries:
                 return "archive :: multi-disk ZIP is unsupported"
 
+            eocd_offset = size - tail_size + position
+            directory_end = eocd_offset
             if (entries == 0xFFFF or directory_size == 0xFFFFFFFF
                     or directory_offset == 0xFFFFFFFF):
-                eocd_offset = size - tail_size + position
                 if eocd_offset < 20:
                     return "archive :: malformed ZIP64 directory"
                 source.seek(eocd_offset - 20)
@@ -147,6 +148,7 @@ def archive_directory_finding(apk: Path) -> str | None:
                 values = struct.unpack("<4sQ2H2L4Q", record)
                 if values[0] != ZIP64_EOCD_SIGNATURE or values[1] < 44:
                     return "archive :: malformed ZIP64 directory"
+                directory_end = zip64_offset
                 disk, directory_disk = values[4], values[5]
                 disk_entries, entries = values[6], values[7]
                 directory_size = values[8]
@@ -158,10 +160,9 @@ def archive_directory_finding(apk: Path) -> str | None:
                 return "archive :: too many entries"
             if directory_size > MAX_CENTRAL_DIRECTORY_BYTES:
                 return "archive :: central directory exceeds scan limit"
-            eocd_offset = size - tail_size + position
             if (directory_offset > size
                     or directory_size > size - directory_offset
-                    or directory_offset + directory_size > eocd_offset):
+                    or directory_offset + directory_size != directory_end):
                 return "archive :: invalid central directory range"
             directory_finding = central_directory_finding(
                 source, directory_offset, directory_size, entries
