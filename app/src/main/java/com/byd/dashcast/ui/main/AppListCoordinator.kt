@@ -132,7 +132,10 @@ class AppListCoordinator(
             mRvApps.layoutManager = LinearLayoutManager(ctx)
         }
         mRvApps.adapter = mAdapter
-        mBtnViewToggle?.text = if (isGrid) "☰" else "⊞"
+        mBtnViewToggle?.apply {
+            text = if (isGrid) "☰" else "⊞"
+            contentDescription = ctx.getString(viewToggleDescription(isGrid))
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -261,6 +264,10 @@ class AppListCoordinator(
     companion object {
         private const val TAG = "AppListCoordinator"
         private const val DEBOUNCE_MS = 150L
+
+        @JvmStatic
+        internal fun viewToggleDescription(isGrid: Boolean): Int =
+            if (isGrid) R.string.menu_view_list else R.string.menu_view_grid
 
         private val FILTER_TINT_ACTIVE = 0xFF1976D2.toInt()
         private val FILTER_TINT_INACTIVE = 0xFF607D8B.toInt()
