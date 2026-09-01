@@ -614,16 +614,10 @@ public final class FissionOrchestrator {
                                              Runnable onComplete) {
         FissionOrchestrator o = sAutoStartOrchestrator;
         sAutoStartOrchestrator = null;
-        final long purgeToken;
-        if (purgeDaemonSlots) {
-            purgeToken = sActivationGate.forceAcquire(
-                    android.os.SystemClock.elapsedRealtime()).getToken();
-        } else {
-            purgeToken = 0L;
-            sActivationGate.clear();
-        }
+        final long teardownToken = sActivationGate.forceAcquire(
+                android.os.SystemClock.elapsedRealtime()).getToken();
         Runnable complete = () -> {
-            if (purgeDaemonSlots) sActivationGate.release(purgeToken);
+            sActivationGate.release(teardownToken);
             notifyLayoutChanged();
             if (onComplete != null) onComplete.run();
         };
