@@ -644,7 +644,6 @@ public final class FissionOrchestrator {
         submitQuietly("initAsync", () -> {
             tryGetBinder();
             if (favoriteLayout != null) {
-                mActiveLayout = favoriteLayout;
                 post(() -> mCallbacks.onSlotsChanged(mSlots.values()));
                 if (autoLayout) {
                     post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autoactivate)));
@@ -897,10 +896,9 @@ public final class FissionOrchestrator {
     }
 
     public void switchToLayoutAsync(LayoutPreset newLayout) {
-        mActiveLayout = newLayout;
         submitQuietly("switchToLayoutAsync", () -> {
             try {
-                doSwitchToLayout(newLayout, null);
+                switchActiveLayout(newLayout, null);
             } catch (Exception e) {
                 AppLogger.e(TAG, "switchToLayout error", e);
                 post(() -> mCallbacks.onSlotError("layout", e.getMessage()));
@@ -1144,9 +1142,8 @@ public final class FissionOrchestrator {
             markAutoStartFailed("saved favourite layout disappeared");
             return;
         }
-        mActiveLayout = fav;
         try {
-            doSwitchToLayout(fav, null);
+            switchActiveLayout(fav, null);
         } catch (Exception e) {
             AppLogger.e(TAG, "activateFavoriteLayout failed", e);
             post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autolayout_err_fmt, e.getMessage())));
@@ -1223,7 +1220,6 @@ public final class FissionOrchestrator {
         // Activate for the rest of the process.
         submitOrFail(() -> {
             tryGetBinder();
-            mActiveLayout = preset;
             post(() -> {
                 mCallbacks.onSlotsChanged(mSlots.values());
                 mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autoactivate));
@@ -1261,7 +1257,7 @@ public final class FissionOrchestrator {
             // replaces keyed slots "layout_<label>_<i>" and never put the package on the wire,
             // which made every slot it created unaddressable. doSwitchToLayout also launches
             // each app itself, so no separate launch pass can target a slot that never existed.
-            doSwitchToLayout(preset, null);
+            switchActiveLayout(preset, null);
             // Commit free-zone replacement only after every bound slot has started. Removing the
             // old overlays first damages the active layout when a later app start rolls back.
             releaseFreeZones();
@@ -1284,6 +1280,21 @@ public final class FissionOrchestrator {
             String reason = e.getClass().getSimpleName();
             if (e.getMessage() != null) reason = reason + ": " + e.getMessage();
             deliver(callback, false, reason);
+        }
+    }
+
+    /** Commits the logical active layout only if its physical slot switch completes. */
+    private void switchActiveLayout(LayoutPreset target, SurfaceHolder surfaceHolder)
+            throws Exception {
+        LayoutPreset previous = mActiveLayout;
+        mActiveLayout = target;
+        try {
+            doSwitchToLayout(target, surfaceHolder);
+        } catch (Exception error) {
+            mActiveLayout = previous;
+            mSelectedMirrorPackage = LayoutSlotSelection.resolve(
+                    mSelectedMirrorPackage, orderedSlotPackages());
+            throw error;
         }
     }
 
