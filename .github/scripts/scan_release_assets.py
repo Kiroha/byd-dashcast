@@ -49,6 +49,50 @@ EOCD_SIGNATURE = b"PK\x05\x06"
 ZIP64_EOCD_SIGNATURE = b"PK\x06\x06"
 ZIP64_LOCATOR_SIGNATURE = b"PK\x06\x07"
 EOCD_MAX_BYTES = 22 + 0xFFFF
+CENTRAL_DIRECTORY_SIGNATURE = b"PK\x01\x02"
+CENTRAL_DIRECTORY_DIGITAL_SIGNATURE = b"PK\x05\x05"
+
+
+def central_directory_finding(
+    source, directory_offset: int, directory_size: int, expected_entries: int
+) -> str | None:
+    """Count bounded central-directory records without materializing ZipInfo objects."""
+    source.seek(directory_offset)
+    remaining = directory_size
+    count = 0
+    while remaining:
+        if remaining < 4:
+            return "archive :: malformed central directory"
+        signature = source.read(4)
+        if signature == CENTRAL_DIRECTORY_DIGITAL_SIGNATURE:
+            if remaining < 6:
+                return "archive :: malformed central directory"
+            raw_length = source.read(2)
+            if len(raw_length) != 2:
+                return "archive :: malformed central directory"
+            record_size = 6 + struct.unpack("<H", raw_length)[0]
+            if record_size != remaining:
+                return "archive :: malformed central directory"
+            source.seek(record_size - 6, os.SEEK_CUR)
+            remaining = 0
+            break
+        if signature != CENTRAL_DIRECTORY_SIGNATURE or remaining < 46:
+            return "archive :: malformed central directory"
+        fixed = source.read(42)
+        if len(fixed) != 42:
+            return "archive :: malformed central directory"
+        filename_size, extra_size, comment_size = struct.unpack_from("<3H", fixed, 24)
+        record_size = 46 + filename_size + extra_size + comment_size
+        if record_size > remaining:
+            return "archive :: malformed central directory"
+        source.seek(record_size - 46, os.SEEK_CUR)
+        remaining -= record_size
+        count += 1
+        if count > MAX_ENTRY_COUNT:
+            return "archive :: too many entries"
+    if count != expected_entries:
+        return "archive :: entry count does not match directory"
+    return None
 
 
 def archive_directory_finding(apk: Path) -> str | None:
@@ -119,6 +163,11 @@ def archive_directory_finding(apk: Path) -> str | None:
                     or directory_size > size - directory_offset
                     or directory_offset + directory_size > eocd_offset):
                 return "archive :: invalid central directory range"
+            directory_finding = central_directory_finding(
+                source, directory_offset, directory_size, entries
+            )
+            if directory_finding:
+                return directory_finding
     except (OSError, OverflowError, struct.error):
         return "unreadable APK"
     return None

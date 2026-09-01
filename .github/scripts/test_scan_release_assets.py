@@ -250,6 +250,49 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 ["DashCast.apk :: archive :: too many entries"],
             )
 
+    def test_actual_directory_count_is_bounded_before_zipfile(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            with zipfile.ZipFile(apk, "w") as archive:
+                archive.writestr("one", b"1")
+                archive.writestr("two", b"2")
+                archive.writestr("three", b"3")
+            raw = bytearray(apk.read_bytes())
+            eocd = raw.rfind(scanner.EOCD_SIGNATURE)
+            struct.pack_into("<HH", raw, eocd + 8, 1, 1)
+            apk.write_bytes(raw)
+
+            with (
+                patch.object(scanner, "MAX_ENTRY_COUNT", 2),
+                patch.object(scanner.zipfile, "ZipFile",
+                             side_effect=AssertionError("must not parse")),
+            ):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(findings, ["DashCast.apk :: archive :: too many entries"])
+
+    def test_declared_directory_count_must_match_actual_records(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            with zipfile.ZipFile(apk, "w") as archive:
+                archive.writestr("one", b"1")
+                archive.writestr("two", b"2")
+            raw = bytearray(apk.read_bytes())
+            eocd = raw.rfind(scanner.EOCD_SIGNATURE)
+            struct.pack_into("<HH", raw, eocd + 8, 1, 1)
+            apk.write_bytes(raw)
+
+            with patch.object(scanner.zipfile, "ZipFile",
+                              side_effect=AssertionError("must not parse")):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(
+                findings,
+                ["DashCast.apk :: archive :: entry count does not match directory"],
+            )
+
     def test_single_entry_size_and_compression_ratio_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
