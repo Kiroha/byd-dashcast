@@ -41,6 +41,7 @@ MAX_COMPRESSION_RATIO = 200
 MIN_RATIO_CHECK_BYTES = 1024 * 1024
 SCAN_CHUNK_BYTES = 64 * 1024
 SCAN_OVERLAP_BYTES = max(PATTERN_MIN_BYTES.values()) - 1
+SUPPORTED_COMPRESSION_METHODS = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
 
 EXPECTED_PACKAGE = "com.byd.dashcast"
 EXPECTED_CERT_SHA256 = "c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8"
@@ -258,6 +259,15 @@ def scan_apks(asset_dir: Path) -> list[str]:
                     continue
                 manifest_found = False
                 for entry in entries:
+                    name = entry.filename
+                    if name == "AndroidManifest.xml":
+                        manifest_found = True
+                    if entry.compress_type not in SUPPORTED_COMPRESSION_METHODS:
+                        findings.append(
+                            f"{apk_name} :: {single_line(name)} :: "
+                            "unsupported compression method"
+                        )
+                        continue
                     if entry.is_dir():
                         if entry.file_size != 0 or entry.compress_size != 0:
                             findings.append(
@@ -265,9 +275,6 @@ def scan_apks(asset_dir: Path) -> list[str]:
                                 "non-empty directory entry"
                             )
                         continue
-                    name = entry.filename
-                    if name == "AndroidManifest.xml":
-                        manifest_found = True
                     if entry.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
                         findings.append(
                             f"{apk_name} :: {single_line(name)} :: entry exceeds scan size limit"

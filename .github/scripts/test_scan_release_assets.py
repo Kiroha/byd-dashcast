@@ -359,6 +359,23 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                     ["DashCast.apk :: classes.dex :: suspicious compression ratio"],
                 )
 
+    def test_lzma_entry_is_rejected_before_decompressor_open(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with zipfile.ZipFile(root / "DashCast.apk", "w", zipfile.ZIP_LZMA) as archive:
+                archive.writestr("AndroidManifest.xml", b"binary release manifest")
+
+            with patch.object(
+                scanner.zipfile.ZipFile, "open",
+                side_effect=AssertionError("unsupported decompressor must not run"),
+            ):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(
+                findings,
+                ["DashCast.apk :: AndroidManifest.xml :: unsupported compression method"],
+            )
+
     def test_github_output_uses_a_report_specific_safe_delimiter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output_path = Path(directory) / "github-output"
