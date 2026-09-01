@@ -230,7 +230,8 @@ class ClusterManager(context: Context) {
             // True fast path: VD up AND Qt already projecting — just hand the display back.
             AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id=${found.displayId})")
             mHandler.post {
-                if (gen == mActivationGeneration) callback.onDisplayReady(found, found.displayId)
+                if (!claimDisplayReady(gen)) return@post
+                callback.onDisplayReady(found, found.displayId)
             }
             return
         }
@@ -730,11 +731,10 @@ class ClusterManager(context: Context) {
                 override fun onSuccess(out: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "warm path ADB(cmd=16): $out")
-                    notifyProjectionActive()
                     mHandler.post {
-                        if (gen == mActivationGeneration) {
-                            callback.onDisplayReady(display, display.displayId)
-                        }
+                        if (!claimDisplayReady(gen)) return@post
+                        notifyProjectionActive()
+                        callback.onDisplayReady(display, display.displayId)
                     }
                 }
 
@@ -742,7 +742,9 @@ class ClusterManager(context: Context) {
                     if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: $err")
                     mHandler.post {
-                        if (gen == mActivationGeneration) callback.onDisplayTimeout()
+                        if (gen == mActivationGeneration && mReadyGeneration != gen) {
+                            callback.onDisplayTimeout()
+                        }
                     }
                 }
             })
@@ -1024,9 +1026,14 @@ class ClusterManager(context: Context) {
     ) {
         val d = findClusterDisplay(dm)
         if (d != null) {
+            if (!claimDisplayReady(gen)) return
             AppLogger.i(TAG, "DL5 cluster display ready: id=${d.displayId} name=${d.name}")
             notifyProjectionActive()
-            mHandler.post { callback.onDisplayReady(d, d.displayId) }
+            mHandler.post {
+                if (gen == mActivationGeneration && mReadyGeneration == gen) {
+                    callback.onDisplayReady(d, d.displayId)
+                }
+            }
             return
         }
         // Brief polling window (up to 3 s) — should never trigger on DL5 in practice.
@@ -1036,6 +1043,7 @@ class ClusterManager(context: Context) {
                 if (gen != mActivationGeneration) return
                 val dd = findClusterDisplay(dm)
                 if (dd != null) {
+                    if (!claimDisplayReady(gen)) return
                     AppLogger.i(TAG, "DL5 cluster display (late) id=${dd.displayId}")
                     notifyProjectionActive()
                     callback.onDisplayReady(dd, dd.displayId)

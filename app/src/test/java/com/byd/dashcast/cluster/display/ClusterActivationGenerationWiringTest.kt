@@ -45,7 +45,18 @@ class ClusterActivationGenerationWiringTest {
 
         assertTrue(Regex("(?m)^\\s*mHandler\\.removeCallbacksAndMessages\\(null\\)")
             .findAll(source).count() == 1)
-        assertTrue(source.split("claimDisplayReady(gen)").size - 1 == 3)
+        assertTrue(source.split("claimDisplayReady(gen)").size - 1 >= 7)
+
+        val dl5 = source.substringAfter("private fun resolveDl5Display")
+            .substringBefore("// ── Cancellation")
+        assertTrue(dl5.substringBefore("// Brief polling window")
+            .contains("if (!claimDisplayReady(gen)) return"))
+        assertTrue(dl5.substringAfter("val dd = findClusterDisplay(dm)")
+            .contains("if (!claimDisplayReady(gen)) return"))
+
+        val warm = source.substringAfter("private fun sendWarmCmd16")
+            .substringBefore("private fun latchPanelGeometry")
+        assertTrue(warm.contains("if (!claimDisplayReady(gen)) return@post"))
     }
 
     @Test
