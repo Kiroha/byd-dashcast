@@ -123,12 +123,30 @@ class SplitReplacementStateTest {
         assertTrue(shortcutPath.contains("isCurrentSecondDashboardReplacement(generation)"))
         assertTrue(splitPath.contains("mSessionTracker.remove(previousSecond)"))
         assertTrue(shortcutPath.contains("mSessionTracker.remove(splitOccupantToStop)"))
+        assertTrue(splitPath.contains("if (launched) cleanupStaleSplitLaunch(pkgName)"))
         val appError = splitPath.substringAfter("override fun onError(error: String?)").take(700)
         val shortcutError = shortcutPath.substringAfter("override fun onError(error: String?)").take(700)
         assertTrue(appError.contains("toast_kill_failed"))
         assertTrue(shortcutError.contains("toast_kill_failed"))
         assertFalse(appError.contains("launchInComplementarySlot()"))
         assertFalse(shortcutError.contains(" launch()"))
+    }
+
+    @Test
+    fun `stale successful bounded launch stays tracked until verified cleanup`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it, "app/src/main/java/com/byd/dashcast/MainActivity.kt").isFile }
+        val source = File(root, "app/src/main/java/com/byd/dashcast/MainActivity.kt").readText()
+        val cleanup = source.substringAfter("private fun cleanupStaleSplitLaunch")
+            .substringBefore("private fun rejectUnsupportedDashboardProjection")
+        val success = cleanup.substringAfter("override fun onSuccess")
+            .substringBefore("override fun onError")
+        val error = cleanup.substringAfter("override fun onError")
+
+        assertTrue(cleanup.indexOf("mSessionTracker.add(packageName)") <
+            cleanup.indexOf("AdbLocalClient.forceStopApp"))
+        assertTrue(success.contains("mSessionTracker.remove(packageName)"))
+        assertFalse(error.contains("mSessionTracker.remove(packageName)"))
     }
 
     private class RecordingHost : SplitController.Host {
