@@ -9,7 +9,7 @@ import unittest
 import warnings
 import zipfile
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 sys.dont_write_bytecode = True
@@ -77,6 +77,73 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 scanner.scan_apks(Path(directory)),
                 ["DashCast.apk :: lib/duplicate.so :: telegram bot token"],
             )
+
+    def test_secret_split_across_scan_chunks_is_detected(self) -> None:
+        token = b"123456789:AAabcdefghijklmnopqrstuvwxyzABCDE12345"
+        padding = b"x" * (scanner.SCAN_CHUNK_BYTES - 10)
+        with tempfile.TemporaryDirectory() as directory:
+            self.write_apk(Path(directory), b"release", padding + token)
+
+            self.assertEqual(
+                scanner.scan_apks(Path(directory)),
+                ["DashCast.apk :: classes.dex :: telegram bot token"],
+            )
+
+    def test_oversized_apk_is_rejected_before_zip_parsing_or_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast-v1-release.apk"
+            with apk.open("wb") as output:
+                output.truncate(scanner.MAX_APK_BYTES + 1)
+            runner = Mock()
+
+            self.assertEqual(
+                scanner.scan_apks(root),
+                [f"{apk.name} :: APK exceeds scan size limit"],
+            )
+            self.assertEqual(
+                scanner.verify_release_contract(root, "v1", "aapt", "apksigner", runner),
+                [f"{apk.name} :: APK exceeds scan size limit"],
+            )
+            runner.assert_not_called()
+
+    def test_entry_count_and_total_expanded_size_are_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with zipfile.ZipFile(root / "DashCast.apk", "w") as archive:
+                archive.writestr("AndroidManifest.xml", b"release")
+                archive.writestr("one", b"1")
+                archive.writestr("two", b"2")
+            with patch.object(scanner, "MAX_ENTRY_COUNT", 2):
+                self.assertEqual(
+                    scanner.scan_apks(root),
+                    ["DashCast.apk :: archive :: too many entries"],
+                )
+            with patch.object(scanner, "MAX_TOTAL_UNCOMPRESSED_BYTES", 8):
+                self.assertEqual(
+                    scanner.scan_apks(root),
+                    ["DashCast.apk :: archive :: expanded size exceeds scan limit"],
+                )
+
+    def test_single_entry_size_and_compression_ratio_are_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with zipfile.ZipFile(root / "DashCast.apk", "w", zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("AndroidManifest.xml", b"release")
+                archive.writestr("classes.dex", b"0" * 4096)
+            with patch.object(scanner, "MAX_ENTRY_UNCOMPRESSED_BYTES", 2048):
+                self.assertEqual(
+                    scanner.scan_apks(root),
+                    ["DashCast.apk :: classes.dex :: entry exceeds scan size limit"],
+                )
+            with (
+                patch.object(scanner, "MIN_RATIO_CHECK_BYTES", 1),
+                patch.object(scanner, "MAX_COMPRESSION_RATIO", 2),
+            ):
+                self.assertEqual(
+                    scanner.scan_apks(root),
+                    ["DashCast.apk :: classes.dex :: suspicious compression ratio"],
+                )
 
     def test_github_output_uses_a_report_specific_safe_delimiter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
