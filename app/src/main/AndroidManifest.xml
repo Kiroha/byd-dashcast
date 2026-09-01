@@ -229,7 +229,7 @@
         <!-- Real-time log viewer -->
         <activity
             android:name=".ui.log.LogActivity"
-            android:label="Journal"
+            android:label="@string/log_title"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
             android:launchMode="singleTop"/>
@@ -238,7 +238,7 @@
              runtime-gated by Platform.isDiLink3()). Activity is exported=false. -->
         <activity
             android:name=".ui.hotspot.HotspotActivity"
-            android:label="Hotspot AOSP"
+            android:label="@string/hotspot_title"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="false"/>
