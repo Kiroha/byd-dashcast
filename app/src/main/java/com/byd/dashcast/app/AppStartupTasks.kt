@@ -30,6 +30,11 @@ object AppStartupTasks {
             } catch (e: Throwable) {
                 AppLogger.w(TAG, "pruneOldFiles failed: " + e.message)
             }
+            try {
+                com.byd.dashcast.report.BugReportCapture.pruneStagedReports(ctx)
+            } catch (e: Throwable) {
+                AppLogger.w(TAG, "staged bug-report cleanup failed: " + e.message)
+            }
             if (killOrphanSniffer) {
                 try {
                     // Orphan-sniffer cleanup: the tag file lives on tmpfs and disappears at boot,
