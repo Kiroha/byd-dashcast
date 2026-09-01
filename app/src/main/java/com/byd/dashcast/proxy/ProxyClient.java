@@ -1271,6 +1271,50 @@ public final class ProxyClient {
         }
     }
 
+    /**
+     * Terminates the authenticated proxy PID through direct local ADB after a typed Binder call
+     * exceeded its deadline. This method never uses the possibly wedged Binder itself.
+     *
+     * @return true only when the old daemon is killed or already absent, making it impossible for
+     *         the timed-out physical command to execute after a newer queued command.
+     */
+    public static boolean terminateHungDaemonViaAdb(Context ctx) {
+        final int authenticatedPid = sDaemonPid;
+        final String pidSource = authenticatedPid > 0
+                ? "PID=" + authenticatedPid
+                : "PID=$(cat " + DAEMON_PID + " 2>/dev/null)";
+        final String command = pidSource
+                + "; case \"$PID\" in ''|*[!0-9]*) echo NO_PID; exit 3;; esac"
+                + "; LINE=$(ps -A 2>/dev/null | awk -v p=\"$PID\" '$2 == p {print; exit}')"
+                + "; if echo \"$LINE\" | grep -q '[d]ashcast_proxy'; then"
+                + " kill -9 \"$PID\" 2>/dev/null && echo KILLED"
+                + "; elif [ -z \"$LINE\" ]; then echo ABSENT"
+                + "; else echo REFUSED; exit 4; fi";
+        try {
+            String result = AdbLocalClient.executeShellWithResultBlocking(ctx, command, 15_000);
+            if (!result.contains("KILLED") && !result.contains("ABSENT")) {
+                AppLogger.e(TAG, "hung daemon recovery refused: " + result);
+                return false;
+            }
+            synchronized (LOCK) {
+                IBinder old = sBinder;
+                if (old != null) {
+                    try { old.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                }
+                sBinder = null;
+                sDaemonUid = -1;
+                sDaemonPid = -1;
+                sDaemonVer = null;
+            }
+            AppLogger.e(TAG, "hung proxy daemon terminated via direct ADB: " + result);
+            return true;
+        } catch (Throwable error) {
+            if (error instanceof InterruptedException) Thread.currentThread().interrupt();
+            AppLogger.e(TAG, "hung daemon recovery failed: " + error.getMessage());
+            return false;
+        }
+    }
+
     // ─── Auto-recovery helpers (v1.2.58-beta, Phase A step 1) ─────────────
 
     /**

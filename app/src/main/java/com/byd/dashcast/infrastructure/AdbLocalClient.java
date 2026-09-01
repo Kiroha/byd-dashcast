@@ -1147,6 +1147,20 @@ public class AdbLocalClient {
     public static void sendInfo(final Context context,
                                 final int type, final int infoInt, final String infoStr,
                                 final Callback callback) {
+        sendInfo(context, type, infoInt, infoStr, callback, null);
+    }
+
+    /** Observer used only by the ordered projection bus to recover a wedged typed transact. */
+    public interface TypedDispatchObserver {
+        void onStart();
+        void onFinish();
+        boolean shouldAbortFallback();
+    }
+
+    public static void sendInfo(final Context context,
+                                final int type, final int infoInt, final String infoStr,
+                                final Callback callback,
+                                final TypedDispatchObserver typedObserver) {
         // Last line of defence for the cluster shape presets. The senders are guarded individually
         // (the ADAS window fix in ClusterManager, the preference in restoreOriginCluster), but the
         // first version of this protection guarded one of them and missed the other, so the rule is
@@ -1204,7 +1218,19 @@ public class AdbLocalClient {
                             // ProxyKeeperService reconnects in background; skip to legacy path.
                             throw new Exception("proxy not connected — skip typed path");
                         }
-                        ProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        if (typedObserver != null) {
+                            ProxyClient.setNonBlockingReconnect(true);
+                            typedObserver.onStart();
+                        }
+                        try {
+                            ProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        } finally {
+                            if (typedObserver != null) {
+                                typedObserver.onFinish();
+                                ProxyClient.setNonBlockingReconnect(false);
+                            }
+                        }
+                        if (typedObserver != null && typedObserver.shouldAbortFallback()) return;
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.log(TAG, "beta sendInfo typed ok (" + dt + "ms): "
                                 + type + "," + infoInt + ",\"" + (infoStr == null ? "" : infoStr) + "\"");
@@ -1215,6 +1241,10 @@ public class AdbLocalClient {
                         if (callback != null) callback.onSuccess("");
                         return;
                     } catch (Throwable t) {
+                        if (typedObserver != null && typedObserver.shouldAbortFallback()) {
+                            AppLogger.e(TAG, "beta sendInfo typed timed out — fallback suppressed");
+                            return;
+                        }
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.w(TAG, "beta sendInfo typed failed after " + dt
                                 + "ms, falling back to ADB shell: " + t.getMessage());
