@@ -123,6 +123,16 @@ internal object ProjectionCommandBus {
         sequencer.submit(
             session,
             launch = { completion ->
+                val watchdog = ProjectionTransportRecovery.watchdog(
+                    context,
+                    Runnable {
+                        completion.complete(
+                            ProjectionCommandSequencer.Result.Error(
+                                "typed projection command timed out; proxy daemon reset"
+                            )
+                        )
+                    },
+                )
                 AdbLocalClient.sendInfo(
                     context.applicationContext,
                     type,
@@ -130,13 +140,16 @@ internal object ProjectionCommandBus {
                     value,
                     object : AdbLocalClient.Callback {
                         override fun onSuccess(out: String?) {
+                            if (watchdog.shouldAbortFallback()) return
                             completion.complete(ProjectionCommandSequencer.Result.Success(out))
                         }
 
                         override fun onError(err: String?) {
+                            if (watchdog.shouldAbortFallback()) return
                             completion.complete(ProjectionCommandSequencer.Result.Error(err))
                         }
                     },
+                    watchdog,
                 )
             },
             completion = ProjectionCommandSequencer.Completion { result ->
