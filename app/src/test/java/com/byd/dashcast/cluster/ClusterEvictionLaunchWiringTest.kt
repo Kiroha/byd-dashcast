@@ -1,6 +1,7 @@
 package com.byd.dashcast.cluster
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -23,5 +24,19 @@ class ClusterEvictionLaunchWiringTest {
             .substringAfter("fun launch()")
             .substringBefore("val previous =")
         assertTrue(shortcut.contains("runWhenSafeToLaunch"))
+
+        val gateWrapper = File(root,
+            "app/src/main/java/com/byd/dashcast/cluster/ClusterSessionTracker.kt").readText()
+            .substringAfter("fun runWhenSafeToLaunch")
+            .substringBefore("private fun snapshot")
+        assertFalse(gateWrapper.contains("remove(pkg)"))
+        for (launch in listOf(
+            source.substringAfter("private fun quickSwitchToApp").substringBefore("override fun onStart"),
+            source.substringAfter("fun launchInComplementarySlot").substringBefore("val previousSecond"),
+            source.substringAfter("fun proceedMove").substringBefore("val previousClusterPkg"),
+            source.substringAfter("fun launchNow()").substringBefore("fun launch()"),
+        )) {
+            assertTrue(launch.indexOf("isFinishing || isDestroyed") < launch.indexOf("mSessionTracker.remove"))
+        }
     }
 }

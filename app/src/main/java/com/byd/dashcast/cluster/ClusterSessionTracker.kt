@@ -57,12 +57,8 @@ class ClusterSessionTracker(context: Context) {
 
     /** Invalidates pending eviction work, or defers launch behind an issued force-stop. */
     fun runWhenSafeToLaunch(pkg: String, launch: Runnable) {
-        val guardedLaunch = Runnable {
-            remove(pkg)
+        if (sEvictionGate.prepareLaunch(pkg, launch)) {
             launch.run()
-        }
-        if (sEvictionGate.prepareLaunch(pkg, guardedLaunch)) {
-            guardedLaunch.run()
         } else {
             AppLogger.i(TAG, "launch deferred until force-stop completes: $pkg")
         }
