@@ -982,95 +982,117 @@ public final class FissionOrchestrator {
     private void doStartSlot(String pkg, String label, Rect rect, SurfaceHolder surfaceHolder)
             throws Exception {
         boolean isFirst = mSlots.isEmpty();
+        boolean slotAcquired = false;
 
-        if (!ensureDaemon()) throw new RuntimeException(mAppCtx.getString(R.string.fo_err_daemon));
+        try {
+            if (!ensureDaemon()) throw new RuntimeException(mAppCtx.getString(R.string.fo_err_daemon));
 
-        // ATTACH_SLOT or REUSE if VD already alive in daemon
-        int existingId = -1;
-        try { existingId = FissionClient.querySlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
-        final int displayId;
-        if (existingId > 0) {
-            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_reuse_fmt, label)));
-            boolean resized = FissionClient.resizeSlot(mDaemonBinder, pkg,
-                    rect.left, rect.top, rect.width(), rect.height());
-            if (!resized) {
-                throw new IllegalStateException("existing slot resize rejected for " + pkg);
+            // ATTACH_SLOT or REUSE if VD already alive in daemon
+            int existingId = -1;
+            try { existingId = FissionClient.querySlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
+            final int displayId;
+            if (existingId > 0) {
+                post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_reuse_fmt, label)));
+                boolean resized = FissionClient.resizeSlot(mDaemonBinder, pkg,
+                        rect.left, rect.top, rect.width(), rect.height());
+                if (!resized) {
+                    throw new IllegalStateException("existing slot resize rejected for " + pkg);
+                }
+                displayId = existingId;
+                slotAcquired = true;
+                AppLogger.i(TAG, "FISSION REUSE_SLOT pkg=" + pkg + " displayId=" + displayId);
+            } else {
+                post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_create_fmt, label)));
+                int newId = FissionClient.attachSlot(mDaemonBinder, pkg,
+                        rect.left, rect.top, rect.width(), rect.height());
+                if (newId < 0) throw new RuntimeException(mAppCtx.getString(R.string.fo_err_attach_fmt, pkg));
+                displayId = newId;
+                slotAcquired = true;
+                AppLogger.i(TAG, "FISSION ATTACH_SLOT pkg=" + pkg + " displayId=" + displayId
+                        + " rect=" + rect.left + "," + rect.top + "+" + rect.width() + "x" + rect.height());
             }
-            displayId = existingId;
-            AppLogger.i(TAG, "FISSION REUSE_SLOT pkg=" + pkg + " displayId=" + displayId);
-        } else {
-            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_create_fmt, label)));
-            int newId = FissionClient.attachSlot(mDaemonBinder, pkg,
-                    rect.left, rect.top, rect.width(), rect.height());
-            if (newId < 0) throw new RuntimeException(mAppCtx.getString(R.string.fo_err_attach_fmt, pkg));
-            displayId = newId;
-            AppLogger.i(TAG, "FISSION ATTACH_SLOT pkg=" + pkg + " displayId=" + displayId
-                    + " rect=" + rect.left + "," + rect.top + "+" + rect.width() + "x" + rect.height());
-        }
 
-        // LAUNCH_AND_FORCE via ProxyClient
-        post(() -> mCallbacks.onStatusMessage(
-                mAppCtx.getString(R.string.fo_status_launching_fmt, label, displayId)));
-        if (!ProxyClient.isConnected()) {
-            AppLogger.d(TAG, "ProxyClient not connected — attempting connect…");
-            boolean connected = ProxyClient.connect(mAppCtx);
-            if (!connected) {
-                throw new RuntimeException(
-                        mAppCtx.getString(R.string.fo_err_proxy));
+            // LAUNCH_AND_FORCE via ProxyClient
+            post(() -> mCallbacks.onStatusMessage(
+                    mAppCtx.getString(R.string.fo_status_launching_fmt, label, displayId)));
+            if (!ProxyClient.isConnected()) {
+                AppLogger.d(TAG, "ProxyClient not connected — attempting connect…");
+                boolean connected = ProxyClient.connect(mAppCtx);
+                if (!connected) {
+                    throw new RuntimeException(
+                            mAppCtx.getString(R.string.fo_err_proxy));
+                }
             }
+            String launchResult = ProxyClient.launchAndForce(pkg, null, displayId,
+                    rect.width(), rect.height());
+            AppLogger.i(TAG, "FISSION launchAndForce result:\n" + launchResult);
+            if (!com.byd.dashcast.proxy.daemon.TaskLaunchRecovery.isSuccessful(launchResult)) {
+                // The verdict is load-bearing, the way the teardown path already makes moveToDisplay0
+                // load-bearing above. It used to be logged and stepped over: the slot was then
+                // registered as live, the layout was reported "activated", and — because activation
+                // success is what marks a layout as the auto-start favourite — a layout whose app never
+                // started could be saved as the one to bring up on every boot. The driver sees an empty
+                // cluster and an interface telling them it worked.
+                AppLogger.w(TAG, "FISSION launchAndForce failed/incomplete: " + launchResult);
+                throw new IllegalStateException("launch failed for " + pkg + ": " + launchResult);
+            }
+
+            int layerStack = resolveLayerStack(displayId);
+
+            // MIRROR_START on first slot
+            if (isFirst && surfaceHolder != null && surfaceHolder.getSurface() != null
+                    && surfaceHolder.getSurface().isValid()) {
+                post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_mirror)));
+                mFirstDisplayId = displayId;
+                int svW = surfaceHolder.getSurfaceFrame().width();
+                int svH = surfaceHolder.getSurfaceFrame().height();
+                if (svW <= 0 || svH <= 0) { svW = CLUSTER_W; svH = CLUSTER_H; }
+                mMirrorReady = FissionClient.startMirror(mDaemonBinder,
+                        layerStack, rect.width(), rect.height(),
+                        displayId, svW, svH, surfaceHolder.getSurface());
+                AppLogger.i(TAG, "FISSION MIRROR_START displayId=" + displayId + " ok=" + mMirrorReady);
+            }
+
+            mSlots.put(pkg, new SlotState(pkg, label, displayId, layerStack, rect));
+            mSelectedMirrorPackage = LayoutSlotSelection.resolve(
+                mSelectedMirrorPackage, orderedSlotPackages());
+            mProjecting = true;
+
+            post(() -> {
+                mCallbacks.onSlotsChanged(mSlots.values());
+                mCallbacks.onStatusMessage(null);
+            });
+        } catch (Exception error) {
+            if (slotAcquired) rollbackStartedSlot(pkg);
+            throw error;
         }
-        String launchResult = ProxyClient.launchAndForce(pkg, null, displayId,
-                rect.width(), rect.height());
-        AppLogger.i(TAG, "FISSION launchAndForce result:\n" + launchResult);
-        if (!com.byd.dashcast.proxy.daemon.TaskLaunchRecovery.isSuccessful(launchResult)) {
-            // The verdict is load-bearing, the way the teardown path already makes moveToDisplay0
-            // load-bearing above. It used to be logged and stepped over: the slot was then
-            // registered as live, the layout was reported "activated", and — because activation
-            // success is what marks a layout as the auto-start favourite — a layout whose app never
-            // started could be saved as the one to bring up on every boot. The driver sees an empty
-            // cluster and an interface telling them it worked.
-            AppLogger.w(TAG, "FISSION launchAndForce failed/incomplete: " + launchResult);
-            throw new IllegalStateException("launch failed for " + pkg + ": " + launchResult);
-        }
-
-        int layerStack = resolveLayerStack(displayId);
-
-        // MIRROR_START on first slot
-        if (isFirst && surfaceHolder != null && surfaceHolder.getSurface() != null
-                && surfaceHolder.getSurface().isValid()) {
-            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_mirror)));
-            mFirstDisplayId = displayId;
-            int svW = surfaceHolder.getSurfaceFrame().width();
-            int svH = surfaceHolder.getSurfaceFrame().height();
-            if (svW <= 0 || svH <= 0) { svW = CLUSTER_W; svH = CLUSTER_H; }
-            mMirrorReady = FissionClient.startMirror(mDaemonBinder,
-                    layerStack, rect.width(), rect.height(),
-                    displayId, svW, svH, surfaceHolder.getSurface());
-            AppLogger.i(TAG, "FISSION MIRROR_START displayId=" + displayId + " ok=" + mMirrorReady);
-        }
-
-        mSlots.put(pkg, new SlotState(pkg, label, displayId, layerStack, rect));
-        mSelectedMirrorPackage = LayoutSlotSelection.resolve(
-            mSelectedMirrorPackage, orderedSlotPackages());
-        mProjecting = true;
-
-        post(() -> {
-            mCallbacks.onSlotsChanged(mSlots.values());
-            mCallbacks.onStatusMessage(null);
-        });
     }
 
     private void doSwitchToLayout(LayoutPreset newLayout, SurfaceHolder surfaceHolder)
             throws Exception {
-        Set<String> newPkgs = new HashSet<>();
+        java.util.Map<String, LayoutPreset.SlotDef> targetSlots = new java.util.LinkedHashMap<>();
         if (newLayout != null) {
             for (LayoutPreset.SlotDef s : newLayout.slots) {
-                if (s.packageName != null && !s.packageName.isEmpty()) newPkgs.add(s.packageName);
+                if (s.packageName != null && !s.packageName.isEmpty()) {
+                    targetSlots.putIfAbsent(s.packageName, s);
+                }
             }
         }
-        // Release slots absent from the new layout (empty set = release all = free mode)
-        for (String pkg : new ArrayList<>(mSlots.keySet())) {
-            if (!newPkgs.contains(pkg)) {
+
+        FissionLayoutSwitchPlan.run(
+                new ArrayList<>(mSlots.keySet()), targetSlots.keySet(),
+                new FissionLayoutSwitchPlan.Operations() {
+            @Override public void start(String pkg) throws Exception {
+                LayoutPreset.SlotDef slot = targetSlots.get(pkg);
+                if (slot == null) throw new IllegalStateException("missing target slot for " + pkg);
+                doStartSlot(pkg, getAppLabel(pkg), slot.toRect(), surfaceHolder);
+            }
+
+            @Override public void rollback(String pkg) {
+                rollbackStartedSlot(pkg);
+            }
+
+            @Override public void stop(String pkg) throws Exception {
                 // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
                 if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
                 if (mDaemonBinder != null) {
@@ -1079,17 +1101,40 @@ public final class FissionOrchestrator {
                 ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
                 mSlots.remove(pkg);
             }
-        }
+        });
+        mSelectedMirrorPackage = LayoutSlotSelection.resolve(
+                mSelectedMirrorPackage, orderedSlotPackages());
         mProjecting = !mSlots.isEmpty();
-        // Start / reuse bound slots (skipped in free mode when newLayout is null)
-        if (newLayout != null) {
-            for (LayoutPreset.SlotDef s : newLayout.slots) {
-                if (s.packageName == null || s.packageName.isEmpty()) continue;
-                if (mSlots.containsKey(s.packageName)) continue;
-                String appLabel = getAppLabel(s.packageName);
-                doStartSlot(s.packageName, appLabel, s.toRect(), surfaceHolder);
+    }
+
+    /** Worker-thread rollback for slots successfully acquired by the failed switch attempt. */
+    private void rollbackStartedSlot(String pkg) {
+        final IBinder binder = mDaemonBinder;
+        FissionTeardownPlan.run(java.util.Collections.singletonList(pkg), false,
+                new FissionTeardownPlan.Operations() {
+            @Override public String moveToDisplay0(String packageName) {
+                if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
+                return FissionClient.moveToDisplay0(binder, packageName);
             }
-        }
+
+            @Override public boolean forceStopAndWait(String packageName) {
+                return forceStopAndWaitForResult(packageName);
+            }
+
+            @Override public void releaseSlot(String packageName) throws Exception {
+                if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
+                FissionClient.releaseSlot(binder, packageName);
+            }
+
+            @Override public void onStepError(String packageName, String step, Throwable error) {
+                AppLogger.e(TAG, "Layout activation rollback " + step + " failed for "
+                        + packageName + ": " + error.getMessage());
+            }
+        });
+        mSlots.remove(pkg);
+        mSelectedMirrorPackage = LayoutSlotSelection.resolve(
+                mSelectedMirrorPackage, orderedSlotPackages());
+        mProjecting = !mSlots.isEmpty();
     }
 
     private void activateFavoriteLayout() {
