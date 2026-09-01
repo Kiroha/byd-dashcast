@@ -23,8 +23,9 @@ class SplitReplacementStateTest {
         val controller = SplitController(host)
         controller.setSecondDashboardApp("Old app")
         controller.setSecondDashboardPkg("old.pkg")
+        val generation = controller.beginSecondDashboardReplacement()
 
-        assertTrue(controller.clearSecondDashboardIfMatches("old.pkg"))
+        assertTrue(controller.clearSecondDashboardIfMatches("old.pkg", generation))
 
         assertNull(controller.secondDashboardApp)
         assertNull(controller.secondDashboardPkg)
@@ -37,12 +38,28 @@ class SplitReplacementStateTest {
         val controller = SplitController(host)
         controller.setSecondDashboardApp("New app")
         controller.setSecondDashboardPkg("new.pkg")
+        val oldGeneration = controller.beginSecondDashboardReplacement()
+        controller.beginSecondDashboardReplacement()
 
-        assertFalse(controller.clearSecondDashboardIfMatches("old.pkg"))
+        assertFalse(controller.clearSecondDashboardIfMatches("old.pkg", oldGeneration))
 
         assertEquals("New app", controller.secondDashboardApp)
         assertEquals("new.pkg", controller.secondDashboardPkg)
         assertEquals(0, host.changes)
+    }
+
+    @Test
+    fun `only latest concurrent replacement generation can complete`() {
+        val controller = SplitController(RecordingHost())
+        controller.setSecondDashboardApp("Old app")
+        controller.setSecondDashboardPkg("old.pkg")
+        val first = controller.beginSecondDashboardReplacement()
+        val second = controller.beginSecondDashboardReplacement()
+
+        assertFalse(controller.isCurrentSecondDashboardReplacement(first))
+        assertTrue(controller.isCurrentSecondDashboardReplacement(second))
+        assertFalse(controller.clearSecondDashboardIfMatches("old.pkg", first))
+        assertTrue(controller.clearSecondDashboardIfMatches("old.pkg", second))
     }
 
     @Test
@@ -55,8 +72,12 @@ class SplitReplacementStateTest {
         val shortcutPath = source.substringAfter("if (splitOccupantToStop != null)")
             .substringBefore("} else if (layoutTarget")
 
-        assertTrue(splitPath.contains("clearSecondDashboardIfMatches(previousSecond)"))
-        assertTrue(shortcutPath.contains("clearSecondDashboardIfMatches(splitOccupantToStop)"))
+        assertTrue(splitPath.contains("beginSecondDashboardReplacement()"))
+        assertTrue(shortcutPath.contains("splitReplacementGeneration"))
+        assertTrue(splitPath.contains("clearSecondDashboardIfMatches("))
+        assertTrue(shortcutPath.contains("clearSecondDashboardIfMatches("))
+        assertTrue(splitPath.contains("isCurrentSecondDashboardReplacement(replacementGeneration)"))
+        assertTrue(shortcutPath.contains("isCurrentSecondDashboardReplacement(generation)"))
         assertTrue(splitPath.contains("mSessionTracker.remove(previousSecond)"))
         assertTrue(shortcutPath.contains("mSessionTracker.remove(splitOccupantToStop)"))
     }
