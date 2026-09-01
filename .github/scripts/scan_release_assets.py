@@ -5,6 +5,7 @@ import os
 import re
 import secrets
 import shutil
+import struct
 import subprocess
 import sys
 import zipfile
@@ -33,6 +34,7 @@ PATTERN_MIN_BYTES = {
 
 MAX_APK_BYTES = 256 * 1024 * 1024
 MAX_ENTRY_COUNT = 10_000
+MAX_CENTRAL_DIRECTORY_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 MAX_ENTRY_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 200
@@ -42,6 +44,77 @@ SCAN_OVERLAP_BYTES = max(PATTERN_MIN_BYTES.values()) - 1
 
 EXPECTED_PACKAGE = "com.byd.dashcast"
 EXPECTED_CERT_SHA256 = "c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8"
+
+EOCD_SIGNATURE = b"PK\x05\x06"
+ZIP64_EOCD_SIGNATURE = b"PK\x06\x06"
+ZIP64_LOCATOR_SIGNATURE = b"PK\x06\x07"
+EOCD_MAX_BYTES = 22 + 0xFFFF
+
+
+def archive_directory_finding(apk: Path) -> str | None:
+    """Reject oversized central-directory metadata before ZipFile materializes it."""
+    try:
+        size = apk.stat().st_size
+        if size < 22:
+            return "unreadable APK"
+        with apk.open("rb") as source:
+            tail_size = min(size, EOCD_MAX_BYTES)
+            source.seek(size - tail_size)
+            tail = source.read(tail_size)
+            position = len(tail)
+            eocd = None
+            while True:
+                position = tail.rfind(EOCD_SIGNATURE, 0, position)
+                if position < 0:
+                    break
+                if position + 22 <= len(tail):
+                    candidate = struct.unpack_from("<4s4H2LH", tail, position)
+                    if position + 22 + candidate[-1] == len(tail):
+                        eocd = candidate
+                        break
+                if position == 0:
+                    break
+            if eocd is None:
+                return "unreadable APK"
+
+            _, disk, directory_disk, disk_entries, entries, directory_size, _, _ = eocd
+            if disk != 0 or directory_disk != 0 or disk_entries != entries:
+                return "archive :: multi-disk ZIP is unsupported"
+
+            if entries == 0xFFFF or directory_size == 0xFFFFFFFF:
+                eocd_offset = size - tail_size + position
+                if eocd_offset < 20:
+                    return "archive :: malformed ZIP64 directory"
+                source.seek(eocd_offset - 20)
+                locator = source.read(20)
+                if len(locator) != 20:
+                    return "archive :: malformed ZIP64 directory"
+                locator_sig, zip64_disk, zip64_offset, total_disks = struct.unpack(
+                    "<4sLQL", locator
+                )
+                if (locator_sig != ZIP64_LOCATOR_SIGNATURE or zip64_disk != 0
+                        or total_disks != 1 or zip64_offset > size - 56):
+                    return "archive :: malformed ZIP64 directory"
+                source.seek(zip64_offset)
+                record = source.read(56)
+                if len(record) != 56:
+                    return "archive :: malformed ZIP64 directory"
+                values = struct.unpack("<4sQ2H2L4Q", record)
+                if values[0] != ZIP64_EOCD_SIGNATURE or values[1] < 44:
+                    return "archive :: malformed ZIP64 directory"
+                disk, directory_disk = values[4], values[5]
+                disk_entries, entries = values[6], values[7]
+                directory_size = values[8]
+                if disk != 0 or directory_disk != 0 or disk_entries != entries:
+                    return "archive :: multi-disk ZIP is unsupported"
+
+            if entries > MAX_ENTRY_COUNT:
+                return "archive :: too many entries"
+            if directory_size > MAX_CENTRAL_DIRECTORY_BYTES:
+                return "archive :: central directory exceeds scan limit"
+    except (OSError, OverflowError, struct.error):
+        return "unreadable APK"
+    return None
 
 
 def apk_size_finding(apk: Path) -> str | None:
@@ -101,6 +174,10 @@ def scan_apks(asset_dir: Path) -> list[str]:
         size_finding = apk_size_finding(apk)
         if size_finding:
             findings.append(f"{apk_name} :: {size_finding}")
+            continue
+        directory_finding = archive_directory_finding(apk)
+        if directory_finding:
+            findings.append(f"{apk_name} :: {directory_finding}")
             continue
         try:
             with zipfile.ZipFile(apk) as archive:
