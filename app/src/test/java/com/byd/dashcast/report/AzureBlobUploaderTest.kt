@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.net.MalformedURLException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -68,14 +69,64 @@ class AzureBlobUploaderTest {
         assertEquals(1, attempts)
     }
 
-    private class FakeConnection(private val status: Int) :
+    @Test
+    fun `every failed block attempt disconnects its connection`() {
+        val attempts = mutableListOf<FakeConnection>()
+
+        try {
+            AzureBlobUploader.putBlockWithRetry(
+                "https://blob.example/container/report.zip?comp=block&sas",
+                byteArrayOf(1, 2, 3),
+                3,
+                AzureBlobUploader.ConnectionFactory { _, _ ->
+                    FakeConnection(503, failWrite = true).also { attempts += it }
+                },
+                AzureBlobUploader.RetrySleeper {},
+            )
+            throw AssertionError("failed block unexpectedly succeeded")
+        } catch (_: IOException) {
+        }
+
+        assertEquals(3, attempts.size)
+        assertTrue(attempts.all { it.disconnected })
+    }
+
+    @Test
+    fun `block retry sleep interruption is preserved and propagated`() {
+        val connection = FakeConnection(503)
+        try {
+            AzureBlobUploader.putBlockWithRetry(
+                "https://blob.example/container/report.zip?comp=block&sas",
+                byteArrayOf(1),
+                1,
+                AzureBlobUploader.ConnectionFactory { _, _ -> connection },
+                AzureBlobUploader.RetrySleeper { throw InterruptedException("stop") },
+            )
+            throw AssertionError("interrupted block unexpectedly continued")
+        } catch (_: InterruptedException) {
+            assertTrue(Thread.currentThread().isInterrupted)
+            assertTrue(connection.disconnected)
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    private class FakeConnection(
+        private val status: Int,
+        private val failWrite: Boolean = false,
+    ) :
         HttpURLConnection(URL("https://blob.example")) {
         private val output = ByteArrayOutputStream()
+        var disconnected = false
 
         override fun connect() = Unit
-        override fun disconnect() = Unit
+        override fun disconnect() { disconnected = true }
         override fun usingProxy(): Boolean = false
-        override fun getOutputStream() = output
+        override fun getOutputStream() = if (failWrite) object : ByteArrayOutputStream() {
+            override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                throw IOException("write failed")
+            }
+        } else output
         override fun getResponseCode(): Int = status
         override fun getErrorStream() =
             ByteArrayInputStream("<Error><Code>Transient</Code></Error>".toByteArray())
