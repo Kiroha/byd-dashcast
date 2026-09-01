@@ -293,6 +293,52 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 ["DashCast.apk :: archive :: entry count does not match directory"],
             )
 
+    def test_second_directory_between_declared_directory_and_eocd_is_rejected(self) -> None:
+        token = b"123456789:AAabcdefghijklmnopqrstuvwxyzABCDE12345"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            with zipfile.ZipFile(apk, "w", zipfile.ZIP_STORED) as archive:
+                archive.writestr("AndroidManifest.xml", b"release")
+                archive.writestr("benign.bin", b"clean")
+                archive.writestr("secret.bin", token)
+            raw = apk.read_bytes()
+            eocd_offset = raw.rfind(scanner.EOCD_SIGNATURE)
+            eocd = struct.unpack_from("<4s4H2LH", raw, eocd_offset)
+            directory_size, directory_offset = eocd[5], eocd[6]
+            records = {}
+            position = directory_offset
+            while position < directory_offset + directory_size:
+                fixed = raw[position:position + 46]
+                name_size, extra_size, comment_size = struct.unpack_from(
+                    "<3H", fixed, 28
+                )
+                end = position + 46 + name_size + extra_size + comment_size
+                name = raw[position + 46:position + 46 + name_size].decode()
+                records[name] = raw[position:end]
+                position = end
+            secret_directory = (
+                records["AndroidManifest.xml"] + records["secret.bin"]
+            )
+            benign_directory = (
+                records["AndroidManifest.xml"] + records["benign.bin"]
+            )
+            self.assertEqual(len(secret_directory), len(benign_directory))
+            prefix = b"X" * len(secret_directory)
+            local_entries = prefix + raw[:directory_offset]
+            eocd = struct.pack(
+                "<4s4H2LH", scanner.EOCD_SIGNATURE,
+                0, 0, 2, 2, len(secret_directory), len(local_entries), 0,
+            )
+            apk.write_bytes(
+                local_entries + secret_directory + benign_directory + eocd
+            )
+
+            self.assertEqual(
+                scanner.scan_apks(root),
+                ["DashCast.apk :: archive :: invalid central directory range"],
+            )
+
     def test_single_entry_size_and_compression_ratio_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
