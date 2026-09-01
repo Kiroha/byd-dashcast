@@ -82,8 +82,13 @@ public class LayoutManagerActivity extends Activity {
                 ? (LinearLayout) mHsvChips.getChildAt(0) : null;
 
         // Load saved data
-        mPresets  = LayoutPrefs.load(this);
-        mActiveId = LayoutPrefs.getFavoriteId(this);
+        LayoutPrefs.LoadResult loaded = LayoutPrefs.loadResult(this);
+        mPresets  = new ArrayList<>(loaded.presets);
+        mActiveId = LayoutPrefs.getValidFavoriteId(this, mPresets);
+        if (loaded.status == LayoutPrefs.LoadStatus.CORRUPT
+            || loaded.status == LayoutPrefs.LoadStatus.STORAGE_ERROR) {
+            Toast.makeText(this, R.string.lm_layout_load_failed, Toast.LENGTH_LONG).show();
+        }
 
         // RecyclerView
         mRecycler.setLayoutManager(new LinearLayoutManager(this));
@@ -433,14 +438,19 @@ public class LayoutManagerActivity extends Activity {
                     // every later move was already "saved", the next LayoutPrefs.save wrote it to
                     // disk, and Cancel cancelled nothing. The canvas keeps the live object.
                     LayoutPreset snapshot = mEditing.copy();
+                    List<LayoutPreset> updated = new ArrayList<>(mPresets);
                     boolean replaced = false;
-                    for (int i = 0; i < mPresets.size(); i++) {
-                        if (mPresets.get(i).id.equals(snapshot.id)) {
-                            mPresets.set(i, snapshot); replaced = true; break;
+                    for (int i = 0; i < updated.size(); i++) {
+                        if (updated.get(i).id.equals(snapshot.id)) {
+                            updated.set(i, snapshot); replaced = true; break;
                         }
                     }
-                    if (!replaced) mPresets.add(snapshot);
-                    LayoutPrefs.save(this, mPresets);
+                    if (!replaced) updated.add(snapshot);
+                    if (!LayoutPrefs.save(this, updated)) {
+                        Toast.makeText(this, R.string.lm_layout_save_failed, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    mPresets = updated;
                     mAdapter.update(mPresets, mActiveId);
                     setCanvasTitle(mEditing.name);
                     Toast.makeText(this, R.string.lm_layout_saved_toast, Toast.LENGTH_SHORT).show();
@@ -453,9 +463,20 @@ public class LayoutManagerActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.lm_delete_confirm_fmt, preset.name))
                 .setPositiveButton(R.string.lm_action_delete, (d, w) -> {
-                    if (preset.id.equals(mActiveId)) deactivateLayout();
-                    mPresets.remove(preset);
-                    LayoutPrefs.save(this, mPresets);
+                        boolean wasActive = preset.id.equals(mActiveId);
+                        boolean wasFavorite = preset.id.equals(
+                            LayoutPrefs.getValidFavoriteId(this, mPresets));
+                    List<LayoutPreset> updated = new ArrayList<>(mPresets);
+                    updated.remove(preset);
+                        boolean saved = wasFavorite
+                            ? LayoutPrefs.saveState(this, updated, null)
+                            : LayoutPrefs.save(this, updated);
+                    if (!saved) {
+                        Toast.makeText(this, R.string.lm_layout_save_failed, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    mPresets = updated;
+                    if (wasActive) deactivateLayout(false);
                     mAdapter.update(mPresets, mActiveId);
                     if (mEditing != null && mEditing.id.equals(preset.id)) startNewLayout();
                 })
@@ -492,12 +513,24 @@ public class LayoutManagerActivity extends Activity {
         // not. Splitting them is why the app context is captured here.
         final android.content.Context appCtx = getApplicationContext();
         FissionOrchestrator.activateLayoutManually(this, preset, (ok, error) -> {
+            boolean selectionSaved = true;
+            boolean runtimeKept = error == null;
             if (error == null) {
                 // Unchanged contract: the activated layout only becomes the favourite when the
                 // activation actually ran to completion. It is written before the lifecycle guard
                 // because the layout really IS running — a screen that closed mid-activation must
                 // not leave the favourite pointing at the previous one.
-                LayoutPrefs.setFavoriteId(appCtx, preset.id);
+                LayoutPrefs.FavoriteWriteStatus selectionStatus =
+                        LayoutPrefs.setFavoriteIdIfPresentResult(appCtx, preset.id);
+                selectionSaved = selectionStatus == LayoutPrefs.FavoriteWriteStatus.SAVED;
+                if (!selectionSaved) {
+                    AppLogger.e(TAG, "activated layout but failed to persist favourite selection");
+                    if (selectionStatus == LayoutPrefs.FavoriteWriteStatus.MISSING) {
+                        AppLogger.w(TAG, "activated layout was deleted before completion; stopping it");
+                        FissionOrchestrator.stopAutoOrchestrator(null);
+                        runtimeKept = false;
+                    }
+                }
             } else {
                 // Journalled before the guard for the same reason: losing the failure line because
                 // the user navigated away costs a diagnostic round trip with a tester.
@@ -511,12 +544,13 @@ public class LayoutManagerActivity extends Activity {
                 AppLogger.e(TAG, "activateLayout failed: " + error);
             }
             if (isFinishing() || isDestroyed()) return;   // from here down it is all UI
-            if (error == null) {
+            if (error == null && runtimeKept) {
                 mActiveId = preset.id;
                 mAdapter.update(mPresets, mActiveId);
             }
             String text = (error != null)
                     ? activationErrorText(error, preset.name)
+                    : !selectionSaved ? getString(R.string.lm_layout_selection_save_failed)
                     : ok ? getString(R.string.lm_activated_ok_fmt, preset.name)
                          : getString(R.string.lm_activated_partial_fmt, preset.name);
             Toast.makeText(this, text,
@@ -555,9 +589,16 @@ public class LayoutManagerActivity extends Activity {
     }
 
     private void deactivateLayout() {
+        deactivateLayout(true);
+    }
+
+    private boolean deactivateLayout(boolean persistSelection) {
+        if (persistSelection && !LayoutPrefs.setFavoriteId(this, null)) {
+            Toast.makeText(this, R.string.lm_layout_selection_save_failed, Toast.LENGTH_LONG).show();
+            return false;
+        }
         mActiveId = null;
         for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
-        LayoutPrefs.setFavoriteId(this, null);
         mAdapter.update(mPresets, mActiveId);
         // Stop the orchestrator first — it owns the slots now, so each layout app is moved back
         // to display 0 and killed, and it stops believing its slots are alive (it would
@@ -565,6 +606,7 @@ public class LayoutManagerActivity extends Activity {
         // guarantees nothing is left over from an earlier run.
         FissionOrchestrator.stopAutoOrchestrator(this::purgeDaemonSlotsAsync);
         Toast.makeText(this, R.string.lm_free_mode_toast, Toast.LENGTH_SHORT).show();
+        return true;
     }
 
     /** Off-main-thread DEACTIVATE_LAYOUT; no-op once this activity's executor is gone. */
@@ -596,7 +638,10 @@ public class LayoutManagerActivity extends Activity {
                     Toast.LENGTH_SHORT).show();
             return;
         }
-        LayoutPrefs.setFavoriteId(this, mEditing.id);
+        if (!LayoutPrefs.setFavoriteIdIfPresent(this, mEditing.id)) {
+            Toast.makeText(this, R.string.lm_layout_selection_save_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
         Toast.makeText(this,
                 getString(R.string.fission_layout_favorite_set_toast), Toast.LENGTH_SHORT).show();
     }

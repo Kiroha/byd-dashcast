@@ -379,6 +379,9 @@
     <string name="lm_layout_name_hint">Tartib nomi</string>
     <string name="lm_layout_save_title">Tartibni saqlash</string>
     <string name="lm_layout_saved_toast">Tartib saqlandi ✓</string>
+    <string name="lm_layout_load_failed">Saqlangan tartiblarni yuklab bo‘lmadi. Mavjud ma’lumotlar saqlandi.</string>
+    <string name="lm_layout_save_failed">Tartibni saqlab bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="lm_layout_selection_save_failed">Tartib o‘zgardi, ammo tanlovni saqlab bo‘lmadi.</string>
     <string name="lm_new_layout_name">Yangi tartib</string>
     <string name="lm_no_layout_loaded">Tartib yuklanmagan</string>
     <string name="lm_save_before_favorite">Sevimli qilishdan oldin tartibni saqlang</string>

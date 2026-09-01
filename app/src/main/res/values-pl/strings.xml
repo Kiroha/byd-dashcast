@@ -388,6 +388,9 @@
     <string name="lm_layout_name_hint">Nazwa layoutu</string>
     <string name="lm_layout_save_title">Zapisz layout</string>
     <string name="lm_layout_saved_toast">Layout zapisany ✓</string>
+    <string name="lm_layout_load_failed">Nie udało się wczytać zapisanych layoutów. Istniejące dane zostały zachowane.</string>
+    <string name="lm_layout_save_failed">Nie udało się zapisać layoutu. Spróbuj ponownie.</string>
+    <string name="lm_layout_selection_save_failed">Layout został zmieniony, ale nie udało się zapisać wyboru.</string>
     <string name="lm_new_layout_name">Nowy layout</string>
     <string name="lm_no_layout_loaded">Nie załadowano layoutu</string>
     <string name="lm_save_before_favorite">Najpierw zapisz layout, zanim ustawisz go jako ulubiony</string>

@@ -379,6 +379,9 @@
     <string name="lm_layout_name_hint">Название макета</string>
     <string name="lm_layout_save_title">Сохранить макет</string>
     <string name="lm_layout_saved_toast">Макет сохранён ✓</string>
+    <string name="lm_layout_load_failed">Не удалось загрузить сохранённые макеты. Существующие данные сохранены.</string>
+    <string name="lm_layout_save_failed">Не удалось сохранить макет. Повторите попытку.</string>
+    <string name="lm_layout_selection_save_failed">Макет изменён, но не удалось сохранить выбор.</string>
     <string name="lm_new_layout_name">Новый макет</string>
     <string name="lm_no_layout_loaded">Макет не загружен</string>
     <string name="lm_save_before_favorite">Сначала сохраните макет, прежде чем сделать его избранным</string>

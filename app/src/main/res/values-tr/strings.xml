@@ -379,6 +379,9 @@
     <string name="lm_layout_name_hint">Düzen adı</string>
     <string name="lm_layout_save_title">Düzeni kaydet</string>
     <string name="lm_layout_saved_toast">Düzen kaydedildi ✓</string>
+    <string name="lm_layout_load_failed">Kayıtlı düzenler yüklenemedi. Mevcut veriler korundu.</string>
+    <string name="lm_layout_save_failed">Düzen kaydedilemedi. Yeniden deneyin.</string>
+    <string name="lm_layout_selection_save_failed">Düzen değişti ancak seçim kaydedilemedi.</string>
     <string name="lm_new_layout_name">Yeni düzen</string>
     <string name="lm_no_layout_loaded">Yüklü düzen yok</string>
     <string name="lm_save_before_favorite">Favori olarak ayarlamadan önce düzeni kaydedin</string>
