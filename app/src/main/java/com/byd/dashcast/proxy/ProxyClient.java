@@ -57,6 +57,8 @@ public final class ProxyClient {
 
     /** PID file written by the daemon at startup (v1.2.63-beta, Phase A step 3). */
     private static final String DAEMON_PID = "/data/local/tmp/dashcast_proxy.pid";
+    /** Per-process nonce paired with {@link #DAEMON_PID}; protocol v25 WHOAMI returns it. */
+    private static final String DAEMON_INSTANCE = "/data/local/tmp/dashcast_proxy_instance";
     /** Trigger file watched by the daemon to ask for a binder rebroadcast. */
     private static final String DAEMON_TRIGGER = "/data/local/tmp/dashcast_proxy.trigger";
     /** Bootstrap-script lock file — flock'd to serialize concurrent bootstraps. */
@@ -233,6 +235,7 @@ public final class ProxyClient {
     private static volatile int    sDaemonUid = -1;
     private static volatile int    sDaemonPid = -1;
     private static volatile String sDaemonVer;
+    private static volatile String sDaemonInstance;
 
     // ─── Auto-recovery (v1.2.58-beta, Phase A step 1) ─────────────────────
     /**
@@ -286,6 +289,7 @@ public final class ProxyClient {
                 sDaemonUid = -1;
                 sDaemonPid = -1;
                 sDaemonVer = null;
+                sDaemonInstance = null;
                 // v1.2.78 — Couche 4: count the zombie. Best-effort: sAppCtx
                 // may still be null if no connect() has ever succeeded, in
                 // which case ProxyMetrics is a no-op.
@@ -370,6 +374,7 @@ public final class ProxyClient {
             sDaemonUid = -1;
             sDaemonPid = -1;
             sDaemonVer = null;
+            sDaemonInstance = null;
             ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_DEATHS_SILENT);
             AppLogger.w(TAG, "invalidateBinder(" + reason
                     + ") — silent death detected by caller (kernel notif missing)");
@@ -1258,6 +1263,7 @@ public final class ProxyClient {
                 sDaemonUid = -1;
                 sDaemonPid = -1;
                 sDaemonVer = null;
+                sDaemonInstance = null;
             }
             // Give AMS / the kernel a moment to reap the old process before
             // the receiver waits for the next broadcast.
@@ -1278,13 +1284,34 @@ public final class ProxyClient {
      * @return true only when the old daemon is killed or already absent, making it impossible for
      *         the timed-out physical command to execute after a newer queued command.
      */
-    public static boolean terminateHungDaemonViaAdb(Context ctx) {
-        final int authenticatedPid = sDaemonPid;
-        final String pidSource = authenticatedPid > 0
-                ? "PID=" + authenticatedPid
-                : "PID=$(cat " + DAEMON_PID + " 2>/dev/null)";
-        final String command = pidSource
+    public static final class DaemonIdentity {
+        private final IBinder binder;
+        private final int pid;
+        private final String instance;
+
+        private DaemonIdentity(IBinder binder, int pid, String instance) {
+            this.binder = binder;
+            this.pid = pid;
+            this.instance = instance;
+        }
+    }
+
+    /** Snapshot taken on the actual typed-dispatch thread immediately before Binder entry. */
+    public static DaemonIdentity captureDaemonIdentity() {
+        synchronized (LOCK) {
+            if (sBinder == null || sDaemonPid <= 0 || sDaemonInstance == null
+                    || !sDaemonInstance.matches("[0-9a-fA-F]{32}")) return null;
+            return new DaemonIdentity(sBinder, sDaemonPid, sDaemonInstance);
+        }
+    }
+
+    public static boolean terminateHungDaemonViaAdb(Context ctx, DaemonIdentity expected) {
+        if (expected == null) return false;
+        final String command = "PID=" + expected.pid
+                + "; EXPECT=" + expected.instance
                 + "; case \"$PID\" in ''|*[!0-9]*) echo NO_PID; exit 3;; esac"
+                + "; CURRENT=$(cat " + DAEMON_INSTANCE + " 2>/dev/null)"
+                + "; if [ \"$CURRENT\" != \"$EXPECT\" ]; then echo INSTANCE_CHANGED; exit 5; fi"
                 + "; LINE=$(ps -A 2>/dev/null | awk -v p=\"$PID\" '$2 == p {print; exit}')"
                 + "; if echo \"$LINE\" | grep -q '[d]ashcast_proxy'; then"
                 + " kill -9 \"$PID\" 2>/dev/null && echo KILLED"
@@ -1293,18 +1320,23 @@ public final class ProxyClient {
         try {
             String result = AdbLocalClient.executeShellWithResultBlocking(ctx, command, 15_000);
             if (!result.contains("KILLED") && !result.contains("ABSENT")) {
+                if (!expected.binder.isBinderAlive()) {
+                    AppLogger.i(TAG, "hung daemon already superseded: " + result);
+                    return true;
+                }
                 AppLogger.e(TAG, "hung daemon recovery refused: " + result);
                 return false;
             }
             synchronized (LOCK) {
-                IBinder old = sBinder;
-                if (old != null) {
-                    try { old.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                if (sBinder == expected.binder && sDaemonPid == expected.pid
+                        && expected.instance.equals(sDaemonInstance)) {
+                    try { expected.binder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    sBinder = null;
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
+                    sDaemonInstance = null;
                 }
-                sBinder = null;
-                sDaemonUid = -1;
-                sDaemonPid = -1;
-                sDaemonVer = null;
             }
             AppLogger.e(TAG, "hung proxy daemon terminated via direct ADB: " + result);
             return true;
@@ -1564,6 +1596,7 @@ public final class ProxyClient {
                     sDaemonUid = -1;
                     sDaemonPid = -1;
                     sDaemonVer = null;
+                    sDaemonInstance = null;
                     sBinder = bp.binder;
                     // Hook the new binder so a future death immediately clears
                     // our cached reference (P2). Best-effort: if linkToDeath
@@ -1624,14 +1657,25 @@ public final class ProxyClient {
             int daemonUid = reply.readInt();
             int daemonPid = reply.readInt();
             String daemonVer = reply.readString();
+            String daemonInstance = reply.dataAvail() > 0 ? reply.readString() : null;
             if (daemonUid < 0 || daemonPid <= 0 || daemonVer == null || daemonVer.isEmpty()) {
                 throw new IllegalStateException("invalid WHOAMI response");
+            }
+            try {
+                if (Integer.parseInt(daemonVer) >= 25
+                        && (daemonInstance == null
+                        || !daemonInstance.matches("[0-9a-fA-F]{32}"))) {
+                    throw new IllegalStateException("invalid WHOAMI instance");
+                }
+            } catch (NumberFormatException badVersion) {
+                throw new IllegalStateException("invalid WHOAMI protocol");
             }
             synchronized (LOCK) {
                 if (sBinder != expectedBinder || !expectedBinder.isBinderAlive()) return false;
                 sDaemonUid = daemonUid;
                 sDaemonPid = daemonPid;
                 sDaemonVer = daemonVer;
+                sDaemonInstance = daemonInstance;
                 return true;
             }
         } catch (Exception e) {
@@ -1642,6 +1686,7 @@ public final class ProxyClient {
                     sDaemonUid = -1;
                     sDaemonPid = -1;
                     sDaemonVer = null;
+                    sDaemonInstance = null;
                 }
             }
             return false;

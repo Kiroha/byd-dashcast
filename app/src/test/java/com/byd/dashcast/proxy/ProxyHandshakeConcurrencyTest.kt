@@ -28,6 +28,7 @@ class ProxyHandshakeConcurrencyTest {
         setStatic("sDaemonUid", -1)
         setStatic("sDaemonPid", -1)
         setStatic("sDaemonVer", null)
+        setStatic("sDaemonInstance", null)
     }
 
     @Test
@@ -129,6 +130,28 @@ class ProxyHandshakeConcurrencyTest {
         assertFalse(ProxyClient.connect(RuntimeEnvironment.getApplication()))
         assertFalse(ProxyClient.isConnected())
         assertEquals(-1, getStatic("sDaemonUid"))
+    }
+
+    @Test
+    fun `protocol 25 publishes exact daemon instance identity`() {
+        val token = "0123456789abcdef0123456789abcdef"
+        val binder = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                reply!!.writeNoException()
+                reply.writeInt(2000)
+                reply.writeInt(789)
+                reply.writeString("25")
+                reply.writeString(token)
+                return true
+            }
+        }
+        setStatic("sBinder", binder)
+        setStatic("sDaemonUid", -1)
+
+        assertTrue(ProxyClient.connect(RuntimeEnvironment.getApplication()))
+        assertEquals(token, getStatic("sDaemonInstance"))
+        assertTrue(ProxyClient.captureDaemonIdentity() != null)
     }
 
     @Test

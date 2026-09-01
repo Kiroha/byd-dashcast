@@ -9,6 +9,7 @@ internal class ProjectionTypedWatchdog(
     private val scheduler: Scheduler,
     private val recover: (Runnable) -> Unit,
     private val onRecovered: Runnable,
+    private val beforeStart: () -> Unit = {},
 ) : AdbLocalClient.TypedDispatchObserver {
 
     fun interface Cancellable {
@@ -24,6 +25,7 @@ internal class ProjectionTypedWatchdog(
 
     override fun onStart() {
         if (!state.compareAndSet(IDLE, RUNNING)) return
+        beforeStart()
         timeout = scheduler.schedule(timeoutMs, Runnable {
             if (!state.compareAndSet(RUNNING, TIMED_OUT)) return@Runnable
             recover(onRecovered)

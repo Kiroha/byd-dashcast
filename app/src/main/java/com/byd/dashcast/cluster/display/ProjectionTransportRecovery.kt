@@ -7,6 +7,7 @@ import com.byd.dashcast.util.AppLogger
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /** Recovers an entered typed projection transact before allowing the global queue to advance. */
 internal object ProjectionTransportRecovery {
@@ -19,26 +20,33 @@ internal object ProjectionTransportRecovery {
     }
 
     fun watchdog(context: Context, onRecovered: Runnable): ProjectionTypedWatchdog =
-        ProjectionTypedWatchdog(
+        AtomicReference<ProxyClient.DaemonIdentity?>().let { identity -> ProjectionTypedWatchdog(
             TYPED_TRANSACTION_TIMEOUT_MS,
             ProjectionTypedWatchdog.Scheduler { delayMs, action ->
                 val future: ScheduledFuture<*> = executor.schedule(
                     action, delayMs, TimeUnit.MILLISECONDS)
                 ProjectionTypedWatchdog.Cancellable { future.cancel(false) }
             },
-            recover = { done -> recoverUntilSafe(context.applicationContext, done) },
+            recover = { done ->
+                recoverUntilSafe(context.applicationContext, identity.get(), done)
+            },
             onRecovered = onRecovered,
-        )
+            beforeStart = { identity.set(ProxyClient.captureDaemonIdentity()) },
+        ) }
 
-    private fun recoverUntilSafe(context: Context, done: Runnable) {
+    private fun recoverUntilSafe(
+        context: Context,
+        identity: ProxyClient.DaemonIdentity?,
+        done: Runnable,
+    ) {
         executor.execute {
-            if (ProxyClient.terminateHungDaemonViaAdb(context)) {
+            if (ProxyClient.terminateHungDaemonViaAdb(context, identity)) {
                 done.run()
                 return@execute
             }
             AppLogger.e(TAG, "proxy termination not yet confirmed; projection queue stays closed")
             executor.schedule(
-                { recoverUntilSafe(context, done) },
+                { recoverUntilSafe(context, identity, done) },
                 RECOVERY_RETRY_MS,
                 TimeUnit.MILLISECONDS,
             )

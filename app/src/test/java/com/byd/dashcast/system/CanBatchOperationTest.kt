@@ -120,7 +120,7 @@ class CanBatchOperationTest {
         ).readText()
 
         assertTrue(controller.contains("supportsProtocol(24)"))
-        assertTrue(daemon.contains("PROTOCOL_VERSION = \"24\""))
+        assertTrue(daemon.contains("PROTOCOL_VERSION = \"25\""))
     }
 
     private class RecordingWriter(

@@ -65,7 +65,7 @@ import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
  * transactions identified by integer codes:
  * <ul>
  *   <li>{@link #TXN_PING}   — no args → {@code long} epoch_ms</li>
- *   <li>{@link #TXN_WHOAMI} — no args → {@code int uid, int pid, String ver}</li>
+ *   <li>{@link #TXN_WHOAMI} — no args → {@code int uid, int pid, String ver, String instance}</li>
  *   <li>{@link #TXN_EXEC}   — {@code String cmd} → {@code int exit, String combinedOutput}</li>
  * </ul>
  */
@@ -96,8 +96,9 @@ public final class ProxyDaemonMain {
     *  TXN_AUTOCONTAINER_REGISTER_CALLBACK (arms serviceDied/receivedX logging, diagnostic-only,
     *  never called before this release) and TXN_PROJECTION_TRACE_START/DRAIN (60s registry sampler
     *  around a normal projection cycle). All three read-only or purely observational.
+    *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "24";
+    private static final String PROTOCOL_VERSION = "25";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -107,6 +108,11 @@ public final class ProxyDaemonMain {
      *  after app restart (setsid'd daemon outlives the app process) and ask
      *  for a binder rebroadcast instead of paying the ~1 s app_process cost. */
     private static final String PID_FILE = "/data/local/tmp/dashcast_proxy.pid";
+
+        /** Random identity for this exact daemon process, paired with the PID for safe recovery. */
+        private static final String INSTANCE_FILE = "/data/local/tmp/dashcast_proxy_instance";
+        private static final String INSTANCE_TOKEN =
+            java.util.UUID.randomUUID().toString().replace("-", "");
 
     /** Trigger file watched via {@link FileObserver} by the running daemon.
      *  The bootstrap script (running as uid 2000 shell) touches this file to
@@ -231,6 +237,7 @@ public final class ProxyDaemonMain {
                 return;
             }
             writeVersionFile();
+            writeInstanceFile();
             installPidShutdownHook();
             Looper.prepareMainLooper();
 
@@ -437,6 +444,12 @@ public final class ProxyDaemonMain {
         } catch (Throwable ignore) {}
     }
 
+    private static void writeInstanceFile() {
+        try (FileOutputStream fos = new FileOutputStream(new File(INSTANCE_FILE))) {
+            fos.write(INSTANCE_TOKEN.getBytes());
+        } catch (Throwable ignore) {}
+    }
+
     /** Remove the PID file on JVM shutdown. Pure best-effort — a SIGKILL'd
      *  daemon will leave a stale file behind, which the bootstrap script
      *  detects via {@code /proc/$PID/comm} sanity check. */
@@ -456,6 +469,12 @@ public final class ProxyDaemonMain {
                     try { new File(PID_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(TRIGGER_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(VERSION_FILE).delete(); } catch (Throwable ignore) {}
+                    try {
+                        if (INSTANCE_TOKEN.equals(
+                                readSmallFile(new File(INSTANCE_FILE)).trim())) {
+                            new File(INSTANCE_FILE).delete();
+                        }
+                    } catch (Throwable ignore) {}
                 }
             });
         } catch (Throwable ignore) {
@@ -678,6 +697,7 @@ public final class ProxyDaemonMain {
                         reply.writeInt(Process.myUid());
                         reply.writeInt(Process.myPid());
                         reply.writeString(PROTOCOL_VERSION);
+                        reply.writeString(INSTANCE_TOKEN);
                     }
                     return true;
                 }
