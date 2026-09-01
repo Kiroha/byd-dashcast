@@ -1366,6 +1366,7 @@ class MainActivity : AppCompatActivity(),
         // 2. Move the app back to Display 0 before killing (serialised move → forceStop).
         val killCallback = object : AdbLocalClient.Callback {
             override fun onSuccess(report: String?) {
+                mSessionTracker.remove(app.packageName)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     AppLogger.i(TAG, "forceStop " + app.packageName + " OK")
@@ -1381,6 +1382,8 @@ class MainActivity : AppCompatActivity(),
             }
 
             override fun onError(error: String?) {
+                // It may still own a cluster task. Keep it in persisted history for Stop retry.
+                mSessionTracker.add(app.packageName)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     Toast.makeText(applicationContext, getString(R.string.toast_kill_failed, error), Toast.LENGTH_LONG).show()
@@ -1394,12 +1397,11 @@ class MainActivity : AppCompatActivity(),
             svc.moveTaskToDisplay(app.packageName, 0, object : ClusterService.LaunchCallback {
                 override fun onResult(ok: Boolean) {
                     AppLogger.i(TAG, "doKillApp: move→display0 " + (if (ok) "OK" else "KO") + " for " + app.packageName + " — now force-stop")
-                    mSessionTracker.remove(app.packageName)
                     AdbLocalClient.forceStopApp(this@MainActivity, app.packageName, killCallback)
                 }
             })
         } else {
-            mSessionTracker.remove(app.packageName)
+            mSessionTracker.add(app.packageName)
             AdbLocalClient.forceStopApp(this, app.packageName, killCallback)
         }
     }

@@ -101,7 +101,15 @@ class ClusterSessionTracker(context: Context) {
             // no service to move with and no probe to reason from — so it cannot establish the one
             // precondition the cover requires: that the app is alive ON display 0. Asserting that
             // without evidence is the defect this whole pipeline was rewritten to stop making.
-            for (p in blind) AdbLocalClient.forceStopApp(mAppCtx, p, null)
+            for (p in blind) {
+                add(p)
+                AdbLocalClient.forceStopApp(mAppCtx, p, object : AdbLocalClient.Callback {
+                    override fun onSuccess(result: String?) { remove(p) }
+                    override fun onError(error: String?) {
+                        AppLogger.w(TAG, "blind forceStop $p failed: $error — retained")
+                    }
+                })
+            }
             Handler(Looper.getMainLooper()).postDelayed(onAllDone, 800L)
             return
         }
@@ -111,6 +119,9 @@ class ClusterSessionTracker(context: Context) {
             onAllDone.run()
             return
         }
+        // Every candidate remains recoverable across process death until a later probe or kill
+        // proves a safe final state. This also covers main/second arguments not already in history.
+        for (pkg in pkgs) add(pkg)
         AppLogger.i(TAG, "evictAll: ${pkgs.size} candidate(s) → $pkgs")
         // One clock for the whole eviction — see ClusterEvictionPolicy.LANDING_BUDGET_MS.
         evictNext(svc, pkgs, 0, SystemClock.elapsedRealtime(), onAllDone)
@@ -170,7 +181,6 @@ class ClusterSessionTracker(context: Context) {
                     override fun onResult(ok: Boolean) {
                         AppLogger.i(TAG, "evict: move $pkg → "
                                 + (if (ok) "OK" else "KO") + " — awaiting landing")
-                        remove(pkg)
                         awaitLandingThenForceStop(svc, pkgs, idx, evictionStartedAt, onAllDone)
                     }
                 })
@@ -252,6 +262,7 @@ class ClusterSessionTracker(context: Context) {
         val pkg = pkgs[idx]
         AdbLocalClient.forceStopApp(mAppCtx, pkg, object : AdbLocalClient.Callback {
             override fun onSuccess(r: String?) {
+                remove(pkg)
                 evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
             }
 
@@ -268,6 +279,7 @@ class ClusterSessionTracker(context: Context) {
             }
 
             override fun onError(e: String?) {
+                add(pkg)
                 AppLogger.w(TAG, "evict: forceStop $pkg ERR: $e")
                 evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
             }
