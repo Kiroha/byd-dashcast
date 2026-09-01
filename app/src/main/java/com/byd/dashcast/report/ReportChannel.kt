@@ -126,9 +126,7 @@ object ReportChannel {
     /** True when this device has been paired, i.e. at least one credential set is on the device. */
     @JvmStatic
     fun isPairedOnDevice(ctx: Context): Boolean {
-        val p = prefs(ctx) ?: return false
-        return !p.getString(K_BOT_TOKEN, "").isNullOrEmpty() ||
-               !p.getString(K_AZURE_SAS, "").isNullOrEmpty()
+        return hasTelegram(ctx) || hasAzure(ctx)
     }
 
     // ── writes ──────────────────────────────────────────────────────────────────────────────
@@ -140,11 +138,17 @@ object ReportChannel {
      */
     @JvmStatic
     fun saveTelegram(ctx: Context, token: String, chat: String, thread: String, hudThread: String): Boolean {
+        val normalizedToken = token.trim()
+        val normalizedChat = chat.trim()
+        if (normalizedToken.isEmpty() != normalizedChat.isEmpty()) {
+            AppLogger.w(TAG, "telegram credentials rejected: token and chat id must be provided together")
+            return false
+        }
         val p = prefs(ctx) ?: return false
         return try {
             p.edit()
-                .putString(K_BOT_TOKEN, token.trim())
-                .putString(K_CHAT_ID, chat.trim())
+                .putString(K_BOT_TOKEN, normalizedToken)
+                .putString(K_CHAT_ID, normalizedChat)
                 .putString(K_THREAD_ID, thread.trim())
                 .putString(K_HUD_THREAD_ID, hudThread.trim())
                 .commit()
@@ -219,6 +223,7 @@ object ReportChannel {
         val sourcePath: String,
         internal val text: String,
         val hasTelegram: Boolean,
+        val hasInvalidTelegram: Boolean,
         val hasAzure: Boolean,
         val azureHost: String?,
         val hasInvalidAzure: Boolean,
@@ -232,11 +237,13 @@ object ReportChannel {
             append("Source: ").append(sourcePath)
             append("\nContains:")
             if (hasTelegram) append(" Telegram credentials;")
+            if (hasInvalidTelegram) append(" incomplete Telegram credentials (will be ignored);")
             if (hasAzure) append(" Azure credentials; host ").append(azureHost).append(';')
             if (hasInvalidAzure) append(" invalid Azure URL (will be ignored);")
             if (relayHost != null) append(" relay host ").append(relayHost).append(';')
             if (hasInvalidRelay) append(" invalid relay URL (will be ignored);")
-            if (!hasTelegram && !hasAzure && !hasInvalidAzure && relayHost == null && !hasInvalidRelay) {
+                if (!hasTelegram && !hasInvalidTelegram && !hasAzure && !hasInvalidAzure &&
+                    relayHost == null && !hasInvalidRelay) {
                 append(" no supported settings;")
             }
             if (requiresSourceDeletion) {
@@ -346,16 +353,19 @@ object ReportChannel {
      * Tolerant on purpose: blank lines, `#` comments and unknown keys are skipped, and `=` inside a
      * value is preserved (Azure SAS strings contain them). A partial file is not an error — storing
      * Telegram without Azure is a valid outcome.
+    * Blank values are ignored here; credential removal is an explicit [clear] operation, never an
+    * accidental side effect of importing an empty or truncated file.
      *
-    * @return how many credential/endpoint sets were stored: 0 through 3. Never the values.
+        * @return how many credential/endpoint sets were stored: 0 through 3. Never the values.
      */
     @JvmStatic
     fun applyProperties(ctx: Context, text: String): Int {
         val kv = parseProperties(text)
         var applied = 0
         val tok = kv["bugReport.botToken"].orEmpty()
-        if (tok.isNotEmpty()) {
-            if (saveTelegram(ctx, tok, kv["bugReport.chatId"].orEmpty(),
+        val chat = kv["bugReport.chatId"].orEmpty()
+        if (tok.isNotEmpty() && chat.isNotEmpty()) {
+            if (saveTelegram(ctx, tok, chat,
                     kv["bugReport.threadId"].orEmpty(),
                     kv["bugReport.hudThreadId"].orEmpty())) applied++
         }
@@ -425,6 +435,8 @@ object ReportChannel {
 
     private fun candidate(sourcePath: String, text: String): ProvisioningCandidate {
         val values = parseProperties(text)
+        val telegramToken = values["bugReport.botToken"].orEmpty().trim()
+        val telegramChat = values["bugReport.chatId"].orEmpty().trim()
         val azureUrl = values["azure.blobUrl"].orEmpty().trim()
         val azureSas = values["azure.sas"].orEmpty().trim().removePrefix("?")
         val azureHost = if (azureSas.isNotEmpty()) validatedAzureHost(azureUrl) else null
@@ -433,7 +445,8 @@ object ReportChannel {
         return ProvisioningCandidate(
             sourcePath = sourcePath,
             text = text,
-            hasTelegram = values["bugReport.botToken"].orEmpty().isNotEmpty(),
+            hasTelegram = telegramToken.isNotEmpty() && telegramChat.isNotEmpty(),
+            hasInvalidTelegram = telegramToken.isNotEmpty() != telegramChat.isNotEmpty(),
             hasAzure = azureSas.isNotEmpty() && azureHost != null,
             azureHost = azureHost,
             hasInvalidAzure = azureSas.isNotEmpty() && azureHost == null,
