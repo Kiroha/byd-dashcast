@@ -104,9 +104,8 @@ internal object ProxyCanVerbs {
 
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
-    fun canBatch(operations: List<CanBatchOperation>?): Int {
-        val b: IBinder? = ProxyClient.sBinder
-        if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
+    fun canBatch(binder: IBinder, operations: List<CanBatchOperation>?): Int {
+        if (!binder.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         if (operations == null || operations.isEmpty() ||
             operations.size > CanBatchOperation.MAX_BATCH_SIZE
         ) {
@@ -123,7 +122,7 @@ internal object ProxyCanVerbs {
                 data.writeInt(operation.intValue)
                 data.writeByteArray(operation.getBytes())
             }
-            b.transact(ProxyDaemonContract.TXN_CAN_BATCH, data, reply, 0)
+            binder.transact(ProxyDaemonContract.TXN_CAN_BATCH, data, reply, 0)
             reply.readException()
             return reply.readInt()
         } finally {
