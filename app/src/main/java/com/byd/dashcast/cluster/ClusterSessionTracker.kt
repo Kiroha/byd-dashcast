@@ -36,26 +36,21 @@ class ClusterSessionTracker(context: Context) {
 
     private val mAppCtx: Context = context.applicationContext
 
-    /**
-     * Synchronized because it is mutated from two threads: the main thread (launch / kill) and
-     * [sLandingExecutor] (the landing waits, which call [remove] once a departure is confirmed).
-     * Iteration still needs an explicit `synchronized` block — see [snapshot].
-     */
-    private val mPkgs: MutableSet<String> =
-        java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    /** Main and landing threads share one mutation + snapshot + preference-write monitor. */
+    private val mPkgs = PersistedPackageSet { packages ->
+        ClusterPrefs.setSessionClusterPkgs(mAppCtx, packages)
+    }
 
     // ── Set mutations ─────────────────────────────────────────────────────────
 
     fun add(pkg: String?) {
         if (pkg == null) return
         mPkgs.add(pkg)
-        persist()
     }
 
     fun remove(pkg: String?) {
         if (pkg == null) return
         mPkgs.remove(pkg)
-        persist()
     }
 
     fun contains(pkg: String?): Boolean = pkg != null && mPkgs.contains(pkg)
@@ -73,8 +68,7 @@ class ClusterSessionTracker(context: Context) {
         }
     }
 
-    /** Thread-safe copy — `synchronizedSet` protects the mutators, not iteration. */
-    private fun snapshot(): List<String> = synchronized(mPkgs) { ArrayList(mPkgs) }
+    private fun snapshot(): List<String> = mPkgs.snapshot()
 
     /**
      * Set when an eviction ends with an app we could not kill still holding a task on display 0.
@@ -404,10 +398,6 @@ class ClusterSessionTracker(context: Context) {
     } catch (ie: InterruptedException) {
         Thread.currentThread().interrupt()
         false
-    }
-
-    private fun persist() {
-        ClusterPrefs.setSessionClusterPkgs(mAppCtx, HashSet(snapshot()))
     }
 
     companion object {
