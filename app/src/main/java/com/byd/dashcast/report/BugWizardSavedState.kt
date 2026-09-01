@@ -20,6 +20,8 @@ internal data class BugWizardSavedState(
     val detectedLabel: String,
     val detectionDone: Boolean,
     val submissionToken: String,
+    val pendingReportPath: String,
+    val pendingReportCaption: String,
 )
 
 internal object BugWizardGate {
@@ -32,6 +34,7 @@ internal object BugWizardGate {
     const val HUD_NO_NOTIFICATION_ACCESS = 6
     const val HUD_NO_ROUTE = 7
     const val HUD_UNSUPPORTED_NAV = 8
+    const val SHOTS_CONSENT = 9
 }
 
 internal object BugWizardStateStore {
@@ -57,6 +60,8 @@ internal object BugWizardStateStore {
         outState.putString(PREFIX + "detectedLabel", state.detectedLabel)
         outState.putBoolean(PREFIX + "detectionDone", state.detectionDone)
         outState.putString(PREFIX + "submissionToken", state.submissionToken)
+        outState.putString(PREFIX + "pendingReportPath", state.pendingReportPath)
+        outState.putString(PREFIX + "pendingReportCaption", state.pendingReportCaption)
     }
 
     fun read(savedState: Bundle?): BugWizardSavedState? {
@@ -79,6 +84,8 @@ internal object BugWizardStateStore {
             detectedLabel = savedState.getString(PREFIX + "detectedLabel").orEmpty(),
             detectionDone = savedState.getBoolean(PREFIX + "detectionDone", false),
             submissionToken = savedState.getString(PREFIX + "submissionToken").orEmpty(),
+            pendingReportPath = savedState.getString(PREFIX + "pendingReportPath").orEmpty(),
+            pendingReportCaption = savedState.getString(PREFIX + "pendingReportCaption").orEmpty(),
         )
     }
 }

@@ -49,6 +49,8 @@ class BugWizardSavedStateTest {
             detectedLabel = "Maps",
             detectionDone = true,
             submissionToken = "submission-1",
+            pendingReportPath = "/tmp/report.txt",
+            pendingReportCaption = "redacted caption",
         )
         val bundle = Bundle()
 
@@ -80,6 +82,8 @@ class BugWizardSavedStateTest {
                 detectedLabel = "Maps",
                 detectionDone = true,
                 submissionToken = "",
+                pendingReportPath = "",
+                pendingReportCaption = "",
             ),
         )
 
@@ -123,6 +127,8 @@ class BugWizardSavedStateTest {
                 detectedLabel = "",
                 detectionDone = true,
                 submissionToken = "",
+                pendingReportPath = "",
+                pendingReportCaption = "",
             ),
         )
 
@@ -173,7 +179,61 @@ class BugWizardSavedStateTest {
         controller.destroy()
     }
 
-    private fun issuePageState(token: String): Bundle = Bundle().also { bundle ->
+    @Test
+    fun `recreation resumes screenshot consent for the completed report`() {
+        val report = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("completed report")
+        }
+        val token = BugWizardSubmissionGate.claim()!!
+        val bundle = issuePageState(
+            token,
+            pendingGate = BugWizardGate.SHOTS_CONSENT,
+            pendingReportPath = report.absolutePath,
+            pendingReportCaption = "redacted caption",
+        )
+
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java).create(bundle)
+        val activity = controller.get()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+
+        assertTrue(dialog.isShowing)
+        assertEquals(activity.getString(R.string.bug_shots_consent_msg),
+            dialog.findViewById<TextView>(android.R.id.message).text.toString())
+        assertTrue(BugWizardSubmissionGate.isActive(token))
+
+        controller.destroy()
+        report.delete()
+    }
+
+    @Test
+    fun `process recreation reclaims completed report screenshot consent`() {
+        val report = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("completed report")
+        }
+        val bundle = issuePageState(
+            "token-from-dead-process",
+            pendingGate = BugWizardGate.SHOTS_CONSENT,
+            pendingReportPath = report.absolutePath,
+            pendingReportCaption = "redacted caption",
+        )
+
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java).create(bundle)
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        val reclaimed = BugWizardSubmissionGate.activeToken()
+
+        assertTrue(dialog.isShowing)
+        assertTrue(reclaimed != null && reclaimed != "token-from-dead-process")
+
+        controller.destroy()
+        report.delete()
+    }
+
+    private fun issuePageState(
+        token: String,
+        pendingGate: Int = BugWizardGate.NONE,
+        pendingReportPath: String = "",
+        pendingReportCaption: String = "",
+    ): Bundle = Bundle().also { bundle ->
         BugWizardStateStore.write(
             bundle,
             BugWizardSavedState(
@@ -189,11 +249,13 @@ class BugWizardSavedStateTest {
                 telegramHandle = "@driver",
                 handleDraft = "",
                 currentStep = 2,
-                pendingGate = BugWizardGate.NONE,
+                pendingGate = pendingGate,
                 detectedPackage = "com.example.maps",
                 detectedLabel = "Maps",
                 detectionDone = true,
                 submissionToken = token,
+                pendingReportPath = pendingReportPath,
+                pendingReportCaption = pendingReportCaption,
             ),
         )
     }
