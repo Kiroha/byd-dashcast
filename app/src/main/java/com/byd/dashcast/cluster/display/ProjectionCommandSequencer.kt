@@ -24,6 +24,7 @@ internal class ProjectionCommandSequencer {
         val session: Session,
         val launch: (Completion) -> Unit,
         val completion: Completion,
+        val dispatchIfSuperseded: Boolean,
     ) {
         var completed = false
     }
@@ -50,9 +51,10 @@ internal class ProjectionCommandSequencer {
         session: Session,
         launch: (Completion) -> Unit,
         completion: Completion,
+        dispatchIfSuperseded: Boolean = false,
     ) {
         val next = synchronized(this) {
-            queue.addLast(Pending(session, launch, completion))
+            queue.addLast(Pending(session, launch, completion, dispatchIfSuperseded))
             takeNextLocked()
         }
         dispatch(next)
@@ -62,7 +64,7 @@ internal class ProjectionCommandSequencer {
         if (inFlight) return null
         while (queue.isNotEmpty()) {
             val pending = queue.removeFirst()
-            if (pending.session.generation != generation) continue
+            if (pending.session.generation != generation && !pending.dispatchIfSuperseded) continue
             inFlight = true
             return pending
         }
@@ -116,6 +118,7 @@ internal object ProjectionCommandBus {
         info: Int,
         value: String,
         callback: AdbLocalClient.Callback,
+        dispatchIfSuperseded: Boolean = false,
     ) {
         sequencer.submit(
             session,
@@ -142,7 +145,19 @@ internal object ProjectionCommandBus {
                     is ProjectionCommandSequencer.Result.Error -> callback.onError(result.message)
                 }
             },
+            dispatchIfSuperseded = dispatchIfSuperseded,
         )
         AppLogger.d(TAG, "queued session=${session.generation} command=$type/$info")
+    }
+
+    fun sendBarrier(
+        context: Context,
+        session: ProjectionCommandSequencer.Session,
+        type: Int,
+        info: Int,
+        value: String,
+        callback: AdbLocalClient.Callback,
+    ) {
+        sendInfo(context, session, type, info, value, callback, dispatchIfSuperseded = true)
     }
 }
