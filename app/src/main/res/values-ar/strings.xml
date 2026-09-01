@@ -384,6 +384,9 @@
     <string name="lm_layout_name_hint">اسم التخطيط</string>
     <string name="lm_layout_save_title">حفظ التخطيط</string>
     <string name="lm_layout_saved_toast">تم حفظ التخطيط ✓</string>
+    <string name="lm_layout_load_failed">تعذّر تحميل التخطيطات المحفوظة. تم الاحتفاظ بالبيانات الحالية.</string>
+    <string name="lm_layout_save_failed">تعذّر حفظ التخطيط. حاول مرة أخرى.</string>
+    <string name="lm_layout_selection_save_failed">تغيّر التخطيط، لكن تعذّر حفظ التحديد.</string>
     <string name="lm_new_layout_name">تخطيط جديد</string>
     <string name="lm_no_layout_loaded">لا يوجد تخطيط محمّل</string>
     <string name="lm_save_before_favorite">احفظ التخطيط أولاً قبل تعيينه كمفضل</string>

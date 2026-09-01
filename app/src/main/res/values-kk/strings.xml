@@ -379,6 +379,9 @@
     <string name="lm_layout_name_hint">Орналасу атауы</string>
     <string name="lm_layout_save_title">Орналасуды сақтау</string>
     <string name="lm_layout_saved_toast">Орналасу сақталды ✓</string>
+    <string name="lm_layout_load_failed">Сақталған орналасуларды жүктеу мүмкін болмады. Бар деректер сақталды.</string>
+    <string name="lm_layout_save_failed">Орналасуды сақтау мүмкін болмады. Қайталап көріңіз.</string>
+    <string name="lm_layout_selection_save_failed">Орналасу өзгерді, бірақ таңдауды сақтау мүмкін болмады.</string>
     <string name="lm_new_layout_name">Жаңа орналасу</string>
     <string name="lm_no_layout_loaded">Орналасу жүктелмеген</string>
     <string name="lm_save_before_favorite">Таңдаулы етпес бұрын орналасуды сақтаңыз</string>

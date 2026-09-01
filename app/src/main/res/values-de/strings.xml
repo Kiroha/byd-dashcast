@@ -379,6 +379,9 @@
     <string name="lm_layout_name_hint">Layout-Name</string>
     <string name="lm_layout_save_title">Layout speichern</string>
     <string name="lm_layout_saved_toast">Layout gespeichert ✓</string>
+    <string name="lm_layout_load_failed">Gespeicherte Layouts konnten nicht geladen werden. Die vorhandenen Daten wurden beibehalten.</string>
+    <string name="lm_layout_save_failed">Das Layout konnte nicht gespeichert werden. Versuchen Sie es erneut.</string>
+    <string name="lm_layout_selection_save_failed">Das Layout wurde geändert, aber die Auswahl konnte nicht gespeichert werden.</string>
     <string name="lm_new_layout_name">Neues Layout</string>
     <string name="lm_no_layout_loaded">Kein Layout geladen</string>
     <string name="lm_save_before_favorite">Speichern Sie das Layout, bevor Sie es als Favorit festlegen</string>

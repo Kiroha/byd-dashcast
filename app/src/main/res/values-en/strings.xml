@@ -406,6 +406,9 @@
     <string name="lm_layout_name_hint">Layout name</string>
     <string name="lm_layout_save_title">Save layout</string>
     <string name="lm_layout_saved_toast">Layout saved ✓</string>
+    <string name="lm_layout_load_failed">Saved layouts could not be loaded. Existing data was preserved.</string>
+    <string name="lm_layout_save_failed">The layout could not be saved. Try again.</string>
+    <string name="lm_layout_selection_save_failed">The layout changed, but the selection could not be saved.</string>
     <string name="lm_new_layout_name">New layout</string>
     <string name="lm_no_layout_loaded">No layout loaded</string>
     <string name="lm_save_before_favorite">Save the layout before setting it as favourite</string>

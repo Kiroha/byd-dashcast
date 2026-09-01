@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.byd.dashcast.R;
 import com.byd.dashcast.fission.LayoutManagerActivity;
@@ -59,7 +60,7 @@ public final class FissionCoordinator {
         if (!enabled) return;
 
         List<LayoutPreset> presets = LayoutPrefs.load(ctx);
-        String favId = LayoutPrefs.getFavoriteId(ctx);
+        String favId = LayoutPrefs.getValidFavoriteId(ctx, presets);
 
         mCardsContainer.removeAllViews();
 
@@ -115,8 +116,15 @@ public final class FissionCoordinator {
         card.addView(content);
         final String newFavId = (preset != null) ? preset.id : null;
         card.setOnClickListener(v -> {
-            LayoutPrefs.setFavoriteId(mHost.getContext(), newFavId);
-            refresh();
+            boolean saved = newFavId == null
+                    ? LayoutPrefs.setFavoriteId(mHost.getContext(), null)
+                    : LayoutPrefs.setFavoriteIdIfPresent(mHost.getContext(), newFavId);
+            if (saved) {
+                refresh();
+            } else {
+                Toast.makeText(mHost.getContext(), R.string.lm_layout_selection_save_failed,
+                        Toast.LENGTH_LONG).show();
+            }
         });
         return card;
     }
