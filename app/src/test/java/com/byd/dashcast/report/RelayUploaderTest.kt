@@ -341,4 +341,19 @@ class RelayUploaderTest {
         assertFalse(TelegramBugReporter.shouldFallbackToDirect(ambiguous, true))
         assertFalse(TelegramBugReporter.shouldFallbackToDirect(RelayUploader.SendResult.Sent, true))
     }
+
+    @Test
+    fun `ambiguous relay result stays typed and never invokes direct transport`() {
+        var directCalls = 0
+        val result = TelegramBugReporter.resolveRelayResult(
+            RelayUploader.SendResult.AmbiguousFailure("may already have been sent"),
+            directConfigured = true,
+        ) {
+            directCalls++
+            null
+        }
+
+        assertTrue(result is TelegramBugReporter.DeliveryResult.Ambiguous)
+        assertEquals(0, directCalls)
+    }
 }

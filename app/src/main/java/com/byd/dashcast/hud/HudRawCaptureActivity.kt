@@ -240,6 +240,9 @@ class HudRawCaptureActivity : AppCompatActivity() {
                     log("✗ upload failed: $message")
                     HudCaptureSupport.offerFallback(this@HudRawCaptureActivity, zip) { line -> log(line) }
                 }
+                override fun onAmbiguous(message: String) {
+                    log("? upload outcome unknown: $message — zip kept at ${zip.absolutePath}")
+                }
             })
     }
 
