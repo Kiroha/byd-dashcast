@@ -1256,16 +1256,15 @@ public final class FissionOrchestrator {
             if (purgeStaleDaemonSlots) {
                 try { FissionClient.deactivateLayout(mDaemonBinder); } catch (Exception ignored) {}
             }
-            // BEFORE doSwitchToLayout, not inside attachFreeZones: doSwitchToLayout throws on
-            // the first failing slot, and the previous activation's free-zone overlays would
-            // then stay on the cluster on top of the new layout until a full stop.
-            releaseFreeZones();
             // One ATTACH_SLOT per bound app — keyed BY PACKAGE in the daemon, so the slot can
             // afterwards be queried, resized and released. The batch ACTIVATE_LAYOUT this
             // replaces keyed slots "layout_<label>_<i>" and never put the package on the wire,
             // which made every slot it created unaddressable. doSwitchToLayout also launches
             // each app itself, so no separate launch pass can target a slot that never existed.
             doSwitchToLayout(preset, null);
+            // Commit free-zone replacement only after every bound slot has started. Removing the
+            // old overlays first damages the active layout when a later app start rolls back.
+            releaseFreeZones();
             attachFreeZones(preset);
             boolean allOk = publishDisplayIds(preset);
             post(() -> {
