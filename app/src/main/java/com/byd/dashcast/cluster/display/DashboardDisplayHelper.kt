@@ -33,6 +33,7 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
 
     // Known cluster display ID — -1 if not connected
     private var mKnownClusterDisplayId = -1
+    private var mProjectionSession: ProjectionCommandSequencer.Session? = null
 
     private val mDisconnectListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {}
@@ -49,9 +50,11 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
 
     /** Triggers the cluster activation sequence. */
     fun start() {
+        val session = ProjectionCommandBus.beginSession()
+        mProjectionSession = session
         mKnownClusterDisplayId = -1
         mDisplayManager.registerDisplayListener(mDisconnectListener, null)
-        mClusterManager.activateClusterDisplay(object : ClusterManager.DisplayReadyCallback {
+        mClusterManager.activateClusterDisplay(session, object : ClusterManager.DisplayReadyCallback {
             override fun onDisplayReady(display: Display?, displayId: Int) {
                 // Guard: if stop() was already called, discard this callback
                 if (mKnownClusterDisplayId == -2) return
@@ -94,6 +97,8 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
     }
 
     fun stop() {
+        val session = mProjectionSession
+        mProjectionSession = null
         // Sentinel: any orphan ClusterManager callback (handler postDelayed) will be ignored
         mKnownClusterDisplayId = -2
 
@@ -113,13 +118,17 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
         // through the proxy daemon's typed transact first (ProxyClient.autoContainerSendInfo) and only
         // falls back to the ADB shell relay when the daemon is unavailable (legacy mode / DL5).
         // Chained: cmd=18 first, then cmd=0 in the callback to guarantee execution order.
-        AdbLocalClient.sendInfo(
-            mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",
+        if (session == null) {
+            AppLogger.d(TAG, "stop: no projection session to restore")
+            return
+        }
+        ProjectionCommandBus.sendInfo(
+            mContext, session, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     AppLogger.i(TAG, "stopProjection ADB(cmd=18): $out")
-                    AdbLocalClient.sendInfo(
-                        mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_RESTORE_NATIVE, "",
+                    ProjectionCommandBus.sendInfo(
+                        mContext, session, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_RESTORE_NATIVE, "",
                         object : AdbLocalClient.Callback {
                             override fun onSuccess(o: String?) { AppLogger.i(TAG, "restoreNative ADB(cmd=0): $o") }
                             override fun onError(e: String?) { AppLogger.e(TAG, "restoreNative ADB error: $e") }
@@ -141,6 +150,8 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
      * to avoid double-sending sendInfo(18+0).
      */
     fun stopWithoutAdb() {
+        mProjectionSession?.let(ProjectionCommandBus::endSession)
+        mProjectionSession = null
         mKnownClusterDisplayId = -2
         mClusterManager.cancel()
         mDisplayManager.unregisterDisplayListener(mDisconnectListener)
