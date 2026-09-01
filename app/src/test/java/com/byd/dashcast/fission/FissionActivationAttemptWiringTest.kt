@@ -26,7 +26,9 @@ class FissionActivationAttemptWiringTest {
         assertTrue(manual.contains("if (ownedCompletion && error != null"))
         assertTrue(auto.contains("sActivationGate.release(mActivationGuardToken)"))
         assertTrue(failure.contains("sActivationGate.release(mActivationGuardToken)"))
-        assertTrue(failure.contains("if (ownedCompletion) sAutoStartFired = false"))
+        assertTrue(failure.contains("if (!ownedCompletion)"))
+        assertTrue(failure.indexOf("if (!ownedCompletion)") <
+            failure.indexOf("sAutoStartOrchestrator == this"))
         assertFalse(source.contains("sActivationInFlight.set(false)"))
     }
 }

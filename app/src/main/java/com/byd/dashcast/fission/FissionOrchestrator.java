@@ -1272,8 +1272,9 @@ public final class FissionOrchestrator {
             // The success funnel of the auto-start path: the ClusterManager sequence is done, so
             // a manual Activate is safe again. markAutoStartFailed covers the failure funnel; the
             // guard's own expiry covers anything that reaches neither.
-            sActivationGate.release(mActivationGuardToken);
-            mAutoStartAttempt = false;
+            if (sActivationGate.release(mActivationGuardToken)) {
+                mAutoStartAttempt = false;
+            }
         }
     }
 
@@ -1505,9 +1506,13 @@ public final class FissionOrchestrator {
     private void markAutoStartFailed(String reason) {
         if (!mAutoStartAttempt) return;
         boolean ownedCompletion = sActivationGate.release(mActivationGuardToken);
+        if (!ownedCompletion) {
+            AppLogger.w(TAG, "stale auto-start failure ignored: " + reason);
+            return;
+        }
         synchronized (FissionOrchestrator.class) {
             if (sAutoStartOrchestrator == this) sAutoStartOrchestrator = null;
-            if (ownedCompletion) sAutoStartFired = false;
+            sAutoStartFired = false;
             // The failure funnel of the auto-start path. Release the activation guard here too:
             // this method is reached from onDisplayTimeout, i.e. BEFORE activateFavoriteLayout
             // ever runs, so its finally would never fire and the guard would sit held until the
