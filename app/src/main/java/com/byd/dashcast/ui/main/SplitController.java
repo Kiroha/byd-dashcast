@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.concurrent.GenerationGate;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
 
@@ -44,6 +45,7 @@ public final class SplitController {
     private int    mCurrentSplitSlot   = 0;   // 0=full, 1=left, 2=right
     private String mSecondDashboardPkg = null;
     private String mSecondDashboardApp = null;
+    private final GenerationGate mReplacementGate = new GenerationGate();
 
     public SplitController(Host host) {
         mHost = host;
@@ -61,9 +63,20 @@ public final class SplitController {
     public void setSecondDashboardPkg(String pkg) { mSecondDashboardPkg = pkg; }
     public void setSecondDashboardApp(String app) { mSecondDashboardApp = app; }
 
-    /** Clears a verified-stopped occupant only if no newer split operation replaced it. */
-    public boolean clearSecondDashboardIfMatches(String expectedPkg) {
-        if (expectedPkg == null || !expectedPkg.equals(mSecondDashboardPkg)) return false;
+    /** Starts a user replacement intent and invalidates every older stop/launch completion. */
+    public int beginSecondDashboardReplacement() {
+        mReplacementGate.invalidate();
+        return mReplacementGate.capture();
+    }
+
+    public boolean isCurrentSecondDashboardReplacement(int generation) {
+        return mReplacementGate.isCurrent(generation);
+    }
+
+    /** Clears a verified-stopped occupant only for the latest replacement intent. */
+    public boolean clearSecondDashboardIfMatches(String expectedPkg, int generation) {
+        if (!mReplacementGate.isCurrent(generation)
+                || expectedPkg == null || !expectedPkg.equals(mSecondDashboardPkg)) return false;
         mSecondDashboardApp = null;
         mSecondDashboardPkg = null;
         mHost.onSplitStateChanged();
@@ -161,6 +174,7 @@ public final class SplitController {
 
     /** Resets split state (slot + second app). Call when the main app changes or cluster stops. */
     public void clearSplitState() {
+        mReplacementGate.invalidate();
         if (mCurrentSplitSlot != 0 || mSecondDashboardPkg != null) {
             AppLogger.d(TAG, "clearSplitState — slot=" + mCurrentSplitSlot
                     + " second=" + mSecondDashboardPkg);

@@ -965,10 +965,13 @@ class MainActivity : AppCompatActivity(),
                     " → complementary slot bounds=[" + newLeft + ",0," + newRight + "," + h + "]" +
                     " pkg=" + pkgName
             )
+            val replacementGeneration = split.beginSecondDashboardReplacement()
             fun launchInComplementarySlot() {
+                if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) return
                 mSessionTracker.remove(pkgName)
                 svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h, object : ClusterService.LaunchCallback {
                     override fun onResult(launched: Boolean) {
+                        if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) return
                         if (launched) {
                             mLastLaunchTime = System.currentTimeMillis()
                             split.setSecondDashboardApp(appName)
@@ -987,7 +990,8 @@ class MainActivity : AppCompatActivity(),
                     override fun onSuccess(report: String?) {
                         runOnUiThread {
                             if (isFinishing || isDestroyed) return@runOnUiThread
-                            if (!split.clearSecondDashboardIfMatches(previousSecond)) return@runOnUiThread
+                            if (!split.clearSecondDashboardIfMatches(
+                                    previousSecond, replacementGeneration)) return@runOnUiThread
                             mSessionTracker.remove(previousSecond)
                             launchInComplementarySlot()
                         }
@@ -996,7 +1000,10 @@ class MainActivity : AppCompatActivity(),
                     override fun onError(error: String?) {
                         runOnUiThread {
                             if (isFinishing || isDestroyed) return@runOnUiThread
-                            if (split.getSecondDashboardPkg() == previousSecond) launchInComplementarySlot()
+                            if (split.isCurrentSecondDashboardReplacement(replacementGeneration) &&
+                                split.getSecondDashboardPkg() == previousSecond) {
+                                launchInComplementarySlot()
+                            }
                         }
                     }
                 })
@@ -1103,6 +1110,7 @@ class MainActivity : AppCompatActivity(),
         val split = if (layoutTarget == null) mSplitController else null
         var splitBounds: Rect? = null
         var splitOccupantToStop: String? = null
+        var splitReplacementGeneration: Int? = null
         if (split != null && split.isInSplitMode() && mCurrentDashboardPkg != null) {
             if (app.packageName == mCurrentDashboardPkg ||
                 app.packageName == split.getSecondDashboardPkg()) {
@@ -1115,9 +1123,13 @@ class MainActivity : AppCompatActivity(),
             val right = if (split.getCurrentSplitSlot() == 1) dimensions[0] else dimensions[0] / 2
             splitBounds = Rect(left, 0, right, dimensions[1])
             splitOccupantToStop = split.getSecondDashboardPkg()
+            splitReplacementGeneration = split.beginSecondDashboardReplacement()
         }
 
         fun launch() {
+            val replacementGeneration = splitReplacementGeneration
+            if (replacementGeneration != null &&
+                !split!!.isCurrentSecondDashboardReplacement(replacementGeneration)) return
             if (layoutTarget == null &&
                 (mClusterService !== service || service?.displayId != targetDisplayId)) {
                 mPendingShortcutAfterActivation = app to shortcut
@@ -1191,7 +1203,9 @@ class MainActivity : AppCompatActivity(),
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
                         if (isFinishing || isDestroyed) return@runOnUiThread
-                        if (!split!!.clearSecondDashboardIfMatches(splitOccupantToStop)) return@runOnUiThread
+                        val generation = splitReplacementGeneration ?: return@runOnUiThread
+                        if (!split!!.clearSecondDashboardIfMatches(
+                                splitOccupantToStop, generation)) return@runOnUiThread
                         mSessionTracker.remove(splitOccupantToStop)
                         launch()
                     }
@@ -1199,7 +1213,9 @@ class MainActivity : AppCompatActivity(),
                 override fun onError(error: String?) {
                     runOnUiThread {
                         if (isFinishing || isDestroyed) return@runOnUiThread
-                        if (split!!.getSecondDashboardPkg() == splitOccupantToStop) launch()
+                        val generation = splitReplacementGeneration ?: return@runOnUiThread
+                        if (split!!.isCurrentSecondDashboardReplacement(generation) &&
+                            split.getSecondDashboardPkg() == splitOccupantToStop) launch()
                     }
                 }
             })
