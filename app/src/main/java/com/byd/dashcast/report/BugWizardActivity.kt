@@ -65,6 +65,8 @@ class BugWizardActivity : Activity() {
     private var mPendingGate = BugWizardGate.NONE
     private var mSubmissionToken = ""
     private var mSubmissionMonitor: Runnable? = null
+    private var mPendingReportPath = ""
+    private var mPendingReportCaption = ""
 
     /**
      * Re-opens an exit if the send has not reached a terminal state in time.
@@ -142,14 +144,12 @@ class BugWizardActivity : Activity() {
             mPendingGate == BugWizardGate.HANDLE_REQUIRED) {
             // First use: block on dialog before showing wizard
             showTgHandleDialogThen {
-                restoreWizardUi()
+                restoreWizardAndPendingState()
             }
         } else {
-            restoreWizardUi()
-            resumePendingGate()
+            restoreWizardAndPendingState()
         }
         updateTgBanner()
-        restoreSubmissionOwnership()
     }
 
     private fun restoreState(state: BugWizardSavedState) {
@@ -170,7 +170,15 @@ class BugWizardActivity : Activity() {
         mDetectedLabel = state.detectedLabel
         mDetectionDone = state.detectionDone
         mSubmissionToken = state.submissionToken
+        mPendingReportPath = state.pendingReportPath
+        mPendingReportCaption = state.pendingReportCaption
         if (mCurrentStep > 0 && mCategory !in ISSUE_ARRAYS.indices) mCurrentStep = 0
+    }
+
+    private fun restoreWizardAndPendingState() {
+        restoreWizardUi()
+        restoreSubmissionOwnership()
+        resumePendingGate()
     }
 
     private fun restoreWizardUi() {
@@ -199,6 +207,7 @@ class BugWizardActivity : Activity() {
             BugWizardGate.HUD_NO_NOTIFICATION_ACCESS -> showHudNoNotificationAccess()
             BugWizardGate.HUD_NO_ROUTE -> showHudNoRoute()
             BugWizardGate.HUD_UNSUPPORTED_NAV -> explainUnsupportedNav()
+            BugWizardGate.SHOTS_CONSENT -> resumeScreenshotConsent()
         }
     }
 
@@ -225,6 +234,8 @@ class BugWizardActivity : Activity() {
                 mDetectedLabel,
                 mDetectionDone,
                 mSubmissionToken,
+                mPendingReportPath,
+                mPendingReportCaption,
             ),
         )
         super.onSaveInstanceState(outState)
@@ -729,17 +740,7 @@ class BugWizardActivity : Activity() {
                 // recorder is on, ask — per send — whether to attach the recent captures, which may
                 // show the user's screen (map, destination…). Consent is NOT persisted.
                 if (ClusterShotRecorder.isEnabled(this@BugWizardActivity)) {
-                    AlertDialog.Builder(this@BugWizardActivity)
-                        .setTitle(R.string.bug_shots_consent_title)
-                        .setMessage(R.string.bug_shots_consent_msg)
-                        .setCancelable(false)
-                        .setPositiveButton(R.string.bug_shots_consent_yes) { _, _ ->
-                            bundleShotsThenDeliver(file, caption)
-                        }
-                        .setNegativeButton(R.string.bug_shots_consent_no) { _, _ ->
-                            deliverReport(file, caption)
-                        }
-                        .show()
+                    showScreenshotConsent(file, caption)
                 } else {
                     deliverReport(file, caption)
                 }
@@ -793,6 +794,56 @@ class BugWizardActivity : Activity() {
         } else {
             shareFallback(file)
         }
+    }
+
+    private fun showScreenshotConsent(file: File, caption: String) {
+        mSending = true
+        mPendingGate = BugWizardGate.SHOTS_CONSENT
+        mPendingReportPath = file.absolutePath
+        mPendingReportCaption = caption
+        AlertDialog.Builder(this)
+            .setTitle(R.string.bug_shots_consent_title)
+            .setMessage(R.string.bug_shots_consent_msg)
+            .setCancelable(false)
+            .setPositiveButton(R.string.bug_shots_consent_yes) { _, _ ->
+                clearPendingReportState()
+                bundleShotsThenDeliver(file, caption)
+            }
+            .setNegativeButton(R.string.bug_shots_consent_no) { _, _ ->
+                clearPendingReportState()
+                deliverReport(file, caption)
+            }
+            .show()
+    }
+
+    private fun resumeScreenshotConsent() {
+        val file = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File)
+        if (file == null || !file.isFile || mPendingReportCaption.isEmpty()) {
+            clearPendingReportState()
+            BugWizardSubmissionGate.release(mSubmissionToken)
+            mSubmissionToken = ""
+            mSending = false
+            mBtnBack.isEnabled = true
+            mBtnSend?.isEnabled = mSelectedIssue != null
+            return
+        }
+        if (!BugWizardSubmissionGate.isActive(mSubmissionToken)) {
+            val token = BugWizardSubmissionGate.claim()
+            if (token == null) {
+                mSubmissionToken = BugWizardSubmissionGate.activeToken().orEmpty()
+                showSubmissionContinuingUi()
+                return
+            }
+            mSubmissionToken = token
+        }
+        BugWizardSubmissionGate.setBackgroundWork(mSubmissionToken, false)
+        showScreenshotConsent(file, mPendingReportCaption)
+    }
+
+    private fun clearPendingReportState() {
+        mPendingGate = BugWizardGate.NONE
+        mPendingReportPath = ""
+        mPendingReportCaption = ""
     }
 
     /**
@@ -901,7 +952,9 @@ class BugWizardActivity : Activity() {
         // The posted Runnable holds this Activity; a send that outlives the screen must not.
         disarmSendWatchdog()
         disarmSubmissionMonitor()
-        if (mSubmissionToken.isNotEmpty() &&
+        val retainConsentForRecreation =
+            mPendingGate == BugWizardGate.SHOTS_CONSENT && isChangingConfigurations
+        if (!retainConsentForRecreation && mSubmissionToken.isNotEmpty() &&
             !BugWizardSubmissionGate.hasBackgroundWork(mSubmissionToken)) {
             BugWizardSubmissionGate.release(mSubmissionToken)
         }
@@ -936,8 +989,12 @@ class BugWizardActivity : Activity() {
 
     private fun restoreSubmissionOwnership() {
         if (BugWizardSubmissionGate.isActive(mSubmissionToken)) {
-            showSubmissionContinuingUi()
-        } else {
+            if (mPendingGate == BugWizardGate.SHOTS_CONSENT) {
+                mSending = true
+            } else {
+                showSubmissionContinuingUi()
+            }
+        } else if (mPendingGate != BugWizardGate.SHOTS_CONSENT) {
             mSubmissionToken = ""
         }
     }
