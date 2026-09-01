@@ -40,7 +40,7 @@ class FissionHeadlessReplacementWiringTest {
             .substringBefore("private static void replaceHeadlessAfterStop")
 
         assertTrue(auto.contains("replaceHeadlessAfterStop(orch, fav)"))
-        assertTrue(manual.contains("sActivationInFlight.compareAndSet(false, true)"))
+        assertTrue(manual.contains("sActivationGate.tryAcquire"))
         assertTrue(manual.contains("replaceHeadlessAfterStop(orch, fav)"))
     }
 }
