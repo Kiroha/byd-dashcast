@@ -29,6 +29,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class ClusterSessionTracker(context: Context) {
 
+    private data class EvictionCandidate(
+        val packageName: String,
+        val token: PackageEvictionGenerationGate.Token,
+    )
+
     private val mAppCtx: Context = context.applicationContext
 
     /**
@@ -54,6 +59,19 @@ class ClusterSessionTracker(context: Context) {
     }
 
     fun contains(pkg: String?): Boolean = pkg != null && mPkgs.contains(pkg)
+
+    /** Invalidates pending eviction work, or defers launch behind an issued force-stop. */
+    fun runWhenSafeToLaunch(pkg: String, launch: Runnable) {
+        val guardedLaunch = Runnable {
+            remove(pkg)
+            launch.run()
+        }
+        if (sEvictionGate.prepareLaunch(pkg, guardedLaunch)) {
+            guardedLaunch.run()
+        } else {
+            AppLogger.i(TAG, "launch deferred until force-stop completes: $pkg")
+        }
+    }
 
     /** Thread-safe copy — `synchronizedSet` protects the mutators, not iteration. */
     private fun snapshot(): List<String> = synchronized(mPkgs) { ArrayList(mPkgs) }
@@ -115,22 +133,32 @@ class ClusterSessionTracker(context: Context) {
             }
             main.postDelayed(timeout, BLIND_EVICTION_TIMEOUT_MS)
             for (p in blind) {
+                val token = sEvictionGate.beginEviction(p)
                 add(p)
+                if (!sEvictionGate.tryBeginDestructive(token)) {
+                    barrier.complete(Runnable {})
+                    continue
+                }
+                val completed = AtomicBoolean(false)
+                fun completeBlind(success: Boolean, error: String?) {
+                    if (!completed.compareAndSet(false, true)) return
+                    val completion = sEvictionGate.finishDestructive(token, Runnable {
+                        if (success) remove(p)
+                    })
+                    postDeferredLaunch(completion?.deferredLaunch)
+                    if (error != null) {
+                        AppLogger.w(TAG, "blind forceStop $p failed: $error — retained")
+                    }
+                    barrier.complete(Runnable {})
+                }
                 try {
                     AdbLocalClient.forceStopApp(mAppCtx, p, object : AdbLocalClient.Callback {
-                    override fun onSuccess(result: String?) {
-                        barrier.complete(Runnable { remove(p) })
-                    }
-                    override fun onError(error: String?) {
-                        barrier.complete(Runnable {
-                            AppLogger.w(TAG, "blind forceStop $p failed: $error — retained")
-                        })
-                    }
-                })
-                } catch (error: Throwable) {
-                    barrier.complete(Runnable {
-                        AppLogger.e(TAG, "blind forceStop dispatch failed for $p", error)
+                        override fun onSuccess(result: String?) = completeBlind(true, null)
+                        override fun onError(error: String?) = completeBlind(false, error)
                     })
+                } catch (error: Throwable) {
+                    AppLogger.e(TAG, "blind forceStop dispatch failed for $p", error)
+                    completeBlind(false, error.message)
                 }
             }
             return
@@ -143,28 +171,37 @@ class ClusterSessionTracker(context: Context) {
         }
         // Every candidate remains recoverable across process death until a later probe or kill
         // proves a safe final state. This also covers main/second arguments not already in history.
-        for (pkg in pkgs) add(pkg)
+        val candidates = pkgs.map { pkg ->
+            val token = sEvictionGate.beginEviction(pkg)
+            add(pkg)
+            EvictionCandidate(pkg, token)
+        }
         AppLogger.i(TAG, "evictAll: ${pkgs.size} candidate(s) → $pkgs")
         // One clock for the whole eviction — see ClusterEvictionPolicy.LANDING_BUDGET_MS.
-        evictNext(svc, pkgs, 0, SystemClock.elapsedRealtime(), onAllDone)
+        evictNext(svc, candidates, 0, SystemClock.elapsedRealtime(), onAllDone)
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
     private fun evictNext(
         svc: ClusterService,
-        pkgs: List<String>,
+        candidates: List<EvictionCandidate>,
         idx: Int,
         evictionStartedAt: Long,
         onAllDone: Runnable
     ) {
-        if (idx >= pkgs.size) {
+        if (idx >= candidates.size) {
             Handler(Looper.getMainLooper()).post(onAllDone)
             return
         }
-        val pkg = pkgs[idx]
+        val candidate = candidates[idx]
+        val pkg = candidate.packageName
         if (pkg.isEmpty()) {
-            evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
+            evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
+            return
+        }
+        if (!sEvictionGate.isCurrent(candidate.token)) {
+            evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
             return
         }
         // LOOK before acting. The list is a session history, so most entries need nothing done —
@@ -182,6 +219,10 @@ class ClusterSessionTracker(context: Context) {
                         + "— evicting anyway, an app left on the cluster is the worse outcome")
                 TaskLocation.unknown()
             }
+            if (!sEvictionGate.isCurrent(candidate.token)) {
+                evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
+                return@execute
+            }
             val skip = when (location.matchDisplay(0)) {
                 // Already home: the user may well be using it right now. Never kill it.
                 TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> "already on display 0"
@@ -191,9 +232,9 @@ class ClusterSessionTracker(context: Context) {
             }
             if (skip != null) {
                 AppLogger.i(TAG, "evict: skip $pkg ($skip) — untracked")
-                remove(pkg)
+                sEvictionGate.runIfCurrent(candidate.token, Runnable { remove(pkg) })
                 Handler(Looper.getMainLooper()).post {
-                    evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
+                    evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
                 }
                 return@execute
             }
@@ -205,9 +246,15 @@ class ClusterSessionTracker(context: Context) {
                 fun continueAfterMove(ok: Boolean, source: String) {
                     if (!continued.compareAndSet(false, true)) return
                     main.removeCallbacks(timeout)
+                    if (!sEvictionGate.isCurrent(candidate.token)) {
+                        evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
+                        return
+                    }
                     AppLogger.i(TAG, "evict: move $pkg → "
                             + (if (ok) "OK" else "KO") + " ($source) — awaiting landing")
-                    awaitLandingThenForceStop(svc, pkgs, idx, evictionStartedAt, onAllDone)
+                    awaitLandingThenForceStop(
+                        svc, candidates, idx, evictionStartedAt, onAllDone
+                    )
                 }
                 timeout = Runnable {
                     AppLogger.w(TAG, "evict: move callback timeout for $pkg — continuing safely")
@@ -241,12 +288,13 @@ class ClusterSessionTracker(context: Context) {
      */
     private fun awaitLandingThenForceStop(
         svc: ClusterService,
-        pkgs: List<String>,
+        candidates: List<EvictionCandidate>,
         idx: Int,
         evictionStartedAt: Long,
         onAllDone: Runnable
     ) {
-        val pkg = pkgs[idx]
+        val candidate = candidates[idx]
+        val pkg = candidate.packageName
         sLandingExecutor.execute {
             val waitStartedAt = SystemClock.elapsedRealtime()
             var landed = false
@@ -257,6 +305,10 @@ class ClusterSessionTracker(context: Context) {
             // request again.
             var lastSeen = "never-probed"
             while (true) {
+                if (!sEvictionGate.isCurrent(candidate.token)) {
+                    evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
+                    return@execute
+                }
                 probes++
                 val match = try {
                     val location = ProxyClient.findTaskLocationForPackage(pkg)
@@ -288,42 +340,61 @@ class ClusterSessionTracker(context: Context) {
                 AppLogger.w(TAG, "evict: $pkg NOT-LANDED after ${waitedMs}ms ($probes probes, "
                         + "shared budget spent) lastSeen[$lastSeen] — force-stop anyway")
             }
-            forceStopThenNext(svc, pkgs, idx, evictionStartedAt, onAllDone)
+            forceStopThenNext(svc, candidates, idx, evictionStartedAt, onAllDone)
         }
     }
 
     private fun forceStopThenNext(
         svc: ClusterService,
-        pkgs: List<String>,
+        candidates: List<EvictionCandidate>,
         idx: Int,
         evictionStartedAt: Long,
         onAllDone: Runnable
     ) {
-        val pkg = pkgs[idx]
-        AdbLocalClient.forceStopApp(mAppCtx, pkg, object : AdbLocalClient.Callback {
-            override fun onSuccess(r: String?) {
-                remove(pkg)
-                evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
-            }
+        val candidate = candidates[idx]
+        val pkg = candidate.packageName
+        if (!sEvictionGate.tryBeginDestructive(candidate.token)) {
+            evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
+            return
+        }
+        val completed = AtomicBoolean(false)
+        fun completeForceStop(success: Boolean, error: String?) {
+            if (!completed.compareAndSet(false, true)) return
+            val completion = sEvictionGate.finishDestructive(candidate.token, Runnable {
+                if (success) remove(pkg) else add(pkg)
+            })
+            postDeferredLaunch(completion?.deferredLaunch)
+            if (error != null) AppLogger.w(TAG, "evict: forceStop $pkg ERR: $error")
+            evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
+        }
+        try {
+            AdbLocalClient.forceStopApp(mAppCtx, pkg, object : AdbLocalClient.Callback {
+                override fun onSuccess(r: String?) = completeForceStop(true, null)
 
-            override fun onEvictionOutcome(outcome: EvictionOutcomePolicy.Outcome) {
+                override fun onEvictionOutcome(outcome: EvictionOutcomePolicy.Outcome) {
                 // Reported by forceStopApp from the probe it took itself, immediately before the
                 // kill. Deciding again here from the landing-wait's last probe was the first
                 // version's bug: on the give-up branch that copy is stale by construction and can
                 // never say KEEP_AND_RESTORE_HOME, even when the task did land on display 0.
-                if (outcome == EvictionOutcomePolicy.Outcome.KEEP_AND_RESTORE_HOME) {
-                    AppLogger.i(TAG, "evict: $pkg survived the kill on display 0 — "
-                            + "the home screen will be restored in front of it")
+                    sEvictionGate.runIfCurrent(candidate.token, Runnable {
+                        if (outcome == EvictionOutcomePolicy.Outcome.KEEP_AND_RESTORE_HOME) {
+                            AppLogger.i(TAG, "evict: $pkg survived the kill on display 0 — "
+                                    + "the home screen will be restored in front of it")
+                        }
+                        mRestoreHome.arm(outcome)
+                    })
                 }
-                mRestoreHome.arm(outcome)
-            }
 
-            override fun onError(e: String?) {
-                add(pkg)
-                AppLogger.w(TAG, "evict: forceStop $pkg ERR: $e")
-                evictNext(svc, pkgs, idx + 1, evictionStartedAt, onAllDone)
-            }
-        })
+                override fun onError(e: String?) = completeForceStop(false, e)
+            })
+        } catch (error: Throwable) {
+            AppLogger.e(TAG, "evict: forceStop dispatch failed for $pkg", error)
+            completeForceStop(false, error.message)
+        }
+    }
+
+    private fun postDeferredLaunch(launch: Runnable?) {
+        if (launch != null) Handler(Looper.getMainLooper()).post(launch)
     }
 
     /** @return false if the thread was interrupted (caller must stop looping). */
@@ -343,6 +414,7 @@ class ClusterSessionTracker(context: Context) {
         private const val TAG = "ClusterSessionTracker"
         private const val MOVE_CALLBACK_TIMEOUT_MS = 30_000L
         private const val BLIND_EVICTION_TIMEOUT_MS = 30_000L
+        private val sEvictionGate = PackageEvictionGenerationGate()
 
         /**
          * Single worker for the landing waits. Serial on purpose — eviction is already

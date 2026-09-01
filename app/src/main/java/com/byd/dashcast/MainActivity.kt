@@ -499,47 +499,51 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun quickSwitchToApp(pkgName: String) {
-        val svc = mClusterService ?: return
+        if (mClusterService == null) return
         if (pkgName == mCurrentDashboardPkg) {
             startClusterMirror()
             return
         }
         mUsageTracker.trackStop(mCurrentDashboardPkg)
-        // Remove from tracker before launch to avoid a concurrent eviction force-stopping it.
-        mSessionTracker.remove(pkgName)
-        val displayId = svc.getDisplayId()
-        if (displayId <= 0) {
-            AppLogger.w(TAG, "quickSwitchToApp: cluster display unavailable — reactivating")
-            mAppRepo.findByPackage(pkgName)?.let { mPendingAppAfterActivation = it }
-            activateCluster()
-            return
-        }
-        svc.moveTaskToDisplay(pkgName, displayId, object : ClusterService.LaunchCallback {
-            override fun onResult(launched: Boolean) {
-                if (launched) {
-                    mLastLaunchTime = System.currentTimeMillis()
-                    mCurrentDashboardPkg = pkgName
-                    mSessionTracker.add(pkgName)
-                    var name = pkgName
-                    try {
-                        val ai = packageManager.getApplicationInfo(pkgName, 0)
-                        val label = packageManager.getApplicationLabel(ai)
-                        name = label.toString()
-                    } catch (ignored: Exception) {
-                    }
-                    mCurrentDashboardApp = name
-                    ClusterPrefs.addRecentApp(this@MainActivity, pkgName, name)
-                    mUsageTracker.trackStart()
-                    ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
-                    ClusterPrefs.setClusterName(this@MainActivity, name)
-                    ClusterPrefs.setLastCluster(this@MainActivity, pkgName, name)
-                    mAppListCoordinator.setCurrentPackage(pkgName)
-                    updateDashboardStatus(mCurrentDashboardApp)
-                    updateControlLabel()
-                    startClusterMirror()
-                    mInsetApplicator.apply(pkgName)
-                }
+        mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
+            if (isFinishing || isDestroyed) return@Runnable
+            val activeService = mClusterService ?: return@Runnable
+            val displayId = activeService.getDisplayId()
+            if (displayId <= 0) {
+                AppLogger.w(TAG, "quickSwitchToApp: cluster display unavailable — reactivating")
+                mAppRepo.findByPackage(pkgName)?.let { mPendingAppAfterActivation = it }
+                activateCluster()
+                return@Runnable
             }
+            activeService.moveTaskToDisplay(pkgName, displayId,
+                object : ClusterService.LaunchCallback {
+                    override fun onResult(launched: Boolean) {
+                        if (launched) {
+                            mLastLaunchTime = System.currentTimeMillis()
+                            mCurrentDashboardPkg = pkgName
+                            mSessionTracker.add(pkgName)
+                            var name = pkgName
+                            try {
+                                val ai = packageManager.getApplicationInfo(pkgName, 0)
+                                val label = packageManager.getApplicationLabel(ai)
+                                name = label.toString()
+                            } catch (ignored: Exception) {
+                            }
+                            mCurrentDashboardApp = name
+                            ClusterPrefs.addRecentApp(this@MainActivity, pkgName, name)
+                            mUsageTracker.trackStart()
+                            ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
+                            ClusterPrefs.setClusterName(this@MainActivity, name)
+                            ClusterPrefs.setLastCluster(this@MainActivity, pkgName, name)
+                            mAppListCoordinator.setCurrentPackage(pkgName)
+                            updateDashboardStatus(mCurrentDashboardApp)
+                            updateControlLabel()
+                            startClusterMirror()
+                            mInsetApplicator.apply(pkgName)
+                        }
+                    }
+                }
+            )
         })
     }
 
@@ -968,23 +972,31 @@ class MainActivity : AppCompatActivity(),
             val replacementGeneration = split.beginSecondDashboardReplacement()
             fun launchInComplementarySlot() {
                 if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) return
-                mSessionTracker.remove(pkgName)
-                svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h, object : ClusterService.LaunchCallback {
-                    override fun onResult(launched: Boolean) {
-                        if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
-                            if (launched) cleanupStaleSplitLaunch(pkgName)
-                            return
-                        }
-                        if (launched) {
-                            mLastLaunchTime = System.currentTimeMillis()
-                            split.setSecondDashboardApp(appName)
-                            split.setSecondDashboardPkg(pkgName)
-                            mSessionTracker.add(pkgName)
-                            updateControlLabel()
-                        } else {
-                            Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
-                        }
+                mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
+                    if (isFinishing || isDestroyed ||
+                        !split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
+                        return@Runnable
                     }
+                    svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h,
+                        object : ClusterService.LaunchCallback {
+                            override fun onResult(launched: Boolean) {
+                                if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
+                                    if (launched) cleanupStaleSplitLaunch(pkgName)
+                                    return
+                                }
+                                if (launched) {
+                                    mLastLaunchTime = System.currentTimeMillis()
+                                    split.setSecondDashboardApp(appName)
+                                    split.setSecondDashboardPkg(pkgName)
+                                    mSessionTracker.add(pkgName)
+                                    updateControlLabel()
+                                } else {
+                                    Toast.makeText(applicationContext,
+                                        getString(R.string.toast_app_launch_failed, appName),
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        })
                 })
             }
             val previousSecond = split.getSecondDashboardPkg()
@@ -1023,47 +1035,53 @@ class MainActivity : AppCompatActivity(),
         // Factored out so it can run either immediately or after the previous cluster app
         // has been stopped (see the guard below).
         fun proceedMove() {
-            mSessionTracker.remove(pkgName)
-            val clusterDisplayId = svc.getDisplayId()
-            if (clusterDisplayId <= 0) {
-                AppLogger.w(TAG, "proceedMove: cluster display disappeared — reactivating")
-                mPendingAppAfterActivation = app
-                activateCluster()
-                return
-            }
-            val targetDisplayId = clusterDisplayId
-            svc.moveTaskToDisplay(pkgName, targetDisplayId, object : ClusterService.LaunchCallback {
-                override fun onResult(launched: Boolean) {
-                    AppLogger.log(
-                        TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId +
-                            " " + (if (launched) "OK" else "FAILED")
-                    )
-                    if (launched) {
-                        mLastLaunchTime = System.currentTimeMillis()
-                        mUsageTracker.trackStop(mCurrentDashboardPkg)
-                        mCurrentDashboardApp = appName
-                        mCurrentDashboardPkg = pkgName
-                        mSessionTracker.add(pkgName)
-                        ClusterPrefs.addRecentApp(this@MainActivity, pkgName, appName)
-                        mUsageTracker.trackStart()
-                        ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
-                        ClusterPrefs.setClusterName(this@MainActivity, appName)
-                        ClusterPrefs.setLastCluster(this@MainActivity, pkgName, appName)
-                        mAppListCoordinator.setCurrentPackage(pkgName)
-                        updateDashboardStatus(appName)
-                        updateControlLabel()
-                        startClusterMirror()
-                        // v1.2.55-beta — deferred enforcement for apps AOSP placed on display 0.
-                        mScreenshotHandler.postDelayed({
-                            if (isFinishing || isDestroyed) return@postDelayed
-                            if (pkgName != mCurrentDashboardPkg) return@postDelayed
-                            svc.enforceTaskOnDisplay(pkgName, targetDisplayId)
-                        }, 2500L)
-                        mInsetApplicator.apply(pkgName)
-                    } else {
-                        Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
-                    }
+            mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
+                if (isFinishing || isDestroyed) return@Runnable
+                val activeService = mClusterService ?: return@Runnable
+                val clusterDisplayId = activeService.getDisplayId()
+                if (clusterDisplayId <= 0) {
+                    AppLogger.w(TAG, "proceedMove: cluster display disappeared — reactivating")
+                    mPendingAppAfterActivation = app
+                    activateCluster()
+                    return@Runnable
                 }
+                val targetDisplayId = clusterDisplayId
+                activeService.moveTaskToDisplay(pkgName, targetDisplayId,
+                    object : ClusterService.LaunchCallback {
+                        override fun onResult(launched: Boolean) {
+                            AppLogger.log(
+                                TAG, "moveTaskToDisplay " + pkgName + " → display=" +
+                                    targetDisplayId + " " +
+                                    (if (launched) "OK" else "FAILED")
+                            )
+                            if (launched) {
+                                mLastLaunchTime = System.currentTimeMillis()
+                                mUsageTracker.trackStop(mCurrentDashboardPkg)
+                                mCurrentDashboardApp = appName
+                                mCurrentDashboardPkg = pkgName
+                                mSessionTracker.add(pkgName)
+                                ClusterPrefs.addRecentApp(this@MainActivity, pkgName, appName)
+                                mUsageTracker.trackStart()
+                                ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
+                                ClusterPrefs.setClusterName(this@MainActivity, appName)
+                                ClusterPrefs.setLastCluster(this@MainActivity, pkgName, appName)
+                                mAppListCoordinator.setCurrentPackage(pkgName)
+                                updateDashboardStatus(appName)
+                                updateControlLabel()
+                                startClusterMirror()
+                                mScreenshotHandler.postDelayed({
+                                    if (isFinishing || isDestroyed) return@postDelayed
+                                    if (pkgName != mCurrentDashboardPkg) return@postDelayed
+                                    activeService.enforceTaskOnDisplay(pkgName, targetDisplayId)
+                                }, 2500L)
+                                mInsetApplicator.apply(pkgName)
+                            } else {
+                                Toast.makeText(applicationContext,
+                                    getString(R.string.toast_app_launch_failed, appName),
+                                    Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        })
             })
         }
 
@@ -1132,7 +1150,8 @@ class MainActivity : AppCompatActivity(),
             splitReplacementGeneration = split.beginSecondDashboardReplacement()
         }
 
-        fun launch() {
+        fun launchNow() {
+            if (isFinishing || isDestroyed) return
             val replacementGeneration = splitReplacementGeneration
             if (replacementGeneration != null &&
                 !split!!.isCurrentSecondDashboardReplacement(replacementGeneration)) return
@@ -1200,6 +1219,16 @@ class MainActivity : AppCompatActivity(),
                 AppLogger.e(TAG, "shortcut launch failed ${app.packageName}/${shortcut.id}", error)
                 Toast.makeText(applicationContext,
                     getString(R.string.toast_app_launch_failed, app.appName), Toast.LENGTH_LONG).show()
+            }
+        }
+
+        fun launch() {
+            if (layoutTarget != null) {
+                launchNow()
+            } else {
+                mSessionTracker.runWhenSafeToLaunch(
+                    app.packageName, Runnable { launchNow() }
+                )
             }
         }
 

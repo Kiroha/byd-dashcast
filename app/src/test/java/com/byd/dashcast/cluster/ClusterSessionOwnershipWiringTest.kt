@@ -18,13 +18,12 @@ class ClusterSessionOwnershipWiringTest {
             .substringBefore("awaitLandingThenForceStop")
         val force = source.substringAfter("private fun forceStopThenNext")
             .substringBefore("private fun sleepQuietly")
-        val success = force.substringAfter("override fun onSuccess")
-            .substringBefore("override fun onEvictionOutcome")
-        val error = force.substringAfter("override fun onError")
+        val terminal = force.substringAfter("fun completeForceStop")
+            .substringBefore("try {")
 
         assertFalse(moveCallback.contains("remove(pkg)"))
-        assertTrue(success.contains("remove(pkg)"))
-        assertTrue(error.contains("add(pkg)"))
+        assertTrue(terminal.contains("if (success) remove(pkg) else add(pkg)"))
+        assertTrue(terminal.contains("sEvictionGate.finishDestructive"))
     }
 
     @Test
