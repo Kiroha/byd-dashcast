@@ -81,6 +81,7 @@ class ClusterManager(context: Context) {
      */
     @Volatile private var mActivationGeneration = 0
     @Volatile private var mReadyGeneration = -1
+    private lateinit var mProjectionSession: ProjectionCommandSequencer.Session
 
     /**
      * True once cmd 16 — the command that actually switches Qt from native rendering into
@@ -136,9 +137,17 @@ class ClusterManager(context: Context) {
      * [scheduleDaemonDisplayPoll].
      */
     fun activateClusterDisplay(callback: DisplayReadyCallback) {
+        activateClusterDisplay(ProjectionCommandBus.beginSession(), callback)
+    }
+
+    internal fun activateClusterDisplay(
+        session: ProjectionCommandSequencer.Session,
+        callback: DisplayReadyCallback,
+    ) {
         // 1.2.29 — defensive cancel() at entry: on retry, re-entering registered a new listener
         // without unregistering the old, leaking listeners and double-launching on the cluster.
         cancel()
+        mProjectionSession = session
         val gen = mActivationGeneration
         // A fresh attempt invalidates any previous DL4 "unsupported firmware" verdict. Reset
         // here rather than in cancel(): the verdict must survive from the timeout that produced
@@ -166,7 +175,7 @@ class ClusterManager(context: Context) {
                         AdbLocalClient.noteAutoContainerMissing(tried)
                         AppLogger.i(TAG, "DL5 activation: '$tried' absent → retry with " +
                                 "'${AdbLocalClient.autoContainerSvcName(mContext)}'")
-                        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "", this)
+                        sendProjectionInfo(CMD_PROJECTION_ON, this)
                         return
                     }
                     mHandler.postDelayed({
@@ -183,7 +192,7 @@ class ClusterManager(context: Context) {
                     }, 500)
                 }
             }
-            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "", cb)
+            sendProjectionInfo(CMD_PROJECTION_ON, cb)
             return
         }
 
@@ -290,7 +299,7 @@ class ClusterManager(context: Context) {
             mHandler.postDelayed(fallback, adasRemapTimeoutMs)
 
             // Arm listener, then fire cmd 30 — onDisplayAdded(newId) will follow.
-            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+            sendProjectionInfo(CMD_SCREEN_SIZE_SEAL_EU,
                 object : AdbLocalClient.Callback {
                     override fun onSuccess(out: String?) {
                         if (gen != mActivationGeneration) return
@@ -726,7 +735,7 @@ class ClusterManager(context: Context) {
 
     /** Sends sendInfo(16) and notifies the callback when done (or on error). */
     private fun sendWarmCmd16(display: Display, callback: DisplayReadyCallback, gen: Int) {
-        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+        sendProjectionInfo(CMD_PROJECTION_ON,
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     if (gen != mActivationGeneration) return
@@ -843,7 +852,7 @@ class ClusterManager(context: Context) {
 
         if (adasFix) {
             // Original sequence: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35).
-            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+            sendProjectionInfo(CMD_SCREEN_SIZE_SEAL_EU,
                 object : AdbLocalClient.Callback {
                     override fun onSuccess(out: String?) {
                         if (gen != mActivationGeneration) return
@@ -869,7 +878,7 @@ class ClusterManager(context: Context) {
     /** Sends sendInfo(16) → 3s delay → sendInfo(35) (VirtualDisplay creation trigger). */
     private fun sendActivationCmd16ThenCmd35(gen: Int) {
         if (gen != mActivationGeneration) return
-        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+        sendProjectionInfo(CMD_PROJECTION_ON,
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     if (gen != mActivationGeneration) return
@@ -897,7 +906,7 @@ class ClusterManager(context: Context) {
     /** Sends sendInfo(35) — triggers Qt JNI → AutoDisplayService.createVirtualDisplay(). */
     private fun sendActivationCmd35(gen: Int) {
         if (gen != mActivationGeneration) return
-        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
+        sendProjectionInfo(CMD_DI40_MODE,
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     if (gen != mActivationGeneration) return
@@ -919,6 +928,17 @@ class ClusterManager(context: Context) {
      */
     private fun markCmd16Dispatched(gen: Int) {
         if (gen == mActivationGeneration) mActivationCmd16Dispatched = true
+    }
+
+    private fun sendProjectionInfo(info: Int, callback: AdbLocalClient.Callback) {
+        ProjectionCommandBus.sendInfo(
+            mContext,
+            mProjectionSession,
+            CLUSTER_TYPE,
+            info,
+            "",
+            callback,
+        )
     }
 
     @Synchronized
