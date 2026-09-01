@@ -63,6 +63,49 @@ class SplitReplacementStateTest {
     }
 
     @Test
+    fun `full screen state commits only for verified current occupant`() {
+        val host = RecordingHost()
+        val controller = SplitController(host)
+        controller.setSecondDashboardApp("Old app")
+        controller.setSecondDashboardPkg("old.pkg")
+        val slot = SplitController::class.java.getDeclaredField("mCurrentSplitSlot")
+        slot.isAccessible = true
+        slot.setInt(controller, 1)
+        val stale = controller.beginSecondDashboardReplacement()
+        val current = controller.beginSecondDashboardReplacement()
+
+        assertFalse(controller.commitFullScreenIfMatches("old.pkg", stale))
+        assertTrue(controller.isInSplitMode)
+        assertEquals("old.pkg", controller.secondDashboardPkg)
+
+        assertTrue(controller.commitFullScreenIfMatches("old.pkg", current))
+        assertFalse(controller.isInSplitMode)
+        assertNull(controller.secondDashboardPkg)
+        assertNull(controller.secondDashboardApp)
+        assertEquals(1, host.changes)
+    }
+
+    @Test
+    fun `full screen flow waits for secondary stop success before state commit`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/ui/main/SplitController.java").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/ui/main/SplitController.java").readText()
+        val apply = source.substringAfter("public void applySplitSlot")
+            .substringBefore("private void relaunchPrimaryInSlot")
+        val success = apply.substringAfter("@Override public void onSuccess")
+            .substringBefore("@Override public void onError")
+        val error = apply.substringAfter("@Override public void onError")
+
+        assertTrue(success.contains("commitFullScreenIfMatches(secondPkg, generation)"))
+        assertTrue(error.contains("isCurrentSecondDashboardReplacement(generation)"))
+        assertTrue(error.contains("toast_kill_failed"))
+        assertFalse(apply.substringBefore("@Override public void onSuccess")
+            .contains("mSecondDashboardPkg = null"))
+    }
+
+    @Test
     fun `app and shortcut replacement paths clear only after verified stop`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it, "app/src/main/java/com/byd/dashcast/MainActivity.kt").isFile }

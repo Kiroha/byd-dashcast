@@ -83,6 +83,17 @@ public final class SplitController {
         return true;
     }
 
+    /** Atomically commits full-screen state after the secondary occupant was verified stopped. */
+    public boolean commitFullScreenIfMatches(String expectedPkg, int generation) {
+        if (!mReplacementGate.isCurrent(generation)
+                || expectedPkg == null || !expectedPkg.equals(mSecondDashboardPkg)) return false;
+        mSecondDashboardApp = null;
+        mSecondDashboardPkg = null;
+        mCurrentSplitSlot = 0;
+        mHost.onSplitStateChanged();
+        return true;
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
 
     /** Shows a popup to choose full-screen / left-50% / right-50% for the current cluster app. */
@@ -131,29 +142,58 @@ public final class SplitController {
                 + " bounds=[" + l + "," + t + "," + r + "," + b + "]"
                 + " pkg=" + splitPkg + " second=" + mSecondDashboardPkg);
 
+        final int generation = beginSecondDashboardReplacement();
         if (slot == 0 && mSecondDashboardPkg != null) {
-            AppLogger.i(TAG, "split → full screen: force-stop second=" + mSecondDashboardPkg);
-            AdbLocalClient.forceStopApp(mHost.getContext(), mSecondDashboardPkg, null);
-            mSecondDashboardApp = null;
-            mSecondDashboardPkg = null;
+            final String secondPkg = mSecondDashboardPkg;
+            AppLogger.i(TAG, "split → full screen: force-stop second=" + secondPkg);
+            AdbLocalClient.forceStopApp(mHost.getContext(), secondPkg,
+                    new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String report) {
+                    mHost.runOnUiThread(() -> {
+                        if (!commitFullScreenIfMatches(secondPkg, generation)) return;
+                        relaunchPrimaryInSlot(svc, splitPkg, splitApp, l, t, r, b,
+                                slot, generation);
+                    });
+                }
+
+                @Override public void onError(String error) {
+                    mHost.runOnUiThread(() -> {
+                        if (!isCurrentSecondDashboardReplacement(generation)) return;
+                        AppLogger.e(TAG, "split → full screen: secondary stop failed: " + error);
+                        Toast.makeText(mHost.getContext(),
+                                mHost.getContext().getString(R.string.toast_kill_failed, error),
+                                Toast.LENGTH_LONG).show();
+                    });
+                }
+            });
+            return;
         }
         mCurrentSplitSlot = slot;
+        relaunchPrimaryInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation);
+    }
 
+    private void relaunchPrimaryInSlot(ClusterService svc, String splitPkg, String splitApp,
+                                       int l, int t, int r, int b, int slot, int generation) {
         AdbLocalClient.forceStopApp(mHost.getContext(), splitPkg, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String ignored) {
-                launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot);
+                if (isCurrentSecondDashboardReplacement(generation)) {
+                    launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation);
+                }
             }
             @Override public void onError(String error) {
                 // force-stop failed: attempt relaunch anyway
-                launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot);
+                if (isCurrentSecondDashboardReplacement(generation)) {
+                    launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation);
+                }
             }
         });
     }
 
     private void launchInSlot(ClusterService svc, String splitPkg, String splitApp,
-                               int l, int t, int r, int b, int slot) {
+                               int l, int t, int r, int b, int slot, int generation) {
         svc.launchOnDashboardWithBounds(splitPkg, l, t, r, b,
                 launched -> mHost.runOnUiThread(() -> {
+                    if (!isCurrentSecondDashboardReplacement(generation)) return;
                     if (launched) {
                         mHost.setCurrentDashboardPkg(splitPkg);
                         mHost.setCurrentDashboardApp(splitApp);
