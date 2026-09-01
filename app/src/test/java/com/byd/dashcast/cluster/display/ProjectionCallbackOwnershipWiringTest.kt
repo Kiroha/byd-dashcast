@@ -23,7 +23,7 @@ class ProjectionCallbackOwnershipWiringTest {
         assertTrue(manager.substringAfter("fun abandon()")
             .substringBefore("companion object").contains("ProjectionCommandBus.endSession"))
         assertTrue(fission.contains("mClusterActivationManager = manager"))
-        assertTrue(fission.substringAfter("public void stopAll(Runnable onComplete)")
+        assertTrue(fission.substringAfter("private void stopAll(boolean purgeDaemonSlots")
             .take(180).contains("abandonClusterActivation()"))
         assertTrue(fission.substringAfter("public void destroy(boolean isFinishing)")
             .take(180).contains("abandonClusterActivation()"))

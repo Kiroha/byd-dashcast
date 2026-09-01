@@ -21,6 +21,11 @@ class ProjectionTransportRecoveryWiringTest {
 
         assertTrue(bus.contains("ProjectionTransportRecovery.watchdog"))
         assertTrue(bus.contains("if (watchdog.shouldAbortFallback()) return"))
+        val transport = File(root,
+            "app/src/main/java/com/byd/dashcast/cluster/display/ProjectionTransportRecovery.kt")
+            .readText()
+        assertTrue(transport.contains("ProxyClient.captureDaemonIdentity()"))
+        assertTrue(transport.contains("terminateHungDaemonViaAdb(context, identity)"))
         val typed = adb.substringAfter("if (typedObserver != null) {")
             .substringBefore("if (isAdbTransportUnreachable())")
         assertTrue(typed.contains("ProxyClient.setNonBlockingReconnect(true)"))
@@ -29,6 +34,8 @@ class ProjectionTransportRecoveryWiringTest {
         val recovery = proxy.substringAfter("public static boolean terminateHungDaemonViaAdb")
             .substringBefore("// ─── Auto-recovery helpers")
         assertTrue(recovery.contains("executeShellWithResultBlocking"))
+        assertTrue(recovery.contains("INSTANCE_CHANGED"))
+        assertTrue(recovery.contains("sBinder == expected.binder"))
         assertTrue(recovery.contains("kill -9"))
         assertTrue(recovery.indexOf("KILLED") < recovery.indexOf("sBinder = null"))
     }
