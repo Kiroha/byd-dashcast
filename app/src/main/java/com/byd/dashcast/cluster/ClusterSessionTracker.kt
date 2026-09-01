@@ -102,16 +102,37 @@ class ClusterSessionTracker(context: Context) {
             // no service to move with and no probe to reason from — so it cannot establish the one
             // precondition the cover requires: that the app is alive ON display 0. Asserting that
             // without evidence is the defect this whole pipeline was rewritten to stop making.
+            val main = Handler(Looper.getMainLooper())
+            lateinit var timeout: Runnable
+            val barrier = BoundedCompletionBarrier(blind.size, Runnable {
+                main.removeCallbacks(timeout)
+                main.post(onAllDone)
+            })
+            timeout = Runnable {
+                if (barrier.timeout()) {
+                    AppLogger.w(TAG, "blind eviction timeout — late callbacks are ignored")
+                }
+            }
+            main.postDelayed(timeout, BLIND_EVICTION_TIMEOUT_MS)
             for (p in blind) {
                 add(p)
-                AdbLocalClient.forceStopApp(mAppCtx, p, object : AdbLocalClient.Callback {
-                    override fun onSuccess(result: String?) { remove(p) }
+                try {
+                    AdbLocalClient.forceStopApp(mAppCtx, p, object : AdbLocalClient.Callback {
+                    override fun onSuccess(result: String?) {
+                        barrier.complete(Runnable { remove(p) })
+                    }
                     override fun onError(error: String?) {
-                        AppLogger.w(TAG, "blind forceStop $p failed: $error — retained")
+                        barrier.complete(Runnable {
+                            AppLogger.w(TAG, "blind forceStop $p failed: $error — retained")
+                        })
                     }
                 })
+                } catch (error: Throwable) {
+                    barrier.complete(Runnable {
+                        AppLogger.e(TAG, "blind forceStop dispatch failed for $p", error)
+                    })
+                }
             }
-            Handler(Looper.getMainLooper()).postDelayed(onAllDone, 800L)
             return
         }
 
@@ -321,6 +342,7 @@ class ClusterSessionTracker(context: Context) {
     companion object {
         private const val TAG = "ClusterSessionTracker"
         private const val MOVE_CALLBACK_TIMEOUT_MS = 30_000L
+        private const val BLIND_EVICTION_TIMEOUT_MS = 30_000L
 
         /**
          * Single worker for the landing waits. Serial on purpose — eviction is already
