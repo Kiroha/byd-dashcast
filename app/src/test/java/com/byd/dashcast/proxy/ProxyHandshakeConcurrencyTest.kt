@@ -5,6 +5,7 @@ import android.os.Parcel
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,6 +14,9 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -65,10 +69,93 @@ class ProxyHandshakeConcurrencyTest {
         invalidating.join(1_000)
     }
 
+    @Test
+    fun `binder arriving after fast snapshot is handshaken before connect succeeds`() {
+        val calls = AtomicInteger()
+        val connected = AtomicBoolean(false)
+        val binder = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                calls.incrementAndGet()
+                reply!!.writeNoException()
+                reply.writeInt(2000)
+                reply.writeInt(456)
+                reply.writeString("24")
+                return true
+            }
+        }
+        setStatic("sBinder", null)
+        setStatic("sDaemonUid", -1)
+        val lock = ProxyClient::class.java.getDeclaredField("LOCK").run {
+            isAccessible = true
+            get(null)!!
+        }
+        val connecting = Thread {
+            connected.set(ProxyClient.connect(RuntimeEnvironment.getApplication()))
+        }
+
+        synchronized(lock) {
+            connecting.start()
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1)
+            while (connecting.state != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+                Thread.yield()
+            }
+            assertEquals(Thread.State.BLOCKED, connecting.state)
+            setStatic("sBinder", binder)
+        }
+
+        connecting.join(1_000)
+        assertFalse("connect thread did not finish", connecting.isAlive)
+        assertTrue(connected.get())
+        assertEquals(1, calls.get())
+        assertEquals(2000, getStatic("sDaemonUid"))
+    }
+
+    @Test
+    fun `malformed WHOAMI never makes connect succeed or escape`() {
+        val binder = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                reply!!.writeNoException()
+                reply.writeInt(-1)
+                reply.writeInt(0)
+                reply.writeString(null)
+                return true
+            }
+        }
+        setStatic("sBinder", binder)
+        setStatic("sDaemonUid", -1)
+
+        assertFalse(ProxyClient.connect(RuntimeEnvironment.getApplication()))
+        assertFalse(ProxyClient.isConnected())
+        assertEquals(-1, getStatic("sDaemonUid"))
+    }
+
+    @Test
+    fun `receiver invalidates old identity before publishing replacement binder`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it,
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+        val receiverPublish = source.substringAfter("// Unhook the previous death recipient")
+            .substringBefore("AppLogger.i(TAG, \"live binder received from daemon\")")
+
+        assertTrue(receiverPublish.indexOf("sDaemonUid = -1") <
+            receiverPublish.indexOf("sBinder = bp.binder"))
+    }
+
     private fun setStatic(name: String, value: Any?) {
         ProxyClient::class.java.getDeclaredField(name).apply {
             isAccessible = true
             set(null, value)
         }
     }
+
+    private fun getStatic(name: String): Any? =
+        ProxyClient::class.java.getDeclaredField(name).run {
+            isAccessible = true
+            get(null)
+        }
 }
