@@ -141,8 +141,9 @@ class BugWizardActivity : Activity() {
 
         val restored = BugWizardStateStore.read(saved)
         if (restored != null) restoreState(restored) else mTgHandle = loadTgHandle()
-        if ((restored == null && mTgHandle.isEmpty()) ||
-            mPendingGate == BugWizardGate.HANDLE_REQUIRED) {
+        val durableDelivery = restoreDurableDeliveryState()
+        if (!durableDelivery && ((restored == null && mTgHandle.isEmpty()) ||
+            mPendingGate == BugWizardGate.HANDLE_REQUIRED)) {
             // First use: block on dialog before showing wizard
             showTgHandleDialogThen {
                 restoreWizardAndPendingState()
@@ -178,8 +179,10 @@ class BugWizardActivity : Activity() {
 
     private fun restoreWizardAndPendingState() {
         restoreWizardUi()
-        restoreSubmissionOwnership()
-        resumePendingGate()
+        val activeOwnership = restoreSubmissionOwnership()
+        if (!activeOwnership || mPendingGate == BugWizardGate.SHOTS_CONSENT) {
+            resumePendingGate()
+        }
     }
 
     private fun restoreWizardUi() {
@@ -209,7 +212,26 @@ class BugWizardActivity : Activity() {
             BugWizardGate.HUD_NO_ROUTE -> showHudNoRoute()
             BugWizardGate.HUD_UNSUPPORTED_NAV -> explainUnsupportedNav()
             BugWizardGate.SHOTS_CONSENT -> resumeScreenshotConsent()
+            BugWizardGate.RESUME_BUNDLE -> resumePendingBundle()
+            BugWizardGate.DELIVERY_RETRY -> showPendingDeliveryRetry()
         }
+    }
+
+    private fun restoreDurableDeliveryState(): Boolean {
+        val record = BugWizardPendingDelivery.load(this) ?: return false
+        if (!record.file().isFile) {
+            BugWizardPendingDelivery.clear(this)
+            return false
+        }
+        mPendingReportPath = record.path
+        mPendingReportCaption = record.caption
+        mPendingGate = when (record.phase) {
+            BugWizardPendingDelivery.AWAITING_SCREENSHOT_CONSENT ->
+                BugWizardGate.SHOTS_CONSENT
+            BugWizardPendingDelivery.BUNDLING -> BugWizardGate.RESUME_BUNDLE
+            else -> BugWizardGate.DELIVERY_RETRY
+        }
+        return true
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -717,10 +739,12 @@ class BugWizardActivity : Activity() {
                     // application context so no finished Activity is touched. The .txt is already
                     // on disk at this point, so nothing is lost either way.
                     if (TelegramBugReporter.isConfigured()) {
+                        savePendingDelivery(file, caption, BugWizardPendingDelivery.DELIVERING)
                         BugWizardSubmissionGate.setBackgroundWork(token, true)
                         TelegramBugReporter.send(applicationContext, file, caption,
                             object : TelegramBugReporter.Callback {
                                 override fun onSent() {
+                                    clearDurablePendingDelivery()
                                     BugWizardSubmissionGate.release(token)
                                 }
                                 override fun onFailed(message: String) {
@@ -728,12 +752,14 @@ class BugWizardActivity : Activity() {
                                     AppLogger.w(TAG, "headless report upload failed: $message")
                                 }
                                 override fun onAmbiguous(message: String) {
+                                    clearDurablePendingDelivery()
                                     BugWizardSubmissionGate.release(token)
                                     AppLogger.w(TAG, "headless report delivery uncertain; file kept: "
                                         + message)
                                 }
                             })
                     } else {
+                        savePendingDelivery(file, caption, BugWizardPendingDelivery.DELIVERING)
                         BugWizardSubmissionGate.release(token)
                         AppLogger.w(TAG, "wizard gone before consent — report kept on disk: "
                             + file.absolutePath)
@@ -751,6 +777,7 @@ class BugWizardActivity : Activity() {
             }
 
             override fun onError(message: String, partial: File?) {
+                clearDurablePendingDelivery()
                 BugWizardSubmissionGate.setBackgroundWork(token, false)
                 BugWizardSubmissionGate.release(token)
                 if (!isUiAlive()) {
@@ -771,11 +798,13 @@ class BugWizardActivity : Activity() {
 
     /** Uploads [file] (a report .txt or a report+shots .zip) via the bot, else the share sheet. */
     private fun deliverReport(file: File, caption: String) {
+        savePendingDelivery(file, caption, BugWizardPendingDelivery.DELIVERING)
         if (TelegramBugReporter.isConfigured()) {
             BugWizardSubmissionGate.setBackgroundWork(mSubmissionToken, true)
             mTvStatus.setText(R.string.bug_status_sending)
             TelegramBugReporter.send(this, file, caption, object : TelegramBugReporter.Callback {
                 override fun onSent() {
+                    clearDurablePendingDelivery()
                     BugWizardSubmissionGate.release(mSubmissionToken)
                     if (!isUiAlive()) {
                         AppLogger.i(TAG, "report sent after wizard closed")
@@ -795,6 +824,7 @@ class BugWizardActivity : Activity() {
                     shareFallback(file)
                 }
                 override fun onAmbiguous(message: String) {
+                    clearDurablePendingDelivery()
                     BugWizardSubmissionGate.release(mSubmissionToken)
                     AppLogger.w(TAG, "report delivery uncertain; file kept: $message")
                     if (isUiAlive()) finishAmbiguousDelivery(file)
@@ -810,15 +840,19 @@ class BugWizardActivity : Activity() {
         mPendingGate = BugWizardGate.SHOTS_CONSENT
         mPendingReportPath = file.absolutePath
         mPendingReportCaption = caption
+        savePendingDelivery(
+            file, caption, BugWizardPendingDelivery.AWAITING_SCREENSHOT_CONSENT)
         AlertDialog.Builder(this)
             .setTitle(R.string.bug_shots_consent_title)
             .setMessage(R.string.bug_shots_consent_msg)
             .setCancelable(false)
             .setPositiveButton(R.string.bug_shots_consent_yes) { _, _ ->
-                clearPendingReportState()
+                savePendingDelivery(file, caption, BugWizardPendingDelivery.BUNDLING)
+                mPendingGate = BugWizardGate.RESUME_BUNDLE
                 bundleShotsThenDeliver(file, caption)
             }
             .setNegativeButton(R.string.bug_shots_consent_no) { _, _ ->
+                savePendingDelivery(file, caption, BugWizardPendingDelivery.DELIVERING)
                 clearPendingReportState()
                 deliverReport(file, caption)
             }
@@ -828,6 +862,7 @@ class BugWizardActivity : Activity() {
     private fun resumeScreenshotConsent() {
         val file = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File)
         if (file == null || !file.isFile || mPendingReportCaption.isEmpty()) {
+            clearDurablePendingDelivery()
             clearPendingReportState()
             BugWizardSubmissionGate.release(mSubmissionToken)
             mSubmissionToken = ""
@@ -839,8 +874,7 @@ class BugWizardActivity : Activity() {
         if (!BugWizardSubmissionGate.isActive(mSubmissionToken)) {
             val token = BugWizardSubmissionGate.claim()
             if (token == null) {
-                mSubmissionToken = BugWizardSubmissionGate.activeToken().orEmpty()
-                showSubmissionContinuingUi()
+                showOtherSubmissionBusy { resumeScreenshotConsent() }
                 return
             }
             mSubmissionToken = token
@@ -849,10 +883,92 @@ class BugWizardActivity : Activity() {
         showScreenshotConsent(file, mPendingReportCaption)
     }
 
+    private fun resumePendingBundle() {
+        val file = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File)
+        if (file == null || !file.isFile || mPendingReportCaption.isEmpty()) {
+            BugWizardPendingDelivery.clear(this)
+            clearPendingReportState()
+            return
+        }
+        if (BugWizardSubmissionGate.isActive(mSubmissionToken)) {
+            showSubmissionContinuingUi()
+            return
+        }
+        val token = BugWizardSubmissionGate.claim()
+        if (token == null) {
+            showOtherSubmissionBusy { resumePendingBundle() }
+            return
+        }
+        mSubmissionToken = token
+        bundleShotsThenDeliver(file, mPendingReportCaption)
+    }
+
+    private fun showPendingDeliveryRetry() {
+        val file = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File)
+        if (file == null || !file.isFile) {
+            BugWizardPendingDelivery.clear(this)
+            clearPendingReportState()
+            mBtnSend?.setOnClickListener { submitReport() }
+            mBtnSend?.isEnabled = mSelectedIssue != null
+            return
+        }
+        val active = BugWizardSubmissionGate.activeToken()
+        if (active != null) {
+            if (active == mSubmissionToken) showSubmissionContinuingUi()
+            else showOtherSubmissionBusy { showPendingDeliveryRetry() }
+            return
+        }
+        mSubmissionToken = ""
+        mSending = true
+        ensurePendingDeliveryButton()
+        mBtnBack.isEnabled = false
+        mBtnCancel?.isEnabled = true
+        mTvStatus.visibility = View.VISIBLE
+        mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
+        mBtnSend?.isEnabled = true
+        mBtnSend?.setOnClickListener {
+            val token = BugWizardSubmissionGate.claim()
+            if (token == null) {
+                showOtherSubmissionBusy { showPendingDeliveryRetry() }
+                return@setOnClickListener
+            }
+            mSubmissionToken = token
+            mSending = true
+            deliverReport(file, mPendingReportCaption)
+        }
+    }
+
+    private fun ensurePendingDeliveryButton() {
+        if (mBtnSend != null) return
+        mLlIssues.removeAllViews()
+        val send = MaterialButton(this)
+        send.setText(R.string.bug_wizard_send)
+        send.minimumHeight = dp(64)
+        send.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { setMargins(0, dp(8), 0, dp(8)) }
+        mLlIssues.addView(send)
+        mBtnSend = send
+        showStep(2)
+    }
+
     private fun clearPendingReportState() {
         mPendingGate = BugWizardGate.NONE
         mPendingReportPath = ""
         mPendingReportCaption = ""
+    }
+
+    private fun savePendingDelivery(file: File, caption: String, phase: String) {
+        mPendingReportPath = file.absolutePath
+        mPendingReportCaption = caption
+        if (!BugWizardPendingDelivery.save(this, file, caption, phase)) {
+            AppLogger.e(TAG, "could not persist pending report delivery phase=$phase")
+        }
+    }
+
+    private fun clearDurablePendingDelivery() {
+        BugWizardPendingDelivery.clear(applicationContext)
     }
 
     /**
@@ -863,6 +979,8 @@ class BugWizardActivity : Activity() {
      */
     private fun bundleShotsThenDeliver(reportFile: File, caption: String) {
         val token = mSubmissionToken
+        savePendingDelivery(reportFile, caption, BugWizardPendingDelivery.BUNDLING)
+        mPendingGate = BugWizardGate.RESUME_BUNDLE
         BugWizardSubmissionGate.setBackgroundWork(token, true)
         mTvStatus.setText(R.string.bug_status_sending)
         Thread({
@@ -913,13 +1031,16 @@ class BugWizardActivity : Activity() {
             val finalFile = toSend
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
+                    clearPendingReportState()
                     deliverReport(finalFile, caption)
                 } else if (TelegramBugReporter.isConfigured()) {
                     // User left the wizard mid-bundle — still deliver (they had tapped send),
                     // headless, so the report isn't lost and no finished Activity is touched.
+                    savePendingDelivery(finalFile, caption, BugWizardPendingDelivery.DELIVERING)
                     TelegramBugReporter.send(applicationContext, finalFile, caption,
                         object : TelegramBugReporter.Callback {
                             override fun onSent() {
+                                clearDurablePendingDelivery()
                                 BugWizardSubmissionGate.release(token)
                             }
                             override fun onFailed(message: String) {
@@ -927,12 +1048,14 @@ class BugWizardActivity : Activity() {
                                 AppLogger.w(TAG, "headless bundle upload failed: $message")
                             }
                             override fun onAmbiguous(message: String) {
+                                clearDurablePendingDelivery()
                                 BugWizardSubmissionGate.release(token)
                                 AppLogger.w(TAG, "headless bundle delivery uncertain; file kept: "
                                     + message)
                             }
                         })
                 } else {
+                    savePendingDelivery(finalFile, caption, BugWizardPendingDelivery.DELIVERING)
                     BugWizardSubmissionGate.release(token)
                 }
             }
@@ -1002,16 +1125,18 @@ class BugWizardActivity : Activity() {
 
     private fun isUiAlive(): Boolean = !isFinishing && !isDestroyed
 
-    private fun restoreSubmissionOwnership() {
+    private fun restoreSubmissionOwnership(): Boolean {
         if (BugWizardSubmissionGate.isActive(mSubmissionToken)) {
             if (mPendingGate == BugWizardGate.SHOTS_CONSENT) {
                 mSending = true
             } else {
                 showSubmissionContinuingUi()
             }
+            return true
         } else if (mPendingGate != BugWizardGate.SHOTS_CONSENT) {
             mSubmissionToken = ""
         }
+        return false
     }
 
     private fun showSubmissionContinuingUi() {
@@ -1029,7 +1154,12 @@ class BugWizardActivity : Activity() {
                 if (!isUiAlive()) return
                 if (!BugWizardSubmissionGate.isActive(token)) {
                     mSending = false
-                    finish()
+                    mSubmissionToken = ""
+                    if (restoreDurableDeliveryState()) {
+                        resumePendingGate()
+                    } else {
+                        finish()
+                    }
                     return
                 }
                 mTvStatus.postDelayed(this, SUBMISSION_MONITOR_MS)
@@ -1039,7 +1169,7 @@ class BugWizardActivity : Activity() {
         mTvStatus.postDelayed(monitor, SUBMISSION_MONITOR_MS)
     }
 
-    private fun showOtherSubmissionBusy() {
+    private fun showOtherSubmissionBusy(onAvailable: (() -> Unit)? = null) {
         // Never adopt the other wizard's token: its completion belongs to that submission and
         // must not close or discard this instance's independent draft.
         mBtnSend?.isEnabled = false
@@ -1051,8 +1181,11 @@ class BugWizardActivity : Activity() {
                 if (!isUiAlive()) return
                 if (BugWizardSubmissionGate.activeToken() == null) {
                     mOtherSubmissionMonitor = null
-                    mTvStatus.visibility = View.GONE
-                    mBtnSend?.isEnabled = mSelectedIssue != null
+                    if (onAvailable != null) onAvailable()
+                    else {
+                        mTvStatus.visibility = View.GONE
+                        mBtnSend?.isEnabled = mSelectedIssue != null
+                    }
                     return
                 }
                 mTvStatus.postDelayed(this, SUBMISSION_MONITOR_MS)
@@ -1186,6 +1319,7 @@ class BugWizardActivity : Activity() {
 
     private fun shareFallback(file: File) {
         disarmSendWatchdog()
+        clearDurablePendingDelivery()
         BugWizardSubmissionGate.release(mSubmissionToken)
         try {
             mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
@@ -1205,6 +1339,7 @@ class BugWizardActivity : Activity() {
 
     private fun finishAmbiguousDelivery(file: File) {
         disarmSendWatchdog()
+        clearDurablePendingDelivery()
         mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
         Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),
             Toast.LENGTH_LONG).show()
