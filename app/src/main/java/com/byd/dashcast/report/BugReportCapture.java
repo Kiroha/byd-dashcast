@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Builds a single, size-bounded diagnostic file for the in-app bug reporter.
@@ -616,8 +617,12 @@ public final class BugReportCapture {
         return new File("/storage/emulated/0/Android/data/" + app.getPackageName() + "/files");
     }
 
-    private static File newFile(Context app) {
+    static String newFileName() {
         String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date());
+        return PREFIX + ts + "_" + UUID.randomUUID().toString().replace("-", "") + ".txt";
+    }
+
+    private static File newFile(Context app) {
         File dir = null;
         // getExternalFilesDir() routes through StorageManagerService (AppOps package/uid check) and
         // can THROW SecurityException ("callingPackage does not match UID") on some DL5.1 / Android 13
@@ -638,7 +643,7 @@ public final class BugReportCapture {
         if (!dir.exists()) {
             try { dir.mkdirs(); } catch (Throwable ignore) { /* best-effort */ }
         }
-        return new File(dir, PREFIX + ts + ".txt");
+        return new File(dir, newFileName());
     }
 
     /**
