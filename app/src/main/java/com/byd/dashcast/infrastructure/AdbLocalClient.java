@@ -1516,7 +1516,18 @@ public class AdbLocalClient {
                         // fall through to ADB path below
                     }
                 }
+                com.byd.dashcast.infrastructure.task.TaskLocation legacyLocation =
+                    com.byd.dashcast.infrastructure.task.TaskLocation.unknown();
                 try (Dadb dadb = connect(context)) {
+                    try {
+                    String activities = dadb.shell(
+                        "dumpsys activity activities 2>/dev/null").getAllOutput();
+                    legacyLocation = com.byd.dashcast.infrastructure.task
+                        .LegacyTaskLocationParser.parse(activities, packageName);
+                    } catch (Throwable locationError) {
+                    AppLogger.w(TAG, "legacy task-location probe failed for " + packageName
+                        + ": " + locationError.getMessage());
+                    }
                     // Same inversion as the typed path above, for the same reason
                     // (INC-20260815-181820): kill first, and only clear the task once the process
                     // is gone. A task destroyed after a FAILED kill is the app losing its way back
@@ -1549,11 +1560,20 @@ public class AdbLocalClient {
                         if (out.contains("STOPPED") || out.isEmpty()) {
                             StringBuilder verification = new StringBuilder();
                             if (verifyForceStopViaAdb(dadb, packageName, verification)) {
+                                callback.onEvictionOutcome(
+                                    com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
+                                        true, legacyLocation));
                                 callback.onSuccess("force-stop OK (ADB, verified)");
                             } else {
+                                callback.onEvictionOutcome(
+                                    com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
+                                        false, legacyLocation));
                                 callback.onError(verification.toString().trim());
                             }
                         } else {
+                            callback.onEvictionOutcome(
+                                com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
+                                    false, legacyLocation));
                             callback.onError(out);
                         }
                     }
@@ -1562,7 +1582,12 @@ public class AdbLocalClient {
                     noteTransportFailure(context, e);
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "forceStopApp ERREUR", e);
-                    if (callback != null) callback.onError(msg);
+                    if (callback != null) {
+                        callback.onEvictionOutcome(
+                            com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
+                                false, legacyLocation));
+                        callback.onError(msg);
+                    }
                 }
             }
         }); // adb-forcestop-thread
