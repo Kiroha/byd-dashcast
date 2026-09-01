@@ -131,6 +131,7 @@ public final class FissionOrchestrator {
     private volatile LayoutPreset mActiveLayout = null;
     private volatile String mSelectedMirrorPackage = null;
     private volatile boolean mAutoStartAttempt = false;
+    private volatile long mActivationGuardToken = 0L;
     private volatile com.byd.dashcast.cluster.display.ClusterManager mClusterActivationManager;
 
     /**
@@ -362,23 +363,23 @@ public final class FissionOrchestrator {
         // Released in activateFavoriteLayout and in markAutoStartFailed — the success and failure
         // funnels of this path — and, if both are somehow missed, stolen by the existing
         // ACTIVATION_GUARD_MAX_MS expiry. A lost guard here cannot disable anything permanently.
-        if (!sActivationInFlight.compareAndSet(false, true)) {
-            long heldMs = android.os.SystemClock.elapsedRealtime() - sActivationStartedMs;
-            if (heldMs < ACTIVATION_GUARD_MAX_MS) {
-                AppLogger.w(TAG, "auto-start skipped: an activation is already in flight (held "
-                        + heldMs + "ms)");
-                return AutoStartResult.PROJECTION_CONFLICT;
-            }
-            AppLogger.w(TAG, "auto-start: previous activation never reported after " + heldMs
-                    + "ms — reclaiming the guard");
+        final long nowMs = android.os.SystemClock.elapsedRealtime();
+        ActivationAttemptGate.Acquisition activation = sActivationGate.tryAcquire(nowMs);
+        if (activation == null) {
+            AppLogger.w(TAG, "auto-start skipped: an activation is already in flight (held "
+                    + sActivationGate.heldMs(nowMs) + "ms)");
+            return AutoStartResult.PROJECTION_CONFLICT;
         }
-        sActivationStartedMs = android.os.SystemClock.elapsedRealtime();
+        if (activation.getReclaimed()) {
+            AppLogger.w(TAG, "auto-start reclaimed an expired activation guard");
+        }
         sAutoStartFired = true;
         AppLogger.i(TAG, "auto-start on app launch: projection + layout « " + fav.name + " »");
 
         FissionOrchestrator orch = new FissionOrchestrator(appCtx,
                 headlessProjectionState(), headlessCallbacks("auto-start"));
         orch.mAutoStartAttempt = true;
+        orch.mActivationGuardToken = activation.getToken();
         replaceHeadlessAfterStop(orch, fav);
         return AutoStartResult.STARTED;
     }
@@ -438,12 +439,8 @@ public final class FissionOrchestrator {
     /** @see #ERR_CLUSTER_TIMEOUT */
     public static final String ERR_ABANDONED = "layout stopped during cluster activation";
 
-    /** Guards against a second Activate tap starting a second cluster-activation sequence. */
-    private static final java.util.concurrent.atomic.AtomicBoolean sActivationInFlight =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
-
     /**
-     * When {@link #sActivationInFlight} was taken, on the monotonic clock.
+    * The generation-bound gate records when its current owner was acquired.
      *
      * <p>The guard is cleared from the activation callback, and that callback is only reached
      * through {@link #deliver}. {@code ClusterManager} posts no deadline of its own on the warm
@@ -456,7 +453,8 @@ public final class FissionOrchestrator {
      * 4 daemon display probe is bounded at 13 s.
      */
     private static final long ACTIVATION_GUARD_MAX_MS = 60_000L;
-    private static volatile long sActivationStartedMs = 0L;
+        private static final ActivationAttemptGate sActivationGate =
+            new ActivationAttemptGate(ACTIVATION_GUARD_MAX_MS);
 
     /**
      * Set once {@link #ensureDaemon()} has let {@code AdbLocalClient.startMirrorDaemon} compare
@@ -500,23 +498,20 @@ public final class FissionOrchestrator {
                                                            ActivationCallback callback) {
         final Context appCtx = context.getApplicationContext();
         final long nowMs = android.os.SystemClock.elapsedRealtime();
-        if (!sActivationInFlight.compareAndSet(false, true)) {
-            long heldMs = nowMs - sActivationStartedMs;
-            if (heldMs < ACTIVATION_GUARD_MAX_MS) {
-                AppLogger.w(TAG, "activateLayoutManually: " + ERR_BUSY + " (held " + heldMs
-                        + "ms) — ignoring tap");
-                if (callback != null) {
-                    new Handler(Looper.getMainLooper())
-                            .post(() -> callback.onActivationResult(false, ERR_BUSY));
-                }
-                return;
+        ActivationAttemptGate.Acquisition activation = sActivationGate.tryAcquire(nowMs);
+        if (activation == null) {
+            AppLogger.w(TAG, "activateLayoutManually: " + ERR_BUSY + " (held "
+                    + sActivationGate.heldMs(nowMs) + "ms) — ignoring tap");
+            if (callback != null) {
+                new Handler(Looper.getMainLooper())
+                        .post(() -> callback.onActivationResult(false, ERR_BUSY));
             }
-            // Expired: the previous attempt never reported back (see ACTIVATION_GUARD_MAX_MS).
-            // Steal it rather than leave the button dead for the rest of the process.
-            AppLogger.w(TAG, "activateLayoutManually: previous activation never reported after "
-                    + heldMs + "ms — reclaiming the guard");
+            return;
         }
-        sActivationStartedMs = nowMs;
+        if (activation.getReclaimed()) {
+            AppLogger.w(TAG, "activateLayoutManually: reclaimed expired activation guard");
+        }
+        final long activationToken = activation.getToken();
         FissionOrchestrator orch = sAutoStartOrchestrator;
         // A shut-down executor would make activatePresetAsync throw RejectedExecutionException
         // on the UI thread; replace such an orchestrator instead of reusing it.
@@ -533,7 +528,7 @@ public final class FissionOrchestrator {
         final boolean previouslyFired = sAutoStartFired;
         sAutoStartFired = true;
         orch.activatePresetAsync(preset, fresh, (ok, error) -> {
-            sActivationInFlight.set(false);
+            boolean ownedCompletion = sActivationGate.release(activationToken);
             // Under the SAME monitor markAutoStartFailed() uses. This is a read-modify-write on
             // a static that the fission-exec thread also writes, and this lambda runs on the
             // main thread: unsynchronised, a markAutoStartFailed() landing between the read and
@@ -544,7 +539,9 @@ public final class FissionOrchestrator {
             // PARTIAL activation must NOT re-arm: it still owns the cluster, and the next
             // onResume would tear it down and rebuild it.
             synchronized (FissionOrchestrator.class) {
-                if (error != null && sAutoStartFired) sAutoStartFired = previouslyFired;
+                if (ownedCompletion && error != null && sAutoStartFired) {
+                    sAutoStartFired = previouslyFired;
+                }
             }
             if (callback != null) callback.onActivationResult(ok, error);
         });
@@ -564,16 +561,18 @@ public final class FissionOrchestrator {
             AppLogger.d(TAG, "launchFavoriteLayoutApps skipped: classic projection active");
             return;
         }
-        if (!sActivationInFlight.compareAndSet(false, true)) {
+        ActivationAttemptGate.Acquisition activation = sActivationGate.tryAcquire(
+            android.os.SystemClock.elapsedRealtime());
+        if (activation == null) {
             AppLogger.w(TAG, "launchFavoriteLayoutApps skipped: activation already in flight");
             return;
         }
-        sActivationStartedMs = android.os.SystemClock.elapsedRealtime();
         AppLogger.i(TAG, "manual launch layout apps: « " + fav.name + " »");
 
         FissionOrchestrator orch = new FissionOrchestrator(appCtx,
                 headlessProjectionState(), headlessCallbacks("launch-layout"));
         orch.mAutoStartAttempt = true;
+        orch.mActivationGuardToken = activation.getToken();
         replaceHeadlessAfterStop(orch, fav);
     }
 
@@ -589,7 +588,7 @@ public final class FissionOrchestrator {
             previous.shutdown();
             if (sAutoStartOrchestrator != previous) {
                 next.shutdown();
-                sActivationInFlight.set(false);
+                sActivationGate.release(next.mActivationGuardToken);
                 AppLogger.i(TAG, "headless replacement cancelled while prior teardown completed");
                 return;
             }
@@ -615,14 +614,16 @@ public final class FissionOrchestrator {
                                              Runnable onComplete) {
         FissionOrchestrator o = sAutoStartOrchestrator;
         sAutoStartOrchestrator = null;
+        final long purgeToken;
         if (purgeDaemonSlots) {
-            sActivationInFlight.set(true);
-            sActivationStartedMs = android.os.SystemClock.elapsedRealtime();
+            purgeToken = sActivationGate.forceAcquire(
+                    android.os.SystemClock.elapsedRealtime()).getToken();
         } else {
-            sActivationInFlight.set(false);
+            purgeToken = 0L;
+            sActivationGate.clear();
         }
         Runnable complete = () -> {
-            if (purgeDaemonSlots) sActivationInFlight.set(false);
+            if (purgeDaemonSlots) sActivationGate.release(purgeToken);
             notifyLayoutChanged();
             if (onComplete != null) onComplete.run();
         };
@@ -1271,7 +1272,8 @@ public final class FissionOrchestrator {
             // The success funnel of the auto-start path: the ClusterManager sequence is done, so
             // a manual Activate is safe again. markAutoStartFailed covers the failure funnel; the
             // guard's own expiry covers anything that reaches neither.
-            sActivationInFlight.set(false);
+            sActivationGate.release(mActivationGuardToken);
+            mAutoStartAttempt = false;
         }
     }
 
@@ -1335,7 +1337,7 @@ public final class FissionOrchestrator {
                                      ActivationCallback callback) {
         // submitOrFail even for the FIRST submit: isUsable() was checked on the caller's thread
         // and another thread can shut this executor down before we get here. A raw execute()
-        // would then throw on the UI thread AND leave sActivationInFlight latched, disabling
+        // would then throw on the UI thread AND leave the activation gate latched, disabling
         // Activate for the rest of the process.
         submitOrFail(() -> {
             tryGetBinder();
@@ -1502,15 +1504,15 @@ public final class FissionOrchestrator {
 
     private void markAutoStartFailed(String reason) {
         if (!mAutoStartAttempt) return;
+        boolean ownedCompletion = sActivationGate.release(mActivationGuardToken);
         synchronized (FissionOrchestrator.class) {
             if (sAutoStartOrchestrator == this) sAutoStartOrchestrator = null;
-            sAutoStartFired = false;
+            if (ownedCompletion) sAutoStartFired = false;
             // The failure funnel of the auto-start path. Release the activation guard here too:
             // this method is reached from onDisplayTimeout, i.e. BEFORE activateFavoriteLayout
             // ever runs, so its finally would never fire and the guard would sit held until the
             // 60 s expiry stole it — leaving Activate answering "busy" on a car that just failed
             // to project, which is exactly when a user tries it by hand.
-            sActivationInFlight.set(false);
         }
         AppLogger.w(TAG, "auto-start re-armed after failure: " + reason);
         // mFreeZoneKeys counts too. Free zones are deliberately kept OUT of mSlots and never set

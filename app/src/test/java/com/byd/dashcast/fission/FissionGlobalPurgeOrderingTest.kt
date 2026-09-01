@@ -19,11 +19,11 @@ class FissionGlobalPurgeOrderingTest {
         val instanceStop = source.substringAfter("private void stopAll(boolean purgeDaemonSlots")
             .substringBefore("private boolean forceStopAndWaitForResult")
 
-        assertTrue(staticStop.indexOf("sActivationInFlight.set(true)") <
+        assertTrue(staticStop.indexOf("sActivationGate.forceAcquire") <
             staticStop.indexOf("o.stopAllAndPurge(complete)"))
         val completion = staticStop.substringAfter("Runnable complete = () -> {")
             .substringBefore("};")
-        assertTrue(completion.contains("if (purgeDaemonSlots) sActivationInFlight.set(false)"))
+        assertTrue(completion.contains("sActivationGate.release(purgeToken)"))
         assertTrue(staticStop.contains("o.stopAllAndPurge(complete)"))
         val terminal = instanceStop.substringAfter("FissionReleaseDebt.recordAll(unreleased)")
         assertTrue(terminal.indexOf("FissionClient.deactivateLayout(binder)") <
