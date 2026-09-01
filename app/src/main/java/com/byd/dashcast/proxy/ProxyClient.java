@@ -318,7 +318,7 @@ public final class ProxyClient {
     static boolean clearConnectionIfCurrent(IBinder expectedBinder) {
         synchronized (LOCK) {
             if (sBinder != expectedBinder) return false;
-            unlinkDeathLocked(expectedBinder);
+            unlinkDeathLocked(expectedBinder != null ? expectedBinder : sDeathBinder);
             sBinder = null;
             sDaemonUid = -1;
             sDaemonPid = -1;
@@ -584,11 +584,12 @@ public final class ProxyClient {
                 // pingBinder() (Binder roundtrip): the live binder cache is hooked
                 // via linkToDeath in the receiver above, so isBinderAlive is
                 // strictly equivalent here and avoids one IPC while holding LOCK.
-                if (sBinder == null || !sBinder.isBinderAlive()) {
+                IBinder failedBinder = sBinder;
+                if (failedBinder == null || !failedBinder.isBinderAlive()) {
                     AppLogger.w(TAG, "no live binder after " + waitMs
                             + "ms (latch=" + (binderSignal.getCount() == 0
                             ? "signalled" : "timed-out") + ")");
-                    sBinder = null;
+                    clearConnectionIfCurrent(failedBinder);
                     // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
                     String transportState = AdbLocalClient.adbTransportState();
                     if (AdbLocalClient.XPORT_UNRESPONSIVE.equals(transportState)
@@ -1527,8 +1528,7 @@ public final class ProxyClient {
             synchronized (LOCK) {
                 IBinder dead = sBinder;
                 if (dead != null && !dead.isBinderAlive()) {
-                    unlinkDeathLocked(dead);
-                    sBinder = null;
+                    clearConnectionIfCurrent(dead);
                 }
             }
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
@@ -1542,8 +1542,7 @@ public final class ProxyClient {
                 synchronized (LOCK) {
                     IBinder dead = sBinder;
                     if (dead != null && !dead.isBinderAlive()) {
-                        unlinkDeathLocked(dead);
-                        sBinder = null;
+                        clearConnectionIfCurrent(dead);
                     }
                 }
                 throw new ProxyException(
@@ -1703,15 +1702,7 @@ public final class ProxyClient {
             }
         } catch (Exception e) {
             AppLogger.w(TAG, "handshake failed (" + e.getClass().getSimpleName() + ")");
-            synchronized (LOCK) {
-                if (sBinder == expectedBinder) {
-                    sBinder = null;
-                    sDaemonUid = -1;
-                    sDaemonPid = -1;
-                    sDaemonVer = null;
-                    sDaemonInstance = null;
-                }
-            }
+            clearConnectionIfCurrent(expectedBinder);
             return false;
         } finally {
             reply.recycle();
