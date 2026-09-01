@@ -416,7 +416,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // ── OTA pre-release ──────────────────────────────────────────────────────
         const val PREF_OTA_PRERELEASE = "ota_include_prerelease"
-        const val DEFAULT_OTA_PRERELEASE = true
+        const val DEFAULT_OTA_PRERELEASE = false
 
         // ── Boot / UI toggles ────────────────────────────────────────────────────
         const val PREF_BOOT_AUTO_START = ClusterPrefs.KEY_BOOT_AUTO_START
