@@ -84,13 +84,24 @@ object TelegramBugReporter {
     private fun doSend(file: File, caption: String?, thread: String): String? {
         if (RelayUploader.isConfigured()) {
             val topic = if (isHudThread(thread)) RelayUploader.TOPIC_HUD else RelayUploader.TOPIC_BUG
-            val relayError = RelayUploader.send(file, caption, topic)
-            if (relayError == null) return null
-            if (!ReportChannel.hasTelegram()) return relayError
-            AppLogger.w(TAG, "relay failed ($relayError) — falling back to the direct bot path")
+            val relayResult = RelayUploader.sendResult(file, caption, topic)
+            if (relayResult == RelayUploader.SendResult.Sent) return null
+            val relayError = when (relayResult) {
+                is RelayUploader.SendResult.SafeFailure -> relayResult.message
+                is RelayUploader.SendResult.AmbiguousFailure -> relayResult.message
+                RelayUploader.SendResult.Sent -> return null
+            }
+            if (!shouldFallbackToDirect(relayResult, ReportChannel.hasTelegram())) return relayError
+            AppLogger.w(TAG, "relay failed safely ($relayError) — falling back to the direct bot path")
         }
         return doSendDirect(file, caption, thread)
     }
+
+    @JvmStatic
+    internal fun shouldFallbackToDirect(
+        relayResult: RelayUploader.SendResult,
+        directConfigured: Boolean,
+    ): Boolean = directConfigured && relayResult is RelayUploader.SendResult.SafeFailure
 
     /**
      * True when this send is aimed at the HUD topic rather than the bug topic.
