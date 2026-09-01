@@ -291,12 +291,16 @@ def main() -> int:
     args = parser.parse_args()
 
     findings = scan_apks(args.asset_dir)
-    findings.extend(verify_release_contract(
-        args.asset_dir,
-        args.tag,
-        args.aapt or find_android_tool("aapt"),
-        args.apksigner or find_android_tool("apksigner"),
-    ))
+    # Never hand an already-rejected untrusted archive to native Android tools. Their manifest and
+    # signature parsers have no scanner resource budget and may inflate the exact bomb rejected
+    # above before this workflow gets a chance to quarantine the release.
+    if not findings:
+        findings.extend(verify_release_contract(
+            args.asset_dir,
+            args.tag,
+            args.aapt or find_android_tool("aapt"),
+            args.apksigner or find_android_tool("apksigner"),
+        ))
     findings = sorted(set(findings))
     for finding in findings:
         print(f"FOUND: {finding}")
