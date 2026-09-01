@@ -431,7 +431,9 @@ class BugWizardActivity : Activity() {
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String) {
                     val hit = MapNotificationListenerService.firstUnsupportedNavProcess(out)
-                    if (!hit.isNullOrEmpty()) runOnUiThread { mActiveNav = hit }
+                    if (!hit.isNullOrEmpty()) runOnUiThread {
+                        if (isUiAlive()) mActiveNav = hit
+                    }
                 }
                 override fun onError(err: String) {}
             }, AdbLocalClient.PROBE_IDLE_TIMEOUT_MS)
@@ -480,10 +482,10 @@ class BugWizardActivity : Activity() {
             override fun onSuccess(out: String) {
                 val pkg = ForegroundPackageLine.parse(out.trim())
                 val label = if (pkg != null) labelFor(pkg) else null
-                runOnUiThread { onDetectionResult(pkg, label) }
+                runOnUiThread { if (isUiAlive()) onDetectionResult(pkg, label) }
             }
             override fun onError(err: String) {
-                runOnUiThread { onDetectionResult(null, null) }
+                runOnUiThread { if (isUiAlive()) onDetectionResult(null, null) }
             }
         }, AdbLocalClient.PROBE_IDLE_TIMEOUT_MS)
     }
@@ -720,6 +722,11 @@ class BugWizardActivity : Activity() {
             }
 
             override fun onError(message: String, partial: File?) {
+                if (!isUiAlive()) {
+                    AppLogger.w(TAG, "capture failed after wizard closed: $message"
+                        + (partial?.let { "; partial kept at ${it.absolutePath}" } ?: ""))
+                    return
+                }
                 disarmSendWatchdog()
                 mSending = false
                 mBtnBack.isEnabled = true
@@ -737,12 +744,20 @@ class BugWizardActivity : Activity() {
             mTvStatus.setText(R.string.bug_status_sending)
             TelegramBugReporter.send(this, file, caption, object : TelegramBugReporter.Callback {
                 override fun onSent() {
+                    if (!isUiAlive()) {
+                        AppLogger.i(TAG, "report sent after wizard closed")
+                        return
+                    }
                     disarmSendWatchdog()
                     Toast.makeText(this@BugWizardActivity, R.string.bug_sent_ok, Toast.LENGTH_LONG).show()
                     finish()
                 }
                 override fun onFailed(message: String) {
                     AppLogger.w(TAG, "bot upload failed: $message")
+                    if (!isUiAlive()) {
+                        AppLogger.w(TAG, "wizard already closed — report kept at ${file.absolutePath}")
+                        return
+                    }
                     shareFallback(file)
                 }
             })
@@ -875,6 +890,8 @@ class BugWizardActivity : Activity() {
     }
 
     private fun dp(dp: Int): Int = Math.round(dp * resources.displayMetrics.density)
+
+    private fun isUiAlive(): Boolean = !isFinishing && !isDestroyed
 
     @Suppress("DEPRECATION")
     private fun labelFor(pkg: String): String {
