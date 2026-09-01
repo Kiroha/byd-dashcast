@@ -515,6 +515,7 @@ class MainActivity : AppCompatActivity(),
                 activateCluster()
                 return@Runnable
             }
+            mSessionTracker.remove(pkgName)
             activeService.moveTaskToDisplay(pkgName, displayId,
                 object : ClusterService.LaunchCallback {
                     override fun onResult(launched: Boolean) {
@@ -977,6 +978,7 @@ class MainActivity : AppCompatActivity(),
                         !split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
                         return@Runnable
                     }
+                    mSessionTracker.remove(pkgName)
                     svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h,
                         object : ClusterService.LaunchCallback {
                             override fun onResult(launched: Boolean) {
@@ -1045,6 +1047,7 @@ class MainActivity : AppCompatActivity(),
                     activateCluster()
                     return@Runnable
                 }
+                mSessionTracker.remove(pkgName)
                 val targetDisplayId = clusterDisplayId
                 activeService.moveTaskToDisplay(pkgName, targetDisplayId,
                     object : ClusterService.LaunchCallback {
@@ -1161,6 +1164,7 @@ class MainActivity : AppCompatActivity(),
                 activateCluster()
                 return
             }
+            if (layoutTarget == null) mSessionTracker.remove(app.packageName)
             try {
                 val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
                     ?: throw IllegalStateException("LauncherApps unavailable")
