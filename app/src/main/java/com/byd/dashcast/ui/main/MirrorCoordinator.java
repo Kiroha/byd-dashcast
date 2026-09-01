@@ -59,8 +59,10 @@ public final class MirrorCoordinator {
     private final FrameLayout  mFrameMirror;
     private final TextView     mPlaceholder;
     private final Host         mHost;
+    private final Runnable     mPostTouchImeCheck;
 
     private Surface mMirrorSurface;
+    private boolean mDestroyed;
     private boolean mLayoutMirrorActive;
     private String mLayoutMirrorPackage;
     private MirrorProjection mLayoutProjection;
@@ -71,6 +73,16 @@ public final class MirrorCoordinator {
         mFrameMirror = frameMirror;
         mPlaceholder = placeholder;
         mHost        = host;
+        mPostTouchImeCheck = new Runnable() {
+            @Override public void run() {
+                if (mDestroyed || mFrameMirror.getVisibility() != View.VISIBLE) return;
+                try {
+                    ClusterImeWatcherService.checkAndLaunchBridgeIfNeeded(mHost.getContext());
+                } catch (Throwable t) {
+                    AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
+                }
+            }
+        };
         for (int i = 0; i < MAX_FWD_POINTERS; i++) {
             mLayoutPointerProperties[i] = new MotionEvent.PointerProperties();
             mLayoutPointerCoords[i] = new MotionEvent.PointerCoords();
@@ -148,6 +160,7 @@ public final class MirrorCoordinator {
 
     /** Called when a daemon Binder arrives after Activity start. */
     public void onDaemonBinderAvailable(IBinder daemonBinder) {
+        if (mDestroyed) return;
         ClusterService svc = mHost.getClusterServiceIfBound();
         if (svc != null) {
             ClusterMirrorManager mm = svc.getMirrorManager();
@@ -164,6 +177,7 @@ public final class MirrorCoordinator {
 
     /** Rebinds the existing TextureView when the selected headless Layout slot changes. */
     public void onLayoutTargetChanged() {
+        if (mDestroyed) return;
         FissionOrchestrator.LayoutMirrorTarget target =
                 FissionOrchestrator.getSelectedLayoutMirrorTarget();
         String nextPackage = target != null ? target.pkg : null;
@@ -180,6 +194,7 @@ public final class MirrorCoordinator {
 
     /** Attempts to start the mirror using whichever path is available. */
     public void attemptStart() {
+        if (mDestroyed) return;
         if (mMirrorSurface == null || !mMirrorSurface.isValid()) return;
 
         int viewW = mTextureView.getWidth();
@@ -289,6 +304,7 @@ public final class MirrorCoordinator {
     }
 
     public void stopMirror() {
+        cancelPostTouchImeCheck();
         if (mLayoutMirrorActive) {
             FissionOrchestrator.stopSelectedLayoutMirror();
             clearLayoutMirrorState();
@@ -298,6 +314,7 @@ public final class MirrorCoordinator {
     }
 
     private void stopMirrorForRestart() {
+        cancelPostTouchImeCheck();
         if (mLayoutMirrorActive) {
             FissionOrchestrator.stopSelectedLayoutMirror();
             clearLayoutMirrorState();
@@ -320,6 +337,7 @@ public final class MirrorCoordinator {
     }
 
     public void showPreview() {
+        if (mDestroyed) return;
         mFrameMirror.setVisibility(View.VISIBLE);
         attemptStart();
     }
@@ -331,6 +349,7 @@ public final class MirrorCoordinator {
 
     /** Recreates the Surface from the current SurfaceTexture and restarts the mirror. */
     public void recreateSurfaceAndRestart() {
+        if (mDestroyed) return;
         try {
             SurfaceTexture st = mTextureView.getSurfaceTexture();
             int w = mTextureView.getWidth();
@@ -433,21 +452,17 @@ public final class MirrorCoordinator {
                 && ClusterService.sIsRunning) {
             try {
                 if (Platform.get().isDiLink5(mHost.getContext())) {
-                    mTextureView.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            try {
-                                ClusterImeWatcherService
-                                        .checkAndLaunchBridgeIfNeeded(mHost.getContext());
-                            } catch (Throwable t) {
-                                AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
-                            }
-                        }
-                    }, 350);
+                    mTextureView.removeCallbacks(mPostTouchImeCheck);
+                    mTextureView.postDelayed(mPostTouchImeCheck, 350);
                 }
             } catch (Throwable t) {
                 AppLogger.e(TAG, "auto-keyboard DL5 guard check failed", t);
             }
         }
+    }
+
+    private void cancelPostTouchImeCheck() {
+        mTextureView.removeCallbacks(mPostTouchImeCheck);
     }
 
     private void forwardTouchToLayout(MotionEvent event) {
@@ -487,7 +502,12 @@ public final class MirrorCoordinator {
     }
 
     public void destroy() {
+        mDestroyed = true;
+        cancelPostTouchImeCheck();
         stopMirror();
+        mTextureView.setOnTouchListener(null);
+        mTextureView.setSurfaceTextureListener(null);
+        mFrameMirror.setOnClickListener(null);
         if (mMirrorSurface != null) {
             mMirrorSurface.release();
             mMirrorSurface = null;
