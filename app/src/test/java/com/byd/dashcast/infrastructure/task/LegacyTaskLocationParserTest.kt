@@ -31,6 +31,8 @@ class LegacyTaskLocationParserTest {
               * Task{bbb #8 type=standard A=com.example.app}
         """.trimIndent()
 
+        val all = LegacyTaskLocationParser.parseAll(dump, "com.example.app")
+        assertEquals(listOf(1, 0), all.map { it.displayId })
         assertEquals(0, LegacyTaskLocationParser.parse(dump, "com.example.app").displayId)
     }
 

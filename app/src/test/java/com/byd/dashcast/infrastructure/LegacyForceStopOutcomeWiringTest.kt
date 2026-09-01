@@ -13,10 +13,12 @@ class LegacyForceStopOutcomeWiringTest {
                 "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").isFile }
         val source = File(root,
             "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").readText()
-        val legacy = source.substringAfter("TaskLocation legacyLocation")
+        val legacy = source.substringAfter("TaskLocation> legacyLocations")
             .substringBefore("// LOT 4")
 
-        assertTrue(legacy.contains("LegacyTaskLocationParser.parse"))
+        assertTrue(legacy.contains("LegacyTaskLocationParser.parseAll"))
+        assertTrue(legacy.contains("EvictionTaskSetPolicy.decide"))
+        assertTrue(legacy.contains("removeLegacyTasks"))
         for (terminal in listOf(
             "callback.onSuccess(\"force-stop OK (ADB, verified)\")",
             "callback.onError(verification.toString().trim())",
