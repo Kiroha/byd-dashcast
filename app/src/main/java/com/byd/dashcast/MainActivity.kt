@@ -1002,7 +1002,10 @@ class MainActivity : AppCompatActivity(),
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             if (split.isCurrentSecondDashboardReplacement(replacementGeneration) &&
                                 split.getSecondDashboardPkg() == previousSecond) {
-                                launchInComplementarySlot()
+                                AppLogger.w(TAG, "split replacement kept $previousSecond: $error")
+                                Toast.makeText(applicationContext,
+                                    getString(R.string.toast_kill_failed, error),
+                                    Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -1215,7 +1218,13 @@ class MainActivity : AppCompatActivity(),
                         if (isFinishing || isDestroyed) return@runOnUiThread
                         val generation = splitReplacementGeneration ?: return@runOnUiThread
                         if (split!!.isCurrentSecondDashboardReplacement(generation) &&
-                            split.getSecondDashboardPkg() == splitOccupantToStop) launch()
+                            split.getSecondDashboardPkg() == splitOccupantToStop) {
+                            AppLogger.w(TAG, "split shortcut replacement kept " +
+                                "$splitOccupantToStop: $error")
+                            Toast.makeText(applicationContext,
+                                getString(R.string.toast_kill_failed, error),
+                                Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             })

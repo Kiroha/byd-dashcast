@@ -123,6 +123,12 @@ class SplitReplacementStateTest {
         assertTrue(shortcutPath.contains("isCurrentSecondDashboardReplacement(generation)"))
         assertTrue(splitPath.contains("mSessionTracker.remove(previousSecond)"))
         assertTrue(shortcutPath.contains("mSessionTracker.remove(splitOccupantToStop)"))
+        val appError = splitPath.substringAfter("override fun onError(error: String?)").take(700)
+        val shortcutError = shortcutPath.substringAfter("override fun onError(error: String?)").take(700)
+        assertTrue(appError.contains("toast_kill_failed"))
+        assertTrue(shortcutError.contains("toast_kill_failed"))
+        assertFalse(appError.contains("launchInComplementarySlot()"))
+        assertFalse(shortcutError.contains(" launch()"))
     }
 
     private class RecordingHost : SplitController.Host {
