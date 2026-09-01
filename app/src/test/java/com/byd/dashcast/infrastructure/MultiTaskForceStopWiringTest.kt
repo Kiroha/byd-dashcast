@@ -1,5 +1,6 @@
 package com.byd.dashcast.infrastructure
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -21,5 +22,9 @@ class MultiTaskForceStopWiringTest {
         assertTrue(forceStop.contains("removeTypedTasks(decision.getTaskIdsToRemove())"))
         assertTrue(forceStop.contains("removeLegacyTasks(dadb, context, decision.getTaskIdsToRemove())"))
         assertTrue(source.contains("LegacyTaskLocationParser.parseAll"))
+        val legacyBeforeVerification = forceStop.substringAfter("TaskLocation> legacyLocations")
+            .substringBefore("verifyForceStopViaAdb")
+        assertFalse(legacyBeforeVerification.contains("grep -F"))
+        assertFalse(legacyBeforeVerification.contains("TaskRemover"))
     }
 }

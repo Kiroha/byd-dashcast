@@ -1512,31 +1512,10 @@ public class AdbLocalClient {
                     AppLogger.w(TAG, "legacy task-location probe failed for " + packageName
                         + ": " + locationError.getMessage());
                     }
-                    // Same inversion as the typed path above, for the same reason
-                    // (INC-20260815-181820): kill first, and only clear the task once the process
-                    // is gone. A task destroyed after a FAILED kill is the app losing its way back
-                    // to display 0. On Android 10, dumpsys activity recents prints lines like:
-                    //   * Recent #0: TaskRecord{3a9c7f5 #42 A=com.example.app U=0 StackId=1 sz=1}
-                    // We extract the task ID (#42) using sed BRE — NOT grep -o (its \+ is unsupported
-                    // on Android's busybox grep). We also must NOT match the recents index (#0).
-                    String apkPath = context.getPackageCodePath();
-                    String cleanRecentsCmd =
-                            // Kill FIRST. Then, only if no process survives, remove its tasks:
-                            // `pidof` empty is the same liveness test verifyForceStopViaAdb uses.
-                            "am force-stop " + packageName + " 2>&1; " +
-                            "if [ -z \"$(pidof " + packageName + " 2>/dev/null)\" ]; then " +
-                            "  TASKS=$(dumpsys activity recents 2>/dev/null | grep 'TaskRecord' | grep -F '" + packageName + "' " +
-                            "  | sed -n 's/.*TaskRecord{[^ ]* #\\([0-9]*\\).*/\\1/p' | sort -u); " +
-                            "  echo \"[DashCast-recents] pkg=" + packageName + " tasks=$TASKS\"; " +
-                            "  for t in $TASKS; do " +
-                            "    am task remove $t 2>/dev/null; " +
-                            "    export CLASSPATH=" + apkPath + "; " +
-                            "    /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "    /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "  done; " +
-                            "else echo \"[DashCast-recents] pkg=" + packageName + " STILL ALIVE — keeping its tasks as its way back\"; fi; ";
-
-                    AdbShellResponse r = dadb.shell(cleanRecentsCmd + "echo STOPPED");
+                        // Kill first. Task deletion happens only after verification below, from the
+                        // exact package/task pairs already returned by LegacyTaskLocationParser.
+                        AdbShellResponse r = dadb.shell(
+                            "am force-stop " + packageName + " 2>&1; echo STOPPED");
                     String out = r.getAllOutput().trim();
                     noteTransportSuccess();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
