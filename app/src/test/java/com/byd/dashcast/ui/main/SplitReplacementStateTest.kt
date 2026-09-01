@@ -159,5 +159,6 @@ class SplitReplacementStateTest {
         override fun setCurrentDashboardApp(app: String?) = Unit
         override fun onSplitStateChanged() { changes++ }
         override fun runOnUiThread(runnable: Runnable) = runnable.run()
+        override fun isActivityAlive(): Boolean = true
     }
 }

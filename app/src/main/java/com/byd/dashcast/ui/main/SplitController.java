@@ -38,6 +38,7 @@ public final class SplitController {
         /** Called after split state changes so the UI (label + split button) can be refreshed. */
         void onSplitStateChanged();
         void runOnUiThread(Runnable r);
+        boolean isActivityAlive();
     }
 
     private final Host mHost;
@@ -150,6 +151,7 @@ public final class SplitController {
                     new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String report) {
                     mHost.runOnUiThread(() -> {
+                        if (!mHost.isActivityAlive()) return;
                         if (!commitFullScreenIfMatches(secondPkg, generation)) return;
                         relaunchPrimaryInSlot(svc, splitPkg, splitApp, l, t, r, b,
                                 slot, generation);
@@ -158,6 +160,7 @@ public final class SplitController {
 
                 @Override public void onError(String error) {
                     mHost.runOnUiThread(() -> {
+                        if (!mHost.isActivityAlive()) return;
                         if (!isCurrentSecondDashboardReplacement(generation)) return;
                         AppLogger.e(TAG, "split → full screen: secondary stop failed: " + error);
                         Toast.makeText(mHost.getContext(),
@@ -174,15 +177,18 @@ public final class SplitController {
 
     private void relaunchPrimaryInSlot(ClusterService svc, String splitPkg, String splitApp,
                                        int l, int t, int r, int b, int slot, int generation) {
+        if (!mHost.isActivityAlive()) return;
         AdbLocalClient.forceStopApp(mHost.getContext(), splitPkg, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String ignored) {
-                if (isCurrentSecondDashboardReplacement(generation)) {
+            if (mHost.isActivityAlive()
+                && isCurrentSecondDashboardReplacement(generation)) {
                     launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation);
                 }
             }
             @Override public void onError(String error) {
                 // force-stop failed: attempt relaunch anyway
-                if (isCurrentSecondDashboardReplacement(generation)) {
+                if (mHost.isActivityAlive()
+                        && isCurrentSecondDashboardReplacement(generation)) {
                     launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation);
                 }
             }
@@ -193,6 +199,7 @@ public final class SplitController {
                                int l, int t, int r, int b, int slot, int generation) {
         svc.launchOnDashboardWithBounds(splitPkg, l, t, r, b,
                 launched -> mHost.runOnUiThread(() -> {
+                    if (!mHost.isActivityAlive()) return;
                     if (!isCurrentSecondDashboardReplacement(generation)) return;
                     if (launched) {
                         mHost.setCurrentDashboardPkg(splitPkg);
@@ -227,7 +234,9 @@ public final class SplitController {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             mHost.onSplitStateChanged();
         } else {
-            mHost.runOnUiThread(mHost::onSplitStateChanged);
+            mHost.runOnUiThread(() -> {
+                if (mHost.isActivityAlive()) mHost.onSplitStateChanged();
+            });
         }
     }
 
