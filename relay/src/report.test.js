@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { handleReport } = require('./functions/report');
+const { decodeCaption, handleReport } = require('./functions/report');
 
 process.env.TELEGRAM_BOT_TOKEN = '123456789:abcdefghijklmnopqrstuvwxyzABCDE';
 process.env.TELEGRAM_CHAT_ID = '-100123456789';
@@ -37,6 +37,27 @@ test('handler rejects a report with the wrong media type before forwarding', asy
 
     assert.equal(result.status, 400);
     assert.equal(result.jsonBody.error, 'application/octet-stream required');
+    assert.equal(forwarded, false);
+});
+
+test('caption decoder accepts only canonical base64 carrying valid UTF-8', async () => {
+    assert.equal(decodeCaption(Buffer.from('route é').toString('base64')), 'route é');
+    assert.throws(() => decodeCaption('!!!='), /invalid base64/);
+    assert.throws(() => decodeCaption('YR=='), /non-canonical base64/);
+    assert.throws(() => decodeCaption('/w=='), /encoded data was not valid/);
+
+    const requestHeaders = headers(64);
+    requestHeaders.set('x-dashcast-caption', '!!!=');
+    let forwarded = false;
+    const result = await handleReport({
+        headers: requestHeaders,
+        body: new ReadableStream(),
+    }, context(), {
+        fetch: async () => { forwarded = true; },
+    });
+
+    assert.equal(result.status, 400);
+    assert.equal(result.jsonBody.error, 'bad caption encoding');
     assert.equal(forwarded, false);
 });
 
