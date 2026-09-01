@@ -209,6 +209,47 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 ["DashCast.apk :: archive :: central directory exceeds scan limit"],
             )
 
+    def test_zip64_offset_sentinel_forces_bounded_zip64_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            count = scanner.MAX_ENTRY_COUNT + 1
+            zip64 = struct.pack(
+                "<4sQ2H2L4Q",
+                scanner.ZIP64_EOCD_SIGNATURE,
+                44,
+                45,
+                45,
+                0,
+                0,
+                count,
+                count,
+                0,
+                0,
+            )
+            locator = struct.pack("<4sLQL", scanner.ZIP64_LOCATOR_SIGNATURE, 0, 0, 1)
+            eocd = struct.pack(
+                "<4s4H2LH",
+                scanner.EOCD_SIGNATURE,
+                0,
+                0,
+                1,
+                1,
+                0,
+                0xFFFFFFFF,
+                0,
+            )
+            apk.write_bytes(zip64 + locator + eocd)
+
+            with patch.object(scanner.zipfile, "ZipFile",
+                              side_effect=AssertionError("must not parse")):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(
+                findings,
+                ["DashCast.apk :: archive :: too many entries"],
+            )
+
     def test_single_entry_size_and_compression_ratio_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

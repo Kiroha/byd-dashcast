@@ -77,11 +77,12 @@ def archive_directory_finding(apk: Path) -> str | None:
             if eocd is None:
                 return "unreadable APK"
 
-            _, disk, directory_disk, disk_entries, entries, directory_size, _, _ = eocd
+            _, disk, directory_disk, disk_entries, entries, directory_size, directory_offset, _ = eocd
             if disk != 0 or directory_disk != 0 or disk_entries != entries:
                 return "archive :: multi-disk ZIP is unsupported"
 
-            if entries == 0xFFFF or directory_size == 0xFFFFFFFF:
+            if (entries == 0xFFFF or directory_size == 0xFFFFFFFF
+                    or directory_offset == 0xFFFFFFFF):
                 eocd_offset = size - tail_size + position
                 if eocd_offset < 20:
                     return "archive :: malformed ZIP64 directory"
@@ -105,6 +106,7 @@ def archive_directory_finding(apk: Path) -> str | None:
                 disk, directory_disk = values[4], values[5]
                 disk_entries, entries = values[6], values[7]
                 directory_size = values[8]
+                directory_offset = values[9]
                 if disk != 0 or directory_disk != 0 or disk_entries != entries:
                     return "archive :: multi-disk ZIP is unsupported"
 
@@ -112,6 +114,11 @@ def archive_directory_finding(apk: Path) -> str | None:
                 return "archive :: too many entries"
             if directory_size > MAX_CENTRAL_DIRECTORY_BYTES:
                 return "archive :: central directory exceeds scan limit"
+            eocd_offset = size - tail_size + position
+            if (directory_offset > size
+                    or directory_size > size - directory_offset
+                    or directory_offset + directory_size > eocd_offset):
+                return "archive :: invalid central directory range"
     except (OSError, OverflowError, struct.error):
         return "unreadable APK"
     return None
