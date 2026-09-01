@@ -63,6 +63,8 @@ class BugWizardActivity : Activity() {
     private var mSending = false
     private var mCurrentStep = 0
     private var mPendingGate = BugWizardGate.NONE
+    private var mSubmissionToken = ""
+    private var mSubmissionMonitor: Runnable? = null
 
     /**
      * Re-opens an exit if the send has not reached a terminal state in time.
@@ -147,6 +149,7 @@ class BugWizardActivity : Activity() {
             resumePendingGate()
         }
         updateTgBanner()
+        restoreSubmissionOwnership()
     }
 
     private fun restoreState(state: BugWizardSavedState) {
@@ -166,6 +169,7 @@ class BugWizardActivity : Activity() {
         mDetectedPkg = state.detectedPackage
         mDetectedLabel = state.detectedLabel
         mDetectionDone = state.detectionDone
+        mSubmissionToken = state.submissionToken
         if (mCurrentStep > 0 && mCategory !in ISSUE_ARRAYS.indices) mCurrentStep = 0
     }
 
@@ -220,6 +224,7 @@ class BugWizardActivity : Activity() {
                 mDetectedPkg,
                 mDetectedLabel,
                 mDetectionDone,
+                mSubmissionToken,
             ),
         )
         super.onSaveInstanceState(outState)
@@ -624,11 +629,24 @@ class BugWizardActivity : Activity() {
      */
     private fun submitReport() {
         if (mSending || mSelectedIssue == null) return
+        BugWizardSubmissionGate.activeToken()?.let { token ->
+            mSubmissionToken = token
+            showSubmissionContinuingUi()
+            return
+        }
         ReportConsent.askThen(this) { doSubmitReport() }
     }
 
     private fun doSubmitReport() {
         if (mSending || mSelectedIssue == null) return
+        val token = BugWizardSubmissionGate.claim()
+        if (token == null) {
+            mSubmissionToken = BugWizardSubmissionGate.activeToken().orEmpty()
+            showSubmissionContinuingUi()
+            return
+        }
+        mSubmissionToken = token
+        BugWizardSubmissionGate.setBackgroundWork(token, true)
         mSending = true
         mBtnSend?.isEnabled = false
         mBtnBack.isEnabled = false
@@ -676,6 +694,7 @@ class BugWizardActivity : Activity() {
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {
+                BugWizardSubmissionGate.setBackgroundWork(token, false)
                 // AUD-005 — lifecycle guard. This callback is posted to the main thread by
                 // BugReportCapture AFTER a capture that takes tens of seconds (two logcat passes
                 // plus ~20 dumpsys). If the user left the wizard meanwhile, the Activity is gone
@@ -688,14 +707,19 @@ class BugWizardActivity : Activity() {
                     // application context so no finished Activity is touched. The .txt is already
                     // on disk at this point, so nothing is lost either way.
                     if (TelegramBugReporter.isConfigured()) {
+                        BugWizardSubmissionGate.setBackgroundWork(token, true)
                         TelegramBugReporter.send(applicationContext, file, caption,
                             object : TelegramBugReporter.Callback {
-                                override fun onSent() {}
+                                override fun onSent() {
+                                    BugWizardSubmissionGate.release(token)
+                                }
                                 override fun onFailed(message: String) {
+                                    BugWizardSubmissionGate.release(token)
                                     AppLogger.w(TAG, "headless report upload failed: $message")
                                 }
                             })
                     } else {
+                        BugWizardSubmissionGate.release(token)
                         AppLogger.w(TAG, "wizard gone before consent — report kept on disk: "
                             + file.absolutePath)
                     }
@@ -722,6 +746,8 @@ class BugWizardActivity : Activity() {
             }
 
             override fun onError(message: String, partial: File?) {
+                BugWizardSubmissionGate.setBackgroundWork(token, false)
+                BugWizardSubmissionGate.release(token)
                 if (!isUiAlive()) {
                     AppLogger.w(TAG, "capture failed after wizard closed: $message"
                         + (partial?.let { "; partial kept at ${it.absolutePath}" } ?: ""))
@@ -741,9 +767,11 @@ class BugWizardActivity : Activity() {
     /** Uploads [file] (a report .txt or a report+shots .zip) via the bot, else the share sheet. */
     private fun deliverReport(file: File, caption: String) {
         if (TelegramBugReporter.isConfigured()) {
+            BugWizardSubmissionGate.setBackgroundWork(mSubmissionToken, true)
             mTvStatus.setText(R.string.bug_status_sending)
             TelegramBugReporter.send(this, file, caption, object : TelegramBugReporter.Callback {
                 override fun onSent() {
+                    BugWizardSubmissionGate.release(mSubmissionToken)
                     if (!isUiAlive()) {
                         AppLogger.i(TAG, "report sent after wizard closed")
                         return
@@ -753,6 +781,7 @@ class BugWizardActivity : Activity() {
                     finish()
                 }
                 override fun onFailed(message: String) {
+                    BugWizardSubmissionGate.release(mSubmissionToken)
                     AppLogger.w(TAG, "bot upload failed: $message")
                     if (!isUiAlive()) {
                         AppLogger.w(TAG, "wizard already closed — report kept at ${file.absolutePath}")
@@ -773,6 +802,8 @@ class BugWizardActivity : Activity() {
      * alone. Consent to include the shots was already given by the caller.
      */
     private fun bundleShotsThenDeliver(reportFile: File, caption: String) {
+        val token = mSubmissionToken
+        BugWizardSubmissionGate.setBackgroundWork(token, true)
         mTvStatus.setText(R.string.bug_status_sending)
         Thread({
             var toSend = reportFile
@@ -828,11 +859,16 @@ class BugWizardActivity : Activity() {
                     // headless, so the report isn't lost and no finished Activity is touched.
                     TelegramBugReporter.send(applicationContext, finalFile, caption,
                         object : TelegramBugReporter.Callback {
-                            override fun onSent() {}
+                            override fun onSent() {
+                                BugWizardSubmissionGate.release(token)
+                            }
                             override fun onFailed(message: String) {
+                                BugWizardSubmissionGate.release(token)
                                 AppLogger.w(TAG, "headless bundle upload failed: $message")
                             }
                         })
+                } else {
+                    BugWizardSubmissionGate.release(token)
                 }
             }
         }, "bug-bundle").start()
@@ -864,6 +900,11 @@ class BugWizardActivity : Activity() {
     override fun onDestroy() {
         // The posted Runnable holds this Activity; a send that outlives the screen must not.
         disarmSendWatchdog()
+        disarmSubmissionMonitor()
+        if (mSubmissionToken.isNotEmpty() &&
+            !BugWizardSubmissionGate.hasBackgroundWork(mSubmissionToken)) {
+            BugWizardSubmissionGate.release(mSubmissionToken)
+        }
         super.onDestroy()
     }
 
@@ -892,6 +933,44 @@ class BugWizardActivity : Activity() {
     private fun dp(dp: Int): Int = Math.round(dp * resources.displayMetrics.density)
 
     private fun isUiAlive(): Boolean = !isFinishing && !isDestroyed
+
+    private fun restoreSubmissionOwnership() {
+        if (BugWizardSubmissionGate.isActive(mSubmissionToken)) {
+            showSubmissionContinuingUi()
+        } else {
+            mSubmissionToken = ""
+        }
+    }
+
+    private fun showSubmissionContinuingUi() {
+        val token = mSubmissionToken
+        if (token.isEmpty()) return
+        mSending = true
+        mBtnSend?.isEnabled = false
+        mBtnBack.isEnabled = false
+        mBtnCancel?.isEnabled = true
+        mTvStatus.visibility = View.VISIBLE
+        mTvStatus.setText(R.string.bug_status_sending)
+        disarmSubmissionMonitor()
+        val monitor = object : Runnable {
+            override fun run() {
+                if (!isUiAlive()) return
+                if (!BugWizardSubmissionGate.isActive(token)) {
+                    mSending = false
+                    finish()
+                    return
+                }
+                mTvStatus.postDelayed(this, SUBMISSION_MONITOR_MS)
+            }
+        }
+        mSubmissionMonitor = monitor
+        mTvStatus.postDelayed(monitor, SUBMISSION_MONITOR_MS)
+    }
+
+    private fun disarmSubmissionMonitor() {
+        mSubmissionMonitor?.let { mTvStatus.removeCallbacks(it) }
+        mSubmissionMonitor = null
+    }
 
     @Suppress("DEPRECATION")
     private fun labelFor(pkg: String): String {
@@ -1007,6 +1086,7 @@ class BugWizardActivity : Activity() {
 
     private fun shareFallback(file: File) {
         disarmSendWatchdog()
+        BugWizardSubmissionGate.release(mSubmissionToken)
         try {
             mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
             Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),
@@ -1027,6 +1107,7 @@ class BugWizardActivity : Activity() {
         private const val TAG = "BugWizardActivity"
         private const val PREFS_BUG = "dashcast_bug_report"
         private const val PREF_TG_HANDLE = "tg_handle"
+        private const val SUBMISSION_MONITOR_MS = 500L
 
         // Category emojis — order must match the bug_categories string-array.
         private val CAT_EMOJIS = arrayOf("🧭", "📺", "📱", "🔊", "🔗", "❄️", "🖥️", "❓")

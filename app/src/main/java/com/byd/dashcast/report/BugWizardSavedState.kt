@@ -19,6 +19,7 @@ internal data class BugWizardSavedState(
     val detectedPackage: String,
     val detectedLabel: String,
     val detectionDone: Boolean,
+    val submissionToken: String,
 )
 
 internal object BugWizardGate {
@@ -55,6 +56,7 @@ internal object BugWizardStateStore {
         outState.putString(PREFIX + "detectedPackage", state.detectedPackage)
         outState.putString(PREFIX + "detectedLabel", state.detectedLabel)
         outState.putBoolean(PREFIX + "detectionDone", state.detectionDone)
+        outState.putString(PREFIX + "submissionToken", state.submissionToken)
     }
 
     fun read(savedState: Bundle?): BugWizardSavedState? {
@@ -76,6 +78,7 @@ internal object BugWizardStateStore {
             detectedPackage = savedState.getString(PREFIX + "detectedPackage").orEmpty(),
             detectedLabel = savedState.getString(PREFIX + "detectedLabel").orEmpty(),
             detectionDone = savedState.getBoolean(PREFIX + "detectionDone", false),
+            submissionToken = savedState.getString(PREFIX + "submissionToken").orEmpty(),
         )
     }
 }

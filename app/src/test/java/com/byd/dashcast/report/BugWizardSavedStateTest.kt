@@ -1,13 +1,16 @@
 package com.byd.dashcast.report
 
 import android.os.Bundle
+import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.ViewFlipper
 import com.byd.dashcast.R
 import com.google.android.material.button.MaterialButton
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,6 +23,11 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class BugWizardSavedStateTest {
+
+    @After
+    fun resetSubmissionGate() {
+        BugWizardSubmissionGate.resetForTest()
+    }
 
     @Test
     fun `all wizard choices and pending gate survive a Bundle round trip`() {
@@ -40,6 +48,7 @@ class BugWizardSavedStateTest {
             detectedPackage = "com.google.android.apps.maps",
             detectedLabel = "Maps",
             detectionDone = true,
+            submissionToken = "submission-1",
         )
         val bundle = Bundle()
 
@@ -70,6 +79,7 @@ class BugWizardSavedStateTest {
                 detectedPackage = "com.example.maps",
                 detectedLabel = "Maps",
                 detectionDone = true,
+                submissionToken = "",
             ),
         )
 
@@ -112,6 +122,7 @@ class BugWizardSavedStateTest {
                 detectedPackage = "",
                 detectedLabel = "",
                 detectionDone = true,
+                submissionToken = "",
             ),
         )
 
@@ -126,6 +137,65 @@ class BugWizardSavedStateTest {
         )
 
         controller.destroy()
+    }
+
+    @Test
+    fun `recreated activity cannot resubmit while prior capture owns the token`() {
+        val token = BugWizardSubmissionGate.claim()!!
+        BugWizardSubmissionGate.setBackgroundWork(token, true)
+        val bundle = issuePageState(token)
+
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java).create(bundle)
+        val activity = controller.get()
+        val issues = activity.findViewById<LinearLayout>(R.id.ll_wizard_issues)
+        val send = (0 until issues.childCount).map(issues::getChildAt)
+            .filterIsInstance<MaterialButton>().last()
+
+        assertTrue(!send.isEnabled)
+        assertTrue(activity.findViewById<View>(R.id.btn_wizard_cancel).isEnabled)
+        assertNull(BugWizardSubmissionGate.claim())
+
+        controller.destroy()
+    }
+
+    @Test
+    fun `saved token does not lock wizard after process ownership is gone`() {
+        val bundle = issuePageState("token-from-dead-process")
+
+        val controller = Robolectric.buildActivity(BugWizardActivity::class.java).create(bundle)
+        val activity = controller.get()
+        val issues = activity.findViewById<LinearLayout>(R.id.ll_wizard_issues)
+        val send = (0 until issues.childCount).map(issues::getChildAt)
+            .filterIsInstance<MaterialButton>().last()
+
+        assertTrue(send.isEnabled)
+
+        controller.destroy()
+    }
+
+    private fun issuePageState(token: String): Bundle = Bundle().also { bundle ->
+        BugWizardStateStore.write(
+            bundle,
+            BugWizardSavedState(
+                category = 1,
+                hudArrowsAnswer = "",
+                hudNavApp = "",
+                activeNav = "",
+                navSeen = "",
+                appPackage = "com.example.maps",
+                appLabel = "Maps",
+                selectedIssueIndex = 2,
+                details = "Happens after reconnect",
+                telegramHandle = "@driver",
+                handleDraft = "",
+                currentStep = 2,
+                pendingGate = BugWizardGate.NONE,
+                detectedPackage = "com.example.maps",
+                detectedLabel = "Maps",
+                detectionDone = true,
+                submissionToken = token,
+            ),
+        )
     }
 
     @Test
