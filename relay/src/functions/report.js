@@ -1,5 +1,6 @@
 const { app } = require('@azure/functions');
 const { Readable } = require('node:stream');
+const { TextDecoder } = require('node:util');
 const {
     createMultipartPlan,
     drainStream,
@@ -91,6 +92,18 @@ function safe(text) {
         .replace(/bot\d{6,12}:[A-Za-z0-9_-]{20,}/g, 'bot<redacted>');
 }
 
+const CANONICAL_BASE64 =
+    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+function decodeCaption(raw) {
+    if (!CANONICAL_BASE64.test(raw) || raw.length % 4 !== 0) {
+        throw new Error('invalid base64');
+    }
+    const bytes = Buffer.from(raw, 'base64');
+    if (bytes.toString('base64') !== raw) throw new Error('non-canonical base64');
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+}
+
 function createAbortDeadline(parentSignal, timeoutMs) {
     const controller = new AbortController();
     let timedOut = false;
@@ -131,7 +144,7 @@ async function handleReport(request, context, dependencies = {}) {
         let caption = '';
         try {
             const raw = request.headers.get('x-dashcast-caption');
-            if (raw) caption = Buffer.from(raw, 'base64').toString('utf8');
+            if (raw) caption = decodeCaption(raw);
         } catch {
             return bad(400, 'bad caption encoding');
         }
@@ -225,4 +238,4 @@ app.http('report', {
     handler: handleReport,
 });
 
-module.exports = { createAbortDeadline, handleReport };
+module.exports = { createAbortDeadline, decodeCaption, handleReport };
