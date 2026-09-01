@@ -53,6 +53,10 @@ receives no telemetry at all because nothing ever ran. There is no error message
 only way to find it is to create a second app on Node 22 and watch it come up immediately. Node 20
 is refused outright as end-of-life.
 
+The streaming relay also requires Azure Functions runtime 4.28 or later and
+`@azure/functions` 4.3 or later. The checked-in dependency is newer, and
+`app.setup({ enableHttpStream: true })` enables the runtime path before the route is registered.
+
 ```bash
 RG=rg-byd-app                      # the resource group you already have
 APP=<function app>                 # must be globally unique
@@ -138,6 +142,7 @@ Validation is checked before configuration, so these can be verified without a t
 ```
 POST <url>
 Content-Type: application/octet-stream
+Content-Length:          exact report size (required)
 X-DashCast-Topic:    bug | hud
 X-DashCast-Filename: report file name, [A-Za-z0-9][A-Za-z0-9._-]{0,119}
 X-DashCast-Caption:  base64(utf8(caption))    — base64 because a caption has newlines

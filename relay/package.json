@@ -4,6 +4,9 @@
   "description": "Forwards DashCast diagnostic reports to Telegram, holding the bot token server-side",
   "main": "src/functions/*.js",
   "private": true,
+  "scripts": {
+    "test": "node --test src/*.test.js"
+  },
   "dependencies": {
     "@azure/functions": "^4.5.0"
   }
