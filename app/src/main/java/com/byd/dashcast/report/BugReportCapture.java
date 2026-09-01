@@ -8,6 +8,7 @@ import android.os.SystemClock;
 import com.byd.dashcast.BuildConfig;
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.proxy.ProxyClient;
+import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.util.AppLogger;
 
 import java.io.File;
@@ -68,6 +69,9 @@ public final class BugReportCapture {
      */
     private static final String TRUNC_MARKER = "@@DASHCAST_BODY_TRUNCATED@@";
 
+    /** Well beyond the 120 s capture timeout, so an active concurrent report is never swept. */
+    private static final int STAGED_REPORT_MAX_AGE_MIN = 15;
+
 
 
     public interface Callback {
@@ -78,6 +82,34 @@ public final class BugReportCapture {
     }
 
     private BugReportCapture() {}
+
+    static String buildStagedCleanupCommand() {
+        return "find /data/local/tmp -name '" + PREFIX + "*.txt' -mmin +"
+                + STAGED_REPORT_MAX_AGE_MIN + " -delete 2>/dev/null";
+    }
+
+    static String buildStagedRemovalCommand(String path) {
+        String root = "/data/local/tmp/" + PREFIX;
+        if (path == null || !path.startsWith(root)
+                || !path.substring(root.length()).matches("[A-Za-z0-9._-]+")) {
+            throw new IllegalArgumentException("not a DashCast staged report path");
+        }
+        return "rm -f '" + path + "' 2>/dev/null";
+    }
+
+    /** Best-effort process-start cleanup for raw shell-readable reports left by a prior crash. */
+    public static void pruneStagedReports(Context context) {
+        if (context == null || Build.VERSION.SDK_INT < 33) return;
+        ShellGateway.execShell(context.getApplicationContext(), buildStagedCleanupCommand());
+    }
+
+    private static void removeStagedReport(Context context, String path) {
+        try {
+            ShellGateway.execShell(context.getApplicationContext(), buildStagedRemovalCommand(path));
+        } catch (Throwable error) {
+            AppLogger.w(TAG, "staged report cleanup failed: " + error.getMessage());
+        }
+    }
 
     /** Device line for the report header and the Telegram caption. */
     public static String deviceLine() {
@@ -388,13 +420,10 @@ public final class BugReportCapture {
         String cmd = buildShellDump(p);
 
         if (stageInTmp) {
-            // Sweep leftovers BEFORE this run writes anything. The `rm -f` below only runs when
-            // the dump reaches the end of the command, so a cancelled or crashed capture strands
-            // a multi-megabyte UNREDACTED dump in a shell-readable directory, and nothing else in
-            // the app ever removes one. Skip the path this run is about to write: captures are
-            // dispatched on a pool, so a bare wildcard could race a concurrent one.
-            cmd = "for f in /data/local/tmp/" + PREFIX + "*.txt ; do"
-                + " [ \"$f\" = '" + p + "' ] || rm -f \"$f\" ; done 2>/dev/null ; " + cmd;
+            // Sweep only files far older than a healthy capture. The previous bare wildcard
+            // deleted every other in-flight report when captures overlapped, and still left the
+            // final failed capture behind forever if no later report was filed.
+            cmd = buildStagedCleanupCommand() + " ; " + cmd;
 
             // Emit the staged body to stdout (the only way back to the app, which can't read
             // /data/local/tmp) and delete the temp file. Every dump command above redirects into
@@ -433,6 +462,7 @@ public final class BugReportCapture {
                 // The shell dump failed (ADB down) — still ship the in-memory
                 // journal + metadata so the report is never empty.
                 AppLogger.w(TAG, "shell dump failed, journal-only report: " + err);
+                if (stageInTmp) removeStagedReport(app, p);
                 finish(app, outFile, metaHeader, cb, err, null);
             }
         };
