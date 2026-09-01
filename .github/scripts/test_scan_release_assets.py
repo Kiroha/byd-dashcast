@@ -3,6 +3,7 @@
 import importlib.util
 import os
 import re
+import struct
 import sys
 import tempfile
 import unittest
@@ -159,6 +160,54 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                     scanner.scan_apks(root),
                     ["DashCast.apk :: archive :: expanded size exceeds scan limit"],
                 )
+
+    def test_entry_count_is_rejected_before_zipfile_materializes_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            apk.write_bytes(struct.pack(
+                "<4s4H2LH",
+                scanner.EOCD_SIGNATURE,
+                0,
+                0,
+                scanner.MAX_ENTRY_COUNT + 1,
+                scanner.MAX_ENTRY_COUNT + 1,
+                0,
+                0,
+                0,
+            ))
+            with patch.object(scanner.zipfile, "ZipFile",
+                              side_effect=AssertionError("must not parse")):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(
+                findings,
+                ["DashCast.apk :: archive :: too many entries"],
+            )
+
+    def test_central_directory_size_is_rejected_before_zipfile(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            apk.write_bytes(struct.pack(
+                "<4s4H2LH",
+                scanner.EOCD_SIGNATURE,
+                0,
+                0,
+                1,
+                1,
+                scanner.MAX_CENTRAL_DIRECTORY_BYTES + 1,
+                0,
+                0,
+            ))
+            with patch.object(scanner.zipfile, "ZipFile",
+                              side_effect=AssertionError("must not parse")):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(
+                findings,
+                ["DashCast.apk :: archive :: central directory exceeds scan limit"],
+            )
 
     def test_single_entry_size_and_compression_ratio_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
