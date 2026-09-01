@@ -140,7 +140,9 @@ object ReportStore {
     @JvmStatic
     fun prune(ctx: Context): Long {
         val d = dir(ctx)
-        val entries = d.listFiles()?.filter { it != null && it.isFile }?.toMutableList()
+        val entries = d.listFiles()?.filter {
+            it != null && it.isFile && !BugWizardPendingDelivery.protects(ctx, it)
+        }?.toMutableList()
             ?: return 0L
         var freed = 0L
         val now = System.currentTimeMillis()
