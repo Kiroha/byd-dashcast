@@ -25,5 +25,8 @@ class ClusterEvictionMoveWatchdogWiringTest {
         assertTrue(move.contains("continueAfterMove(ok, \"callback\")"))
         assertTrue(source.contains("sEvictionGate.tryBeginDestructive(candidate.token)"))
         assertTrue(source.contains("postDeferredLaunch(completion?.deferredLaunch)"))
+        val blind = source.substringAfter("if (svc == null)")
+            .substringBefore("val pkgs =")
+        assertTrue(blind.contains("forceStopAppForBlindEviction"))
     }
 }
