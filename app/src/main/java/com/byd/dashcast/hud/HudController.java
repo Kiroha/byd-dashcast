@@ -147,6 +147,8 @@ public final class HudController {
             Log.w(TAG, "naviStatus heartbeat failed: " + e.getMessage());
         }
 
+        boolean canFrameDelivered = true;
+
         // 1. Simple guidance (icon + distance).
         if (data.iconId != lastIconId || data.distanceMeters != lastDistance) {
             try {
@@ -154,6 +156,7 @@ public final class HudController {
                 lastIconId    = data.iconId;
                 lastDistance  = data.distanceMeters;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "sendSimpleGuidance failed: " + e.getMessage());
             }
         }
@@ -165,6 +168,7 @@ public final class HudController {
                 lastSecondaryIconId    = -1;
                 lastSecondaryDistance  = -1;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "clearSecondary failed: " + e.getMessage());
             }
         }
@@ -175,6 +179,7 @@ public final class HudController {
                 CanBusController.sendNextStreetName(data.roadName);
                 lastRoadName = data.roadName;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "sendNextStreetName failed: " + e.getMessage());
             }
         }
@@ -192,6 +197,7 @@ public final class HudController {
                     lastRestMinute  = minutes;
                     lastRestMileage = mileage;
                 } catch (ProxyClient.ProxyException e) {
+                    canFrameDelivered = false;
                     Log.w(TAG, "sendRestRoute failed: " + e.getMessage());
                 }
             }
@@ -207,6 +213,7 @@ public final class HudController {
                 lastEtaHour   = data.etaHour;
                 lastEtaMinute = data.etaMinute;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "sendExpectedArrival failed: " + e.getMessage());
             }
         }
@@ -219,11 +226,14 @@ public final class HudController {
 
         // 5. AMap broadcast — unconditional, the cluster compositor needs it every step.
         sendAmapBroadcast(ctx, data);
-        boolean canGuidanceDelivered = data.iconId == lastIconId
-            && data.distanceMeters == lastDistance;
-        boolean delivered = canGuidanceDelivered || clusterGuidanceDelivered;
+        boolean delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered);
         if (delivered) lastUpdateMs = SystemClock.elapsedRealtime();
         return delivered;
+    }
+
+    static boolean frameDelivered(boolean allRequiredCanWritesSucceeded,
+                                  boolean clusterFrameDelivered) {
+        return allRequiredCanWritesSucceeded || clusterFrameDelivered;
     }
 
     /**

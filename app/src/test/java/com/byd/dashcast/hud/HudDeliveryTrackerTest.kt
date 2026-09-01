@@ -57,4 +57,34 @@ class HudDeliveryTrackerTest {
         assertTrue(deliveryDecision >= 0)
         assertTrue(watchdogWrite > deliveryDecision)
     }
+
+    @Test
+    fun `one failed required CAN field rejects frame unless cluster accepted it`() {
+        assertFalse(HudController.frameDelivered(false, false))
+        assertTrue(HudController.frameDelivered(false, true))
+        assertTrue(HudController.frameDelivered(true, false))
+    }
+
+    @Test
+    fun `every changed CAN field failure participates in production verdict`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/hud/HudController.java").isFile }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/hud/HudController.java").readText()
+        val update = source.substringAfter("public synchronized boolean updateNavigation")
+            .substringBefore("static boolean frameDelivered")
+
+        for (message in listOf(
+            "sendSimpleGuidance failed",
+            "clearSecondary failed",
+            "sendNextStreetName failed",
+            "sendRestRoute failed",
+            "sendExpectedArrival failed",
+        )) {
+            val catchBody = update.substringBefore(message).takeLast(220)
+            assertTrue("$message does not reject the CAN frame",
+                catchBody.contains("canFrameDelivered = false"))
+        }
+    }
 }
