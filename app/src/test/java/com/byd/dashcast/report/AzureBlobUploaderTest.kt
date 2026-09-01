@@ -111,6 +111,50 @@ class AzureBlobUploaderTest {
         }
     }
 
+    @Test
+    fun `permanent block rejection fails without retry and disconnects`() {
+        val attempts = mutableListOf<FakeConnection>()
+
+        try {
+            AzureBlobUploader.putBlockWithRetry(
+                "https://blob.example/container/report.zip?comp=block&sas",
+                byteArrayOf(1),
+                1,
+                AzureBlobUploader.ConnectionFactory { _, _ ->
+                    FakeConnection(403).also { attempts += it }
+                },
+                AzureBlobUploader.RetrySleeper { throw AssertionError("must not sleep") },
+            )
+            throw AssertionError("403 block unexpectedly succeeded")
+        } catch (expected: IllegalStateException) {
+            assertTrue(expected.message.orEmpty().contains("HTTP 403"))
+        }
+
+        assertEquals(1, attempts.size)
+        assertTrue(attempts.single().disconnected)
+    }
+
+    @Test
+    fun `transient block rejection is retried`() {
+        val responses = ArrayDeque(listOf(503, 201))
+        val attempts = mutableListOf<FakeConnection>()
+        val delays = mutableListOf<Long>()
+
+        AzureBlobUploader.putBlockWithRetry(
+            "https://blob.example/container/report.zip?comp=block&sas",
+            byteArrayOf(1),
+            1,
+            AzureBlobUploader.ConnectionFactory { _, _ ->
+                FakeConnection(responses.removeFirst()).also { attempts += it }
+            },
+            AzureBlobUploader.RetrySleeper { delays += it },
+        )
+
+        assertEquals(2, attempts.size)
+        assertEquals(listOf(1500L), delays)
+        assertTrue(attempts.all { it.disconnected })
+    }
+
     private class FakeConnection(
         private val status: Int,
         private val failWrite: Boolean = false,
