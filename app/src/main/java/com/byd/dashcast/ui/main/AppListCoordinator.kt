@@ -125,7 +125,8 @@ class AppListCoordinator(
         mAdapter.setGridMode(isGrid)
         if (isGrid) {
             val prefs = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
-            val compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL, false)
+            val compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL,
+                SettingsActivity.DEFAULT_COMPACT_APPS_PANEL)
             mRvApps.layoutManager = GridLayoutManager(ctx, if (compact) 2 else 5)
         } else {
             mRvApps.layoutManager = LinearLayoutManager(ctx)

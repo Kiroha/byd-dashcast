@@ -279,7 +279,8 @@ class SettingsActivity : AppCompatActivity() {
         cbBootAutoStart.isChecked = ClusterPrefs.isBootAutoStartEnabled(this)
 
         // Category filters toggle
-        cbShowCategoryFilters.isChecked = prefs.getBoolean(PREF_SHOW_CATEGORY_FILTERS, false)
+        cbShowCategoryFilters.isChecked = prefs.getBoolean(
+            PREF_SHOW_CATEGORY_FILTERS, DEFAULT_SHOW_CATEGORY_FILTERS)
         // Rolling screenshot capture for bug reports (default ON; consent still required at send)
         cbCaptureShots?.isChecked =
             com.byd.dashcast.report.ClusterShotRecorder.isEnabled(this)
@@ -299,7 +300,8 @@ class SettingsActivity : AppCompatActivity() {
         cbUseOwnSim.isChecked = prefs.getBoolean(PREF_USE_OWN_SIM, DEFAULT_USE_OWN_SIM)
 
         // v1.2.45 — Compact apps panel toggle (default OFF, historical layout)
-        cbCompactAppsPanel?.isChecked = prefs.getBoolean(PREF_COMPACT_APPS_PANEL, false)
+        cbCompactAppsPanel?.isChecked = prefs.getBoolean(
+            PREF_COMPACT_APPS_PANEL, DEFAULT_COMPACT_APPS_PANEL)
 
         swLegacyPath.isChecked = DaemonConfig.isLegacyPathEnabled(this)
         cbFissionMode.isChecked = DaemonConfig.isFissionModeEnabled(this)
@@ -419,6 +421,7 @@ class SettingsActivity : AppCompatActivity() {
         // ── Boot / UI toggles ────────────────────────────────────────────────────
         const val PREF_BOOT_AUTO_START = ClusterPrefs.KEY_BOOT_AUTO_START
         const val PREF_SHOW_CATEGORY_FILTERS = "show_category_filters"
+        const val DEFAULT_SHOW_CATEGORY_FILTERS = true
         const val PREF_RECONNECT_POPUP = "reconnect_popup_enabled"
 
         // ── Stop Projection behaviour ──────────────────────────────────────────────
@@ -441,6 +444,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // v1.2.45 — Compact apps panel.
         const val PREF_COMPACT_APPS_PANEL = "compact_apps_panel"
+        const val DEFAULT_COMPACT_APPS_PANEL = false
 
         // v1.2.43 — Hotspot integration prefs (set from HotspotActivity, read at boot)
         const val PREF_HOTSPOT_AUTOSTART_BOOT = "hotspot_autostart_boot"
