@@ -14,6 +14,7 @@ class ProxyDaemonStartupLockTest {
         try {
             val lockFile = File(directory, "startup.lock")
             val pidFile = File(directory, "proxy.pid")
+            pidFile.writeText("9999")
             val first = ProxyDaemonStartupLock.tryAcquire(lockFile)
             assertNotNull(first)
             assertNull(ProxyDaemonStartupLock.tryAcquire(lockFile))

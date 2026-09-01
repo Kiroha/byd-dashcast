@@ -47,8 +47,8 @@ final class ProxyDaemonStartupLock implements AutoCloseable {
                 output.write(pid.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
                 output.getFD().sync();
             }
-            Files.deleteIfExists(target.toPath());
-            Files.move(staging.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                Files.move(staging.toPath(), target.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } finally {
             Files.deleteIfExists(staging.toPath());
         }
