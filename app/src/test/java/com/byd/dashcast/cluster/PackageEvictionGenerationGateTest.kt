@@ -21,16 +21,16 @@ class PackageEvictionGenerationGateTest {
         val gate = PackageEvictionGenerationGate()
         val token = gate.beginEviction("com.example.nav")
         var launched = false
-        var staleOwnershipMutation = false
+        var ownershipMutation = false
 
         assertTrue(gate.tryBeginDestructive(token))
         assertFalse(gate.prepareLaunch("com.example.nav", Runnable { launched = true }))
         assertFalse(launched)
 
         val completion = gate.finishDestructive(
-            token, Runnable { staleOwnershipMutation = true }
+            token, Runnable { ownershipMutation = true }
         )
-        assertFalse(staleOwnershipMutation)
+        assertTrue(ownershipMutation)
         completion!!.deferredLaunch!!.run()
         assertTrue(launched)
     }
