@@ -25,6 +25,7 @@ import com.byd.dashcast.report.ReportStore
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.util.AppLogger
 import java.io.File
+import java.lang.ref.WeakReference
 
 /**
  * Diagnostics host — rebuilt in Kotlin, English-only by project rule (SetTextI18n exempt).
@@ -58,14 +59,11 @@ class DiagActivity : Activity() {
     private lateinit var fissionRegistryBtn: Button
     private lateinit var armCallbackBtn: Button
     private lateinit var traceBtn: Button
-    @Volatile private var lastWork: File? = null
 
     /** Shared across every probe on this screen — they all write into the same [logView], and
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private val sBusy = java.util.concurrent.atomic.AtomicBoolean(false)
-
     private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
@@ -81,7 +79,11 @@ class DiagActivity : Activity() {
      *  re-enable" shape the three newer probes use directly. */
     private fun releaseBusy() {
         sBusy.set(false)
-        runOnUiThread { allDiagButtons().forEach { it.isEnabled = true } }
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed) {
+                allDiagButtons().forEach { it.isEnabled = true }
+            }
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -256,16 +258,20 @@ class DiagActivity : Activity() {
         runOnUiThread { allDiagButtons().forEach { it.isEnabled = false } }
         runOnUiThread { logView.text = "" }
         log("Collecting…")
+        val app = applicationContext
+        val owner = WeakReference(this)
+        val progress: (String) -> Unit = { line -> logExtraction(owner, line) }
         Thread({
+            var workDir: File? = null
             // With an Azure container configured the 50 MB messaging ceiling no longer applies, so
             // the planner may pull the big OEM artefacts (cluster Qt themes, the renderer .so) that
             // were previously skipped for size. Set before planning — it changes every budget.
             ApkExtractionPolicy.largeSink = AzureBlobUploader.isConfigured()
-            if (ApkExtractionPolicy.largeSink) log("Azure container configured — large pull enabled.")
+            if (ApkExtractionPolicy.largeSink) progress("Azure container configured — large pull enabled.")
             val zip: File = try {
-                val plan = BydApkExtractionBundle.plan(this) { line -> log(line) }
-                lastWork = plan.workDir
-                log("Selected ${plan.accepted.size} OEM APK(s) + ${plan.acceptedNative.size} native, " +
+                val plan = BydApkExtractionBundle.plan(app, progress)
+                workDir = plan.workDir
+                progress("Selected ${plan.accepted.size} OEM APK(s) + ${plan.acceptedNative.size} native, " +
                     "${plan.payloadBytes / 1024} KB" +
                     (if (plan.manifestSkips.isEmpty()) "" else " (${plan.manifestSkips.size} skipped — see manifest)"))
 
@@ -278,52 +284,57 @@ class DiagActivity : Activity() {
                 // into the report store on external storage. These are two different volumes on
                 // these units, so each is checked for one payload rather than one volume for two.
                 val need = plan.payloadBytes
-                val store = ReportStore.dir(this)
+                val store = ReportStore.dir(app)
                 val short = when {
-                    !ReportStore.hasRoomFor(cacheDir, need) -> cacheDir
+                    !ReportStore.hasRoomFor(app.cacheDir, need) -> app.cacheDir
                     !ReportStore.hasRoomFor(store, need) -> store
                     else -> null
                 }
                 if (short != null) {
                     val freeMb = ReportStore.usableBytes(short) / (1024 * 1024)
-                    log("aborted: needs ~${need / (1024 * 1024)} MB free on ${short.absolutePath},")
-                    log("only $freeMb MB available. Free some space and run this again.")
-                    BydApkExtractionBundle.cleanup(lastWork); lastWork = null
-                    resetButton()
+                    progress("aborted: needs ~${need / (1024 * 1024)} MB free on ${short.absolutePath},")
+                    progress("only $freeMb MB available. Free some space and run this again.")
+                    BydApkExtractionBundle.cleanup(workDir); workDir = null
+                    completeExtraction(owner)
                     return@Thread
                 }
-                ReportStore.prune(this)
-                BydApkExtractionBundle.materialize(
-                    plan, File(store, plan.workDir.name + ".zip")) { line -> log(line) }
+                ReportStore.prune(app)
+                val archive = BydApkExtractionBundle.materialize(
+                    plan, File(store, plan.workDir.name + ".zip"), progress)
+                BydApkExtractionBundle.cleanup(workDir)
+                workDir = null
+                archive
             } catch (t: Throwable) {
-                log("failed: ${t.javaClass.simpleName}: ${t.message}")
-                resetButton()
+                BydApkExtractionBundle.cleanup(workDir)
+                workDir = null
+                progress("failed: ${t.javaClass.simpleName}: ${t.message}")
+                completeExtraction(owner)
                 return@Thread
             }
-            log("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
+            progress("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
 
             // Azure first when available: it has no practical size limit, and it is the only sink
             // that can take a pull containing the 100 MB+ OEM artefacts.
             if (AzureBlobUploader.isConfigured()) {
-                log("uploading to Azure…")
-                AzureBlobUploader.upload(zip, "dilink/${zip.name}", { line: String -> log(line) },
+                progress("uploading to Azure…")
+                AzureBlobUploader.upload(zip, "dilink/${zip.name}", progress,
                     object : AzureBlobUploader.Callback {
                         override fun onUploaded(url: String) {
-                            log("✓ uploaded to Azure:\n$url")
-                            log("Done — tell the maintainer the file name above.")
-                            BydApkExtractionBundle.cleanup(lastWork, zip); lastWork = null
-                            resetButton()
+                            progress("✓ uploaded to Azure:\n$url")
+                            progress("Done — tell the maintainer the file name above.")
+                            BydApkExtractionBundle.cleanup(null, zip)
+                            completeExtraction(owner)
                         }
                         override fun onFailed(message: String) {
                             // Fall back rather than losing the pull: a bundle that still fits under
                             // the messaging ceiling can go out the old way.
-                            log("✗ Azure upload failed: $message")
+                            progress("✗ Azure upload failed: $message")
                             if (TelegramBugReporter.isConfigured()
                                     && zip.length() < 45L * 1024 * 1024) {
-                                log("falling back to Telegram…")
-                                sendViaTelegram(zip)
+                                progress("falling back to Telegram…")
+                                sendExtractionViaTelegram(app, owner, zip, progress)
                             } else {
-                                keepLocally(zip)
+                                keepExtractionLocally(owner, zip, progress)
                             }
                         }
                     })
@@ -331,30 +342,12 @@ class DiagActivity : Activity() {
             }
 
             if (!TelegramBugReporter.isConfigured()) {
-                log("cannot upload: ${com.byd.dashcast.report.ReportConsent.transportBlockReason()}")
-                keepLocally(zip)
+                progress("cannot upload: ${com.byd.dashcast.report.ReportConsent.transportBlockReason()}")
+                keepExtractionLocally(owner, zip, progress)
                 return@Thread
             }
-            sendViaTelegram(zip)
+            sendExtractionViaTelegram(app, owner, zip, progress)
         }, "byd-apk-extract").start()
-    }
-
-    /** Uploads the bundle through the report bot — the pre-Azure path, also the fallback. */
-    private fun sendViaTelegram(zip: File) {
-            log("uploading…")
-            TelegramBugReporter.send(this, zip,
-                "BYD APK extraction — ${BydApkExtractionBundle.header(this)}",
-                object : TelegramBugReporter.Callback {
-                    override fun onSent() {
-                        log("✓ sent. Done — you can leave this screen.")
-                        BydApkExtractionBundle.cleanup(lastWork, zip); lastWork = null
-                        resetButton()
-                    }
-                    override fun onFailed(message: String) {
-                        log("✗ upload failed: $message")
-                        keepLocally(zip)
-                    }
-                })
     }
 
     /**
@@ -523,49 +516,86 @@ class DiagActivity : Activity() {
         }, "projection-trace").start()
     }
 
-    @SuppressLint("SetTextI18n")
-    /**
-     * Last-resort exit for an extraction that could not be uploaded.
-     *
-     * The archive already lives in the report store, so the path printed here is one a file manager
-     * or an adb pull can actually reach — the previous message named a cacheDir path that nobody
-     * could open. The system chooser is only offered for archives small enough for it to mean
-     * something: these pulls routinely exceed a hundred megabytes, and handing such a file to a
-     * chooser wastes the tester's time rather than helping them.
-     */
-    private fun keepLocally(zip: File) {
-        log("kept locally at:\n${zip.absolutePath}")
-        if (zip.length() < 45L * 1024 * 1024) {
-            runOnUiThread {
-                if (isFinishing || isDestroyed) return@runOnUiThread
-                try {
-                    AppLogger.shareFile(this, zip,
-                        getString(R.string.bug_share_subject), getString(R.string.bug_share_chooser))
-                } catch (t: Throwable) {
-                    log("share unavailable (${t.javaClass.simpleName}) — pull the file above")
-                }
-            }
-        } else {
-            log("too large to share from the car — pull it over adb.")
-        }
-        resetButton()
-    }
-
-    private fun log(line: String) = runOnUiThread {
+    private fun log(line: String) {
         AppLogger.i(TAG, line)
-        logView.append(line + "\n")
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed && ::logView.isInitialized) {
+                logView.append(line + "\n")
+            }
+        }
     }
 
     private fun resetButton() = releaseBusy()
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // Free cache if the tester left before the upload finished.
-        BydApkExtractionBundle.cleanup(lastWork)
-        lastWork = null
-    }
-
     private companion object {
         const val TAG = "DiagActivity"
+        val sBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        private fun logExtraction(owner: WeakReference<DiagActivity>, line: String) {
+            AppLogger.i(TAG, line)
+            val activity = owner.get() ?: return
+            activity.runOnUiThread {
+                if (!activity.isFinishing && !activity.isDestroyed && activity::logView.isInitialized) {
+                    activity.logView.append(line + "\n")
+                }
+            }
+        }
+
+        private fun completeExtraction(owner: WeakReference<DiagActivity>) {
+            sBusy.set(false)
+            val activity = owner.get() ?: return
+            activity.runOnUiThread {
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    activity.allDiagButtons().forEach { it.isEnabled = true }
+                }
+            }
+        }
+
+        private fun sendExtractionViaTelegram(
+            app: android.content.Context,
+            owner: WeakReference<DiagActivity>,
+            zip: File,
+            progress: (String) -> Unit,
+        ) {
+            progress("uploading…")
+            TelegramBugReporter.send(app, zip,
+                "BYD APK extraction — ${BydApkExtractionBundle.header(app)}",
+                object : TelegramBugReporter.Callback {
+                    override fun onSent() {
+                        progress("✓ sent. Done — you can leave this screen.")
+                        BydApkExtractionBundle.cleanup(null, zip)
+                        completeExtraction(owner)
+                    }
+
+                    override fun onFailed(message: String) {
+                        progress("✗ upload failed: $message")
+                        keepExtractionLocally(owner, zip, progress)
+                    }
+                })
+        }
+
+        private fun keepExtractionLocally(
+            owner: WeakReference<DiagActivity>,
+            zip: File,
+            progress: (String) -> Unit,
+        ) {
+            progress("kept locally at:\n${zip.absolutePath}")
+            if (zip.length() < 45L * 1024 * 1024) {
+                owner.get()?.runOnUiThread {
+                    val activity = owner.get() ?: return@runOnUiThread
+                    if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                    try {
+                        AppLogger.shareFile(activity, zip,
+                            activity.getString(R.string.bug_share_subject),
+                            activity.getString(R.string.bug_share_chooser))
+                    } catch (t: Throwable) {
+                        progress("share unavailable (${t.javaClass.simpleName}) — pull the file above")
+                    }
+                }
+            } else {
+                progress("too large to share from the car — pull it over adb.")
+            }
+            completeExtraction(owner)
+        }
     }
 }

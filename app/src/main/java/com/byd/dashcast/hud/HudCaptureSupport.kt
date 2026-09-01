@@ -12,6 +12,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -98,20 +100,31 @@ object HudCaptureSupport {
      */
     @JvmStatic
     fun zipDir(work: File, dest: File): File {
-        val zip = dest
-        ZipOutputStream(FileOutputStream(zip)).use { zos ->
-            work.walkTopDown().filter { it.isFile }.forEach { f ->
-                val rel = f.relativeTo(work).path
-                zos.putNextEntry(ZipEntry(rel))
-                if (isRedactableText(f)) {
-                    writeRedactedText(f, zos)
-                } else {
-                    FileInputStream(f).use { it.copyTo(zos) }
+        dest.parentFile?.mkdirs()
+        val staging = File.createTempFile(".${dest.name}.", ".tmp", dest.parentFile)
+        try {
+            ZipOutputStream(FileOutputStream(staging)).use { zos ->
+                work.walkTopDown().filter { it.isFile }.forEach { f ->
+                    val rel = f.relativeTo(work).path
+                    zos.putNextEntry(ZipEntry(rel))
+                    if (isRedactableText(f)) {
+                        writeRedactedText(f, zos)
+                    } else {
+                        FileInputStream(f).use { it.copyTo(zos) }
+                    }
+                    zos.closeEntry()
                 }
-                zos.closeEntry()
             }
+            try {
+                Files.move(staging.toPath(), dest.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+            return dest
+        } finally {
+            try { staging.delete() } catch (_: Throwable) { }
         }
-        return zip
     }
 
     /**
