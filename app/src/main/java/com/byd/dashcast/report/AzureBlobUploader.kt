@@ -96,24 +96,51 @@ object AzureBlobUploader {
 
     // ── HTTP ────────────────────────────────────────────────────────────────
 
-    private fun putBlock(url: String, buf: ByteArray, len: Int) {
+    private fun putBlock(url: String, buf: ByteArray, len: Int) = putBlockWithRetry(
+        url,
+        buf,
+        len,
+        ConnectionFactory { requestUrl, method -> open(requestUrl, method) },
+        RetrySleeper { delayMs -> Thread.sleep(delayMs) },
+    )
+
+    internal fun putBlockWithRetry(
+        url: String,
+        buf: ByteArray,
+        len: Int,
+        connectionFactory: ConnectionFactory,
+        sleeper: RetrySleeper,
+    ) {
         var lastError: Throwable? = null
         for (attempt in 1..ATTEMPTS_PER_REQUEST) {
+            var connection: HttpURLConnection? = null
             try {
-                val c = open(url, "PUT")
-                c.setFixedLengthStreamingMode(len)
-                c.doOutput = true
-                c.outputStream.use { it.write(buf, 0, len) }
-                val code = c.responseCode
-                val detail = if (code in 200..299) "" else errorDetail(c)
-                c.disconnect()
+                connection = connectionFactory.open(url, "PUT")
+                connection.setFixedLengthStreamingMode(len)
+                connection.doOutput = true
+                connection.outputStream.use { it.write(buf, 0, len) }
+                val code = connection.responseCode
+                val detail = if (code in 200..299) "" else errorDetail(connection)
                 if (code in 200..299) return
                 lastError = IllegalStateException("HTTP $code$detail")
             } catch (t: Throwable) {
+                if (t is InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw t
+                }
                 lastError = t
+            } finally {
+                connection?.disconnect()
             }
             // Linear back-off; a dropped mobile link usually recovers within a few seconds.
-            try { Thread.sleep(1500L * attempt) } catch (_: InterruptedException) {}
+            if (attempt < ATTEMPTS_PER_REQUEST) {
+                try {
+                    sleeper.sleep(1500L * attempt)
+                } catch (interrupted: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw interrupted
+                }
+            }
         }
         throw lastError ?: IllegalStateException("block upload failed")
     }
