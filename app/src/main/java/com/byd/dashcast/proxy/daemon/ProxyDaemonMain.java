@@ -237,7 +237,11 @@ public final class ProxyDaemonMain {
                 return;
             }
             writeVersionFile();
-            writeInstanceFile();
+            if (!writeInstanceFile()) {
+                log("FATAL: cannot persist daemon instance marker — exiting");
+                System.exit(4);
+                return;
+            }
             installPidShutdownHook();
             Looper.prepareMainLooper();
 
@@ -444,10 +448,14 @@ public final class ProxyDaemonMain {
         } catch (Throwable ignore) {}
     }
 
-    private static void writeInstanceFile() {
+    private static boolean writeInstanceFile() {
         try (FileOutputStream fos = new FileOutputStream(new File(INSTANCE_FILE))) {
             fos.write(INSTANCE_TOKEN.getBytes());
-        } catch (Throwable ignore) {}
+            return true;
+        } catch (Throwable error) {
+            log("writeInstanceFile failed: " + error);
+            return false;
+        }
     }
 
     /** Remove the PID file on JVM shutdown. Pure best-effort — a SIGKILL'd
