@@ -207,7 +207,9 @@ class ClusterManager(context: Context) {
         // (isDiLink3=false, and handled above) never reach here.
         if (Platform.get().isDiLink3(mContext) && Platform.isClusterSingleOs()) {
             AppLogger.w(TAG, "DL3 single-OS fission — no projectable cluster display; skipping activation")
-            mHandler.post { callback.onDisplayTimeout() }
+            mHandler.post {
+                if (isCurrentActivation(gen)) callback.onDisplayTimeout()
+            }
             return
         }
 
@@ -240,7 +242,7 @@ class ClusterManager(context: Context) {
             AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id=${found.displayId})")
             mHandler.post {
                 if (!claimDisplayReady(gen)) return@post
-                callback.onDisplayReady(found, found.displayId)
+                if (isCurrentActivation(gen)) callback.onDisplayReady(found, found.displayId)
             }
             return
         }
@@ -352,7 +354,7 @@ class ClusterManager(context: Context) {
                     mActiveDisplayManager = null
                     AppLogger.i(TAG, "VirtualDisplay cluster detected: id=$displayId")
                     notifyProjectionActive()
-                    callback.onDisplayReady(d, displayId)
+                    if (isCurrentActivation(gen)) callback.onDisplayReady(d, displayId)
                 }
             }
 
@@ -369,7 +371,7 @@ class ClusterManager(context: Context) {
         // Named (not an inline lambda) so the DL4 daemon resolution can cancel THIS message alone
         // instead of flushing the whole handler queue — see resolveViaDaemon.
         val timeoutRunnable = Runnable {
-            if (gen != mActivationGeneration || mReadyGeneration == gen) return@Runnable
+            if (!isCurrentActivation(gen) || mReadyGeneration == gen) return@Runnable
             dm.unregisterDisplayListener(listenerHolder[0])
             mActiveDisplayListener = null
             mActiveDisplayManager = null
@@ -387,13 +389,13 @@ class ClusterManager(context: Context) {
                             + "a cluster display — projection is unavailable on this firmware")
                 }
             }
-            callback.onDisplayTimeout()
+            if (isCurrentActivation(gen)) callback.onDisplayTimeout()
             // Keep watching quietly for slow firmware variants. NOT extended to the DL4 daemon
             // probe on purpose: this watch exists for SLOW VirtualDisplay CREATION, and on DL4
             // the display provably pre-exists activation (the display set DMS iterated was
             // identical before and after cmd 16/35 across 54.6 s), so a display the daemon could
             // not see during the main window will not materialise during the grace period.
-            armLateArrivalWatch(dm, callback)
+            armLateArrivalWatch(dm, callback, gen)
         }
 
         // ── DiLink 4.0 ONLY — resolve through the uid-2000 daemon ──────────────────────
@@ -580,6 +582,7 @@ class ClusterManager(context: Context) {
         } catch (ignore: Throwable) {
             null
         }
+        if (!ProjectionCommandBus.isCurrent(mProjectionSession)) return
         if (late) callback.onDisplayLateReady(real, cluster.id)
         else callback.onDisplayReady(real, cluster.id)
     }
@@ -639,7 +642,7 @@ class ClusterManager(context: Context) {
                     mActiveDisplayManager = null
                     AppLogger.i(TAG, "VirtualDisplay found by polling: id=${found.displayId}")
                     notifyProjectionActive()
-                    callback.onDisplayReady(found, found.displayId)
+                    if (isCurrentActivation(gen)) callback.onDisplayReady(found, found.displayId)
                 } else {
                     mHandler.postDelayed(this, POLL_INTERVAL_MS)
                 }
@@ -655,11 +658,16 @@ class ClusterManager(context: Context) {
      * If the cluster VirtualDisplay eventually appears within LATE_ARRIVAL_GRACE_MS,
      * [DisplayReadyCallback.onDisplayLateReady] is called exactly once. Cleared by [cancel].
      */
-    private fun armLateArrivalWatch(dm: DisplayManager, callback: DisplayReadyCallback) {
+    private fun armLateArrivalWatch(
+        dm: DisplayManager,
+        callback: DisplayReadyCallback,
+        gen: Int,
+    ) {
         // One-shot: prevents both the DisplayListener and the polling loop from firing.
         val consumed = booleanArrayOf(false)
 
         val expiry = Runnable {
+            if (!isCurrentActivation(gen)) return@Runnable
             if (!consumed[0]) {
                 consumed[0] = true
                 val mgr = mLateArrivalManager
@@ -676,7 +684,7 @@ class ClusterManager(context: Context) {
         val holder = arrayOfNulls<DisplayManager.DisplayListener>(1)
         holder[0] = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
-                if (consumed[0]) return
+                if (consumed[0] || !isCurrentActivation(gen)) return
                 val d = dm.getDisplay(displayId)
                 if (!isClusterDisplay(d)) return
                 consumed[0] = true
@@ -686,7 +694,7 @@ class ClusterManager(context: Context) {
                 mLateArrivalManager = null
                 AppLogger.i(TAG, "Late arrival: cluster VD appeared — id=$displayId")
                 notifyProjectionActive()
-                callback.onDisplayLateReady(d, displayId)
+                if (isCurrentActivation(gen)) callback.onDisplayLateReady(d, displayId)
             }
 
             override fun onDisplayRemoved(displayId: Int) {}
@@ -707,7 +715,7 @@ class ClusterManager(context: Context) {
         val deadline = SystemClock.uptimeMillis() + LATE_ARRIVAL_GRACE_MS
         mHandler.postDelayed(object : Runnable {
             override fun run() {
-                if (consumed[0]) return
+                if (consumed[0] || !isCurrentActivation(gen)) return
                 val found = findClusterDisplay(dm)
                 if (found != null) {
                     consumed[0] = true
@@ -721,7 +729,7 @@ class ClusterManager(context: Context) {
                     }
                     AppLogger.i(TAG, "Late arrival (poll): cluster VD id=${found.displayId}")
                     notifyProjectionActive()
-                    callback.onDisplayLateReady(found, found.displayId)
+                    if (isCurrentActivation(gen)) callback.onDisplayLateReady(found, found.displayId)
                 } else if (SystemClock.uptimeMillis() < deadline) {
                     mHandler.postDelayed(this, 2000)
                 }
@@ -743,7 +751,9 @@ class ClusterManager(context: Context) {
                     mHandler.post {
                         if (!claimDisplayReady(gen)) return@post
                         notifyProjectionActive()
-                        callback.onDisplayReady(display, display.displayId)
+                        if (isCurrentActivation(gen)) {
+                            callback.onDisplayReady(display, display.displayId)
+                        }
                     }
                 }
 
@@ -751,7 +761,7 @@ class ClusterManager(context: Context) {
                     if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: $err")
                     mHandler.post {
-                        if (gen == mActivationGeneration && mReadyGeneration != gen) {
+                        if (isCurrentActivation(gen) && mReadyGeneration != gen) {
                             callback.onDisplayTimeout()
                         }
                     }
@@ -943,10 +953,15 @@ class ClusterManager(context: Context) {
 
     @Synchronized
     private fun claimDisplayReady(gen: Int): Boolean {
-        if (gen != mActivationGeneration || mReadyGeneration == gen) return false
+        if (!isCurrentActivation(gen) || mReadyGeneration == gen) return false
         mReadyGeneration = gen
         return true
     }
+
+    private fun isCurrentActivation(gen: Int): Boolean =
+        gen == mActivationGeneration &&
+            this::mProjectionSession.isInitialized &&
+            ProjectionCommandBus.isCurrent(mProjectionSession)
 
     // ── Cluster display detection ─────────────────────────────────────────
 
@@ -1050,7 +1065,7 @@ class ClusterManager(context: Context) {
             AppLogger.i(TAG, "DL5 cluster display ready: id=${d.displayId} name=${d.name}")
             notifyProjectionActive()
             mHandler.post {
-                if (gen == mActivationGeneration && mReadyGeneration == gen) {
+                if (isCurrentActivation(gen) && mReadyGeneration == gen) {
                     callback.onDisplayReady(d, d.displayId)
                 }
             }
@@ -1060,18 +1075,18 @@ class ClusterManager(context: Context) {
         val deadline = SystemClock.uptimeMillis() + 3000
         mHandler.postDelayed(object : Runnable {
             override fun run() {
-                if (gen != mActivationGeneration) return
+                if (!isCurrentActivation(gen)) return
                 val dd = findClusterDisplay(dm)
                 if (dd != null) {
                     if (!claimDisplayReady(gen)) return
                     AppLogger.i(TAG, "DL5 cluster display (late) id=${dd.displayId}")
                     notifyProjectionActive()
-                    callback.onDisplayReady(dd, dd.displayId)
+                    if (isCurrentActivation(gen)) callback.onDisplayReady(dd, dd.displayId)
                 } else if (SystemClock.uptimeMillis() < deadline) {
                     mHandler.postDelayed(this, 250)
                 } else {
                     AppLogger.w(TAG, "DL5 cluster display not found after 3s — timeout")
-                    callback.onDisplayTimeout()
+                    if (isCurrentActivation(gen)) callback.onDisplayTimeout()
                 }
             }
         }, 250)
@@ -1117,6 +1132,14 @@ class ClusterManager(context: Context) {
             mLateArrivalManager = null
         }
         AppLogger.d(TAG, "cancel() — Handler and DisplayListener cancelled")
+    }
+
+    /** Cancels a directly-owned activation and relinquishes its process-wide command session. */
+    fun abandon() {
+        cancel()
+        if (this::mProjectionSession.isInitialized) {
+            ProjectionCommandBus.endSession(mProjectionSession)
+        }
     }
 
     companion object {
