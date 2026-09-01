@@ -19,6 +19,7 @@ import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.util.concurrent.LifecycleGate
 import com.byd.dashcast.util.AppLogger
 import java.io.File
 import java.text.SimpleDateFormat
@@ -66,6 +67,7 @@ class HudDiagActivity : AppCompatActivity() {
     private lateinit var iconSweepBtn: Button
     private lateinit var bar: ProgressBar
     private var benchKind = "canbench"   // "canbench" | "sendinfo2" | "iconsweep" — drives the zip prefix
+    private val lifecycleGate = LifecycleGate()
 
     private val stamp = SimpleDateFormat("HH:mm:ss", Locale.US)
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
@@ -244,12 +246,13 @@ class HudDiagActivity : AppCompatActivity() {
         bg {
             val rc = try { step.run() }
                      catch (t: Throwable) { "EXCEPTION ${t.javaClass.simpleName}: ${t.message}" }
-            runOnUiThread { askStep(step, rc) }
+            postUi { askStep(step, rc) }
         }
     }
 
     /** Popup after each command: says what was sent + asks whether the expected effect happened. */
     private fun askStep(step: Step, rc: String) {
+        if (!isUiAlive()) return
         log("   $rc")
         AlertDialog.Builder(this)
             .setTitle(step.title)
@@ -263,6 +266,7 @@ class HudDiagActivity : AppCompatActivity() {
 
     /** On NON, offer an optional free-text note before recording. */
     private fun askStepNote(step: Step, rc: String) {
+        if (!isUiAlive()) return
         val input = EditText(this).apply {
             hint = getString(R.string.hud_bench_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -306,7 +310,7 @@ class HudDiagActivity : AppCompatActivity() {
             } finally {
                 // Always restore the UI, even if the zip/upload/diag work threw (bg's outer
                 // catch only logs) — otherwise the button stays disabled + spinner visible.
-                runOnUiThread {
+                postUi {
                     confirmBtn.isEnabled = true
                     bar.visibility = View.GONE
                     showProdNudge()
@@ -366,7 +370,7 @@ class HudDiagActivity : AppCompatActivity() {
                 }
                 sb.append("[$en] icon=$icon sustained 6s (dist 300→) rc=$rc\n")
             }
-            runOnUiThread { askBench(sb) }
+            postUi { askBench(sb) }
         }
     }
 
@@ -421,7 +425,7 @@ class HudDiagActivity : AppCompatActivity() {
                 }
                 sb.append("[$en] nextTurnIcon=$icon sustained 6s (dist 300→)\n")
             }
-            runOnUiThread { askBench(sb) }
+            postUi { askBench(sb) }
         }
     }
 
@@ -464,7 +468,7 @@ class HudDiagActivity : AppCompatActivity() {
                 }
                 sb.append("[icon=$icon] sent 3s (road='ICON $icon') $rc\n")
             }
-            runOnUiThread { askSweepResult(sb) }
+            postUi { askSweepResult(sb) }
         }
     }
 
@@ -475,6 +479,7 @@ class HudDiagActivity : AppCompatActivity() {
      * 04_hud_state.txt, so options describe only what the tester SAW.
      */
     private fun askBench(sb: StringBuilder) {
+        if (!isUiAlive()) return
         val options = listOf(
             getString(R.string.hud_bench_opt_cluster)  to "YES — arrow on CLUSTER",
             getString(R.string.hud_bench_opt_ok)       to "YES — arrow on HUD (windshield)",
@@ -501,6 +506,7 @@ class HudDiagActivity : AppCompatActivity() {
      * earlier). Its zip carries a distinct hud_iconsweep_ prefix and is never tallied with the benches.
      */
     private fun askSweepResult(sb: StringBuilder) {
+        if (!isUiAlive()) return
         val options = listOf(
             getString(R.string.hud_sweep_opt_photographed) to "DONE — glyphs photographed",
             getString(R.string.hud_sweep_opt_nothing)      to "NO — nothing on cluster",
@@ -517,6 +523,7 @@ class HudDiagActivity : AppCompatActivity() {
     }
 
     private fun askBenchNote(sb: StringBuilder) {
+        if (!isUiAlive()) return
         val input = EditText(this).apply {
             hint = getString(R.string.hud_bench_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -572,7 +579,7 @@ class HudDiagActivity : AppCompatActivity() {
                 try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}
                 // Always restore the UI even if the zip/upload/diag work threw (bg's outer catch
                 // only logs) — otherwise the button stays disabled + spinner visible until recreate.
-                runOnUiThread { activeBenchButton?.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
+                postUi { activeBenchButton?.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
             }
         }
     }
@@ -580,6 +587,7 @@ class HudDiagActivity : AppCompatActivity() {
     /** After a bench/confirm upload, nudge the tester toward the LIVE feature (drive Maps/Waze +
      *  report via 🐞) instead of these R&D tools. Translated (R.string.hud_prod_nudge). */
     private fun showProdNudge() {
+        if (!isUiAlive()) return
         try {
             AlertDialog.Builder(this)
                 .setMessage(getString(R.string.hud_prod_nudge))
@@ -631,6 +639,22 @@ class HudDiagActivity : AppCompatActivity() {
         Thread { try { work() } catch (t: Throwable) { log("ERR: ${t.javaClass.simpleName}: ${t.message}") } }.start()
     }
 
+    override fun onDestroy() {
+        lifecycleGate.invalidate()
+        super.onDestroy()
+    }
+
+    private fun isUiAlive(): Boolean =
+        lifecycleGate.capture().isValid && !isFinishing && !isDestroyed
+
+    private inline fun postUi(crossinline work: () -> Unit) {
+        val token = lifecycleGate.capture()
+        runOnUiThread {
+            if (!token.isValid || isFinishing || isDestroyed) return@runOnUiThread
+            work()
+        }
+    }
+
     private fun sh(cmd: String): String =
         try { ProxyClient.runShell(cmd) ?: "" }
         catch (t: Throwable) { "ERR [$cmd]: ${t.message}" }
@@ -665,10 +689,14 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (_: InterruptedException) {} }
 
-    private fun log(msg: String) = runOnUiThread {
+    private fun log(msg: String) {
         AppLogger.i("HudDiagBench", msg)
-        out.append("[${stamp.format(Date())}] $msg\n")
-        (out.parent as? ScrollView)?.post { (out.parent as ScrollView).fullScroll(View.FOCUS_DOWN) }
+        postUi {
+            out.append("[${stamp.format(Date())}] $msg\n")
+            (out.parent as? ScrollView)?.post {
+                if (isUiAlive()) (out.parent as ScrollView).fullScroll(View.FOCUS_DOWN)
+            }
+        }
     }
 
     private fun sectionHeader(t: String) = TextView(this).apply {
