@@ -1453,23 +1453,20 @@ public class AdbLocalClient {
                         // there. Keeping that task leaves the cluster occupied and the next launch
                         // lands split-screen: INC-20260621-130238's NPE. Same round trip, one more
                         // field.
-                        com.byd.dashcast.infrastructure.task.TaskLocation loc =
-                                ProxyClient.findTaskLocationForPackage(packageName);
-                        int taskId = loc.getTaskId();
+                        java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> locations =
+                                findTaskLocationsForEviction(packageName);
                         ProxyClient.forceStopPackage(packageName, 0);
                         StringBuilder verification = new StringBuilder();
                         boolean killed = verifyForceStop(packageName, verification);
+                        com.byd.dashcast.cluster.EvictionTaskSetPolicy.Decision decision =
+                                com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                        killed, locations);
+                        removeTypedTasks(decision.getTaskIdsToRemove());
                         long dt = SystemClock.elapsedRealtime() - t0;
                         if (killed) {
-                            if (taskId >= 0) {
-                                AppLogger.d(TAG, "forceStopApp typed: kill verified — removeTask taskId="
-                                        + taskId);
-                                ProxyClient.removeTask(taskId);
-                            }
                             AppLogger.log(TAG, "forceStopApp typed verified (" + dt + "ms): "
-                                + packageName + " taskId=" + taskId);
-                            if (callback != null) callback.onEvictionOutcome(
-                                com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome.REMOVE_TASK);
+                                + packageName + " tasks=" + decision.getTaskIdsToRemove());
+                            if (callback != null) callback.onEvictionOutcome(decision.getOutcome());
                             if (callback != null) callback.onSuccess(
                                 "force-stop OK (typed, verified)");
                         } else {
@@ -1482,26 +1479,11 @@ public class AdbLocalClient {
                             // must go, exactly as before this change. ABSENT/UNKNOWN keep too: a
                             // failed lookup is not evidence, and destroying on one is the original
                             // defect.
-                            com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome outcome =
-                                    com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(false, loc);
-                            boolean onCluster = outcome
-                                    == com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome.REMOVE_TASK;
-                            if (onCluster && taskId >= 0) {
-                                ProxyClient.removeTask(taskId);
-                                AppLogger.w(TAG, "forceStopApp verification failed for "
-                                    + packageName + ": " + detail + " — task " + taskId
-                                    + " still on display " + loc.getDisplayId()
-                                    + ", removed to free that display");
-                            } else if (taskId >= 0) {
-                                AppLogger.w(TAG, "forceStopApp verification failed for "
-                                    + packageName + ": " + detail + " — keeping task " + taskId
-                                    + " (display " + loc.getDisplayId() + ") as its way back"
-                                    + " [" + outcome + "]");
-                            } else {
-                                AppLogger.w(TAG, "forceStopApp verification failed for "
-                                    + packageName + ": " + detail + " — no task to keep or remove");
-                            }
-                            if (callback != null) callback.onEvictionOutcome(outcome);
+                            AppLogger.w(TAG, "forceStopApp verification failed for "
+                                + packageName + ": " + detail + " — removed non-default tasks "
+                                + decision.getTaskIdsToRemove() + ", outcome="
+                                + decision.getOutcome());
+                            if (callback != null) callback.onEvictionOutcome(decision.getOutcome());
                             if (callback != null) callback.onError(detail);
                         }
                         return;
@@ -1517,14 +1499,15 @@ public class AdbLocalClient {
                         // fall through to ADB path below
                     }
                 }
-                com.byd.dashcast.infrastructure.task.TaskLocation legacyLocation =
-                    com.byd.dashcast.infrastructure.task.TaskLocation.unknown();
+                java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> legacyLocations =
+                    java.util.Collections.singletonList(
+                        com.byd.dashcast.infrastructure.task.TaskLocation.unknown());
                 try (Dadb dadb = connect(context)) {
                     try {
                     String activities = dadb.shell(
                         "dumpsys activity activities 2>/dev/null").getAllOutput();
-                    legacyLocation = com.byd.dashcast.infrastructure.task
-                        .LegacyTaskLocationParser.parse(activities, packageName);
+                    legacyLocations = com.byd.dashcast.infrastructure.task
+                        .LegacyTaskLocationParser.parseAll(activities, packageName);
                     } catch (Throwable locationError) {
                     AppLogger.w(TAG, "legacy task-location probe failed for " + packageName
                         + ": " + locationError.getMessage());
@@ -1560,21 +1543,24 @@ public class AdbLocalClient {
                     if (callback != null) {
                         if (out.contains("STOPPED") || out.isEmpty()) {
                             StringBuilder verification = new StringBuilder();
-                            if (verifyForceStopViaAdb(dadb, packageName, verification)) {
-                                callback.onEvictionOutcome(
-                                    com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
-                                        true, legacyLocation));
+                            boolean killed = verifyForceStopViaAdb(dadb, packageName, verification);
+                            com.byd.dashcast.cluster.EvictionTaskSetPolicy.Decision decision =
+                                    com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                            killed, legacyLocations);
+                            removeLegacyTasks(dadb, context, decision.getTaskIdsToRemove());
+                            if (killed) {
+                                callback.onEvictionOutcome(decision.getOutcome());
                                 callback.onSuccess("force-stop OK (ADB, verified)");
                             } else {
-                                callback.onEvictionOutcome(
-                                    com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
-                                        false, legacyLocation));
+                                callback.onEvictionOutcome(decision.getOutcome());
                                 callback.onError(verification.toString().trim());
                             }
                         } else {
-                            callback.onEvictionOutcome(
-                                com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
-                                    false, legacyLocation));
+                            com.byd.dashcast.cluster.EvictionTaskSetPolicy.Decision decision =
+                                    com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                            false, legacyLocations);
+                            removeLegacyTasks(dadb, context, decision.getTaskIdsToRemove());
+                            callback.onEvictionOutcome(decision.getOutcome());
                             callback.onError(out);
                         }
                     }
@@ -1585,8 +1571,8 @@ public class AdbLocalClient {
                     AppLogger.e(TAG, "forceStopApp ERREUR", e);
                     if (callback != null) {
                         callback.onEvictionOutcome(
-                            com.byd.dashcast.cluster.EvictionOutcomePolicy.decide(
-                                false, legacyLocation));
+                            com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                false, legacyLocations).getOutcome());
                         callback.onError(msg);
                     }
                 }
@@ -1635,6 +1621,60 @@ public class AdbLocalClient {
                     + error.getMessage());
             sb.append("WARN: ADB verification failed: ").append(error.getMessage()).append("\n");
             return false;
+        }
+    }
+
+    private static java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation>
+            findTaskLocationsForEviction(String packageName) throws ProxyClient.ProxyException {
+        try {
+            String activities = ProxyClient.runShell(
+                    "dumpsys activity activities 2>/dev/null");
+            java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> parsed =
+                    com.byd.dashcast.infrastructure.task.LegacyTaskLocationParser.parseAll(
+                            activities, packageName);
+            for (com.byd.dashcast.infrastructure.task.TaskLocation location : parsed) {
+                if (location.getStatus()
+                        == com.byd.dashcast.infrastructure.task.TaskLocation.Status.FOUND) {
+                    return parsed;
+                }
+            }
+        } catch (Throwable error) {
+            AppLogger.w(TAG, "typed multi-task probe failed for " + packageName + ": "
+                    + error.getMessage());
+        }
+        return java.util.Collections.singletonList(
+                ProxyClient.findTaskLocationForPackage(packageName));
+    }
+
+    private static void removeTypedTasks(java.util.List<Integer> taskIds) throws Exception {
+        Exception first = null;
+        for (Integer taskId : taskIds) {
+            if (taskId == null || taskId <= 0) continue;
+            try {
+                ProxyClient.removeTask(taskId);
+            } catch (Exception error) {
+                if (first == null) first = error;
+            }
+        }
+        if (first != null) throw first;
+    }
+
+    private static void removeLegacyTasks(Dadb dadb, Context context,
+                                          java.util.List<Integer> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) return;
+        String apkPath = context.getPackageCodePath();
+        for (Integer taskId : taskIds) {
+            if (taskId == null || taskId <= 0) continue;
+            try {
+                dadb.shell("am task remove " + taskId + " 2>/dev/null; "
+                        + "export CLASSPATH=" + apkPath + "; "
+                        + "/system/bin/app_process64 -Xnoimage-dex2oat /system/bin "
+                        + "com.byd.dashcast.proxy.daemon.TaskRemover \"" + taskId
+                        + "\" 2>/dev/null; true");
+            } catch (Throwable error) {
+                AppLogger.w(TAG, "legacy removeTask " + taskId + " failed: "
+                        + error.getMessage());
+            }
         }
     }
 
