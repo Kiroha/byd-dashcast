@@ -57,7 +57,6 @@ public class UpdateChecker {
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases/latest";
     private static final String RELEASES_LIST_API =
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases?per_page=100&page=";
-    private static final String APK_CACHE_NAME = "dashcast-update.apk";
     private static final long MAX_APK_BYTES = 100L * 1024L * 1024L;
 
     public static final class ReleaseAsset {
@@ -456,12 +455,12 @@ public class UpdateChecker {
             if (ext != null) {
                 //noinspection ResultOfMethodCallIgnored
                 ext.mkdirs();
-                return new File(ext, APK_CACHE_NAME);
+                return new File(ext, OtaArtifactCleanup.APK_CACHE_NAME);
             }
         } catch (Throwable t) {
             AppLogger.w(TAG, "getExternalFilesDir unavailable, using cache: " + t);
         }
-        return new File(context.getCacheDir(), APK_CACHE_NAME);
+        return new File(context.getCacheDir(), OtaArtifactCleanup.APK_CACHE_NAME);
     }
 
     /**
