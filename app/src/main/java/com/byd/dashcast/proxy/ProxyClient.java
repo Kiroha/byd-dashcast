@@ -396,19 +396,15 @@ public final class ProxyClient {
      * @param reason short tag included in the log line (e.g. "MirrorStart").
      */
     public static void invalidateBinder(String reason) {
-        synchronized (LOCK) {
-            IBinder dead = sBinder;
-            if (dead == null) return; // already invalidated, nothing to do
-            unlinkDeathLocked(dead);
-            sBinder = null;
-            sDaemonUid = -1;
-            sDaemonPid = -1;
-            sDaemonVer = null;
-            sDaemonInstance = null;
-            ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_DEATHS_SILENT);
-            AppLogger.w(TAG, "invalidateBinder(" + reason
-                    + ") — silent death detected by caller (kernel notif missing)");
-        }
+        invalidateBinderIfCurrent(sBinder, reason);
+    }
+
+    public static boolean invalidateBinderIfCurrent(IBinder expectedBinder, String reason) {
+        if (expectedBinder == null || !clearConnectionIfCurrent(expectedBinder)) return false;
+        ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_DEATHS_SILENT);
+        AppLogger.w(TAG, "invalidateBinder(" + reason
+                + ") — silent death detected by caller (kernel notif missing)");
+        return true;
     }
 
     /**
@@ -743,7 +739,7 @@ public final class ProxyClient {
             String out = reply.readString();
             return out == null ? "" : out;
         } catch (RemoteException e) {
-            invalidateBinder("Phase4Probes");
+            invalidateBinderIfCurrent(b, "Phase4Probes");
             throw new ProxyException("transact: " + e.getMessage(), e);
         } finally {
             reply.recycle();
@@ -1109,12 +1105,14 @@ public final class ProxyClient {
     public static int canBatch(java.util.List<com.byd.dashcast.system.CanBatchOperation> operations)
             throws ProxyException {
         if (!supportsProtocol(24)) throw new ProxyException("truthful CAN batch unsupported by daemon");
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
         try {
             // Do not use callWithRetry here: a RemoteException can arrive after the daemon applied
             // a prefix of the group. Replaying the whole batch would violate exactly-once grouping.
-            return ProxyCanVerbs.canBatch(operations);
+            return ProxyCanVerbs.canBatch(b, operations);
         } catch (RemoteException transportError) {
-            invalidateBinder("canBatch");
+            invalidateBinderIfCurrent(b, "canBatch");
             throw new ProxyException("canBatch transact: " + transportError.getMessage(),
                     transportError);
         }

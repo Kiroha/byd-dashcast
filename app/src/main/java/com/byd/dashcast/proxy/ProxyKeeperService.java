@@ -147,7 +147,7 @@ public final class ProxyKeeperService extends Service {
         android.os.IBinder b = ProxyClient.getProxyDaemonBinder();
         boolean alive = (b != null) && b.pingBinder();
         if (b != null && !alive) {
-            ProxyClient.invalidateBinder("KeeperPing");
+            ProxyClient.invalidateBinderIfCurrent(b, "KeeperPing");
         }
 
         if (alive) {

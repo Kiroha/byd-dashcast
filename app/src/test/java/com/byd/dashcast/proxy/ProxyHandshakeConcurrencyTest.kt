@@ -210,6 +210,22 @@ class ProxyHandshakeConcurrencyTest {
     }
 
     @Test
+    fun `silent death invalidation cannot clear a replacement binder`() {
+        val stale = Binder()
+        val current = Binder()
+        setStatic("sBinder", current)
+        setStatic("sDaemonUid", 2000)
+        setStatic("sDaemonPid", 456)
+
+        assertFalse(ProxyClient.invalidateBinderIfCurrent(stale, "test"))
+        assertTrue(ProxyClient.isConnected())
+        assertEquals(456, getStatic("sDaemonPid"))
+
+        assertTrue(ProxyClient.invalidateBinderIfCurrent(current, "test"))
+        assertFalse(ProxyClient.isConnected())
+    }
+
+    @Test
     fun `virtual display transact and cleanup use the same captured binder`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
@@ -238,6 +254,23 @@ class ProxyHandshakeConcurrencyTest {
         assertTrue(failedWait.contains("IBinder failedBinder = sBinder"))
         assertTrue(failedWait.contains("clearConnectionIfCurrent(failedBinder)"))
         assertTrue(handshakeFailure.contains("clearConnectionIfCurrent(expectedBinder)"))
+    }
+
+    @Test
+    fun `manual transact failures invalidate only their captured binder`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+
+        val probes = source.substringAfter("public static String runPhase4Probes")
+            .substringBefore("public static int createVirtualDisplay")
+        val batch = source.substringAfter("public static int canBatch")
+            .substringBefore("public static int canInstrumentGet")
+        assertTrue(probes.contains("invalidateBinderIfCurrent(b, \"Phase4Probes\")"))
+        assertTrue(batch.contains("ProxyCanVerbs.canBatch(b, operations)"))
+        assertTrue(batch.contains("invalidateBinderIfCurrent(b, \"canBatch\")"))
     }
 
     private fun setStatic(name: String, value: Any?) {
