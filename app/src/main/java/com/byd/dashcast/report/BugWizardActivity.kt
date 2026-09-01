@@ -61,6 +61,8 @@ class BugWizardActivity : Activity() {
     private var mAppPkg = ""
     private var mAppLabel = ""
     private var mSending = false
+    private var mCurrentStep = 0
+    private var mPendingGate = BugWizardGate.NONE
 
     /**
      * Re-opens an exit if the send has not reached a terminal state in time.
@@ -81,6 +83,8 @@ class BugWizardActivity : Activity() {
     /** How long Send may hold the screen with no exit before Cancel is restored. */
     private val mSendWatchdogMs = 45_000L
     private var mTgHandle = ""
+    private var mHandleDraft = ""
+    private var mHandleField: EditText? = null
 
     // Step 2 (issue) — selection + optional free-text details, sent via an explicit button.
     private var mSelectedIssue: String? = null
@@ -95,6 +99,7 @@ class BugWizardActivity : Activity() {
      * with the arrays they mirror; the index cannot.
      */
     private var mSelectedIssueIndex: Int = -1
+    private var mDetailsDraft = ""
     private var mDetailsField: EditText? = null
     private var mBtnSend: MaterialButton? = null
     private var mBtnCancel: View? = null
@@ -129,20 +134,95 @@ class BugWizardActivity : Activity() {
         mBtnBack.setOnClickListener { goBack() }
         mTvTgBanner.setOnClickListener { showTgHandleDialog() }
 
-        mTgHandle = loadTgHandle()
-        if (mTgHandle.isEmpty()) {
+        val restored = BugWizardStateStore.read(saved)
+        if (restored != null) restoreState(restored) else mTgHandle = loadTgHandle()
+        if ((restored == null && mTgHandle.isEmpty()) ||
+            mPendingGate == BugWizardGate.HANDLE_REQUIRED) {
             // First use: block on dialog before showing wizard
             showTgHandleDialogThen {
-                buildCategoryPage()
-                showStep(0)
-                detectClusterApp()
+                restoreWizardUi()
             }
         } else {
-            buildCategoryPage()
-            showStep(0)
-            detectClusterApp()
+            restoreWizardUi()
+            resumePendingGate()
         }
         updateTgBanner()
+    }
+
+    private fun restoreState(state: BugWizardSavedState) {
+        mCategory = state.category
+        mHudArrowsAnswer = state.hudArrowsAnswer
+        mHudNavApp = state.hudNavApp
+        mActiveNav = state.activeNav
+        mNavSeen = state.navSeen
+        mAppPkg = state.appPackage
+        mAppLabel = state.appLabel
+        mSelectedIssueIndex = state.selectedIssueIndex
+        mDetailsDraft = state.details
+        mTgHandle = state.telegramHandle
+        mHandleDraft = state.handleDraft
+        mCurrentStep = state.currentStep.coerceIn(0, 2)
+        mPendingGate = state.pendingGate
+        mDetectedPkg = state.detectedPackage
+        mDetectedLabel = state.detectedLabel
+        mDetectionDone = state.detectionDone
+        if (mCurrentStep > 0 && mCategory !in ISSUE_ARRAYS.indices) mCurrentStep = 0
+    }
+
+    private fun restoreWizardUi() {
+        buildCategoryPage()
+        if (mCurrentStep >= 1) buildAppPage()
+        if (mCurrentStep == 2) {
+            val issueIndex = mSelectedIssueIndex
+            val details = mDetailsDraft
+            buildIssuePage()
+            if (issueIndex in mIssueButtons.indices) {
+                val issue = resources.getStringArray(ISSUE_ARRAYS[mCategory])[issueIndex]
+                onIssuePicked(issue, issueIndex, mIssueButtons[issueIndex])
+            }
+            mDetailsField?.setText(details)
+        }
+        showStep(mCurrentStep)
+        if (!mDetectionDone) detectClusterApp()
+    }
+
+    private fun resumePendingGate() {
+        when (mPendingGate) {
+            BugWizardGate.HANDLE_EDIT -> showTgHandleDialog()
+            BugWizardGate.HUD_ARROWS -> askHudArrowCapability()
+            BugWizardGate.HUD_NAV_APP -> askHudNavApp()
+            BugWizardGate.HUD_NO_ARROWS -> showHudNoArrowsExplanation()
+            BugWizardGate.HUD_NO_NOTIFICATION_ACCESS -> showHudNoNotificationAccess()
+            BugWizardGate.HUD_NO_ROUTE -> showHudNoRoute()
+            BugWizardGate.HUD_UNSUPPORTED_NAV -> explainUnsupportedNav()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        mDetailsDraft = mDetailsField?.text?.toString().orEmpty()
+        mHandleDraft = mHandleField?.text?.toString() ?: mHandleDraft
+        BugWizardStateStore.write(
+            outState,
+            BugWizardSavedState(
+                mCategory,
+                mHudArrowsAnswer,
+                mHudNavApp,
+                mActiveNav,
+                mNavSeen,
+                mAppPkg,
+                mAppLabel,
+                mSelectedIssueIndex,
+                mDetailsDraft,
+                mTgHandle,
+                mHandleDraft,
+                mCurrentStep,
+                mPendingGate,
+                mDetectedPkg,
+                mDetectedLabel,
+                mDetectionDone,
+            ),
+        )
+        super.onSaveInstanceState(outState)
     }
 
     // ── Step 0: category ─────────────────────────────────────────────────────
@@ -178,13 +258,13 @@ class BugWizardActivity : Activity() {
         // Not the HUD flow: drop any HUD-only answers collected on a previous pass through the wizard
         // so they are not stapled onto an unrelated report after the user goes Back and re-picks.
         mHudArrowsAnswer = ""; mHudNavApp = ""; mActiveNav = ""; mNavSeen = ""
-        buildAppPage()
-        showStep(1)
+        continueToAppPage()
     }
 
     /** Arrow-capability gate for HUD reports (see [selectCategory]). Yes/Unknown → continue the
      *  wizard (answer recorded in the report); No → explain there is nothing to fix and finish. */
     private fun askHudArrowCapability() {
+        mPendingGate = BugWizardGate.HUD_ARROWS
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.bug_hud_gate_title))
             .setMessage(getString(R.string.bug_hud_gate_msg))
@@ -196,12 +276,17 @@ class BugWizardActivity : Activity() {
                 mHudArrowsAnswer = "unknown"; askHudNavApp()
             }
             .setNegativeButton(getString(R.string.bug_hud_gate_no)) { _, _ ->
-                AlertDialog.Builder(this)
-                    .setMessage(getString(R.string.bug_hud_no_arrows_msg))
-                    .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
-                    .setOnCancelListener { finish() }
-                    .show()
+                showHudNoArrowsExplanation()
             }
+            .show()
+    }
+
+    private fun showHudNoArrowsExplanation() {
+        mPendingGate = BugWizardGate.HUD_NO_ARROWS
+        AlertDialog.Builder(this)
+            .setMessage(getString(R.string.bug_hud_no_arrows_msg))
+            .setPositiveButton(android.R.string.ok) { _, _ -> finishFromGate() }
+            .setOnCancelListener { finishFromGate() }
             .show()
     }
 
@@ -214,6 +299,7 @@ class BugWizardActivity : Activity() {
      * → continue; OEM/Other → explain the limitation, then finish (noise avoided) or report anyway.
      */
     private fun askHudNavApp() {
+        mPendingGate = BugWizardGate.HUD_NAV_APP
         val opts = arrayOf(
             getString(R.string.bug_hud_nav_maps),
             getString(R.string.bug_hud_nav_waze),
@@ -248,38 +334,61 @@ class BugWizardActivity : Activity() {
         //    did exactly that, cancelling the very report its notification dump was added to diagnose.
         if (!hasNotificationAccess()) {
             mNavSeen = "notif-access-off"
-            AlertDialog.Builder(this)
-                .setMessage(getString(R.string.bug_hud_no_notif_access_msg))
-                .setCancelable(false)
-                .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
-                .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
-                    buildAppPage(); showStep(1)
-                }
-                .setOnCancelListener { finish() }
-                .show()
+            showHudNoNotificationAccess()
             return
         }
 
         mNavSeen = MapNotificationListenerService.navSeenSummary(mHudNavApp)
         when (MapNotificationListenerService.recentNavStatus(mHudNavApp)) {
             // A route ran and we understood it → ordinary report, no interruption.
-            MapNotificationListenerService.NAV_PARSED -> { buildAppPage(); showStep(1) }
+            MapNotificationListenerService.NAV_PARSED -> continueToAppPage()
 
             // The nav app WAS posting guidance but nothing parsed → a DashCast PARSER bug, and the
             // most valuable "no arrow" report there is. Never gate it away: straight through.
-            MapNotificationListenerService.NAV_PARSE_FAIL -> { buildAppPage(); showStep(1) }
+            MapNotificationListenerService.NAV_PARSE_FAIL -> continueToAppPage()
 
             // Nothing recent from that app at all → most likely no route was ever started.
-            else -> AlertDialog.Builder(this)
-                .setMessage(getString(R.string.bug_hud_no_route_msg))
-                .setCancelable(false)
-                .setPositiveButton(getString(R.string.bug_hud_no_route_understood)) { _, _ -> finish() }
-                .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
-                    buildAppPage(); showStep(1)
-                }
-                .setOnCancelListener { finish() }
-                .show()
+            else -> showHudNoRoute()
         }
+    }
+
+    private fun showHudNoNotificationAccess() {
+        mPendingGate = BugWizardGate.HUD_NO_NOTIFICATION_ACCESS
+        AlertDialog.Builder(this)
+            .setMessage(getString(R.string.bug_hud_no_notif_access_msg))
+            .setCancelable(false)
+            .setPositiveButton(android.R.string.ok) { _, _ -> finishFromGate() }
+            .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
+                continueToAppPage()
+            }
+            .setOnCancelListener { finishFromGate() }
+            .show()
+    }
+
+    private fun showHudNoRoute() {
+        mPendingGate = BugWizardGate.HUD_NO_ROUTE
+        AlertDialog.Builder(this)
+            .setMessage(getString(R.string.bug_hud_no_route_msg))
+            .setCancelable(false)
+            .setPositiveButton(getString(R.string.bug_hud_no_route_understood)) { _, _ ->
+                finishFromGate()
+            }
+            .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
+                continueToAppPage()
+            }
+            .setOnCancelListener { finishFromGate() }
+            .show()
+    }
+
+    private fun continueToAppPage() {
+        mPendingGate = BugWizardGate.NONE
+        buildAppPage()
+        showStep(1)
+    }
+
+    private fun finishFromGate() {
+        mPendingGate = BugWizardGate.NONE
+        finish()
     }
 
     /**
@@ -297,14 +406,15 @@ class BugWizardActivity : Activity() {
     /** OEM/Other nav: tell the user DashCast only mirrors Maps/Waze, then let them bail (nothing to
      *  fix) or report anyway (recorded as HudNavApp so triage sees it is an unsupported-nav case). */
     private fun explainUnsupportedNav() {
+        mPendingGate = BugWizardGate.HUD_UNSUPPORTED_NAV
         AlertDialog.Builder(this)
             .setMessage(getString(R.string.bug_hud_nav_unsupported_msg))
             .setCancelable(false)
-            .setPositiveButton(getString(R.string.bug_hud_nav_understood)) { _, _ -> finish() }
+            .setPositiveButton(getString(R.string.bug_hud_nav_understood)) { _, _ -> finishFromGate() }
             .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
-                buildAppPage(); showStep(1)
+                continueToAppPage()
             }
-            .setOnCancelListener { finish() }
+            .setOnCancelListener { finishFromGate() }
             .show()
     }
 
@@ -416,6 +526,7 @@ class BugWizardActivity : Activity() {
     private fun selectApp(pkg: String, label: String) {
         mAppPkg = pkg
         mAppLabel = label
+        mDetailsDraft = ""
         buildIssuePage()
         showStep(2)
     }
@@ -715,6 +826,7 @@ class BugWizardActivity : Activity() {
     // ── Navigation ────────────────────────────────────────────────────────────
 
     private fun showStep(step: Int) {
+        mCurrentStep = step
         mFlipper.displayedChild = step
         val titleIds = intArrayOf(
             R.string.bug_wizard_step_category,
@@ -797,11 +909,13 @@ class BugWizardActivity : Activity() {
 
     /** Shows the dialog with the full explanation message (first use). Calls [then] on confirm or skip. */
     private fun showTgHandleDialogThen(then: Runnable) {
+        mPendingGate = BugWizardGate.HANDLE_REQUIRED
         showTgHandleDialogInternal(then)
     }
 
     /** Shows the dialog for subsequent edits (no mandatory callback). */
     private fun showTgHandleDialog() {
+        mPendingGate = BugWizardGate.HANDLE_EDIT
         showTgHandleDialogInternal(null)
     }
 
@@ -810,7 +924,9 @@ class BugWizardActivity : Activity() {
         et.setHint(R.string.bug_tg_hint)
         et.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
         et.isSingleLine = true
-        if (mTgHandle.isNotEmpty()) et.setText(mTgHandle)
+        val initialHandle = mHandleDraft.ifEmpty { mTgHandle }
+        if (initialHandle.isNotEmpty()) et.setText(initialHandle)
+        mHandleField = et
 
         val container = LinearLayout(this)
         container.orientation = LinearLayout.VERTICAL
@@ -826,11 +942,17 @@ class BugWizardActivity : Activity() {
                 var raw = et.text.toString().trim()
                 if (raw.isNotEmpty() && !raw.startsWith("@")) raw = "@$raw"
                 mTgHandle = raw
+                mHandleDraft = raw
+                mHandleField = null
+                mPendingGate = BugWizardGate.NONE
                 saveTgHandle(mTgHandle)
                 updateTgBanner()
                 onDismiss?.run()
             }
             .setNegativeButton(R.string.bug_tg_skip) { _, _ ->
+                mHandleField = null
+                mHandleDraft = ""
+                mPendingGate = BugWizardGate.NONE
                 onDismiss?.run()
             }
             .setCancelable(false)
