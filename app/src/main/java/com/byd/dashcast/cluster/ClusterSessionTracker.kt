@@ -12,6 +12,7 @@ import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.util.AppLogger
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Owns the set of packages launched on the cluster display during this session.
@@ -177,13 +178,31 @@ class ClusterSessionTracker(context: Context) {
             }
             AppLogger.i(TAG, "evict: move→display0 $pkg (was display=${location.displayId})")
             Handler(Looper.getMainLooper()).post {
-                svc.moveTaskToDisplay(pkg, 0, object : ClusterService.LaunchCallback {
-                    override fun onResult(ok: Boolean) {
-                        AppLogger.i(TAG, "evict: move $pkg → "
-                                + (if (ok) "OK" else "KO") + " — awaiting landing")
-                        awaitLandingThenForceStop(svc, pkgs, idx, evictionStartedAt, onAllDone)
-                    }
-                })
+                val main = Handler(Looper.getMainLooper())
+                val continued = AtomicBoolean(false)
+                lateinit var timeout: Runnable
+                fun continueAfterMove(ok: Boolean, source: String) {
+                    if (!continued.compareAndSet(false, true)) return
+                    main.removeCallbacks(timeout)
+                    AppLogger.i(TAG, "evict: move $pkg → "
+                            + (if (ok) "OK" else "KO") + " ($source) — awaiting landing")
+                    awaitLandingThenForceStop(svc, pkgs, idx, evictionStartedAt, onAllDone)
+                }
+                timeout = Runnable {
+                    AppLogger.w(TAG, "evict: move callback timeout for $pkg — continuing safely")
+                    continueAfterMove(false, "callback-timeout")
+                }
+                main.postDelayed(timeout, MOVE_CALLBACK_TIMEOUT_MS)
+                try {
+                    svc.moveTaskToDisplay(pkg, 0, object : ClusterService.LaunchCallback {
+                        override fun onResult(ok: Boolean) {
+                            continueAfterMove(ok, "callback")
+                        }
+                    })
+                } catch (error: Throwable) {
+                    AppLogger.e(TAG, "evict: move dispatch failed for $pkg", error)
+                    continueAfterMove(false, "dispatch-error")
+                }
             }
         }
     }
@@ -301,6 +320,7 @@ class ClusterSessionTracker(context: Context) {
 
     companion object {
         private const val TAG = "ClusterSessionTracker"
+        private const val MOVE_CALLBACK_TIMEOUT_MS = 30_000L
 
         /**
          * Single worker for the landing waits. Serial on purpose — eviction is already
