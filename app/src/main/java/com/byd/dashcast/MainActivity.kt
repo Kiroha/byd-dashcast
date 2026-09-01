@@ -1598,8 +1598,8 @@ class MainActivity : AppCompatActivity(),
      * is left on the display with a live phone session, which is a foreground for the OEM host to
      * reclaim, and we handed it over.
      *
-     * Gated on [ClusterSessionTracker.consumeHomeRestoreRequest], which is only ever set when a
-     * force-stop went unverified AND the task was seen on display 0 — so for every package whose
+    * Gated on the outcome captured by this exact eviction when a force-stop went unverified AND
+    * the task was seen on display 0 — so for every package whose
      * kill succeeds, which is nearly all of them, this is not reached and Stop behaves exactly as
      * before. The visible consequence where it DOES fire is that Stop leaves you on the launcher
      * rather than on DashCast's app list. That is the trade, and it is the better half of it.
@@ -1607,8 +1607,8 @@ class MainActivity : AppCompatActivity(),
      * Fails silently on purpose: a home screen that will not start must never be the reason the
      * projection teardown reports failure.
      */
-    private fun restoreHomeIfRequested() {
-        if (!mSessionTracker.consumeHomeRestoreRequest()) return
+    private fun restoreHomeIfRequested(requested: Boolean) {
+        if (!requested) return
         try {
             startActivity(
                 Intent(Intent.ACTION_MAIN)
@@ -1631,36 +1631,44 @@ class MainActivity : AppCompatActivity(),
         mSessionTracker.evictAllThen(
             if (mServiceBound) mClusterService else null,
             capturedClusterPkg, capturedSecondPkg
-        ) {
+        ) { restoreHome, callerComplete ->
             // Cluster pkg already killed → pass null so the helper only sends sendInfo(18+0).
             AdbLocalClient.restoreBydOnCluster(this, null, object : AdbLocalClient.Callback {
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
-                        // Sync ClusterService: invalidate mDashboardDisplayId.
-                        if (mServiceBound && mClusterService != null) {
-                            mClusterService!!.stopProjectionNoAdb()
+                        try {
+                            // Sync ClusterService: invalidate mDashboardDisplayId.
+                            if (mServiceBound && mClusterService != null) {
+                                mClusterService!!.stopProjectionNoAdb()
+                            }
+                            restoreHomeIfRequested(restoreHome)
+                            mSplitController?.clearSplitState()
+                            // v0.9.73 — projection just stopped → OFF state.
+                            setDashboardOffState()
+                            showAppList()
+                            btnRestoreCluster.isEnabled = true
+                            AppLogger.log(TAG, "BYD restored via ADB ✓")
+                        } finally {
+                            callerComplete.run()
                         }
-                        restoreHomeIfRequested()
-                        mSplitController?.clearSplitState()
-                        // v0.9.73 — projection just stopped → OFF state.
-                        setDashboardOffState()
-                        showAppList()
-                        btnRestoreCluster.isEnabled = true
-                        AppLogger.log(TAG, "BYD restored via ADB ✓")
                     }
                 }
 
                 override fun onError(error: String?) {
                     runOnUiThread {
-                        btnRestoreCluster.isEnabled = true
-                        Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
-                        AppLogger.log(TAG, "Restore FAILED: $error")
-                        // The hazardous state was created by the EVICTION, which has already
-                        // finished. Whether the separate cluster-restore call then succeeded says
-                        // nothing about it — and that call has several documented flaky paths, so
-                        // hanging the cover on its success would drop it exactly when a Stop is
-                        // already going badly.
-                        restoreHomeIfRequested()
+                        try {
+                            btnRestoreCluster.isEnabled = true
+                            Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
+                            AppLogger.log(TAG, "Restore FAILED: $error")
+                            // The hazardous state was created by the EVICTION, which has already
+                            // finished. Whether the separate cluster-restore call then succeeded says
+                            // nothing about it — and that call has several documented flaky paths, so
+                            // hanging the cover on its success would drop it exactly when a Stop is
+                            // already going badly.
+                            restoreHomeIfRequested(restoreHome)
+                        } finally {
+                            callerComplete.run()
+                        }
                     }
                 }
             })
@@ -1795,33 +1803,41 @@ class MainActivity : AppCompatActivity(),
         mSessionTracker.evictAllThen(
             if (mServiceBound) mClusterService else null,
             capturedClusterPkg, capturedSecondPkg
-        ) {
+        ) { restoreHome, callerComplete ->
             AdbLocalClient.restoreOriginCluster(this, ClusterPrefs.getClusterType(this), null, object : AdbLocalClient.Callback {
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
-                        if (mServiceBound && mClusterService != null) {
-                            mClusterService!!.stopProjectionNoAdb()
+                        try {
+                            if (mServiceBound && mClusterService != null) {
+                                mClusterService!!.stopProjectionNoAdb()
+                            }
+                            restoreHomeIfRequested(restoreHome)
+                            mSplitController?.clearSplitState()
+                            updateDashboardStatus(null)
+                            showAppList()
+                            btnRestoreCluster.isEnabled = true
+                            AppLogger.log(TAG, "Original cluster restored ✓")
+                        } finally {
+                            callerComplete.run()
                         }
-                        restoreHomeIfRequested()
-                        mSplitController?.clearSplitState()
-                        updateDashboardStatus(null)
-                        showAppList()
-                        btnRestoreCluster.isEnabled = true
-                        AppLogger.log(TAG, "Original cluster restored ✓")
                     }
                 }
 
                 override fun onError(error: String?) {
                     runOnUiThread {
-                        btnRestoreCluster.isEnabled = true
-                        Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
-                        AppLogger.log(TAG, "originCluster FAILED: $error")
-                        // The hazardous state was created by the EVICTION, which has already
-                        // finished. Whether the separate cluster-restore call then succeeded says
-                        // nothing about it — and that call has several documented flaky paths, so
-                        // hanging the cover on its success would drop it exactly when a Stop is
-                        // already going badly.
-                        restoreHomeIfRequested()
+                        try {
+                            btnRestoreCluster.isEnabled = true
+                            Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
+                            AppLogger.log(TAG, "originCluster FAILED: $error")
+                            // The hazardous state was created by the EVICTION, which has already
+                            // finished. Whether the separate cluster-restore call then succeeded says
+                            // nothing about it — and that call has several documented flaky paths, so
+                            // hanging the cover on its success would drop it exactly when a Stop is
+                            // already going badly.
+                            restoreHomeIfRequested(restoreHome)
+                        } finally {
+                            callerComplete.run()
+                        }
                     }
                 }
             })

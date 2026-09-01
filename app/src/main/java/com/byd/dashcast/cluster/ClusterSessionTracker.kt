@@ -13,6 +13,7 @@ import com.byd.dashcast.util.AppLogger
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Owns the set of packages launched on the cluster display during this session.
@@ -28,6 +29,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * after a process death.
  */
 class ClusterSessionTracker(context: Context) {
+
+    fun interface EvictionCompletion {
+        fun onAllDone(restoreHome: Boolean, callerComplete: Runnable)
+    }
 
     private data class EvictionCandidate(
         val packageName: String,
@@ -76,9 +81,6 @@ class ClusterSessionTracker(context: Context) {
      */
     private val mRestoreHome = HomeRestoreRequest()
 
-    /** Reads and clears the request. One eviction, at most one home launch. */
-    fun consumeHomeRestoreRequest(): Boolean = mRestoreHome.consume()
-
     // ── Bulk operations ───────────────────────────────────────────────────────
 
     /**
@@ -95,7 +97,16 @@ class ClusterSessionTracker(context: Context) {
      * Widening the list is only safe because [evictNext] now LOOKS before it acts — see there. The
      * tracked set is a session history, so most of its entries are usually nothing to evict.
      */
-    fun evictAllThen(svc: ClusterService?, main: String?, second: String?, onAllDone: Runnable) {
+    fun evictAllThen(svc: ClusterService?, main: String?, second: String?,
+                     onAllDone: EvictionCompletion) {
+        sEvictionOperations.submit { lease ->
+            evictAllOwned(svc, main, second, onAllDone, lease)
+        }
+    }
+
+    private fun evictAllOwned(svc: ClusterService?, main: String?, second: String?,
+                              onAllDone: EvictionCompletion,
+                              lease: EvictionOperationQueue.Lease) {
         mRestoreHome.reset()
         if (svc == null) {
             // Nothing here can verify anything: no service to move with, and probing from the main
@@ -103,7 +114,8 @@ class ClusterSessionTracker(context: Context) {
             // rather than force-stopping a whole session's history on a guess.
             val blind = ClusterEvictionPolicy.evictionList(main, second, emptyList())
             if (blind.isEmpty()) {
-                onAllDone.run()
+                lease.markPhysicalDone()
+                deliverCompletion(onAllDone, lease)
                 return
             }
             // No home cover from this path, deliberately. It is blind by definition — there is
@@ -112,10 +124,16 @@ class ClusterSessionTracker(context: Context) {
             // without evidence is the defect this whole pipeline was rewritten to stop making.
             val main = Handler(Looper.getMainLooper())
             val blindTokens = ArrayList<PackageEvictionGenerationGate.Token>(blind.size)
+            val physicalRemaining = AtomicInteger(blind.size)
+            fun physicalComplete() {
+                if (physicalRemaining.decrementAndGet() == 0) {
+                    main.post { lease.markPhysicalDone() }
+                }
+            }
             lateinit var timeout: Runnable
             val barrier = BoundedCompletionBarrier(blind.size, Runnable {
                 main.removeCallbacks(timeout)
-                main.post(onAllDone)
+                deliverCompletion(onAllDone, lease)
             })
             timeout = Runnable {
                 if (barrier.timeout()) {
@@ -132,6 +150,7 @@ class ClusterSessionTracker(context: Context) {
                 add(p)
                 if (!sEvictionGate.tryBeginDestructive(token)) {
                     barrier.complete(Runnable {})
+                    physicalComplete()
                     continue
                 }
                 val completed = AtomicBoolean(false)
@@ -145,6 +164,7 @@ class ClusterSessionTracker(context: Context) {
                         AppLogger.w(TAG, "blind forceStop $p failed: $error — retained")
                     }
                     barrier.complete(Runnable {})
+                    physicalComplete()
                 }
                 try {
                     AdbLocalClient.forceStopAppForBlindEviction(
@@ -162,7 +182,8 @@ class ClusterSessionTracker(context: Context) {
 
         val pkgs = ClusterEvictionPolicy.evictionList(main, second, snapshot())
         if (pkgs.isEmpty()) {
-            onAllDone.run()
+            lease.markPhysicalDone()
+            deliverCompletion(onAllDone, lease)
             return
         }
         // Every candidate remains recoverable across process death until a later probe or kill
@@ -174,7 +195,25 @@ class ClusterSessionTracker(context: Context) {
         }
         AppLogger.i(TAG, "evictAll: ${pkgs.size} candidate(s) → $pkgs")
         // One clock for the whole eviction — see ClusterEvictionPolicy.LANDING_BUDGET_MS.
-        evictNext(svc, candidates, 0, SystemClock.elapsedRealtime(), onAllDone)
+        evictNext(svc, candidates, 0, SystemClock.elapsedRealtime(), Runnable {
+            lease.markPhysicalDone()
+            deliverCompletion(onAllDone, lease)
+        })
+    }
+
+    private fun deliverCompletion(
+        completion: EvictionCompletion,
+        lease: EvictionOperationQueue.Lease,
+    ) {
+        val restoreHome = mRestoreHome.consume()
+        Handler(Looper.getMainLooper()).post {
+            try {
+                completion.onAllDone(restoreHome, Runnable { lease.markCallerDone() })
+            } catch (error: Throwable) {
+                lease.markCallerDone()
+                throw error
+            }
+        }
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
@@ -407,6 +446,7 @@ class ClusterSessionTracker(context: Context) {
         private const val MOVE_CALLBACK_TIMEOUT_MS = 30_000L
         private const val BLIND_EVICTION_TIMEOUT_MS = 30_000L
         private val sEvictionGate = PackageEvictionGenerationGate()
+        private val sEvictionOperations = EvictionOperationQueue()
 
         /**
          * Single worker for the landing waits. Serial on purpose — eviction is already
