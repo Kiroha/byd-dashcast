@@ -61,6 +61,15 @@ public final class SplitController {
     public void setSecondDashboardPkg(String pkg) { mSecondDashboardPkg = pkg; }
     public void setSecondDashboardApp(String app) { mSecondDashboardApp = app; }
 
+    /** Clears a verified-stopped occupant only if no newer split operation replaced it. */
+    public boolean clearSecondDashboardIfMatches(String expectedPkg) {
+        if (expectedPkg == null || !expectedPkg.equals(mSecondDashboardPkg)) return false;
+        mSecondDashboardApp = null;
+        mSecondDashboardPkg = null;
+        mHost.onSplitStateChanged();
+        return true;
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
 
     /** Shows a popup to choose full-screen / left-50% / right-50% for the current cluster app. */

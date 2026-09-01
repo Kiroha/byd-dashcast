@@ -965,23 +965,44 @@ class MainActivity : AppCompatActivity(),
                     " → complementary slot bounds=[" + newLeft + ",0," + newRight + "," + h + "]" +
                     " pkg=" + pkgName
             )
-            if (split.getSecondDashboardPkg() != null) {
-                AdbLocalClient.forceStopApp(this, split.getSecondDashboardPkg(), null)
-            }
-            mSessionTracker.remove(pkgName)
-            svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h, object : ClusterService.LaunchCallback {
-                override fun onResult(launched: Boolean) {
-                    if (launched) {
-                        mLastLaunchTime = System.currentTimeMillis()
-                        split.setSecondDashboardApp(appName)
-                        split.setSecondDashboardPkg(pkgName)
-                        mSessionTracker.add(pkgName)
-                        updateControlLabel()
-                    } else {
-                        Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
+            fun launchInComplementarySlot() {
+                mSessionTracker.remove(pkgName)
+                svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h, object : ClusterService.LaunchCallback {
+                    override fun onResult(launched: Boolean) {
+                        if (launched) {
+                            mLastLaunchTime = System.currentTimeMillis()
+                            split.setSecondDashboardApp(appName)
+                            split.setSecondDashboardPkg(pkgName)
+                            mSessionTracker.add(pkgName)
+                            updateControlLabel()
+                        } else {
+                            Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
+                        }
                     }
-                }
-            })
+                })
+            }
+            val previousSecond = split.getSecondDashboardPkg()
+            if (previousSecond != null) {
+                AdbLocalClient.forceStopApp(this, previousSecond, object : AdbLocalClient.Callback {
+                    override fun onSuccess(report: String?) {
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            if (!split.clearSecondDashboardIfMatches(previousSecond)) return@runOnUiThread
+                            mSessionTracker.remove(previousSecond)
+                            launchInComplementarySlot()
+                        }
+                    }
+
+                    override fun onError(error: String?) {
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            if (split.getSecondDashboardPkg() == previousSecond) launchInComplementarySlot()
+                        }
+                    }
+                })
+            } else {
+                launchInComplementarySlot()
+            }
             return
         }
 
@@ -1168,10 +1189,18 @@ class MainActivity : AppCompatActivity(),
         if (splitOccupantToStop != null) {
             AdbLocalClient.forceStopApp(this, splitOccupantToStop, object : AdbLocalClient.Callback {
                 override fun onSuccess(report: String?) {
-                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        if (!split!!.clearSecondDashboardIfMatches(splitOccupantToStop)) return@runOnUiThread
+                        mSessionTracker.remove(splitOccupantToStop)
+                        launch()
+                    }
                 }
                 override fun onError(error: String?) {
-                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        if (split!!.getSecondDashboardPkg() == splitOccupantToStop) launch()
+                    }
                 }
             })
         } else if (layoutTarget == null && splitBounds == null &&
