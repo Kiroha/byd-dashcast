@@ -1032,7 +1032,7 @@ public final class FissionOrchestrator {
         IBinder b = FissionClient.getBinderFromServiceManager();
         if (b != null && sDaemonFreshnessChecked) {
             mDaemonBinder = b;
-            retryReleaseDebt(b);
+            if (!retryReleaseDebt(b)) return false;
             final IBinder fb0 = b;
             post(() -> mCallbacks.onDaemonBinderAcquired(fb0));
             return true;
@@ -1067,7 +1067,7 @@ public final class FissionOrchestrator {
             b = FissionClient.getBinderFromServiceManager();
             if (b != null) {
                 mDaemonBinder = b;
-                retryReleaseDebt(b);
+                if (!retryReleaseDebt(b)) return false;
                 final IBinder fb = b;
                 post(() -> mCallbacks.onDaemonBinderAcquired(fb));
                 AppLogger.d(TAG, "Daemon binder acquired after " + ((i + 1) * 500) + "ms");
@@ -1078,12 +1078,14 @@ public final class FissionOrchestrator {
         return false;
     }
 
-    private void retryReleaseDebt(IBinder binder) {
+    private boolean retryReleaseDebt(IBinder binder) {
         java.util.Set<String> remaining = FissionReleaseDebt.retry(
                 key -> FissionClient.releaseSlot(binder, key));
         if (!remaining.isEmpty()) {
             AppLogger.w(TAG, "slot release debt still pending: " + remaining);
+            return false;
         }
+        return true;
     }
 
     private void doStartSlot(String pkg, String label, Rect rect, SurfaceHolder surfaceHolder)

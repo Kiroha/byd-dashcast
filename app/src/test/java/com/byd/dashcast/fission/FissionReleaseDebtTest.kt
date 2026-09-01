@@ -53,6 +53,9 @@ class FissionReleaseDebtTest {
             .substringBefore("public void stopAll()")
 
         assertTrue(ensure.contains("retryReleaseDebt(b)"))
+        assertTrue(ensure.split("if (!retryReleaseDebt(b)) return false").size - 1 >= 2)
+        assertTrue(source.indexOf("if (!retryReleaseDebt(b)) return false") <
+            source.indexOf("private void doStartSlot"))
         assertTrue(free.contains("FissionReleaseDebt.record(key)"))
         assertTrue(free.indexOf("FissionClient.releaseSlot") < free.indexOf("mFreeZoneKeys.remove(key)"))
         assertTrue(!startError.contains("FissionClient.releaseSlot"))
