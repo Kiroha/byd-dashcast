@@ -25,10 +25,12 @@ internal class PackageEvictionGenerationGate {
     @Synchronized
     fun prepareLaunch(packageName: String, launch: Runnable): Boolean {
         val state = states.getOrPut(packageName) { State() }
+        if (state.destructiveGeneration != null) {
+            state.deferredLaunch = launch
+            return false
+        }
         state.generation = ++nextGeneration
-        if (state.destructiveGeneration == null) return true
-        state.deferredLaunch = launch
-        return false
+        return true
     }
 
     @Synchronized
