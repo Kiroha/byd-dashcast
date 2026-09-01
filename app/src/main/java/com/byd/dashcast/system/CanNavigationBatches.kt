@@ -71,6 +71,12 @@ object CanNavigationBatches {
         )
 
     @JvmStatic
+    fun nextStreetName(bytes: ByteArray): List<CanBatchOperation> =
+        listOf(
+            CanBatchOperation.instrumentBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, bytes)
+        )
+
+    @JvmStatic
     fun restRoute(restHour: Int, restMinute: Int, restMileage: Long): List<CanBatchOperation> =
         listOf(
             CanBatchOperation.instrumentInt(

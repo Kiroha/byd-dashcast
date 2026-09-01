@@ -38,6 +38,26 @@ class CanBatchOperationTest {
     }
 
     @Test
+    fun nextStreetNameUsesTruthfulInstrumentBytesBatch() {
+        val events = mutableListOf<String>()
+        val bytes = "Rue".toByteArray(Charsets.UTF_16LE)
+
+        CanNavigationBatches.nextStreetName(bytes)
+            .forEach { it.execute(RecordingWriter(events)) }
+
+        assertEquals(listOf("bytes:1140461576=82,0,117,0,101,0"), events)
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .first { java.io.File(it,
+                "app/src/main/java/com/byd/dashcast/system/CanBusController.java").isFile }
+        val controller = java.io.File(root,
+            "app/src/main/java/com/byd/dashcast/system/CanBusController.java").readText()
+        val method = controller.substringAfter("public static void sendNextStreetName")
+            .substringBefore("// ─── Remaining route info")
+        assertTrue(method.contains("sendBatch(CanNavigationBatches.nextStreetName(bytes))"))
+        assertTrue(!method.contains("ProxyClient.canInstrumentBytes"))
+    }
+
+    @Test
     fun navigationActivationKeepsLegacyOrder() {
         val events = mutableListOf<String>()
 
