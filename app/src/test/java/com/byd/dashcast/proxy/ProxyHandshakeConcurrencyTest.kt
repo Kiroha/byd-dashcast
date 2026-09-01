@@ -223,6 +223,23 @@ class ProxyHandshakeConcurrencyTest {
         assertTrue(create.contains("clearConnectionIfCurrent(b)"))
     }
 
+    @Test
+    fun `failed connection paths clear the complete captured generation`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+        val failedWait = source.substringAfter("// Late-arrival recovery:")
+            .substringBefore("result = isConnected()")
+        val handshakeFailure = source.substringAfter("handshake failed (")
+            .substringBefore("return false;")
+
+        assertTrue(failedWait.contains("IBinder failedBinder = sBinder"))
+        assertTrue(failedWait.contains("clearConnectionIfCurrent(failedBinder)"))
+        assertTrue(handshakeFailure.contains("clearConnectionIfCurrent(expectedBinder)"))
+    }
+
     private fun setStatic(name: String, value: Any?) {
         ProxyClient::class.java.getDeclaredField(name).apply {
             isAccessible = true
