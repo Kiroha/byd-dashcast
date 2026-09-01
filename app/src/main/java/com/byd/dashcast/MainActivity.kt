@@ -971,7 +971,10 @@ class MainActivity : AppCompatActivity(),
                 mSessionTracker.remove(pkgName)
                 svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h, object : ClusterService.LaunchCallback {
                     override fun onResult(launched: Boolean) {
-                        if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) return
+                        if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
+                            if (launched) cleanupStaleSplitLaunch(pkgName)
+                            return
+                        }
                         if (launched) {
                             mLastLaunchTime = System.currentTimeMillis()
                             split.setSecondDashboardApp(appName)
@@ -1242,6 +1245,23 @@ class MainActivity : AppCompatActivity(),
         } else {
             launch()
         }
+    }
+
+    /** A superseded bounded launch already reached the cluster; retain it until kill is verified. */
+    private fun cleanupStaleSplitLaunch(packageName: String) {
+        mSessionTracker.add(packageName)
+        AppLogger.w(TAG, "cleaning stale split launch: $packageName")
+        AdbLocalClient.forceStopApp(this, packageName, object : AdbLocalClient.Callback {
+            override fun onSuccess(report: String?) {
+                mSessionTracker.remove(packageName)
+                AppLogger.i(TAG, "stale split launch removed: $packageName")
+            }
+
+            override fun onError(error: String?) {
+                // Keep it in the persisted session history so Stop retries the eviction.
+                AppLogger.e(TAG, "stale split launch cleanup failed for $packageName: $error")
+            }
+        })
     }
 
     private fun rejectUnsupportedDashboardProjection(): Boolean {
