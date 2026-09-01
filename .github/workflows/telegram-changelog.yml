@@ -19,7 +19,9 @@ jobs:
       - name: Check out the release scanner
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+                    # Run policy from the reviewed default branch, never from the release tag being judged.
+                    ref: ${{ github.event.repository.default_branch }}
+                    persist-credentials: false
 
       - name: Verify release APK assets
         env:
