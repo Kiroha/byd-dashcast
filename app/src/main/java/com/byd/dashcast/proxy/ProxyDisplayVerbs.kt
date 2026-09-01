@@ -45,10 +45,9 @@ internal object ProxyDisplayVerbs {
 
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
-    fun createVirtualDisplay(name: String?, width: Int, height: Int,
+    fun createVirtualDisplay(binder: IBinder, name: String?, width: Int, height: Int,
                              densityDpi: Int, flags: Int, surface: Surface?): Int {
-        val b: IBinder? = ProxyClient.sBinder
-        if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
+        if (!binder.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         if (surface == null || !surface.isValid()) throw ProxyClient.ProxyException("surface invalid")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -62,7 +61,7 @@ internal object ProxyDisplayVerbs {
             data.writeInt(1) // non-null Surface marker (readParcelable convention)
             surface.writeToParcel(data, 0)
             data.writeStrongBinder(ProxyDisplayResourceOwner.token())
-            b.transact(ProxyDaemonContract.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0)
+            binder.transact(ProxyDaemonContract.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0)
             reply.readException()
             return reply.readInt()
         } finally {

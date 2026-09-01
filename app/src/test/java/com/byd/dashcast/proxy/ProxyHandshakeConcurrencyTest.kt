@@ -189,6 +189,40 @@ class ProxyHandshakeConcurrencyTest {
         assertTrue(receiver.contains("linkDeathLocked(sBinder)"))
     }
 
+    @Test
+    fun `connection clear cannot invalidate a replacement binder`() {
+        val stale = Binder()
+        val current = Binder()
+        setStatic("sBinder", current)
+        setStatic("sDaemonUid", 2000)
+        setStatic("sDaemonPid", 456)
+        setStatic("sDaemonVer", "25")
+        setStatic("sDaemonInstance", "0123456789abcdef0123456789abcdef")
+
+        assertFalse(ProxyClient.clearConnectionIfCurrent(stale))
+        assertTrue(ProxyClient.isConnected())
+        assertEquals(456, getStatic("sDaemonPid"))
+
+        assertTrue(ProxyClient.clearConnectionIfCurrent(current))
+        assertFalse(ProxyClient.isConnected())
+        assertEquals(-1, getStatic("sDaemonPid"))
+        assertEquals(null, getStatic("sDaemonInstance"))
+    }
+
+    @Test
+    fun `virtual display transact and cleanup use the same captured binder`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+        val create = source.substringAfter("public static int createVirtualDisplay")
+            .substringBefore("public static void releaseVirtualDisplay")
+
+        assertTrue(create.contains("ProxyDisplayVerbs.createVirtualDisplay(\n                    b,"))
+        assertTrue(create.contains("clearConnectionIfCurrent(b)"))
+    }
+
     private fun setStatic(name: String, value: Any?) {
         ProxyClient::class.java.getDeclaredField(name).apply {
             isAccessible = true

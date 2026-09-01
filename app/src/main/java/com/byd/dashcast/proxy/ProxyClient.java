@@ -314,6 +314,20 @@ public final class ProxyClient {
         sDeathBinder = null;
     }
 
+    /** Clears one complete connection generation only while it is still current. */
+    static boolean clearConnectionIfCurrent(IBinder expectedBinder) {
+        synchronized (LOCK) {
+            if (sBinder != expectedBinder) return false;
+            unlinkDeathLocked(expectedBinder);
+            sBinder = null;
+            sDaemonUid = -1;
+            sDaemonPid = -1;
+            sDaemonVer = null;
+            sDaemonInstance = null;
+            return true;
+        }
+    }
+
     private ProxyClient() {}
 
     /**
@@ -882,17 +896,10 @@ public final class ProxyClient {
         if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
         if (surface == null || !surface.isValid()) throw new ProxyException("surface null or invalid");
         try {
-            return ProxyDisplayVerbs.createVirtualDisplay(name, width, height, densityDpi, flags, surface);
+            return ProxyDisplayVerbs.createVirtualDisplay(
+                    b, name, width, height, densityDpi, flags, surface);
         } catch (RemoteException e) {
-            // M9: unlink death recipient inside LOCK — avoids leaking the registration
-            // and prevents clobbering a fresh binder from the broadcast receiver.
-            synchronized (LOCK) {
-                IBinder dead = sBinder;
-                if (dead != null) {
-                    unlinkDeathLocked(dead);
-                }
-                sBinder = null;
-            }
+            clearConnectionIfCurrent(b);
             throw new ProxyException("transact: " + e.getMessage(), e);
         }
     }
