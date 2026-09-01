@@ -16,6 +16,10 @@ class ProxyInstanceMarkerWiringTest {
 
         assertTrue(daemon.indexOf("if (!writeInstanceFile())") <
             daemon.indexOf("sBinder = new ProxyBinder()"))
+        assertTrue(daemon.indexOf("if (!writeInstanceFile())") <
+            daemon.indexOf("releaseStartupLock()"))
+        assertTrue(daemon.indexOf("releaseStartupLock()") <
+            daemon.indexOf("sBinder = new ProxyBinder()"))
         assertTrue(daemon.contains("System.exit(4)"))
         assertTrue(daemon.contains("reply.writeString(INSTANCE_TOKEN)"))
         val heartbeat = daemon.substringAfter("private static void installSelfHealHeartbeat()")
