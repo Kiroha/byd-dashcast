@@ -231,7 +231,7 @@ public final class CanBusController {
         byte[] bytes = (streetName == null || streetName.isEmpty())
                 ? new byte[0]
                 : streetName.getBytes(java.nio.charset.Charset.forName("UTF-16LE"));
-        ProxyClient.canInstrumentBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, bytes);
+        sendBatch(CanNavigationBatches.nextStreetName(bytes));
     }
 
     // ─── Remaining route info ─────────────────────────────────────────────
