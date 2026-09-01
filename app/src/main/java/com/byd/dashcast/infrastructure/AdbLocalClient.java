@@ -1210,7 +1210,8 @@ public class AdbLocalClient {
                 // only inspect callback.onSuccess(String) for emptiness.
                 // DL5: skip typed path — Phase4ProcessVerbs hardcodes the DL3 service
                 // name ("AutoContainer") which does not exist on DL5.
-                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)) {
+                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)
+                    && (typedObserver == null || ProxyClient.supportsProtocol(25))) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!ProxyClient.isConnected()) {
