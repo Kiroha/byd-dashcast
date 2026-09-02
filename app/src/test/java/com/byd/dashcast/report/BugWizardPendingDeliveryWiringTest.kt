@@ -28,9 +28,13 @@ class BugWizardPendingDeliveryWiringTest {
         assertTrue(bundle.indexOf("BugWizardPendingDelivery.BUNDLING") <
             bundle.indexOf("Thread({"))
         assertTrue(delivery.contains("BugWizardPendingDelivery.DELIVERING"))
-        assertFalse("headless failure must leave the retry record", failed.contains(
-            "clearDurablePendingDelivery()"))
-        assertTrue(source.substringAfter("private fun shareFallback")
-            .contains("clearDurablePendingDelivery()"))
+        assertFalse("failure must leave the retry record",
+            failed.contains("clearDurablePendingDelivery"))
+        val share = source.substringAfter("private fun shareFallback")
+            .substringBefore("private fun finishAmbiguousDelivery")
+        assertTrue(share.indexOf("AppLogger.shareFile") <
+            share.indexOf("if (chooserOpened) clearDurablePendingDelivery(file)"))
+        assertFalse(share.substringBefore("AppLogger.shareFile")
+            .contains("clearDurablePendingDelivery"))
     }
 }

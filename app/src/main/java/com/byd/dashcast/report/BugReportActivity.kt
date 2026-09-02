@@ -90,10 +90,12 @@ class BugReportActivity : Activity() {
                     return
                 }
                 if (TelegramBugReporter.isConfigured()) {
+                    protectDelivery(file, caption)
                     tvStatus.setText(R.string.bug_status_sending)
                     TelegramBugReporter.send(this@BugReportActivity, file, caption,
                         object : TelegramBugReporter.Callback {
                             override fun onSent() {
+                                clearDelivery(file)
                                 if (!isUiAlive()) {
                                     AppLogger.i(TAG, "legacy report sent after Activity closed")
                                     return
@@ -123,6 +125,7 @@ class BugReportActivity : Activity() {
                             }
                         })
                 } else {
+                    protectDelivery(file, caption)
                     shareFallback(file)
                 }
             }
@@ -143,6 +146,7 @@ class BugReportActivity : Activity() {
     }
 
     private fun deliverHeadlessly(file: File, caption: String) {
+        protectDelivery(file, caption)
         if (!TelegramBugReporter.isConfigured()) {
             AppLogger.w(TAG, "Activity closed — report kept at ${file.absolutePath}")
             return
@@ -150,6 +154,7 @@ class BugReportActivity : Activity() {
         TelegramBugReporter.send(applicationContext, file, caption,
             object : TelegramBugReporter.Callback {
                 override fun onSent() {
+                    clearDelivery(file)
                     AppLogger.i(TAG, "legacy report sent headlessly")
                 }
 
@@ -165,17 +170,33 @@ class BugReportActivity : Activity() {
             })
     }
 
+    private fun protectDelivery(file: File, caption: String) {
+        if (!BugWizardPendingDelivery.protect(
+                applicationContext,
+                file,
+            caption)) {
+            AppLogger.e(TAG, "could not protect legacy pending report ${file.absolutePath}")
+        }
+    }
+
+    private fun clearDelivery(file: File) {
+        BugWizardPendingDelivery.clear(applicationContext, file)
+    }
+
     private fun isUiAlive(): Boolean = !isFinishing && !isDestroyed
 
     private fun shareFallback(file: File) {
+        var chooserOpened = false
         try {
             AppLogger.shareFile(this, file, getString(R.string.bug_share_subject),
                 getString(R.string.bug_share_chooser))
+            chooserOpened = true
         } catch (e: Exception) {
             AppLogger.e(TAG, "share fallback failed", e)
             Toast.makeText(this, getString(R.string.bug_status_error_fmt, e.message.orEmpty()),
                 Toast.LENGTH_LONG).show()
         }
+        if (chooserOpened) clearDelivery(file)
         finish()
     }
 

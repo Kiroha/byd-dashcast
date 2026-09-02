@@ -42,8 +42,36 @@ class BugReportActivityLifecycleWiringTest {
             .substringBefore("private fun isUiAlive")
 
         assertTrue(headless.contains("TelegramBugReporter.send(applicationContext"))
+        assertTrue(headless.indexOf("protectDelivery(file, caption)") <
+            headless.indexOf("TelegramBugReporter.send(applicationContext"))
+        val sent = headless.substringAfter("override fun onSent")
+            .substringBefore("override fun onFailed")
+        val failed = headless.substringAfter("override fun onFailed")
+            .substringBefore("override fun onAmbiguous")
+        val ambiguous = headless.substringAfter("override fun onAmbiguous")
+        assertTrue(sent.contains("clearDelivery(file)"))
+        assertFalse(failed.contains("clearDelivery(file)"))
+        assertFalse(ambiguous.contains("clearDelivery(file)"))
         assertFalse(headless.contains("Toast.makeText"))
         assertFalse(headless.contains("shareFallback"))
         assertFalse(headless.contains("tvStatus"))
+    }
+
+    @Test
+    fun `visible upload is protected before dispatch and share clears only on success`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/report/BugReportActivity.kt").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/report/BugReportActivity.kt").readText()
+        val ready = source.substringAfter("override fun onReady(file: File)")
+            .substringBefore("override fun onError")
+        val share = source.substringAfter("private fun shareFallback")
+            .substringBefore("private fun buildCaption")
+
+        assertTrue(ready.indexOf("protectDelivery(file, caption)") <
+            ready.indexOf("TelegramBugReporter.send(this@BugReportActivity"))
+        assertTrue(share.contains("if (chooserOpened) clearDelivery(file)"))
+        assertFalse(share.substringBefore("try {").contains("clearDelivery(file)"))
     }
 }
