@@ -20,6 +20,12 @@ class ProxyInstanceMarkerWiringTest {
             daemon.indexOf("releaseStartupLock()"))
         assertTrue(daemon.indexOf("releaseStartupLock()") <
             daemon.indexOf("sBinder = new ProxyBinder()"))
+        val beforeBinder = daemon.substringAfter("public static void main(String[] args)")
+            .substringBefore("sBinder = new ProxyBinder()")
+        assertTrue(beforeBinder.contains("prepareStandaloneMainLooper()"))
+        val looperHelper = daemon.substringAfter("private static void prepareStandaloneMainLooper()")
+            .substringBefore("public static void main(String[] args)")
+        assertTrue(looperHelper.contains("Looper.prepareMainLooper()"))
         assertTrue(daemon.contains("System.exit(4)"))
         assertTrue(daemon.contains("reply.writeString(INSTANCE_TOKEN)"))
         val heartbeat = daemon.substringAfter("private static void installSelfHealHeartbeat()")

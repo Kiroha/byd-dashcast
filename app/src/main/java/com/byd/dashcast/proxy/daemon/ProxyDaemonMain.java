@@ -208,6 +208,11 @@ public final class ProxyDaemonMain {
 
     private ProxyDaemonMain() {}
 
+    @SuppressWarnings("deprecation")
+    private static void prepareStandaloneMainLooper() {
+        Looper.prepareMainLooper();
+    }
+
     public static void main(String[] args) {
         try {
             // v1.8.24 — unlock hidden APIs for THIS process before anything else touches
@@ -248,7 +253,7 @@ public final class ProxyDaemonMain {
             }
             releaseStartupLock();
             installPidShutdownHook();
-            Looper.prepareMainLooper();
+            prepareStandaloneMainLooper();
 
             sBinder = new ProxyBinder();
             log("binder ready uid=" + Process.myUid()
