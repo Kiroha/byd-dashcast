@@ -101,6 +101,17 @@ class FissionWatchdogPolicyTest {
 
         assertEquals(TaskLocation.Status.UNKNOWN, selected.status)
     }
+
+    @Test
+    fun `null Java list entries are ignored without hiding a displaced task`() {
+        val selected = FissionWatchdogPolicy.selectTask(
+            listOf(null, TaskLocation.found(11, 0)),
+            4
+        )
+
+        assertEquals(11, selected.taskId)
+        assertEquals(0, selected.displayId)
+    }
     // ── what the daemon transcript gets to see ───────────────────────────────────────────────
 
     /**

@@ -62,7 +62,7 @@ internal class FissionWatchdogPolicy {
 
         /** Prefer any known task outside the slot; otherwise keep the newest query ordering. */
         @JvmStatic
-        fun selectTask(locations: List<TaskLocation>?, targetDisplayId: Int): TaskLocation {
+        fun selectTask(locations: List<TaskLocation?>?, targetDisplayId: Int): TaskLocation {
             requireNotNull(locations) { "locations required" }
             var expected: TaskLocation? = null
             var unknown: TaskLocation? = null
