@@ -48,6 +48,7 @@ class UsageTracker(private val mHost: Host) {
                 val ms = value
                 var name = pkg
                 try {
+                    @Suppress("DEPRECATION")
                     val ai = ctx.packageManager.getApplicationInfo(pkg, 0)
                     val label: CharSequence? = ctx.packageManager.getApplicationLabel(ai)
                     if (label != null) name = label.toString()
