@@ -42,6 +42,13 @@
           <ignore path="**/report/ReportChannel.kt" />
      </issue>
 
+     <!-- Report admission is intentionally based on bytes writable now on the
+           target volume. Counting reclaimable cache via StorageManager would make
+           the guard optimistic and could evict unrelated cached data. -->
+     <issue id="UsableSpace">
+          <ignore path="**/report/ReportStore.kt" />
+     </issue>
+
     <!-- Not distributed via Play Store; targetSdk29 is intentional for DiLink3 compatibility. -->
     <issue id="ExpiredTargetSdkVersion" severity="ignore" />
 
