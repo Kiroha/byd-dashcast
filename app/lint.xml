@@ -27,6 +27,14 @@
           <ignore path="**/report/ReportChannel.kt" />
      </issue>
 
+     <!-- These process-wide transport gates retain ctx.applicationContext only,
+           never an Activity or service context. Their lifetime intentionally
+           matches the application process. -->
+     <issue id="StaticFieldLeak">
+          <ignore path="**/report/ReportChannel.kt" />
+          <ignore path="**/report/ReportConsent.kt" />
+     </issue>
+
     <!-- Not distributed via Play Store; targetSdk29 is intentional for DiLink3 compatibility. -->
     <issue id="ExpiredTargetSdkVersion" severity="ignore" />
 
