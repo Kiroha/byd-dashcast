@@ -135,6 +135,7 @@ class ClusterResizeActivity : Activity(),
             val disp = dm0?.getDisplay(mDisplayId)
             if (disp != null) {
                 val sz = android.graphics.Point()
+                @Suppress("DEPRECATION")
                 disp.getRealSize(sz)
                 if (sz.x > 0 && sz.y > 0) panel.set(sz.x, sz.y)
             } else {
