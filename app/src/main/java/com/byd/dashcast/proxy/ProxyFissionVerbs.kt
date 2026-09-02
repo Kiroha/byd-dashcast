@@ -26,7 +26,7 @@ internal object ProxyFissionVerbs {
         pkg: String?, activityCls: String?,
         displayId: Int, width: Int, height: Int
     ): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -57,7 +57,7 @@ internal object ProxyFissionVerbs {
         pkg: String?, displayId: Int,
         left: Int, top: Int, right: Int, bottom: Int
     ): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -81,7 +81,7 @@ internal object ProxyFissionVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun cleanFissionStacks(displayId: Int): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -100,7 +100,7 @@ internal object ProxyFissionVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun cancelFissionWatchdog(packageName: String?): Boolean {
-        val binder: IBinder? = ProxyClient.sBinder
+        val binder: IBinder? = ProxyClient.dispatchBinder()
         if (binder == null || !binder.isBinderAlive()) {
             throw ProxyClient.ProxyException("not connected")
         }

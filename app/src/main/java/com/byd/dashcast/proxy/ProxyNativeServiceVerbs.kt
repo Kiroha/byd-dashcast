@@ -21,7 +21,7 @@ internal object ProxyNativeServiceVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun fissionGetAutoCarDisplay(): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -39,7 +39,7 @@ internal object ProxyNativeServiceVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun autoContainerRegisterCallback(): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -57,7 +57,7 @@ internal object ProxyNativeServiceVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun projectionTraceStart() {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -74,7 +74,7 @@ internal object ProxyNativeServiceVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun projectionTraceDrain(): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()

@@ -26,7 +26,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canNaviStatus(status: Int): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -45,7 +45,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canInstrumentInt(featureId: Int, value: Int): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -65,7 +65,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canInstrumentBytes(featureId: Int, bytes: ByteArray?): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -85,7 +85,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canSettingInt(featureId: Int, value: Int): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -134,7 +134,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canInstrumentGet(featureId: Int): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -153,7 +153,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canSettingDouble(featureId: Int, value: Double): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -173,7 +173,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canSettingGet(featureId: Int): Int {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -192,7 +192,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canListenStart(): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -210,7 +210,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canListenDrain(): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -228,7 +228,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun aaosHalProbe(): String? {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -246,7 +246,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canListenClear() {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -263,7 +263,7 @@ internal object ProxyCanVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun canListenMark(label: String?) {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()

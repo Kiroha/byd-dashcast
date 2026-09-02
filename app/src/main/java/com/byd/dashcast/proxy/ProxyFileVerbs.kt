@@ -25,7 +25,7 @@ internal object ProxyFileVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun readFileChunk(path: String?, offset: Long, maxLen: Int): ByteArray {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
