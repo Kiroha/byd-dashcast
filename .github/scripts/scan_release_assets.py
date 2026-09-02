@@ -448,6 +448,7 @@ def verify_release_contract(
         signer_count = re.search(r"Number of signers:\s*(\d+)", signature)
         certs = signer_certificate_digests(signature)
         if len(certs) != 1 or (signer_count is not None and signer_count.group(1) != "1"):
+            print(signature_parse_diagnostic(signature, apksigner))
             findings.append(f"{single_line(apk.name)} :: expected exactly one APK signer")
         if len(certs) != 1 or certs[0] != EXPECTED_CERT_SHA256:
             findings.append(f"{single_line(apk.name)} :: unexpected signing certificate")
@@ -503,6 +504,23 @@ def signer_certificate_digests(signature: str) -> list[str]:
             continue
         digests.append(hashlib.sha256(certificate).hexdigest())
     return digests
+
+
+def signature_parse_diagnostic(signature: str, apksigner: str) -> str:
+    labels = []
+    for match in re.finditer(
+        r"^([^\r\n]{1,120}) certificate DN:",
+        signature,
+        re.MULTILINE | re.IGNORECASE,
+    ):
+        labels.append(single_line(match.group(1).strip()))
+    return (
+        "INFO: apksigner certificate markers "
+        f"tool={single_line(apksigner)} "
+        f"pem_begin={signature.count('-----BEGIN CERTIFICATE-----')} "
+        f"pem_end={signature.count('-----END CERTIFICATE-----')} "
+        f"labels={labels}"
+    )
 
 
 def write_github_output(findings: list[str]) -> None:
