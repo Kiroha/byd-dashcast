@@ -14,6 +14,22 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.48-beta (versionCode 638)
+
+**The full post-1.8.47 convergence audit: projection and task ownership are serialized, daemon
+identity and recovery are race-safe, Layout/Fission activation is transactional, tactile stop is
+truthful, and completed bug reports have durable per-file delivery ownership.**
+
+The release adds bounded stale-callback and timeout handling across projection, eviction, Split,
+IME, reporting, relay and OTA paths; hardens the published-APK scanner through raw ZIP/ZIP64 and
+APK Signing Block validation; and brings Android lint, Kotlin/Javac diagnostics and Gradle
+configuration to zero findings except for the documented Kotlin 2.4 metadata warning emitted by
+the retained AGP-bundled R8.
+
+738 JVM tests pass across 158 suites. The platform-signed release APK and matching R8 mapping are
+published for on-car validation. Full scope, hashes, rollback constraints and the prioritized car
+checklist: [docs/releases/1.8.48-beta.md](docs/releases/1.8.48-beta.md).
+
 ### 1.8.35-beta (versionCode 625)
 
 **Eleven P2 defects from the re-audit of 1.8.33 — and five of them are the same shape: a finding already marked as fixed, whose fix only covered half the defect.**
