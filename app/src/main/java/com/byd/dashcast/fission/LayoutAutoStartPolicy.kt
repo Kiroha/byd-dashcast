@@ -31,7 +31,7 @@ object LayoutAutoStartPolicy {
     fun hasBoundApplication(preset: LayoutPreset?): Boolean {
         val slots = preset?.slots ?: return false
         for (slot in slots) {
-            val pkg = slot?.packageName
+            val pkg = slot.packageName
             if (!pkg.isNullOrEmpty()) return true
         }
         return false
