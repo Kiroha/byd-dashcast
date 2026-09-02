@@ -84,4 +84,20 @@ class ClusterImeRelaySessionTest {
         assertTrue(launch.indexOf("sInstance != this") < launch.indexOf("startActivity(i)"))
         assertTrue(launch.indexOf("mRelaySession.hasTargetOn") < launch.indexOf("startActivity(i)"))
     }
+
+    @Test
+    fun `API 29 node recycling remains centralized at every ownership boundary`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/ime").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java"
+        ).readText()
+
+        assertEquals(11, source.split("recycleNode(").size - 1)
+        val helper = source.substringAfter("private static void recycleNode")
+            .substringBefore("private static int activeClusterDisplayId")
+        assertTrue(helper.contains("node.recycle()"))
+    }
 }

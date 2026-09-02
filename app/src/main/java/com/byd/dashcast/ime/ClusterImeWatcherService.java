@@ -124,7 +124,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 AppLogger.e(TAG, "setTextOnCluster failed", t);
                 return false;
             } finally {
-                try { node.recycle(); } catch (Throwable ignored) { }
+                try { recycleNode(node); } catch (Throwable ignored) { }
             }
         }
     }
@@ -235,7 +235,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 // (avoids an infinite popup loop if the user taps it).
                 if (TextUtils.equals(targetPackage, getPackageName())) return;
             } finally {
-                src.recycle();
+                recycleNode(src);
             }
 
             // De-bounce + foreground check
@@ -487,7 +487,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 } catch (Throwable t) {
                     AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
                 } finally {
-                    try { node.recycle(); } catch (Throwable ignored) { }
+                    try { recycleNode(node); } catch (Throwable ignored) { }
                 }
                 if (accepted) self.mPendingText.clearIfCurrent(pendingText.generation);
                 self.mImeActionGate.finish(operation, accepted);
@@ -546,7 +546,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                     if (candidatePackage == null) return;
                     svc.mRelaySession.bind(activeDisplayId, candidatePackage.toString());
                 } finally {
-                    try { node.recycle(); } catch (Throwable ignored) { }
+                    try { recycleNode(node); } catch (Throwable ignored) { }
                 }
                 svc.mLastLaunchAt = android.os.SystemClock.uptimeMillis();
                 AppLogger.d(TAG, "checkAndLaunchBridgeIfNeeded — cluster editable detected after touch, launching bridge");
@@ -583,7 +583,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                     AppLogger.e(TAG, "manual bridge target lookup failed", t);
                 } finally {
                     if (node != null) {
-                        try { node.recycle(); } catch (Throwable ignored) { }
+                        try { recycleNode(node); } catch (Throwable ignored) { }
                     }
                 }
                 self.mLastLaunchAt = SystemClock.uptimeMillis();
@@ -644,7 +644,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
                         }
                         if (candidate == null) continue;
                         if (found == null) found = candidate;
-                        else candidate.recycle();
+                        else recycleNode(candidate);
                     }
                     return found;
                 }
@@ -670,24 +670,29 @@ public class ClusterImeWatcherService extends AccessibilityService {
         } catch (Throwable ignored) { }
         try {
             if (focused == null) return null;
-            if (!focused.isEditable()) { focused.recycle(); return null; }
+            if (!focused.isEditable()) { recycleNode(focused); return null; }
             // v1.2.25 — Skip our own bridge EditText so we never push the
             // user's keystrokes back into the local field instead of the
             // cluster Yandex search.
             CharSequence pkg = focused.getPackageName();
             if (pkg != null && selfPkg.contentEquals(pkg)) {
-                focused.recycle();
+                recycleNode(focused);
                 return null;
             }
                 if (expectedPackage != null
                     && (pkg == null || !expectedPackage.contentEquals(pkg))) {
-                focused.recycle();
+                recycleNode(focused);
                 return null;
             }
             return focused;
         } finally {
-            root.recycle();
+            recycleNode(root);
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void recycleNode(AccessibilityNodeInfo node) {
+        node.recycle();
     }
 
     private static int activeClusterDisplayId() {
