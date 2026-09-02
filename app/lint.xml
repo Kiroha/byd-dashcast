@@ -109,7 +109,10 @@
          each reviewed layout is allowlisted below. -->
     <issue id="TooManyViews" severity="informational" />
     <issue id="TooDeepLayout" severity="informational" />
-    <issue id="Overdraw" severity="informational" />
+     <issue id="Overdraw">
+          <ignore path="**/layout/activity_bug_report.xml" />
+          <ignore path="**/layout/activity_bug_wizard.xml" />
+     </issue>
     <issue id="DisableBaselineAlignment" severity="informational" />
 
     <!-- DiagActivity is a developer diagnostics screen rendering raw shell
