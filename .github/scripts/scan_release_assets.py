@@ -490,12 +490,12 @@ def signer_certificate_digests(signature: str) -> list[str]:
     for match in pem_pattern.finditer(signature):
         header = signature[previous_end:match.start()]
         labels = re.findall(
-            r"^(Signer\b[^\r\n]*) certificate DN:",
+            r"^([^\r\n]*\bSigner\b[^\r\n]*) certificate DN:",
             header,
             re.MULTILINE | re.IGNORECASE,
         )
         previous_end = match.end()
-        if not labels:
+        if not labels or labels[-1].strip().lower().startswith("source stamp signer"):
             continue
         encoded = re.sub(r"\s", "", match.group(1))
         try:
