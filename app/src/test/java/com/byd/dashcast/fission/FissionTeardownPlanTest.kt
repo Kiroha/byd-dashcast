@@ -36,23 +36,23 @@ class FissionTeardownPlanTest {
     fun failureForOnePackageDoesNotSkipRemainingPackages() {
         val events = mutableListOf<String>()
         val operations = object : FissionTeardownPlan.Operations {
-            override fun moveToDisplay0(pkg: String): String {
-                events += "move:$pkg"
-                if (pkg == "com.waze") throw IllegalStateException("move failed")
+            override fun moveToDisplay0(packageName: String): String {
+                events += "move:$packageName"
+                if (packageName == "com.waze") throw IllegalStateException("move failed")
                 return "OK"
             }
 
-            override fun forceStopAndWait(pkg: String): Boolean {
-                events += "force:$pkg"
+            override fun forceStopAndWait(packageName: String): Boolean {
+                events += "force:$packageName"
                 return true
             }
 
-            override fun releaseSlot(pkg: String) {
-                events += "release:$pkg"
+            override fun releaseSlot(packageName: String) {
+                events += "release:$packageName"
             }
 
-            override fun onStepError(pkg: String, step: String, error: Throwable) {
-                events += "error:$pkg:$step"
+            override fun onStepError(packageName: String, step: String, error: Throwable) {
+                events += "error:$packageName:$step"
             }
         }
 
@@ -71,22 +71,22 @@ class FissionTeardownPlanTest {
     fun unverifiedForceStopIsReportedBeforeSlotRelease() {
         val events = mutableListOf<String>()
         val operations = object : FissionTeardownPlan.Operations {
-            override fun moveToDisplay0(pkg: String): String {
-                events += "move:$pkg"
+            override fun moveToDisplay0(packageName: String): String {
+                events += "move:$packageName"
                 return "OK"
             }
 
-            override fun forceStopAndWait(pkg: String): Boolean {
-                events += "force:$pkg"
+            override fun forceStopAndWait(packageName: String): Boolean {
+                events += "force:$packageName"
                 return false
             }
 
-            override fun releaseSlot(pkg: String) {
-                events += "release:$pkg"
+            override fun releaseSlot(packageName: String) {
+                events += "release:$packageName"
             }
 
-            override fun onStepError(pkg: String, step: String, error: Throwable) {
-                events += "error:$pkg:$step"
+            override fun onStepError(packageName: String, step: String, error: Throwable) {
+                events += "error:$packageName:$step"
             }
         }
 
@@ -120,22 +120,22 @@ class FissionTeardownPlanTest {
 
     private class RecordingOperations(private val events: MutableList<String>) :
         FissionTeardownPlan.Operations {
-        override fun moveToDisplay0(pkg: String): String {
-            events += "move:$pkg"
+        override fun moveToDisplay0(packageName: String): String {
+            events += "move:$packageName"
             return "OK"
         }
 
-        override fun forceStopAndWait(pkg: String): Boolean {
-            events += "force:$pkg"
+        override fun forceStopAndWait(packageName: String): Boolean {
+            events += "force:$packageName"
             return true
         }
 
-        override fun releaseSlot(pkg: String) {
-            events += "release:$pkg"
+        override fun releaseSlot(packageName: String) {
+            events += "release:$packageName"
         }
 
-        override fun onStepError(pkg: String, step: String, error: Throwable) {
-            events += "error:$pkg:$step"
+        override fun onStepError(packageName: String, step: String, error: Throwable) {
+            events += "error:$packageName:$step"
         }
     }
 }
