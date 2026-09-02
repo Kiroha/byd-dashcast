@@ -11,8 +11,8 @@ class EvictionOperationQueueTest {
         lateinit var first: EvictionOperationQueue.Lease
         lateinit var second: EvictionOperationQueue.Lease
 
-        queue.submit { lease -> first = lease; started += 1 }
-        queue.submit { lease -> second = lease; started += 2 }
+        queue.submit({ lease -> first = lease; started += 1 }, Runnable {})
+        queue.submit({ lease -> second = lease; started += 2 }, Runnable {})
         assertEquals(listOf(1), started)
 
         first.markPhysicalDone()
