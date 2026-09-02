@@ -273,10 +273,21 @@ public final class FissionOrchestrator {
 
     public static void stopSelectedLayoutMirror() {
         FissionOrchestrator o = sAutoStartOrchestrator;
-        if (o == null || o.mDaemonBinder == null) return;
-        FissionClient.stopMirror(o.mDaemonBinder);
-        o.mMirrorReady = false;
-        o.mFirstDisplayId = -1;
+        if (o == null) return;
+        IBinder binder = o.mDaemonBinder;
+        boolean accepted = FissionClient.stopMirror(binder);
+        boolean ownerGone = binder == null || !binder.isBinderAlive();
+        if (!accepted && binder != null && !binder.isBinderAlive()) {
+            // The old process already destroyed its mirror/input state. Reacquire for subsequent
+            // tactile operations, but do not pretend the dead binder accepted this command.
+            o.recoverSurfaceBinderIfCurrent(binder, "LayoutMirrorStop");
+        }
+        if (accepted || ownerGone) {
+            o.mMirrorReady = false;
+            o.mFirstDisplayId = -1;
+        } else {
+            AppLogger.e(TAG, "Layout tactile mirror STOP was not accepted; retaining local state");
+        }
     }
 
     public static boolean injectSelectedLayoutMotion(MotionEvent event) {

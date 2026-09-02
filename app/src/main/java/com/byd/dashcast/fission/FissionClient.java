@@ -205,15 +205,22 @@ public class FissionClient {
         } finally { data.recycle(); reply.recycle(); }
     }
 
-    public static void stopMirror(IBinder binder) {
-        if (binder == null) return;
+    public static boolean stopMirror(IBinder binder) {
+        if (binder == null || !binder.isBinderAlive()) return false;
         Parcel data = Parcel.obtain();
         try {
             data.writeInterfaceToken(SurfaceDaemon.DESCRIPTOR);
-            binder.transact(SurfaceDaemon.TRANSACT_MIRROR_STOP, data, null, 0);
+            boolean accepted = binder.transact(
+                    SurfaceDaemon.TRANSACT_MIRROR_STOP, data, null, 0);
+            if (!accepted) {
+                AppLogger.w(TAG, "MIRROR_STOP rejected by surface daemon");
+                return false;
+            }
             AppLogger.d(TAG, "MIRROR_STOP sent");
+            return true;
         } catch (Exception e) {
             AppLogger.w(TAG, "MIRROR_STOP error: " + e.getMessage());
+            return false;
         } finally { data.recycle(); }
     }
 
