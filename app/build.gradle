@@ -68,7 +68,7 @@ android {
     // La Seal EU tourne sur Android 10 (API 29) — DiLink 3.0
     // compileSdk bumpé à 33 pour pouvoir utiliser Material 3 (com.google.android.material 1.9.x).
     // targetSdkVersion reste à 29 → comportement runtime inchangé sur la Seal.
-    namespace "com.byd.dashcast"
+    namespace = "com.byd.dashcast"
     compileSdkVersion 33
     // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
 
@@ -1944,7 +1944,7 @@ android {
             // developer who cannot debug will simply build a release and lose the stack traces.
             // The control is that debug builds stay off cars — stated in README.md and SECURITY.md
             // rather than left for someone to infer from "same platform-signed APK".
-            if (hasPlatformKeystore) signingConfig signingConfigs.bydPlatform
+            if (hasPlatformKeystore) signingConfig = signingConfigs.bydPlatform
         }
             // R8 enabled (issue #78 hardening). Keep rules in proguard-rules.pro
             // are conservative (whole proxy.** kept) because the daemon is launched
@@ -1956,10 +1956,10 @@ android {
             // back is a resource named at runtime, which the shrinker cannot see; there is no
             // such call site in this app (no getIdentifier() anywhere in app/src/main/java),
             // so no res/raw/keep.xml is needed. If one is ever added, it needs a keep rule.
-            shrinkResources true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             // Explicit fallback: unset means UNSIGNED on release, not debug-signed.
-            signingConfig hasPlatformKeystore ? signingConfigs.bydPlatform : signingConfigs.debug
+            signingConfig = hasPlatformKeystore ? signingConfigs.bydPlatform : signingConfigs.debug
         }
     }
 
@@ -1967,13 +1967,13 @@ android {
     // (ProxyDaemonMain, ProxyClient, ClusterService, UpdateChecker, Settings,
     // Welcome, DiagActivity).
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 
     // Ignore les erreurs de lint sur les permissions BYD non connues du SDK standard
     // (AGP 8 : bloc `lint` — l'ancien `lintOptions` a été supprimé)
     lint {
-        abortOnError false
+        abortOnError = false
     }
 
     packagingOptions {
