@@ -480,6 +480,15 @@ public final class ProxyDaemonMain {
         try {
             Runtime.getRuntime().addShutdownHook(new Thread("pid-cleanup") {
                 @Override public void run() {
+                    ProxyDaemonStartupLock cleanupLock = null;
+                    try {
+                        cleanupLock = ProxyDaemonStartupLock.tryAcquire(
+                                new File(STARTUP_LOCK_FILE));
+                    } catch (Throwable ignore) {}
+                    // A successor is publishing PID+nonce. Never make a cleanup decision from
+                    // markers that can change between our ownership check and delete.
+                    if (cleanupLock == null) return;
+                    try {
                     // Only clean up if THIS process still owns the lock. A duplicate daemon
                     // that lost the race and suicided (healPidLock -> System.exit) must NOT
                     // delete the SURVIVOR's PID file — otherwise a fresh bootstrap sees no
@@ -498,6 +507,9 @@ public final class ProxyDaemonMain {
                             new File(INSTANCE_FILE).delete();
                         }
                     } catch (Throwable ignore) {}
+                    } finally {
+                        try { cleanupLock.close(); } catch (Throwable ignore) {}
+                    }
                 }
             });
         } catch (Throwable ignore) {
