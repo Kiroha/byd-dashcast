@@ -62,10 +62,17 @@ class ClusterSessionTracker(context: Context) {
 
     /** Invalidates pending eviction work, or defers launch behind an issued force-stop. */
     fun runWhenSafeToLaunch(pkg: String, launch: Runnable) {
-        if (sEvictionGate.prepareLaunch(pkg, launch)) {
-            launch.run()
+        val packageGuard = Runnable {
+            if (sEvictionGate.prepareLaunch(pkg, launch)) {
+                launch.run()
+            } else {
+                AppLogger.i(TAG, "launch deferred until force-stop completes: $pkg")
+            }
+        }
+        if (sLaunchFence.prepareLaunch(pkg, packageGuard)) {
+            packageGuard.run()
         } else {
-            AppLogger.i(TAG, "launch deferred until force-stop completes: $pkg")
+            AppLogger.i(TAG, "launch deferred until eviction restoration completes: $pkg")
         }
     }
 
@@ -99,8 +106,18 @@ class ClusterSessionTracker(context: Context) {
      */
     fun evictAllThen(svc: ClusterService?, main: String?, second: String?,
                      onAllDone: EvictionCompletion) {
-        sEvictionOperations.submit { lease ->
-            evictAllOwned(svc, main, second, onAllDone, lease)
+        sLaunchFence.beginOperation()
+        val fenceReleased = AtomicBoolean(false)
+        val releaseFence = Runnable {
+            if (fenceReleased.compareAndSet(false, true)) sLaunchFence.finishOperation()
+        }
+        try {
+            sEvictionOperations.submit({ lease ->
+                evictAllOwned(svc, main, second, onAllDone, lease)
+            }, releaseFence)
+        } catch (error: Throwable) {
+            releaseFence.run()
+            throw error
         }
     }
 
@@ -446,6 +463,7 @@ class ClusterSessionTracker(context: Context) {
         private const val MOVE_CALLBACK_TIMEOUT_MS = 30_000L
         private const val BLIND_EVICTION_TIMEOUT_MS = 30_000L
         private val sEvictionGate = PackageEvictionGenerationGate()
+        private val sLaunchFence = EvictionLaunchFence()
         private val sEvictionOperations = EvictionOperationQueue()
 
         /**

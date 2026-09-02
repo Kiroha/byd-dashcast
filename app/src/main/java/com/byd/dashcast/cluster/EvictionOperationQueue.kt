@@ -33,23 +33,25 @@ internal class EvictionOperationQueue {
     }
 
     private val pending = ArrayDeque<Operation>()
+    private val completionCallbacks = ArrayDeque<Runnable>()
     private var running = false
 
-    fun submit(operation: Operation) {
+    fun submit(operation: Operation, onComplete: Runnable) {
         val startNow = synchronized(this) {
             if (running) {
                 pending.addLast(operation)
+                completionCallbacks.addLast(onComplete)
                 false
             } else {
                 running = true
                 true
             }
         }
-        if (startNow) start(operation)
+        if (startNow) start(operation, onComplete)
     }
 
-    private fun start(operation: Operation) {
-        val lease = Lease(Runnable { finish() })
+    private fun start(operation: Operation, onComplete: Runnable) {
+        val lease = Lease(Runnable { finish(onComplete) })
         try {
             operation.start(lease)
         } catch (error: Throwable) {
@@ -59,15 +61,16 @@ internal class EvictionOperationQueue {
         }
     }
 
-    private fun finish() {
+    private fun finish(onComplete: Runnable) {
+        onComplete.run()
         val next = synchronized(this) {
             if (pending.isEmpty()) {
                 running = false
                 null
             } else {
-                pending.removeFirst()
+                pending.removeFirst() to completionCallbacks.removeFirst()
             }
         }
-        if (next != null) start(next)
+        if (next != null) start(next.first, next.second)
     }
 }

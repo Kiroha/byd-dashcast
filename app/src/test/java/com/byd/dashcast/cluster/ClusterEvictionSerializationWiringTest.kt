@@ -20,7 +20,10 @@ class ClusterEvictionSerializationWiringTest {
         val owned = tracker.substringAfter("private fun evictAllOwned")
             .substringBefore("// ── Internal")
 
+        assertTrue(entry.contains("sLaunchFence.beginOperation()"))
+        assertTrue(entry.contains("fenceReleased.compareAndSet(false, true)"))
         assertTrue(entry.contains("sEvictionOperations.submit"))
+        assertTrue(entry.contains("sLaunchFence.finishOperation()"))
         assertTrue(owned.contains("mRestoreHome.reset()"))
         assertTrue(owned.contains("val physicalRemaining = AtomicInteger(blind.size)"))
         assertTrue(owned.contains("main.post { lease.markPhysicalDone() }"))
