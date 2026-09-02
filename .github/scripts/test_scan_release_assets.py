@@ -544,6 +544,29 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             self.assertIn("release :: aapt unavailable; identity not verified", findings)
             self.assertIn("release :: apksigner unavailable; signature not verified", findings)
 
+    def test_android_sdk_build_tool_wins_over_path_executable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_tool = root / "path" / "apksigner"
+            old_tool.parent.mkdir()
+            old_tool.touch()
+            sdk = root / "sdk"
+            for version in ("35.0.0", "36.0.0"):
+                tool = sdk / "build-tools" / version / "apksigner"
+                tool.parent.mkdir(parents=True)
+                tool.touch()
+
+            with patch.dict(os.environ, {
+                "ANDROID_HOME": str(sdk),
+                "ANDROID_SDK_ROOT": str(sdk),
+            }), patch.object(scanner.shutil, "which", return_value=str(old_tool)):
+                selected = scanner.find_android_tool("apksigner")
+
+            self.assertEqual(
+                str(sdk / "build-tools" / "36.0.0" / "apksigner"),
+                selected,
+            )
+
     def test_release_contract_rejects_an_extra_untrusted_signer(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
