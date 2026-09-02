@@ -453,17 +453,18 @@ def verify_release_contract(
 
 
 def find_android_tool(name: str) -> str | None:
-    direct = shutil.which(name)
-    if direct:
-        return direct
+    candidates: list[Path] = []
     for variable in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
         root = os.environ.get(variable)
         if not root:
             continue
-        candidates = list((Path(root) / "build-tools").glob(f"*/{name}"))
-        if candidates:
-            return str(max(candidates, key=lambda path: version_key(path.parent.name)))
-    return None
+        candidates.extend(
+            path for path in (Path(root) / "build-tools").glob(f"*/{name}")
+            if path.is_file()
+        )
+    if candidates:
+        return str(max(candidates, key=lambda path: version_key(path.parent.name)))
+    return shutil.which(name)
 
 
 def version_key(value: str) -> tuple[int, ...]:
