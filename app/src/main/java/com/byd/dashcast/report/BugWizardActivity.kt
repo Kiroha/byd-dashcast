@@ -752,7 +752,6 @@ class BugWizardActivity : Activity() {
                                     AppLogger.w(TAG, "headless report upload failed: $message")
                                 }
                                 override fun onAmbiguous(message: String) {
-                                    clearDurablePendingDelivery()
                                     BugWizardSubmissionGate.release(token)
                                     AppLogger.w(TAG, "headless report delivery uncertain; file kept: "
                                         + message)
@@ -1047,7 +1046,6 @@ class BugWizardActivity : Activity() {
                                 AppLogger.w(TAG, "headless bundle upload failed: $message")
                             }
                             override fun onAmbiguous(message: String) {
-                                clearDurablePendingDelivery()
                                 BugWizardSubmissionGate.release(token)
                                 AppLogger.w(TAG, "headless bundle delivery uncertain; file kept: "
                                     + message)

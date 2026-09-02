@@ -29,6 +29,27 @@ class AmbiguousDeliveryWiringTest {
     }
 
     @Test
+    fun `headless wizard ambiguity also retains durable retry protection`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .first { File(it,
+                "app/src/main/java/com/byd/dashcast/report/BugWizardActivity.kt").isFile }
+        val source = File(root,
+            "app/src/main/java/com/byd/dashcast/report/BugWizardActivity.kt").readText()
+
+        for (message in listOf(
+            "headless report delivery uncertain",
+            "headless bundle delivery uncertain",
+        )) {
+            val callback = source.substringBefore(message).substringAfterLast(
+                "override fun onAmbiguous(message: String)")
+            assertFalse("$message clears the retry record",
+                callback.contains("clearDurablePendingDelivery"))
+            assertTrue("$message must release only transient submission ownership",
+                callback.contains("BugWizardSubmissionGate.release(token)"))
+        }
+    }
+
+    @Test
     fun `every Telegram callback implements ambiguous terminal`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it, "app/src/main/java/com/byd/dashcast").isDirectory }
