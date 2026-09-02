@@ -1,24 +1,62 @@
 name: Post stable release changelog to Telegram
 
-# Fires when a full (non-pre-release) release is published or set as Latest.
+# Fires when a full (non-pre-release) release is published, and when an existing
+# pre-release is promoted to a full release — which is how this project ships
+# stable versions: the beta channel is pre-releases, one of which is later marked
+# Latest. GitHub emits `released` for that promotion, never `published`, so the
+# workflow used to listen to `published` alone and stayed silent every time.
+#
+# Creating a stable release outright emits BOTH events. The concurrency group
+# collapses that pair: keyed on the tag, the second run cancels the first before
+# it reaches Telegram, since a queued run cancels the in-progress one long before
+# a runner has finished starting. Residual race, if a runner is unusually fast:
+# one duplicate message. That is the right side to fail on — the failure it
+# replaces is announcing nothing at all.
+#
 # Flow: reopen topic → send formatted changelog → pin → close topic.
 on:
   release:
-    types: [published]
+    types: [published, released]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tg-stable-${{ github.event.release.tag_name }}
+  cancel-in-progress: true
 
 jobs:
   telegram-stable:
     runs-on: ubuntu-latest
-    # Extra guard: ignore accidental triggers on pre-releases
-    if: ${{ !github.event.release.prerelease }}
+    # Extra guard: ignore accidental triggers on pre-releases.
+    # telegram-changelog.yml handles those, and its guard is the exact mirror of
+    # this one, so exactly one of the two workflows ever posts.
+    if: ${{ !github.event.release.prerelease && !contains(join(github.event.release.assets.*.name, ','), '-debug.apk') }}
     steps:
+      - name: Check out the release scanner
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+                    # Run policy from the reviewed default branch, never from the release tag being judged.
+                    ref: ${{ github.event.repository.default_branch }}
+                    persist-credentials: false
+
+      - name: Verify release APK assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p assets
+          gh release download "$TAG" --repo "$REPO" --dir assets --pattern '*.apk' --clobber
+          python3 .github/scripts/scan_release_assets.py assets --tag "$TAG"
+
       - name: Send changelog to Telegram (reopen → post → pin → close)
         env:
-          TG_TOKEN:    ${{ secrets.TG_CHANGELOG_BOT_TOKEN }}
-          TG_CHAT_ID:  ${{ secrets.TG_CHANGELOG_CHAT_ID }}
-          TG_THREAD:   ${{ secrets.TG_STABLE_THREAD_ID }}
-          RELEASE_TAG:  ${{ github.event.release.tag_name }}
-          RELEASE_URL:  ${{ github.event.release.html_url }}
+          TG_TOKEN: ${{ secrets.TG_CHANGELOG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHANGELOG_CHAT_ID }}
+          TG_THREAD: ${{ secrets.TG_STABLE_THREAD_ID }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
           python3 << 'EOF'
@@ -36,6 +74,9 @@ jobs:
           def html_esc(s):
               return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
+          def html_attr_esc(s):
+              return html_esc(s).replace('"', '&quot;')
+
           def inline_html(text):
               pattern = re.compile(
                   r'(\*\*(.+?)\*\*'
@@ -52,7 +93,7 @@ jobs:
                   elif full.startswith('`'):
                       result += f'<code>{html_esc(m.group(3))}</code>'
                   else:
-                      result += f'<a href="{m.group(5)}">{html_esc(m.group(4))}</a>'
+                      result += f'<a href="{html_attr_esc(m.group(5))}">{html_esc(m.group(4))}</a>'
                   last = m.end()
               return result + html_esc(text[last:])
 
