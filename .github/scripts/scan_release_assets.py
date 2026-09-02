@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import base64
+import binascii
+import hashlib
 import os
 import re
 import secrets
@@ -428,7 +431,7 @@ def verify_release_contract(
         findings.append("release :: apksigner unavailable; signature not verified")
     else:
         result = runner(
-            [apksigner, "verify", "--verbose", "--print-certs", str(apk)],
+            [apksigner, "verify", "--verbose", "--print-certs-pem", str(apk)],
             capture_output=True,
             text=True,
             check=False,
@@ -477,15 +480,28 @@ def single_line(value: str) -> str:
 
 def signer_certificate_digests(signature: str) -> list[str]:
     digests: list[str] = []
-    pattern = re.compile(
-        r"^Signer\b[^\r\n]* certificate SHA-256 digest:\s*"
-        r"([0-9a-fA-F: \t]+)\s*$",
-        re.MULTILINE | re.IGNORECASE,
+    pem_pattern = re.compile(
+        r"-----BEGIN CERTIFICATE-----\s*([A-Za-z0-9+/=\r\n]+?)\s*"
+        r"-----END CERTIFICATE-----",
+        re.MULTILINE,
     )
-    for match in pattern.finditer(signature):
-        digest = re.sub(r"[: \t]", "", match.group(1)).lower()
-        if re.fullmatch(r"[0-9a-f]{64}", digest):
-            digests.append(digest)
+    previous_end = 0
+    for match in pem_pattern.finditer(signature):
+        header = signature[previous_end:match.start()]
+        labels = re.findall(
+            r"^(Signer\b[^\r\n]*) certificate DN:",
+            header,
+            re.MULTILINE | re.IGNORECASE,
+        )
+        previous_end = match.end()
+        if not labels:
+            continue
+        encoded = re.sub(r"\s", "", match.group(1))
+        try:
+            certificate = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        digests.append(hashlib.sha256(certificate).hexdigest())
     return digests
 
 
