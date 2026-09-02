@@ -823,7 +823,7 @@ public final class FissionOrchestrator {
                             new com.byd.dashcast.cluster.display.ClusterManager.DisplayReadyCallback() {
                         @Override public void onDisplayReady(android.view.Display display,
                                                               int displayId) {
-                    if (mClusterActivationManager != manager || mDestroyed) return;
+                            if (mClusterActivationManager != manager || mDestroyed) return;
                             AppLogger.i(TAG, "auto-layout: cluster projection ready (display="
                                     + displayId + ")");
                             next.run();
