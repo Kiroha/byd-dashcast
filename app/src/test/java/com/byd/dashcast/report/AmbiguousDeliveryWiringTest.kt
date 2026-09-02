@@ -20,10 +20,12 @@ class AmbiguousDeliveryWiringTest {
 
         assertTrue(ambiguous.contains("finishAmbiguousDelivery(file)"))
         assertFalse(ambiguous.substringBefore("})").contains("shareFallback"))
+        assertFalse(ambiguous.substringBefore("})").contains("clearDurablePendingDelivery"))
         val finish = source.substringAfter("private fun finishAmbiguousDelivery")
             .substringBefore("companion object")
         assertTrue(finish.contains("bug_kept_locally_fmt"))
         assertFalse(finish.contains("AppLogger.shareFile"))
+        assertFalse(finish.contains("clearDurablePendingDelivery"))
     }
 
     @Test

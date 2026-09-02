@@ -824,7 +824,6 @@ class BugWizardActivity : Activity() {
                     shareFallback(file)
                 }
                 override fun onAmbiguous(message: String) {
-                    clearDurablePendingDelivery()
                     BugWizardSubmissionGate.release(mSubmissionToken)
                     AppLogger.w(TAG, "report delivery uncertain; file kept: $message")
                     if (isUiAlive()) finishAmbiguousDelivery(file)
@@ -1339,7 +1338,6 @@ class BugWizardActivity : Activity() {
 
     private fun finishAmbiguousDelivery(file: File) {
         disarmSendWatchdog()
-        clearDurablePendingDelivery()
         mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
         Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),
             Toast.LENGTH_LONG).show()
