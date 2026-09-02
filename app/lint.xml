@@ -95,10 +95,18 @@
          already flip correctly for the ar locale. -->
     <issue id="RtlSymmetry" severity="ignore" />
 
-    <!-- Performance hints: kept visible in the report (informational) but
-         not counted as warnings — diag screens are intentionally dense and
-         render fine on the target hardware. -->
-    <issue id="NestedWeights" severity="informational" />
+    <!-- These fixed 1920x720 control surfaces use proportional rows/columns
+         deliberately. Scope the measured-twice trade-off to reviewed layouts
+         so new nested weights elsewhere remain lint-visible. -->
+    <issue id="NestedWeights">
+        <ignore path="**/layout/activity_layout_manager.xml" />
+        <ignore path="**/layout/activity_log.xml" />
+        <ignore path="**/layout/activity_main.xml" />
+        <ignore path="**/layout/activity_sysinfo.xml" />
+    </issue>
+
+    <!-- Remaining fixed-dashboard density hints stay informational until
+         each reviewed layout is allowlisted below. -->
     <issue id="TooManyViews" severity="informational" />
     <issue id="TooDeepLayout" severity="informational" />
     <issue id="Overdraw" severity="informational" />
