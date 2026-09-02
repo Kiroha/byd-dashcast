@@ -105,10 +105,19 @@
         <ignore path="**/layout/activity_sysinfo.xml" />
     </issue>
 
-    <!-- Remaining fixed-dashboard density hints stay informational until
-         each reviewed layout is allowlisted below. -->
-    <issue id="TooManyViews" severity="informational" />
-    <issue id="TooDeepLayout" severity="informational" />
+     <!-- These always-visible operational panels deliberately keep their
+           controls in one fixed-dashboard layout. Scope the density trade-off
+           so new deep or oversized hierarchies elsewhere remain visible. -->
+     <issue id="TooManyViews">
+          <ignore path="**/layout/activity_hotspot.xml" />
+          <ignore path="**/layout/activity_main.xml" />
+          <ignore path="**/layout/activity_settings.xml" />
+     </issue>
+     <issue id="TooDeepLayout">
+          <ignore path="**/layout/activity_hotspot.xml" />
+          <ignore path="**/layout/activity_main.xml" />
+          <ignore path="**/layout/activity_settings.xml" />
+     </issue>
      <issue id="Overdraw">
           <ignore path="**/layout/activity_bug_report.xml" />
           <ignore path="**/layout/activity_bug_wizard.xml" />
