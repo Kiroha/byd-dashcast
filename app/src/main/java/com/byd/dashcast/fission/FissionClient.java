@@ -52,6 +52,7 @@ public class FissionClient {
      * Creates an overlay + TRUSTED VirtualDisplay for {@code pkg} at the given
      * cluster rect. Returns the new VD displayId, or -1 on failure.
      */
+    @SuppressWarnings("deprecation")
     public static int attachSlot(IBinder binder, String pkg,
                                  int x, int y, int w, int h) throws Exception {
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();

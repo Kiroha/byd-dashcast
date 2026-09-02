@@ -1610,6 +1610,7 @@ public final class FissionOrchestrator {
         post(() -> mCallbacks.onStatusMessage(null));
     }
 
+    @SuppressWarnings("deprecation")
     private String getAppLabel(String pkg) {
         try {
             android.content.pm.PackageManager pm = mAppCtx.getPackageManager();

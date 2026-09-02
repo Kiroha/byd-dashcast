@@ -1570,6 +1570,7 @@ public final class ProxyClient {
      * as the dynamic receiver is registered once on the application context and persists
      * for the entire lifetime of the process. Gated by sReceiver null check.
      */
+    @SuppressWarnings("deprecation")
     private static void ensureReceiverRegistered(Context ctx) {
         if (sReceiver != null) return;
         final Context appCtx = ctx.getApplicationContext();
