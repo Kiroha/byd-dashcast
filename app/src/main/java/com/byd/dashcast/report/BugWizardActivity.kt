@@ -218,11 +218,12 @@ class BugWizardActivity : Activity() {
     }
 
     private fun restoreDurableDeliveryState(): Boolean {
-        val record = BugWizardPendingDelivery.load(this) ?: return false
-        if (!record.file().isFile) {
-            BugWizardPendingDelivery.clear(this)
-            return false
+        var record = BugWizardPendingDelivery.load(this)
+        while (record != null && !record.file().isFile) {
+            BugWizardPendingDelivery.clear(this, record.file())
+            record = BugWizardPendingDelivery.load(this)
         }
+        record ?: return false
         mPendingReportPath = record.path
         mPendingReportCaption = record.caption
         mPendingGate = when (record.phase) {
@@ -744,7 +745,7 @@ class BugWizardActivity : Activity() {
                         TelegramBugReporter.send(applicationContext, file, caption,
                             object : TelegramBugReporter.Callback {
                                 override fun onSent() {
-                                    clearDurablePendingDelivery()
+                                    clearDurablePendingDelivery(file)
                                     BugWizardSubmissionGate.release(token)
                                 }
                                 override fun onFailed(message: String) {
@@ -798,12 +799,13 @@ class BugWizardActivity : Activity() {
     /** Uploads [file] (a report .txt or a report+shots .zip) via the bot, else the share sheet. */
     private fun deliverReport(file: File, caption: String) {
         savePendingDelivery(file, caption, BugWizardPendingDelivery.DELIVERING)
+        mPendingGate = BugWizardGate.DELIVERY_RETRY
         if (TelegramBugReporter.isConfigured()) {
             BugWizardSubmissionGate.setBackgroundWork(mSubmissionToken, true)
             mTvStatus.setText(R.string.bug_status_sending)
             TelegramBugReporter.send(this, file, caption, object : TelegramBugReporter.Callback {
                 override fun onSent() {
-                    clearDurablePendingDelivery()
+                    clearDurablePendingDelivery(file)
                     BugWizardSubmissionGate.release(mSubmissionToken)
                     if (!isUiAlive()) {
                         AppLogger.i(TAG, "report sent after wizard closed")
@@ -884,7 +886,7 @@ class BugWizardActivity : Activity() {
     private fun resumePendingBundle() {
         val file = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File)
         if (file == null || !file.isFile || mPendingReportCaption.isEmpty()) {
-            BugWizardPendingDelivery.clear(this)
+            clearDurablePendingDelivery()
             clearPendingReportState()
             return
         }
@@ -904,7 +906,7 @@ class BugWizardActivity : Activity() {
     private fun showPendingDeliveryRetry() {
         val file = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File)
         if (file == null || !file.isFile) {
-            BugWizardPendingDelivery.clear(this)
+            clearDurablePendingDelivery()
             clearPendingReportState()
             mBtnSend?.setOnClickListener { submitReport() }
             mBtnSend?.isEnabled = mSelectedIssue != null
@@ -958,15 +960,25 @@ class BugWizardActivity : Activity() {
     }
 
     private fun savePendingDelivery(file: File, caption: String, phase: String) {
-        mPendingReportPath = file.absolutePath
-        mPendingReportCaption = caption
-        if (!BugWizardPendingDelivery.save(this, file, caption, phase)) {
+        val previousPath = mPendingReportPath
+        if (BugWizardPendingDelivery.save(this, file, caption, phase)) {
+            mPendingReportPath = file.absolutePath
+            mPendingReportCaption = caption
+            if (previousPath.isNotEmpty() && previousPath != file.absolutePath) {
+                BugWizardPendingDelivery.clear(this, File(previousPath))
+            }
+        } else {
             AppLogger.e(TAG, "could not persist pending report delivery phase=$phase")
         }
     }
 
-    private fun clearDurablePendingDelivery() {
-        BugWizardPendingDelivery.clear(applicationContext)
+    private fun clearDurablePendingDelivery(
+        file: File? = mPendingReportPath.takeIf { it.isNotEmpty() }?.let(::File),
+    ) {
+        if (file != null) {
+            BugWizardPendingDelivery.clear(
+                applicationContext, file)
+        }
     }
 
     /**
@@ -1029,7 +1041,6 @@ class BugWizardActivity : Activity() {
             val finalFile = toSend
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
-                    clearPendingReportState()
                     deliverReport(finalFile, caption)
                 } else if (TelegramBugReporter.isConfigured()) {
                     // User left the wizard mid-bundle — still deliver (they had tapped send),
@@ -1038,7 +1049,7 @@ class BugWizardActivity : Activity() {
                     TelegramBugReporter.send(applicationContext, finalFile, caption,
                         object : TelegramBugReporter.Callback {
                             override fun onSent() {
-                                clearDurablePendingDelivery()
+                                clearDurablePendingDelivery(finalFile)
                                 BugWizardSubmissionGate.release(token)
                             }
                             override fun onFailed(message: String) {
@@ -1316,21 +1327,23 @@ class BugWizardActivity : Activity() {
 
     private fun shareFallback(file: File) {
         disarmSendWatchdog()
-        clearDurablePendingDelivery()
         BugWizardSubmissionGate.release(mSubmissionToken)
         try {
             mTvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
             Toast.makeText(this, getString(R.string.bug_kept_locally_fmt, file.name),
                 Toast.LENGTH_LONG).show()
         } catch (_: Throwable) { /* never let a message cost the report */ }
+        var chooserOpened = false
         try {
             AppLogger.shareFile(this, file,
                 getString(R.string.bug_share_subject),
                 getString(R.string.bug_share_chooser))
+            chooserOpened = true
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.bug_status_error_fmt, e.message.orEmpty()),
                 Toast.LENGTH_LONG).show()
         }
+        if (chooserOpened) clearDurablePendingDelivery(file)
         finish()
     }
 

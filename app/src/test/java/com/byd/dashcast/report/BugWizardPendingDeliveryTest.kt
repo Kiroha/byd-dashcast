@@ -51,4 +51,55 @@ class BugWizardPendingDeliveryTest {
             BugWizardPendingDelivery.BUNDLING,
         ))
     }
+
+    @Test
+    fun `legacy singleton remains resumable when a protected report is added`() {
+        val wizard = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("wizard")
+        }
+        val legacy = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("legacy")
+        }
+        val prefs = context.getSharedPreferences(
+            "dashcast_pending_bug_delivery", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("path", wizard.absolutePath)
+            .putString("caption", "wizard caption")
+            .putString("phase", BugWizardPendingDelivery.DELIVERING)
+            .commit()
+
+        assertTrue(BugWizardPendingDelivery.protect(context, legacy, "legacy caption"))
+
+        assertEquals(wizard.absolutePath, BugWizardPendingDelivery.load(context)?.path)
+        assertTrue(BugWizardPendingDelivery.protects(context, wizard))
+        assertTrue(BugWizardPendingDelivery.protects(context, legacy))
+        assertFalse(prefs.contains("path"))
+        wizard.delete()
+        legacy.delete()
+    }
+
+    @Test
+    fun `multiple pending reports remain independently protected and clearable`() {
+        val first = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("first")
+        }
+        val second = File.createTempFile(BugReportCapture.PREFIX, ".txt").apply {
+            writeText("second")
+        }
+        BugWizardPendingDelivery.save(
+            context, first, "first caption", BugWizardPendingDelivery.DELIVERING)
+        BugWizardPendingDelivery.protect(context, second, "second caption")
+
+        assertEquals(first.absolutePath, BugWizardPendingDelivery.load(context)?.path)
+        assertTrue(BugWizardPendingDelivery.protects(context, first))
+        assertTrue(BugWizardPendingDelivery.protects(context, second))
+
+        BugWizardPendingDelivery.clear(context, second)
+
+        assertEquals(first.absolutePath, BugWizardPendingDelivery.load(context)?.path)
+        assertTrue(BugWizardPendingDelivery.protects(context, first))
+        assertFalse(BugWizardPendingDelivery.protects(context, second))
+        first.delete()
+        second.delete()
+    }
 }

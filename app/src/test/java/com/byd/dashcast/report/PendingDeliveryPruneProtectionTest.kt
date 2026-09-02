@@ -33,11 +33,15 @@ class PendingDeliveryPruneProtectionTest {
     }
 
     @Test
-    fun `loose pending report survives prefix rotation`() {
+    fun `concurrent loose pending reports survive prefix rotation`() {
         val root = context.getExternalFilesDir(null)!!
         val pending = File(root, BugReportCapture.PREFIX + "pending.txt").apply {
             writeText("pending")
             setLastModified(1)
+        }
+        val legacyPending = File(root, BugReportCapture.PREFIX + "legacy_pending.txt").apply {
+            writeText("legacy pending")
+            setLastModified(2)
         }
         repeat(4) { index ->
             File(root, BugReportCapture.PREFIX + "new_$index.txt").apply {
@@ -47,17 +51,23 @@ class PendingDeliveryPruneProtectionTest {
         }
         BugWizardPendingDelivery.save(
             context, pending, "caption", BugWizardPendingDelivery.DELIVERING)
+        BugWizardPendingDelivery.protect(context, legacyPending, "legacy caption")
 
         AppLogger.pruneOldFiles(context, 1)
 
         assertTrue(pending.exists())
+        assertTrue(legacyPending.exists())
     }
 
     @Test
-    fun `pending bundle survives age size and count pruning`() {
+    fun `concurrent pending bundles survive age size and count pruning`() {
         val pending = File(ReportStore.dir(context), "pending.zip").apply {
             writeText("pending")
             setLastModified(1)
+        }
+        val legacyPending = File(ReportStore.dir(context), "legacy_pending.zip").apply {
+            writeText("legacy pending")
+            setLastModified(2)
         }
         repeat(ReportStore.KEEP_FILES + 2) { index ->
             File(ReportStore.dir(context), "new_$index.zip").apply {
@@ -67,9 +77,11 @@ class PendingDeliveryPruneProtectionTest {
         }
         BugWizardPendingDelivery.save(
             context, pending, "caption", BugWizardPendingDelivery.DELIVERING)
+        BugWizardPendingDelivery.protect(context, legacyPending, "legacy caption")
 
         ReportStore.prune(context)
 
         assertTrue(pending.exists())
+        assertTrue(legacyPending.exists())
     }
 }
