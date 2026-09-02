@@ -5,8 +5,12 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // AGP 8.13.2 (last 8.x) + Gradle 8.14.5 + Kotlin 2.4.0 — all inside
-        // KGP 2.4.0's tested window (Gradle 7.6.3-9.5.0, AGP 8.5.2-9.1.0).
+        // AGP 8.13.2 (last 8.x) + Gradle 8.14.5 are inside KGP 2.4.0's tested
+        // window (Gradle 7.6.3-9.5.0, AGP 8.5.2-9.1.0). This does not cover
+        // R8 metadata: AGP embeds R8 8.13.19 while Kotlin 2.4 requires 9.1.29+.
+        // A standalone 9.1.x override parses the metadata but AGP 8.13's class
+        // provider then falls back synchronously with two integration warnings.
+        // Keep the chosen versions until that boundary is changed as a tested unit.
         // AGP 9.x is a separate migration (old variant API removed, built-in
         // Kotlin, Build Tools 36) — see docs/KOTLIN_MIGRATION_AUDIT.md.
         // Requires a full JDK 17 (jlink).
