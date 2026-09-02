@@ -436,15 +436,17 @@ def verify_release_contract(
         signature = (result.stdout or "") + "\n" + (result.stderr or "")
         if result.returncode != 0:
             findings.append(f"{single_line(apk.name)} :: APK signature verification failed")
-        if "Verified using v2 scheme (APK Signature Scheme v2): true" not in signature:
+        if not re.search(
+            r"^Verified using v2 scheme \(APK Signature Scheme v2\):\s*true\s*$",
+            signature,
+            re.MULTILINE | re.IGNORECASE,
+        ):
             findings.append(f"{single_line(apk.name)} :: APK Signature Scheme v2 missing")
         signer_count = re.search(r"Number of signers:\s*(\d+)", signature)
-        certs = re.findall(
-            r"Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]{64})", signature
-        )
-        if signer_count is None or signer_count.group(1) != "1" or len(certs) != 1:
+        certs = signer_certificate_digests(signature)
+        if len(certs) != 1 or (signer_count is not None and signer_count.group(1) != "1"):
             findings.append(f"{single_line(apk.name)} :: expected exactly one APK signer")
-        if len(certs) != 1 or certs[0].lower() != EXPECTED_CERT_SHA256:
+        if len(certs) != 1 or certs[0] != EXPECTED_CERT_SHA256:
             findings.append(f"{single_line(apk.name)} :: unexpected signing certificate")
 
     return sorted(set(findings))
@@ -470,6 +472,20 @@ def version_key(value: str) -> tuple[int, ...]:
 
 def single_line(value: str) -> str:
     return re.sub(r"[\x00\r\n]", "?", value)
+
+
+def signer_certificate_digests(signature: str) -> list[str]:
+    digests: list[str] = []
+    pattern = re.compile(
+        r"^Signer\b[^\r\n]* certificate SHA-256 digest:\s*"
+        r"([0-9a-fA-F: \t]+)\s*$",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    for match in pattern.finditer(signature):
+        digest = re.sub(r"[: \t]", "", match.group(1)).lower()
+        if re.fullmatch(r"[0-9a-f]{64}", digest):
+            digests.append(digest)
+    return digests
 
 
 def write_github_output(findings: list[str]) -> None:
