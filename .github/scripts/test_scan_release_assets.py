@@ -463,6 +463,41 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 [],
             )
 
+    def test_release_contract_accepts_colon_separated_digest_without_count(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast-v1.8.48-beta-release.apk"
+            apk.write_bytes(b"apk")
+            aapt = root / "aapt"
+            signer = root / "apksigner"
+            aapt.touch()
+            signer.touch()
+            digest = ":".join(
+                scanner.EXPECTED_CERT_SHA256[index:index + 2]
+                for index in range(0, len(scanner.EXPECTED_CERT_SHA256), 2)
+            )
+            runner = Mock(side_effect=[
+                scanner.subprocess.CompletedProcess(
+                    [], 0,
+                    "package: name='com.byd.dashcast' versionCode='638' "
+                    "versionName='1.8.48-beta'\n",
+                    "",
+                ),
+                scanner.subprocess.CompletedProcess(
+                    [], 0,
+                    "Verified using v2 scheme (APK Signature Scheme v2): TRUE\n"
+                    f"Signer certificate SHA-256 digest: {digest}\n",
+                    "",
+                ),
+            ])
+
+            self.assertEqual(
+                scanner.verify_release_contract(
+                    root, "v1.8.48-beta", str(aapt), str(signer), runner
+                ),
+                [],
+            )
+
     def test_release_contract_rejects_debug_wrong_identity_and_signer(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
