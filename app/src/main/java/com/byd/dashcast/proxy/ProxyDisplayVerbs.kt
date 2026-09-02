@@ -24,7 +24,7 @@ internal object ProxyDisplayVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun setOverscan(displayId: Int, left: Int, top: Int, right: Int, bottom: Int) {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -73,7 +73,7 @@ internal object ProxyDisplayVerbs {
     @JvmStatic
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun releaseVirtualDisplay(displayId: Int) {
-        val b: IBinder? = ProxyClient.sBinder
+        val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
         val data = Parcel.obtain()
         val reply = Parcel.obtain()

@@ -1385,6 +1385,27 @@ public final class ProxyClient {
         T run() throws RemoteException, ProxyException;
     }
 
+    private static final ThreadLocal<IBinder> sDispatchBinder = new ThreadLocal<>();
+
+    /** Package-private verb accessor: one callWithRetry attempt always uses one Binder. */
+    static IBinder dispatchBinder() {
+        IBinder pinned = sDispatchBinder.get();
+        return pinned != null ? pinned : sBinder;
+    }
+
+    private static <T> T runPinned(IBinder binder, BinderOp<T> op)
+            throws RemoteException, ProxyException {
+        if (binder == null || !binder.isBinderAlive()) throw new ProxyException("not connected");
+        IBinder previous = sDispatchBinder.get();
+        sDispatchBinder.set(binder);
+        try {
+            return op.run();
+        } finally {
+            if (previous == null) sDispatchBinder.remove();
+            else sDispatchBinder.set(previous);
+        }
+    }
+
     /**
      * Best-effort daemon revive, rate-limited by {@link #RECONNECT_COOLDOWN_MS}.
      *
@@ -1518,31 +1539,21 @@ public final class ProxyClient {
         if (pre == null || !pre.isBinderAlive()) {
             reconnectUnlessMainThread();
         }
+        IBinder firstAttempt = sBinder;
         try {
-            return op.run();
+            return runPinned(firstAttempt, op);
         } catch (RemoteException e) {
-            // C3: guard sBinder null-out inside LOCK so a freshly-arrived binder
-            // from the broadcast receiver (written inside LOCK) is not clobbered.
-            synchronized (LOCK) {
-                IBinder dead = sBinder;
-                if (dead != null && !dead.isBinderAlive()) {
-                    clearConnectionIfCurrent(dead);
-                }
-            }
+            invalidateBinderIfCurrent(firstAttempt, tag);
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
                     + " — attempting reconnect");
             if (!reconnectUnlessMainThread()) {
                 throw new ProxyException(tag + ": " + e.getMessage(), e);
             }
+            IBinder retryAttempt = sBinder;
             try {
-                return op.run();
+                return runPinned(retryAttempt, op);
             } catch (RemoteException e2) {
-                synchronized (LOCK) {
-                    IBinder dead = sBinder;
-                    if (dead != null && !dead.isBinderAlive()) {
-                        clearConnectionIfCurrent(dead);
-                    }
-                }
+                invalidateBinderIfCurrent(retryAttempt, tag + " retry");
                 throw new ProxyException(
                         tag + " (after reconnect): " + e2.getMessage(), e2);
             }

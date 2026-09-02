@@ -1,6 +1,7 @@
 package com.byd.dashcast.proxy
 
 import android.os.Binder
+import android.os.DeadObjectException
 import android.os.Parcel
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import org.junit.After
@@ -271,6 +272,63 @@ class ProxyHandshakeConcurrencyTest {
         assertTrue(probes.contains("invalidateBinderIfCurrent(b, \"Phase4Probes\")"))
         assertTrue(batch.contains("ProxyCanVerbs.canBatch(b, operations)"))
         assertTrue(batch.contains("invalidateBinderIfCurrent(b, \"canBatch\")"))
+    }
+
+    @Test
+    fun `alive-looking dead binder is invalidated by generic retry path`() {
+        val binder = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                throw DeadObjectException()
+            }
+        }
+        setStatic("sBinder", binder)
+        setStatic("sDaemonUid", 2000)
+
+        try {
+            ProxyClient.runShell("echo test")
+        } catch (_: ProxyClient.ProxyException) {}
+
+        assertFalse(ProxyClient.isConnected())
+    }
+
+    @Test
+    fun `failed pinned attempt cannot transact on or clear replacement binder`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val first = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                entered.countDown()
+                release.await(2, TimeUnit.SECONDS)
+                throw DeadObjectException()
+            }
+        }
+        val replacementCalls = AtomicInteger()
+        val replacement = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                replacementCalls.incrementAndGet()
+                return false
+            }
+        }
+        setStatic("sBinder", first)
+        setStatic("sDaemonUid", 2000)
+        val done = CountDownLatch(1)
+        Thread {
+            ProxyClient.setNonBlockingReconnect(true)
+            try {
+                ProxyClient.runShell("echo test")
+            } catch (_: ProxyClient.ProxyException) {
+            } finally {
+                ProxyClient.setNonBlockingReconnect(false)
+                done.countDown()
+            }
+        }.start()
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        setStatic("sBinder", replacement)
+        release.countDown()
+
+        assertTrue(done.await(1, TimeUnit.SECONDS))
+        assertTrue(ProxyClient.isConnected())
+        assertEquals(0, replacementCalls.get())
     }
 
     private fun setStatic(name: String, value: Any?) {
