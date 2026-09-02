@@ -6,6 +6,7 @@ import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.DeadObjectException;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.MotionEvent;
@@ -17,6 +18,7 @@ import com.byd.dashcast.domain.cluster.ProjectionStateProvider;
 import com.byd.dashcast.R;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.ShellGateway;
+import com.byd.dashcast.proxy.DaemonBinderResolver;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -228,23 +230,29 @@ public final class FissionOrchestrator {
     public static LayoutMirrorTarget startSelectedLayoutMirror(
             Surface surface, int viewWidth, int viewHeight) {
         FissionOrchestrator o = sAutoStartOrchestrator;
-        if (o == null || o.mDaemonBinder == null || surface == null || !surface.isValid()) {
+        if (o == null || surface == null || !surface.isValid()) {
             return null;
         }
+        IBinder binder = o.surfaceBinderForTactile("LayoutMirrorStart");
+        if (binder == null) return null;
         LayoutMirrorTarget target = o.selectedMirrorTarget();
         if (target == null) return null;
         try {
-            String focus = FissionClient.focusSlot(o.mDaemonBinder, target.pkg);
+            String focus = FissionClient.focusSlot(binder, target.pkg);
             if (focus == null || !focus.startsWith("OK ")) {
                 AppLogger.w(TAG, "Layout tactile focus best-effort for " + target.pkg
                         + ": " + focus);
             }
+        } catch (DeadObjectException dead) {
+            o.recoverSurfaceBinderIfCurrent(binder, "LayoutFocus");
+            AppLogger.w(TAG, "Layout tactile focus lost surface daemon for " + target.pkg);
+            return null;
         } catch (Exception focusError) {
             AppLogger.w(TAG, "Layout tactile focus unavailable for " + target.pkg
                     + ": " + focusError.getMessage());
         }
         try {
-            boolean ok = FissionClient.startMirror(o.mDaemonBinder,
+            boolean ok = FissionClient.startMirror(binder,
                     target.layerStack, target.width, target.height,
                     target.displayId, viewWidth, viewHeight, surface);
             if (!ok) return null;
@@ -253,6 +261,10 @@ public final class FissionOrchestrator {
             AppLogger.i(TAG, "Layout tactile mirror selected pkg=" + target.pkg
                     + " displayId=" + target.displayId + " layerStack=" + target.layerStack);
             return target;
+        } catch (DeadObjectException dead) {
+            o.recoverSurfaceBinderIfCurrent(binder, "LayoutMirrorStart");
+            AppLogger.w(TAG, "Layout tactile mirror lost surface daemon for " + target.pkg);
+            return null;
         } catch (Exception error) {
             AppLogger.e(TAG, "startSelectedLayoutMirror failed for " + target.pkg, error);
             return null;
@@ -269,14 +281,62 @@ public final class FissionOrchestrator {
 
     public static boolean injectSelectedLayoutMotion(MotionEvent event) {
         FissionOrchestrator o = sAutoStartOrchestrator;
-        if (o == null || o.mDaemonBinder == null || event == null) return false;
+        if (o == null || event == null) return false;
+        IBinder binder = o.surfaceBinderForTactile("LayoutMotion");
+        if (binder == null) return false;
         try {
-            FissionClient.injectMotion(o.mDaemonBinder, event);
+            FissionClient.injectMotion(binder, event);
             return true;
+        } catch (DeadObjectException dead) {
+            o.recoverSurfaceBinderIfCurrent(binder, "LayoutMotion");
+            AppLogger.w(TAG, "Layout tactile input lost surface daemon");
+            return false;
         } catch (Exception error) {
             AppLogger.e(TAG, "injectSelectedLayoutMotion failed", error);
             return false;
         }
+    }
+
+    private IBinder surfaceBinderForTactile(String reason) {
+        IBinder current = mDaemonBinder;
+        if (current != null) return current;
+        IBinder fresh = DaemonBinderResolver.reacquireSurfaceBinder(reason);
+        if (fresh == null) return null;
+        boolean adopted = false;
+        synchronized (this) {
+            if (mDaemonBinder == null) {
+                mDaemonBinder = fresh;
+                adopted = true;
+            }
+            current = mDaemonBinder;
+        }
+        if (adopted) {
+            final IBinder published = current;
+            post(() -> mCallbacks.onDaemonBinderAcquired(published));
+        }
+        return current;
+    }
+
+    private IBinder recoverSurfaceBinderIfCurrent(IBinder failed, String reason) {
+        synchronized (this) {
+            if (mDaemonBinder != failed) return mDaemonBinder;
+            mDaemonBinder = null;
+        }
+        IBinder fresh = DaemonBinderResolver.reacquireSurfaceBinder(reason);
+        if (fresh == failed || (fresh != null && !fresh.isBinderAlive())) fresh = null;
+        boolean adopted = false;
+        synchronized (this) {
+            if (mDaemonBinder == null) {
+                mDaemonBinder = fresh;
+                adopted = true;
+            }
+            fresh = mDaemonBinder;
+        }
+        if (adopted) {
+            final IBinder published = fresh;
+            post(() -> mCallbacks.onDaemonBinderAcquired(published));
+        }
+        return fresh;
     }
 
     /**
