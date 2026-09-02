@@ -376,6 +376,41 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 ["DashCast.apk :: AndroidManifest.xml :: unsupported compression method"],
             )
 
+    def test_unknown_apk_signing_block_pair_is_scanned_before_zipfile(self) -> None:
+        token = b"123456789:AAabcdefghijklmnopqrstuvwxyzABCDE12345"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast.apk"
+            self.write_apk(root, b"binary release manifest")
+            raw = apk.read_bytes()
+            eocd_offset = raw.rfind(scanner.EOCD_SIGNATURE)
+            directory_offset = struct.unpack_from("<L", raw, eocd_offset + 16)[0]
+            pair = struct.pack("<QI", 4 + len(token), 0xDEADBEEF) + token
+            block_size = len(pair) + 24
+            signing_block = (
+                struct.pack("<Q", block_size)
+                + pair
+                + struct.pack("<Q", block_size)
+                + scanner.APK_SIGNING_BLOCK_MAGIC
+            )
+            mutated = bytearray(
+                raw[:directory_offset] + signing_block + raw[directory_offset:]
+            )
+            struct.pack_into(
+                "<L", mutated, eocd_offset + len(signing_block) + 16,
+                directory_offset + len(signing_block),
+            )
+            apk.write_bytes(mutated)
+
+            with patch.object(scanner.zipfile, "ZipFile",
+                              side_effect=AssertionError("must not parse")):
+                findings = scanner.scan_apks(root)
+
+            self.assertEqual(
+                findings,
+                ["DashCast.apk :: APK Signing Block 0xdeadbeef :: telegram bot token"],
+            )
+
     def test_github_output_uses_a_report_specific_safe_delimiter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output_path = Path(directory) / "github-output"

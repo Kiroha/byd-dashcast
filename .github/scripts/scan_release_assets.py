@@ -35,6 +35,7 @@ PATTERN_MIN_BYTES = {
 MAX_APK_BYTES = 256 * 1024 * 1024
 MAX_ENTRY_COUNT = 10_000
 MAX_CENTRAL_DIRECTORY_BYTES = 64 * 1024 * 1024
+MAX_APK_SIGNING_BLOCK_BYTES = 16 * 1024 * 1024
 MAX_TOTAL_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 MAX_ENTRY_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 200
@@ -52,6 +53,64 @@ ZIP64_LOCATOR_SIGNATURE = b"PK\x06\x07"
 EOCD_MAX_BYTES = 22 + 0xFFFF
 CENTRAL_DIRECTORY_SIGNATURE = b"PK\x01\x02"
 CENTRAL_DIRECTORY_DIGITAL_SIGNATURE = b"PK\x05\x05"
+APK_SIGNING_BLOCK_MAGIC = b"APK Sig Block 42"
+
+
+def scan_raw_range(source, size: int) -> set[str]:
+    labels: set[str] = set()
+    tail = b""
+    remaining = size
+    while remaining:
+        chunk = source.read(min(SCAN_CHUNK_BYTES, remaining))
+        if not chunk:
+            raise OSError("truncated raw range")
+        remaining -= len(chunk)
+        window = tail + chunk
+        for label, pattern in PATTERNS.items():
+            if label not in labels and pattern.search(window):
+                labels.add(label)
+        tail = window[-SCAN_OVERLAP_BYTES:]
+    return labels
+
+
+def apk_signing_block_finding(source, directory_offset: int) -> str | None:
+    if directory_offset < 24:
+        return None
+    source.seek(directory_offset - 24)
+    footer = source.read(24)
+    if len(footer) != 24 or footer[8:] != APK_SIGNING_BLOCK_MAGIC:
+        return None
+    block_size = struct.unpack_from("<Q", footer)[0]
+    total_size = block_size + 8
+    if block_size < 24 or total_size > directory_offset:
+        return "APK Signing Block :: malformed framing"
+    if total_size > MAX_APK_SIGNING_BLOCK_BYTES:
+        return "APK Signing Block :: exceeds scan limit"
+    block_start = directory_offset - total_size
+    source.seek(block_start)
+    header = source.read(8)
+    if len(header) != 8 or struct.unpack("<Q", header)[0] != block_size:
+        return "APK Signing Block :: malformed framing"
+
+    remaining = block_size - 24
+    while remaining:
+        if remaining < 8:
+            return "APK Signing Block :: malformed pair"
+        raw_pair_size = source.read(8)
+        if len(raw_pair_size) != 8:
+            return "APK Signing Block :: malformed pair"
+        pair_size = struct.unpack("<Q", raw_pair_size)[0]
+        if pair_size < 4 or pair_size > remaining - 8:
+            return "APK Signing Block :: malformed pair"
+        pair_id = source.read(4)
+        if len(pair_id) != 4:
+            return "APK Signing Block :: malformed pair"
+        labels = scan_raw_range(source, pair_size - 4)
+        if labels:
+            pair_id_text = f"0x{struct.unpack('<L', pair_id)[0]:08x}"
+            return f"APK Signing Block {pair_id_text} :: {sorted(labels)[0]}"
+        remaining -= 8 + pair_size
+    return None
 
 
 def central_directory_finding(
@@ -170,6 +229,9 @@ def archive_directory_finding(apk: Path) -> str | None:
             )
             if directory_finding:
                 return directory_finding
+            signing_finding = apk_signing_block_finding(source, directory_offset)
+            if signing_finding:
+                return signing_finding
     except (OSError, OverflowError, struct.error):
         return "unreadable APK"
     return None
