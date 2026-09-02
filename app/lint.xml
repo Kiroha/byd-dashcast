@@ -35,6 +35,13 @@
           <ignore path="**/report/ReportConsent.kt" />
      </issue>
 
+     <!-- Provisioning probes run through the uid-2000 shell, not app storage
+           APIs. Both shell-visible shared-storage aliases are intentional and
+           are covered by ReportChannelTest. -->
+     <issue id="SdCardPath">
+          <ignore path="**/report/ReportChannel.kt" />
+     </issue>
+
     <!-- Not distributed via Play Store; targetSdk29 is intentional for DiLink3 compatibility. -->
     <issue id="ExpiredTargetSdkVersion" severity="ignore" />
 
