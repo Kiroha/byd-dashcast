@@ -25,5 +25,13 @@ class ProxyInstanceMarkerWiringTest {
         val heartbeat = daemon.substringAfter("private static void installSelfHealHeartbeat()")
             .substringBefore("private static void healTriggerFile()")
         assertTrue(heartbeat.contains("healInstanceFile()"))
+
+        val cleanup = daemon.substringAfter("new Thread(\"pid-cleanup\")")
+            .substringBefore("// shutdown hooks may be disallowed")
+        assertTrue(cleanup.indexOf("ProxyDaemonStartupLock.tryAcquire") <
+            cleanup.indexOf("readSmallFile(new File(PID_FILE))"))
+        assertTrue(cleanup.indexOf("readSmallFile(new File(PID_FILE))") <
+            cleanup.indexOf("new File(PID_FILE).delete()"))
+        assertTrue(cleanup.contains("cleanupLock.close()"))
     }
 }
