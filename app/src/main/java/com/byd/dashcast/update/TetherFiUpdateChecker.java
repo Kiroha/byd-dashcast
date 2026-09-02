@@ -124,6 +124,7 @@ public final class TetherFiUpdateChecker {
         }, "tetherfi-update-check").start();
     }
 
+    @SuppressWarnings("deprecation")
     private static int getInstalledVersionCode(Context context) {
         try {
             return context.getPackageManager()

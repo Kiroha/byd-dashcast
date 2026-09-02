@@ -348,6 +348,7 @@ public class UpdateChecker {
         return conn;
     }
 
+    @SuppressWarnings("deprecation")
     private static void validateDownloadedApk(Context context, File apkFile,
                                               ReleaseAsset asset) throws Exception {
         if (asset.sha256 == null || !asset.sha256.matches("(?i)[0-9a-f]{64}")) {

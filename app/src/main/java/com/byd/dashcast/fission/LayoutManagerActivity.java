@@ -330,6 +330,7 @@ public class LayoutManagerActivity extends Activity {
     }
 
     /** Opens an app-picker dialog and writes the selected package into {@code pickedPkg[0]}. */
+    @SuppressWarnings("deprecation")
     private void showPackagePickerForZone(TextView tvBound, String[] pickedPkg) {
         mExec.execute(() -> {
             PackageManager pm = getPackageManager();

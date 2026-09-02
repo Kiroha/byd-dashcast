@@ -338,6 +338,7 @@ public class KeyboardBridgeActivity extends Activity {
      * so we never call startActivity on an unresolvable Intent. Always
      * finishes the bridge after launch.
      */
+    @SuppressWarnings("deprecation")
     private void openAccessibilitySettings() {
         android.content.pm.PackageManager pm = getPackageManager();
         android.content.Intent[] attempts = new android.content.Intent[] {

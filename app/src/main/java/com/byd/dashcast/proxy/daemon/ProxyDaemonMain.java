@@ -167,6 +167,7 @@ public final class ProxyDaemonMain {
         return DaemonCallerPolicy.isAllowed(uid, Process.myUid(), appUid);
     }
 
+    @SuppressWarnings("deprecation")
     private static int resolveAppUid() {
         Context context = sSystemContext;
         if (context == null) return -1;
