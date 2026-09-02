@@ -537,6 +537,25 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             scanner.signer_certificate_digests(output),
         )
 
+    def test_signature_diagnostic_never_echoes_certificate_or_dn(self) -> None:
+        certificate = base64.b64encode(b"private diagnostic fixture").decode("ascii")
+        output = "\n".join([
+            "Signer #1 certificate DN: CN=Private Driver",
+            "-----BEGIN CERTIFICATE-----",
+            certificate,
+            "-----END CERTIFICATE-----",
+        ])
+
+        diagnostic = scanner.signature_parse_diagnostic(
+            output, "/sdk/build-tools/36.0.0/apksigner"
+        )
+
+        self.assertIn("pem_begin=1", diagnostic)
+        self.assertIn("pem_end=1", diagnostic)
+        self.assertIn("labels=['Signer #1']", diagnostic)
+        self.assertNotIn(certificate, diagnostic)
+        self.assertNotIn("Private Driver", diagnostic)
+
     def test_release_contract_rejects_debug_wrong_identity_and_signer(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
