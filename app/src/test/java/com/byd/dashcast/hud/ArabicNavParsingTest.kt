@@ -26,7 +26,10 @@ class ArabicNavParsingTest {
 
     private fun firstDistance(raw: String): String? {
         val m = dist.matcher(MapNotificationListenerService.normaliseDigits(raw))
-        return if (m.find()) m.group(1) + " " + m.group(2) else null
+        if (!m.find()) return null
+        val value = requireNotNull(m.group(1))
+        val unit = requireNotNull(m.group(2))
+        return "$value $unit"
     }
 
     @Test
