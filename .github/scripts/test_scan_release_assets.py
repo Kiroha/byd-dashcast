@@ -35,13 +35,15 @@ class ScanReleaseAssetsTest(unittest.TestCase):
         *,
         v2: str = "true",
         include_count: bool = True,
+        labels: list[str] | None = None,
     ) -> str:
         lines = [f"Verified using v2 scheme (APK Signature Scheme v2): {v2}"]
         if include_count:
             lines.append(f"Number of signers: {len(certificates)}")
         for index, certificate in enumerate(certificates, start=1):
+            label = labels[index - 1] if labels is not None else f"Signer #{index}"
             lines.extend([
-                f"Signer #{index} certificate DN: CN=Test",
+                f"{label} certificate DN: CN=Test",
                 "Signer #1 certificate SHA-256 digest: " + "0" * 64,
                 "-----BEGIN CERTIFICATE-----",
                 base64.b64encode(certificate).decode("ascii"),
@@ -504,7 +506,12 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                 ),
                 scanner.subprocess.CompletedProcess(
                     [], 0,
-                    self.signer_output([certificate], v2="TRUE", include_count=False),
+                    self.signer_output(
+                        [certificate],
+                        v2="TRUE",
+                        include_count=False,
+                        labels=["V2 Signer:"],
+                    ),
                     "",
                 ),
             ])
