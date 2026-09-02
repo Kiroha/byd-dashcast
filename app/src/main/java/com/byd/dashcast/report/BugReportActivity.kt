@@ -85,11 +85,19 @@ class BugReportActivity : Activity() {
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {
+                if (!isUiAlive()) {
+                    deliverHeadlessly(file, caption)
+                    return
+                }
                 if (TelegramBugReporter.isConfigured()) {
                     tvStatus.setText(R.string.bug_status_sending)
                     TelegramBugReporter.send(this@BugReportActivity, file, caption,
                         object : TelegramBugReporter.Callback {
                             override fun onSent() {
+                                if (!isUiAlive()) {
+                                    AppLogger.i(TAG, "legacy report sent after Activity closed")
+                                    return
+                                }
                                 Toast.makeText(this@BugReportActivity,
                                     R.string.bug_sent_ok, Toast.LENGTH_LONG).show()
                                 finish()
@@ -98,10 +106,15 @@ class BugReportActivity : Activity() {
                                 // Bot upload failed (no network to Telegram, etc.)
                                 // — fall back to the share sheet so nothing is lost.
                                 AppLogger.w(TAG, "bot send failed, share fallback: $message")
+                                if (!isUiAlive()) {
+                                    AppLogger.w(TAG, "Activity closed — report kept at ${file.absolutePath}")
+                                    return
+                                }
                                 shareFallback(file)
                             }
                             override fun onAmbiguous(message: String) {
                                 AppLogger.w(TAG, "report delivery uncertain; file kept: $message")
+                                if (!isUiAlive()) return
                                 tvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
                                 Toast.makeText(this@BugReportActivity,
                                     getString(R.string.bug_kept_locally_fmt, file.name),
@@ -115,6 +128,11 @@ class BugReportActivity : Activity() {
             }
 
             override fun onError(message: String, partial: File?) {
+                if (!isUiAlive()) {
+                    AppLogger.w(TAG, "legacy capture failed after Activity closed: $message"
+                        + (partial?.let { "; partial kept at ${it.absolutePath}" } ?: ""))
+                    return
+                }
                 mSending = false
                 btnSend.isEnabled = true
                 btnCancel.isEnabled = true
@@ -123,6 +141,31 @@ class BugReportActivity : Activity() {
             }
         })
     }
+
+    private fun deliverHeadlessly(file: File, caption: String) {
+        if (!TelegramBugReporter.isConfigured()) {
+            AppLogger.w(TAG, "Activity closed — report kept at ${file.absolutePath}")
+            return
+        }
+        TelegramBugReporter.send(applicationContext, file, caption,
+            object : TelegramBugReporter.Callback {
+                override fun onSent() {
+                    AppLogger.i(TAG, "legacy report sent headlessly")
+                }
+
+                override fun onFailed(message: String) {
+                    AppLogger.w(TAG, "headless legacy upload failed: $message; kept at "
+                        + file.absolutePath)
+                }
+
+                override fun onAmbiguous(message: String) {
+                    AppLogger.w(TAG, "headless legacy delivery uncertain: $message; kept at "
+                        + file.absolutePath)
+                }
+            })
+    }
+
+    private fun isUiAlive(): Boolean = !isFinishing && !isDestroyed
 
     private fun shareFallback(file: File) {
         try {
