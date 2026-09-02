@@ -205,6 +205,7 @@ class MainActivity : AppCompatActivity(),
             svc?.getInputForwarder()?.setDaemonBinder(binder)
             mMirrorCoordinator?.onDaemonBinderAvailable(binder)
         }
+    private var mDaemonReadyReceiverRegistered = false
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(LocaleHelper.applyLocale(base))
@@ -272,6 +273,7 @@ class MainActivity : AppCompatActivity(),
         DaemonBroadcastRegistrar.register(
             this, mDaemonReadyReceiver, IntentFilter(SurfaceDaemon.ACTION_DAEMON_READY)
         )
+        mDaemonReadyReceiverRegistered = true
 
         // Floating mirror button — started once, visibility controlled by show()/hide().
         // Deferred to post-first-frame: FloatingRemoteButton.onStartCommand inflates a
@@ -650,7 +652,10 @@ class MainActivity : AppCompatActivity(),
         AppLogger.lifecycle(javaClass.simpleName, "onDestroy")
         // Cancel all pending runnables.
         mScreenshotHandler.removeCallbacksAndMessages(null)
-        unregisterReceiver(mDaemonReadyReceiver)
+        if (mDaemonReadyReceiverRegistered) {
+            unregisterReceiver(mDaemonReadyReceiver)
+            mDaemonReadyReceiverRegistered = false
+        }
         if (mServiceBound) {
             stopClusterMirror()
             unbindService(mServiceConn)
