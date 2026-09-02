@@ -1615,7 +1615,7 @@ class MainActivity : AppCompatActivity(),
     private fun restoreHomeIfRequested(requested: Boolean) {
         if (!requested) return
         try {
-            startActivity(
+            applicationContext.startActivity(
                 Intent(Intent.ACTION_MAIN)
                     .addCategory(Intent.CATEGORY_HOME)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1642,11 +1642,12 @@ class MainActivity : AppCompatActivity(),
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
                         try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
                             // Sync ClusterService: invalidate mDashboardDisplayId.
                             if (mServiceBound && mClusterService != null) {
                                 mClusterService!!.stopProjectionNoAdb()
                             }
-                            restoreHomeIfRequested(restoreHome)
                             mSplitController?.clearSplitState()
                             // v0.9.73 — projection just stopped → OFF state.
                             setDashboardOffState()
@@ -1662,6 +1663,8 @@ class MainActivity : AppCompatActivity(),
                 override fun onError(error: String?) {
                     runOnUiThread {
                         try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
                             btnRestoreCluster.isEnabled = true
                             Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
                             AppLogger.log(TAG, "Restore FAILED: $error")
@@ -1670,7 +1673,6 @@ class MainActivity : AppCompatActivity(),
                             // nothing about it — and that call has several documented flaky paths, so
                             // hanging the cover on its success would drop it exactly when a Stop is
                             // already going badly.
-                            restoreHomeIfRequested(restoreHome)
                         } finally {
                             callerComplete.run()
                         }
@@ -1813,10 +1815,11 @@ class MainActivity : AppCompatActivity(),
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
                         try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
                             if (mServiceBound && mClusterService != null) {
                                 mClusterService!!.stopProjectionNoAdb()
                             }
-                            restoreHomeIfRequested(restoreHome)
                             mSplitController?.clearSplitState()
                             updateDashboardStatus(null)
                             showAppList()
@@ -1831,6 +1834,8 @@ class MainActivity : AppCompatActivity(),
                 override fun onError(error: String?) {
                     runOnUiThread {
                         try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
                             btnRestoreCluster.isEnabled = true
                             Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
                             AppLogger.log(TAG, "originCluster FAILED: $error")
@@ -1839,7 +1844,6 @@ class MainActivity : AppCompatActivity(),
                             // nothing about it — and that call has several documented flaky paths, so
                             // hanging the cover on its success would drop it exactly when a Stop is
                             // already going badly.
-                            restoreHomeIfRequested(restoreHome)
                         } finally {
                             callerComplete.run()
                         }

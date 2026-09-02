@@ -33,5 +33,12 @@ class ClusterEvictionSerializationWiringTest {
             .findAll(activity).count())
         assertEquals(4, Regex("callerComplete\\.run\\(\\)")
             .findAll(activity).count())
+        val callbacks = activity.substringAfter("private fun continueRestoreBydDashboard")
+            .substringBefore("private fun updateControlLabel")
+        assertEquals(4, Regex("if \\(isFinishing \\|\\| isDestroyed\\) return@runOnUiThread")
+            .findAll(callbacks).count())
+        assertTrue(callbacks.indexOf("restoreHomeIfRequested(restoreHome)") <
+            callbacks.indexOf("if (isFinishing || isDestroyed)"))
+        assertTrue(activity.contains("applicationContext.startActivity("))
     }
 }
