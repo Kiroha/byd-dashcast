@@ -13,6 +13,20 @@
     <!-- Dependency upgrade noise is tracked manually for platform compatibility. -->
     <issue id="GradleDependency" severity="ignore" />
 
+     <!-- These stores require synchronous persistence before the next lifecycle or
+           delivery transition. Their callers also use commit's Boolean verdict to
+           surface storage failures; KTX edit/apply cannot preserve that contract. -->
+     <issue id="ApplySharedPref">
+          <ignore path="**/fission/LayoutPrefs.kt" />
+          <ignore path="**/report/BugWizardPendingDelivery.kt" />
+          <ignore path="**/report/ReportChannel.kt" />
+     </issue>
+     <issue id="UseKtx">
+          <ignore path="**/fission/LayoutPrefs.kt" />
+          <ignore path="**/report/BugWizardPendingDelivery.kt" />
+          <ignore path="**/report/ReportChannel.kt" />
+     </issue>
+
     <!-- Not distributed via Play Store; targetSdk29 is intentional for DiLink3 compatibility. -->
     <issue id="ExpiredTargetSdkVersion" severity="ignore" />
 
