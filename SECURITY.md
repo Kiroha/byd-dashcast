@@ -70,7 +70,7 @@ than the source already does.
 
 ## Known: what's in the APK
 
-A DashCast release APK is a **privileged system component**, not a sandboxed consumer app. Installing it grants it powerful capabilities (input injection, SurfaceFlinger/display access, boot receiver, tethering/Wi-Fi config, microphone, network). Treat it accordingly:
+A DashCast release APK is a **privileged system component**, not a sandboxed consumer app. Installing it grants it powerful capabilities (input injection, SurfaceFlinger/display access, boot receiver, tethering/Wi-Fi config, and network access). Treat it accordingly:
 
 - Install release APKs only from the official project releases, and **verify the signer SHA-1** above — or build from source.
 - Understand that platform signing is a public-key model on this hardware, so the signature identifies the platform, not a specific author. If you require author-level trust, build from source.

@@ -1902,8 +1902,15 @@ android {
         // Final source validation before this bump: 567 unit tests, zero failures/skips; release
         // lint zero errors (14 warnings / 16 hints); R8 release build and platform signature green.
         // NOT VALIDATED ON A CAR.)
-        versionCode 638
-        versionName "1.8.48-beta"
+        // 638 = 1.8.48-beta (complete post-1.8.47 convergence audit: ordered projection and task
+        // ownership, protocol-v25 daemon identity, transactional Layout/Fission state, durable
+        // per-file report delivery, lifecycle gates, release scanner hardening and clean lint.
+        // 738 JVM tests; this build was validated successfully in a car.)
+        // 639 = 1.9.0 stable promotion. Application logic is unchanged from 638; only version
+        // metadata plus tests, documentation and default-branch release policy changed. The 639
+        // binary itself has not been separately vehicle-tested before publication.)
+        versionCode 639
+        versionName "1.9.0"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

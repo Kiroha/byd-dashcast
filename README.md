@@ -13,7 +13,8 @@
 
 Android application for **BYD vehicles (DiLink 3 and DiLink 5)** to push any installed app onto the instrument cluster display, control it via a real-time touch mirror, run several apps at once on the cluster with the **Layouts** engine (internally *Fission*), draw turn-by-turn arrows on the **DiLink 3 windshield HUD**, and report problems in one tap with a keyboard-free bug wizard.
 
-> **v1.7.0 — first stable release since 1.5.4.** Milestone: the codebase has crossed **>50% Kotlin** (Kotlin now outnumbers Java). See [Migration status](#code-structure).
+> **v1.9.0 — current stable release.** It consolidates the complete 1.8.x projection, Layout,
+> HUD, reporting, privacy, OTA and reliability audit. The road to 2.0.0 now focuses on the HUD.
 
 > **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F, Android 10). Also runs on **DiLink 5** head units (Android 13); the privileged daemon path adapts to each ROM.
 
@@ -348,17 +349,18 @@ Only needed to **run** the privileged features. The project builds without it; s
   - **Stable** (recommended): latest non-pre-release asset on the Releases page
   - **Beta** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
 
-2. **Uninstall any previous version first** (see breaking change notice above):
-```bash
-adb uninstall com.byd.myapp     # if coming from any alpha
-adb uninstall com.byd.dashcast  # if coming from a previous beta
-```
-
-3. Sideload onto the infotainment unit:
+2. Connect to the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-adb install DashCast-vX.Y.Z-release.apk
 ```
+
+3. Install or upgrade DashCast. `-r` preserves settings, consent and update state:
+```bash
+adb install -r DashCast-vX.Y.Z-release.apk
+```
+
+  Only users of the obsolete pre-`0.2.0` package name must first run
+  `adb uninstall com.byd.myapp`.
 
 4. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
 5. The app should be functional immediately.
