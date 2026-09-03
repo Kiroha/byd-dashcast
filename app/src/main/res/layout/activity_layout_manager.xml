@@ -12,7 +12,7 @@
     android:orientation="horizontal"
     android:baselineAligned="false"
     android:background="@color/md_background"
-    tools:ignore="Overdraw,HardcodedText">
+    tools:ignore="Overdraw">
 
     <!-- ════════════════ NAV RAIL (Layouts active) ════════════════ -->
     <LinearLayout
@@ -307,7 +307,7 @@
                     android:paddingStart="14dp"
                     android:paddingTop="12dp"
                     android:paddingBottom="8dp"
-                    android:text="MES LAYOUTS"
+                    android:text="@string/lm_section_my_layouts"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.06"
@@ -454,7 +454,7 @@
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
-                        android:text="Effacer tout"
+                        android:text="@string/lm_action_clear_all"
                         android:textSize="13sp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
@@ -469,7 +469,7 @@
                         style="@style/Widget.Material3.Button"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
-                        android:text="Enregistrer"
+                        android:text="@string/lm_action_save"
                         android:textSize="13sp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
@@ -484,7 +484,7 @@
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
-                        android:text="⭐ Favori"
+                        android:text="@string/lm_action_favorite"
                         android:textSize="13sp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"

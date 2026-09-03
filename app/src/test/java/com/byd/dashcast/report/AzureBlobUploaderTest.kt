@@ -1,0 +1,180 @@
+package com.byd.dashcast.report
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.net.MalformedURLException
+import java.net.HttpURLConnection
+import java.net.URL
+
+class AzureBlobUploaderTest {
+
+    @Test
+    fun `upload failure messages never expose the sas`() {
+        val sas = "sv=2024&sp=cw&sig=SECRET-SIGNATURE"
+        val error = MalformedURLException(
+            "no protocol: blob.example/container?comp=block&$sas"
+        )
+
+        val message = AzureBlobUploader.safeFailureMessage(error, sas)
+
+        assertTrue(message.contains("MalformedURLException"))
+        assertTrue(message.contains("<sas>"))
+        assertFalse(message.contains("SECRET-SIGNATURE"))
+    }
+
+    @Test
+    fun `transient commit failures retry without reuploading blocks`() {
+        val responses = ArrayDeque(listOf(503, 503, 201))
+        val attempts = mutableListOf<FakeConnection>()
+        val delays = mutableListOf<Long>()
+
+        AzureBlobUploader.commitWithRetry(
+            "https://blob.example/container/report.zip?comp=blocklist&sas",
+            listOf("block-1"),
+            AzureBlobUploader.ConnectionFactory { _, _ ->
+                FakeConnection(responses.removeFirst()).also { attempts += it }
+            },
+            AzureBlobUploader.RetrySleeper { delays += it },
+        )
+
+        assertEquals(3, attempts.size)
+        assertEquals(listOf(1500L, 3000L), delays)
+        assertTrue(attempts.all { it.requestBody().contains("<Latest>block-1</Latest>") })
+    }
+
+    @Test
+    fun `permanent commit rejection is not retried`() {
+        var attempts = 0
+
+        try {
+            AzureBlobUploader.commitWithRetry(
+                "https://blob.example/container/report.zip?comp=blocklist&sas",
+                listOf("block-1"),
+                AzureBlobUploader.ConnectionFactory { _, _ ->
+                    attempts++
+                    FakeConnection(403)
+                },
+                AzureBlobUploader.RetrySleeper { throw AssertionError("must not sleep") },
+            )
+            throw AssertionError("403 commit unexpectedly succeeded")
+        } catch (expected: IllegalStateException) {
+            assertTrue(expected.message.orEmpty().contains("HTTP 403"))
+        }
+
+        assertEquals(1, attempts)
+    }
+
+    @Test
+    fun `every failed block attempt disconnects its connection`() {
+        val attempts = mutableListOf<FakeConnection>()
+
+        try {
+            AzureBlobUploader.putBlockWithRetry(
+                "https://blob.example/container/report.zip?comp=block&sas",
+                byteArrayOf(1, 2, 3),
+                3,
+                AzureBlobUploader.ConnectionFactory { _, _ ->
+                    FakeConnection(503, failWrite = true).also { attempts += it }
+                },
+                AzureBlobUploader.RetrySleeper {},
+            )
+            throw AssertionError("failed block unexpectedly succeeded")
+        } catch (_: IOException) {
+        }
+
+        assertEquals(3, attempts.size)
+        assertTrue(attempts.all { it.disconnected })
+    }
+
+    @Test
+    fun `block retry sleep interruption is preserved and propagated`() {
+        val connection = FakeConnection(503)
+        try {
+            AzureBlobUploader.putBlockWithRetry(
+                "https://blob.example/container/report.zip?comp=block&sas",
+                byteArrayOf(1),
+                1,
+                AzureBlobUploader.ConnectionFactory { _, _ -> connection },
+                AzureBlobUploader.RetrySleeper { throw InterruptedException("stop") },
+            )
+            throw AssertionError("interrupted block unexpectedly continued")
+        } catch (_: InterruptedException) {
+            assertTrue(Thread.currentThread().isInterrupted)
+            assertTrue(connection.disconnected)
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test
+    fun `permanent block rejection fails without retry and disconnects`() {
+        val attempts = mutableListOf<FakeConnection>()
+
+        try {
+            AzureBlobUploader.putBlockWithRetry(
+                "https://blob.example/container/report.zip?comp=block&sas",
+                byteArrayOf(1),
+                1,
+                AzureBlobUploader.ConnectionFactory { _, _ ->
+                    FakeConnection(403).also { attempts += it }
+                },
+                AzureBlobUploader.RetrySleeper { throw AssertionError("must not sleep") },
+            )
+            throw AssertionError("403 block unexpectedly succeeded")
+        } catch (expected: IllegalStateException) {
+            assertTrue(expected.message.orEmpty().contains("HTTP 403"))
+        }
+
+        assertEquals(1, attempts.size)
+        assertTrue(attempts.single().disconnected)
+    }
+
+    @Test
+    fun `transient block rejection is retried`() {
+        val responses = ArrayDeque(listOf(503, 201))
+        val attempts = mutableListOf<FakeConnection>()
+        val delays = mutableListOf<Long>()
+
+        AzureBlobUploader.putBlockWithRetry(
+            "https://blob.example/container/report.zip?comp=block&sas",
+            byteArrayOf(1),
+            1,
+            AzureBlobUploader.ConnectionFactory { _, _ ->
+                FakeConnection(responses.removeFirst()).also { attempts += it }
+            },
+            AzureBlobUploader.RetrySleeper { delays += it },
+        )
+
+        assertEquals(2, attempts.size)
+        assertEquals(listOf(1500L), delays)
+        assertTrue(attempts.all { it.disconnected })
+    }
+
+    private class FakeConnection(
+        private val status: Int,
+        private val failWrite: Boolean = false,
+    ) :
+        HttpURLConnection(URL("https://blob.example")) {
+        private val output = ByteArrayOutputStream()
+        var disconnected = false
+
+        override fun connect() = Unit
+        override fun disconnect() { disconnected = true }
+        override fun usingProxy(): Boolean = false
+        override fun getOutputStream() = if (failWrite) object : ByteArrayOutputStream() {
+            override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                throw IOException("write failed")
+            }
+        } else output
+        override fun getResponseCode(): Int = status
+        override fun getErrorStream() =
+            ByteArrayInputStream("<Error><Code>Transient</Code></Error>".toByteArray())
+
+        fun requestBody(): String = output.toString(Charsets.UTF_8.name())
+    }
+}

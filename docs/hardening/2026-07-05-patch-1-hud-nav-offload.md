@@ -1,6 +1,11 @@
 # Patch 1 — Offload nav-notification HUD updates off the listener main thread
 
-- **Status:** PROPOSED — reviewed draft, **not applied**. Review + on-car verify before merging.
+- **Status:** ⚠️ **APPLIED — in production since 1.6.108-beta. Do not apply this diff.**
+  It shipped in a more developed form than the draft below: instead of the proposed
+  `ExecutorService` plus coalescing `AtomicReference`, the code uses a dedicated
+  `LatestValueDispatcher<HudNavigationData>` on a `hud-nav-writer` thread. See
+  `MapNotificationListenerService` for what actually runs. The "Why" and "Side effects"
+  sections still explain the reasoning; the diff is history.
 - **File:** `app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.java`
 - **Fixes:** Finding #16 (HIGH), also #17 benefits once the resolver runs off-main.
 - **Fix risk:** Medium

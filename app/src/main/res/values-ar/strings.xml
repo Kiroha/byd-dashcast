@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">متحكّم لوحة القيادة</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">متابعة بدون تغيير</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,14 +42,19 @@
     <string name="menu_log">📜 السجلات</string>
     <string name="menu_language">🌐 اللغة</string>
     <string name="menu_check_updates">🔄 التحقق من التحديثات</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">قناة بيتا</string>
     <string name="settings_prerelease_hint">استلام إصدارات تجريبية قبل الإصدار الرسمي</string>
     <string name="cluster_label_88">8,8 بوصة  (cmd=29)</string>
     <string name="cluster_label_123">12,3 بوصة (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 بوصة (cmd=31)</string>
-    <string name="split_full_screen">⬜ ملء الشاشة</string>
-    <string name="split_left">⬛⬜ اليمين (50%)</string>
-    <string name="split_right">⬜⬛ اليسار (50%)</string>
+    <!-- ⬜/⬛ are U+2B1C/U+2B1B, bidi class ON (neutral): in an RTL paragraph the pair is
+         reordered, and the icon then points at the opposite half from the word beside it.
+         AUD-011 fixed the words and left the glyphs. They are wrapped in LRI…PDI
+         (U+2066/U+2069) so the pair keeps its own direction. Do NOT "fix" this by swapping
+         the glyphs: that looks right and is wrong, for the reason AUD-011 recorded. -->
+    <string name="split_full_screen">⁦⬜⁩ ملء الشاشة</string>
+    <string name="split_left">⁦⬜⬛⁩ اليسار (50%)</string>
+    <string name="split_right">⁦⬛⬜⁩ اليمين (50%)</string>
     <string name="log_title">السجل</string>
     <string name="log_filter_hint">تصفية السجل (علامة، رسالة، regex)…</string>
     <string name="log_empty">(لا توجد إدخالات)</string>
@@ -61,21 +67,12 @@
     <string name="share_report_title">مشاركة التقرير…</string>
     <string name="settings_header">الإعدادات</string>
     <string name="settings_cluster_type_title">نوع العنقود</string>
-    <string name="settings_overscan_section_title">هوامش الشاشة (overscan)</string>
-    <string name="settings_inset_h_label">يسار / يمين:</string>
-    <string name="settings_inset_v_label">أعلى / أسفل:</string>
-    <string name="settings_btn_apply_overscan">تطبيق الآن</string>
-    <string name="settings_btn_reset_overscan">إعادة تعيين (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ مُطبَّق — ي/ي: %1$d بكسل، أ/أ: %2$d بكسل</string>
     <string name="ota_dialog_title">تحديث متاح</string>
     <string name="ota_up_to_date">DashCast محدَّث</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
     <string name="btn_adjust">تعديل</string>
-    <string name="label_width_inset">هامش العرض</string>
-    <string name="label_height_inset">هامش الارتفاع</string>
-    <string name="btn_apply">تطبيق</string>
     <string name="toast_grid_mode_enabled">تم تفعيل وضع الشبكة</string>
     <string name="toast_list_mode_enabled">تم تفعيل وضع القائمة</string>
     <string name="toast_update_install_failed">فشل تثبيت التحديث: </string>
@@ -105,9 +102,6 @@
     <string name="dialog_reconnect_msg">إعادة تشغيل %1$s على العنقود؟</string>
     <string name="dialog_reconnect_yes">↺ إعادة تشغيل</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">ضبط بالأسهم (بدلاً من أشرطة التمرير)</string>
-    <string name="visual_overscan_height">↕ الارتفاع</string>
-    <string name="visual_overscan_width">↔ العرض</string>
     <string name="setting_boot_auto_start">بدء العرض التلقائي عند بدء التشغيل (Auto-Boot)</string>
     <string name="category_navigation">🗺 الملاحة</string>
     <string name="category_media">🎵 وسائط</string>
@@ -194,7 +188,7 @@
     <string name="sysinfo_disp_main">الرئيسية</string>
     <string name="sysinfo_disp_cluster">العنقود</string>
     <string name="sysinfo_disp_virtual">افتراضية (مرآة)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">شاشة %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">يراقب pidof · 500 مللي ثانية</string>
@@ -221,7 +215,7 @@
     <string name="log_saved_toast">تم حفظ السجل: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">متقدم</string>
     <string name="settings_legacy_path">الوكيل الخفي لا يعمل. استخدم المسار القديم</string>
     <string name="settings_legacy_path_support">يوجّه جميع الأوامر المميزة عبر صدفة ADB القديمة بدلاً من الوكيل الخفي. فعّله إذا كان الخفي لا يستجيب أو يسبب مشاكل.</string>
 
@@ -248,9 +242,6 @@
     <!-- DiLink 4 — تشخيص مخصص (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ تم تعطيل الهوامش على DiLink 2 (شاشة واحدة).</string>
-    <string name="settings_warn_no_cluster">⚠️ لم يتم اكتشاف الكلاستر — تم تجاهل الهوامش (DL2؟).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">لا يوجد متصفح متاح لفتح %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">إعادة التشغيل</string>
@@ -267,35 +258,22 @@
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
-    <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_voice_notif_channel">DashCast — اختبار الصوت</string>
-    <string name="diag_voice_notif_title">DashCast — استماع الميكروفون (PoC)</string>
-    <string name="diag_voice_notif_text">تحليل مستوى الصوت محليًا، لا يتم تسجيل أي شيء.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
-
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">المعاينة المحلية غير متاحة — شاشة العنقود لا تزال نشطة</string>
     <string name="layout_mirror_previous">تطبيق التخطيط السابق</string>
     <string name="layout_mirror_next">تطبيق التخطيط التالي</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">رجوع</string>
     <string name="hotspot_hero_title">نقطة اتصال 4G عبر TetherFi</string>
     <string name="hotspot_hero_subtitle">شارك بياناتك المحمولة بنقرتين</string>
     <string name="hotspot_intro">نقطة الاتصال المدمجة غير متاحة على DiLink 3. بدلاً من ذلك، يقود DashCast تطبيق TetherFi (مفتوح المصدر) الذي ينشئ نقطة وصول Wi-Fi Direct + وكيل SOCKS5 — دون الحاجة إلى إذن النظام، وتُستخدم شريحة SIM الخاصة بمركبتك كوصلة صاعدة.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ جارٍ الكشف…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi مثبَّت — الإصدار %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi غير مثبَّت. اضغط «تثبيت» لجلب أحدث إصدار.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">بدء</string>
+    <string name="hotspot_tf_stop">إيقاف</string>
+    <string name="hotspot_tf_toggle">تبديل</string>
     <string name="hotspot_tf_open">فتح TetherFi</string>
     <string name="hotspot_tf_install">تثبيت TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — تم الإرسال</string>
@@ -303,8 +281,8 @@
     <string name="hotspot_tf_open_failed">فتح TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">مراقبة تلقائية</string>
     <string name="hotspot_watchdog_hint">يعيد تشغيل نقطة الاتصال تلقائيًا إذا انقطعت (يفحص كل 30 ث).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">متوقف</string>
+    <string name="hotspot_watchdog_probing">⏳ جارٍ الفحص…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ تم إلغاء تثبيت TetherFi — توقّفت المراقبة</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 نقطة الاتصال تعمل (عمليات إعادة التشغيل=%3$d)</string>
@@ -316,9 +294,9 @@
     <string name="hotspot_clients_title">العملاء المتصلون</string>
     <string name="hotspot_clients_empty">لا يوجد عملاء متصلون</string>
     <string name="hotspot_client_default_name">جهاز %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">مدة التشغيل</string>
+    <string name="hotspot_stat_rx">المستلَم</string>
+    <string name="hotspot_stat_tx">المُرسَل</string>
     <string name="settings_use_own_sim">أستخدم شريحة SIM الخاصة بي</string>
     <string name="settings_use_own_sim_support">يُظهر زر «نقطة الاتصال» في شريط التنقل حتى تتمكن من مشاركة بياناتك المحمولة عبر TetherFi (DiLink 3 فقط).</string>
     <string name="proxy_keeper_channel_name">عفريت البروكسي</string>
@@ -346,48 +324,17 @@
     <string name="settings_adas_window_fix_support">يرسل sendInfo(30) قبل الإسقاط — يصلح تمدد ADAS في بعض المركبات. قم بالتعطيل إذا تغير شكل المجموعة عند البدء.</string>
     <string name="settings_fission_mode">وضع Layouts</string>
     <string name="settings_fission_mode_support">إسقاط تطبيقات متعددة على المجموعة بمناطق مخصصة. يتطلب خادم الوكيل.</string>
-    <string name="fission_title">Fission — مجموعة متعددة التطبيقات</string>
-    <string name="fission_status_idle">اضغط + لعرض تطبيق</string>
-    <string name="fission_btn_add">+ إضافة تطبيق</string>
-    <string name="fission_btn_stop">إيقاف الكل</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">محرر التخطيطات</string>
-    <string name="fission_editor_clear">مسح</string>
-    <string name="fission_editor_save">حفظ</string>
     <string name="fission_editor_edit">تعديل</string>
     <string name="fission_editor_delete">حذف</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">التخطيطات</string>
     <string name="layout_manager_title">إدارة التخطيطات</string>
     <string name="layout_manager_new">تخطيط جديد</string>
     <string name="layout_canvas_hint">اسحب لرسم منطقة</string>
 
     <!-- Fission — multi-app cluster -->
-    <string name="fission_active_count">%1$d تطبيق نشط</string>
-    <string name="fission_all_projected">جميع التطبيقات معروضة بالفعل</string>
-    <string name="fission_close_slot_confirm">إغلاق</string>
-    <string name="fission_close_slot_title">إغلاق %1$s؟</string>
-    <string name="fission_conflict_message">يوجد عرض نشط بالفعل. هل تريد إيقافه للمتابعة؟</string>
-    <string name="fission_conflict_stop">إيقاف</string>
     <string name="fission_conflict_title">تعارض في العرض</string>
-    <string name="fission_idle_hint">اضغط + لعرض تطبيق</string>
-    <string name="fission_launch_in">تشغيل %1$s في…</string>
-    <string name="fission_layout_active_fmt">التخطيط: %1$s</string>
     <string name="fission_layout_favorite_set_toast">تم تعيين التخطيط المفضل ✓</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">وضع حر</string>
-    <string name="fission_layout_switch">تغيير</string>
-    <string name="fission_mode_free">وضع حر</string>
-    <string name="fission_no_apps">لا توجد تطبيقات متاحة</string>
-    <string name="fission_pick_app_title">اختر تطبيقًا</string>
-    <string name="fission_place_in">وضع %1$s في…</string>
-    <string name="fission_resize_full">ملء الشاشة</string>
-    <string name="fission_resize_left_3q">يسار ¾</string>
-    <string name="fission_resize_left_half">يسار ½</string>
-    <string name="fission_resize_right_3q">يمين ¾</string>
-    <string name="fission_resize_right_half">يمين ½</string>
-    <string name="fission_resize_title">تغيير حجم %1$s</string>
-    <string name="fission_slot_error">الفتحة %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">ربط تطبيق…</string>
     <string name="fission_slot_pkg_none">لا شيء — منطقة حرة</string>
     <string name="fission_slot_zone_bound_fmt">التطبيق المرتبط: %1$s</string>
@@ -421,25 +368,28 @@
     <string name="fo_status_stopping">جارٍ الإيقاف…</string>
     <string name="lm_action_add">إضافة</string>
     <string name="lm_action_delete">حذف</string>
+    <string name="lm_section_my_layouts">تخطيطاتي</string>
+    <string name="lm_action_clear_all">مسح الكل</string>
+    <string name="lm_action_favorite">⭐ مفضّل</string>
     <string name="lm_action_save">حفظ</string>
     <string name="lm_activated_ok_fmt">تم تفعيل %1$s ✓</string>
     <string name="lm_activated_partial_fmt">تم تفعيل %1$s (فشلت بعض الفتحات)</string>
     <string name="lm_activating_fmt">جارٍ تفعيل %1$s…</string>
-    <string name="lm_daemon_not_connected">الخادم غير متصل — ابدأ إسقاط Fission أولاً</string>
+    <string name="lm_layout_mode_disabled">فعّل أولاً «وضع Layouts» في الإعدادات.</string>
     <string name="lm_delete_confirm_fmt">حذف «%1$s»؟</string>
     <string name="lm_draw_zone_first">ارسم منطقة واحدة على الأقل</string>
-    <string name="lm_edit_zones_hint">عدّل المناطق ثم احفظ</string>
     <string name="lm_error_fmt">خطأ: %1$s</string>
     <string name="lm_free_mode_toast">تم تفعيل الوضع الحر</string>
     <string name="lm_layout_default_name_fmt">تخطيط %1$d</string>
     <string name="lm_layout_name_hint">اسم التخطيط</string>
     <string name="lm_layout_save_title">حفظ التخطيط</string>
     <string name="lm_layout_saved_toast">تم حفظ التخطيط ✓</string>
+    <string name="lm_layout_load_failed">تعذّر تحميل التخطيطات المحفوظة. تم الاحتفاظ بالبيانات الحالية.</string>
+    <string name="lm_layout_save_failed">تعذّر حفظ التخطيط. حاول مرة أخرى.</string>
+    <string name="lm_layout_selection_save_failed">تغيّر التخطيط، لكن تعذّر حفظ التحديد.</string>
     <string name="lm_new_layout_name">تخطيط جديد</string>
     <string name="lm_no_layout_loaded">لا يوجد تخطيط محمّل</string>
-    <string name="lm_no_saved_layouts">لا توجد تخطيطات محفوظة\nارسم المناطق أعلاه ثم احفظ.</string>
     <string name="lm_save_before_favorite">احفظ التخطيط أولاً قبل تعيينه كمفضل</string>
-    <string name="lm_zone_delete_title">حذف المنطقة؟</string>
     <string name="lm_zone_edit_title_fmt">تعديل «%1$s»</string>
     <string name="lm_zone_height">الارتفاع (px)</string>
     <string name="lm_zone_name_hint">اسم المنطقة</string>
@@ -463,6 +413,7 @@
     <string name="bug_send">إرسال</string>
     <string name="bug_status_capturing">جارٍ التقاط السجل…</string>
     <string name="bug_status_sending">جارٍ الإرسال…</string>
+    <string name="bug_status_slow">الإرسال يستغرق وقتًا أطول من المتوقع — يمكنك الإلغاء.</string>
     <string name="bug_status_error_fmt">خطأ: %1$s</string>
     <string name="bug_sent_ok">تم إرسال التقرير ✓ شكرًا!</string>
     <string name="bug_share_subject">DashCast — تقرير خطأ</string>
@@ -477,7 +428,7 @@
     <string name="bug_wizard_other_app">تطبيق آخر / غير معروف</string>
     <string name="bug_wizard_back">← رجوع</string>
     <string name="bug_tg_title">معرّفك على تيليغرام</string>
-    <string name="bug_tg_message">عندما يتوفر إصلاح لمشكلتك، سنتواصل معك مباشرة عبر تيليغرام لنطلب منك تجربته أولاً.\n\n⚠️ تأكد من إدخال المعرّف الصحيح (مثال: @john_doe). بدونه لن نتمكن من التواصل معك.\n\nيُخزَّن معرّفك على هذا الجهاز فقط ولا يُشارَك أبداً.</string>
+    <string name="bug_tg_message">عندما يتوفر إصلاح لمشكلتك، سنتواصل معك مباشرة عبر تيليغرام لنطلب منك تجربته أولاً.\n\n⚠️ تأكد من إدخال المعرّف الصحيح (مثال: @john_doe). بدونه لن نتمكن من التواصل معك.\n\nيُخزَّن معرّفك على هذا الجهاز ويُرفَق بالتقرير الذي ترسله، فقط لكي نتمكن من التواصل معك.</string>
     <string name="bug_tg_hint">@معرفك</string>
     <string name="bug_tg_confirm">تأكيد</string>
     <string name="bug_tg_skip">لاحقاً</string>
@@ -561,17 +512,16 @@
     <string name="bug_wizard_pick_issue">اختر مشكلة من الأعلى</string>
     <string name="bug_wizard_selected_fmt">محدد: %1$s</string>
     <string name="toast_adb_port_refused">ADB غير قابل للوصول (المنفذ 5555) — المرآة غير متوفرة على هذا الجهاز</string>
-    <string name="hud_visual_title">فحص HUD البصري</string>
-    <string name="hud_visual_yes">نعم</string>
-    <string name="hud_visual_no">لا</string>
-    <string name="hud_visual_unsure">غير متأكد</string>
     <string name="aaos_cluster_unsupported_title">تعذّر العرض على لوحة العدادات</string>
     <string name="aaos_cluster_unsupported_msg">تستخدم سيارتك نظام أندرويد أوتوموتيف من BYD (DX_BYD_AUTO). في هذه الوحدة، تكون لوحة العدادات مقفلة من قِبل الشركة المصنّعة: تحجزها BYD للملاحة المدمجة وتمنع عرض التطبيقات عليها. هذا قيد من السيارة (وليس قيدًا من DashCast) — ولا يوجد حل بديل.</string>
     <string name="dl3_singleos_cluster_unsupported_title">عرض لوحة العدادات غير متاح</string>
     <string name="dl3_singleos_cluster_unsupported_msg">في هذه السيارة، تستخدم لوحة العدادات تخطيطًا بنظام تشغيل واحد (single-OS): تُرسم مباشرةً بواسطة السيارة، دون شاشة منفصلة يمكن عرض التطبيقات عليها. لذلك لا يمكن عرض التطبيقات على لوحة العدادات هنا — هذه خاصية في لوحة عدادات سيارتك، وليست قيدًا من DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">إسقاط لوحة العدادات محظور بواسطة البرنامج الثابت</string>
+    <string name="dl4_cluster_unsupported_msg">في هذه السيارة، لا يسمح البرنامج الثابت لـ DashCast برؤية شاشة لوحة العدادات: التطبيق ليس ضمن قائمة البرامج المسموح لها من الشركة المصنّعة بتعداد الشاشات. كما استعلم DashCast عبر مساعده ذي الامتيازات، ولم يعثر هو الآخر على أي شاشة للوحة العدادات. لذلك فإن إسقاط التطبيقات على لوحة العدادات غير ممكن مع هذا الإصدار من البرنامج الثابت — وهذا قيد من الشركة المصنّعة وليس قيدًا في DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">نتيجة HUD — ماذا رأيت على الزجاج الأمامي؟</string>
-    <string name="hud_bench_opt_ok">✅ ظهر السهم — الاتجاه صحيح</string>
+    <string name="hud_bench_result_title">النتيجة — ماذا رأيت، وأين (على cluster أو على الزجاج الأمامي)؟</string>
+    <string name="hud_bench_opt_cluster">✅ السهم على CLUSTER (خلف المقود)</string>
+    <string name="hud_bench_opt_ok">✅ السهم على HUD (الزجاج الأمامي)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ ظهر السهم — اتجاه خاطئ</string>
     <string name="hud_bench_opt_partial">⚠️ ظهرت المسافة/النص — لكن دون سهم واضح</string>
     <string name="hud_bench_opt_nothing">❌ لا شيء على HUD</string>
@@ -615,4 +565,26 @@
     <string name="bug_hud_no_route_msg">لا يوجد أي مسار نشط حاليًا. لا يتلقّى DashCast تعليمات الانعطاف إلا أثناء التنقّل النشط: مجرّد فتح Google Maps أو Waze لا يكفي. ابدأ مسارًا إلى وجهة ما، ثم انظر إلى HUD — من المفترض أن يظهر السهم.</string>
     <string name="bug_hud_no_route_understood">فهمت، سأبدأ مسارًا</string>
     <string name="bug_hud_no_notif_access_msg">‏DashCast لا يملك إذن الوصول إلى الإشعارات، وهذا ضروري: فالاتجاهات تُقرأ من إشعار Google Maps أو Waze. افتح إعدادات أندرويد → الإشعارات → الوصول إلى الإشعارات، وامنح الإذن لـ DashCast، ثم ابدأ مسارك من جديد.</string>
+    <string name="hud_sweep_result_title">انتهى المسح — ماذا رأيت على CLUSTER (خلف المقود)؟</string>
+    <string name="hud_sweep_opt_photographed">📷 صوّرت رموز الأسهم</string>
+    <string name="hud_sweep_opt_nothing">❌ لم يظهر شيء على CLUSTER</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">إرسال تقارير الأخطاء</string>
+    <string name="pairing_state_on">مُفعَّل — تقاريرك تصل إلى فريق DashCast</string>
+    <string name="pairing_state_off">مُعطَّل — تقاريرك تبقى على هذا الجهاز</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">تمت الموافقة، لكن لا توجد قناة مُهيّأة على هذا الجهاز</string>
+    <string name="consent_title">إرسال بيانات التشخيص إلى فريق DashCast؟</string>
+    <string name="consent_body">لإصلاح مشكلة، يحتاج فريق DashCast إلى معرفة ما كان يجري في السيارة في تلك اللحظة.\n\nقبل الإرسال، يزيل DashCast تلقائيًا من كل تقرير رقم الهيكل (VIN) وأسماء شبكات الواي فاي والعناوين المادية للأجهزة والمواقع.\n\nما يبقى:\n\n•  سجل DashCast وسجل نظام أندرويد، منسوخين كما هما — يحتويان على ما كتبته التطبيقات الأخرى، ولا يمكننا أن نعرف مسبقًا ما هو؛\n\n•  معلومات عن السيارة والوحدة الرئيسية: الطراز والإصدار والإعدادات والتطبيقات المثبّتة؛\n\n•  عنوان IP المحلي للسيارة؛\n\n•  ما تكتبه في النموذج ومعرّف تيليجرام الذي تذكره؛\n\n•  لقطات الشاشة، وهي مُفعَّلة افتراضيًا: صور غير مموّهة للشاشة المركزية ولوحة العدادات، وقد تظهر فيها خريطة تحمل وجهتك — والصورة لا يمكن ترشيحها كما يُرشَّح النص. يُسأل عنها مرة أخرى مع كل إرسال.\n\nلا يغادر السيارة أي تقرير قبل أن تضغط «إرسال». يقرأ التقارير فريق DashCast في مجموعة خاصة. لا يرسل DashCast أي تسجيل صوتي أو صورة أو جهة اتصال أو رسالة.\n\nإذا رفضت، يبقى التقرير على هذا الجهاز ويمكنك مشاركته بنفسك. يمكنك تغيير رأيك في أي وقت من الإعدادات.</string>
+    <string name="consent_accept">أوافق</string>
+    <string name="consent_refuse">أرفض</string>
+    <string name="consent_revoke">سحب الموافقة</string>
+    <string name="consent_close">إغلاق</string>
+    <string name="consent_result_granted">شكرًا. ستُرسل تقاريرك إلى فريق DashCast.</string>
+    <string name="consent_result_refused">تم الرفض. ستبقى تقاريرك على هذا الجهاز.</string>
+    <string name="consent_result_revoked">تم سحب الموافقة. ستبقى تقاريرك على هذا الجهاز.</string>
+    <string name="bug_kept_locally_fmt">حُفظ التقرير على هذا الجهاز: %1$s. اختر كيف تريد إرساله.</string>
 </resources>

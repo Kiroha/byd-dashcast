@@ -16,6 +16,7 @@ import android.widget.TextView;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
 import com.byd.dashcast.fission.FissionOrchestrator;
 import com.byd.dashcast.ime.ClusterImeWatcherService;
@@ -44,7 +45,13 @@ public final class MirrorCoordinator {
     public interface Host {
         Context getContext();
         ClusterService getClusterServiceIfBound();
-        IBinder getDaemonBinder();
+        /**
+         * The <b>SURFACE</b> daemon's binder ({@link com.byd.dashcast.proxy.daemon.SurfaceDaemon},
+         * ServiceManager name {@code byd_mirror_daemon}), or {@code null} if not resolved yet.
+         * Never {@code ProxyClient.getProxyDaemonBinder()} — that is the other daemon and the
+         * mirror transactions below would be rejected silently.
+         */
+        IBinder getSurfaceDaemonBinder();
         void onPreviewClicked();
     }
 
@@ -52,8 +59,10 @@ public final class MirrorCoordinator {
     private final FrameLayout  mFrameMirror;
     private final TextView     mPlaceholder;
     private final Host         mHost;
+    private final Runnable     mPostTouchImeCheck;
 
     private Surface mMirrorSurface;
+    private boolean mDestroyed;
     private boolean mLayoutMirrorActive;
     private String mLayoutMirrorPackage;
     private MirrorProjection mLayoutProjection;
@@ -64,6 +73,16 @@ public final class MirrorCoordinator {
         mFrameMirror = frameMirror;
         mPlaceholder = placeholder;
         mHost        = host;
+        mPostTouchImeCheck = new Runnable() {
+            @Override public void run() {
+                if (mDestroyed || mFrameMirror.getVisibility() != View.VISIBLE) return;
+                try {
+                    ClusterImeWatcherService.checkAndLaunchBridgeIfNeeded(mHost.getContext());
+                } catch (Throwable t) {
+                    AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
+                }
+            }
+        };
         for (int i = 0; i < MAX_FWD_POINTERS; i++) {
             mLayoutPointerProperties[i] = new MotionEvent.PointerProperties();
             mLayoutPointerCoords[i] = new MotionEvent.PointerCoords();
@@ -141,6 +160,7 @@ public final class MirrorCoordinator {
 
     /** Called when a daemon Binder arrives after Activity start. */
     public void onDaemonBinderAvailable(IBinder daemonBinder) {
+        if (mDestroyed) return;
         ClusterService svc = mHost.getClusterServiceIfBound();
         if (svc != null) {
             ClusterMirrorManager mm = svc.getMirrorManager();
@@ -157,6 +177,7 @@ public final class MirrorCoordinator {
 
     /** Rebinds the existing TextureView when the selected headless Layout slot changes. */
     public void onLayoutTargetChanged() {
+        if (mDestroyed) return;
         FissionOrchestrator.LayoutMirrorTarget target =
                 FissionOrchestrator.getSelectedLayoutMirrorTarget();
         String nextPackage = target != null ? target.pkg : null;
@@ -173,6 +194,7 @@ public final class MirrorCoordinator {
 
     /** Attempts to start the mirror using whichever path is available. */
     public void attemptStart() {
+        if (mDestroyed) return;
         if (mMirrorSurface == null || !mMirrorSurface.isValid()) return;
 
         int viewW = mTextureView.getWidth();
@@ -237,14 +259,38 @@ public final class MirrorCoordinator {
             if (dm != null) clusterDisplay = dm.getDisplay(displayId);
         }
 
+        // "Do we have a cluster to mirror?" must be answered from the ID, not from the Display
+        // object: on DiLink 4.0 the display exists and the daemon can drive it, but the OEM
+        // DisplayManagerService whitelist means dm.getDisplay() above always returns null for
+        // our uid. ClusterDisplayRegistry is only ever populated by the DL4 activation path, so
+        // on DL3/DL5 this is exactly "clusterDisplay != null" as before.
+        boolean haveClusterDisplay = clusterDisplay != null
+                || (displayId > 0 && ClusterDisplayRegistry.forDisplayId(displayId) != null);
+
         boolean mirrorOk = false;
-        IBinder daemonBinder = mHost.getDaemonBinder();
+        IBinder daemonBinder = mHost.getSurfaceDaemonBinder();
         if (daemonBinder != null) {
             mirrorOk = mm.startMirrorViaDaemon(
-                    ctx, daemonBinder, clusterDisplay, mMirrorSurface, viewW, viewH);
+                    ctx, daemonBinder, clusterDisplay, displayId, mMirrorSurface, viewW, viewH);
         }
-        if (!mirrorOk) {
+        // Only attempt the unprivileged in-app SurfaceControl path when a cluster display
+        // ACTUALLY EXISTS. With none, startMirror() cannot possibly succeed — yet it used to be
+        // called anyway (startMirrorViaDaemon returns false both for "daemon failed" and for
+        // "no display yet"), inventing a layerStack from a null Display
+        // ("getLayerStack failed -> fallback layerStack=2") and then dying on
+        // SurfaceControl.createDisplay -> null with an [ERROR] naming ACCESS_SURFACE_FLINGER —
+        // three times in 0.9 s in INC-20260727-203241. An unprivileged app can NEVER hold that
+        // permission (that is the whole reason the uid-2000 SurfaceDaemon exists), so the line reads like a
+        // security regression and has repeatedly sent triage down a phantom path. When there is
+        // no display the WARN already emitted by startMirrorViaDaemon says everything, and the
+        // user-visible outcome is unchanged: mirrorOk stays false → placeholder.
+        if (!mirrorOk && haveClusterDisplay) {
             mirrorOk = mm.startMirror(ctx, clusterDisplay, mMirrorSurface, viewW, viewH);
+        } else if (!mirrorOk) {
+            // Keep one quiet breadcrumb: with no daemon binder AND no display, nothing else
+            // would have logged the skip at all.
+            AppLogger.d(TAG, "attemptStart: no cluster display (id=" + displayId
+                    + ") — in-app SurfaceControl fallback skipped");
         }
 
         if (mirrorOk) {
@@ -258,6 +304,7 @@ public final class MirrorCoordinator {
     }
 
     public void stopMirror() {
+        cancelPostTouchImeCheck();
         if (mLayoutMirrorActive) {
             FissionOrchestrator.stopSelectedLayoutMirror();
             clearLayoutMirrorState();
@@ -267,6 +314,7 @@ public final class MirrorCoordinator {
     }
 
     private void stopMirrorForRestart() {
+        cancelPostTouchImeCheck();
         if (mLayoutMirrorActive) {
             FissionOrchestrator.stopSelectedLayoutMirror();
             clearLayoutMirrorState();
@@ -278,7 +326,7 @@ public final class MirrorCoordinator {
         ClusterService svc = mHost.getClusterServiceIfBound();
         if (svc == null) return;
         ClusterMirrorManager mirror = svc.getMirrorManager();
-        if (mirror.isMirrorViaDaemon()) mirror.stopMirrorViaDaemon(mHost.getDaemonBinder());
+        if (mirror.isMirrorViaDaemon()) mirror.stopMirrorViaDaemon(mHost.getSurfaceDaemonBinder());
         mirror.stopMirror();
     }
 
@@ -289,6 +337,7 @@ public final class MirrorCoordinator {
     }
 
     public void showPreview() {
+        if (mDestroyed) return;
         mFrameMirror.setVisibility(View.VISIBLE);
         attemptStart();
     }
@@ -300,6 +349,7 @@ public final class MirrorCoordinator {
 
     /** Recreates the Surface from the current SurfaceTexture and restarts the mirror. */
     public void recreateSurfaceAndRestart() {
+        if (mDestroyed) return;
         try {
             SurfaceTexture st = mTextureView.getSurfaceTexture();
             int w = mTextureView.getWidth();
@@ -402,21 +452,17 @@ public final class MirrorCoordinator {
                 && ClusterService.sIsRunning) {
             try {
                 if (Platform.get().isDiLink5(mHost.getContext())) {
-                    mTextureView.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            try {
-                                ClusterImeWatcherService
-                                        .checkAndLaunchBridgeIfNeeded(mHost.getContext());
-                            } catch (Throwable t) {
-                                AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
-                            }
-                        }
-                    }, 350);
+                    mTextureView.removeCallbacks(mPostTouchImeCheck);
+                    mTextureView.postDelayed(mPostTouchImeCheck, 350);
                 }
             } catch (Throwable t) {
                 AppLogger.e(TAG, "auto-keyboard DL5 guard check failed", t);
             }
         }
+    }
+
+    private void cancelPostTouchImeCheck() {
+        mTextureView.removeCallbacks(mPostTouchImeCheck);
     }
 
     private void forwardTouchToLayout(MotionEvent event) {
@@ -456,7 +502,12 @@ public final class MirrorCoordinator {
     }
 
     public void destroy() {
+        mDestroyed = true;
+        cancelPostTouchImeCheck();
         stopMirror();
+        mTextureView.setOnTouchListener(null);
+        mTextureView.setSurfaceTextureListener(null);
+        mFrameMirror.setOnClickListener(null);
         if (mMirrorSurface != null) {
             mMirrorSurface.release();
             mMirrorSurface = null;

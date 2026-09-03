@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.content.pm.LauncherApps
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -25,7 +27,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.RecyclerView
 import com.byd.dashcast.app.AppStartupTasks
 import com.byd.dashcast.app.BootDisplayCleanup
@@ -37,22 +38,26 @@ import com.byd.dashcast.data.apps.AppRepository
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.fission.FissionOrchestrator
 import com.byd.dashcast.fission.LayoutPrefs
+import com.byd.dashcast.ime.ClusterImeWatcherService
 import com.byd.dashcast.ime.KeyboardBridgeActivity
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.infrastructure.task.TaskLocation
 import com.byd.dashcast.model.AppInfo
+import com.byd.dashcast.model.AppShortcut
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonBinderResolver
+import com.byd.dashcast.proxy.DaemonBroadcastRegistrar
 import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ShellGateway
-import com.byd.dashcast.proxy.daemon.MirrorDaemon
+import com.byd.dashcast.proxy.daemon.SurfaceDaemon
 import com.byd.dashcast.system.FloatingRemoteButton
 import com.byd.dashcast.ui.AppListAdapter
 import com.byd.dashcast.ui.InsetOverlayView
 import com.byd.dashcast.ui.main.ActivateTimeoutManager
 import com.byd.dashcast.ui.main.AppActionSheet
 import com.byd.dashcast.ui.main.AppListCoordinator
+import com.byd.dashcast.ui.main.AppsPanelLayoutPolicy
 import com.byd.dashcast.ui.main.ClusterControlCoordinator
 import com.byd.dashcast.ui.main.DisplayStatePollCoordinator
 import com.byd.dashcast.ui.main.DashboardSelectionTracker
@@ -72,8 +77,6 @@ import com.byd.dashcast.update.OtaProgressUi
 import com.byd.dashcast.update.UpdateChecker
 import com.byd.dashcast.util.AppLogger
 import com.byd.dashcast.util.LocaleHelper
-import com.byd.dashcast.voice.VoiceCommandReceiver
-import com.byd.dashcast.voice.VoiceCommandRouter
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -113,6 +116,7 @@ class MainActivity : AppCompatActivity(),
     private val mAppRepo = AppRepository()
     private var mPendingAutoLaunchPkg: String? = null
     private var mPendingAppAfterActivation: AppInfo? = null
+    private var mPendingShortcutAfterActivation: Pair<AppInfo, AppShortcut>? = null
     private var mMissingAutoLayoutToastShown = false
     private val mDashboardSelectionTracker = DashboardSelectionTracker()
 
@@ -192,7 +196,7 @@ class MainActivity : AppCompatActivity(),
 
     private val mScreenshotHandler = Handler(Looper.getMainLooper())
 
-    // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
+    // SurfaceDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private var mDaemonBinder: IBinder? = null
     private val mDaemonReadyReceiver: BroadcastReceiver =
         DaemonBinderResolver.createActionReceiver { binder ->
@@ -201,6 +205,7 @@ class MainActivity : AppCompatActivity(),
             svc?.getInputForwarder()?.setDaemonBinder(binder)
             mMirrorCoordinator?.onDaemonBinderAvailable(binder)
         }
+    private var mDaemonReadyReceiverRegistered = false
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(LocaleHelper.applyLocale(base))
@@ -213,12 +218,15 @@ class MainActivity : AppCompatActivity(),
 
         // Safety-net: if projection auto-start is disabled, move any leftover cluster apps
         // back to Display 0. Auto-launch pending package consumed in the cluster-connect callback.
+        val bootAutoStartEnabled = ClusterPrefs.isBootAutoStartEnabled(this)
+        var sessionResumePending = false
         mPendingAutoLaunchPkg = ClusterPrefs.getAutoLaunchPkg(this)
         // Session-resume: re-activate the last cluster package if a previous projection was
         // interrupted. Read the session set HERE — before the cleanup thread clears it.
-        if (mPendingAutoLaunchPkg == null && !ClusterPrefs.isBootAutoStartEnabled(this)) {
+        if (mPendingAutoLaunchPkg == null && !bootAutoStartEnabled) {
             val prevSession = ClusterPrefs.getSessionClusterPkgs(this)
             if (prevSession.isNotEmpty()) {
+            sessionResumePending = true
                 val lastPkg = ClusterPrefs.getLastClusterPkg(this)
                 mPendingAutoLaunchPkg = if (lastPkg != null && prevSession.contains(lastPkg))
                     lastPkg
@@ -240,15 +248,17 @@ class MainActivity : AppCompatActivity(),
             AppLogger.i(TAG, "Layout auto-start configured — suppressing single-app auto-launch of « "
                     + mPendingAutoLaunchPkg + " » (the layout owns startup launching)")
         }
-        if (!ClusterPrefs.isBootAutoStartEnabled(this)) {
+        if (BootDisplayCleanup.shouldRunAtStartup(bootAutoStartEnabled, sessionResumePending)) {
             // Off-load the (binder-reflection) cleanup to a named daemon thread.
             val appCtx = applicationContext
             val cleanupThread = Thread({ BootDisplayCleanup.cleanup(appCtx) }, "boot-cleanup-fallback")
             cleanupThread.isDaemon = true
             cleanupThread.start()
-        } else {
+        } else if (bootAutoStartEnabled) {
             // Auto-start enabled: clear the persisted set (apps managed normally).
             ClusterPrefs.clearSessionClusterPkgs(this)
+        } else {
+            AppLogger.i(TAG, "Session resume owns startup — skipping display cleanup")
         }
 
         // Unlock hidden Android APIs (SurfaceControl, etc.) before any startMirror call.
@@ -259,8 +269,11 @@ class MainActivity : AppCompatActivity(),
         if (killOrphanSniffer) sOrphanSnifferKillDone = true
         AppStartupTasks.run(applicationContext, killOrphanSniffer)
 
-        // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
-        registerReceiver(mDaemonReadyReceiver, IntentFilter(MirrorDaemon.ACTION_DAEMON_READY))
+        // Receiver to retrieve the SurfaceDaemon Binder (uid=2000)
+        DaemonBroadcastRegistrar.register(
+            this, mDaemonReadyReceiver, IntentFilter(SurfaceDaemon.ACTION_DAEMON_READY)
+        )
+        mDaemonReadyReceiverRegistered = true
 
         // Floating mirror button — started once, visibility controlled by show()/hide().
         // Deferred to post-first-frame: FloatingRemoteButton.onStartCommand inflates a
@@ -290,7 +303,8 @@ class MainActivity : AppCompatActivity(),
         vRootOverlay = findViewById(R.id.root_overlay)
         llCategoryFilters = findViewById(R.id.ll_category_filters)
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true)
+        val showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS,
+            SettingsActivity.DEFAULT_SHOW_CATEGORY_FILTERS)
         llCategoryFilters.visibility = if (showFilters) View.VISIBLE else View.GONE
 
         // Button "Restore cluster" — quick stop or full origin-restore per PREF_QUICK_STOP.
@@ -363,7 +377,9 @@ class MainActivity : AppCompatActivity(),
             btnKeyboardBridge.visibility = if (isDl5) View.VISIBLE else View.GONE
             btnKeyboardBridge.setOnClickListener {
                 try {
-                    startActivity(Intent(this, KeyboardBridgeActivity::class.java))
+                    if (!ClusterImeWatcherService.prepareAndLaunchBridgeManually()) {
+                        startActivity(Intent(this, KeyboardBridgeActivity::class.java))
+                    }
                 } catch (e: Exception) {
                     AppLogger.e("MainActivity", "KeyboardBridge launch failed", e)
                 }
@@ -374,6 +390,7 @@ class MainActivity : AppCompatActivity(),
 
         // Wire coordinator layer (status dot, mirror lifecycle, fullscreen state machine).
         setupCoordinators()
+        applyCompactAppsPanelMode()
 
         // Restore main-display pkg into the adapter now that mAppListCoordinator exists.
         if (mMainDisplayPkg != null) {
@@ -394,16 +411,6 @@ class MainActivity : AppCompatActivity(),
         setIntent(intent)
         handleShowMirrorIntent(intent)
     }
-
-    // ─── v1.4.0 Voice command receiver ─────────────────────────────────────────
-
-    private val mVoiceCommandReceiver = VoiceCommandReceiver(object : VoiceCommandReceiver.Host {
-        override fun isActivityAlive(): Boolean = !isFinishing && !isDestroyed
-        override fun activateCluster() = this@MainActivity.activateCluster()
-        override fun restoreBydDashboard() = this@MainActivity.restoreBydDashboard()
-        override fun startActivity(intent: Intent) = this@MainActivity.startActivity(intent)
-        override fun quickSwitchToApp(pkg: String) = this@MainActivity.quickSwitchToApp(pkg)
-    })
 
     override fun onResume() {
         super.onResume()
@@ -452,27 +459,30 @@ class MainActivity : AppCompatActivity(),
         return false
     }
 
-    /**
-     * v1.2.45 — Apply the "compact apps panel" preference (left column fixed 160dp, 2-col grid,
-     * chips hidden). Idempotent.
-     */
+    /** Applies the regular or compact apps-panel preference. Idempotent. */
     private fun applyCompactAppsPanelMode() {
-        // Left apps column is always a fixed 160dp width with span=2.
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL,
+            SettingsActivity.DEFAULT_COMPACT_APPS_PANEL)
+        val filtersEnabled = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS,
+            SettingsActivity.DEFAULT_SHOW_CATEGORY_FILTERS)
+        val config = AppsPanelLayoutPolicy.resolve(compact, filtersEnabled)
+
         val lp = llAppListSection.layoutParams
         if (lp is LinearLayout.LayoutParams) {
-            val targetW = (160 * resources.displayMetrics.density).toInt()
-            if (lp.width != targetW || lp.weight != 0f) {
+            val targetW = config.fixedWidthDp?.let {
+                (it * resources.displayMetrics.density).toInt()
+            } ?: 0
+            if (lp.width != targetW || lp.weight != config.weight) {
                 lp.width = targetW
-                lp.weight = 0f
+                lp.weight = config.weight
                 llAppListSection.layoutParams = lp
             }
         }
 
-        // Always 2-column grid to match the favorites strip.
-        mAppListCoordinator.ensureGridSpanCount(2)
-
-        // Category-filter chips: too wide for a 160dp column, force-hidden.
-        findViewById<View?>(R.id.ll_category_filters)?.visibility = View.GONE
+        mAppListCoordinator.ensureGridSpanCount(config.gridSpanCount)
+        llCategoryFilters.visibility =
+            if (config.showCategoryFilters) View.VISIBLE else View.GONE
     }
 
     private fun handleShowMirrorIntent(intent: Intent?) {
@@ -491,42 +501,52 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun quickSwitchToApp(pkgName: String) {
-        val svc = mClusterService ?: return
+        if (mClusterService == null) return
         if (pkgName == mCurrentDashboardPkg) {
             startClusterMirror()
             return
         }
         mUsageTracker.trackStop(mCurrentDashboardPkg)
-        // Remove from tracker before launch to avoid a concurrent eviction force-stopping it.
-        mSessionTracker.remove(pkgName)
-        var displayId = svc.getDisplayId()
-        if (displayId < 0) displayId = 1
-        svc.moveTaskToDisplay(pkgName, displayId, object : ClusterService.LaunchCallback {
-            override fun onResult(launched: Boolean) {
-                if (launched) {
-                    mLastLaunchTime = System.currentTimeMillis()
-                    mCurrentDashboardPkg = pkgName
-                    mSessionTracker.add(pkgName)
-                    var name = pkgName
-                    try {
-                        val ai = packageManager.getApplicationInfo(pkgName, 0)
-                        val label = packageManager.getApplicationLabel(ai)
-                        name = label.toString()
-                    } catch (ignored: Exception) {
-                    }
-                    mCurrentDashboardApp = name
-                    ClusterPrefs.addRecentApp(this@MainActivity, pkgName, name)
-                    mUsageTracker.trackStart()
-                    ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
-                    ClusterPrefs.setClusterName(this@MainActivity, name)
-                    ClusterPrefs.setLastCluster(this@MainActivity, pkgName, name)
-                    mAppListCoordinator.setCurrentPackage(pkgName)
-                    updateDashboardStatus(mCurrentDashboardApp)
-                    updateControlLabel()
-                    startClusterMirror()
-                    mInsetApplicator.apply(pkgName)
-                }
+        mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
+            if (isFinishing || isDestroyed) return@Runnable
+            val activeService = mClusterService ?: return@Runnable
+            val displayId = activeService.getDisplayId()
+            if (displayId <= 0) {
+                AppLogger.w(TAG, "quickSwitchToApp: cluster display unavailable — reactivating")
+                mAppRepo.findByPackage(pkgName)?.let { mPendingAppAfterActivation = it }
+                activateCluster()
+                return@Runnable
             }
+            mSessionTracker.remove(pkgName)
+            activeService.moveTaskToDisplay(pkgName, displayId,
+                object : ClusterService.LaunchCallback {
+                    override fun onResult(launched: Boolean) {
+                        if (launched) {
+                            mLastLaunchTime = System.currentTimeMillis()
+                            mCurrentDashboardPkg = pkgName
+                            mSessionTracker.add(pkgName)
+                            var name = pkgName
+                            try {
+                                val ai = packageManager.getApplicationInfo(pkgName, 0)
+                                val label = packageManager.getApplicationLabel(ai)
+                                name = label.toString()
+                            } catch (ignored: Exception) {
+                            }
+                            mCurrentDashboardApp = name
+                            ClusterPrefs.addRecentApp(this@MainActivity, pkgName, name)
+                            mUsageTracker.trackStart()
+                            ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
+                            ClusterPrefs.setClusterName(this@MainActivity, name)
+                            ClusterPrefs.setLastCluster(this@MainActivity, pkgName, name)
+                            mAppListCoordinator.setCurrentPackage(pkgName)
+                            updateDashboardStatus(mCurrentDashboardApp)
+                            updateControlLabel()
+                            startClusterMirror()
+                            mInsetApplicator.apply(pkgName)
+                        }
+                    }
+                }
+            )
         })
     }
 
@@ -539,9 +559,7 @@ class MainActivity : AppCompatActivity(),
         }
         mPermissionBannerCoordinator?.refresh()
         // Refresh category filter visibility (may have been toggled in Settings)
-        val showFilters = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true)
-        llCategoryFilters.visibility = if (showFilters) View.VISIBLE else View.GONE
+        applyCompactAppsPanelMode()
         // Retrieve the daemon Binder from ServiceManager if not yet available.
         if (mDaemonBinder == null) {
             tryGetDaemonBinderFromServiceManager()
@@ -592,11 +610,6 @@ class MainActivity : AppCompatActivity(),
             }
         }
         mStatePollCoordinator?.start()
-        // Register the voice-command receiver only while the Activity is visible.
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            mVoiceCommandReceiver, IntentFilter(VoiceCommandRouter.ACTION_VOICE_COMMAND)
-        )
-
         // Reflect fission-layout apps in the app list (indicator + long-press kill).
         FissionOrchestrator.setLayoutChangeListener { refreshLayoutPackages() }
         refreshLayoutPackages()
@@ -621,10 +634,6 @@ class MainActivity : AppCompatActivity(),
         }
         // Detach the fission layout listener — only the foreground Activity drives the indicators.
         FissionOrchestrator.setLayoutChangeListener(null)
-        try {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(mVoiceCommandReceiver)
-        } catch (ignore: Throwable) {
-        }
     }
 
     override fun onDestroy() {
@@ -643,7 +652,10 @@ class MainActivity : AppCompatActivity(),
         AppLogger.lifecycle(javaClass.simpleName, "onDestroy")
         // Cancel all pending runnables.
         mScreenshotHandler.removeCallbacksAndMessages(null)
-        unregisterReceiver(mDaemonReadyReceiver)
+        if (mDaemonReadyReceiverRegistered) {
+            unregisterReceiver(mDaemonReadyReceiver)
+            mDaemonReadyReceiverRegistered = false
+        }
         if (mServiceBound) {
             stopClusterMirror()
             unbindService(mServiceConn)
@@ -716,6 +728,11 @@ class MainActivity : AppCompatActivity(),
             }
 
             // Pending app from "activate cluster" dialog.
+            val pendingShortcut = mPendingShortcutAfterActivation
+            if (pendingShortcut != null) {
+                mPendingShortcutAfterActivation = null
+                onLaunchShortcut(pendingShortcut.first, pendingShortcut.second)
+            }
             val pending = mPendingAppAfterActivation
             if (pending != null) {
                 mPendingAppAfterActivation = null
@@ -822,6 +839,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToDashboard(app: AppInfo) {
+        mPendingShortcutAfterActivation = null
         // A running Layout app already owns a dedicated VD. A normal launch here would start a
         // competing classic projection; instead, make this app the tactile mirror target.
         if (FissionOrchestrator.isLayoutPackage(app.packageName)) {
@@ -834,36 +852,7 @@ class MainActivity : AppCompatActivity(),
             return
         }
         val selectionGeneration = selection.generation
-        // DX_BYD_AUTO (Android Automotive): the instrument cluster is owned by the AAOS
-        // cluster-rendering pipeline and is unreachable to us (the automotive display HIDL stub
-        // is absent AND SELinux denies the HAL even to uid 2000 — proven on-car, 1.6.74). App
-        // projection is impossible here, so explain it clearly instead of looping forever on a
-        // silent activation failure. (Only DX_BYD_AUTO is FEATURE_AUTOMOTIVE; DL3/DL5 are not.)
-        if (com.byd.dashcast.hud.AaosClusterProbe.isAaos(this)) {
-            AppLogger.i(TAG, "onSendToDashboard: AAOS detected — cluster projection unsupported, informing user")
-            AlertDialog.Builder(this)
-                .setTitle(R.string.aaos_cluster_unsupported_title)
-                .setMessage(R.string.aaos_cluster_unsupported_msg)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-            return
-        }
-        // DL3 single-OS fission (ro.build.system.fission_single_os==1): the cluster is rendered
-        // natively (Qt/fission) with NO projectable Android display (only Display 0; AutoContainer
-        // creates none → "no AutoContainerNative") — proven by working(=0)/failing(=1) on-car diff.
-        // App projection is impossible here, so explain it instead of looping 12s on activation.
-        // STRICT + safe: only DL3 (isDiLink3) AND single-OS — a real DL5.1 (also single-OS but
-        // isDiLink3=false) and a normal 1-for-2 DL3 (fission_single_os==0) are NOT affected.
-        if (com.byd.dashcast.platform.Platform.get().isDiLink3(this)
-                && com.byd.dashcast.platform.Platform.isClusterSingleOs()) {
-            AppLogger.i(TAG, "onSendToDashboard: DL3 single-OS fission (fission_single_os=1) — cluster projection unsupported, informing user")
-            AlertDialog.Builder(this)
-                .setTitle(R.string.dl3_singleos_cluster_unsupported_title)
-                .setMessage(R.string.dl3_singleos_cluster_unsupported_msg)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-            return
-        }
+        if (rejectUnsupportedDashboardProjection()) return
         val svc = mClusterService
         if (svc == null) {
             // v1.2.76 — auto-trigger activateCluster() and replay the app once the service is up.
@@ -986,23 +975,66 @@ class MainActivity : AppCompatActivity(),
                     " → complementary slot bounds=[" + newLeft + ",0," + newRight + "," + h + "]" +
                     " pkg=" + pkgName
             )
-            if (split.getSecondDashboardPkg() != null) {
-                AdbLocalClient.forceStopApp(this, split.getSecondDashboardPkg(), null)
-            }
-            mSessionTracker.remove(pkgName)
-            svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h, object : ClusterService.LaunchCallback {
-                override fun onResult(launched: Boolean) {
-                    if (launched) {
-                        mLastLaunchTime = System.currentTimeMillis()
-                        split.setSecondDashboardApp(appName)
-                        split.setSecondDashboardPkg(pkgName)
-                        mSessionTracker.add(pkgName)
-                        updateControlLabel()
-                    } else {
-                        Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
+            val replacementGeneration = split.beginSecondDashboardReplacement()
+            fun launchInComplementarySlot() {
+                if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) return
+                mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
+                    if (isFinishing || isDestroyed ||
+                        !split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
+                        return@Runnable
                     }
-                }
-            })
+                    mSessionTracker.remove(pkgName)
+                    svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h,
+                        object : ClusterService.LaunchCallback {
+                            override fun onResult(launched: Boolean) {
+                                if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
+                                    if (launched) cleanupStaleSplitLaunch(pkgName)
+                                    return
+                                }
+                                if (launched) {
+                                    mLastLaunchTime = System.currentTimeMillis()
+                                    split.setSecondDashboardApp(appName)
+                                    split.setSecondDashboardPkg(pkgName)
+                                    mSessionTracker.add(pkgName)
+                                    updateControlLabel()
+                                } else {
+                                    Toast.makeText(applicationContext,
+                                        getString(R.string.toast_app_launch_failed, appName),
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        })
+                })
+            }
+            val previousSecond = split.getSecondDashboardPkg()
+            if (previousSecond != null) {
+                AdbLocalClient.forceStopApp(this, previousSecond, object : AdbLocalClient.Callback {
+                    override fun onSuccess(report: String?) {
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            if (!split.clearSecondDashboardIfMatches(
+                                    previousSecond, replacementGeneration)) return@runOnUiThread
+                            mSessionTracker.remove(previousSecond)
+                            launchInComplementarySlot()
+                        }
+                    }
+
+                    override fun onError(error: String?) {
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            if (split.isCurrentSecondDashboardReplacement(replacementGeneration) &&
+                                split.getSecondDashboardPkg() == previousSecond) {
+                                AppLogger.w(TAG, "split replacement kept $previousSecond: $error")
+                                Toast.makeText(applicationContext,
+                                    getString(R.string.toast_kill_failed, error),
+                                    Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                })
+            } else {
+                launchInComplementarySlot()
+            }
             return
         }
 
@@ -1010,42 +1042,54 @@ class MainActivity : AppCompatActivity(),
         // Factored out so it can run either immediately or after the previous cluster app
         // has been stopped (see the guard below).
         fun proceedMove() {
-            mSessionTracker.remove(pkgName)
-            var clusterDisplayId = svc.getDisplayId()
-            if (clusterDisplayId < 0) clusterDisplayId = 1 // Seal EU hardcoded fallback
-            val targetDisplayId = clusterDisplayId
-            svc.moveTaskToDisplay(pkgName, targetDisplayId, object : ClusterService.LaunchCallback {
-                override fun onResult(launched: Boolean) {
-                    AppLogger.log(
-                        TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId +
-                            " " + (if (launched) "OK" else "FAILED")
-                    )
-                    if (launched) {
-                        mLastLaunchTime = System.currentTimeMillis()
-                        mUsageTracker.trackStop(mCurrentDashboardPkg)
-                        mCurrentDashboardApp = appName
-                        mCurrentDashboardPkg = pkgName
-                        mSessionTracker.add(pkgName)
-                        ClusterPrefs.addRecentApp(this@MainActivity, pkgName, appName)
-                        mUsageTracker.trackStart()
-                        ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
-                        ClusterPrefs.setClusterName(this@MainActivity, appName)
-                        ClusterPrefs.setLastCluster(this@MainActivity, pkgName, appName)
-                        mAppListCoordinator.setCurrentPackage(pkgName)
-                        updateDashboardStatus(appName)
-                        updateControlLabel()
-                        startClusterMirror()
-                        // v1.2.55-beta — deferred enforcement for apps AOSP placed on display 0.
-                        mScreenshotHandler.postDelayed({
-                            if (isFinishing || isDestroyed) return@postDelayed
-                            if (pkgName != mCurrentDashboardPkg) return@postDelayed
-                            svc.enforceTaskOnDisplay(pkgName, targetDisplayId)
-                        }, 2500L)
-                        mInsetApplicator.apply(pkgName)
-                    } else {
-                        Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
-                    }
+            mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
+                if (isFinishing || isDestroyed) return@Runnable
+                val activeService = mClusterService ?: return@Runnable
+                val clusterDisplayId = activeService.getDisplayId()
+                if (clusterDisplayId <= 0) {
+                    AppLogger.w(TAG, "proceedMove: cluster display disappeared — reactivating")
+                    mPendingAppAfterActivation = app
+                    activateCluster()
+                    return@Runnable
                 }
+                mSessionTracker.remove(pkgName)
+                val targetDisplayId = clusterDisplayId
+                activeService.moveTaskToDisplay(pkgName, targetDisplayId,
+                    object : ClusterService.LaunchCallback {
+                        override fun onResult(launched: Boolean) {
+                            AppLogger.log(
+                                TAG, "moveTaskToDisplay " + pkgName + " → display=" +
+                                    targetDisplayId + " " +
+                                    (if (launched) "OK" else "FAILED")
+                            )
+                            if (launched) {
+                                mLastLaunchTime = System.currentTimeMillis()
+                                mUsageTracker.trackStop(mCurrentDashboardPkg)
+                                mCurrentDashboardApp = appName
+                                mCurrentDashboardPkg = pkgName
+                                mSessionTracker.add(pkgName)
+                                ClusterPrefs.addRecentApp(this@MainActivity, pkgName, appName)
+                                mUsageTracker.trackStart()
+                                ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
+                                ClusterPrefs.setClusterName(this@MainActivity, appName)
+                                ClusterPrefs.setLastCluster(this@MainActivity, pkgName, appName)
+                                mAppListCoordinator.setCurrentPackage(pkgName)
+                                updateDashboardStatus(appName)
+                                updateControlLabel()
+                                startClusterMirror()
+                                mScreenshotHandler.postDelayed({
+                                    if (isFinishing || isDestroyed) return@postDelayed
+                                    if (pkgName != mCurrentDashboardPkg) return@postDelayed
+                                    activeService.enforceTaskOnDisplay(pkgName, targetDisplayId)
+                                }, 2500L)
+                                mInsetApplicator.apply(pkgName)
+                            } else {
+                                Toast.makeText(applicationContext,
+                                    getString(R.string.toast_app_launch_failed, appName),
+                                    Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        })
             })
         }
 
@@ -1077,6 +1121,219 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    override fun onLaunchShortcut(app: AppInfo, shortcut: AppShortcut) {
+        mDashboardSelectionTracker.begin(null)
+        mPendingAppAfterActivation = null
+        mPendingShortcutAfterActivation = null
+        if (rejectUnsupportedDashboardProjection()) return
+
+        val layoutTarget = if (FissionOrchestrator.isLayoutPackage(app.packageName)) {
+            FissionOrchestrator.selectLayoutMirrorPackage(app.packageName)
+        } else null
+        val service = mClusterService
+        val targetDisplayId = layoutTarget?.displayId ?: (service?.displayId ?: -1)
+        if (targetDisplayId <= 0) {
+            if (layoutTarget != null) return
+            mPendingShortcutAfterActivation = app to shortcut
+            activateCluster()
+            return
+        }
+
+        val split = if (layoutTarget == null) mSplitController else null
+        var splitBounds: Rect? = null
+        var splitOccupantToStop: String? = null
+        var splitReplacementGeneration: Int? = null
+        if (split != null && split.isInSplitMode() && mCurrentDashboardPkg != null) {
+            if (app.packageName == mCurrentDashboardPkg ||
+                app.packageName == split.getSecondDashboardPkg()) {
+                Toast.makeText(applicationContext, getString(R.string.toast_app_already_cluster),
+                    Toast.LENGTH_SHORT).show()
+                return
+            }
+            val dimensions = split.getClusterDimensions()
+            val left = if (split.getCurrentSplitSlot() == 1) dimensions[0] / 2 else 0
+            val right = if (split.getCurrentSplitSlot() == 1) dimensions[0] else dimensions[0] / 2
+            splitBounds = Rect(left, 0, right, dimensions[1])
+            splitOccupantToStop = split.getSecondDashboardPkg()
+            splitReplacementGeneration = split.beginSecondDashboardReplacement()
+        }
+
+        fun launchNow() {
+            if (isFinishing || isDestroyed) return
+            val replacementGeneration = splitReplacementGeneration
+            if (replacementGeneration != null &&
+                !split!!.isCurrentSecondDashboardReplacement(replacementGeneration)) return
+            if (layoutTarget == null &&
+                (mClusterService !== service || service?.displayId != targetDisplayId)) {
+                mPendingShortcutAfterActivation = app to shortcut
+                activateCluster()
+                return
+            }
+            if (layoutTarget == null) mSessionTracker.remove(app.packageName)
+            try {
+                val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
+                    ?: throw IllegalStateException("LauncherApps unavailable")
+                val layoutBounds = layoutTarget?.let { Rect(0, 0, it.width, it.height) }
+                val options = mDashboardLauncher.createLaunchOptions(
+                    targetDisplayId, splitBounds ?: layoutBounds)
+                launcherApps.startShortcut(
+                    app.packageName,
+                    shortcut.id,
+                    null,
+                    options.toBundle(),
+                    android.os.Process.myUserHandle(),
+                )
+                ClusterPrefs.incrementLaunchCount(this, app.packageName)
+                if (layoutTarget != null) {
+                    selectLayoutMirror(app.packageName)
+                    return
+                }
+                val activeSplitBounds = splitBounds
+                if (split != null && activeSplitBounds != null) {
+                    mLastLaunchTime = System.currentTimeMillis()
+                    split.setSecondDashboardApp(app.appName)
+                    split.setSecondDashboardPkg(app.packageName)
+                    mSessionTracker.remove(app.packageName)
+                    mSessionTracker.add(app.packageName)
+                    updateControlLabel()
+                    return
+                }
+                if (app.packageName == mMainDisplayPkg) {
+                    mMainDisplayPkg = null
+                    mAppListCoordinator.setMainPackage(null)
+                    ClusterPrefs.setMainPkg(this, null)
+                }
+                mLastLaunchTime = System.currentTimeMillis()
+                mUsageTracker.trackStop(mCurrentDashboardPkg)
+                mSessionTracker.remove(app.packageName)
+                mCurrentDashboardApp = app.appName
+                mCurrentDashboardPkg = app.packageName
+                mSessionTracker.add(app.packageName)
+                ClusterPrefs.addRecentApp(this, app.packageName, app.appName)
+                mUsageTracker.trackStart()
+                ClusterPrefs.setClusterPkg(this, app.packageName)
+                ClusterPrefs.setClusterName(this, app.appName)
+                ClusterPrefs.setLastCluster(this, app.packageName, app.appName)
+                mAppListCoordinator.setCurrentPackage(app.packageName)
+                updateDashboardStatus(app.appName)
+                updateControlLabel()
+                startClusterMirror()
+                mScreenshotHandler.postDelayed({
+                    if (isFinishing || isDestroyed) return@postDelayed
+                    if (app.packageName != mCurrentDashboardPkg) return@postDelayed
+                    service?.enforceTaskOnDisplay(app.packageName, targetDisplayId)
+                }, 2500L)
+                mInsetApplicator.apply(app.packageName)
+            } catch (error: Exception) {
+                AppLogger.e(TAG, "shortcut launch failed ${app.packageName}/${shortcut.id}", error)
+                Toast.makeText(applicationContext,
+                    getString(R.string.toast_app_launch_failed, app.appName), Toast.LENGTH_LONG).show()
+            }
+        }
+
+        fun launch() {
+            if (layoutTarget != null) {
+                launchNow()
+            } else {
+                mSessionTracker.runWhenSafeToLaunch(
+                    app.packageName, Runnable { launchNow() }
+                )
+            }
+        }
+
+        val previous = mCurrentDashboardPkg
+        if (splitOccupantToStop != null) {
+            AdbLocalClient.forceStopApp(this, splitOccupantToStop, object : AdbLocalClient.Callback {
+                override fun onSuccess(report: String?) {
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        val generation = splitReplacementGeneration ?: return@runOnUiThread
+                        if (!split!!.clearSecondDashboardIfMatches(
+                                splitOccupantToStop, generation)) return@runOnUiThread
+                        mSessionTracker.remove(splitOccupantToStop)
+                        launch()
+                    }
+                }
+                override fun onError(error: String?) {
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        val generation = splitReplacementGeneration ?: return@runOnUiThread
+                        if (split!!.isCurrentSecondDashboardReplacement(generation) &&
+                            split.getSecondDashboardPkg() == splitOccupantToStop) {
+                            AppLogger.w(TAG, "split shortcut replacement kept " +
+                                "$splitOccupantToStop: $error")
+                            Toast.makeText(applicationContext,
+                                getString(R.string.toast_kill_failed, error),
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            })
+        } else if (layoutTarget == null && splitBounds == null &&
+            previous != null && previous != app.packageName
+                && service != null && !service.isMoveTaskToDisplaySupported()) {
+            AdbLocalClient.forceStopApp(this, previous, object : AdbLocalClient.Callback {
+                override fun onSuccess(report: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                }
+                override fun onError(error: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
+                }
+            })
+        } else {
+            launch()
+        }
+    }
+
+    /** A superseded bounded launch already reached the cluster; retain it until kill is verified. */
+    private fun cleanupStaleSplitLaunch(packageName: String) {
+        mSessionTracker.add(packageName)
+        AppLogger.w(TAG, "cleaning stale split launch: $packageName")
+        AdbLocalClient.forceStopApp(this, packageName, object : AdbLocalClient.Callback {
+            override fun onSuccess(report: String?) {
+                mSessionTracker.remove(packageName)
+                AppLogger.i(TAG, "stale split launch removed: $packageName")
+            }
+
+            override fun onError(error: String?) {
+                // Keep it in the persisted session history so Stop retries the eviction.
+                AppLogger.e(TAG, "stale split launch cleanup failed for $packageName: $error")
+            }
+        })
+    }
+
+    private fun rejectUnsupportedDashboardProjection(): Boolean {
+        if (com.byd.dashcast.hud.AaosClusterProbe.isAaos(this)) {
+            AppLogger.i(TAG, "Dashboard projection unavailable on AAOS")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.aaos_cluster_unsupported_title)
+                .setMessage(R.string.aaos_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return true
+        }
+        if (Platform.get().isDiLink3(this) && Platform.isClusterSingleOs()) {
+            AppLogger.i(TAG, "Dashboard projection unavailable on DL3 single-OS")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dl3_singleos_cluster_unsupported_title)
+                .setMessage(R.string.dl3_singleos_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return true
+        }
+        if (Platform.get().isDiLink4(this) &&
+            com.byd.dashcast.cluster.display.ClusterManager.isDl4ProjectionUnavailable()) {
+            AppLogger.i(TAG, "Dashboard projection unavailable on DL4")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dl4_cluster_unsupported_title)
+                .setMessage(R.string.dl4_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return true
+        }
+        return false
+    }
+
     override fun onSendToMain(app: AppInfo) {
         ClusterPrefs.incrementLaunchCount(this, app.packageName)
         mUsageTracker.trackStop(mCurrentDashboardPkg)
@@ -1098,7 +1355,11 @@ class MainActivity : AppCompatActivity(),
         ClusterPrefs.setMainPkg(this, app.packageName)
         updateDashboardStatus(null)
         showAppList()
-        // Move the running task to display 0 without relaunching.
+        // Move the running task to display 0 without relaunching. Deliberately does NOT untrack the
+        // package: this move is unverified (on a ROM without moveTaskToDisplay it is an async
+        // relaunch that can silently not happen), and dropping it here is what stranded an app on
+        // the cluster in INC-20260809-122719. Stop projection probes where it actually is and skips
+        // it if it did land on display 0.
         val svc = mClusterService
         if (mServiceBound && svc != null) {
             svc.moveTaskToDisplay(app.packageName, 0, null)
@@ -1143,6 +1404,7 @@ class MainActivity : AppCompatActivity(),
         // 2. Move the app back to Display 0 before killing (serialised move → forceStop).
         val killCallback = object : AdbLocalClient.Callback {
             override fun onSuccess(report: String?) {
+                mSessionTracker.remove(app.packageName)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     AppLogger.i(TAG, "forceStop " + app.packageName + " OK")
@@ -1158,6 +1420,8 @@ class MainActivity : AppCompatActivity(),
             }
 
             override fun onError(error: String?) {
+                // It may still own a cluster task. Keep it in persisted history for Stop retry.
+                mSessionTracker.add(app.packageName)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     Toast.makeText(applicationContext, getString(R.string.toast_kill_failed, error), Toast.LENGTH_LONG).show()
@@ -1171,12 +1435,11 @@ class MainActivity : AppCompatActivity(),
             svc.moveTaskToDisplay(app.packageName, 0, object : ClusterService.LaunchCallback {
                 override fun onResult(ok: Boolean) {
                     AppLogger.i(TAG, "doKillApp: move→display0 " + (if (ok) "OK" else "KO") + " for " + app.packageName + " — now force-stop")
-                    mSessionTracker.remove(app.packageName)
                     AdbLocalClient.forceStopApp(this@MainActivity, app.packageName, killCallback)
                 }
             })
         } else {
-            mSessionTracker.remove(app.packageName)
+            mSessionTracker.add(app.packageName)
             AdbLocalClient.forceStopApp(this, app.packageName, killCallback)
         }
     }
@@ -1229,17 +1492,9 @@ class MainActivity : AppCompatActivity(),
         mInsetOverlay?.setOverlayVisible(false)
         mClusterControlCoordinator?.collapseResizePanel()
 
-        // Load persisted insets for the new app into the seekbars.
-        val ccc = mClusterControlCoordinator
-        val pkg = mCurrentDashboardPkg
-        if (pkg != null && ccc != null) {
-            val p = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H)
-            val defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V)
-            val curW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH)
-            val curH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV)
-            ccc.loadInsets(pkg, curW, curH)
-        }
+        // v1.8.2 — nothing to preload: the symmetric per-app inset seekbars are gone, and the
+        // only way to shrink a cluster app is now the hand-drawn rectangle editor, which reads
+        // its own saved rect when opened.
     }
 
     /** Hides the mirror and restores the app list. */
@@ -1337,38 +1592,90 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    /**
+     * Puts the head unit's home screen back in front when an eviction left an app we could not
+     * kill sitting resumed on display 0.
+     *
+     * INC-20260816: the tester projected Android Auto, pressed Stop, and the centre screen was
+     * unusable until he rebooted — the OEM drawer and the home screen each lasted about 0.3 s
+     * before Android Auto returned. Keeping that task is correct and stays (destroying it is what
+     * made the app unreachable in INC-20260815-181820); what was missing is covering it. The app
+     * is left on the display with a live phone session, which is a foreground for the OEM host to
+     * reclaim, and we handed it over.
+     *
+    * Gated on the outcome captured by this exact eviction when a force-stop went unverified AND
+    * the task was seen on display 0 — so for every package whose
+     * kill succeeds, which is nearly all of them, this is not reached and Stop behaves exactly as
+     * before. The visible consequence where it DOES fire is that Stop leaves you on the launcher
+     * rather than on DashCast's app list. That is the trade, and it is the better half of it.
+     *
+     * Fails silently on purpose: a home screen that will not start must never be the reason the
+     * projection teardown reports failure.
+     */
+    private fun restoreHomeIfRequested(requested: Boolean) {
+        if (!requested) return
+        try {
+            applicationContext.startActivity(
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            AppLogger.i(TAG, "home screen restored on display 0 after an unverified kill")
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "could not restore the home screen: ${t.message}")
+        }
+    }
+
     private fun continueRestoreBydDashboard(capturedClusterPkg: String?, capturedSecondPkg: String?) {
         // v1.2.81 — every classic cluster app is moved back to display 0 AND force-stopped.
-        mSessionTracker.moveToMainDisplay(if (mServiceBound) mClusterService else null)
-
+        // evictAllThen now covers the whole tracked set, so the unverified moveToMainDisplay() that
+        // used to run first is gone: it fired moves nobody checked and then CLEARED the set, which
+        // is what left the verified pipeline with nothing to work on (INC-20260809-122719).
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)")
 
         mSessionTracker.evictAllThen(
             if (mServiceBound) mClusterService else null,
             capturedClusterPkg, capturedSecondPkg
-        ) {
+        ) { restoreHome, callerComplete ->
             // Cluster pkg already killed → pass null so the helper only sends sendInfo(18+0).
             AdbLocalClient.restoreBydOnCluster(this, null, object : AdbLocalClient.Callback {
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
-                        // Sync ClusterService: invalidate mDashboardDisplayId.
-                        if (mServiceBound && mClusterService != null) {
-                            mClusterService!!.stopProjectionNoAdb()
+                        try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            // Sync ClusterService: invalidate mDashboardDisplayId.
+                            if (mServiceBound && mClusterService != null) {
+                                mClusterService!!.stopProjectionNoAdb()
+                            }
+                            mSplitController?.clearSplitState()
+                            // v0.9.73 — projection just stopped → OFF state.
+                            setDashboardOffState()
+                            showAppList()
+                            btnRestoreCluster.isEnabled = true
+                            AppLogger.log(TAG, "BYD restored via ADB ✓")
+                        } finally {
+                            callerComplete.run()
                         }
-                        mSplitController?.clearSplitState()
-                        // v0.9.73 — projection just stopped → OFF state.
-                        setDashboardOffState()
-                        showAppList()
-                        btnRestoreCluster.isEnabled = true
-                        AppLogger.log(TAG, "BYD restored via ADB ✓")
                     }
                 }
 
                 override fun onError(error: String?) {
                     runOnUiThread {
-                        btnRestoreCluster.isEnabled = true
-                        Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
-                        AppLogger.log(TAG, "Restore FAILED: $error")
+                        try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            btnRestoreCluster.isEnabled = true
+                            Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
+                            AppLogger.log(TAG, "Restore FAILED: $error")
+                            // The hazardous state was created by the EVICTION, which has already
+                            // finished. Whether the separate cluster-restore call then succeeded says
+                            // nothing about it — and that call has several documented flaky paths, so
+                            // hanging the cover on its success would drop it exactly when a Stop is
+                            // already going badly.
+                        } finally {
+                            callerComplete.run()
+                        }
                     }
                 }
             })
@@ -1426,10 +1733,9 @@ class MainActivity : AppCompatActivity(),
         if (!mServiceBound || svc == null) return
         val mirror = svc.getMirrorManager()
         overlay.setProjection(mirror.getProjScale(), mirror.getProjOffsetX().toFloat(), mirror.getProjOffsetY().toFloat())
-        overlay.setInsets(
-            mClusterControlCoordinator?.getInsetH() ?: 0,
-            mClusterControlCoordinator?.getInsetV() ?: 0
-        )
+        // v1.8.2 — the inset seekbars that fed this preview are gone; the cluster is always
+        // full-screen unless a hand-drawn rectangle says otherwise, so there is no band to draw.
+        overlay.setInsets(0, 0)
     }
 
     // ── Relaunch current cluster app ─────────────────────────────────────────
@@ -1450,16 +1756,30 @@ class MainActivity : AppCompatActivity(),
         })
     }
 
+    /**
+     * Second half of Relaunch: the app has just been force-stopped, now put it back.
+     *
+     * Resolve from the repository FIRST, the grid only as a fallback — the same correction already
+     * applied to the auto-launch path below, for the same reason. getApps() is the UI grid, and the
+     * grid deliberately excludes favourites into their own strip. So Relaunch on a favourited app
+     * force-stopped it, failed to find it, logged a warning nobody sees, and left the cluster dark
+     * with no way back except sending the app again by hand. The more an app is used — favourited —
+     * the more certainly this broke.
+     */
     private fun relaunchFromList(pkg: String) {
-        for (a in mAppListCoordinator.getApps()) {
-            if (pkg == a.packageName) {
-                mCurrentDashboardPkg = null // clear so onSendToDashboard doesn't bail early
-                mCurrentDashboardApp = null
-                runOnUiThread { onSendToDashboard(a) }
-                return
-            }
+        val app = mAppRepo.findByPackage(pkg)
+            ?: mAppListCoordinator.getApps().firstOrNull { it.packageName == pkg }
+        if (app != null) {
+            mCurrentDashboardPkg = null // clear so onSendToDashboard doesn't bail early
+            mCurrentDashboardApp = null
+            runOnUiThread { onSendToDashboard(app) }
+            return
         }
-        AppLogger.w(TAG, "relaunchCurrentApp: pkg not found in list — $pkg")
+        // Not reachable in practice once the repository is consulted — the package was on the
+        // cluster a moment ago, so the repository knows it. Kept as the honest last word: the app
+        // has just been force-stopped and the cluster is empty, and a silent return would leave no
+        // trace of why.
+        AppLogger.w(TAG, "relaunchCurrentApp: pkg not found in repository or list — $pkg")
     }
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
@@ -1484,32 +1804,49 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun continueOriginCluster(capturedClusterPkg: String?, capturedSecondPkg: String?) {
-        mSessionTracker.moveToMainDisplay(if (mServiceBound) mClusterService else null)
+        // Same as continueRestoreBydDashboard: evictAllThen covers the tracked set itself.
         AppLogger.log(TAG, "originCluster() cmd=" + ClusterPrefs.getClusterType(this))
 
         mSessionTracker.evictAllThen(
             if (mServiceBound) mClusterService else null,
             capturedClusterPkg, capturedSecondPkg
-        ) {
+        ) { restoreHome, callerComplete ->
             AdbLocalClient.restoreOriginCluster(this, ClusterPrefs.getClusterType(this), null, object : AdbLocalClient.Callback {
                 override fun onSuccess(report: String?) {
                     runOnUiThread {
-                        if (mServiceBound && mClusterService != null) {
-                            mClusterService!!.stopProjectionNoAdb()
+                        try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            if (mServiceBound && mClusterService != null) {
+                                mClusterService!!.stopProjectionNoAdb()
+                            }
+                            mSplitController?.clearSplitState()
+                            updateDashboardStatus(null)
+                            showAppList()
+                            btnRestoreCluster.isEnabled = true
+                            AppLogger.log(TAG, "Original cluster restored ✓")
+                        } finally {
+                            callerComplete.run()
                         }
-                        mSplitController?.clearSplitState()
-                        updateDashboardStatus(null)
-                        showAppList()
-                        btnRestoreCluster.isEnabled = true
-                        AppLogger.log(TAG, "Original cluster restored ✓")
                     }
                 }
 
                 override fun onError(error: String?) {
                     runOnUiThread {
-                        btnRestoreCluster.isEnabled = true
-                        Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
-                        AppLogger.log(TAG, "originCluster FAILED: $error")
+                        try {
+                            restoreHomeIfRequested(restoreHome)
+                            if (isFinishing || isDestroyed) return@runOnUiThread
+                            btnRestoreCluster.isEnabled = true
+                            Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
+                            AppLogger.log(TAG, "originCluster FAILED: $error")
+                            // The hazardous state was created by the EVICTION, which has already
+                            // finished. Whether the separate cluster-restore call then succeeded says
+                            // nothing about it — and that call has several documented flaky paths, so
+                            // hanging the cover on its success would drop it exactly when a Stop is
+                            // already going badly.
+                        } finally {
+                            callerComplete.run()
+                        }
                     }
                 }
             })
@@ -1611,12 +1948,6 @@ class MainActivity : AppCompatActivity(),
         mClusterControlCoordinator = ClusterControlCoordinator(
             panelClusterControl,
             findViewById(R.id.panel_controls_content),
-            findViewById(R.id.panel_resize),
-            findViewById(R.id.sb_resize_w),
-            findViewById(R.id.sb_resize_h),
-            findViewById(R.id.tv_resize_w_val),
-            findViewById(R.id.tv_resize_h_val),
-            findViewById(R.id.btn_resize_apply),
             findViewById(R.id.btn_panel_toggle),
             findViewById(R.id.btn_toggle_resize),
             findViewById(R.id.tv_control_app_name),
@@ -1735,7 +2066,93 @@ class MainActivity : AppCompatActivity(),
 
     override fun getClusterServiceIfBound(): ClusterService? = if (mServiceBound) mClusterService else null
 
-    override fun getDaemonBinder(): IBinder? = mDaemonBinder
+    /**
+     * The surface daemon's binder, re-acquired if the cached one has died — AUD-009, last step.
+     *
+     * The five call sites that mishandled a dead surface binder are fixed, but two of them live in
+     * [ClusterMirrorManager], which receives the binder as a parameter and therefore cannot forget
+     * a dead reference on anyone's behalf. The reference it is handed comes from here, so this is
+     * where the forgetting has to happen.
+     *
+     * Two ways to ask whether a binder is alive, and the difference is the failure mode this
+     * finding is about. `isBinderAlive` is a local flag; on DiLink 3 the kernel's binderDied
+     * notification is sometimes never delivered, so it keeps saying "alive" about a process that
+     * is gone. Only `pingBinder` catches that — and it is a blocking round trip.
+     * `ProxyKeeperService` learned the same lesson on the other daemon, but it runs on its own
+     * heartbeat thread and can afford to block. THIS GETTER CANNOT, and an earlier version of it
+     * did, which is the mistake this comment exists to stop repeating.
+     *
+     * `MirrorCoordinator` states the contract in its own class doc — every method on the main
+     * thread — and both call sites honour it. Worse than "main thread occasionally": one of them
+     * is reached from `clusterMirror.addOnLayoutChangeListener`, so it runs inside the view
+     * traversal on every layout pass with a non-zero size. A daemon that is WEDGED rather than
+     * cleanly dead does not fail a ping quickly; it blocks it. Blocking there blocks the traversal,
+     * and the lifecycle callers (`onStop`, `onDestroy`) charge the same block against the
+     * transition ANR budget.
+     *
+     * So liveness is established in two steps, neither of which blocks:
+     *
+     *  - [android.os.IBinder.isBinderAlive] is local and free. It answers correctly once the kernel
+     *    has delivered `binderDied`, which is the ordinary case. If it says dead, the replacement
+     *    comes from a ServiceManager lookup — reflection plus a lookup, no IPC to the daemon.
+     *  - the silent death, where the notification never arrives and the flag keeps saying "alive",
+     *    is checked with a real ping on a background thread. This call returns the cached binder
+     *    immediately; if the ping comes back dead, the cache is dropped and republished, so the
+     *    NEXT caller is correct. The current one may still transact against a corpse and take a
+     *    DeadObjectException — which every one of these call sites now handles, because that is
+     *    what the rest of AUD-009 was about.
+     *
+     * One stale attempt is the price of never blocking the UI thread. It is the right trade: the
+     * attempt fails loudly and recovers, an ANR does not.
+     *
+     * Republishes to the input forwarder as well, so a recovered binder reaches the path that needs
+     * it most without waiting for the next ACTION_DAEMON_READY broadcast.
+     */
+    override fun getSurfaceDaemonBinder(): IBinder? {
+        val cached = mDaemonBinder ?: return null
+        if (cached.isBinderAlive()) {
+            checkSurfaceBinderLivenessAsync(cached)
+            return cached
+        }
+        val fresh = DaemonBinderResolver.reacquireSurfaceBinder("getSurfaceDaemonBinder")
+        adoptSurfaceBinder(fresh, "was dead")
+        return fresh
+    }
+
+    /**
+     * Confirms a seemingly-alive binder really is, without blocking the caller.
+     *
+     * `pingBinder` is the only thing that catches the silent death this whole finding is about, and
+     * it is a blocking round trip. Off the main thread it costs nothing anyone can feel; on it, it
+     * is an ANR waiting for a wedged daemon. Throttled by [DaemonBinderResolver], so a layout storm
+     * cannot spawn a thread per pass.
+     */
+    private fun checkSurfaceBinderLivenessAsync(binder: IBinder) {
+        if (mSurfaceLivenessCheckInFlight.getAndSet(true)) return
+        Thread({
+            try {
+                if (binder.pingBinder()) return@Thread
+                val fresh = DaemonBinderResolver.reacquireSurfaceBinder("silent-death")
+                runOnUiThread {
+                    // Only if nothing better arrived meanwhile — a broadcast may have republished.
+                    if (mDaemonBinder === binder) adoptSurfaceBinder(fresh, "silently dead")
+                }
+            } catch (_: Throwable) {
+            } finally {
+                mSurfaceLivenessCheckInFlight.set(false)
+            }
+        }, "surface-binder-ping").start()
+    }
+
+    /** Main thread. Replaces the cached surface binder and tells the touch path about it. */
+    private fun adoptSurfaceBinder(fresh: IBinder?, why: String) {
+        mDaemonBinder = fresh
+        if (mServiceBound) mClusterService?.getInputForwarder()?.setDaemonBinder(fresh)
+        AppLogger.w(TAG, "surface binder " + why + " — "
+                + (if (fresh != null) "re-acquired" else "dropped, waiting for the daemon"))
+    }
+
+    private val mSurfaceLivenessCheckInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
 
     override fun onPreviewClicked() {
         // no-op: frameMirror touch is handled by clusterMirror.setOnTouchListener()

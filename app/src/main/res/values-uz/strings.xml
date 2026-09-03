@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Asboblar paneli boshqaruvchisi</string>
+    <string name="welcome_subtitle">Asboblar panelini boshqarish</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Tilni tanlang\nPlease select your language</string>
     <string name="welcome_continue_without_change">Oʻzgartirmasdan davom etish</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,14 +42,14 @@
     <string name="menu_log">📜 Jurnallar</string>
     <string name="menu_language">🌐 Til</string>
     <string name="menu_check_updates">🔄 Yangilanishlarni tekshirish</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Beta kanal</string>
     <string name="settings_prerelease_hint">Rasmiy chiqarilishidan oldin sinov versiyalarini oling</string>
     <string name="cluster_label_88">8,8 dyuym  (cmd=29)</string>
     <string name="cluster_label_123">12,3 dyuym (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 dyuym (cmd=31)</string>
     <string name="split_full_screen">⬜ Toʻliq ekran</string>
-    <string name="split_left">⬜⬛ Chap (50%%)</string>
-    <string name="split_right">⬛⬜ Oʻng (50%%)</string>
+    <string name="split_left">⬜⬛ Chap (50%)</string>
+    <string name="split_right">⬛⬜ Oʻng (50%)</string>
     <string name="log_title">Jurnal</string>
     <string name="log_filter_hint">Jurnalni filtrlash (teg, xabar, regex)…</string>
     <string name="log_empty">(yozuvlar yoʻq)</string>
@@ -61,21 +62,12 @@
     <string name="share_report_title">Hisobotni ulashish…</string>
     <string name="settings_header">Sozlamalar</string>
     <string name="settings_cluster_type_title">Klaster turi</string>
-    <string name="settings_overscan_section_title">Displey chetlari (overscan)</string>
-    <string name="settings_inset_h_label">Chap / Oʻng:</string>
-    <string name="settings_inset_v_label">Yuqori / Pastki:</string>
-    <string name="settings_btn_apply_overscan">Hozir qoʻllash</string>
-    <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Qoʻllandi — Ch/Oʻ: %1$d px, Yu/P: %2$d px</string>
     <string name="ota_dialog_title">Yangilanish mavjud</string>
     <string name="ota_up_to_date">DashCast yangilangan</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Moslash</string>
-    <string name="label_width_inset">Kenglik bo\'shlig\'i</string>
-    <string name="label_height_inset">Balandlik bo\'shlig\'i</string>
-    <string name="btn_apply">Qo\'llash</string>
     <string name="toast_grid_mode_enabled">To\'r rejimi yoqildi</string>
     <string name="toast_list_mode_enabled">Ro\'yxat rejimi yoqildi</string>
     <string name="toast_update_install_failed">O\'rnatishda xatolik: </string>
@@ -105,9 +97,6 @@
     <string name="dialog_reconnect_msg">%1$s ni klasterda qayta ishga tushirish?</string>
     <string name="dialog_reconnect_yes">↺ Qayta ishga tushirish</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Strelkalar bilan sozlash (slayderlar oʻrniga)</string>
-    <string name="visual_overscan_height">↕ Balandligi</string>
-    <string name="visual_overscan_width">↔ Kengligi</string>
     <string name="setting_boot_auto_start">Ishga tushganda proyeksiyani avtomatik boshlash (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigatsiya</string>
     <string name="category_media">🎵 Media</string>
@@ -194,7 +183,7 @@
     <string name="sysinfo_disp_main">Asosiy</string>
     <string name="sysinfo_disp_cluster">Klaster</string>
     <string name="sysinfo_disp_virtual">Virtual (oyna)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Ekran %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof kuzatilmoqda · 500 ms</string>
@@ -221,7 +210,7 @@
     <string name="log_saved_toast">Jurnal saqlandi: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Qo‘shimcha</string>
     <string name="settings_legacy_path">Proksi-demon ishlamayapti. Eski yo\'ldan foydalaning</string>
     <string name="settings_legacy_path_support">Barcha imtiyozli buyruqlarni proksi-demon o\'rniga eski ADB qobig\'i orqali yo\'naltiradi. Demon javob bermasa yoki muammo tug\'dirsa, yoqing.</string>
 
@@ -248,9 +237,6 @@
     <!-- DiLink 4 — Maxsus tashxis (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ DiLink 2\'da chetlar o\'chirilgan (bitta ekran).</string>
-    <string name="settings_warn_no_cluster">⚠️ Klaster aniqlanmadi — chetlar e\'tiborga olinmadi (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">%1$s ochish uchun brauzer mavjud emas</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Qayta ishga tushir</string>
@@ -267,35 +253,22 @@
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
-    <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_voice_notif_channel">DashCast — Ovozli PoC</string>
-    <string name="diag_voice_notif_title">DashCast — mikrofon tinglanyapti (PoC)</string>
-    <string name="diag_voice_notif_text">Audio darajasi lokal tahlil qilinadi, hech narsa yozilmaydi.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
-
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Mahalliy oldindan ko\'rish mavjud emas — klaster displeyi hali faol</string>
     <string name="layout_mirror_previous">Oldingi tartib ilovasi</string>
     <string name="layout_mirror_next">Keyingi tartib ilovasi</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Orqaga</string>
     <string name="hotspot_hero_title">TetherFi orqali 4G hotspot</string>
     <string name="hotspot_hero_subtitle">Mobil internetingizni bir necha teginishda ulashing</string>
     <string name="hotspot_intro">O\'rnatilgan hotspot DiLink 3-da mavjud emas. Buning o\'rniga DashCast tizim ruxsatisiz Wi-Fi Direct kirish nuqtasi + SOCKS5 proksi yaratadigan TetherFi\'ni (ochiq kodli) boshqaradi va avtomobil SIM-kartasi yuqori oqim sifatida ishlatiladi.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Aniqlanmoqda…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi o\'rnatilgan — versiya %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi o\'rnatilmagan. So\'nggi versiyani olish uchun «O\'rnatish» tugmasini bosing.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Boshlash</string>
+    <string name="hotspot_tf_stop">To‘xtatish</string>
+    <string name="hotspot_tf_toggle">Almashtirish</string>
     <string name="hotspot_tf_open">TetherFi\'ni ochish</string>
     <string name="hotspot_tf_install">TetherFi\'ni o\'rnatish</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — yuborildi</string>
@@ -303,8 +276,8 @@
     <string name="hotspot_tf_open_failed">TetherFi\'ni ochish: %1$s</string>
     <string name="hotspot_watchdog_title">Avto-kuzatuv</string>
     <string name="hotspot_watchdog_hint">Hotspot uzilsa, uni avtomatik qayta ishga tushiradi (har 30 s da tekshiradi).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">O‘chiq</string>
+    <string name="hotspot_watchdog_probing">⏳ tekshirilmoqda…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi o\'chirildi — kuzatuv to\'xtatildi</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot YONIQ (qayta ishga tushirishlar=%3$d)</string>
@@ -316,9 +289,9 @@
     <string name="hotspot_clients_title">Ulangan mijozlar</string>
     <string name="hotspot_clients_empty">Ulangan mijozlar yo\'q</string>
     <string name="hotspot_client_default_name">Qurilma %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Ishlash vaqti</string>
+    <string name="hotspot_stat_rx">Qabul qilindi</string>
+    <string name="hotspot_stat_tx">Yuborildi</string>
     <string name="settings_use_own_sim">Men o\'z SIM-kartamdan foydalanaman</string>
     <string name="settings_use_own_sim_support">Mobil internetingizni TetherFi orqali ulashishingiz uchun navigatsiya panelida «Hotspot» tugmasini ko\'rsatadi (faqat DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Proksi demoni</string>
@@ -346,48 +319,17 @@
     <string name="settings_adas_window_fix_support">Proyeksiyadan oldin sendInfo(30) yuboradi — ba\'zi transport vositalarida ADAS cho\'zilishini tuzatadi. Ishga tushirishda klaster shakli o\'zgarsa o\'chiring.</string>
     <string name="settings_fission_mode">Layouts rejimi</string>
     <string name="settings_fission_mode_support">Klasterdagi maxsus zonalar bilan ko\'p ilovali proyeksiya. Proksi daemonni talab qiladi.</string>
-    <string name="fission_title">Fission — Ko\'p ilovali klaster</string>
-    <string name="fission_status_idle">Ilovani ko\'rsatish uchun + ni bosing</string>
-    <string name="fission_btn_add">+ Ilova qo\'shish</string>
-    <string name="fission_btn_stop">Hammasini to\'xtatish</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">Layout muharriri</string>
-    <string name="fission_editor_clear">Tozalash</string>
-    <string name="fission_editor_save">Saqlash</string>
     <string name="fission_editor_edit">Tahrirlash</string>
     <string name="fission_editor_delete">O\'chirish</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Maketlar</string>
     <string name="layout_manager_title">Tartiblarni boshqarish</string>
     <string name="layout_manager_new">Yangi tartib</string>
     <string name="layout_canvas_hint">Zona chizish uchun torting</string>
 
     <!-- Fission — multi-app cluster -->
-    <string name="fission_active_count">Faol ilovalar: %1$d</string>
-    <string name="fission_all_projected">Barcha ilovalar allaqachon ko\'rsatilmoqda</string>
-    <string name="fission_close_slot_confirm">Yopish</string>
-    <string name="fission_close_slot_title">%1$s yopilsinmi?</string>
-    <string name="fission_conflict_message">Proyeksiya allaqachon faol. Davom etish uchun uni to\'xtatasizmi?</string>
-    <string name="fission_conflict_stop">To\'xtatish</string>
     <string name="fission_conflict_title">Proyeksiya ziddiyati</string>
-    <string name="fission_idle_hint">Ilovani ko\'rsatish uchun + ni bosing</string>
-    <string name="fission_launch_in">%1$s shu yerda ishga tushirish…</string>
-    <string name="fission_layout_active_fmt">Tartib: %1$s</string>
     <string name="fission_layout_favorite_set_toast">Sevimli tartib o\'rnatildi ✓</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Erkin rejim</string>
-    <string name="fission_layout_switch">Almashtirish</string>
-    <string name="fission_mode_free">Erkin rejim</string>
-    <string name="fission_no_apps">Mavjud ilovalar yo\'q</string>
-    <string name="fission_pick_app_title">Ilovani tanlang</string>
-    <string name="fission_place_in">%1$s shu yerga joylashtirish…</string>
-    <string name="fission_resize_full">To\'liq ekran</string>
-    <string name="fission_resize_left_3q">Chap ¾</string>
-    <string name="fission_resize_left_half">Chap ½</string>
-    <string name="fission_resize_right_3q">O\'ng ¾</string>
-    <string name="fission_resize_right_half">O\'ng ½</string>
-    <string name="fission_resize_title">%1$s o\'lchamini o\'zgartirish</string>
-    <string name="fission_slot_error">Slot %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Ilovani bog\'lash…</string>
     <string name="fission_slot_pkg_none">Yo\'q — bo\'sh hudud</string>
     <string name="fission_slot_zone_bound_fmt">Bog\'langan ilova: %1$s</string>
@@ -421,25 +363,28 @@
     <string name="fo_status_stopping">To\'xtatilmoqda…</string>
     <string name="lm_action_add">Qo\'shish</string>
     <string name="lm_action_delete">O\'chirish</string>
+    <string name="lm_section_my_layouts">MENING MAKETLARIM</string>
+    <string name="lm_action_clear_all">Hammasini tozalash</string>
+    <string name="lm_action_favorite">⭐ Sevimli</string>
     <string name="lm_action_save">Saqlash</string>
     <string name="lm_activated_ok_fmt">%1$s faollashtirildi ✓</string>
     <string name="lm_activated_partial_fmt">%1$s faollashtirildi (ba\'zi slotlar muvaffaqiyatsiz)</string>
     <string name="lm_activating_fmt">%1$s faollashtirilmoqda…</string>
-    <string name="lm_daemon_not_connected">Daemon ulanmagan — avval Fission proyeksiyasini ishga tushiring</string>
+    <string name="lm_layout_mode_disabled">Avval sozlamalarda «Layouts rejimi»ni yoqing.</string>
     <string name="lm_delete_confirm_fmt">«%1$s» o\'chirilsinmi?</string>
     <string name="lm_draw_zone_first">Kamida bitta zona chizing</string>
-    <string name="lm_edit_zones_hint">Zonalarni tahrirlang va saqlang</string>
     <string name="lm_error_fmt">Xato: %1$s</string>
     <string name="lm_free_mode_toast">Erkin rejim yoqildi</string>
-    <string name="lm_layout_default_name_fmt">Tartib %1$d</string>
+    <string name="lm_layout_default_name_fmt">Maket %1$d</string>
     <string name="lm_layout_name_hint">Tartib nomi</string>
     <string name="lm_layout_save_title">Tartibni saqlash</string>
     <string name="lm_layout_saved_toast">Tartib saqlandi ✓</string>
+    <string name="lm_layout_load_failed">Saqlangan tartiblarni yuklab bo‘lmadi. Mavjud ma’lumotlar saqlandi.</string>
+    <string name="lm_layout_save_failed">Tartibni saqlab bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="lm_layout_selection_save_failed">Tartib o‘zgardi, ammo tanlovni saqlab bo‘lmadi.</string>
     <string name="lm_new_layout_name">Yangi tartib</string>
     <string name="lm_no_layout_loaded">Tartib yuklanmagan</string>
-    <string name="lm_no_saved_layouts">Saqlangan tartiblar yo\'q\nYuqorida zonalar chizib, saqlang.</string>
     <string name="lm_save_before_favorite">Sevimli qilishdan oldin tartibni saqlang</string>
-    <string name="lm_zone_delete_title">Zona o\'chirilsinmi?</string>
     <string name="lm_zone_edit_title_fmt">«%1$s» tahrirlash</string>
     <string name="lm_zone_height">Balandlik (px)</string>
     <string name="lm_zone_name_hint">Zona nomi</string>
@@ -463,6 +408,7 @@
     <string name="bug_send">Yuborish</string>
     <string name="bug_status_capturing">Jurnal olinmoqda…</string>
     <string name="bug_status_sending">Yuborilmoqda…</string>
+    <string name="bug_status_slow">Yuborish kutilganidan uzoqroq davom etmoqda — bekor qilishingiz mumkin.</string>
     <string name="bug_status_error_fmt">Xato: %1$s</string>
     <string name="bug_sent_ok">Hisobot yuborildi ✓ Rahmat!</string>
     <string name="bug_share_subject">DashCast — Xato hisoboti</string>
@@ -477,7 +423,7 @@
     <string name="bug_wizard_other_app">Boshqa / Noma’lum ilova</string>
     <string name="bug_wizard_back">← Orqaga</string>
     <string name="bug_tg_title">Telegram taxallusingiz</string>
-    <string name="bug_tg_message">Muammoingiz uchun tuzatish tayyor bo\’lganda, uni birinchi bo\’lib sinab ko\’rishingizni so\’rash uchun to\’g\’ridan-to\’g\’ri Telegram orqali siz bilan bog\’lanamiz.\n\n⚠️ To\’g\’ri taxallusni kiritganingizga ishonch hosil qiling (misol: @john_doe). Usiz siz bilan bog\’lana olmaymiz.\n\nTaxallusingiz faqat ushbu qurilmada saqlanadi va hech qachon ulashilmaydi.</string>
+    <string name="bug_tg_message">Muammoingiz uchun tuzatish tayyor bo\’lganda, uni birinchi bo\’lib sinab ko\’rishingizni so\’rash uchun to\’g\’ridan-to\’g\’ri Telegram orqali siz bilan bog\’lanamiz.\n\n⚠️ To\’g\’ri taxallusni kiritganingizga ishonch hosil qiling (misol: @john_doe). Usiz siz bilan bog\’lana olmaymiz.\n\nTaxallusingiz shu qurilmada saqlanadi va siz yuboradigan hisobotga qo\'shiladi — faqat siz bilan bog\'lana olishimiz uchun.</string>
     <string name="bug_tg_hint">@taxallusingiz</string>
     <string name="bug_tg_confirm">Tasdiqlash</string>
     <string name="bug_tg_skip">Keyinroq</string>
@@ -561,17 +507,16 @@
     <string name="bug_wizard_pick_issue">Yuqoridan muammo tanlang</string>
     <string name="bug_wizard_selected_fmt">Tanlandi: %1$s</string>
     <string name="toast_adb_port_refused">ADB ulanib bo\'lmadi (5555-port) — bu qurilmada ko\'zgu mavjud emas</string>
-    <string name="hud_visual_title">HUD vizual tekshiruvi</string>
-    <string name="hud_visual_yes">Ha</string>
-    <string name="hud_visual_no">Yo‘q</string>
-    <string name="hud_visual_unsure">Aniq emas</string>
     <string name="aaos_cluster_unsupported_title">Asboblar paneliga proyeksiya bloklangan</string>
     <string name="aaos_cluster_unsupported_msg">Avtomobilingiz BYD\'ning Android Automotive tizimidan (DX_BYD_AUTO) foydalanadi. Bu qurilmada asboblar paneli ishlab chiqaruvchi tomonidan qulflangan: BYD uni o\'rnatilgan navigatsiya uchun ajratadi va ilovalarni proyeksiya qilishni bloklaydi. Bu — avtomobil cheklovi (DashCast cheklovi emas), chetlab o\'tish yo\'li yo\'q.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Asboblar paneliga proyeksiya mavjud emas</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Bu avtomobilda asboblar paneli bitta ekranli (single-OS) tartibdan foydalanadi: u bevosita avtomobil tomonidan chiziladi va ilovalarni proyeksiya qilish mumkin bo\'lgan alohida ekran yo\'q. Shu sababli bu yerda ilovalarni panelga proyeksiya qilish imkonsiz — bu avtomobilingiz asboblar panelining xususiyati, DashCast cheklovi emas.</string>
+    <string name="dl4_cluster_unsupported_title">Asboblar paneliga proyeksiya proshivka tomonidan bloklangan</string>
+    <string name="dl4_cluster_unsupported_msg">Ushbu avtomobilda proshivka DashCast ilovasiga asboblar paneli ekranini ko\'rishga ruxsat bermaydi: ilova ishlab chiqaruvchi ekranlarni sanab o\'tishga ruxsat bergan dasturlar ro\'yxatida yo\'q. DashCast o\'zining imtiyozli yordamchisi orqali ham so\'radi, u ham asboblar paneli ekranini topmadi. Shu sababli ilovalarni asboblar paneliga proyeksiya qilish ushbu proshivka versiyasida mumkin emas — bu ishlab chiqaruvchining cheklovi, DashCast cheklovi emas.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD natijasi — old oynada nimani ko\'rdingiz?</string>
-    <string name="hud_bench_opt_ok">✅ Strelka ko\'rindi — to\'g\'ri yo\'nalish</string>
+    <string name="hud_bench_result_title">Natija — nimani ko\'rding va QAYERDA (cluster yoki old oyna)?</string>
+    <string name="hud_bench_opt_cluster">✅ Strelka CLUSTER\'da (rul orqasida)</string>
+    <string name="hud_bench_opt_ok">✅ Strelka HUD\'da (old oyna)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Strelka ko\'rindi — noto\'g\'ri yo\'nalish</string>
     <string name="hud_bench_opt_partial">⚠️ Masofa/matn ko\'rindi — lekin aniq strelka yo\'q</string>
     <string name="hud_bench_opt_nothing">❌ HUDda hech narsa yo\'q</string>
@@ -615,4 +560,26 @@
     <string name="bug_hud_no_route_msg">Hozir hech qanday marshrut faol emas. DashCast yoʻnalish koʻrsatmalarini faqat faol navigatsiya paytida oladi: Google Maps yoki Waze\'ni shunchaki ochishning oʻzi yetarli emas. Biror manzilga marshrut boshla, keyin HUD\'ga qara — strelka paydo boʻlishi kerak.</string>
     <string name="bug_hud_no_route_understood">Tushundim, marshrut boshlayman</string>
     <string name="bug_hud_no_notif_access_msg">DashCast’ning bildirishnomalarga ruxsati yoʻq. Busiz boʻlmaydi: burilish koʻrsatmalari Google Maps yoki Waze bildirishnomasidan oʻqiladi. Android Sozlamalar → Bildirishnomalar → Bildirishnomalardan foydalanish boʻlimiga kirib, DashCast’ga ruxsat ber, keyin marshrutni qaytadan ishga tushir.</string>
+    <string name="hud_sweep_result_title">Skanerlash tugadi — CLUSTERda nima koʻrding?</string>
+    <string name="hud_sweep_opt_photographed">📷 Belgilarni suratga oldim</string>
+    <string name="hud_sweep_opt_nothing">❌ CLUSTERda hech narsa chiqmadi</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Xato hisobotlarini yuborish</string>
+    <string name="pairing_state_on">Yoqilgan — hisobotlaringiz DashCast jamoasiga yuboriladi</string>
+    <string name="pairing_state_off">Oʻchirilgan — hisobotlaringiz shu qurilmada qoladi</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Rozilik berilgan, ammo bu qurilmada kanal sozlanmagan</string>
+    <string name="consent_title">Diagnostika DashCast jamoasiga yuborilsinmi?</string>
+    <string name="consent_body">Muammoni tuzatish uchun DashCast jamoasi oʻsha paytda avtomobilda nima boʻlganini bilishi kerak.\n\nYuborishdan oldin DashCast har bir hisobotdan VIN raqamini, Wi-Fi tarmoq nomlarini, qurilmalarning apparat manzillarini va joylashuvlarni avtomatik olib tashlaydi.\n\nQoladigani:\n\n•  DashCast jurnali va Android tizim jurnali, boricha nusxalanadi — ularda boshqa ilovalar yozganlari boʻladi va bu nima ekanini biz oldindan bila olmaymiz;\n\n•  avtomobil va bosh qurilma haqidagi maʼlumotlar: modeli, versiyasi, sozlamalari, oʻrnatilgan ilovalar;\n\n•  avtomobilning mahalliy IP manzili;\n\n•  shaklga yozganingiz va koʻrsatgan Telegram taxallusingiz;\n\n•  sukut boʻyicha yoqilgan ekran suratlari: markaziy ekran va asboblar panelining xiralashtirilmagan tasvirlari — ularda boradigan joyingiz koʻrsatilgan xarita boʻlishi mumkin, tasvirni esa matn kabi filtrlab boʻlmaydi. Ular haqida har safar yuborishda alohida soʻraladi.\n\n«Yuborish»ga bosmaguningizcha avtomobildan birorta hisobot chiqmaydi. Hisobotlarni DashCast jamoasi yopiq guruhda oʻqiydi. DashCast hech qanday ovoz yozuvi, surat, kontakt yoki xabar yubormaydi.\n\nRad etsangiz, hisobot shu qurilmada qoladi va uni oʻzingiz ulashishingiz mumkin. Fikringizni istalgan vaqtda Sozlamalarda oʻzgartirasiz.</string>
+    <string name="consent_accept">Roziman</string>
+    <string name="consent_refuse">Rad etish</string>
+    <string name="consent_revoke">Bekor qilish</string>
+    <string name="consent_close">Yopish</string>
+    <string name="consent_result_granted">Rahmat. Hisobotlaringiz DashCast jamoasiga yuboriladi.</string>
+    <string name="consent_result_refused">Rad etildi. Hisobotlaringiz shu qurilmada qoladi.</string>
+    <string name="consent_result_revoked">Rozilik bekor qilindi. Hisobotlaringiz shu qurilmada qoladi.</string>
+    <string name="bug_kept_locally_fmt">Hisobot shu qurilmada saqlandi: %1$s. Uni qanday uzatishni tanlang.</string>
 </resources>

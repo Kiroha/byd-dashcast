@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="Typos">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">Contrôleur de tableau de bord</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Continuer sans changer</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -47,7 +48,7 @@
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Langue</string>
     <string name="menu_check_updates">🔄 Rechercher des mises à jour</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Canal bêta</string>
     <string name="settings_prerelease_hint">Permet de recevoir les versions de test avant leur publication officielle</string>
     <string name="cluster_label_88">8,8 pouces  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pouces (cmd=30) — Seal EU</string>
@@ -82,18 +83,9 @@
     <string name="share_report_title">Partager le rapport…</string>
     <string name="settings_header">Paramètres</string>
     <string name="settings_cluster_type_title">Type de cluster</string>
-    <string name="settings_overscan_section_title">Marges d\'affichage (overscan)</string>
-    <string name="settings_inset_h_label">Gauche / Droite :</string>
-    <string name="settings_inset_v_label">Haut / Bas :</string>
-    <string name="settings_btn_apply_overscan">Appliquer maintenant</string>
-    <string name="settings_btn_reset_overscan">Réinitialiser (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Appliqué — G/D : %1$d px, H/B : %2$d px</string>
     <string name="ota_dialog_title">Mise à jour disponible</string>
     <string name="ota_up_to_date">DashCast est à jour</string>
     <string name="btn_adjust">Ajuster</string>
-    <string name="label_width_inset">Marge Largeur</string>
-    <string name="label_height_inset">Marge Hauteur</string>
-    <string name="btn_apply">Appliquer</string>
     <string name="toast_grid_mode_enabled">Mode Grille activé</string>
     <string name="toast_list_mode_enabled">Mode Liste activé</string>
     <string name="toast_update_install_failed">Échec de l\'installation : </string>
@@ -153,9 +145,6 @@
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
     <string name="dialog_reconnect_yes">↺ Relancer</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Ajuster avec des flèches (au lieu des curseurs)</string>
-    <string name="visual_overscan_height">↕ Hauteur</string>
-    <string name="visual_overscan_width">↔ Largeur</string>
     <string name="setting_boot_auto_start">Activer automatiquement la projection au démarrage (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Média</string>
@@ -179,6 +168,7 @@
     <string name="bug_send">Envoyer</string>
     <string name="bug_status_capturing">Capture du journal…</string>
     <string name="bug_status_sending">Envoi en cours…</string>
+    <string name="bug_status_slow">Envoi plus long que prévu — vous pouvez annuler.</string>
     <string name="bug_status_error_fmt">Erreur : %1$s</string>
     <string name="bug_sent_ok">Rapport envoyé ✓ Merci !</string>
     <string name="bug_share_subject">DashCast — Rapport de bug</string>
@@ -219,7 +209,7 @@
     <!-- v1.2.37 / v1.2.42 — Hotspot screen (TetherFi-only since v1.2.42) -->
     <string name="main_nav_hotspot">Hotspot</string>
     <!-- v1.4.9-beta — Layouts manager -->
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Dispositions</string>
     <string name="layout_manager_title">Gestion des layouts</string>
     <string name="layout_manager_new">Nouveau layout</string>
     <string name="layout_canvas_hint">Tirez pour dessiner une zone</string>
@@ -257,7 +247,7 @@
     <string name="hotspot_clients_title">Clients connectés</string>
     <string name="hotspot_clients_empty">Aucun client connecté</string>
     <string name="hotspot_client_default_name">Appareil %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
+    <string name="hotspot_stat_uptime">Durée d’activité</string>
     <string name="hotspot_stat_rx">Reçus</string>
     <string name="hotspot_stat_tx">Envoyés</string>
     <string name="settings_use_own_sim">J\'utilise ma propre carte SIM</string>
@@ -320,7 +310,7 @@
     <string name="sysinfo_disp_main">Main</string>
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtual (mirror)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Écran %1$d — %2$s</string>
     <string name="sysinfo_disp_hidden">Caché (PRIVATE)</string>
     <string name="sysinfo_disp_hidden_sub">Non visible via DisplayManager API</string>
     <string name="sysinfo_svc_run">RUN</string>
@@ -340,16 +330,6 @@
     <string name="settings_legacy_path_support">Utilise le shell ADB classique au lieu du proxy daemon. À activer si le daemon ne répond pas ou cause des problèmes.</string>
 
     <!-- Diag tabs -->
-
-    <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
-    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
-    <string name="diag_voice_notif_title">DashCast — écoute micro (PoC)</string>
-    <string name="diag_voice_notif_text">Niveau audio analysé localement, rien n’est enregistré.</string>
-
-    <!-- Diag — Voice wake-word card (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <!-- v1.4.2-beta — LLM API key -->
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
@@ -379,9 +359,6 @@
     <string name="keyboard_bridge_a11y_required_toast">Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l’instrumentation.</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Marges désactivées sur DiLink 2 (un seul écran).</string>
-    <string name="settings_warn_no_cluster">⚠️ Aucun cluster détecté — marges ignorées (DL2 ?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Aucun navigateur disponible pour ouvrir %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 
@@ -407,49 +384,18 @@
     <string name="dpi_value_fmt" translatable="false">%1$d dpi</string>
 
     <!-- Fission multi-app projection (v1.3.30-beta+) -->
-    <string name="fission_title">Fission — Multi-apps cluster</string>
-    <string name="fission_status_idle">Appuyez sur + pour projeter une application</string>
-    <string name="fission_btn_add">+ Ajouter une app</string>
-    <string name="fission_btn_stop">Tout arrêter</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">Éditeur de layouts</string>
-    <string name="fission_editor_clear">Effacer</string>
-    <string name="fission_editor_save">Enregistrer</string>
     <string name="fission_editor_edit">Modifier</string>
     <string name="fission_editor_delete">Supprimer</string>
 
     <!-- Fission layout selector + slot management (v1.4.17-beta+) -->
     <string name="fission_layout_mode_free">Mode libre</string>
-    <string name="fission_layout_active_fmt">Layout : %1$s</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
-    <string name="fission_layout_switch">Changer</string>
     <string name="fission_layout_favorite_set_toast">Layout favori défini ✓</string>
     <string name="fission_slot_zone_bound_fmt">App liée : %1$s</string>
     <string name="fission_slot_pick_pkg">Lier une application…</string>
     <string name="fission_slot_pkg_none">Aucune — zone libre</string>
 
-    <!-- FissionActivity runtime strings -->
-    <string name="fission_idle_hint">Appuyez sur + pour projeter une application</string>
-    <string name="fission_active_count">%1$d app(s) active(s)</string>
-    <string name="fission_no_apps">Aucune application disponible</string>
-    <string name="fission_all_projected">Toutes les apps sont déjà projetées</string>
-    <string name="fission_pick_app_title">Choisir une application</string>
-    <string name="fission_place_in">Placer %1$s dans…</string>
-    <string name="fission_launch_in">Lancer %1$s dans…</string>
-    <string name="fission_mode_free">Mode libre</string>
-    <string name="fission_slot_error">Slot %1$s : %2$s</string>
+    <!-- Layout (fission) runtime strings -->
     <string name="fission_conflict_title">Conflit de projection</string>
-    <string name="fission_conflict_message">Une projection est déjà active. La stopper pour continuer ?</string>
-    <string name="fission_conflict_stop">Stopper</string>
-    <string name="fission_resize_title">Redimensionner %1$s</string>
-    <string name="fission_resize_full">Plein écran</string>
-    <string name="fission_resize_left_half">Gauche ½</string>
-    <string name="fission_resize_right_half">Droite ½</string>
-    <string name="fission_resize_left_3q">Gauche ¾</string>
-    <string name="fission_resize_right_3q">Droite ¾</string>
-    <string name="fission_close_slot_title">Fermer %1$s ?</string>
-    <string name="fission_close_slot_confirm">Fermer</string>
     <string name="layout_preset_activate">Activer</string>
     <string name="layout_preset_active_badge">ACTIF</string>
     <string name="layout_preset_deactivate">Désactiver</string>
@@ -470,25 +416,28 @@
     <string name="fo_status_stopping">Arrêt…</string>
     <string name="lm_action_add">Ajouter</string>
     <string name="lm_action_delete">Supprimer</string>
+    <string name="lm_section_my_layouts">MES LAYOUTS</string>
+    <string name="lm_action_clear_all">Effacer tout</string>
+    <string name="lm_action_favorite">⭐ Favori</string>
     <string name="lm_action_save">Enregistrer</string>
     <string name="lm_activated_ok_fmt">%1$s activé ✓</string>
     <string name="lm_activated_partial_fmt">%1$s activé (certains slots ont échoué)</string>
     <string name="lm_activating_fmt">Activation de %1$s…</string>
-    <string name="lm_daemon_not_connected">Daemon non connecté — lancez d\'abord une projection Fission</string>
+    <string name="lm_layout_mode_disabled">Activez d’abord « Mode Layouts » dans les paramètres.</string>
     <string name="lm_delete_confirm_fmt">Supprimer « %1$s » ?</string>
     <string name="lm_draw_zone_first">Dessinez au moins une zone</string>
-    <string name="lm_edit_zones_hint">Modifiez les zones puis enregistrez</string>
     <string name="lm_error_fmt">Erreur : %1$s</string>
     <string name="lm_free_mode_toast">Mode libre activé</string>
-    <string name="lm_layout_default_name_fmt">Layout %1$d</string>
+    <string name="lm_layout_default_name_fmt">Disposition %1$d</string>
     <string name="lm_layout_name_hint">Nom du layout</string>
     <string name="lm_layout_save_title">Enregistrer le layout</string>
     <string name="lm_layout_saved_toast">Layout enregistré ✓</string>
+    <string name="lm_layout_load_failed">Impossible de charger les layouts enregistrés. Les données existantes ont été conservées.</string>
+    <string name="lm_layout_save_failed">Impossible d’enregistrer le layout. Réessayez.</string>
+    <string name="lm_layout_selection_save_failed">Le layout a changé, mais la sélection n’a pas pu être enregistrée.</string>
     <string name="lm_new_layout_name">Nouveau layout</string>
     <string name="lm_no_layout_loaded">Aucun layout chargé</string>
-    <string name="lm_no_saved_layouts">Aucun layout sauvegardé\nDessinez des zones ci-dessus et enregistrez.</string>
     <string name="lm_save_before_favorite">Enregistrez d\'abord le layout avant de le définir en favori</string>
-    <string name="lm_zone_delete_title">Supprimer la zone ?</string>
     <string name="lm_zone_edit_title_fmt">Modifier « %1$s »</string>
     <string name="lm_zone_height">Hauteur (px)</string>
     <string name="lm_zone_name_hint">Nom de la zone</string>
@@ -512,7 +461,7 @@
 
     <!-- Telegram handle — first-time dialog -->
     <string name="bug_tg_title">Ton pseudo Telegram</string>
-    <string name="bug_tg_message">Lorsqu\'un correctif est disponible pour ton problème, nous te contacterons directement sur Telegram pour te demander de le tester en priorité.\n\n⚠️ Entre bien le bon pseudo (exemple : @john_doe). Sans lui, nous ne pourrons pas te joindre.\n\nTon pseudo est stocké uniquement sur cet appareil et n\'est jamais partagé.</string>
+    <string name="bug_tg_message">Lorsqu\'un correctif est disponible pour ton problème, nous te contacterons directement sur Telegram pour te demander de le tester en priorité.\n\n⚠️ Entre bien le bon pseudo (exemple : @john_doe). Sans lui, nous ne pourrons pas te joindre.\n\nTon pseudo est stocké sur cet appareil et joint au rapport que tu envoies, uniquement pour pouvoir te recontacter.</string>
     <string name="bug_tg_hint">@ton_pseudo</string>
     <string name="bug_tg_confirm">Confirmer</string>
     <string name="bug_tg_skip">Plus tard</string>
@@ -601,21 +550,25 @@
     <string name="bug_wizard_send">Envoyer le rapport</string>
     <string name="bug_wizard_pick_issue">Sélectionne un problème ci-dessus</string>
     <string name="bug_wizard_selected_fmt">Sélectionné : %1$s</string>
-    <string name="hud_visual_title">Vérification visuelle du HUD</string>
-    <string name="hud_visual_yes">Oui</string>
-    <string name="hud_visual_no">Non</string>
-    <string name="hud_visual_unsure">Pas sûr</string>
     <string name="aaos_cluster_unsupported_title">Projection cluster bloquée</string>
     <string name="aaos_cluster_unsupported_msg">Votre véhicule utilise le système Android Automotive de BYD (DX_BYD_AUTO), où le combiné d\'instruments est verrouillé par le constructeur : BYD le réserve à la navigation intégrée et bloque la projection d\'applications. C\'est une restriction du véhicule (pas une limite de DashCast) — il n\'existe aucun contournement.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Projection cluster indisponible</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Sur ce véhicule, le combiné d\'instruments utilise une configuration mono-écran (single-OS) : il est dessiné directement par la voiture, sans écran séparé sur lequel projeter des applications. La projection d\'applications sur le combiné est donc impossible ici — c\'est une caractéristique du combiné de votre véhicule, pas une limite de DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">Projection cluster bloquée par le firmware</string>
+    <string name="dl4_cluster_unsupported_msg">Sur ce véhicule, le firmware n\'autorise pas DashCast à voir l\'écran du combiné d\'instruments : l\'application ne figure pas dans la liste des programmes autorisés par le constructeur à énumérer les écrans. DashCast a également interrogé son assistant privilégié, qui n\'a trouvé aucun écran de combiné non plus. La projection d\'applications sur le combiné est donc impossible avec cette version de firmware — c\'est une restriction du constructeur, pas une limite de DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Résultat HUD — qu’as-tu vu sur le pare-brise ?</string>
-    <string name="hud_bench_opt_ok">✅ Flèche affichée — bonne direction</string>
+    <string name="hud_bench_result_title">Résultat — qu’as-tu vu, et OÙ (cluster ou pare-brise) ?</string>
+    <string name="hud_bench_opt_cluster">✅ Flèche sur le CLUSTER (derrière le volant)</string>
+    <string name="hud_bench_opt_ok">✅ Flèche sur le HUD (pare-brise)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Flèche affichée — mauvaise direction</string>
     <string name="hud_bench_opt_partial">⚠️ Distance/texte affiché — mais pas de flèche nette</string>
     <string name="hud_bench_opt_nothing">❌ Rien sur le HUD</string>
     <string name="hud_bench_opt_other">❓ Autre / pas sûr…</string>
+    <!-- Icon sweep — its own result picker (it targets the CLUSTER, and its outcome is
+         "did you capture the glyphs", not a HUD yes/no). -->
+    <string name="hud_sweep_result_title">Balayage terminé — qu\'as-tu vu sur le CLUSTER ?</string>
+    <string name="hud_sweep_opt_photographed">📷 J\'ai photographié les glyphes</string>
+    <string name="hud_sweep_opt_nothing">❌ Rien ne s\'est affiché sur le cluster</string>
     <string name="hud_bench_note_title">Qu’as-tu vu ?</string>
     <string name="hud_bench_note_hint">Décris ce qui est apparu sur le HUD (optionnel)</string>
     <string name="hud_report_send">Envoyer</string>
@@ -661,4 +614,28 @@
     <string name="bug_hud_no_route_understood">Compris, je vais lancer un itinéraire</string>
     <!-- HUD gate 3b — DashCast has no notification access: that alone explains "no arrow". -->
     <string name="bug_hud_no_notif_access_msg">DashCast n\'a pas accès aux notifications. C\'est indispensable : les directions sont lues dans la notification de Google Maps ou Waze. Va dans Réglages Android → Notifications → Accès aux notifications et autorise DashCast, puis relance un itinéraire.</string>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Bug report delivery — pairing.
+         Credentials are no longer built into the APK, so an unpaired device keeps its reports
+         to itself. Safe by default, but only acceptable if pairing is something a user can do
+         without a computer: hence a folder, a clipboard, and plain words for both states.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="pairing_row_title">Envoi des rapports de bug</string>
+    <string name="pairing_state_on">Activé — vos rapports sont transmis à l\'équipe DashCast</string>
+    <string name="pairing_state_off">Désactivé — vos rapports restent sur cet appareil</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Accepté, mais aucun canal n\'est configuré sur cet appareil</string>
+    <string name="consent_title">Envoyer les diagnostics à l\'équipe DashCast ?</string>
+    <string name="consent_body">Pour corriger un problème, l\'équipe DashCast a besoin de savoir ce qui se passait dans la voiture à ce moment-là.\n\nAvant l\'envoi, DashCast retire automatiquement de chaque rapport le numéro de série du véhicule (VIN), les noms de réseaux Wi-Fi, les adresses matérielles des appareils et les positions.\n\nCe qui reste :\n\n•  le journal de DashCast et celui du système Android, copiés tels quels — ils contiennent ce que les autres applications ont écrit, et nous ne pouvons pas savoir d\'avance ce que c\'est ;\n\n•  des informations sur la voiture et le boîtier : modèle, version, réglages, applications installées ;\n\n•  l\'adresse IP locale de la voiture ;\n\n•  ce que vous écrivez dans le formulaire et le pseudo Telegram que vous indiquez ;\n\n•  les captures d\'écran, activées par défaut : des images non floutées de l\'écran central et du combiné, qui peuvent montrer une carte avec votre destination — une image ne peut pas être filtrée comme du texte. Elles vous sont redemandées à chaque envoi.\n\nAucun rapport ne part tant que vous n\'avez pas touché « Envoyer ». Les rapports sont lus par l\'équipe DashCast dans un groupe privé. DashCast n\'envoie aucun enregistrement audio, aucune photo, aucun contact et aucun message.\n\nSi vous refusez, le rapport reste sur cet appareil et vous pouvez le partager vous-même. Vous pouvez changer d\'avis à tout moment dans les Réglages.</string>
+    <string name="consent_accept">Accepter</string>
+    <string name="consent_refuse">Refuser</string>
+    <string name="consent_revoke">Révoquer</string>
+    <string name="consent_close">Fermer</string>
+    <string name="consent_result_granted">Merci. Vos rapports seront transmis à l\'équipe DashCast.</string>
+    <string name="consent_result_refused">Refusé. Vos rapports resteront sur cet appareil.</string>
+    <string name="consent_result_revoked">Révoqué. Vos rapports resteront sur cet appareil.</string>
+    <string name="bug_kept_locally_fmt">Rapport conservé sur cet appareil : %1$s. Choisissez comment le transmettre.</string>
 </resources>

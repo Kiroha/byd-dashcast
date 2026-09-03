@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_subtitle">Gösterge paneli denetleyicisi</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Değiştirmeden devam et</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -44,7 +45,7 @@
     <string name="menu_log">📜 Günlükler</string>
     <string name="menu_language">🌐 Dil</string>
     <string name="menu_check_updates">🔄 Güncellemeleri kontrol et</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Beta kanalı</string>
     <string name="settings_prerelease_hint">Resmi sürümden önce test sürümlerini al</string>
     <string name="cluster_label_88">8,8 inç  (cmd=29)</string>
     <string name="cluster_label_123">12,3 inç (cmd=30) — Seal EU</string>
@@ -64,18 +65,9 @@
     <string name="share_report_title">Raporu paylaş…</string>
     <string name="settings_header">Ayarlar</string>
     <string name="settings_cluster_type_title">Küme tipi</string>
-    <string name="settings_overscan_section_title">Ekran kenar boşlukları (overscan)</string>
-    <string name="settings_inset_h_label">Sol / Sağ:</string>
-    <string name="settings_inset_v_label">Üst / Alt:</string>
-    <string name="settings_btn_apply_overscan">Şimdi uygula</string>
-    <string name="settings_btn_reset_overscan">Sıfırla (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Uygulandı — S/S: %1$d px, Ü/A: %2$d px</string>
     <string name="ota_dialog_title">Güncelleme mevcut</string>
     <string name="ota_up_to_date">DashCast güncel</string>
     <string name="btn_adjust">Ayarla</string>
-    <string name="label_width_inset">Genişlik Boşluğu</string>
-    <string name="label_height_inset">Yükseklik Boşluğu</string>
-    <string name="btn_apply">Uygula</string>
     <string name="toast_grid_mode_enabled">Izgara Modu Etkin</string>
     <string name="toast_list_mode_enabled">Liste Modu Etkin</string>
     <string name="toast_update_install_failed">Güncelleme yüklemesi başarısız: </string>
@@ -105,9 +97,6 @@
     <string name="dialog_reconnect_msg">%1$s kümede yeniden başlatılsın mı?</string>
     <string name="dialog_reconnect_yes">↺ Başlat</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Oklar ile ayarla (kaydırıcılar yerine)</string>
-    <string name="visual_overscan_height">↕ Yükseklik</string>
-    <string name="visual_overscan_width">↔ Genişlik</string>
     <string name="setting_boot_auto_start">Başlangıçta projeksiyonu otomatik başlat (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigasyon</string>
     <string name="category_media">🎵 Medya</string>
@@ -194,7 +183,7 @@
     <string name="sysinfo_disp_main">Ana</string>
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Sanal (ayna)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Ekran %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof izleniyor · 500 ms</string>
@@ -221,7 +210,7 @@
     <string name="log_saved_toast">Günlük kaydedildi: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Gelişmiş</string>
     <string name="settings_legacy_path">Proxy daemon çalışmıyor. Eski yolu kullan</string>
     <string name="settings_legacy_path_support">Tüm ayrıcalıklı komutları proxy daemon yerine eski ADB kabuğu üzerinden yönlendirir. Daemon yanıt vermiyorsa veya sorun çıkarıyorsa etkinleştirin.</string>
 
@@ -248,9 +237,6 @@
     <!-- DiLink 4 — Özel tanılama (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Kenar boşlukları DiLink 2\'de devre dışı (tek ekran).</string>
-    <string name="settings_warn_no_cluster">⚠️ Küme algılanmadı — kenar boşlukları yok sayıldı (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">%1$s\'yi açacak tarayıcı yok</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Yeniden başlat</string>
@@ -267,35 +253,22 @@
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
-    <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_voice_notif_channel">DashCast — Sesli PoC</string>
-    <string name="diag_voice_notif_title">DashCast — mikrofon dinleniyor (PoC)</string>
-    <string name="diag_voice_notif_text">Ses seviyesi yerel olarak analiz ediliyor, hiçbir şey kaydedilmiyor.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
-
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Yerel önizleme kullanılamıyor — küme ekranı hâlâ etkin</string>
     <string name="layout_mirror_previous">Önceki düzen uygulaması</string>
     <string name="layout_mirror_next">Sonraki düzen uygulaması</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Geri</string>
     <string name="hotspot_hero_title">TetherFi ile 4G ortak erişim noktası</string>
     <string name="hotspot_hero_subtitle">Mobil verinizi birkaç dokunuşla paylaşın</string>
     <string name="hotspot_intro">Yerleşik ortak erişim noktası DiLink 3\'te erişilebilir değil. Bunun yerine DashCast, sistem izni gerektirmeden Wi-Fi Direct erişim noktası + SOCKS5 proxy oluşturan TetherFi\'yi (açık kaynak) kullanır ve aracınızın SIM kartı üst bağlantı olarak kullanılır.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ Algılanıyor…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi yüklü — sürüm %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi yüklü değil. En son sürümü almak için «Yükle» öğesine dokunun.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Başlat</string>
+    <string name="hotspot_tf_stop">Durdur</string>
+    <string name="hotspot_tf_toggle">Değiştir</string>
     <string name="hotspot_tf_open">TetherFi\'yi aç</string>
     <string name="hotspot_tf_install">TetherFi\'yi yükle</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — gönderildi</string>
@@ -303,8 +276,8 @@
     <string name="hotspot_tf_open_failed">TetherFi\'yi aç: %1$s</string>
     <string name="hotspot_watchdog_title">Otomatik gözetim</string>
     <string name="hotspot_watchdog_hint">Düşerse ortak erişim noktasını otomatik olarak yeniden başlatır (her 30 sn\'de bir sınar).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Kapalı</string>
+    <string name="hotspot_watchdog_probing">⏳ denetleniyor…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi kaldırıldı — gözetim durduruldu</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 ortak erişim noktası AÇIK (yeniden başlatma=%3$d)</string>
@@ -316,9 +289,9 @@
     <string name="hotspot_clients_title">Bağlı istemciler</string>
     <string name="hotspot_clients_empty">Bağlı istemci yok</string>
     <string name="hotspot_client_default_name">Cihaz %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Çalışma süresi</string>
+    <string name="hotspot_stat_rx">Alınan</string>
+    <string name="hotspot_stat_tx">Gönderilen</string>
     <string name="settings_use_own_sim">Kendi SIM kartımı kullanıyorum</string>
     <string name="settings_use_own_sim_support">Mobil verinizi TetherFi ile paylaşabilmeniz için gezinme çubuğunda «Ortak erişim» düğmesini gösterir (yalnızca DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Proxy daemon</string>
@@ -346,48 +319,17 @@
     <string name="settings_adas_window_fix_support">Projeksiyon öncesinde sendInfo(30) gönderir — bazı araçlarda ADAS bozulmasını düzeltir. Küme şekli başlangıçta değişirse devre dışı bırakın.</string>
     <string name="settings_fission_mode">Layouts modu</string>
     <string name="settings_fission_mode_support">Özel bölgelerle kümede çoklu uygulama projeksiyonu. Proxy daemon gerektirir.</string>
-    <string name="fission_title">Fission — Çoklu uygulama kümesi</string>
-    <string name="fission_status_idle">Uygulama yansıtmak için + tuşuna dokunun</string>
-    <string name="fission_btn_add">+ Uygulama ekle</string>
-    <string name="fission_btn_stop">Tümünü durdur</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">Düzen düzenleyicisi</string>
-    <string name="fission_editor_clear">Temizle</string>
-    <string name="fission_editor_save">Kaydet</string>
     <string name="fission_editor_edit">Düzenle</string>
     <string name="fission_editor_delete">Sil</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Düzenler</string>
     <string name="layout_manager_title">Düzen yöneticisi</string>
     <string name="layout_manager_new">Yeni düzen</string>
     <string name="layout_canvas_hint">Bir bölge çizmek için sürükleyin</string>
 
     <!-- Fission — multi-app cluster -->
-    <string name="fission_active_count">%1$d etkin uygulama</string>
-    <string name="fission_all_projected">Tüm uygulamalar zaten yansıtılıyor</string>
-    <string name="fission_close_slot_confirm">Kapat</string>
-    <string name="fission_close_slot_title">%1$s kapatılsın mı?</string>
-    <string name="fission_conflict_message">Zaten etkin bir yansıtma var. Devam etmek için durdurulsun mu?</string>
-    <string name="fission_conflict_stop">Durdur</string>
     <string name="fission_conflict_title">Yansıtma çakışması</string>
-    <string name="fission_idle_hint">Uygulama yansıtmak için + tuşuna dokunun</string>
-    <string name="fission_launch_in">%1$s şurada başlatılsın…</string>
-    <string name="fission_layout_active_fmt">Düzen: %1$s</string>
     <string name="fission_layout_favorite_set_toast">Favori düzen ayarlandı ✓</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Serbest mod</string>
-    <string name="fission_layout_switch">Değiştir</string>
-    <string name="fission_mode_free">Serbest mod</string>
-    <string name="fission_no_apps">Kullanılabilir uygulama yok</string>
-    <string name="fission_pick_app_title">Bir uygulama seçin</string>
-    <string name="fission_place_in">%1$s şuraya yerleştirilsin…</string>
-    <string name="fission_resize_full">Tam ekran</string>
-    <string name="fission_resize_left_3q">Sol ¾</string>
-    <string name="fission_resize_left_half">Sol ½</string>
-    <string name="fission_resize_right_3q">Sağ ¾</string>
-    <string name="fission_resize_right_half">Sağ ½</string>
-    <string name="fission_resize_title">%1$s yeniden boyutlandır</string>
-    <string name="fission_slot_error">Slot %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Bir uygulama bağla…</string>
     <string name="fission_slot_pkg_none">Yok — serbest bölge</string>
     <string name="fission_slot_zone_bound_fmt">Bağlı uygulama: %1$s</string>
@@ -421,25 +363,28 @@
     <string name="fo_status_stopping">Durduruluyor…</string>
     <string name="lm_action_add">Ekle</string>
     <string name="lm_action_delete">Sil</string>
+    <string name="lm_section_my_layouts">DÜZENLERİM</string>
+    <string name="lm_action_clear_all">Tümünü temizle</string>
+    <string name="lm_action_favorite">⭐ Favori</string>
     <string name="lm_action_save">Kaydet</string>
     <string name="lm_activated_ok_fmt">%1$s etkinleştirildi ✓</string>
     <string name="lm_activated_partial_fmt">%1$s etkinleştirildi (bazı slotlar başarısız)</string>
     <string name="lm_activating_fmt">%1$s etkinleştiriliyor…</string>
-    <string name="lm_daemon_not_connected">Daemon bağlı değil — önce bir Fission projeksiyonu başlatın</string>
+    <string name="lm_layout_mode_disabled">Önce Ayarlar’da “Layouts modu”nu açın.</string>
     <string name="lm_delete_confirm_fmt">“%1$s” silinsin mi?</string>
     <string name="lm_draw_zone_first">En az bir bölge çizin</string>
-    <string name="lm_edit_zones_hint">Bölgeleri düzenleyin ve kaydedin</string>
     <string name="lm_error_fmt">Hata: %1$s</string>
     <string name="lm_free_mode_toast">Serbest mod etkin</string>
     <string name="lm_layout_default_name_fmt">Düzen %1$d</string>
     <string name="lm_layout_name_hint">Düzen adı</string>
     <string name="lm_layout_save_title">Düzeni kaydet</string>
     <string name="lm_layout_saved_toast">Düzen kaydedildi ✓</string>
+    <string name="lm_layout_load_failed">Kayıtlı düzenler yüklenemedi. Mevcut veriler korundu.</string>
+    <string name="lm_layout_save_failed">Düzen kaydedilemedi. Yeniden deneyin.</string>
+    <string name="lm_layout_selection_save_failed">Düzen değişti ancak seçim kaydedilemedi.</string>
     <string name="lm_new_layout_name">Yeni düzen</string>
     <string name="lm_no_layout_loaded">Yüklü düzen yok</string>
-    <string name="lm_no_saved_layouts">Kayıtlı düzen yok\nYukarıda bölgeler çizin ve kaydedin.</string>
     <string name="lm_save_before_favorite">Favori olarak ayarlamadan önce düzeni kaydedin</string>
-    <string name="lm_zone_delete_title">Bölge silinsin mi?</string>
     <string name="lm_zone_edit_title_fmt">“%1$s” düzenle</string>
     <string name="lm_zone_height">Yükseklik (px)</string>
     <string name="lm_zone_name_hint">Bölge adı</string>
@@ -463,6 +408,7 @@
     <string name="bug_send">Gönder</string>
     <string name="bug_status_capturing">Günlük yakalanıyor…</string>
     <string name="bug_status_sending">Gönderiliyor…</string>
+    <string name="bug_status_slow">Gönderme beklenenden uzun sürüyor — iptal edebilirsiniz.</string>
     <string name="bug_status_error_fmt">Hata: %1$s</string>
     <string name="bug_sent_ok">Rapor gönderildi ✓ Teşekkürler!</string>
     <string name="bug_share_subject">DashCast — Hata raporu</string>
@@ -477,7 +423,7 @@
     <string name="bug_wizard_other_app">Diğer / Bilinmeyen uygulama</string>
     <string name="bug_wizard_back">← Geri</string>
     <string name="bug_tg_title">Telegram kullanıcı adın</string>
-    <string name="bug_tg_message">Sorunun için bir düzeltme hazır olduğunda, onu ilk test etmeni istemek için seni doğrudan Telegram\'dan arayacağız.\n\n⚠️ Doğru kullanıcı adını girdiğinden emin ol (örnek: @john_doe). Onsuz sana ulaşamayız.\n\nKullanıcı adın yalnızca bu cihazda saklanır ve asla paylaşılmaz.</string>
+    <string name="bug_tg_message">Sorunun için bir düzeltme hazır olduğunda, onu ilk test etmeni istemek için seni doğrudan Telegram\'dan arayacağız.\n\n⚠️ Doğru kullanıcı adını girdiğinden emin ol (örnek: @john_doe). Onsuz sana ulaşamayız.\n\nKullanıcı adın bu cihazda saklanır ve gönderdiğin rapora eklenir — yalnızca sana ulaşabilmemiz için.</string>
     <string name="bug_tg_hint">@kullanici_adin</string>
     <string name="bug_tg_confirm">Onayla</string>
     <string name="bug_tg_skip">Sonra</string>
@@ -561,17 +507,16 @@
     <string name="bug_wizard_pick_issue">Yukarıdan bir sorun seç</string>
     <string name="bug_wizard_selected_fmt">Seçildi: %1$s</string>
     <string name="toast_adb_port_refused">ADB\'ye erişilemiyor (bağlantı noktası 5555) — bu cihazda ayna kullanılamıyor</string>
-    <string name="hud_visual_title">HUD görsel kontrolü</string>
-    <string name="hud_visual_yes">Evet</string>
-    <string name="hud_visual_no">Hayır</string>
-    <string name="hud_visual_unsure">Emin değilim</string>
     <string name="aaos_cluster_unsupported_title">Gösterge paneli yansıtması engellendi</string>
     <string name="aaos_cluster_unsupported_msg">Aracınız BYD\'nin Android Automotive sistemini (DX_BYD_AUTO) kullanıyor. Bu ünitede gösterge paneli üretici tarafından kilitlenmiştir: BYD bunu yerleşik navigasyona ayırır ve uygulama yansıtmasını engeller. Bu, aracın bir kısıtlamasıdır (DashCast\'in değil) — bir geçici çözüm yoktur.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Gösterge paneli yansıtması kullanılamıyor</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Bu araçta gösterge paneli tek ekranlı (single-OS) bir düzen kullanır: doğrudan araç tarafından çizilir ve uygulamaların yansıtılabileceği ayrı bir ekran yoktur. Gösterge paneline uygulama yansıtma burada mümkün değildir — bu, aracınızın gösterge panelinin bir özelliğidir, DashCast\'in bir kısıtlaması değildir.</string>
+    <string name="dl4_cluster_unsupported_title">Gösterge paneli yansıtması ürün yazılımı tarafından engellendi</string>
+    <string name="dl4_cluster_unsupported_msg">Bu araçta ürün yazılımı DashCast\'in gösterge paneli ekranını görmesine izin vermiyor: uygulama, üreticinin ekranları listelemesine izin verdiği programlar listesinde yer almıyor. DashCast ayrıca ayrıcalıklı yardımcısı üzerinden de sordu; o da bir gösterge paneli ekranı bulamadı. Bu nedenle bu ürün yazılımı sürümünde uygulamaların gösterge paneline yansıtılması mümkün değil — bu bir üretici kısıtlamasıdır, DashCast sınırlaması değil.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">HUD sonucu — ön camda ne gördün?</string>
-    <string name="hud_bench_opt_ok">✅ Ok göründü — doğru yön</string>
+    <string name="hud_bench_result_title">Sonuç — ne gördün ve NEREDE (CLUSTER mı yoksa ön cam mı)?</string>
+    <string name="hud_bench_opt_cluster">✅ CLUSTER\'da ok (direksiyonun arkasında)</string>
+    <string name="hud_bench_opt_ok">✅ HUD\'da ok (ön cam)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Ok göründü — yanlış yön</string>
     <string name="hud_bench_opt_partial">⚠️ Mesafe/yazı göründü — ama net bir ok yok</string>
     <string name="hud_bench_opt_nothing">❌ HUD\'da hiçbir şey yok</string>
@@ -615,4 +560,26 @@
     <string name="bug_hud_no_route_msg">Şu anda aktif bir rota yok. DashCast dönüş yönlerini yalnızca navigasyon aktif olarak yol tarifi verirken alır; Google Maps veya Waze\'i açmış olman yeterli değil. Bir hedefe rota başlat, sonra HUD\'a bak — okun belirmesi gerekir.</string>
     <string name="bug_hud_no_route_understood">Anladım, bir rota başlatacağım</string>
     <string name="bug_hud_no_notif_access_msg">DashCast\'ın bildirim erişimi yok. Bu şart: dönüş yönleri Google Maps veya Waze bildiriminden okunuyor. Android Ayarlar → Bildirimler → Bildirim erişimi bölümüne gidip DashCast\'a izin ver, sonra rotayı yeniden başlat.</string>
+    <string name="hud_sweep_result_title">Tarama bitti — CLUSTER\'da ne gördün?</string>
+    <string name="hud_sweep_opt_photographed">📷 Simgelerin fotoğrafını çektim</string>
+    <string name="hud_sweep_opt_nothing">❌ Cluster\'da hiçbir şey görünmedi</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Hata raporlarının gönderimi</string>
+    <string name="pairing_state_on">Açık — raporların DashCast ekibine gönderiliyor</string>
+    <string name="pairing_state_off">Kapalı — raporların bu cihazda kalıyor</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Kabul edildi, ancak bu cihazda yapılandırılmış bir kanal yok</string>
+    <string name="consent_title">Tanılama verileri DashCast ekibine gönderilsin mi?</string>
+    <string name="consent_body">Bir sorunu düzeltmek için DashCast ekibinin, o anda araçta neler olduğunu bilmesi gerekir.\n\nGöndermeden önce DashCast her rapordan şasi numarasını (VIN), Wi-Fi ağ adlarını, cihazların donanım adreslerini ve konumları otomatik olarak çıkarır.\n\nGeriye kalanlar:\n\n•  DashCast günlüğü ve Android sistem günlüğü, olduğu gibi kopyalanır — diğer uygulamaların yazdıklarını içerir ve bunun ne olduğunu önceden bilemeyiz;\n\n•  araç ve ana ünite bilgileri: model, sürüm, ayarlar, kurulu uygulamalar;\n\n•  aracın yerel IP adresi;\n\n•  forma yazdıkların ve verdiğin Telegram kullanıcı adı;\n\n•  varsayılan olarak açık olan ekran görüntüleri: ana ekranın ve gösterge panelinin bulanıklaştırılmamış görüntüleri; bunlarda gideceğin yeri gösteren bir harita görünebilir — bir görüntü, metin gibi süzülemez. Bunlar her gönderimde ayrıca sorulur.\n\n“Gönder”e dokunmadan hiçbir rapor araçtan çıkmaz. Raporları DashCast ekibi özel bir grupta okur. DashCast hiçbir ses kaydı, fotoğraf, kişi veya mesaj göndermez.\n\nReddedersen rapor bu cihazda kalır ve dilersen kendin paylaşırsın. Fikrini istediğin zaman Ayarlar\'dan değiştirebilirsin.</string>
+    <string name="consent_accept">Kabul et</string>
+    <string name="consent_refuse">Reddet</string>
+    <string name="consent_revoke">Geri al</string>
+    <string name="consent_close">Kapat</string>
+    <string name="consent_result_granted">Teşekkürler. Raporların DashCast ekibine gönderilecek.</string>
+    <string name="consent_result_refused">Reddedildi. Raporların bu cihazda kalacak.</string>
+    <string name="consent_result_revoked">Geri alındı. Raporların bu cihazda kalacak.</string>
+    <string name="bug_kept_locally_fmt">Rapor bu cihazda saklandı: %1$s. Nasıl ileteceğini seç.</string>
 </resources>

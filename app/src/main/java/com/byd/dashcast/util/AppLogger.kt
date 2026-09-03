@@ -1,6 +1,7 @@
 package com.byd.dashcast.util
 
 import android.content.Context
+import com.byd.dashcast.report.BugReportCapture
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -27,6 +28,28 @@ import java.util.Locale
  * Circular buffer: MAX_ENTRIES = 5000 entries.
  */
 object AppLogger {
+
+    // ── Artefact naming contract ──────────────────────────────────────────────────────────────
+    //
+    // Every file this app leaves on disk is named with one of these prefixes, and [PRUNED_PREFIXES]
+    // is what the sweeper matches against. The two halves MUST stay in step: they drifted once and
+    // the result was that every bug report ever generated stayed on disk forever, because the list
+    // said "byd_report_" while BugReportCapture writes "byd_bugreport_" and startsWith() is a
+    // prefix test. Both halves are now named constants so PruneCoverageTest can assert the
+    // relationship between them rather than restate it — a test that owns its own copy of the list
+    // cannot fail on the drift it exists to catch.
+    @JvmField val PREFIX_LOG    = "byd_log_"
+    @JvmField val PREFIX_REPORT = "byd_report_"
+    @JvmField val PREFIX_SNIFFER = "BYD_RE_Sniffer_"
+
+    /** The prefixes [pruneOldFiles] sweeps. Must cover every prefix the app writes. */
+    @JvmField val PRUNED_PREFIXES = arrayOf(
+        PREFIX_LOG,
+        PREFIX_REPORT,
+        // BugReportCapture.PREFIX — not covered by PREFIX_REPORT; see the note above.
+        com.byd.dashcast.report.BugReportCapture.PREFIX,
+        PREFIX_SNIFFER,
+    )
 
     // ── Niveau de log ─────────────────────────────────────────────────────────
     enum class Level { DEBUG, INFO, WARN, ERROR }
@@ -262,10 +285,28 @@ object AppLogger {
         // duration of formatting 3000 entries (~5-10 ms). Aligned with
         // getEntries() which already uses the snapshot pattern.
         val snapshot: Array<Entry>
+        val totalChars: Long
         synchronized(LOCK) {
             snapshot = sEntries.toTypedArray()
+            totalChars = sTotalChars
         }
-        val sb = StringBuilder(snapshot.size * 80)
+        // AUD-PERF-P5 — size the builder from the REAL retained char count, not a guess.
+        // `snapshot.size * 80` yields 400 K for a full buffer whose retained content can reach
+        // MAX_TOTAL_CHARS (2 M), so the builder doubled four times, copying the whole char[] on
+        // each growth and peaking around 12 MB — on every bug report and every log share, i.e.
+        // exactly when the user is already in trouble. sTotalChars is already maintained under
+        // LOCK for the eviction budget, so the exact number was one field away. The ~40 chars per
+        // entry cover the "[timestamp][LEVEL][tag] " prefix and the trailing newline.
+        // Capacity hint only: the produced String is byte-identical to before.
+        // sTotalChars counts only the MESSAGE text, so add ~40/entry for the
+        // "[timestamp][LEVEL][tag] " prefix and the newline. coerceAtLeast(size * 80) keeps this
+        // strictly non-regressive: with unusually short messages the computed hint could land
+        // below the old fixed guess, and this can then only ever over-reserve, never under.
+        val hint = (totalChars + snapshot.size * 40L)
+            .coerceAtLeast(snapshot.size * 80L)
+            .coerceIn(256L, Int.MAX_VALUE.toLong())
+            .toInt()
+        val sb = StringBuilder(hint)
         for (e in snapshot) {
             sb.append("[").append(fmt.format(Date(e.timestamp))).append("]")
                 .append("[").append(e.level.name).append("]")
@@ -302,7 +343,7 @@ object AppLogger {
      * @return the created File, or null on error
      */
     @JvmStatic
-    fun saveToFile(context: Context): File? = writeFile(context, "byd_log_", get())
+    fun saveToFile(context: Context): File? = writeFile(context, PREFIX_LOG, get())
 
     /**
      * Generic helper — writes [content] to a timestamped
@@ -316,7 +357,7 @@ object AppLogger {
     @JvmStatic
     fun writeFile(context: Context, prefix: String, content: String?): File? {
         val filename = prefix + sFileFmt.get()!!.format(Date()) + ".log"
-        val outDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val outDir = externalFilesDirOrNull(context) ?: context.filesDir
         if (!outDir.exists()) outDir.mkdirs()
         val outFile = File(outDir, filename)
         return try {
@@ -370,7 +411,7 @@ object AppLogger {
             "LOG\n" +
             "════════════════════════════════════\n" +
             get()
-        val f = writeFile(context, "byd_report_", combined)
+        val f = writeFile(context, PREFIX_REPORT, combined)
         if (f != null) {
             shareFile(
                 context, f,
@@ -394,6 +435,15 @@ object AppLogger {
      * report, custom diagnostics, …). The MIME type is forced to text/plain so
      * any chooser entry (email, messaging, drive) accepts the file.
      */
+    /** MIME type from the file extension, defaulting to `text/plain` like the historic behaviour. */
+    private fun mimeForFile(file: File): String = when (file.extension.lowercase()) {
+        "zip" -> "application/zip"
+        "png" -> "image/png"
+        "jpg", "jpeg" -> "image/jpeg"
+        "json" -> "application/json"
+        else -> "text/plain"
+    }
+
     @JvmStatic
     fun shareFile(context: Context, file: File?, subject: String, chooserTitle: String) {
         if (file == null || !file.exists()) {
@@ -404,7 +454,12 @@ object AppLogger {
             context, context.packageName + ".fileprovider", file
         )
         val intent = Intent(Intent.ACTION_SEND)
-        intent.type = "text/plain"
+        // Derived from the extension, not forced to text/plain. Five of the six diagnostic
+        // emitters produce a .zip; announcing it as text/plain hides from the chooser every
+        // target that filters correctly on application/zip — and a target that takes the file at
+        // its word may open it as text. Callers are unchanged: a .txt still resolves to
+        // text/plain, so nothing regresses for the report path.
+        intent.type = mimeForFile(file)
         intent.putExtra(Intent.EXTRA_SUBJECT, subject)
         intent.putExtra(Intent.EXTRA_STREAM, uri)
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -487,68 +542,11 @@ object AppLogger {
 
     // ── Storage cleanup ───────────────────────────────────────────────────────
 
-    /**
-     * Deletes all DashCast-generated files from app external and cache storage:
-     *   - byd_log_*.log         (AppLogger.saveToFile)
-     *   - byd_report_*.txt      (SysInfoActivity)
-     *   - BYD_RE_Sniffer_*.txt  (DiagActivity)
-     *   - cluster_live.png      (legacy — produced by captureClusterDisplay, removed in LOT 4 / v1.2.32)
-     * ADB keys (adb.key / adb.pub) in getFilesDir() are NOT deleted.
-     * Also clears the in-memory log buffer.
-     *
-     * @return number of files deleted
-     */
-    @JvmStatic
-    fun cleanupFiles(context: Context): Int {
-        var deleted = 0
-
-        // External files dir: byd_log_*, byd_report_*, BYD_RE_Sniffer_*
-        val extDir = context.getExternalFilesDir(null)
-        if (extDir != null && extDir.exists()) {
-            val files = extDir.listFiles()
-            if (files != null) {
-                for (f in files) {
-                    val name = f.name
-                    if (name.startsWith("byd_log_") ||
-                        name.startsWith("byd_report_") ||
-                        name.startsWith("BYD_RE_Sniffer_")
-                    ) {
-                        if (f.delete()) deleted++
-                    }
-                }
-            }
-        }
-
-        // Internal files dir: same patterns (fallback when external not available)
-        val intDir = context.filesDir
-        if (intDir != null && intDir.exists()) {
-            val files = intDir.listFiles()
-            if (files != null) {
-                for (f in files) {
-                    val name = f.name
-                    if (name.startsWith("byd_log_") ||
-                        name.startsWith("byd_report_") ||
-                        name.startsWith("BYD_RE_Sniffer_")
-                    ) {
-                        if (f.delete()) deleted++
-                    }
-                }
-            }
-        }
-
-        // External cache: cluster_live.png
-        val extCache = context.externalCacheDir
-        if (extCache != null && extCache.exists()) {
-            val png = File(extCache, "cluster_live.png")
-            if (png.exists() && png.delete()) deleted++
-        }
-
-        // Clear in-memory buffer too
-        clear()
-
-        Log.i("AppLogger", "cleanupFiles: $deleted file(s) deleted")
-        return deleted
-    }
+    // cleanupFiles() lived here: 60 lines that deleted every generated artefact and cleared the
+    // in-memory buffer, with no caller in source, resources or the manifest. It was the "wipe
+    // everything" counterpart to pruneOldFiles' rotation, and the button that would have called it
+    // does not exist. Deleted rather than wired: pruneOldFiles already bounds the same directories
+    // on every start, and a destructive one-shot with no UI is a hazard waiting for a caller.
 
     /**
      * v1.2.55-beta — caps the on-disk accumulation of generated files by
@@ -566,16 +564,17 @@ object AppLogger {
     @JvmStatic
     fun pruneOldFiles(context: Context?, keepPerPrefix: Int): Int {
         if (context == null || keepPerPrefix < 1) return 0
-        val prefixes = arrayOf("byd_log_", "byd_report_", "BYD_RE_Sniffer_")
+        val prefixes = PRUNED_PREFIXES
         var deleted = 0
-        val dirs = arrayOf(context.getExternalFilesDir(null), context.filesDir)
-        for (dir in dirs) {
-            if (dir == null || !dir.exists()) continue
+        for (dir in sweepRoots(context)) {
+            if (!dir.exists()) continue
             val entries = dir.listFiles() ?: continue
             for (prefix in prefixes) {
                 val matches = ArrayList<File>()
                 for (f in entries) {
                     if (f != null && f.isFile && f.name.startsWith(prefix)) {
+                        if (com.byd.dashcast.report.BugWizardPendingDelivery
+                                .protects(context, f)) continue
                         matches.add(f)
                     }
                 }
@@ -587,22 +586,52 @@ object AppLogger {
                 }
             }
         }
-        // Vosk directory: remove orphan partial-download temp files.
-        // Uses File constructor to avoid creating the directory if it doesn't
-        // exist (getExternalFilesDir("vosk") would create it as a side effect).
-        val extBase = context.getExternalFilesDir(null)
+        // D1 — the voice subsystem is gone as of 1.8.33-beta, so its downloads are orphans
+        // nothing will ever open again. A user who tried the PoC is holding a Vosk model
+        // (~40 MB, up to ~1.3 GB on the large one) plus the native libs (~25 MB) that the app
+        // no longer has any code to load. This used to sweep only ".download.tmp" leftovers;
+        // now it takes the whole tree, once, on the first sweep after the upgrade.
+        //
+        // File() rather than getExternalFilesDir("vosk"): the qualified form creates the
+        // directory as a side effect, which would have this cleanup manufacture the very
+        // thing it is meant to remove.
+        val extBase = externalFilesDirOrNull(context)
+        for (stale in listOfNotNull(
+            extBase?.let { File(it, "vosk") },   // Vosk model, external
+            File(context.filesDir, "vosk"),      // Vosk model, internal fallback
+            File(context.filesDir, "voice_libs") // ONNX/Vosk .so downloaded by VoiceLibsManager
+        )) {
+            if (stale.isDirectory) deleted += deleteTree(stale)
+        }
+        // The models were the visible leftover. This is the one that matters more: anyone who
+        // tried the PoC could paste an OpenAI API key into it, and LlmVoiceEngine kept it in its
+        // own EncryptedSharedPreferences file. D1 deleted every line that could read, rewrite or
+        // clear that key — so a live third-party credential was left on a head unit that runs for
+        // weeks, with no code and no UI able to reach it. Encrypted at rest is not the same as
+        // gone, and the population holding one is exactly the population this sweep was written
+        // for. Its Tink keyset sibling goes with it, and so do the abandoned TTS clips.
+        for (name in arrayOf("dashcast_llm_prefs.xml", "dashcast_llm_prefs")) {
+            val f = File(File(context.filesDir.parentFile, "shared_prefs"), name)
+            if (f.isFile && f.delete()) deleted++
+        }
+        try {
+            context.cacheDir.listFiles { _, n -> n.startsWith("jarvis_tts_") && n.endsWith(".mp3") }
+                ?.forEach { if (it.delete()) deleted++ }
+        } catch (t: Throwable) {
+            Log.w("AppLogger", "tts cache sweep skipped: " + t.javaClass.simpleName)
+        }
         if (extBase != null) {
-            val voskDir = File(extBase, "vosk")
-            if (voskDir.isDirectory) {
-                val voskEntries = voskDir.listFiles()
-                if (voskEntries != null) {
-                    for (f in voskEntries) {
-                        if (f != null && f.isFile && f.name.endsWith(".download.tmp")) {
-                            if (f.delete()) deleted++
-                        }
-                    }
-                }
+            // reports/: diagnostic artefacts written by the six emitters. Invisible to the loop
+            // above, which is non-recursive and keyed on three prefixes — a subdirectory would
+            // grow unbounded, which is exactly how the 1.08 GB accumulation documented above
+            // happened. ReportStore owns the policy (age, then total size, then count); this only
+            // makes sure the sweep reaches it on the same heartbeat as everything else.
+            try {
+                deleted += if (com.byd.dashcast.report.ReportStore.prune(context) > 0) 1 else 0
+            } catch (t: Throwable) {
+                Log.w("AppLogger", "reports prune failed: " + t.message)
             }
+
             // exported_apks: keep the 2 most recent, delete the rest.
             val exportDir = File(extBase, "exported_apks")
             if (exportDir.isDirectory) {
@@ -628,5 +657,82 @@ object AppLogger {
             "pruneOldFiles: $deleted file(s) deleted (keep $keepPerPrefix/prefix)"
         )
         return deleted
+    }
+
+    /**
+     * Deletes [dir] and everything under it, returning how many FILES went — the caller counts
+     * files, not directories. Best-effort by design: this runs on a housekeeping sweep, and a
+     * directory that resists deletion must never take the sweep down with it.
+     */
+    /**
+     * [Context.getExternalFilesDir] without the throw, returning null when it fails.
+     *
+     * That API routes through StorageManagerService and its AppOps package/uid check, and on some
+     * DL5.1 / Android 13 ROMs it raises SecurityException("callingPackage does not match UID").
+     * The project has known this since 1.6.101, when it took down the whole bug-report feature, and
+     * BugReportCapture.newFile has guarded it ever since — but four call sites in THIS file never
+     * were, and their failure modes are worse than a missing directory:
+     *
+     *  - [writeFile] and [saveToFile] crash the process on the Share/Save-log tap, because the call
+     *    sits above the try and the catch below only handles IOException.
+     *  - [pruneOldFiles] makes it its first storage statement, so on those ROMs the entire
+     *    storage-hygiene sweep never runs: not the log rotation that exists because an app directory
+     *    once reached 1.08 GB, not the reports prune, not the exported-APK prune, and not the D1
+     *    voice-leftover reclaim shipped in 1.8.33 — which was announced to testers as something the
+     *    app would do for them, on the very ROM family most likely to still hold the download.
+     *
+     * Returning null rather than falling back to filesDir is deliberate here: the callers want to
+     * know the external directory is unavailable so they can keep working on internal storage,
+     * which for the sweep means the vosk/ and voice_libs/ deletions still happen.
+     */
+    /**
+     * Every directory this app can leave a prunable file in, deduplicated.
+     *
+     * Split out and made visible because it is a DECISION, not plumbing, and it was wrong in a way
+     * no diff-shaped review could see. On the DL5.1 / Android 13 ROMs where getExternalFilesDir()
+     * throws, [externalFilesDirOrNull] answers null and the sweep used to skip external storage
+     * entirely — while BugReportCapture.newFile answers the SAME throw by writing to
+     * [BugReportCapture.canonicalExternalFilesDir] and succeeding. The writer and the sweeper
+     * disagreed about where reports live, on the one platform family the fallback exists for, so
+     * every report written there was a report never pruned.
+     *
+     * Deduplicated by canonical path because on a healthy ROM getExternalFilesDir() returns exactly
+     * the canonical path, and sweeping the same directory twice would double-count the deletions
+     * this function's caller reports.
+     */
+    @JvmStatic
+    internal fun sweepRoots(context: Context): List<File> {
+        val roots = ArrayList<File>(3)
+        val seen = HashSet<String>()
+        fun add(f: File?) {
+            if (f == null) return
+            val key = try { f.canonicalPath } catch (_: Throwable) { f.absolutePath }
+            if (seen.add(key)) roots.add(f)
+        }
+        add(externalFilesDirOrNull(context))
+        add(try { BugReportCapture.canonicalExternalFilesDir(context) } catch (_: Throwable) { null })
+        add(context.filesDir)
+        return roots
+    }
+
+    private fun externalFilesDirOrNull(context: Context): File? = try {
+        context.getExternalFilesDir(null)
+    } catch (t: Throwable) {
+        // android.util.Log, not our own w(): this can be reached from the log plumbing itself.
+        Log.w("AppLogger", "getExternalFilesDir threw (" + t.javaClass.simpleName + ") — external storage skipped")
+        null
+    }
+
+    private fun deleteTree(dir: File): Int {
+        var n = 0
+        try {
+            dir.listFiles()?.forEach { child ->
+                n += if (child.isDirectory) deleteTree(child) else if (child.delete()) 1 else 0
+            }
+            dir.delete()
+        } catch (t: Throwable) {
+            Log.w("AppLogger", "deleteTree(" + dir.name + ") stopped: " + t.javaClass.simpleName)
+        }
+        return n
     }
 }

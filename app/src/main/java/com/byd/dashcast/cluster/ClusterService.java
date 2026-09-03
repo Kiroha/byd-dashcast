@@ -14,6 +14,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Binder;
@@ -23,6 +26,10 @@ import android.view.Display;
 
 import com.byd.dashcast.cluster.mirror.ClusterInputForwarder;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
+import com.byd.dashcast.cluster.display.ClusterDisplayInfo;
+import com.byd.dashcast.cluster.display.ClusterGeometryPolicy;
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry;
+import com.byd.dashcast.cluster.display.ClusterManager;
 import com.byd.dashcast.cluster.display.DashboardDisplayHelper;
 import com.byd.dashcast.cluster.display.DashboardLauncher;
 import com.byd.dashcast.domain.cluster.ProjectionStateProvider;
@@ -30,10 +37,8 @@ import com.byd.dashcast.infrastructure.launch.PlatformAdaptiveAppLauncher;
 import com.byd.dashcast.infrastructure.task.AdbLocalTaskFinder;
 import com.byd.dashcast.infrastructure.task.AmTaskFinder;
 import com.byd.dashcast.infrastructure.task.ChainedTaskFinder;
-import com.byd.dashcast.infrastructure.task.ChainedTaskResizer;
 import com.byd.dashcast.infrastructure.task.TaskFinder;
 import com.byd.dashcast.infrastructure.task.TaskLocation;
-import com.byd.dashcast.infrastructure.task.TaskResizer;
 import com.byd.dashcast.infrastructure.task.TypedProxyTaskFinder;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
@@ -50,14 +55,22 @@ import java.util.concurrent.Executors;
  * <ul>
  *   <li>{@link #findRunningTaskId(String)} now delegates to {@link ChainedTaskFinder}
  *       (AM → ProxyDaemon → AdbLocal), removing 140 lines of inline strategy code.
- *   <li>{@link #resizeActiveTask(int, String)} now delegates to {@link ChainedTaskResizer}
- *       (reflection → shell), removing 80 lines of inline cascade code.
  *   <li>Implements {@link ProjectionStateProvider} so FissionActivity / FissionOrchestrator
  *       no longer depend on the static field {@code sIsRunning} or a direct class reference.
  * </ul>
  *
  * Zero regression: all runtime logic (IATM reflection, shell commands, timing, DPI settle,
  * DL5 guards, wm overscan, cleanFissionStacks, enforceTaskOnDisplay) is preserved verbatim.
+ *
+ * <h3>Both daemons run through here</h3>
+ * Besides the ProxyDaemon commands above, this service drives the <b>SURFACE</b> daemon
+ * ({@link com.byd.dashcast.proxy.daemon.SurfaceDaemon}): it owns the {@link ClusterMirrorManager}
+ * and the {@link com.byd.dashcast.cluster.mirror.ClusterInputForwarder}, and
+ * {@link #stopProjectionNoAdb()} / {@link #onDestroy()} are the two paths that tear the mirror
+ * down. Their binder comes from
+ * {@link com.byd.dashcast.proxy.DaemonBinderResolver#surfaceDaemonBinder()} — never from
+ * {@code ProxyClient.getProxyDaemonBinder()}; see the boundary rule on
+ * {@link com.byd.dashcast.proxy.daemon.SurfaceDaemon}.
  */
 @SuppressWarnings("deprecation")
 public class ClusterService extends Service
@@ -80,13 +93,21 @@ public class ClusterService extends Service
      * main display (INC-20260621-130238).
      */
     public boolean isMoveTaskToDisplaySupported() {
-        return !Boolean.FALSE.equals(sMoveTaskToDisplayAvailable);
+        // Resolved on demand, by the reader that actually needs the answer. Previously the flag was
+        // only ever latched as a SIDE EFFECT of a move attempt, and the corpus shows 82% of real
+        // sessions got it from the deferred re-anchor alone — the very call that now goes through
+        // the daemon instead. A fire-and-forget prime at startup would have left a silent window
+        // (and a race); a cheap interface lookup here has neither.
+        Boolean known = sMoveTaskToDisplayAvailable;
+        if (known == null) known = resolveMoveTaskToDisplaySupport();
+        return !Boolean.FALSE.equals(known);
     }
 
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int    NOTIF_ID   = 1;
 
     public static volatile boolean sIsRunning = false;
+    private static final Object sTaskMoveOwnershipLock = new Object();
     public static boolean isRunning() { return sIsRunning; }
 
     private static volatile ClusterService sInstance = null;
@@ -113,7 +134,7 @@ public class ClusterService extends Service
     private ClusterMirrorManager   mMirrorManager;
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
-    private boolean                mProjectionActive = false;
+    private volatile boolean       mProjectionActive = false;
     private volatile boolean       mDestroyed        = false;
     private final LifecycleGate    mOperationGate    = new LifecycleGate();
     private LaunchCallback         mPendingDashboardCallback;
@@ -125,7 +146,6 @@ public class ClusterService extends Service
 
     // ── Strategy objects (injected in onCreate) ─────────────────────────────
     private TaskFinder   mTaskFinder;
-    private TaskResizer  mTaskResizer;
 
     // ── Background executor for task-move operations ────────────────────────
     private static final ExecutorService sMoveTaskExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -165,7 +185,21 @@ public class ClusterService extends Service
     @Override
     public void onCreate() {
         super.onCreate();
-        sIsRunning = true;
+        claimTaskMoveOwnership();
+        boolean initialized = false;
+        try {
+            initializeAfterOwnershipClaim();
+            initialized = true;
+        } finally {
+            if (!initialized) {
+                mProjectionActive = false;
+                if (sInstance == this) sInstance = null;
+                releaseTaskMoveOwnership();
+            }
+        }
+    }
+
+    private void initializeAfterOwnershipClaim() {
         sInstance  = this;
 
         mDisplayHelper  = new DashboardDisplayHelper(this, this);
@@ -174,14 +208,14 @@ public class ClusterService extends Service
         mInputForwarder = new ClusterInputForwarder(this);
 
         // v1.6.147 — PULL the daemon Binder instead of waiting to be pushed one.
-        // When the MirrorDaemon survives an ACC off/on cycle it is REUSED, so it is already
+        // When the SurfaceDaemon survives an ACC off/on cycle it is REUSED, so it is already
         // registered in ServiceManager before MainActivity binds this service. The push path in
         // MainActivity resolves the binder first, finds mClusterService still null and drops it,
         // and no ACTION_DAEMON_READY broadcast follows a reused (never re-spawned) daemon — so
         // setDaemonBinder was never called and every touch fell back to the unprivileged direct
         // path, silently reaching nothing (INC-20260724-102136). Pulling here removes the
         // Activity-ordering dependency entirely; it is a cheap local ServiceManager lookup.
-        IBinder reusedDaemon = com.byd.dashcast.proxy.DaemonBinderResolver.getRegisteredBinderOrNull();
+        IBinder reusedDaemon = com.byd.dashcast.proxy.DaemonBinderResolver.surfaceDaemonBinder();
         if (reusedDaemon != null) {
             mInputForwarder.setDaemonBinder(reusedDaemon);
         }
@@ -192,7 +226,6 @@ public class ClusterService extends Service
                 new TypedProxyTaskFinder(),
                 new com.byd.dashcast.infrastructure.task.ProxyTaskFinder(),
                 new AdbLocalTaskFinder(this));
-        mTaskResizer = new ChainedTaskResizer(this);
 
         AdbLocalClient.startMirrorDaemon(this);
         createNotificationChannel();
@@ -236,8 +269,19 @@ public class ClusterService extends Service
                                 // If this resolved only AFTER the first activation already timed
                                 // out, correct the notification now (it would otherwise read the
                                 // generic "disconnected" until the next boot).
-                                mMainHandler.post(() -> updateNotification(
-                                        getString(R.string.dl3_singleos_cluster_unsupported_title)));
+                                //
+                                // Guarded: this is a shell round-trip, so it can land after the
+                                // user has already stopped projection — and updateNotification
+                                // would then re-post NOTIF_ID for a session that is over, putting
+                                // an ongoing notification back on screen with nothing behind it.
+                                // mProjectionActive covers the common stopped-but-still-bound
+                                // case that mDestroyed misses; it is cleared in
+                                // stopProjectionNoAdb() before the cancel/stopSelf.
+                                mMainHandler.post(() -> {
+                                    if (mDestroyed || !mProjectionActive) return;
+                                    updateNotification(
+                                        getString(R.string.dl3_singleos_cluster_unsupported_title));
+                                });
                             }
                         }
                         @Override public void onError(String err) { /* stays unflagged; projection proceeds (fail-open) */ }
@@ -299,31 +343,38 @@ public class ClusterService extends Service
     public void onDestroy() {
         mOperationGate.invalidate();
         mDestroyed = true;
-        super.onDestroy();
-        sIsRunning = false;
-        if (sInstance == this) sInstance = null;
-        mListener  = null;
-        // NOTE: the rolling screenshots are deliberately NOT wiped here — a tester often stops a
-        // broken projection and THEN files the report, so the shots must survive the stop. They
-        // self-clean via the recorder's max-age prune (runs on the keeper heartbeat even when idle)
-        // and after a send. See ClusterShotRecorder.
-        if (mPendingDashboardCallback != null) {
-            LaunchCallback pending = mPendingDashboardCallback;
-            mPendingDashboardCallback = null;
-            pending.onResult(false);
-        }
-        mMainHandler.removeCallbacksAndMessages(null);
         try {
-            com.byd.dashcast.cluster.dpi.ClusterDpiManager.restore(
-                    this, mDisplayHelper.getKnownClusterDisplayId());
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "DPI restore (onDestroy) failed: " + t.getMessage());
+            super.onDestroy();
+            if (sInstance == this) sInstance = null;
+            mListener  = null;
+            // NOTE: the rolling screenshots are deliberately NOT wiped here — a tester often stops a
+            // broken projection and THEN files the report, so the shots must survive the stop. They
+            // self-clean via the recorder's max-age prune (runs on the keeper heartbeat even when idle)
+            // and after a send. See ClusterShotRecorder.
+            if (mPendingDashboardCallback != null) {
+                LaunchCallback pending = mPendingDashboardCallback;
+                mPendingDashboardCallback = null;
+                pending.onResult(false);
+            }
+            mMainHandler.removeCallbacksAndMessages(null);
+            try {
+                com.byd.dashcast.cluster.dpi.ClusterDpiManager.restore(
+                        this, mDisplayHelper.getKnownClusterDisplayId());
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "DPI restore (onDestroy) failed: " + t.getMessage());
+            }
+            mMirrorManager.release();
+            if (mProjectionActive) {
+                mDisplayHelper.stop();
+            }
+            // Same reason as stopProjectionNoAdb: the registry is process-wide and outlives this
+            // service, so a geometry left behind here would be picked up by the next mirror attempt
+            // even though no projection is running. No-op on DL3/DL5.
+            ClusterDisplayRegistry.clear();
+            AppLogger.log(TAG, "ClusterService destroyed");
+        } finally {
+            releaseTaskMoveOwnership();
         }
-        mMirrorManager.release();
-        if (mProjectionActive) {
-            mDisplayHelper.stop();
-        }
-        AppLogger.log(TAG, "ClusterService destroyed");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -333,6 +384,31 @@ public class ClusterService extends Service
     @Override
     public boolean isProjectionActive() {
         return mProjectionActive;
+    }
+
+    @FunctionalInterface
+    public interface StoppedTaskMove {
+        boolean run() throws Exception;
+    }
+
+    /** Runs one cleanup move atomically with respect to service ownership acquisition. */
+    public static boolean runTaskMoveWhileStopped(StoppedTaskMove move) throws Exception {
+        synchronized (sTaskMoveOwnershipLock) {
+            if (sIsRunning) return false;
+            return move.run();
+        }
+    }
+
+    static void claimTaskMoveOwnership() {
+        synchronized (sTaskMoveOwnershipLock) {
+            sIsRunning = true;
+        }
+    }
+
+    static void releaseTaskMoveOwnership() {
+        synchronized (sTaskMoveOwnershipLock) {
+            sIsRunning = false;
+        }
     }
 
     @Override
@@ -362,6 +438,21 @@ public class ClusterService extends Service
         return Platform.get().isDiLink3(this) && Platform.isClusterSingleOs();
     }
 
+    /**
+     * DiLink 4.0 where the cluster display is invisible to BOTH the app process and the
+     * uid-2000 daemon. The OEM patched {@code DisplayManagerService.getDisplayIdsInternal} with
+     * an app whitelist DashCast is not on, which is why the app process alone proves nothing —
+     * so this is only true once {@link ClusterManager} recorded that a SUCCESSFUL daemon
+     * {@code dumpsys display} also listed no cluster display. A shell that merely failed to
+     * answer leaves this false and the generic "disconnected" message stands.
+     *
+     * <p>STRICT: gated on {@link Platform#isDiLink4}, and {@code isDiLink3()} is defined as
+     * "not DL2/DL4/DL5" — DL3 and DL5 can never reach this branch.
+     */
+    private boolean isDl4ProjectionBlocked() {
+        return Platform.get().isDiLink4(this) && ClusterManager.isDl4ProjectionUnavailable();
+    }
+
     private void startNativeProjection() {
         if (isDl3SingleOsFission()) {
             AppLogger.w(TAG, "DL3 single-OS fission (fission_single_os=1) — no projectable cluster display; skipping AutoContainer activation");
@@ -372,101 +463,41 @@ public class ClusterService extends Service
         mDisplayHelper.start();
     }
 
-    public int getInsetH(String packageName) {
-        android.content.SharedPreferences prefs =
-                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
-        int def = prefs.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
-        if (packageName == null || packageName.isEmpty()) return def;
-        return prefs.getInt(SettingsActivity.PREF_INSET_H_PREFIX + packageName, def);
-    }
-
-    public int getInsetV(String packageName) {
-        android.content.SharedPreferences prefs =
-                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
-        int def = prefs.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        if (packageName == null || packageName.isEmpty()) return def;
-        return prefs.getInt(SettingsActivity.PREF_INSET_V_PREFIX + packageName, def);
-    }
-
     /**
-     * Resizes the active cluster task to its per-app inset bounds.
-     *
-     * <p>Delegates to {@link ChainedTaskResizer} (reflection → shell). All DL5/ROM guards
-     * are preserved; this method is unchanged from the user's perspective.
+     * Set when the cluster display disconnects with no listener attached, so the edge can be
+     * replayed on re-attach. Volatile: written from the display callback thread, read in
+     * setListener on the main thread.
      */
-    public void resizeActiveTask(int taskId, String packageName) {
-        if (taskId <= 0) {
-            AppLogger.w(TAG, "resizeActiveTask: taskId<=0 for pkg=" + packageName);
-            return;
-        }
-        if (!Platform.get().isClusterTaskResizeSupported(this)) {
-            if (!sResizeUnsupportedLogged) {
-                sResizeUnsupportedLogged = true;
-                AppLogger.w(TAG, "resizeActiveTask skipped: cluster task resize not supported on ROM");
-            }
-            return;
-        }
-        int clusterId = mDisplayHelper.getKnownClusterDisplayId();
-        if (clusterId <= 0) {
-            AppLogger.w(TAG, "resizeActiveTask aborted: no cluster display (taskId=" + taskId + ")");
-            return;
-        }
-
-        // Compute bounds (DL5 framebuffer-space fix: use real display dimensions).
-        int cw = 1920, ch = 720;
-        try {
-            android.hardware.display.DisplayManager dm =
-                    (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
-            android.view.Display d = (dm != null) ? dm.getDisplay(clusterId) : null;
-            if (d != null) {
-                android.graphics.Point sz = new android.graphics.Point();
-                d.getRealSize(sz);
-                if (sz.x > 0) cw = sz.x;
-                if (sz.y > 0) ch = sz.y;
-            }
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "getRealSize(" + clusterId + ") failed: " + t.getMessage());
-            if (mInputForwarder != null) {
-                int fw = mInputForwarder.getClusterWidth();
-                int fh = mInputForwarder.getClusterHeight();
-                if (fw > 0) cw = fw;
-                if (fh > 0) ch = fh;
-            }
-        }
-        // Normalize: cluster is always landscape; getRealSize() can report portrait dimensions
-        // after a portrait app triggered a VirtualDisplay rotation on DL3.
-        if (cw > 0 && ch > 0 && ch > cw) {
-            int tmp = cw; cw = ch; ch = tmp;
-            AppLogger.w(TAG, "resizeActiveTask: portrait VD detected — swapped to " + cw + "x" + ch);
-        }
-        int insetH = getInsetH(packageName);
-        int insetV = getInsetV(packageName);
-        Rect bounds = new Rect(insetH, insetV, cw - insetH, ch - insetV);
-
-        // Primary: daemon-backed FREEFORM flip + resize (uid=2000 bypasses permission check).
-        // The containing stack stays FULLSCREEN when the task is launched via startActivity,
-        // and am task resize rejects non-FREEFORM tasks. Phase4TaskVerbs.moveAndResize()
-        // calls setTaskWindowingMode(FREEFORM) on both the task and stack before resizing.
-        try {
-            String log = ProxyClient.moveAndResize(packageName, clusterId,
-                    bounds.left, bounds.top, bounds.right, bounds.bottom);
-            AppLogger.i(TAG, "resizeActiveTask via daemon: " + log);
-            return;
-        } catch (Exception daemonEx) {
-            AppLogger.w(TAG, "resizeActiveTask daemon unavailable — fallback: " + daemonEx.getMessage());
-        }
-        // Fallback: ChainedTaskResizer (reflection → shell)
-        try {
-            mTaskResizer.resize(taskId, packageName, bounds);
-        } catch (TaskResizer.ResizeException e) {
-            AppLogger.w(TAG, "resizeActiveTask final failure for " + packageName + ": " + e.getMessage());
-        }
-    }
+    private volatile boolean mMissedDisconnect = false;
 
     public void setListener(Listener listener) {
         mListener = listener;
         int knownId = mDisplayHelper.getKnownClusterDisplayId();
+        // Replay a disconnect that happened while nobody was listening.
+        //
+        // MainActivity detaches in onStop, which is the app's NORMAL state during projection --
+        // the user sends an app to the cluster and then leaves DashCast. If the cluster display
+        // goes away in that window (ACC off/on, OEM teardown, activation timeout) the callback at
+        // onDashboardDisplayDisconnected was simply dropped: nothing latched it, and this method
+        // only ever replayed the CONNECTED edge. The Activity came back still showing the app as
+        // live on a display that no longer exists -- green state, "<app> -> Cluster", mirror
+        // button, and a mirror restart aimed at a dead display. Worse, ClusterPrefs still recorded
+        // that package as the cluster app, and that persisted value is what the next successful
+        // connect restores, so the lie outlived the process.
+        //
+        // Nothing automatic corrected it. The five other places that clear the persisted package
+        // are all user-initiated (send-to-main, kill, clear, restore-BYD, origin-cluster), and
+        // onStart's re-sync is one-sided by construction: `if (curDispId > 0)`, no else.
+        if (listener != null && mMissedDisconnect && knownId <= 0) {
+            mMissedDisconnect = false;
+            AppLogger.i(TAG, "setListener: replaying cluster disconnect missed while detached");
+            listener.onClusterDisplayDisconnected();
+            return;
+        }
         if (knownId > 0 && mListener != null) {
+            // A disconnect followed by a reconnect while detached nets out to "still up" -- do not
+            // deliver a spurious off-state on top of the connected replay below.
+            mMissedDisconnect = false;
             Display d = null;
             try {
                 android.hardware.display.DisplayManager dm =
@@ -475,7 +506,19 @@ public class ClusterService extends Service
             } catch (Exception e) {
                 AppLogger.w(TAG, "getDisplay(" + knownId + ") failed: " + e.getMessage());
             }
-            if (d != null) mListener.onClusterDisplayConnected(d, knownId);
+            if (d != null) {
+                mListener.onClusterDisplayConnected(d, knownId);
+            } else if (ClusterDisplayRegistry.forDisplayId(knownId) != null) {
+                // DiLink 4.0: dm.getDisplay(knownId) is blocked by the same OEM whitelist that
+                // hides the id list, so this branch used to DROP the callback and MainActivity
+                // never learned the cluster was up after an Activity re-create (rotation, back
+                // from another app) — the mirror and the green state stayed off for the rest of
+                // the session. The id IS valid (the daemon resolved it) and Listener already
+                // declares Display as nullable, so deliver it. Registry is null on DL3/DL5.
+                AppLogger.i(TAG, "setListener: no Display object for id=" + knownId
+                        + " (daemon-resolved cluster) — notifying with null Display");
+                mListener.onClusterDisplayConnected(null, knownId);
+            }
         }
     }
 
@@ -523,11 +566,154 @@ public class ClusterService extends Service
 
     public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
                                    final LaunchCallback callback) {
-        moveTaskToDisplayInternal(packageName, targetDisplayId, callback, false);
+        moveTaskToDisplayInternal(packageName, targetDisplayId, callback);
     }
 
+    /**
+     * Record, permanently, that this car has the small 1280x480 cluster panel — the one that drops
+     * into its degraded "simple mode" if a larger shape preset is ever sent to it.
+     *
+     * <p><b>Second chance, not the primary reading.</b> This runs after activation, so on a car
+     * where the ADAS fix has just forced the 12.3" shape it sees 1920x720 and correctly declines to
+     * latch — which is why v1.8.27, where this was the ONLY latch site, failed to fire on exactly
+     * the cars it protects. {@code ClusterManager.activateClusterDisplay} now latches from the
+     * display it already holds BEFORE sending anything; this site still earns its place for the
+     * DiLink 4 path, where the app cannot enumerate the display at all and the geometry only
+     * arrives later via the uid-2000 daemon's {@code dumpsys display} parse.
+     *
+     * <p>Latching rather than re-reading is the whole point: the damage is self-concealing, because
+     * a panel already pushed to 1920x720 reports 1920x720 from then on. One sighting is enough and
+     * it has to outlive the process.
+     */
+    private void latchPanelGeometry(int width, int height) {
+        if (!ClusterGeometryPolicy.isSmallPanelGeometry(width, height)) return;
+        if (ClusterPrefs.isSmallClusterPanelLatched(this)) return;
+        ClusterPrefs.latchSmallClusterPanel(this);
+        AppLogger.i(TAG, "small cluster panel observed (" + width + "x" + height + ") — latched; "
+                + "shape presets 30/31 will be refused on this car from now on");
+    }
+
+    /**
+     * Resolve once, at service start, whether this ROM still has
+     * {@code IActivityTaskManager.moveTaskToDisplay}.
+     *
+     * <p>Used to be a side effect: the deferred re-anchor was, on DiLink 3, the call that happened
+     * to reach the reflection first and latch the flag to FALSE. Routing that re-anchor through the
+     * daemon removed the side effect, and with it the only primer on a path where every launch goes
+     * through {@code fallbackLaunch} (a cold app has no task, so the reflection is never reached).
+     * The flag then stayed {@code null}, {@link #isMoveTaskToDisplaySupported()} kept answering
+     * "supported", and {@code MainActivity}'s DiLink-3 workaround — force-stop the previous cluster
+     * app before launching the next — never armed. The second app would land split-screen on the
+     * main display: exactly the {@code ActivityStack.getBounds} NPE of INC-20260621-130238 that the
+     * workaround exists to prevent. Caught by adversarial review, not by a test.
+     *
+     * <p>A lookup, never an invoke — it cannot move or disturb anything.
+     */
+    private static Boolean resolveMoveTaskToDisplaySupport() {
+        Boolean known = sMoveTaskToDisplayAvailable;
+        if (known != null) return known;
+        try {
+            // The INTERFACE, not a live binder. An earlier version resolved
+            // ActivityTaskManager.getService() and inspected the returned Stub$Proxy, which asks a
+            // question about a class through an object: getService() can return null before
+            // activity_task is registered (NPE, answered "inconclusive" for a reason unrelated to
+            // the method), can block on ServiceManager, and forced the whole probe onto a worker
+            // thread — which is the only reason there was ever a race to reason about. The AIDL
+            // method is a property of the interface; verified against this ROM's own decompiled
+            // framework.jar, where IActivityTaskManager declares no moveTaskToDisplay at all.
+            Class.forName("android.app.IActivityTaskManager")
+                    .getMethod("moveTaskToDisplay", int.class, int.class);
+            sMoveTaskToDisplayAvailable = Boolean.TRUE;
+            return Boolean.TRUE;
+        } catch (NoSuchMethodException nsme) {
+            // Means "unreachable from this process" — stripped by the OEM, OR hidden-API filtered,
+            // which surfaces identically because Android's enforcement makes a blocked member
+            // invisible to reflection (see the 1.8.24 hidden-API work: the bypass ships in the
+            // DAEMON process, not this one). Both are the same verdict for every consumer of this
+            // flag: the in-process fallback cannot reparent a task either way. On DiLink 3 the
+            // daemon dump settles which it is — genuine absence.
+            sMoveTaskToDisplayAvailable = Boolean.FALSE;
+            AppLogger.i(TAG, "moveTaskToDisplay unreachable on this ROM — launcher fallback will "
+                    + "be used, and the stop-previous-app guard is armed");
+            return Boolean.FALSE;
+        } catch (Throwable t) {
+            // ClassNotFoundException on a ROM without the interface at all, or a LinkageError.
+            // Genuinely inconclusive: leave the flag null so the NEXT reader probes again rather
+            // than latching a guess for the life of the process.
+            AppLogger.d(TAG, "moveTaskToDisplay probe inconclusive ("
+                    + t.getClass().getSimpleName() + ": " + t.getMessage() + ") — will retry");
+            return null;
+        }
+    }
+
+    /**
+     * Deferred post-launch re-anchor: 2.5 s after a launch, make sure the task really is on the
+     * cluster, because AOSP sometimes places it on display 0 anyway.
+     *
+     * <p>Looks before it acts, and moves through the uid-2000 daemon rather than in-process
+     * reflection. The old implementation called {@code IActivityTaskManager.moveTaskToDisplay}
+     * from the app process; that method does not exist on DiLink 3 (the OEM stripped it), so it
+     * threw {@code NoSuchMethodException}, logged a WARN claiming a launcher fallback that the
+     * {@code enforceOnly} branch never actually ran, and gave up — the re-anchor was a silent
+     * no-op on the platform that needs it most. The daemon has a working path
+     * ({@code moveAndResize} → {@code setDisplayToSingleTaskInstance} + stack move), proven on
+     * DL3 in every {@code launchAndForce} transcript.
+     *
+     * <p>The probe is what keeps this cheap: when the daemon's own post-launch watchdog has
+     * already done the job — the normal case — the task is found on the right display and nothing
+     * is sent at all.
+     */
     public void enforceTaskOnDisplay(final String packageName, final int targetDisplayId) {
-        moveTaskToDisplayInternal(packageName, targetDisplayId, null, true);
+        if (packageName == null || packageName.isEmpty() || targetDisplayId <= 0) return;
+        if (PKG_FORCE_FRESH_LAUNCH.equals(packageName)) {
+            AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg " + packageName);
+            return;
+        }
+        final LifecycleGate.Token operation = mOperationGate.capture();
+        sMoveTaskExecutor.execute(() -> {
+            if (!operation.isValid()) return;
+            TaskLocation location;
+            try {
+                location = ProxyClient.findTaskLocationForPackage(packageName);
+            } catch (Throwable t) {
+                // A failed probe says nothing about where the task is; acting on that would be the
+                // mistake TaskLocation exists to prevent.
+                AppLogger.d(TAG, "enforceTaskOnDisplay: probe failed for " + packageName
+                        + " (" + t.getClass().getSimpleName() + ") — leaving it alone");
+                return;
+            }
+            if (!operation.isValid()) return;
+            switch (location.matchDisplay(targetDisplayId)) {
+                case ON_EXPECTED_DISPLAY:
+                    AppLogger.d(TAG, "enforceTaskOnDisplay: " + packageName
+                            + " already on display " + targetDisplayId + " — nothing to do");
+                    return;
+                case ABSENT:
+                    AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName);
+                    return;
+                case UNKNOWN:
+                    AppLogger.d(TAG, "enforceTaskOnDisplay: location unknown for " + packageName
+                            + " — leaving it alone");
+                    return;
+                default:
+                    break; // ON_OTHER_DISPLAY — the case this method exists for.
+            }
+            int w = (mInputForwarder != null) ? mInputForwarder.getClusterWidth() : 0;
+            int h = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() : 0;
+            if (w <= 0) w = 1920;
+            if (h <= 0) h = 720;
+            AppLogger.i(TAG, "enforceTaskOnDisplay: " + packageName + " is on display "
+                    + location.getDisplayId() + ", re-anchoring to " + targetDisplayId
+                    + " via daemon");
+            try {
+                String log = ProxyClient.moveAndResize(packageName, targetDisplayId, 0, 0, w, h);
+                AppLogger.i(TAG, "enforceTaskOnDisplay result:\n"
+                        + (log == null || log.isEmpty() ? "(empty)" : log));
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "enforceTaskOnDisplay: daemon move failed for " + packageName
+                        + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            }
+        });
     }
 
     public interface TaskLocationCallback {
@@ -562,14 +748,9 @@ public class ClusterService extends Service
     }
 
     private void moveTaskToDisplayInternal(final String packageName, final int targetDisplayId,
-                                            final LaunchCallback callback,
-                                            final boolean enforceOnly) {
+                                            final LaunchCallback callback) {
         final LifecycleGate.Token operation = mOperationGate.capture();
         if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
-            if (enforceOnly) {
-                AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg " + packageName);
-                return;
-            }
             AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName);
             fallbackLaunch(packageName, targetDisplayId, callback, operation);
             return;
@@ -581,21 +762,15 @@ public class ClusterService extends Service
                 int taskId = findRunningTaskId(packageName);
                 if (!operation.isValid()) return;
                 if (taskId == -1) {
-                    if (enforceOnly) {
-                        AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName);
-                        return;
-                    }
                     AppLogger.w(TAG, "moveTaskToDisplay: no task for " + packageName + " → fallback");
                     fallbackLaunch(packageName, targetDisplayId, callback, operation);
                     return;
                 }
 
                 if (Boolean.FALSE.equals(sMoveTaskToDisplayAvailable)) {
-                    AppLogger.d(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + ": method unavailable on ROM → "
-                            + (enforceOnly ? "skip" : "fallback launch"));
+                    AppLogger.d(TAG, "moveTaskToDisplay: method unavailable on ROM → fallback launch");
                     if (!operation.isValid()) return;
-                    if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback, operation);
+                    fallbackLaunch(packageName, targetDisplayId, callback, operation);
                     return;
                 }
 
@@ -605,8 +780,8 @@ public class ClusterService extends Service
                 if (!operation.isValid()) return;
                 iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
                         .invoke(iatm, taskId, targetDisplayId);
-                AppLogger.i(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                        + " taskId=" + taskId + " → display=" + targetDisplayId + " OK");
+                AppLogger.i(TAG, "moveTaskToDisplay taskId=" + taskId
+                        + " → display=" + targetDisplayId + " OK");
 
                 if (targetDisplayId > 0) {
                     try { Thread.sleep(300); } catch (InterruptedException ie) {
@@ -623,16 +798,15 @@ public class ClusterService extends Service
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setTaskWindowingMode: " + e.getMessage());
                     }
-                    // Apply inset bounds post-move
+                    // Fill the panel post-move (v1.8.2 — no more inset margins; a per-app
+                    // hand-drawn rectangle is re-applied afterwards by InsetAutoApplicator).
                     try {
                         if (!operation.isValid()) return;
-                        int insetH = getInsetH(packageName);
-                        int insetV = getInsetV(packageName);
                         int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
                         int ch = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() :  720;
                         if (cw <= 0) cw = 1920;
                         if (ch <= 0) ch =  720;
-                        Rect bounds = new Rect(insetH, insetV, cw - insetH, ch - insetV);
+                        Rect bounds = new Rect(0, 0, cw, ch);
                         iAtmClass.getMethod("resizeTask",
                                 int.class, Rect.class, int.class)
                                 .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
@@ -652,14 +826,12 @@ public class ClusterService extends Service
                         || (e.getCause() instanceof NoSuchMethodException);
                 if (stripped && sMoveTaskToDisplayAvailable == null) {
                     sMoveTaskToDisplayAvailable = Boolean.FALSE;
-                    AppLogger.w(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + ": moveTaskToDisplay stripped on ROM — using launcher fallback");
+                    AppLogger.w(TAG, "moveTaskToDisplay stripped on ROM — using launcher fallback");
                 } else if (!stripped) {
-                    AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + " error", e);
+                    AppLogger.e(TAG, "moveTaskToDisplay error", e);
                 }
                 if (!operation.isValid()) return;
-                if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback, operation);
+                fallbackLaunch(packageName, targetDisplayId, callback, operation);
             }
         });
     }
@@ -678,6 +850,32 @@ public class ClusterService extends Service
         });
     }
 
+    /**
+     * Resolves this package's flags and the current HOME handler, then asks
+     * {@link ProjectionSafetyPolicy}. Fails OPEN: if PackageManager cannot answer, the launch
+     * proceeds exactly as before — a lookup failure is not evidence that a package is dangerous,
+     * and this guard must never be the reason a working car stops projecting.
+     */
+    private boolean isProjectionAllowed(String packageName) {
+        boolean isHome = false;
+        try {
+            PackageManager pm = getPackageManager();
+            ResolveInfo home = pm.resolveActivity(
+                    new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0);
+            isHome = home != null && packageName.equals(home.activityInfo.packageName);
+        } catch (Throwable t) {
+            AppLogger.d(TAG, "projection safety check inconclusive for " + packageName
+                    + " (" + t.getClass().getSimpleName() + ") — allowing");
+            return true;
+        }
+        ProjectionSafetyPolicy.Verdict v =
+                ProjectionSafetyPolicy.verdict(packageName, isHome);
+        if (v == ProjectionSafetyPolicy.Verdict.ALLOWED) return true;
+        AppLogger.w(TAG, "refusing to project " + packageName + " — "
+                + ProjectionSafetyPolicy.reason(v));
+        return false;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Launch on cluster
     // ─────────────────────────────────────────────────────────────────────────
@@ -685,6 +883,13 @@ public class ClusterService extends Service
     public void launchOnDashboard(final String packageName, final LaunchCallback callback) {
         final LifecycleGate.Token operation = mOperationGate.capture();
         if (!operation.isValid()) return;
+        // Backstop for the paths the app picker does not gate: auto-launch, saved layouts, the
+        // headless boot launch, and a target persisted from before this build. Hiding it in the
+        // list is the primary defence; refusing here is what makes it unreachable.
+        if (!isProjectionAllowed(packageName)) {
+            if (callback != null) callback.onResult(false);
+            return;
+        }
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → " + packageName);
         if (mPendingLaunchRunnable != null) {
             mMainHandler.removeCallbacks(mPendingLaunchRunnable);
@@ -790,17 +995,27 @@ public class ClusterService extends Service
                             iamThrew = true;
                         }
                         if (!operation.isValid()) return;
-                        if (!iamOk && !daemonTried && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                            // DL5 app-side DENIED (cross-user) and the daemon was not tried yet
+                        // DL4 joins DL5 here for the same structural reason: on DL4 the app process
+                        // is not allowed to see the cluster display at all (OEM
+                        // DisplayManagerService whitelist), so an app-side setLaunchDisplayId is
+                        // at best unverifiable — the daemon is the only path with a proven view of
+                        // that display. Whether DL4 ALSO blocks cross-display launches for our uid
+                        // is unproven; routing through the daemon removes the question either way.
+                        // isDiLink4() is false on DL3 and on DL5, so neither changes.
+                        boolean daemonOnlyLaunch = AdbLocalClient.isDiLink5Safe(ClusterService.this)
+                                || Platform.get().isDiLink4(ClusterService.this);
+                        if (!iamOk && !daemonTried && daemonOnlyLaunch) {
+                            // App-side DENIED / unverifiable and the daemon was not tried yet
                             // (use_legacy_path ON, or daemon was down at decision time) — the daemon
                             // HOLDS the cross-user permission, so it is the only path that can land it.
-                            AppLogger.w(TAG, "DL5: app-side launch failed — routing via proxy daemon launchAndForce");
+                            AppLogger.w(TAG, "app-side launch failed — routing via proxy daemon launchAndForce");
                                 boolean ok = daemonLaunchSync(
                                     packageName, displayId, clW, clH, operation);
                             AppLogger.i(TAG, "launchOnDashboard → daemon force path (ok=" + ok + ") → " + packageName);
                                 postLaunchResult(callback, ok, operation);
                         } else if (iamThrew) {
-                            // Non-DL5 (DL3) and EVERY app-side attempt threw — a genuine failure.
+                            // Neither DL5 nor DL4 (i.e. DL3) and EVERY app-side attempt threw —
+                            // a genuine failure.
                             AppLogger.e(TAG, "launchOnDashboard failed (app-side) → " + packageName);
                             postLaunchResult(callback, false, operation);
                         } else {
@@ -974,7 +1189,18 @@ public class ClusterService extends Service
             android.hardware.display.DisplayManager dm =
                     (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
             android.view.Display d = (dm != null) ? dm.getDisplay(displayId) : null;
-            if (d != null) d.getRealSize(sz);
+            if (d != null) {
+                d.getRealSize(sz);
+            } else {
+                // DL4: no Display object obtainable (OEM whitelist). Use the geometry the
+                // uid-2000 daemon read from `dumpsys display` rather than the 1920x720 literal,
+                // so a DL4 variant with a different panel still gets correct launch bounds.
+                // Null on DL3/DL5 → the literal above stands, exactly as before.
+                ClusterDisplayInfo info = ClusterDisplayRegistry.forDisplayId(displayId);
+                if (info != null && info.getWidth() > 0 && info.getHeight() > 0) {
+                    sz.set(info.getWidth(), info.getHeight());
+                }
+            }
         } catch (Exception e) {
             AppLogger.w(TAG, "getRealSize: " + e.getMessage());
         }
@@ -985,9 +1211,12 @@ public class ClusterService extends Service
             AppLogger.w(TAG, "applyClusterFreeformBounds: portrait VD detected — swapped to "
                     + sz.x + "x" + sz.y);
         }
-        int insetH = getInsetH(packageName);
-        int insetV = getInsetV(packageName);
-        Rect bounds = new Rect(insetH, insetV, sz.x - insetH, sz.y - insetV);
+        // v1.8.2 — always launch onto the FULL panel. This used to inset the launch bounds by
+        // the per-app/global margins AND then apply the same margins again as a display overscan;
+        // the two stacked, so an 80/50 setting removed 160/100 of usable area on every side pair
+        // (measured 1600x520 of a 1920x720 panel — INC-20260725-211405). Shrinking is now the sole
+        // job of the per-app hand-drawn rectangle, re-applied after launch by InsetAutoApplicator.
+        Rect bounds = new Rect(0, 0, sz.x, sz.y);
         try {
             java.lang.reflect.Method setLB = android.app.ActivityOptions.class
                     .getDeclaredMethod("setLaunchBounds", Rect.class);
@@ -996,17 +1225,6 @@ public class ClusterService extends Service
             AppLogger.i(TAG, "cluster FREEFORM bounds=" + bounds + " display=" + displayId);
         } catch (Exception e) {
             AppLogger.w(TAG, "setLaunchBounds: " + e.getMessage());
-        }
-        if (displayId > 0) {
-            if (!operation.isValid()) return;
-            if (AdbLocalClient.isDiLink5Safe(this)) {
-                AppLogger.d(TAG, "DL5: skipping wm overscan (removed in API 30+)");
-            } else {
-                ShellGateway.execShell(this, "wm overscan "
-                        + insetH + "," + insetV + "," + insetH + "," + insetV
-                        + " -d " + displayId);
-                AppLogger.i(TAG, "Applied wm overscan on display " + displayId);
-            }
         }
     }
 
@@ -1096,8 +1314,15 @@ public class ClusterService extends Service
             // bug report shows whether the app stayed put and in which mode it rendered.
             // Runs on the diagnostic executor so its 1.5 s sleep never holds the move-task
             // worker (frees it immediately for a queued eviction / task-move).
+            // AUD-PERF-P3 — opt-in (Diagnostics screen), OFF by default. This dump shells
+            // `dumpsys SurfaceFlinger`, taking SF's global lock 1.5 s into the projected app's
+            // cold start. NOTE: tryClusterFixedActivityExperiment above is deliberately NOT
+            // gated by this — despite the name it invokes `cmd car_service start-fixed-activity`,
+            // which has a real effect on AAOS units, so gating it could regress DX_BYD_AUTO.
+            if (ClusterPrefs.isLaunchDiagnosticsEnabled(this)) {
                 sDiagExecutor.execute(() -> verifyClusterDisplayState(
                     displayId, packageName, operation));
+            }
         });
     }
 
@@ -1154,7 +1379,14 @@ public class ClusterService extends Service
         // AAOS-only experiment + post-launch verify — diagnostic, off the critical path.
         if (!operation.isValid()) return false;
         tryClusterFixedActivityExperiment(displayId, packageName, operation);
-        sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName, operation));
+        // AUD-PERF-P3 — opt-in (Diagnostics screen), OFF by default. This dump shells
+        // `dumpsys SurfaceFlinger`, taking SF's global lock 1.5 s into the projected app's
+        // cold start. NOTE: tryClusterFixedActivityExperiment above is deliberately NOT
+        // gated by this — despite the name it invokes `cmd car_service start-fixed-activity`,
+        // which has a real effect on AAOS units, so gating it could regress DX_BYD_AUTO.
+        if (ClusterPrefs.isLaunchDiagnosticsEnabled(this)) {
+            sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName, operation));
+        }
         return ok;
     }
 
@@ -1313,8 +1545,13 @@ public class ClusterService extends Service
 
     public void stopProjectionNoAdb() {
         AppLogger.log(TAG, "stopProjectionNoAdb requested");
-        if (!AdbLocalClient.isDiLink5Safe(this)) {
-            ShellGateway.execShell(this, "wm overscan reset -d 1");
+        // v1.8.2 — was hardcoded "-d 1". The fission VirtualDisplay is display 1 on most DiLink 3
+        // units but not all (INC-20260721 saw it come up as display 3), and resetting the wrong
+        // display both misses the cluster and touches a display we do not own. Never display 0:
+        // the id is the one the helper resolved, and ShellGateway blocks -d 0 outright anyway.
+        int clusterId = mDisplayHelper.getKnownClusterDisplayId();
+        if (clusterId > 0 && !AdbLocalClient.isDiLink5Safe(this)) {
+            ShellGateway.execShell(this, "wm overscan reset -d " + clusterId);
         }
         try {
             com.byd.dashcast.cluster.dpi.ClusterDpiManager.restore(
@@ -1324,6 +1561,12 @@ public class ClusterService extends Service
         }
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
+        // The projection session is over: drop the daemon-resolved geometry so nothing downstream
+        // can start a mirror / inject touch on a display that is no longer projected. This used to
+        // be cleared ONLY from onDashboardDisplayDisconnected, which on DL4 essentially never
+        // fires (its producers need the app process to observe the display — the very thing the
+        // OEM whitelist forbids). No-op on DL3/DL5, where the registry is never populated.
+        ClusterDisplayRegistry.clear();
         // Tear down the mirror NOW (local token + daemon SurfaceControl via stopPreview) so
         // SurfaceFlinger stops compositing the cluster immediately on a real stop, instead of
         // waiting for the async stopSelf()→onDestroy()→release(). Background keepalive is not
@@ -1350,21 +1593,37 @@ public class ClusterService extends Service
         mLauncher.setDashboardDisplayId(displayId);
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
-        updateNotification(getString(R.string.notif_cluster_active, displayId));
-        if (displayId > 0) {
-            if (AdbLocalClient.isDiLink5Safe(this)) {
-                AppLogger.d(TAG, "DL5: skipping display-level wm overscan (API 30+)");
-            } else {
-                final int insetH = getInsetH(null);
-                final int insetV = getInsetV(null);
-                ShellGateway.execShell(this,
-                        "wm overscan " + insetH + "," + insetV
-                        + "," + insetH + "," + insetV + " -d " + displayId);
-                AppLogger.i(TAG, "wm overscan on display " + displayId
-                        + " inset=" + insetH + "," + insetV);
+        // DiLink 4.0 has no Display object to hand around (the OEM DisplayManagerService
+        // whitelist hides the id from our uid, so dm.getDisplay() returns null): the call above
+        // no-ops and the forwarder would keep its 1920x720 compile-time defaults. Feed it the
+        // geometry the uid-2000 daemon read out of `dumpsys display` instead. Double-gated —
+        // display==null never happens on DL3/DL5, and only the DL4 activation path writes
+        // ClusterDisplayRegistry, so both platforms skip this entirely.
+        if (display == null) {
+            ClusterDisplayInfo info = ClusterDisplayRegistry.forDisplayId(displayId);
+            if (info != null) {
+                mInputForwarder.setClusterGeometry(displayId, info.getWidth(), info.getHeight());
+                latchPanelGeometry(info.getWidth(), info.getHeight());
             }
         } else {
-            AppLogger.w(TAG, "wm overscan skipped: displayId=" + displayId);
+            android.graphics.Point size = new android.graphics.Point();
+            try {
+                display.getRealSize(size);
+                latchPanelGeometry(size.x, size.y);
+            } catch (Throwable ignored) {
+                // Unreadable geometry latches nothing — the policy stays on the configured type.
+            }
+        }
+        updateNotification(getString(R.string.notif_cluster_active, displayId));
+        // v1.8.2 — the global overscan is gone: the cluster is always driven full-screen and
+        // only a per-app hand-drawn rectangle (ClusterResizeActivity) may shrink it afterwards.
+        // We RESET here rather than simply not applying, because `wm overscan` is display state
+        // that survives in WindowManager: a unit upgrading from a build that set 80,50 would
+        // otherwise keep the old inset with no UI left to clear it (INC-20260725-211405, where
+        // the 80/50 default combined with the launch bounds to eat 40% of the panel).
+        if (displayId > 0 && !AdbLocalClient.isDiLink5Safe(this)) {
+            ShellGateway.execShell(this, "wm overscan reset -d " + displayId);
+            AppLogger.i(TAG, "wm overscan reset on display " + displayId + " (full-screen cluster)");
         }
         if (mListener != null) mListener.onClusterDisplayConnected(display, displayId);
 
@@ -1394,13 +1653,42 @@ public class ClusterService extends Service
         // Projection ended — the boot-launched app is no longer on the cluster, so drop the latch
         // (defensive: the consume-once in MainActivity is the primary clear).
         sBootLaunchedPkg = null;
+        // Nothing downstream may keep using a dead display's geometry. No-op on DL3/DL5.
+        ClusterDisplayRegistry.clear();
+
+        // The mirror was compositing onto the display that just went away, and nothing here used to
+        // tell it so. stopProjectionNoAdb tears it down; this path did not, so mMirrorActive stayed
+        // true against a dead surface — and because every start is guarded by that flag, the mirror
+        // could never be started again for the rest of the process's life. On a head unit that runs
+        // for weeks, "never again" means what it says: the preview stays black until the app is
+        // force-stopped, and nothing on screen explains why.
+        try {
+            if (mMirrorManager != null) mMirrorManager.stopMirror();
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "mirror teardown on disconnect failed: " + t.getMessage());
+        }
         // On a DL3 single-OS car the "disconnect" is really "activation timed out because no
         // VirtualDisplay can exist" — tell the user projection is unavailable rather than the
         // generic "disconnected" (which reads like a transient glitch they should retry).
-        updateNotification(getString(isDl3SingleOsFission()
-                ? R.string.dl3_singleos_cluster_unsupported_title
-                : R.string.notif_cluster_disconnected));
-        if (mListener != null) mListener.onClusterDisplayDisconnected();
+        // Same treatment on a DL4 whose firmware hides the display from BOTH the app process and
+        // the uid-2000 daemon: there is nothing the user can retry.
+        final int titleRes;
+        if (isDl3SingleOsFission()) {
+            titleRes = R.string.dl3_singleos_cluster_unsupported_title;
+        } else if (isDl4ProjectionBlocked()) {
+            titleRes = R.string.dl4_cluster_unsupported_title;
+        } else {
+            titleRes = R.string.notif_cluster_disconnected;
+        }
+        updateNotification(getString(titleRes));
+        if (mListener != null) {
+            mListener.onClusterDisplayDisconnected();
+        } else {
+            // Nobody is listening (MainActivity is stopped). Latch it so setListener can replay
+            // the edge on re-attach; otherwise the UI and the persisted cluster package stay
+            // wrong for the rest of the session and beyond. See setListener for the full note.
+            mMissedDisconnect = true;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 package com.byd.dashcast.system
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CanBatchOperationTest {
@@ -37,6 +38,26 @@ class CanBatchOperationTest {
     }
 
     @Test
+    fun nextStreetNameUsesTruthfulInstrumentBytesBatch() {
+        val events = mutableListOf<String>()
+        val bytes = "Rue".toByteArray(Charsets.UTF_16LE)
+
+        CanNavigationBatches.nextStreetName(bytes)
+            .forEach { it.execute(RecordingWriter(events)) }
+
+        assertEquals(listOf("bytes:1140461576=82,0,117,0,101,0"), events)
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .first { java.io.File(it,
+                "app/src/main/java/com/byd/dashcast/system/CanBusController.java").isFile }
+        val controller = java.io.File(root,
+            "app/src/main/java/com/byd/dashcast/system/CanBusController.java").readText()
+        val method = controller.substringAfter("public static void sendNextStreetName")
+            .substringBefore("// ─── Remaining route info")
+        assertTrue(method.contains("sendBatch(CanNavigationBatches.nextStreetName(bytes))"))
+        assertTrue(!method.contains("ProxyClient.canInstrumentBytes"))
+    }
+
+    @Test
     fun navigationActivationKeepsLegacyOrder() {
         val events = mutableListOf<String>()
 
@@ -47,7 +68,7 @@ class CanBatchOperationTest {
     }
 
     @Test
-    fun navigationStopKeepsStatusThenEightLegacyClears() {
+    fun navigationStopKeepsStatusThenSevenLegacyClears() {
         val events = mutableListOf<String>()
 
         CanNavigationBatches.navigationState(false)
@@ -57,7 +78,6 @@ class CanBatchOperationTest {
             listOf(
                 "navi:4",
                 "int:1139806224=0",
-                "int:1139806256=0",
                 "int:1139806232=-1",
                 "bytes:1140461576=",
                 "int:1139810344=-1",
@@ -69,17 +89,62 @@ class CanBatchOperationTest {
         )
     }
 
-    private class RecordingWriter(private val events: MutableList<String>) :
+    @Test
+    fun nativeRejectionStopsTheBatchAndIsNotCountedAsApplied() {
+        val events = mutableListOf<String>()
+        val writer = RecordingWriter(events, ArrayDeque(listOf(0, -7, 0)))
+        val operations = listOf(
+            CanBatchOperation.naviStatus(2),
+            CanBatchOperation.instrumentInt(10, 20),
+            CanBatchOperation.settingInt(12, 30)
+        )
+
+        val applied = CanBatchOperation.executeAcceptedPrefix(operations, writer)
+
+        assertEquals(1, applied)
+        assertEquals(listOf("navi:2", "int:10=20"), events)
+    }
+
+    @Test
+    fun truthfulBatchingIsNegotiatedAsProtocol24() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val controller = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/system/CanBusController.java"
+        ).readText()
+        val daemon = java.io.File(
+            root,
+            "app/src/main/java/com/byd/dashcast/proxy/daemon/ProxyDaemonMain.java"
+        ).readText()
+
+        assertTrue(controller.contains("supportsProtocol(24)"))
+        assertTrue(daemon.contains("PROTOCOL_VERSION = \"25\""))
+    }
+
+    private class RecordingWriter(
+        private val events: MutableList<String>,
+        private val results: ArrayDeque<Int> = ArrayDeque(),
+    ) :
         CanBatchOperation.Writer {
-        override fun setNaviStatus(status: Int) { events += "navi:$status" }
-        override fun setInstrumentInt(featureId: Int, value: Int) {
+        private fun result(): Int = results.removeFirstOrNull() ?: 0
+
+        override fun setNaviStatus(status: Int): Int {
+            events += "navi:$status"
+            return result()
+        }
+        override fun setInstrumentInt(featureId: Int, value: Int): Int {
             events += "int:$featureId=$value"
+            return result()
         }
-        override fun setInstrumentBytes(featureId: Int, bytes: ByteArray) {
-            events += "bytes:$featureId=${bytes.joinToString(",")}" 
+        override fun setInstrumentBytes(featureId: Int, bytes: ByteArray): Int {
+            events += "bytes:$featureId=${bytes.joinToString(",")}"
+            return result()
         }
-        override fun setSettingInt(featureId: Int, value: Int) {
+        override fun setSettingInt(featureId: Int, value: Int): Int {
             events += "setting:$featureId=$value"
+            return result()
         }
     }
 }

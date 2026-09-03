@@ -57,13 +57,15 @@ public final class ProxyClient {
 
     /** PID file written by the daemon at startup (v1.2.63-beta, Phase A step 3). */
     private static final String DAEMON_PID = "/data/local/tmp/dashcast_proxy.pid";
+    /** Per-process nonce paired with {@link #DAEMON_PID}; protocol v25 WHOAMI returns it. */
+    private static final String DAEMON_INSTANCE = "/data/local/tmp/dashcast_proxy_instance";
     /** Trigger file watched by the daemon to ask for a binder rebroadcast. */
     private static final String DAEMON_TRIGGER = "/data/local/tmp/dashcast_proxy.trigger";
     /** Bootstrap-script lock file — flock'd to serialize concurrent bootstraps. */
     private static final String DAEMON_LOCK = "/data/local/tmp/dashcast_proxy.lock";
 
     /**
-     * Bootstrap script run via local ADB. Mirrors the proven {@code MirrorDaemon}
+     * Bootstrap script run via local ADB. Mirrors the proven {@code SurfaceDaemon}
      * recipe and preserves every hard-won fix from 1.1.3–1.1.5:
      * <ul>
      *   <li>{@code setsid} detaches from the ADB session group (survives SIGHUP);</li>
@@ -108,6 +110,21 @@ public final class ProxyClient {
             "TRIG=" + DAEMON_TRIGGER + "; "
             + "PS_OUT=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy'); "
             + "ALIVE_PID=$(echo \"$PS_OUT\" | awk '{print $2}' | head -n1); "
+            // AUD — the process NAME is not an identity. `ps -A | grep dashcast_proxy` matches
+            // any process whose name merely contains that string, and any app can obtain one by
+            // declaring an android:process ending in dashcast_proxy in its own manifest. With the version
+            // file already holding the current versionCode — which it does as soon as a real
+            // daemon has run once — such a process made this take the REBROADCAST path forever:
+            // the genuine uid-2000 daemon was never started again, and every privileged feature
+            // stayed dead with no error anywhere.
+            //
+            // The pid file is the identity, because only uid 2000 can write /data/local/tmp.
+            // A name match that does not agree with it is not our daemon.
+            + "PID_FILE_VAL=$(cat /data/local/tmp/dashcast_proxy.pid 2>/dev/null); "
+            + "if [ -n \"$ALIVE_PID\" ] && [ \"$ALIVE_PID\" != \"$PID_FILE_VAL\" ]; then "
+            +   "echo \"[diag] proxy name-match pid=$ALIVE_PID != pidfile=${PID_FILE_VAL:-none} — ignoring\" >&2; "
+            +   "ALIVE_PID=; "
+            + "fi; "
             + "if [ -n \"$ALIVE_PID\" ]; then "
             // Version check: daemon loaded from old APK after OTA has a stale
             // versionCode in VERSION_FILE — fall through to kill+restart instead
@@ -118,6 +135,13 @@ public final class ProxyClient {
             +     "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
             +   "fi; "
             +   "echo \"[diag] proxy stale ver=${DAEMON_VER:-?} expected=" + com.byd.dashcast.BuildConfig.VERSION_CODE + "\" >&2; "
+            // The "no daemon at all" diagnostic belongs to the ELSE of the aliveness test. It
+            // used to be emitted unconditionally right after this block, so a stale-but-ALIVE
+            // daemon printed "[diag] proxy stale ver=588 expected=593" and then "[diag] no_alive
+            // ps_empty" in the same breath — the second line falsely asserting `ps` had found
+            // nothing. Every post-OTA triage had to work out which of the two was lying.
+            + "else "
+            +   "echo \"[diag] no_alive ps_empty\" >&2; "
             + "fi; "
             // ── flock guard ── REMOVED in v1.2.69 ──────────────────────────
             // v1.2.68 tried to gate the flock on its availability, but
@@ -133,7 +157,6 @@ public final class ProxyClient {
             // Worst case: two near-simultaneous bootstraps spawn two
             // daemons; the second one's stale-kill terminates the first
             // and only one survives. Acceptable.
-            + "echo \"[diag] no_alive ps_empty\" >&2; "
             // ── full bootstrap ─────────────────────────────────────────────
             + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
@@ -212,6 +235,7 @@ public final class ProxyClient {
     private static volatile int    sDaemonUid = -1;
     private static volatile int    sDaemonPid = -1;
     private static volatile String sDaemonVer;
+    private static volatile String sDaemonInstance;
 
     // ─── Auto-recovery (v1.2.58-beta, Phase A step 1) ─────────────────────
     /**
@@ -253,25 +277,56 @@ public final class ProxyClient {
      * (a full IPC roundtrip per call) — it can rely on the cheaper local
      * {@link IBinder#isBinderAlive()} check (build 195 / P2).
      */
-    private static final DeathRecipient sDeath = new DeathRecipient() {
-        @Override public void binderDied() {
-            synchronized (LOCK) {
-                AppLogger.w(TAG, "daemon binder died — clearing cached reference");
-                IBinder dead = sBinder;
-                if (dead != null) {
-                    try { dead.unlinkToDeath(this, 0); } catch (Throwable ignore) {}
+    private static DeathRecipient sDeath;
+    private static IBinder sDeathBinder;
+
+    /** LOCK must be held. Registers a recipient that can clear only {@code watchedBinder}. */
+    private static void linkDeathLocked(final IBinder watchedBinder) throws RemoteException {
+        DeathRecipient recipient = new DeathRecipient() {
+            @Override public void binderDied() {
+                synchronized (LOCK) {
+                    if (sBinder != watchedBinder) return;
+                    AppLogger.w(TAG, "daemon binder died — clearing matching cached reference");
+                    try { watchedBinder.unlinkToDeath(this, 0); } catch (Throwable ignore) {}
+                    if (sDeath == this) {
+                        sDeath = null;
+                        sDeathBinder = null;
+                    }
+                    sBinder = null;
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
+                    sDaemonInstance = null;
+                    ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_ZOMBIES);
                 }
-                sBinder = null;
-                sDaemonUid = -1;
-                sDaemonPid = -1;
-                sDaemonVer = null;
-                // v1.2.78 — Couche 4: count the zombie. Best-effort: sAppCtx
-                // may still be null if no connect() has ever succeeded, in
-                // which case ProxyMetrics is a no-op.
-                ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_ZOMBIES);
             }
+        };
+        watchedBinder.linkToDeath(recipient, 0);
+        sDeath = recipient;
+        sDeathBinder = watchedBinder;
+    }
+
+    /** LOCK must be held. Unlinks only the recipient registered for {@code binder}. */
+    private static void unlinkDeathLocked(IBinder binder) {
+        if (binder == null || binder != sDeathBinder || sDeath == null) return;
+        try { binder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+        sDeath = null;
+        sDeathBinder = null;
+    }
+
+    /** Clears one complete connection generation only while it is still current. */
+    static boolean clearConnectionIfCurrent(IBinder expectedBinder) {
+        synchronized (LOCK) {
+            if (sBinder != expectedBinder) return false;
+            unlinkDeathLocked(expectedBinder != null ? expectedBinder : sDeathBinder);
+            sBinder = null;
+            sDaemonUid = -1;
+            sDaemonPid = -1;
+            sDaemonVer = null;
+            sDaemonInstance = null;
+            return true;
         }
-    };
+    }
 
     private ProxyClient() {}
 
@@ -290,13 +345,34 @@ public final class ProxyClient {
     }
 
     /**
-     * v1.2.71 — Exposes the cached daemon binder so callers (e.g.
-     * {@code ClusterResizeActivity}) can pass it to
-     * {@code ClusterMirrorManager.startMirrorViaDaemon()} without binding
-     * to {@code ClusterService}. Returns {@code null} if the daemon is not
-     * currently connected.
+     * Returns the cached binder of the <b>PROXY</b> daemon
+     * ({@link com.byd.dashcast.proxy.daemon.ProxyDaemonMain}, ServiceManager name
+     * {@code byd_proxy_daemon}), or {@code null} when it is not currently connected.
+     *
+     * <p><b>This is NOT the surface daemon.</b> DashCast runs two uid-2000 daemons:
+     * <ul>
+     *   <li>the PROXY daemon (this one) <b>DOES</b> things — shell commands and one-shot verbs —
+     *       and enforces {@link com.byd.dashcast.proxy.daemon.ProxyDaemonContract#DESCRIPTOR};</li>
+     *   <li>the SURFACE daemon ({@link com.byd.dashcast.proxy.daemon.SurfaceDaemon}) <b>HOLDS</b>
+     *       things — the preview mirror, the cluster slot overlay windows and their trusted
+     *       VirtualDisplays, touch injection — and enforces
+     *       {@link com.byd.dashcast.proxy.daemon.SurfaceDaemon#DESCRIPTOR}.</li>
+     * </ul>
+     *
+     * <p>Do <b>not</b> pass this binder to mirror / slot / injection APIs such as
+     * {@code ClusterMirrorManager.startMirrorViaDaemon()}, {@code FissionClient.*} or
+     * {@code ClusterInputForwarder}: writing the surface daemon's interface token onto this binder
+     * makes the receiving {@code enforceInterface} reject the transaction, which then silently does
+     * nothing. For those, use {@link DaemonBinderResolver#surfaceDaemonBinder()}.
+     *
+     * <p>Triage rule: a failed <i>command</i> → proxy daemon; a black or frozen <i>surface</i> →
+     * surface daemon.
+     *
+     * <p>Callers of this accessor are the ones that legitimately need the proxy binder itself
+     * (liveness ping, DESCRIPTOR-crossing guard). Every other proxy operation should go through the
+     * typed verbs on this class instead of transacting on the raw binder.
      */
-    public static IBinder getDaemonBinder() {
+    public static IBinder getProxyDaemonBinder() {
         IBinder b = sBinder;
         return (b != null && b.isBinderAlive()) ? b : null;
     }
@@ -320,18 +396,15 @@ public final class ProxyClient {
      * @param reason short tag included in the log line (e.g. "MirrorStart").
      */
     public static void invalidateBinder(String reason) {
-        synchronized (LOCK) {
-            IBinder dead = sBinder;
-            if (dead == null) return; // already invalidated, nothing to do
-            try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
-            sBinder = null;
-            sDaemonUid = -1;
-            sDaemonPid = -1;
-            sDaemonVer = null;
-            ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_DEATHS_SILENT);
-            AppLogger.w(TAG, "invalidateBinder(" + reason
-                    + ") — silent death detected by caller (kernel notif missing)");
-        }
+        invalidateBinderIfCurrent(sBinder, reason);
+    }
+
+    public static boolean invalidateBinderIfCurrent(IBinder expectedBinder, String reason) {
+        if (expectedBinder == null || !clearConnectionIfCurrent(expectedBinder)) return false;
+        ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_DEATHS_SILENT);
+        AppLogger.w(TAG, "invalidateBinder(" + reason
+                + ") — silent death detected by caller (kernel notif missing)");
+        return true;
     }
 
     /**
@@ -352,19 +425,31 @@ public final class ProxyClient {
         if (sAppCtx == null) {
             sAppCtx = ctx.getApplicationContext();
         }
+        IBinder cachedBinder = sBinder;
+        if (cachedBinder != null && cachedBinder.isBinderAlive()) {
+            return sDaemonUid >= 0 || handshakeAndVerify(cachedBinder);
+        }
         // Fast path: an already-live binder is reused without touching the daemon
         // process — critical to avoid the cascade of kill-and-respawn cycles that
         // froze the head unit in v1.1.6 (each respawn triggers a full
         // ActivityThread.systemMain() in app_process which is very heavy).
         SingleFlight.Ticket<Boolean> ticket;
         CountDownLatch binderSignal = null;
+        IBinder lateBinder = null;
         synchronized (LOCK) {
-            if (isConnected()) {
-                if (sDaemonUid < 0) handshake();
-                return true;
+            IBinder currentBinder = sBinder;
+            if (currentBinder != null && currentBinder.isBinderAlive()) {
+                if (sDaemonUid >= 0) return true;
+                // The receiver published this Binder after the lock-free snapshot above. WHOAMI
+                // must run outside LOCK, just like the ordinary fast path.
+                lateBinder = currentBinder;
+                ticket = null;
+            } else {
+                ticket = sConnectSingleFlight.join();
             }
-            ticket = sConnectSingleFlight.join();
-            if (!ticket.isLeader()) {
+            if (lateBinder != null) {
+                // Drop LOCK before the synchronous Binder transaction below.
+            } else if (!ticket.isLeader()) {
                 // The leader already owns receiver setup, bootstrap, metrics, and Binder wait.
                 // Drop LOCK before waiting so the broadcast receiver can publish the Binder.
             } else {
@@ -404,6 +489,8 @@ public final class ProxyClient {
                 }
             }
         }
+
+        if (lateBinder != null) return handshakeAndVerify(lateBinder);
 
         if (!ticket.isLeader()) {
             try {
@@ -458,16 +545,20 @@ public final class ProxyClient {
             // monitors the way Object.wait() does, so we have to drop LOCK manually.
             //
             // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
-            // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
-            // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
-            // the fallback am-start triggers quickly rather than blocking 15s.
+            // (REBROADCAST), ProxyDaemonMain's trigger-file poll delivers the
+            // broadcast within one poll period. That period and this budget are the
+            // same decision and now live together in ProxyBootstrapPolicy, derived
+            // from each other -- do NOT restate either as a literal here again; the
+            // prose version of this coupling drifted and shipped a regression.
+            // Use this shorter timeout so the fallback am-start triggers quickly
+            // rather than blocking 15s.
             // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
             // on DiLink SoCs). A classified transport failure gets only a 2s grace
             // in case the detached daemon started just before the socket failed.
             long waitMs = ProxyBootstrapPolicy.binderWaitMs(
                     upper,
                     AdbLocalClient.isAdbTransportUnreachable(),
-                    5_000L,
+                    ProxyBootstrapPolicy.REBROADCAST_BUDGET_MS,
                     TRANSPORT_FAILURE_BINDER_GRACE_MS,
                     BROADCAST_WAIT_MS);
             try {
@@ -477,6 +568,11 @@ public final class ProxyClient {
                 return false;
             }
 
+            IBinder receivedBinder = sBinder;
+            if (receivedBinder != null && receivedBinder.isBinderAlive() && sDaemonUid < 0) {
+                handshake(receivedBinder);
+            }
+
             synchronized (LOCK) {
                 // Late-arrival recovery: the receiver may have signalled just after
                 // the latch timed out — re-check rather than failing hard.
@@ -484,11 +580,12 @@ public final class ProxyClient {
                 // pingBinder() (Binder roundtrip): the live binder cache is hooked
                 // via linkToDeath in the receiver above, so isBinderAlive is
                 // strictly equivalent here and avoids one IPC while holding LOCK.
-                if (sBinder == null || !sBinder.isBinderAlive()) {
+                IBinder failedBinder = sBinder;
+                if (failedBinder == null || !failedBinder.isBinderAlive()) {
                     AppLogger.w(TAG, "no live binder after " + waitMs
                             + "ms (latch=" + (binderSignal.getCount() == 0
                             ? "signalled" : "timed-out") + ")");
-                    sBinder = null;
+                    clearConnectionIfCurrent(failedBinder);
                     // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
                     String transportState = AdbLocalClient.adbTransportState();
                     if (AdbLocalClient.XPORT_UNRESPONSIVE.equals(transportState)
@@ -500,8 +597,7 @@ public final class ProxyClient {
                     }
                     return false;
                 }
-                handshake();
-                result = isConnected();
+                result = isConnected() && sDaemonUid >= 0;
                 if (result) {
                     AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
                             + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
@@ -643,7 +739,7 @@ public final class ProxyClient {
             String out = reply.readString();
             return out == null ? "" : out;
         } catch (RemoteException e) {
-            invalidateBinder("Phase4Probes");
+            invalidateBinderIfCurrent(b, "Phase4Probes");
             throw new ProxyException("transact: " + e.getMessage(), e);
         } finally {
             reply.recycle();
@@ -718,6 +814,39 @@ public final class ProxyClient {
     }
 
     /**
+     * Sends AutoContainer info after transport recovery, preserving a native result when the
+     * connected daemon supports it. Returns {@code null} only for a legacy daemon whose wire
+     * contract predates result codes.
+     */
+    public static Integer autoContainerSendInfoResultCompatible(int type, int info, String str)
+            throws ProxyException {
+        final String safeStr = str == null ? "" : str;
+        return callWithRetry("autoContainerSendInfoResultCompatible", () -> {
+            if (supportsProtocol(20)) {
+                return ProxyProcessVerbs.autoContainerSendInfoResult(type, info, safeStr);
+            }
+            ProxyProcessVerbs.autoContainerSendInfo(type, info, safeStr);
+            return null;
+        });
+    }
+
+    /**
+     * Typed verb for {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — same binder
+     * the OEM's own navigation app uses to push a serialized {@code byd.fbs.naviInfo.NaviInfo}
+     * FlatBuffer (type=4) to the instrument-cluster HUD. Reaches the daemon's cached AutoContainer
+     * binder via the same {@code checkSignatures} fast-path proven by {@link #autoContainerSendInfo},
+     * so any {@code type} value is accepted, not only the ones the OEM's
+     * {@code container_comm_cfg.json} allow-lists for app-uid callers.
+     *
+     * @param type BYD AutoContainer message type (4 = navigation guidance, per the OEM's own usage)
+     * @param data raw payload bytes (a FlatBuffer-serialized struct for type 4)
+     */
+    public static void autoContainerSendInfo2(int type, byte[] data) throws ProxyException {
+        callWithRetry("autoContainerSendInfo2",
+                () -> { ProxyProcessVerbs.autoContainerSendInfo2(type, data); return null; });
+    }
+
+    /**
      * Phase 4d typed verb — direct {@code IActivityManager.forceStopPackage} in
      * the daemon, replacing {@code dadb.shell("am force-stop <pkg>")} forks
      * used by {@code AdbLocalClient.restoreBydOnCluster} and
@@ -764,17 +893,10 @@ public final class ProxyClient {
         if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
         if (surface == null || !surface.isValid()) throw new ProxyException("surface null or invalid");
         try {
-            return ProxyDisplayVerbs.createVirtualDisplay(name, width, height, densityDpi, flags, surface);
+            return ProxyDisplayVerbs.createVirtualDisplay(
+                    b, name, width, height, densityDpi, flags, surface);
         } catch (RemoteException e) {
-            // M9: unlink death recipient inside LOCK — avoids leaking the registration
-            // and prevents clobbering a fresh binder from the broadcast receiver.
-            synchronized (LOCK) {
-                IBinder dead = sBinder;
-                if (dead != null) {
-                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
-                }
-                sBinder = null;
-            }
+            clearConnectionIfCurrent(b);
             throw new ProxyException("transact: " + e.getMessage(), e);
         }
     }
@@ -979,16 +1101,18 @@ public final class ProxyClient {
                 () -> ProxyCanVerbs.canSettingInt(featureId, value));
     }
 
-    /** Executes an ordered CAN write group in one Binder transaction (protocol v19+). */
+    /** Executes an ordered CAN write group with truthful applied-count semantics (protocol v24+). */
     public static int canBatch(java.util.List<com.byd.dashcast.system.CanBatchOperation> operations)
             throws ProxyException {
-        if (!supportsProtocol(19)) throw new ProxyException("CAN batch unsupported by daemon");
+        if (!supportsProtocol(24)) throw new ProxyException("truthful CAN batch unsupported by daemon");
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
         try {
             // Do not use callWithRetry here: a RemoteException can arrive after the daemon applied
             // a prefix of the group. Replaying the whole batch would violate exactly-once grouping.
-            return ProxyCanVerbs.canBatch(operations);
+            return ProxyCanVerbs.canBatch(b, operations);
         } catch (RemoteException transportError) {
-            invalidateBinder("canBatch");
+            invalidateBinderIfCurrent(b, "canBatch");
             throw new ProxyException("canBatch transact: " + transportError.getMessage(),
                     transportError);
         }
@@ -1077,6 +1201,43 @@ public final class ProxyClient {
         return callWithRetry("aaosHalProbe", ProxyCanVerbs::aaosHalProbe);
     }
 
+    /**
+     * Read-only probe of the native {@code FissionHostSvc} display registry (DL3 only,
+     * transaction 101 = {@code getAutoCarDisplay}) — RE'd from a real firmware pull, never called
+     * before v1.8.26-beta. Returns raw hex plus a best-effort decode; "SERVICE NOT FOUND" is a
+     * normal, expected answer on every platform but DL3.
+     */
+    public static String fissionGetAutoCarDisplay() throws ProxyException {
+        return callWithRetry("fissionGetAutoCarDisplay", ProxyNativeServiceVerbs::fissionGetAutoCarDisplay);
+    }
+
+    /**
+     * Arms the daemon's {@code AutoContainer.registerCallback} listener (AIDL transaction 4,
+     * documented since the DL3 RE pass, never called before this release). The registration lives
+     * for the rest of THIS daemon process — re-arm after any daemon respawn. Payoff is
+     * asynchronous: any push the native service makes afterward lands in the daemon's own
+     * transcript, {@code --- PROXYDAEMON LOG ---} in the next bug report.
+     *
+     * @return the native result code from {@code registerCallback}
+     */
+    public static int autoContainerRegisterCallback() throws ProxyException {
+        return callWithRetry("autoContainerRegisterCallback", ProxyNativeServiceVerbs::autoContainerRegisterCallback);
+    }
+
+    /**
+     * Arms a ~90s-capped background sampler of the {@code FissionHostSvc} registry, one sample
+     * every ~2s, logged only on change. Call {@link #projectionTraceDrain()} after the tester has
+     * run their normal projection start/stop cycle.
+     */
+    public static void projectionTraceStart() throws ProxyException {
+        callWithRetry("projectionTraceStart", () -> { ProxyNativeServiceVerbs.projectionTraceStart(); return null; });
+    }
+
+    /** Stops the sampler armed by {@link #projectionTraceStart()} and returns every change recorded. */
+    public static String projectionTraceDrain() throws ProxyException {
+        return callWithRetry("projectionTraceDrain", ProxyNativeServiceVerbs::projectionTraceDrain);
+    }
+
     /** Clear the push-feedback log + persistent last-known map (for a fresh, uncontaminated read). */
     public static void canListenClear() throws ProxyException {
         callWithRetry("canListenClear", () -> { ProxyCanVerbs.canListenClear(); return null; });
@@ -1118,12 +1279,13 @@ public final class ProxyClient {
             synchronized (LOCK) {
                 IBinder dead = sBinder;
                 if (dead != null) {
-                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    unlinkDeathLocked(dead);
                 }
                 sBinder = null;
                 sDaemonUid = -1;
                 sDaemonPid = -1;
                 sDaemonVer = null;
+                sDaemonInstance = null;
             }
             // Give AMS / the kernel a moment to reap the old process before
             // the receiver waits for the next broadcast.
@@ -1133,6 +1295,76 @@ public final class ProxyClient {
             return connect(ctx);
         } catch (Throwable t) {
             AppLogger.w(TAG, "killAndRestartDaemon failed: " + t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Terminates the authenticated proxy PID through direct local ADB after a typed Binder call
+     * exceeded its deadline. This method never uses the possibly wedged Binder itself.
+     *
+     * @return true only when the old daemon is killed or already absent, making it impossible for
+     *         the timed-out physical command to execute after a newer queued command.
+     */
+    public static final class DaemonIdentity {
+        private final IBinder binder;
+        private final int pid;
+        private final String instance;
+
+        private DaemonIdentity(IBinder binder, int pid, String instance) {
+            this.binder = binder;
+            this.pid = pid;
+            this.instance = instance;
+        }
+    }
+
+    /** Snapshot taken on the actual typed-dispatch thread immediately before Binder entry. */
+    public static DaemonIdentity captureDaemonIdentity() {
+        synchronized (LOCK) {
+            if (sBinder == null || sDaemonPid <= 0 || sDaemonInstance == null
+                    || !sDaemonInstance.matches("[0-9a-fA-F]{32}")) return null;
+            return new DaemonIdentity(sBinder, sDaemonPid, sDaemonInstance);
+        }
+    }
+
+    public static boolean terminateHungDaemonViaAdb(Context ctx, DaemonIdentity expected) {
+        if (expected == null) return false;
+        final String command = "PID=" + expected.pid
+                + "; EXPECT=" + expected.instance
+                + "; case \"$PID\" in ''|*[!0-9]*) echo NO_PID; exit 3;; esac"
+                + "; CURRENT=$(cat " + DAEMON_INSTANCE + " 2>/dev/null)"
+                + "; if [ \"$CURRENT\" != \"$EXPECT\" ]; then echo INSTANCE_CHANGED; exit 5; fi"
+                + "; LINE=$(ps -A 2>/dev/null | awk -v p=\"$PID\" '$2 == p {print; exit}')"
+                + "; if echo \"$LINE\" | grep -q '[d]ashcast_proxy'; then"
+                + " kill -9 \"$PID\" 2>/dev/null && echo KILLED"
+                + "; elif [ -z \"$LINE\" ]; then echo ABSENT"
+                + "; else echo REFUSED; exit 4; fi";
+        try {
+            String result = AdbLocalClient.executeShellWithResultBlocking(ctx, command, 15_000);
+            if (!result.contains("KILLED") && !result.contains("ABSENT")) {
+                if (!expected.binder.isBinderAlive()) {
+                    AppLogger.i(TAG, "hung daemon already superseded: " + result);
+                    return true;
+                }
+                AppLogger.e(TAG, "hung daemon recovery refused: " + result);
+                return false;
+            }
+            synchronized (LOCK) {
+                if (sBinder == expected.binder && sDaemonPid == expected.pid
+                        && expected.instance.equals(sDaemonInstance)) {
+                    unlinkDeathLocked(expected.binder);
+                    sBinder = null;
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
+                    sDaemonInstance = null;
+                }
+            }
+            AppLogger.e(TAG, "hung proxy daemon terminated via direct ADB: " + result);
+            return true;
+        } catch (Throwable error) {
+            if (error instanceof InterruptedException) Thread.currentThread().interrupt();
+            AppLogger.e(TAG, "hung daemon recovery failed: " + error.getMessage());
             return false;
         }
     }
@@ -1151,6 +1383,27 @@ public final class ProxyClient {
     @FunctionalInterface
     private interface BinderOp<T> {
         T run() throws RemoteException, ProxyException;
+    }
+
+    private static final ThreadLocal<IBinder> sDispatchBinder = new ThreadLocal<>();
+
+    /** Package-private verb accessor: one callWithRetry attempt always uses one Binder. */
+    static IBinder dispatchBinder() {
+        IBinder pinned = sDispatchBinder.get();
+        return pinned != null ? pinned : sBinder;
+    }
+
+    private static <T> T runPinned(IBinder binder, BinderOp<T> op)
+            throws RemoteException, ProxyException {
+        if (binder == null || !binder.isBinderAlive()) throw new ProxyException("not connected");
+        IBinder previous = sDispatchBinder.get();
+        sDispatchBinder.set(binder);
+        try {
+            return op.run();
+        } finally {
+            if (previous == null) sDispatchBinder.remove();
+            else sDispatchBinder.set(previous);
+        }
     }
 
     /**
@@ -1286,33 +1539,21 @@ public final class ProxyClient {
         if (pre == null || !pre.isBinderAlive()) {
             reconnectUnlessMainThread();
         }
+        IBinder firstAttempt = sBinder;
         try {
-            return op.run();
+            return runPinned(firstAttempt, op);
         } catch (RemoteException e) {
-            // C3: guard sBinder null-out inside LOCK so a freshly-arrived binder
-            // from the broadcast receiver (written inside LOCK) is not clobbered.
-            synchronized (LOCK) {
-                IBinder dead = sBinder;
-                if (dead != null && !dead.isBinderAlive()) {
-                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
-                    sBinder = null;
-                }
-            }
+            invalidateBinderIfCurrent(firstAttempt, tag);
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
                     + " — attempting reconnect");
             if (!reconnectUnlessMainThread()) {
                 throw new ProxyException(tag + ": " + e.getMessage(), e);
             }
+            IBinder retryAttempt = sBinder;
             try {
-                return op.run();
+                return runPinned(retryAttempt, op);
             } catch (RemoteException e2) {
-                synchronized (LOCK) {
-                    IBinder dead = sBinder;
-                    if (dead != null && !dead.isBinderAlive()) {
-                        try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
-                        sBinder = null;
-                    }
-                }
+                invalidateBinderIfCurrent(retryAttempt, tag + " retry");
                 throw new ProxyException(
                         tag + " (after reconnect): " + e2.getMessage(), e2);
             }
@@ -1329,6 +1570,7 @@ public final class ProxyClient {
      * as the dynamic receiver is registered once on the application context and persists
      * for the entire lifetime of the process. Gated by sReceiver null check.
      */
+    @SuppressWarnings("deprecation")
     private static void ensureReceiverRegistered(Context ctx) {
         if (sReceiver != null) return;
         final Context appCtx = ctx.getApplicationContext();
@@ -1379,22 +1621,24 @@ public final class ProxyClient {
                     }
                     // Unhook the previous death recipient (if any) before swapping.
                     if (sBinder != null && sBinder != bp.binder) {
-                        try { sBinder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                        unlinkDeathLocked(sBinder);
                     }
+                    // Invalidate identity BEFORE publishing the replacement Binder. Lock-free
+                    // readers must never observe a new Binder paired with the previous daemon's UID.
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
+                    sDaemonInstance = null;
                     sBinder = bp.binder;
                     // Hook the new binder so a future death immediately clears
                     // our cached reference (P2). Best-effort: if linkToDeath
                     // fails (binder already dead between isBinderAlive above
                     // and here — vanishingly unlikely), isBinderAlive() on
                     // the next call still gives the right answer.
-                    try { sBinder.linkToDeath(sDeath, 0); }
+                    try { linkDeathLocked(sBinder); }
                     catch (RemoteException re) {
                         AppLogger.w(TAG, "linkToDeath failed: " + re.getMessage());
                     }
-                    // Invalidate WHOAMI cache — handshake() will refresh it.
-                    sDaemonUid = -1;
-                    sDaemonPid = -1;
-                    sDaemonVer = null;
                     AppLogger.i(TAG, "live binder received from daemon");
                     CountDownLatch latch = sBinderLatch;
                     if (latch != null) latch.countDown();
@@ -1402,10 +1646,10 @@ public final class ProxyClient {
             }
         };
         IntentFilter filter = new IntentFilter(ProxyDaemonContract.ACTION_PROXY_CONNECTED);
-        // 2-arg form: targetSdk=29 so platform does not enforce RECEIVER_EXPORTED.
-        // If targetSdk is ever raised to 33+, switch to the 3-arg overload with
-        // Context.RECEIVER_EXPORTED (the broadcaster is in another process / uid).
-        appCtx.registerReceiver(sReceiver, filter);
+        // The daemon runs as uid 2000 (com.android.shell), which holds DUMP. Requiring that
+        // sender permission preserves the broadcast fallback on ROMs where addService fails,
+        // without allowing an ordinary co-installed app to supply a fake Binder.
+        DaemonBroadcastRegistrar.register(appCtx, sReceiver, filter);
         AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonContract.ACTION_PROXY_CONNECTED);
     }
 
@@ -1423,21 +1667,53 @@ public final class ProxyClient {
         }
     }
 
-    /** Issue the WHOAMI transaction to populate uid/pid/version caches. */
-    private static void handshake() {
-        if (sBinder == null) return;
+    /** Runs WHOAMI and confirms its published identity still belongs to the expected Binder. */
+    private static boolean handshakeAndVerify(IBinder expectedBinder) {
+        if (!handshake(expectedBinder)) return false;
+        synchronized (LOCK) {
+            return sBinder == expectedBinder
+                    && expectedBinder.isBinderAlive()
+                    && sDaemonUid >= 0;
+        }
+    }
+
+    /** Issue WHOAMI without holding {@link #LOCK}; publish only if the Binder is still current. */
+    private static boolean handshake(IBinder expectedBinder) {
+        if (expectedBinder == null || !expectedBinder.isBinderAlive()) return false;
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-            sBinder.transact(ProxyDaemonContract.TXN_WHOAMI, data, reply, 0);
+            if (!expectedBinder.transact(ProxyDaemonContract.TXN_WHOAMI, data, reply, 0)) return false;
             reply.readException();
-            sDaemonUid = reply.readInt();
-            sDaemonPid = reply.readInt();
-            sDaemonVer = reply.readString();
-        } catch (RemoteException e) {
-            AppLogger.w(TAG, "handshake failed: " + e.getMessage());
-            sBinder = null;
+            int daemonUid = reply.readInt();
+            int daemonPid = reply.readInt();
+            String daemonVer = reply.readString();
+            String daemonInstance = reply.dataAvail() > 0 ? reply.readString() : null;
+            if (daemonUid < 0 || daemonPid <= 0 || daemonVer == null || daemonVer.isEmpty()) {
+                throw new IllegalStateException("invalid WHOAMI response");
+            }
+            try {
+                if (Integer.parseInt(daemonVer) >= 25
+                        && (daemonInstance == null
+                        || !daemonInstance.matches("[0-9a-fA-F]{32}"))) {
+                    throw new IllegalStateException("invalid WHOAMI instance");
+                }
+            } catch (NumberFormatException badVersion) {
+                throw new IllegalStateException("invalid WHOAMI protocol");
+            }
+            synchronized (LOCK) {
+                if (sBinder != expectedBinder || !expectedBinder.isBinderAlive()) return false;
+                sDaemonUid = daemonUid;
+                sDaemonPid = daemonPid;
+                sDaemonVer = daemonVer;
+                sDaemonInstance = daemonInstance;
+                return true;
+            }
+        } catch (Exception e) {
+            AppLogger.w(TAG, "handshake failed (" + e.getClass().getSimpleName() + ")");
+            clearConnectionIfCurrent(expectedBinder);
+            return false;
         } finally {
             reply.recycle();
             data.recycle();

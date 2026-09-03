@@ -3,13 +3,19 @@ import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import ManualTemplate from './components/ManualTemplate.vue';
 import { languages, resolveLocale } from './locales';
 
+// AUD-159 — injected from app/build.gradle by vite.config.js, never hand-written.
+const appVersion = __APP_VERSION__;
+
 const activeCode = ref(readLocaleFromLocation());
 const activeSection = ref(readSectionFromLocation());
 
 function readLocaleFromLocation() {
   const hashMatch = window.location.hash.match(/^#\/([a-z]{2})\b/);
+  // AUD-157 — hold ?lang= to the same shape as the hash. resolveLocale is the real
+  // guard now, but there is no reason for this half of the pair to stay looser.
   const queryLocale = new URLSearchParams(window.location.search).get('lang');
-  return hashMatch?.[1] || queryLocale || '';
+  const queryMatch = queryLocale?.match(/^[a-z]{2}$/) ? queryLocale : '';
+  return hashMatch?.[1] || queryMatch || '';
 }
 
 function readSectionFromLocation() {
@@ -61,7 +67,7 @@ onBeforeUnmount(() => {
     <section class="landing-wrap" aria-labelledby="landing-title">
       <h1 id="landing-title">DashCast</h1>
       <p class="landing-sub">Dashboard Controller - User Manual</p>
-      <p class="landing-version">v0.9.92-alpha · BYD Seal EU · DiLink 3.0 · Android 10</p>
+      <p class="landing-version">v{{ appVersion }} · BYD Seal / Dolphin / Atto 3 · DiLink 3 &amp; DiLink 5 · Android 10–13</p>
 
       <nav class="landing-languages" aria-label="Documentation languages">
         <button

@@ -6,6 +6,8 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.os.SystemClock;
 
+import com.byd.dashcast.cluster.display.ClusterGeometryPolicy;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.proxy.DaemonBinderResolver;
 import com.byd.dashcast.proxy.ProxyClient;
@@ -61,6 +63,16 @@ public class AdbLocalClient {
             return t;
         }
     });
+    /** At most main+split are blindly evicted; dedicated workers prevent shared-pool starvation. */
+    private static final ExecutorService sBlindEvictionExecutor =
+            Executors.newFixedThreadPool(2, new ThreadFactory() {
+                private final AtomicInteger seq = new AtomicInteger(1);
+                @Override public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "adb-blind-evict-" + seq.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
 
     private static final String TAG = "AdbLocalClient";
 
@@ -319,6 +331,19 @@ public class AdbLocalClient {
         void onSuccess(String report);
         /** Called if the connection fails (port closed, timeout, refused…). */
         void onError(String error);
+        /**
+         * What {@link #forceStopApp} decided to do with the task, from the SAME round trip that
+         * fed the kill. Default no-op, so the dozen callers that do not care are untouched.
+         *
+         * <p>It exists because the caller must NOT re-derive this. Review of the first version
+         * caught exactly that: {@code ClusterSessionTracker} decided from the last probe of its
+         * landing-wait loop while this method decided from a fresher one taken immediately before
+         * the kill, and on the give-up branch the tracker's copy could never say
+         * {@code KEEP_AND_RESTORE_HOME} even when the task had in fact landed on display 0. One
+         * probe, one decision, carried to whoever needs it.
+         */
+        default void onEvictionOutcome(
+                com.byd.dashcast.cluster.EvictionOutcomePolicy.Outcome outcome) { }
     }
 
     // LOT 4 — BitmapCallback interface removed: only used by captureClusterDisplay
@@ -328,14 +353,46 @@ public class AdbLocalClient {
         // Character-class tricks match both runtime names without matching grep's own cmdline.
         private static final String DAEMON_GREP =
             "grep -E '[m]irrordaemon|[b]yd[.]mirror[.]daemon'";
+
+    /**
+     * Keeps only lines owned by uid 2000, because a process NAME is not an identity.
+     *
+     * Any installed app can declare {@code android:process="byd.mirror.daemon"} and land in this
+     * grep. It cannot be mistaken for the daemon — reuse also demands a live {@code
+     * byd_mirror_daemon} binder AND a pid matching the marker file that only shell can write — but
+     * a second matching line is enough to make {@link SurfaceDaemonReusePolicy#singleProcessPid}
+     * return -1, which sends every startMirrorDaemon down the kill-and-respawn branch. That throws
+     * away the state this daemon exists to HOLD (slot overlays, VirtualDisplays, the mirror token)
+     * on every call, permanently, since our {@code kill -9} from uid 2000 cannot touch another
+     * app's process. It would also let the post-launch "ACTIVE ✓" check pass on the impostor's
+     * line while our own launch had failed.
+     *
+     * The USER column is field 1 of toybox {@code ps -A}; it can print either the name or the
+     * number depending on the ROM, so both are accepted. Filtering here keeps the line shape
+     * intact, so singleProcessPid still reads the pid from field 2.
+     */
+    private static final String SHELL_OWNED_ONLY = "awk '$1==\"shell\" || $1==\"2000\"'";
+
+    /** {@code ps} listing of OUR daemon processes only — never another app's lookalike. */
+    private static final String DAEMON_PS =
+            "ps -A | " + DAEMON_GREP + " | " + SHELL_OWNED_ONLY;
+
     private static final String KILL_DAEMON_CMD =
-            "ps -A | " + DAEMON_GREP + " | awk '{print $2}'" +
+            DAEMON_PS + " | awk '{print $2}'" +
             " | xargs -r kill -9 2>/dev/null; echo killed";
 
     private static volatile long sLastDaemonStartMs = 0;
     private static final AtomicBoolean sMirrorDaemonStartInFlight = new AtomicBoolean(false);
     public static long getLastDaemonStartMs() { return sLastDaemonStartMs; }
 
+    /**
+     * Spawns (or reuses) {@link com.byd.dashcast.proxy.daemon.SurfaceDaemon} — the uid-2000 daemon
+     * that HOLDS the mirror/cluster surfaces; see the two-daemon boundary on that class.
+     *
+     * <p>The method name and every log line below deliberately keep saying "MirrorDaemon": they are
+     * the daemon's runtime identity in logcat and in {@code mirrordaemon_latest.log}, which the
+     * bug-report tooling pastes into every report and triagers grep across historical reports.
+     */
     public static void startMirrorDaemon(final Context context) {
         if (!sMirrorDaemonStartInFlight.compareAndSet(false, true)) {
             AppLogger.d(TAG, "MirrorDaemon start already in flight — joining existing attempt");
@@ -347,17 +404,16 @@ public class AdbLocalClient {
                 try (Dadb dadb = connect(context, PROBE_IDLE_TIMEOUT_MS)) {
                     // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
-                    String psOut = dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
-                int daemonPid = MirrorDaemonReusePolicy.singleProcessPid(psOut);
+                    String psOut = dadb.shell(DAEMON_PS + " 2>&1").getAllOutput().trim();
+                int daemonPid = SurfaceDaemonReusePolicy.singleProcessPid(psOut);
                 String versionMarker = daemonPid > 0
                     ? dadb.shell("cat "
-                        + com.byd.dashcast.proxy.daemon.MirrorDaemon.VERSION_FILE
+                        + com.byd.dashcast.proxy.daemon.SurfaceDaemon.VERSION_FILE
                         + " 2>/dev/null").getAllOutput().trim()
                     : "";
-                    IBinder knownBinder = DaemonBinderResolver.getRegisteredBinderOrNull();
+                    IBinder knownBinder = DaemonBinderResolver.surfaceDaemonBinder();
                 boolean binderAlive = knownBinder != null && knownBinder.isBinderAlive();
-                if (MirrorDaemonReusePolicy.shouldReuse(binderAlive, daemonPid,
+                if (SurfaceDaemonReusePolicy.shouldReuse(binderAlive, daemonPid,
                     versionMarker, com.byd.dashcast.BuildConfig.VERSION_CODE)) {
                 AppLogger.i(TAG, "MirrorDaemon already active for build "
                     + com.byd.dashcast.BuildConfig.VERSION_CODE + " pid=" + daemonPid
@@ -376,7 +432,7 @@ public class AdbLocalClient {
                         Thread.sleep(500);
                     }
                 dadb.shell("rm -f "
-                    + com.byd.dashcast.proxy.daemon.MirrorDaemon.VERSION_FILE);
+                    + com.byd.dashcast.proxy.daemon.SurfaceDaemon.VERSION_FILE);
                     String apkPath = context.getPackageCodePath();
                     // Prune old per-launch daemon logs, keeping the 5 most recent:
                     // one file is created per daemon start and nothing ever deleted
@@ -394,14 +450,13 @@ public class AdbLocalClient {
                     // → survives dadb connection close (otherwise SIGHUP possible)
                     // CLASSPATH inline (no export &&) as Commander APK does it
                     // -Xnoimage-dex2oat: avoids AOT crash at startup
-                        String cmd = MirrorDaemonStartCommand.build(apkPath, logPath, latestLink);
+                        String cmd = SurfaceDaemonStartCommand.build(apkPath, logPath, latestLink);
                     dadb.shell(cmd);
                     AppLogger.i(TAG, "MirrorDaemon launched → " + logPath);
 
                     // Verification: is the process alive after 3s?
                     Thread.sleep(3000);
-                    String psCheck = dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    String psCheck = dadb.shell(DAEMON_PS + " 2>&1").getAllOutput().trim();
                     if (!psCheck.isEmpty()) {
                         AppLogger.i(TAG, "MirrorDaemon ACTIVE ✓  " + psCheck);
                     } else {
@@ -557,6 +612,25 @@ public class AdbLocalClient {
     private static void noteTransportFailure(Context context, Throwable error) {
         String state = AdbTransportFailure.INSTANCE.classify(error);
         if (state == null) return;
+        // Never downgrade HANDSHAKE to NO_LISTENER.
+        //
+        // connect() classifies this SAME exception with classify(e, true) — it holds the proof that
+        // a plain TCP connect to adbd succeeded milliseconds earlier — and publishes XPORT_HANDSHAKE.
+        // The exception then propagates to the caller's catch, which lands here and re-classifies it
+        // WITHOUT that proof; the one and only difference the flag makes is this exact pair, so the
+        // verdict flips to NO_LISTENER and markTransport() overwrites the better answer. The tester
+        // is then told to run `adb tcpip 5555` for a port that answered a fraction of a second ago —
+        // precisely the misdiagnosis AdbTransportFailure's own doc says the flag was added to stop.
+        // The fix was threaded into connect() and never into the sites downstream of it.
+        //
+        // Only this pair is guarded: every other classification here is made from the exception
+        // alone and is not second-guessing a better-informed one.
+        if (XPORT_NO_LISTENER.equals(state) && XPORT_HANDSHAKE.equals(sTransportState)) {
+            AppLogger.d(TAG, "keeping XPORT_HANDSHAKE — connect() classified this with a passing"
+                    + " TCP probe; re-classifying without it would say NO_LISTENER");
+            sOperationSucceeded = false;
+            return;
+        }
         if (XPORT_UNRESPONSIVE.equals(state)) {
             confirmUnresponsiveTransport(context, error);
             return;
@@ -611,7 +685,7 @@ public class AdbLocalClient {
 
     private static boolean isMirrorDaemonBinderAlive() {
         try {
-            IBinder binder = DaemonBinderResolver.getRegisteredBinderOrNull();
+            IBinder binder = DaemonBinderResolver.surfaceDaemonBinder();
             return binder != null && binder.isBinderAlive();
         } catch (Throwable ignore) {
             return false;
@@ -936,9 +1010,27 @@ public class AdbLocalClient {
      *
      * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal EU — CONFIRMED), 31=10.25" (Seal U-DMI)
      */
-    public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
+    public static void restoreOriginCluster(final Context context, final int requestedScreenSizeCmd,
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
+        // This is the DEFAULT Stop flow and it passes the raw preference, whose default is 30
+        // (12.3"). On an Atto 3 / Dolphin that never had its cluster size configured, every Stop
+        // was therefore ordering a 1280x480 panel into the 12.3" shape — which drops it into its
+        // degraded simple mode. Two of the three known simple-mode reports came through HERE, with
+        // the ADAS window fix off entirely (INC-20260625-173900, INC-20260715-141429); only one
+        // came through the ADAS path that was guarded first. Sanitising at the entry covers both
+        // the typed and the shell sub-paths below with one check.
+        final int screenSizeCmd = ClusterGeometryPolicy.allowShapeCommand(
+                requestedScreenSizeCmd,
+                ClusterPrefs.getClusterType(context),
+                ClusterPrefs.isSmallClusterPanelLatched(context))
+                ? requestedScreenSizeCmd
+                : ClusterGeometryPolicy.CMD_8_8;
+        if (screenSizeCmd != requestedScreenSizeCmd) {
+            AppLogger.w(TAG, "restoreOriginCluster: refusing shape preset "
+                    + requestedScreenSizeCmd + " on a 1280x480 cluster — sending "
+                    + screenSizeCmd + " (8.8\") instead, the larger shape breaks that panel");
+        }
         // v1.2.78 — see restoreBydOnCluster() above for rationale.
         com.byd.dashcast.cluster.display.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
@@ -1065,15 +1157,46 @@ public class AdbLocalClient {
     public static void sendInfo(final Context context,
                                 final int type, final int infoInt, final String infoStr,
                                 final Callback callback) {
+        sendInfo(context, type, infoInt, infoStr, callback, null);
+    }
+
+    /** Observer used only by the ordered projection bus to recover a wedged typed transact. */
+    public interface TypedDispatchObserver {
+        void onStart();
+        void onFinish();
+        boolean shouldAbortFallback();
+    }
+
+    public static void sendInfo(final Context context,
+                                final int type, final int infoInt, final String infoStr,
+                                final Callback callback,
+                                final TypedDispatchObserver typedObserver) {
+        // Last line of defence for the cluster shape presets. The senders are guarded individually
+        // (the ADAS window fix in ClusterManager, the preference in restoreOriginCluster), but the
+        // first version of this protection guarded one of them and missed the other, so the rule is
+        // also enforced here — the single point every AutoContainer command physically leaves the
+        // app through. Non-shape commands are untouched.
+        if (type == com.byd.dashcast.cluster.display.ClusterManager.CLUSTER_TYPE
+                && !ClusterGeometryPolicy.allowShapeCommand(infoInt,
+                        ClusterPrefs.getClusterType(context),
+                        ClusterPrefs.isSmallClusterPanelLatched(context))) {
+            AppLogger.w(TAG, "sendInfo: BLOCKED shape preset " + infoInt
+                    + " — this car has the 1280x480 cluster, the larger shape breaks it");
+            if (callback != null) callback.onSuccess("");
+            return;
+        }
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 // v1.6.102 — daemon-free & ADB-free FIRST attempt, tried ONLY when the
                 // uid-2000 daemon is not connected (so healthy DL3/DL5.0 keep their exact
                 // proven path). Transacts the AutoContainer binder directly from THIS process:
                 // needs neither the daemon nor the self-ADB shell — the only path left on an
-                // unprivileged unit whose ADB-TCP is dead (D50F_LC). It succeeds only if the
-                // AutoContainer server does not enforce caller uid/signature (UNPROVEN from the
-                // app uid), so any failure — incl. SecurityException — falls through untouched.
+                // unprivileged unit whose ADB-TCP is dead (D50F_LC). The checkSignatures(uid<10000)
+                // fast-path this whole call is betting on is confirmed real for the uid-2000
+                // daemon (81 bug reports, zero refusals) — but the app's own uid is NOT under
+                // 10000, so it does NOT get that fast-path and IS refused here in practice. That
+                // is fine: this is explicitly a best-effort first attempt, and any failure — incl.
+                // SecurityException — falls through untouched to the ADB/daemon paths below.
                 if (!ProxyClient.isConnected()) {
                     try {
                         String svc = autoContainerSvcName(context);
@@ -1097,7 +1220,8 @@ public class AdbLocalClient {
                 // only inspect callback.onSuccess(String) for emptiness.
                 // DL5: skip typed path — Phase4ProcessVerbs hardcodes the DL3 service
                 // name ("AutoContainer") which does not exist on DL5.
-                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)) {
+                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)
+                    && (typedObserver == null || ProxyClient.supportsProtocol(25))) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!ProxyClient.isConnected()) {
@@ -1105,7 +1229,19 @@ public class AdbLocalClient {
                             // ProxyKeeperService reconnects in background; skip to legacy path.
                             throw new Exception("proxy not connected — skip typed path");
                         }
-                        ProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        if (typedObserver != null) {
+                            ProxyClient.setNonBlockingReconnect(true);
+                            typedObserver.onStart();
+                        }
+                        try {
+                            ProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        } finally {
+                            if (typedObserver != null) {
+                                typedObserver.onFinish();
+                                ProxyClient.setNonBlockingReconnect(false);
+                            }
+                        }
+                        if (typedObserver != null && typedObserver.shouldAbortFallback()) return;
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.log(TAG, "beta sendInfo typed ok (" + dt + "ms): "
                                 + type + "," + infoInt + ",\"" + (infoStr == null ? "" : infoStr) + "\"");
@@ -1116,6 +1252,10 @@ public class AdbLocalClient {
                         if (callback != null) callback.onSuccess("");
                         return;
                     } catch (Throwable t) {
+                        if (typedObserver != null && typedObserver.shouldAbortFallback()) {
+                            AppLogger.e(TAG, "beta sendInfo typed timed out — fallback suppressed");
+                            return;
+                        }
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.w(TAG, "beta sendInfo typed failed after " + dt
                                 + "ms, falling back to ADB shell: " + t.getMessage());
@@ -1286,37 +1426,89 @@ public class AdbLocalClient {
      */
     public static void forceStopApp(final Context context, final String packageName,
             final Callback callback) {
-        sExecutor.execute(new Runnable() {
+        forceStopAppInternal(context, packageName, callback, sExecutor, true,
+            SHELL_IDLE_TIMEOUT_MS);
+        }
+
+        /** Service-less teardown: bypass potentially wedged Binder and shared ADB work. */
+        public static void forceStopAppForBlindEviction(final Context context,
+            final String packageName, final Callback callback) {
+        forceStopAppInternal(context, packageName, callback, sBlindEvictionExecutor, false,
+            PROBE_IDLE_TIMEOUT_MS);
+        }
+
+        private static void forceStopAppInternal(final Context context, final String packageName,
+            final Callback callback, ExecutorService executor, final boolean allowTyped,
+            final int socketTimeoutMs) {
+        executor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "forceStop " + packageName + " ...");
                 // Phase 7: typed daemon path — findTask + removeTask + forceStopPackage.
                 // Replaces the 3-step ADB shell chain (dumpsys recents + am task remove
                 // + TaskRemover app_process + am force-stop). Falls through to ADB on
                 // any failure so semantics are fully preserved for callers.
-                if (!DaemonConfig.isLegacyPathEnabled(context) && ProxyClient.isConnected()) {
+                if (allowTyped && !DaemonConfig.isLegacyPathEnabled(context)
+                    && ProxyClient.isConnected()) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
-                        int taskId = ProxyClient.findTaskIdForPackage(packageName);
-                        if (taskId >= 0) {
-                            AppLogger.d(TAG, "forceStopApp typed: removeTask taskId=" + taskId);
-                            ProxyClient.removeTask(taskId);
-                            Thread.sleep(300);
-                        }
+                        // ORDER MATTERS, and it is the reverse of what it used to be.
+                        //
+                        // This used to removeTask() FIRST and kill second, to avoid leaving an
+                        // orphan task on display 0. That reasoning only holds when the kill
+                        // actually succeeds. When it does not — a persistent / system-uid package
+                        // the uid-2000 daemon cannot signal — destroying the task removes the one
+                        // thing that would have brought the app back to the centre screen.
+                        //
+                        // INC-20260815-181820: the eviction correctly parked com.byd.androidauto's
+                        // task on display 0, then removeTask() destroyed it, then the kill failed
+                        // (pid unchanged before and after). Seven seconds later the tester tapped
+                        // Android Auto in the head-unit launcher and system_server, with no task
+                        // left to recycle, sent the fresh one to the CLUSTER — proven by the same
+                        // launcher call site logging mDisplayId=0 before the session and
+                        // mDisplayId=1 after it. Had the parked task survived, the tap would have
+                        // found a task with the right affinity already on display 0.
+                        //
+                        // So: kill, verify, and only then remove the task. On the overwhelming
+                        // majority of packages the kill succeeds and behaviour is unchanged.
+                        // Location, not just the id: whether keeping the task HELPS depends on
+                        // where it is. Review caught the first version keeping it unconditionally,
+                        // which regresses the DL3 "free the cluster" path — MainActivity force-stops
+                        // the app CURRENTLY ON THE CLUSTER before launching the next one, with no
+                        // move to display 0 first, precisely because moveTaskToDisplay is stripped
+                        // there. Keeping that task leaves the cluster occupied and the next launch
+                        // lands split-screen: INC-20260621-130238's NPE. Same round trip, one more
+                        // field.
+                        java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> locations =
+                                findTaskLocationsForEviction(packageName);
                         ProxyClient.forceStopPackage(packageName, 0);
                         StringBuilder verification = new StringBuilder();
                         boolean killed = verifyForceStop(packageName, verification);
+                        com.byd.dashcast.cluster.EvictionTaskSetPolicy.Decision decision =
+                                com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                        killed, locations);
+                        removeTypedTasks(decision.getTaskIdsToRemove());
                         long dt = SystemClock.elapsedRealtime() - t0;
                         if (killed) {
                             AppLogger.log(TAG, "forceStopApp typed verified (" + dt + "ms): "
-                                + packageName + " taskId=" + taskId);
+                                + packageName + " tasks=" + decision.getTaskIdsToRemove());
+                            if (callback != null) callback.onEvictionOutcome(decision.getOutcome());
                             if (callback != null) callback.onSuccess(
                                 "force-stop OK (typed, verified)");
                         } else {
                             String detail = verification.length() == 0
                                 ? "process still alive after force-stop"
                                 : verification.toString().trim();
+                            // A task on display 0 is the app's way home — keep it, that is the
+                            // whole point of this inversion. A task still on the CLUSTER is the
+                            // opposite: it occupies the display the caller is trying to free, so it
+                            // must go, exactly as before this change. ABSENT/UNKNOWN keep too: a
+                            // failed lookup is not evidence, and destroying on one is the original
+                            // defect.
                             AppLogger.w(TAG, "forceStopApp verification failed for "
-                                + packageName + ": " + detail);
+                                + packageName + ": " + detail + " — removed non-default tasks "
+                                + decision.getTaskIdsToRemove() + ", outcome="
+                                + decision.getOutcome());
+                            if (callback != null) callback.onEvictionOutcome(decision.getOutcome());
                             if (callback != null) callback.onError(detail);
                         }
                         return;
@@ -1332,41 +1524,47 @@ public class AdbLocalClient {
                         // fall through to ADB path below
                     }
                 }
-                try (Dadb dadb = connect(context)) {
-                    // Extract Task IDs associated with the package and remove them from Recents BEFORE force-stopping.
-                    // On Android 10, dumpsys activity recents prints lines like:
-                    //   * Recent #0: TaskRecord{3a9c7f5 #42 A=com.example.app U=0 StackId=1 sz=1}
-                    // We extract the task ID (#42) using sed BRE — NOT grep -o (its \+ is unsupported
-                    // on Android's busybox grep). We also must NOT match the recents index (#0).
-                    String apkPath = context.getPackageCodePath();
-                    String cleanRecentsCmd =
-                            // 1. Find TaskRecord lines containing this package, extract the task ID
-                            //    (the number inside "TaskRecord{<hash> #<ID> ...}")
-                            "TASKS=$(dumpsys activity recents 2>/dev/null | grep 'TaskRecord' | grep -F '" + packageName + "' " +
-                            "| sed -n 's/.*TaskRecord{[^ ]* #\\([0-9]*\\).*/\\1/p' | sort -u); " +
-                            "echo \"[DashCast-recents] pkg=" + packageName + " tasks=$TASKS\"; " +
-                            // 2. Remove each task: try IActivityTaskManager.removeTask() via reflection
-                            //    (app_process, uid=2000 shell). Also try am task remove as OEM fallback.
-                            "for t in $TASKS; do " +
-                            "  am task remove $t 2>/dev/null; " +
-                            "  export CLASSPATH=" + apkPath + "; " +
-                            "  /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "done; ";
-                    
-                    AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");
+                java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> legacyLocations =
+                    java.util.Collections.singletonList(
+                        com.byd.dashcast.infrastructure.task.TaskLocation.unknown());
+                try (Dadb dadb = connect(context, socketTimeoutMs)) {
+                    try {
+                    String activities = dadb.shell(
+                        "dumpsys activity activities 2>/dev/null").getAllOutput();
+                    legacyLocations = com.byd.dashcast.infrastructure.task
+                        .LegacyTaskLocationParser.parseAll(activities, packageName);
+                    } catch (Throwable locationError) {
+                    AppLogger.w(TAG, "legacy task-location probe failed for " + packageName
+                        + ": " + locationError.getMessage());
+                    }
+                        // Kill first. Task deletion happens only after verification below, from the
+                        // exact package/task pairs already returned by LegacyTaskLocationParser.
+                        AdbShellResponse r = dadb.shell(
+                            "am force-stop " + packageName + " 2>&1; echo STOPPED");
                     String out = r.getAllOutput().trim();
                     noteTransportSuccess();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
                     if (callback != null) {
                         if (out.contains("STOPPED") || out.isEmpty()) {
                             StringBuilder verification = new StringBuilder();
-                            if (verifyForceStopViaAdb(dadb, packageName, verification)) {
+                            boolean killed = verifyForceStopViaAdb(dadb, packageName, verification);
+                            com.byd.dashcast.cluster.EvictionTaskSetPolicy.Decision decision =
+                                    com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                            killed, legacyLocations);
+                            removeLegacyTasks(dadb, context, decision.getTaskIdsToRemove());
+                            if (killed) {
+                                callback.onEvictionOutcome(decision.getOutcome());
                                 callback.onSuccess("force-stop OK (ADB, verified)");
                             } else {
+                                callback.onEvictionOutcome(decision.getOutcome());
                                 callback.onError(verification.toString().trim());
                             }
                         } else {
+                            com.byd.dashcast.cluster.EvictionTaskSetPolicy.Decision decision =
+                                    com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                            false, legacyLocations);
+                            removeLegacyTasks(dadb, context, decision.getTaskIdsToRemove());
+                            callback.onEvictionOutcome(decision.getOutcome());
                             callback.onError(out);
                         }
                     }
@@ -1375,7 +1573,12 @@ public class AdbLocalClient {
                     noteTransportFailure(context, e);
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "forceStopApp ERREUR", e);
-                    if (callback != null) callback.onError(msg);
+                    if (callback != null) {
+                        callback.onEvictionOutcome(
+                            com.byd.dashcast.cluster.EvictionTaskSetPolicy.decide(
+                                false, legacyLocations).getOutcome());
+                        callback.onError(msg);
+                    }
                 }
             }
         }); // adb-forcestop-thread
@@ -1422,6 +1625,60 @@ public class AdbLocalClient {
                     + error.getMessage());
             sb.append("WARN: ADB verification failed: ").append(error.getMessage()).append("\n");
             return false;
+        }
+    }
+
+    private static java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation>
+            findTaskLocationsForEviction(String packageName) throws ProxyClient.ProxyException {
+        try {
+            String activities = ProxyClient.runShell(
+                    "dumpsys activity activities 2>/dev/null");
+            java.util.List<com.byd.dashcast.infrastructure.task.TaskLocation> parsed =
+                    com.byd.dashcast.infrastructure.task.LegacyTaskLocationParser.parseAll(
+                            activities, packageName);
+            for (com.byd.dashcast.infrastructure.task.TaskLocation location : parsed) {
+                if (location.getStatus()
+                        == com.byd.dashcast.infrastructure.task.TaskLocation.Status.FOUND) {
+                    return parsed;
+                }
+            }
+        } catch (Throwable error) {
+            AppLogger.w(TAG, "typed multi-task probe failed for " + packageName + ": "
+                    + error.getMessage());
+        }
+        return java.util.Collections.singletonList(
+                ProxyClient.findTaskLocationForPackage(packageName));
+    }
+
+    private static void removeTypedTasks(java.util.List<Integer> taskIds) throws Exception {
+        Exception first = null;
+        for (Integer taskId : taskIds) {
+            if (taskId == null || taskId <= 0) continue;
+            try {
+                ProxyClient.removeTask(taskId);
+            } catch (Exception error) {
+                if (first == null) first = error;
+            }
+        }
+        if (first != null) throw first;
+    }
+
+    private static void removeLegacyTasks(Dadb dadb, Context context,
+                                          java.util.List<Integer> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) return;
+        String apkPath = context.getPackageCodePath();
+        for (Integer taskId : taskIds) {
+            if (taskId == null || taskId <= 0) continue;
+            try {
+                dadb.shell("am task remove " + taskId + " 2>/dev/null; "
+                        + "export CLASSPATH=" + apkPath + "; "
+                        + "/system/bin/app_process64 -Xnoimage-dex2oat /system/bin "
+                        + "com.byd.dashcast.proxy.daemon.TaskRemover \"" + taskId
+                        + "\" 2>/dev/null; true");
+            } catch (Throwable error) {
+                AppLogger.w(TAG, "legacy removeTask " + taskId + " failed: "
+                        + error.getMessage());
+            }
         }
     }
 

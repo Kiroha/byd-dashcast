@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.core.content.edit
 
 import com.byd.dashcast.R
+import com.byd.dashcast.cluster.display.ClusterDisplayRegistry
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.proxy.ProxyClient
@@ -29,6 +30,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * v1.2.71 — Fullscreen editor that lets the user position/resize a fission-cluster
@@ -67,7 +69,7 @@ class ClusterResizeActivity : Activity(),
      */
     private var mLiveMode = false
     private lateinit var mPkg: String
-    private var mDisplayId = 1
+    private var mDisplayId = -1
     private lateinit var mInitRect: IntArray // [l,t,r,b]
 
     private lateinit var mMirror: ClusterMirrorManager
@@ -87,10 +89,15 @@ class ClusterResizeActivity : Activity(),
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_cluster_resize)
 
-        mDisplayId = intent.getIntExtra(EXTRA_DISPLAY_ID, 1)
+        mDisplayId = intent.getIntExtra(EXTRA_DISPLAY_ID, -1)
         val pkg = intent.getStringExtra(EXTRA_PACKAGE)
         if (pkg.isNullOrEmpty()) {
             Toast.makeText(this, R.string.resize_no_package, Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        if (mDisplayId <= 0) {
+            Toast.makeText(this, R.string.toast_activate_timeout, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -107,8 +114,38 @@ class ClusterResizeActivity : Activity(),
         ClusterMirrorManager.unlockHiddenApis()
         mMirror = ClusterMirrorManager()
 
-        val cw = mMirror.getClusterWidth()
-        val ch = mMirror.getClusterHeight()
+        // The REAL panel geometry, not the mirror's placeholder.
+        //
+        // This used to read mMirror.getClusterWidth()/Height() on an instance created two lines
+        // above, before startMirror() had ever run on it — so it always got ClusterMirrorManager's
+        // 1920x720 default, and setClusterSize() below is called exactly once and never revisited.
+        // On any other panel the whole editor session then worked in the wrong coordinate space:
+        // every preset, every snap anchor and every clamp was computed against a rect larger than
+        // the display, and the result went to ProxyClient.moveAndResize on the live cluster. The
+        // project has already met a 1280x480 DL3 panel on a car (INC-20260715-141429).
+        //
+        // Same resolution order DashboardLauncher uses: getRealSize, then the daemon-resolved
+        // registry for DL4 (where the OEM whitelist makes getDisplay() return null even though the
+        // display exists), then the literal. The strictly-positive guard mirrors
+        // ClusterMirrorManager.startMirror: a transient 0x0 during teardown must not become the
+        // editor's coordinate space.
+        val panel = android.graphics.Point(1920, 720)
+        run {
+            val dm0 = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val disp = dm0?.getDisplay(mDisplayId)
+            if (disp != null) {
+                val sz = android.graphics.Point()
+                @Suppress("DEPRECATION")
+                disp.getRealSize(sz)
+                if (sz.x > 0 && sz.y > 0) panel.set(sz.x, sz.y)
+            } else {
+                val info = ClusterDisplayRegistry.forDisplayId(mDisplayId)
+                if (info != null && info.width > 0 && info.height > 0) panel.set(info.width, info.height)
+            }
+            AppLogger.i(TAG, "resize editor coordinate space = ${panel.x}x${panel.y} (display $mDisplayId)")
+        }
+        val cw = panel.x
+        val ch = panel.y
         val extra = intent.getIntArrayExtra(EXTRA_INIT_LTRB)
         mInitRect = if (extra == null || extra.size != 4) intArrayOf(0, 0, cw, ch) else extra
         mFrame.setClusterSize(cw, ch)
@@ -162,8 +199,7 @@ class ClusterResizeActivity : Activity(),
             val r = mInitRect
             mFrame.setFrame(r[0], r[1], r[2], r[3])
             updateCoordsLabel(r[0], r[1], r[2], r[3])
-            scheduleApply(r[0], r[1], r[2], r[3], /*commit*/ true)
-            finish()
+            if (dispatchFinalApply(r[0], r[1], r[2], r[3])) finish()
         }
         mOk.setOnClickListener {
             // v1.2.84 — Valider applies the current frame to the cluster but does NOT close the
@@ -209,15 +245,29 @@ class ClusterResizeActivity : Activity(),
         val surface = Surface(st)
         mActiveSurface = surface
         var ok = false
-        val daemon = ProxyClient.getDaemonBinder()
-        if (daemon != null) {
-            try {
-                ok = mMirror.startMirrorViaDaemon(this, daemon, clusterDisplay, surface, w, h)
-            } catch (t: Throwable) {
-                AppLogger.w(TAG, "startMirrorViaDaemon threw: " + t.message)
-            }
-        }
-        if (!ok) {
+        // NO daemon mirror here, deliberately. Until 1.8.x this asked ProxyClient.getDaemonBinder()
+        // — the PROXY daemon — so startMirrorViaDaemon wrote SurfaceDaemon.DESCRIPTOR onto a binder
+        // enforcing the proxy DESCRIPTOR: rejected every time. That is why this editor's live
+        // preview has never come up, and it is also why simply pointing it at the right binder is
+        // NOT the fix: the surface daemon owns exactly ONE mirror (SurfaceDaemon.TRANSACT_MIRROR_START
+        // calls stopMirror() first), so a working call here would re-target it away from
+        // MainActivity's preview, and on close nothing restores it — MirrorCoordinator.attemptStart
+        // short-circuits on ClusterService's ClusterMirrorManager still reporting mMirrorActive,
+        // leaving the main preview frozen on its last frame. Trading a preview nobody has ever had
+        // for a broken one is a bad deal.
+        // To implement it properly: drive the mirror through the BOUND ClusterService's
+        // ClusterMirrorManager (the same instance MirrorCoordinator consults) instead of this
+        // Activity's private one, so the shared mMirrorActive state stays consistent and the main
+        // preview restarts on return. Until then the editor draws on the placeholder, exactly as it
+        // always has.
+        // Same guard as MirrorCoordinator.attemptStart: without a cluster display the in-app
+        // SurfaceControl path cannot succeed (no ACCESS_SURFACE_FLINGER) and only emits a bogus
+        // "fallback layerStack=2" + ACCESS_SURFACE_FLINGER [ERROR] that reads like a permission
+        // regression. On DL4 the Display object is null even though the display exists, so the
+        // existence test goes through the registry; null on DL3/DL5 → behaviour unchanged there.
+        val haveClusterDisplay = clusterDisplay != null ||
+                (mDisplayId > 0 && ClusterDisplayRegistry.forDisplayId(mDisplayId) != null)
+        if (!ok && haveClusterDisplay) {
             try {
                 ok = mMirror.startMirror(this, clusterDisplay, surface, w, h)
             } catch (t: Throwable) {
@@ -239,9 +289,12 @@ class ClusterResizeActivity : Activity(),
 
     private fun stopMirrorSafely() {
         if (mMirrorStarted) {
-            val daemon = ProxyClient.getDaemonBinder()
+            // Only the in-app path can have started here (see onSurfaceTextureAvailable: no daemon
+            // mirror is taken), so stop only that one. Sending TRANSACT_MIRROR_STOP to the surface
+            // daemon from this Activity would tear down MainActivity's preview, which this editor
+            // never started and does not own.
             try {
-                if (daemon != null) mMirror.stopMirrorViaDaemon(daemon) else mMirror.stopMirror()
+                mMirror.stopMirror()
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "stopMirror threw: " + t.message)
             }
@@ -313,20 +366,47 @@ class ClusterResizeActivity : Activity(),
             mLastApplyTs = System.currentTimeMillis()
             pending
         }
-        val l = rect[0]
-        val t = rect[1]
-        val r = rect[2]
-        val b = rect[3]
-        sResizeExec.execute {
-            try {
-                if (!ProxyClient.isConnected()) {
-                    ProxyClient.connect(this)
+        enqueueApply(rect)
+    }
+
+    /** Queues the terminal Cancel restore outside the Activity handler before teardown can run. */
+    private fun dispatchFinalApply(l: Int, t: Int, r: Int, b: Int): Boolean {
+        val rect = intArrayOf(l, t, r, b)
+        synchronized(mApplyLock) {
+            mUi.removeCallbacks(mApplyRunnable)
+            mPendingRect = null
+            mApplyScheduled = false
+        }
+        if (!enqueueApply(rect)) return false
+        persistRect(l, t, r, b)
+        return true
+    }
+
+    private fun enqueueApply(rect: IntArray): Boolean {
+        val app = applicationContext
+        val pkg = mPkg
+        val displayId = mDisplayId
+        val applied = rect.copyOf()
+        return try {
+            sResizeExec.execute {
+                val l = applied[0]
+                val t = applied[1]
+                val r = applied[2]
+                val b = applied[3]
+                try {
+                    if (!ProxyClient.isConnected()) {
+                        ProxyClient.connect(app)
+                    }
+                    val log = ProxyClient.moveAndResize(pkg, displayId, l, t, r, b)
+                    AppLogger.d(TAG, "moveAndResize [$l,$t,$r,$b] → $log")
+                } catch (th: Throwable) {
+                    AppLogger.w(TAG, "moveAndResize failed: " + th.message)
                 }
-                val log = ProxyClient.moveAndResize(mPkg, mDisplayId, l, t, r, b)
-                AppLogger.d(TAG, "moveAndResize [$l,$t,$r,$b] → $log")
-            } catch (th: Throwable) {
-                AppLogger.w(TAG, "moveAndResize failed: " + th.message)
             }
+            true
+        } catch (rejected: RejectedExecutionException) {
+            AppLogger.e(TAG, "moveAndResize dispatch rejected", rejected)
+            false
         }
     }
 

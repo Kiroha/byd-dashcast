@@ -40,31 +40,31 @@ public final class CanBusController {
 
     private static final CanBatchOperation.Writer LEGACY_WRITER =
             new CanBatchOperation.Writer() {
-        @Override public void setNaviStatus(int status) throws ProxyClient.ProxyException {
-            ProxyClient.canNaviStatus(status);
+        @Override public int setNaviStatus(int status) throws ProxyClient.ProxyException {
+            return ProxyClient.canNaviStatus(status);
         }
-        @Override public void setInstrumentInt(int featureId, int value)
+        @Override public int setInstrumentInt(int featureId, int value)
                 throws ProxyClient.ProxyException {
-            ProxyClient.canInstrumentInt(featureId, value);
+            return ProxyClient.canInstrumentInt(featureId, value);
         }
-        @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+        @Override public int setInstrumentBytes(int featureId, byte[] bytes)
                 throws ProxyClient.ProxyException {
-            ProxyClient.canInstrumentBytes(featureId, bytes);
+            return ProxyClient.canInstrumentBytes(featureId, bytes);
         }
-        @Override public void setSettingInt(int featureId, int value)
+        @Override public int setSettingInt(int featureId, int value)
                 throws ProxyClient.ProxyException {
-            ProxyClient.canSettingInt(featureId, value);
+            return ProxyClient.canSettingInt(featureId, value);
         }
     };
 
-    /** Executes one pre-existing atomic write group, using one Binder RTT on protocol v19+. */
+    /** Executes one write group, using truthful batch semantics on protocol v24+. */
     public static void sendBatch(List<CanBatchOperation> operations)
             throws ProxyClient.ProxyException {
         if (operations == null || operations.isEmpty()) return;
         if (operations.size() > CanBatchOperation.MAX_BATCH_SIZE) {
             throw new ProxyClient.ProxyException("CAN batch too large: " + operations.size());
         }
-        if (ProxyClient.supportsProtocol(19)) {
+        if (ProxyClient.supportsProtocol(24)) {
             int applied = ProxyClient.canBatch(operations);
             if (applied != operations.size()) {
                 throw new ProxyClient.ProxyException(
@@ -73,7 +73,11 @@ public final class CanBusController {
             return;
         }
         try {
-            for (CanBatchOperation operation : operations) operation.execute(LEGACY_WRITER);
+            int applied = CanBatchOperation.executeAcceptedPrefix(operations, LEGACY_WRITER);
+            if (applied != operations.size()) {
+                throw new ProxyClient.ProxyException(
+                        "legacy CAN batch incomplete: " + applied + "/" + operations.size());
+            }
         } catch (ProxyClient.ProxyException proxyError) {
             throw proxyError;
         } catch (Throwable error) {
@@ -153,7 +157,7 @@ public final class CanBusController {
      * <p>OFF sequence (active=false):
      * <ol>
      *   <li>Set {@code INSTRUMENT_SEND_NAVI_STATUS} = 4 (stopped).</li>
-     *   <li>Clear all 8 HUD registers to their "no data" sentinel values so the
+     *   <li>Clear the remaining HUD registers to their "no data" sentinel values so the
      *       cluster display resets cleanly to the default ADAS / speed view.</li>
      * </ol>
      */
@@ -183,7 +187,6 @@ public final class CanBusController {
      * <p>Writes three CAN registers matching OpenBYD {@code sendSimpleGuidanceInfo}:
      * <ul>
      *   <li>{@code INSTRUMENT_GUIDE_SIMPLE} = iconId</li>
-     *   <li>{@code INSTRUMENT_GUIDE_ROAD_DISTANCE} = iconId (same value — dual-display register)</li>
      *   <li>{@code INSTRUMENT_FRONT_CROSSING_DIST} = distanceMeters</li>
      * </ul>
      *
@@ -211,7 +214,14 @@ public final class CanBusController {
     }
 
     /**
-     * Send the name of the next street / road segment as UTF-8.
+     * Send the name of the next street / road segment as UTF-16LE (no BOM).
+     *
+     * <p>The encoding is NOT free: the OEM nav writes this same register with
+     * {@code str.getBytes("UnicodeLittleUnmarked")} — UTF-16 little-endian without a BOM —
+     * so the MCU decodes the buffer as UTF-16LE. DashCast sent UTF-8 here from the start, which
+     * the MCU rendered as arbitrary CJK codepoints: a field report described
+     * "distance and some Chinese text" on the HUD, which was this bug, visible on-glass, and
+     * was misfiled as a partial failure. Verified against AmapService.java:489/623/628.
      *
      * <p>Null or empty string clears the street name field on the cluster display.
      *
@@ -220,8 +230,8 @@ public final class CanBusController {
     public static void sendNextStreetName(String streetName) throws ProxyClient.ProxyException {
         byte[] bytes = (streetName == null || streetName.isEmpty())
                 ? new byte[0]
-                : streetName.getBytes(StandardCharsets.UTF_8);
-        ProxyClient.canInstrumentBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, bytes);
+                : streetName.getBytes(java.nio.charset.Charset.forName("UTF-16LE"));
+        sendBatch(CanNavigationBatches.nextStreetName(bytes));
     }
 
     // ─── Remaining route info ─────────────────────────────────────────────

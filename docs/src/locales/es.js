@@ -4,7 +4,7 @@ export default {
   name: 'Español',
   title: 'DashCast — Manual de usuario',
   manualName: 'Manual de usuario',
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Índice',
 
   intro: {
@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        '🔒 El reporte contiene solo registros de DashCast y el estado técnico del dispositivo/cluster — sin contactos, sin posición GPS, sin contenido de apps.',
+        '🔒 Antes de enviarlo, DashCast elimina el número de bastidor, los nombres de redes wifi, las direcciones físicas y las posiciones. Quedan el registro de DashCast y el del sistema Android, copiados tal cual: contienen lo que hayan escrito otras aplicaciones. Se te pregunta una vez antes de enviar nada, y si te niegas nada sale del coche.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        '🔒 No se registra ningún dato personal (contactos, posición GPS, contenido de apps) — solo las acciones DashCast y los códigos de retorno técnicos.',
+        '🔒 El registro anota lo que hace DashCast, incluidos nombres de paquetes y la salida de los comandos que ejecuta. Compartirlo desde esta pantalla lo envía tal cual: el filtrado que elimina el número de bastidor, los nombres de redes y las posiciones se aplica a los informes de error, no aquí.',
     },
   ],
 

@@ -1,5 +1,12 @@
 # DashCast full application audit — 2026-07-17
 
+> ⚠️ **HISTORICAL SNAPSHOT — 2026-07-17. Do not apply.**
+> R8 has been enabled for release builds since **1.8.3-beta** (commit `269e2533`, 2026-07-26),
+> and `app/proguard-rules.pro` exists — it is the source of truth for keep rules, not this
+> document. `shrinkResources true` followed in **1.8.32-beta**. Every statement below about
+> minification being off, or about `proguard-rules.pro` being absent, was true when written and
+> is false now. Read this file for its reasoning, never for its state of the world.
+
 **Baseline:** `switch-kotlin` at `v1.6.133-beta` (`ffb9455`)  
 **Scope:** approximately 51k production Java/Kotlin lines, 162 source files, 125 XML resources, startup, lifecycle, UI, projection, Binder/daemon IPC, shell fallbacks, voice, storage, reports, build footprint, and tests.  
 **Release target:** `1.6.134-beta` / versionCode 575 on `switch-kotlin`, without merging `main` or changing the repository's Latest stable release.

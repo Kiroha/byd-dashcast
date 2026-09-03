@@ -36,7 +36,7 @@ object NavRailHotspot {
             isDl3 = Platform.get().isDiLink3(host)
         } catch (ignore: Throwable) { /* Platform may not be initialised on some test paths. */ }
         val useOwnSim = host.getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, true)
+                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, SettingsActivity.DEFAULT_USE_OWN_SIM)
         if (isDl3 && useOwnSim) {
             v.visibility = View.VISIBLE
             v.setOnClickListener {

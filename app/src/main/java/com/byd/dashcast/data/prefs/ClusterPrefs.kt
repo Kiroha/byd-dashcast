@@ -61,10 +61,16 @@ object ClusterPrefs {
      * some screen sizes but causes a visible shape change on others.
      */
     const val KEY_ADAS_WINDOW_FIX = "adas_window_fix"
+    private const val KEY_SMALL_CLUSTER_PANEL = "small_cluster_panel_seen"
 
-    // ── Voice ASR model ──────────────────────────────────────────────
-    /** true = high-accuracy large model (~1.3 GB), false = small model (~40 MB, default). */
-    const val KEY_VOSK_HIGH_ACCURACY = "vosk_high_accuracy"
+    /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
+    const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
+
+    /** True while cluster/main screenshots may still be on disk. See the accessors below. */
+    const val KEY_SHOTS_ON_DISK = "shots_on_disk"
+
+    /** Diagnostic opt-in: post-launch cluster state dump (AUD-PERF-P3). See the accessor below. */
+    const val KEY_LAUNCH_DIAGNOSTICS = "launch_diagnostics"
 
     // ── Fission layout automation ─────────────────────────────────────────────
     /** When true: favourite layout is activated automatically when FissionActivity opens,
@@ -254,17 +260,80 @@ object ClusterPrefs {
         edit(ctx).putBoolean(KEY_ADAS_WINDOW_FIX, enabled).apply()
     }
 
-    // ───────────────────────────────────────────────────────────────────────
-    // Voice ASR model
-    // ───────────────────────────────────────────────────────────────────────
+    /**
+     * Latched the first time this car's cluster is ever seen at 1280x480 — see
+     * [com.byd.dashcast.cluster.display.ClusterGeometryPolicy].
+     *
+     * Persisted deliberately, and never cleared: a live geometry reading is useless for this
+     * question because once a small panel has been pushed to 1920x720 it reports 1920x720 for
+     * good, so the very cars that need protecting are the ones a live check stops recognising.
+     * One observation is enough, and it must outlive the process that made it.
+     */
+    @JvmStatic
+    fun isSmallClusterPanelLatched(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_SMALL_CLUSTER_PANEL, false)
+
+    /** One-way: only ever sets the latch, never clears it. */
+    @JvmStatic
+    fun latchSmallClusterPanel(ctx: Context) {
+        if (isSmallClusterPanelLatched(ctx)) return
+        edit(ctx).putBoolean(KEY_SMALL_CLUSTER_PANEL, true).apply()
+    }
+
+    /**
+     * Diagnostic opt-in: when true, [com.byd.dashcast.hud.MapNotificationListenerService] also logs
+     * the RAW notification title/text/bigText (clipped) so a maintainer can see exactly what Waze (or
+     * any nav app) posts, to calibrate the text parser. OFF by default — the raw text is location PII
+     * (destination / current road / ETA) and flows into bug reports, so it must be turned on
+     * deliberately from the Diagnostics screen and off again after capturing a route.
+     */
+    @JvmStatic
+    fun isNavRawCaptureEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_NAV_RAW_CAPTURE, false)
 
     @JvmStatic
-    fun isVoskHighAccuracy(ctx: Context): Boolean =
-        prefs(ctx).getBoolean(KEY_VOSK_HIGH_ACCURACY, false)
+    fun setNavRawCaptureEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_NAV_RAW_CAPTURE, enabled).apply()
+    }
+
+    /**
+     * AUD-PERF-P3 — is the post-launch cluster state dump enabled? OFF by default.
+     *
+     * `ClusterService.verifyClusterDisplayState` shells a pipeline containing
+     * `dumpsys SurfaceFlinger`, which serialises SurfaceFlinger's entire layer tree under SF's
+     * global lock — 1.5 s into the projected app's cold start, i.e. exactly when SF is busiest
+     * and the driver-facing panel is least able to absorb a stall. It also forks ~10 processes.
+     * Its own javadoc calls it "diagnostic only (no behaviour change)" and nothing consumes the
+     * output but a journal line, so every projection start used to pay for evidence almost no
+     * report ever needed. Turn it on from the Diagnostics screen when triaging a placement bug.
+     */
+    /**
+     * Do cluster/main screenshots possibly still exist in the daemon's scratch dir?
+     *
+     * This has to be PERSISTED, not a process-local flag. The max-age sweep is the only thing that
+     * enforces MAX_AGE_MIN on those JPEGs, and it was gated on an in-memory `sLastCaptureMs != 0L`.
+     * After any process death -- an OTA reinstall, a force-stop, a low-memory kill, a swipe-away --
+     * a fresh process read 0, concluded nothing had ever been captured, and never swept again.
+     * Pictures of BOTH driver-facing screens then sat on disk indefinitely, past the bound the
+     * recorder's own KDoc promises. Persisting the latch is what makes that bound real.
+     */
+    @JvmStatic
+    fun shotsOnDisk(ctx: Context): Boolean =
+        try { prefs(ctx).getBoolean(KEY_SHOTS_ON_DISK, false) } catch (t: Throwable) { true }
+
+    /** Fail-safe: a write failure leaves the latch SET, i.e. keeps sweeping. */
+    @JvmStatic
+    fun setShotsOnDisk(ctx: Context, onDisk: Boolean) {
+        try { edit(ctx).putBoolean(KEY_SHOTS_ON_DISK, onDisk).apply() } catch (t: Throwable) { }
+    }
 
     @JvmStatic
-    fun setVoskHighAccuracy(ctx: Context, highAccuracy: Boolean) {
-        edit(ctx).putBoolean(KEY_VOSK_HIGH_ACCURACY, highAccuracy).apply()
+    fun isLaunchDiagnosticsEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_LAUNCH_DIAGNOSTICS, false)
+
+    @JvmStatic
+    fun setLaunchDiagnosticsEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_LAUNCH_DIAGNOSTICS, enabled).apply()
     }
 
     @JvmStatic

@@ -866,7 +866,14 @@ class SysInfoActivity : AppCompatActivity() {
                             val stackStr = if (value >= 0) "layerStack=$value" else "layerStack=?"
                             support.text = stackStr + " · " + getString(R.string.sysinfo_disp_hidden_sub)
                             badge.text = "●"
-                            badge.setTextColor(0xFFFF9800.toInt()) // orange — not visible via API
+                            // AUD-148 (suite) — this row is why AUD-148 was raised, and the first
+                            // fix did not reach it: setServiceRowState was the only place touched,
+                            // and no display-row builder calls it. A hard-coded orange glyph was
+                            // left sitting inside the GREEN pill the layout supplies by default —
+                            // #FF9800 on that ground measures 1.59:1, the least legible thing on
+                            // the screen and semantically the opposite of what the pill says.
+                            badge.setTextColor(ContextCompat.getColor(this@SysInfoActivity, R.color.md_pill_warn_text))
+                            badge.setBackgroundResource(R.drawable.bg_status_pill_warn)
                             container.addView(row)
                         }
                     }
@@ -979,7 +986,9 @@ class SysInfoActivity : AppCompatActivity() {
                 }, 1500L)
             })
 
-        // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
+        // SurfaceDaemon — separate process started via ADB (uid=2000); pid via pgrep.
+        // The row label stays "MirrorDaemon": it is the runtime identity a triager sees in logcat
+        // and in mirrordaemon_latest.log, which the class rename deliberately did not touch.
         val mirrorRow = addServiceRow(
             inf, container, "MirrorDaemon",
             if (clusterRunning) getString(R.string.sysinfo_svc_mirror_sub)
@@ -1008,8 +1017,22 @@ class SysInfoActivity : AppCompatActivity() {
             })
         if (clusterRunning) {
             // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
+            //
+            // Match the RUNTIME process name, never the entry-point class name. `pgrep -f` tests
+            // /proc/<pid>/cmdline, and the daemon overwrites its whole arg block with
+            // setArgV0("com.byd.dashcast.mirrordaemon") (see SurfaceDaemon.main) — the FQCN
+            // app_process was invoked with is gone from the cmdline by the time anyone can look.
+            // So "MirrorDaemon" (used until 1.8.x) and "SurfaceDaemon" alike could never match and
+            // this row has always fallen back to the generic subtitle; the class rename did not
+            // break it, it was already dead. Same shape as the BetaProxy row below, which greps
+            // its own runtime name "dashcast_proxy", and as AdbLocalClient.DAEMON_GREP.
+            // Still shows the generic subtitle when the lookup yields nothing (e.g. if /proc does
+            // not expose a uid-2000 process to our uid) — the row's on/off state comes from
+            // clusterRunning, not from this pid.
+            // NOTE: pidOf() interpolates the pattern into `sh -c`, so it must stay free of shell
+            // metacharacters — hence one literal token, not the DAEMON_GREP alternation.
             Thread({
-                val pid = pidOf("MirrorDaemon")
+                val pid = pidOf("com.byd.dashcast.mirrordaemon")
                 runOnUiThread {
                     if (mDestroyed) return@runOnUiThread
                     val sub = if (pid > 0) "pid $pid · poll 500 ms" else getString(R.string.sysinfo_svc_mirror_sub)
@@ -1213,12 +1236,24 @@ class SysInfoActivity : AppCompatActivity() {
         }
         row.findViewById<TextView>(R.id.row_support).text = sub
         val badge = row.findViewById<TextView>(R.id.row_badge)
+        // AUD-148 — the pill has to follow the text. Only one pill drawable existed, green, set
+        // once in row_sysinfo.xml and never changed, so an OFF row rendered red text inside a
+        // green badge: the two halves of the same widget disagreeing about what they meant.
         if (running) {
             badge.text = getString(if (useConnBadge) R.string.sysinfo_svc_conn else R.string.sysinfo_svc_run)
-            badge.setTextColor(ContextCompat.getColor(this, R.color.md_status_ok))
+            badge.setTextColor(ContextCompat.getColor(this, R.color.md_pill_ok_text))
+            badge.setBackgroundResource(R.drawable.bg_status_pill_ok)
         } else {
             badge.text = getString(R.string.sysinfo_svc_off)
-            badge.setTextColor(ContextCompat.getColor(this, R.color.md_status_err))
+            // Neutral rather than the error red it used to take: a service that is not running is
+            // a state, not a fault, and every stopped row shouting in red teaches people to ignore
+            // the colour entirely.
+            // md_on_surface_variant, not md_outline. My AUD-148 fix used the outline token —
+            // which exists for strokes and dividers, never for text — and took the OFF badge from
+            // 6.9:1 to 3.37:1 in day mode and 3.22:1 at night, making the one state a triager
+            // scans for the hardest thing on the screen to read. This measures 7.03:1 and 6.42:1.
+            badge.setTextColor(ContextCompat.getColor(this, R.color.md_on_surface_variant))
+            badge.setBackgroundResource(R.drawable.bg_status_pill_off)
         }
     }
 
@@ -1269,9 +1304,15 @@ class SysInfoActivity : AppCompatActivity() {
         // always supplies a value, so get() never returns null here (it is nonetheless
         // typed nullable in Kotlin → !! at the call sites is safe by construction).
         private val SDF_REPORT_HEADER: ThreadLocal<SimpleDateFormat> =
-            ThreadLocal.withInitial { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
+            ThreadLocal.withInitial { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT) }
+        // Locale.ROOT, not getDefault(): this stamp goes into a FILENAME and into the report
+        // header, both of which are machine-read — by the Telegram pull script's filename filter
+        // and by triage. AppLogger already learned this the hard way and documents it: on an
+        // Arabic head unit getDefault() renders Arabic-Indic digits, and the artefact stops
+        // matching the pattern everything downstream expects. SDF_TIME_HMS / SDF_TIME_HM below
+        // feed on-screen text only and legitimately stay on getDefault().
         private val SDF_FILE_STAMP: ThreadLocal<SimpleDateFormat> =
-            ThreadLocal.withInitial { SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()) }
+            ThreadLocal.withInitial { SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT) }
         private val SDF_TIME_HMS: ThreadLocal<SimpleDateFormat> =
             ThreadLocal.withInitial { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
         private val SDF_TIME_HM: ThreadLocal<SimpleDateFormat> =

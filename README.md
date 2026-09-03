@@ -13,7 +13,8 @@
 
 Android application for **BYD vehicles (DiLink 3 and DiLink 5)** to push any installed app onto the instrument cluster display, control it via a real-time touch mirror, run several apps at once on the cluster with the **Layouts** engine (internally *Fission*), draw turn-by-turn arrows on the **DiLink 3 windshield HUD**, and report problems in one tap with a keyboard-free bug wizard.
 
-> **v1.7.0 — first stable release since 1.5.4.** Milestone: the codebase has crossed **>50% Kotlin** (Kotlin now outnumbers Java). See [Migration status](#code-structure).
+> **v1.9.0 — current stable release.** It consolidates the complete 1.8.x projection, Layout,
+> HUD, reporting, privacy, OTA and reliability audit. The road to 2.0.0 now focuses on the HUD.
 
 > **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F, Android 10). Also runs on **DiLink 5** head units (Android 13); the privileged daemon path adapts to each ROM.
 
@@ -49,22 +50,21 @@ Android application for **BYD vehicles (DiLink 3 and DiLink 5)** to push any ins
 | 3 | **→ Main screen** | Move an app from the cluster back to display 0 |
 | 4 | **Touch mirror** | Real-time TextureView of the cluster via `SurfaceControl` + full touch & key forwarding |
 | 5 | **Fission** | Multi-app layout engine: run several apps simultaneously on the cluster, with layout presets, per-slot app binding, auto-activation on open, and a visual editor |
-| 6 | **Voice commands** *(experimental)* | Wake-word → offline speech recognition (Vosk) → LLM → TTS. A proof-of-concept that lived in the diagnostics surface; not exposed in the main UI while diagnostics are being rebuilt in Kotlin |
-| 7 | **HUD turn-by-turn** *(DiLink 3)* | Forwards Google Maps / Waze guidance (maneuver arrow + distance) to the **windshield HUD over CAN** on arrow-capable firmware. Also renders a nav-data overlay on the cluster |
-| 8 | **Per-app DPI override** | Adjustable cluster display DPI per package — corrects apps that render incorrectly at 320 dpi |
-| 9 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
-| 10 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
-| 11 | **Settings** | Cluster screen size, auto-launch, Fission auto-layout, beta OTA channel, per-app insets |
-| 12 | **Diagnostics** *(rebuilding)* | The Java diagnostics screen + test runners were **emptied in v1.7.0** to be rebuilt cleanly in Kotlin; a Kotlin stub keeps the menu entry. The HUD/AAOS diagnostic tools remain |
-| 13 | **System report** | Displays, system properties, BYD packages, permissions, proxy metrics, DiLink probe results |
-| 14 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, auto-scroll, share |
-| 15 | **Multilingual** | French / English / German / Italian / Spanish / Polish / Turkish / Russian / Ukrainian / Arabic / Uzbek / Kazakh / Belarusian (13 languages), selected on first launch |
-| 16 | **Floating overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
-| 17 | **Hotspot control** | Toggle and monitor Wi-Fi hotspot from within the app |
-| 18 | **Display affinity safeguards** | Moves session apps back to Display 0 when projection stops or app is killed |
-| 19 | **OTA update** | Auto-check against GitHub Releases; **silent auto-install + app relaunch** via the uid-2000 daemon (`pm install -r … && am start`), with fallback to `PackageInstaller` / the system dialog |
-| 20 | **Bug reporter** | Keyboard-free 3-step wizard (category → app → issue) that captures a bounded diagnostic snapshot and sends it to the support channel in one tap; reachable from the nav rail and the floating button |
-| 21 | **DiLink 5 support** | Cluster projection on DiLink 5 head units, with signing-wall hardening and a ROM-adaptive uid-2000 daemon path |
+| 6 | **HUD turn-by-turn** *(DiLink 3)* | Forwards Google Maps / Waze guidance (maneuver arrow + distance) to the **windshield HUD over CAN** on arrow-capable firmware. Also renders a nav-data overlay on the cluster |
+| 7 | **Per-app DPI override** | Adjustable cluster display DPI per package — corrects apps that render incorrectly at 320 dpi |
+| 8 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
+| 9 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
+| 10 | **Settings** | Cluster screen size, auto-launch, Fission auto-layout, beta OTA channel, per-app insets |
+| 11 | **Diagnostics** *(rebuilding)* | The Java diagnostics screen + test runners were **emptied in v1.7.0** to be rebuilt cleanly in Kotlin; a Kotlin stub keeps the menu entry. The HUD/AAOS diagnostic tools remain |
+| 12 | **System report** | Displays, system properties, BYD packages, permissions, proxy metrics, DiLink probe results |
+| 13 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, auto-scroll, share |
+| 14 | **Multilingual** | French / English / German / Italian / Spanish / Polish / Turkish / Russian / Ukrainian / Arabic / Uzbek / Kazakh / Belarusian (13 languages), selected on first launch |
+| 15 | **Floating overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
+| 16 | **Hotspot control** | Toggle and monitor Wi-Fi hotspot from within the app |
+| 17 | **Display affinity safeguards** | Moves session apps back to Display 0 when projection stops or app is killed |
+| 18 | **OTA update** | Auto-check against GitHub Releases; **silent auto-install + app relaunch** via the uid-2000 daemon (`pm install -r … && am start`), with fallback to `PackageInstaller` / the system dialog |
+| 19 | **Bug reporter** | Keyboard-free 3-step wizard (category → app → issue) that captures a bounded diagnostic snapshot and sends it to the support channel in one tap; reachable from the nav rail and the floating button |
+| 20 | **DiLink 5 support** | Cluster projection on DiLink 5 head units, with signing-wall hardening and a ROM-adaptive uid-2000 daemon path |
 
 ---
 
@@ -72,7 +72,7 @@ Android application for **BYD vehicles (DiLink 3 and DiLink 5)** to push any ins
 
 DashCast is organized around three runtime layers:
 
-**App layer** (`uid=10080`) — MainActivity and all UI coordinators. Handles user interaction, app list, settings, mirror rendering, Fission layout UI, and voice commands.
+**App layer** (`uid=10080`) — MainActivity and all UI coordinators. Handles user interaction, app list, settings, mirror rendering, and the Fission layout UI.
 
 **ClusterService** (`uid=10080`, foreground service) — Manages cluster projection independently of the Activity lifecycle. Owns the display connection, mirror pipeline, touch forwarding, and task resize.
 
@@ -82,7 +82,7 @@ DashCast is organized around three runtime layers:
 
 ## Code structure
 
-> **Migration status (v1.7.0):** the codebase is **majority Kotlin** — `.kt` files now outnumber `.java`. The tree below is organised by responsibility; some entries keep their historical `.java` name even where the file is already Kotlin. Converted so far: the voice package, the bug reporter (`report/`), `ui/nav`, `cluster/{dpi,display,mirror}`, most of `infrastructure/`, the app lifecycle, and a batch of unit-tested pure-logic policy classes. Still Java (deliberately last): the `proxy` / `proxy/daemon` binder-contract core, `ClusterService`, `AdbLocalClient`, `Platform`, and the large activities.
+> **Migration status (v1.7.0):** the codebase is **majority Kotlin** — `.kt` files now outnumber `.java`. The tree below is organised by responsibility; some entries keep their historical `.java` name even where the file is already Kotlin. Converted so far: the bug reporter (`report/`), `ui/nav`, `cluster/{dpi,display,mirror}`, most of `infrastructure/`, the app lifecycle, and a batch of unit-tested pure-logic policy classes. Still Java (deliberately last): the `proxy` / `proxy/daemon` binder-contract core, `ClusterService`, `AdbLocalClient`, `Platform`, and the large activities.
 
 ```
 app/src/main/java/com/byd/dashcast/
@@ -115,26 +115,19 @@ app/src/main/java/com/byd/dashcast/
 │   ├── FissionClient.java         — Proxy client for fission verbs
 │   └── ClusterCanvasView.java     — Visual layout canvas
 │
-├── voice/                         — Offline voice command pipeline
-│   ├── VoiceService.java          — Foreground service, audio capture loop
-│   ├── wakeword/WakeWordEngine.java — Wake-word detection
-│   ├── VoskTranscriber.java       — Vosk offline speech recognition
-│   ├── LlmVoiceEngine.java        — LLM intent resolution
-│   ├── VoiceCommandRouter.java    — Routes intents to app actions
-│   └── VoiceLibsManager.java      — Runtime model download & management
-│
-├── proxy/                         — Beta Proxy Daemon client interface
-│   ├── ProxyClient.java           — All Binder calls to the daemon
-│   ├── ProxyKeeperService.java    — Keeps the daemon alive (10 s heartbeat)
+├── proxy/                         — Clients of the two uid-2000 daemons (see note below)
+│   ├── ProxyClient.java           — Binder calls to the PROXY daemon (getProxyDaemonBinder)
+│   ├── DaemonBinderResolver.kt    — Looks up the SURFACE daemon binder (surfaceDaemonBinder)
+│   ├── ProxyKeeperService.java    — Keeps the proxy daemon alive (10 s heartbeat)
 │   ├── ProxyWatchdog.java         — Periodic connectivity check
 │   ├── ShellGateway.java          — Fire-and-forget / result shell dispatcher
 │   ├── ProxyFissionVerbs.java     — launchAndForce, moveAndResize, cleanStacks
 │   ├── ProxyDisplayVerbs.java     — Overscan, display size
 │   ├── ProxyCanVerbs.java         — CAN bus write verbs
-│   └── daemon/                    — Daemon process (runs as uid=2000)
-│       ├── ProxyDaemonMain.java   — Entry point, Binder onTransact()
+│   └── daemon/                    — TWO separate uid=2000 processes (see note below)
+│       ├── ProxyDaemonMain.java   — PROXY daemon entry point, Binder onTransact()
 │       ├── ProxyDaemonContract.java — TXN constants
-│       ├── MirrorDaemon.java      — SurfaceControl mirror transactions
+│       ├── SurfaceDaemon.java     — SURFACE daemon entry point, SurfaceControl / slot windows
 │       ├── Phase4TaskVerbs.java   — FREEFORM mode, task resize, move
 │       ├── Phase4DisplayVerbs.java
 │       ├── Phase4ProcessVerbs.java
@@ -174,6 +167,25 @@ app/src/main/java/com/byd/dashcast/
     ├── AppLogger.java             — Circular log buffer (3000 entries, share)
     └── LocaleHelper.java
 ```
+
+### Two uid-2000 daemons, not one
+
+`proxy/daemon/` builds **two separate processes**, each with its own ServiceManager name, its own
+binder and its own interface DESCRIPTOR:
+
+| | **ProxyDaemon** (`ProxyDaemonMain`) | **SurfaceDaemon** (`SurfaceDaemon`) |
+|---|---|---|
+| Role | **DOES** things — stateless command executor: shell + one-shot verbs | **HOLDS** things — stateful owner of surfaces, cluster slot overlay windows, trusted VirtualDisplays, touch injection |
+| ServiceManager | `byd_proxy_daemon` | `byd_mirror_daemon` |
+| Get its binder | `ProxyClient.getProxyDaemonBinder()` | `DaemonBinderResolver.surfaceDaemonBinder()` (alias: `FissionClient.getBinderFromServiceManager()`) |
+| If it dies | retry the command | the graphical state is lost and must be rebuilt |
+
+Never pair one daemon's DESCRIPTOR with the other's binder: the receiving `enforceInterface`
+rejects the transaction, which then **silently does nothing**. Triage rule: a failed *command* →
+ProxyDaemon; a black or frozen *surface* → SurfaceDaemon.
+
+`SurfaceDaemon` was named `MirrorDaemon` until 1.8.x; only the Java class was renamed — the wire
+name, the DESCRIPTOR, the runtime process names and the log TAG still say "mirror" on purpose.
 
 ---
 
@@ -257,8 +269,22 @@ CLASSPATH=<apk> exec /system/bin/app_process64 /system/bin \
   com.byd.dashcast.proxy.daemon.ProxyDaemonMain
 ```
 
-It exposes a Binder interface (registered in `ServiceManager` as `dashcast_proxy`) with
-19 transactions. Key verbs:
+It exposes a Binder interface registered in `ServiceManager` as **`byd_proxy_daemon`**.
+
+Three different identifiers coexist here and confusing them is the documented cause of a
+past incident, so they are worth separating once:
+
+| Identifier | Value | What it names |
+|---|---|---|
+| ServiceManager name | `byd_proxy_daemon` | what `service list` shows and what `getService()` takes — `ProxyDaemonMain.SERVICE_NAME` |
+| Process nice-name | `dashcast_proxy` | what `ps` shows, and the prefix of the pid/trigger files in `/data/local/tmp` — `ProxyDaemonMain.PROC_NAME` |
+| Interface DESCRIPTOR | `com.byd.dashcast.proxy.daemon.IProxyDaemon` | the token every transaction must carry — `ProxyDaemonContract.DESCRIPTOR` |
+
+Looking the daemon up as `dashcast_proxy` finds nothing and looks exactly like "the daemon
+is not registered", which is convincing because a process by that name really is running.
+
+The transaction count is not repeated here — `ProxyDaemonContract.java` is the source of
+truth and it grows with the protocol. Key verbs:
 
 | TXN | Method | Purpose |
 |-----|--------|---------|
@@ -270,7 +296,13 @@ It exposes a Binder interface (registered in `ServiceManager` as `dashcast_proxy
 | 16 | `canNaviStatus` | Write CAN navigation status |
 
 `ProxyKeeperService` reconnects to the daemon every 10 s if the Binder is dead.
-`ProxyWatchdog` polls every 30 s during active sessions.
+
+`ProxyWatchdog` was designed as a lighter 30 s fallback for when the keeper is not running,
+and in practice that loop never runs: `ProxyKeeperService.onCreate` calls
+`noteKeeperStarted()`, `shouldPoll()` is `!keeperActive && foregroundCount > 0`, and nothing
+in the tree ever stops the keeper — there is no `stopSelf()` and no `stopService()` for it,
+only `ensureRunning()`. What is actually live in that class is the foreground-activity
+counter, which `HotspotKeeper` reads.
 
 ### Restore
 
@@ -305,13 +337,9 @@ On BYD Seal EU (DiLink 3.0), ADB TCP is available at `localhost:5555` from withi
 
 ### 2. Platform keystore
 
-The APK must be signed with `platform.keystore` (included in the BYD SDK v1.0.5) to obtain `signature`-level permissions (`INJECT_EVENTS`, `BYDAUTO_*`).
+To obtain `signature`-level permissions (`INJECT_EVENTS`, `BYDAUTO_*`) the APK must be signed with the platform key — the public AOSP test key, as [SECURITY.md](SECURITY.md) explains. Place it at `app/keystore/platform.keystore`.
 
-Place it at `app/keystore/platform.keystore` before building.
-
-### 3. BYD SDK
-
-See [Build requirements](#build-requirements) below.
+Only needed to **run** the privileged features. The project builds without it; see [Build requirements](#build-requirements).
 
 ---
 
@@ -321,17 +349,18 @@ See [Build requirements](#build-requirements) below.
   - **Stable** (recommended): latest non-pre-release asset on the Releases page
   - **Beta** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
 
-2. **Uninstall any previous version first** (see breaking change notice above):
-```bash
-adb uninstall com.byd.myapp     # if coming from any alpha
-adb uninstall com.byd.dashcast  # if coming from a previous beta
-```
-
-3. Sideload onto the infotainment unit:
+2. Connect to the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-adb install DashCast-vX.Y.Z-release.apk
 ```
+
+3. Install or upgrade DashCast. `-r` preserves settings, consent and update state:
+```bash
+adb install -r DashCast-vX.Y.Z-release.apk
+```
+
+  Only users of the obsolete pre-`0.2.0` package name must first run
+  `adb uninstall com.byd.myapp`.
 
 4. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
 5. The app should be functional immediately.
@@ -354,42 +383,52 @@ Once DashCast is installed, future updates are automatic:
 - **BYD vehicle data permissions**: On some units, `BYDAUTO_*` permissions are denied at the platform level regardless of signing. Speed, energy, and instrument data will be unavailable; all other features are unaffected.
 - **resizeTask on first install**: On a fresh install, the cluster task may not resize to fill the display on the first launch. This resolves automatically after the first successful `moveAndResize` cycle through the daemon.
 - **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface).
-- **Voice models**: Vosk and LLM models are several hundred MB and are downloaded on first voice activation. Requires an active internet connection during the initial setup.
 
 ---
 
 ## Build requirements
 
-| Tool | Version |
-|---|---|
-| JDK | 11 (Temurin recommended) |
-| Android SDK | API 29 compileSdk, **BYD SDK v1.0.5** as sdk.dir |
-| AGP | 7.4.2 |
-| Gradle wrapper | 7.6 |
+| Tool | Version | Where it is pinned |
+|---|---|---|
+| JDK | **17** — a full JDK, not a JRE (AGP 8 runs `jlink`) | `app/build.gradle` (`JavaVersion.VERSION_17`) |
+| AGP | **8.13.2** | `build.gradle` |
+| Kotlin | **2.4.0** | `build.gradle` |
+| Gradle wrapper | **8.14.5** | `gradle/wrapper/gradle-wrapper.properties` |
+| compileSdk | **33** | `app/build.gradle` |
+| targetSdk | **29** — deliberately frozen for DiLink compatibility, do not raise it | `app/build.gradle` |
+| minSdk | **28** | `app/build.gradle` |
 
-### BYD SDK
+A stock Android SDK is enough. Point `sdk.dir` in `local.properties` at it, or set
+`ANDROID_HOME`, as with any Android project.
 
-This project requires BYD SDK v1.0.5 (modified `android.jar` with `android.hardware.bydauto.*`).
+### The BYD SDK is not required to build
 
-> The SDK is **not included** in this repository (proprietary).  
-> Extract to: `../sdk/SDK_v1.0.5/byd-auto_sdk_windows/`  
-> Configure `local.properties`:
+Older revisions of this file said it was, and that instruction outlived the fact.
+The proprietary SDK's distinguishing artefact is a modified `android.jar` carrying the
+`android.hardware.bydauto.*` classes, and it exists only in that SDK's `platforms/android-25`.
+This project compiles against **API 33**, whose `android.jar` — the BYD SDK's own copy included —
+contains none of those classes.
 
-```properties
-sdk.dir=/path/to/sdk/SDK_v1.0.5/byd-auto_sdk_windows
-```
+They come from `app/libs/byd-auto-api-stubs.jar` instead, which **is** in this repository:
+interface declarations only, no implementation, enough to compile against and useless to run.
+Move it aside and `compileDebugJavaWithJavac` fails on the six references in
+`CanFeedbackListener.java`; put it back and the build is green. That is the whole of the
+dependency.
 
 ### Signing
 
-The APK must be signed with `platform.keystore` (BYD SDK) for `signature` permissions
-(`INJECT_EVENTS`, `BYDAUTO_*_COMMON`).
+`app/keystore/platform.keystore` is not in the repository, and the build no longer requires it:
+if it is absent, Gradle falls back to its own debug signing and says so. See the note under
+[Build](#build) for what that costs at runtime.
 
 ```
 app/keystore/platform.keystore
   alias: androiddebugkey | storepass/keypass: android
 ```
 
-The `app/build.gradle` signing config applies this keystore for both debug and release builds.
+The key itself is the **public AOSP platform test key** — see [SECURITY.md](SECURITY.md), which
+explains why that is both intentional and unavoidable on this hardware. The copy shipped in the
+BYD SDK is byte-for-byte the same file. It is not a secret, and it is not proof of authorship.
 
 ---
 
@@ -400,10 +439,28 @@ cd MyBYDApp   # repo folder name
 ./gradlew assembleRelease
 # APK → app/build/outputs/apk/release/DashCast-v<versionName>-release.apk
 
-# Debug build (same platform-signed APK, useful for development):
+# Debug build — for a development machine, NOT for a car (see the warning below):
 ./gradlew assembleDebug
 # APK → app/build/outputs/apk/debug/DashCast-v<versionName>-debug.apk
 ```
+
+> **Building without the platform key.** `app/keystore/platform.keystore` is not in the repository —
+> it is what grants the BYD system permissions, and an APK signed with it is a privileged APK. If it
+> is absent the build still works: both variants are signed with Gradle's **debug** key instead, and
+> the build prints a line saying so. The APK installs and runs, and the bydauto features — cluster
+> projection, HUD, the uid-2000 daemon — are denied at runtime. That is enough to read, compile and
+> review the code, which is what SECURITY.md means by "build from source".
+>
+> The release APK is then named `DashCast-v<version>-release-debugsigned.apk` rather than
+> `-release.apk`. That is deliberate: a build the platform key did not sign must not be mistakable
+> for a publishable one.
+
+> **Do not leave a debug build on a vehicle.** It carries the same platform signature as the
+> release — that part is unavoidable, the BYD permissions depend on it — but it is also
+> `debuggable`, which the release is not. On a head unit, ADB over TCP has to be enabled for
+> DashCast to work at all, so anyone who can reach that port can attach a debugger to a process
+> holding platform permissions. The release build is the one to install; use debug builds on the
+> bench and uninstall them when you are done.
 
 ---
 
@@ -413,9 +470,8 @@ cd MyBYDApp   # repo folder name
 |---|---|---|
 | `INJECT_EVENTS` | signature | Touch/key injection to the cluster |
 | `SYSTEM_ALERT_WINDOW` | dangerous | Floating overlay (FloatingRemoteButton) |
-| `FOREGROUND_SERVICE` | normal | ClusterService, VoiceService |
-| `RECORD_AUDIO` | dangerous | Voice command pipeline |
-| `INTERNET` | normal | OTA update check, voice model download |
+| `FOREGROUND_SERVICE` | normal | ClusterService |
+| `INTERNET` | normal | OTA update check, diagnostic report upload |
 | `BIND_NOTIFICATION_LISTENER_SERVICE` | signature | Navigation HUD (map notification parsing) |
 | `BYDAUTO_*_COMMON` (×11) | dangerous | BYD vehicle APIs |
 | `BYDAUTO_*_GET` | signature | Extended read (not grantable without real BYD key) |
@@ -472,10 +528,9 @@ adb pull /sdcard/Android/data/com.byd.dashcast/files/
 
 This project is licensed under the [MIT License](LICENSE).
 
-> **Note on dependencies**: This project requires **BYD SDK v1.0.5** (proprietary) which
-> is NOT included in this repository and is NOT covered by the MIT license.
-> The BYD SDK contains a modified `android.jar` with `android.hardware.bydauto.*` APIs.
-> You must obtain it separately.
+> **Note on dependencies**: the `android.hardware.bydauto.*` APIs originate in the proprietary
+> **BYD SDK v1.0.5**, which is NOT included here and is NOT covered by the MIT license.
+> Building does not require it — see [Build requirements](#build-requirements).
 >
 > The file `app/libs/byd-auto-api-stubs.jar` is a stub-only extract of the BYD SDK v1.0.5
 > (interface declarations, no implementation). It is included solely to allow the project

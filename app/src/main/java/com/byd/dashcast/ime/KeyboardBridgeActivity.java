@@ -27,7 +27,7 @@ import com.byd.dashcast.proxy.ShellGateway;
  * IME cannot render natively on the cluster display.
  *
  * <p>v1.2.12 — Forwarding pivot. The original v1.2.8 design injected synthetic
- * {@link KeyEvent}s through {@code MirrorDaemon.injectKey()} routed via
+ * {@link KeyEvent}s through {@code SurfaceDaemon.injectKey()} routed via
  * {@code KeyEvent.setDisplayId(clusterId)}. Field testing showed two problems:
  * <ul>
  *   <li>v1.2.11 made the EditText 1×1 to remove visual chrome — but at that
@@ -75,6 +75,12 @@ public class KeyboardBridgeActivity extends Activity {
     public static boolean isShowing() { return sShowing; }
 
     private EditText           mInput;
+
+    /** AUD-007 — true while this activity edits its own field; such edits are not relayed. */
+    private boolean mSuppressRelay = false;
+    private long mInputGeneration = 0L;
+    private boolean mImeActionInFlight = false;
+    private long mImeActionGeneration = 0L;
     private InputMethodManager mImm;
 
     @Override
@@ -122,15 +128,38 @@ public class KeyboardBridgeActivity extends Activity {
                         || actionId == EditorInfo.IME_ACTION_GO
                         || actionId == EditorInfo.IME_ACTION_SEARCH
                         || actionId == EditorInfo.IME_ACTION_SEND) {
-                    boolean ok = false;
+                    if (mImeActionInFlight) return true;
+                    mImeActionInFlight = true;
+                    final long actionGeneration = ++mImeActionGeneration;
+                    final String submitted = mInput == null || mInput.getText() == null
+                            ? "" : mInput.getText().toString();
+                        final long submittedGeneration = mInputGeneration;
                     try {
-                        ok = ClusterImeWatcherService.performImeEnterOnCluster();
+                        ClusterImeWatcherService.performImeEnterOnCluster(
+                                new ClusterImeWatcherService.ImeActionCallback() {
+                            @Override public void onComplete(final boolean accepted) {
+                                runOnUiThread(new Runnable() {
+                                    @Override public void run() {
+                                        if (actionGeneration != mImeActionGeneration) return;
+                                        mImeActionInFlight = false;
+                                        if (!accepted || isFinishing() || isDestroyed()
+                                                || mInput == null || mInput.getText() == null
+                                            || submittedGeneration != mInputGeneration
+                                                || !submitted.contentEquals(mInput.getText())) {
+                                            return;
+                                        }
+                                        mSuppressRelay = true;
+                                        try { mInput.setText(""); } catch (Throwable ignored) { }
+                                        finally { mSuppressRelay = false; }
+                                    }
+                                });
+                            }
+                        });
                     } catch (Throwable t) {
+                        if (actionGeneration == mImeActionGeneration) {
+                            mImeActionInFlight = false;
+                        }
                         AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
-                    }
-                    if (ok) {
-                        // Reset local field so next session starts fresh.
-                        try { mInput.setText(""); } catch (Throwable ignored) { }
                     }
                     return true;
                 }
@@ -309,6 +338,7 @@ public class KeyboardBridgeActivity extends Activity {
      * so we never call startActivity on an unresolvable Intent. Always
      * finishes the bridge after launch.
      */
+    @SuppressWarnings("deprecation")
     private void openAccessibilitySettings() {
         android.content.pm.PackageManager pm = getPackageManager();
         android.content.Intent[] attempts = new android.content.Intent[] {
@@ -425,18 +455,49 @@ public class KeyboardBridgeActivity extends Activity {
     @Override
     protected void onStop() {
         sShowing = false;
+        endSession();
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
         sShowing = false;
+        endSession();
         try {
             if (mImm != null && mInput != null) {
                 mImm.hideSoftInputFromWindow(mInput.getWindowToken(), 0);
             }
         } catch (Exception ignored) { }
         super.onDestroy();
+    }
+
+    /**
+     * Discard anything typed in this session but never validated.
+     *
+     * <p>AUD-007 put this in {@code onDestroy} only, and that is not where the session ends. This
+     * activity is {@code launchMode="singleTask"} (AndroidManifest.xml:175), so re-opening the
+     * bridge reuses the existing instance: the lifecycle is onStop then onStart, and onDestroy
+     * never runs. The abandoned draft therefore survived exactly the case the fix was written for —
+     * leave the keyboard without validating, come back later, press Done, and the previous
+     * session's destination is what leaves for the cluster. In a car that means being routed to an
+     * address the driver had given up on, with zero keystrokes.
+     *
+     * <p>Both the relay's pending text and the local field are cleared, the latter under
+     * {@code mSuppressRelay} so the TextWatcher does not forward the housekeeping clear to the
+     * cluster as {@code setTextOnCluster("")} — the other half of AUD-007, and the same trap.
+     *
+     * <p>Idempotent: onStop is followed by onDestroy on a real teardown, and clearing twice costs
+     * nothing.
+     */
+    private void endSession() {
+        mImeActionGeneration++;
+        mImeActionInFlight = false;
+        try { ClusterImeWatcherService.clearPendingText(); } catch (Throwable ignored) { }
+        if (mInput != null) {
+            mSuppressRelay = true;
+            try { mInput.setText(""); } catch (Throwable ignored) { }
+            finally { mSuppressRelay = false; }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -453,6 +514,10 @@ public class KeyboardBridgeActivity extends Activity {
             // the cluster editable's text. No per-character KeyEvent path, no
             // diff calculation — ACTION_SET_TEXT is atomic by design and
             // matches what the user sees in their local field.
+            // AUD-007 — a change this activity made to its own field is not a change the user
+            // made, and must not travel to the cluster.
+            if (mSuppressRelay) return;
+            mInputGeneration++;
             try {
                 ClusterImeWatcherService.setTextOnCluster(s == null ? "" : s.toString());
             } catch (Throwable t) {

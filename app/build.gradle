@@ -1,33 +1,74 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
-// Bug-report Telegram bot credentials are read from local.properties (never
-// committed): they end up in the compiled APK but not in the public repo.
-// Keys (all optional — absent → the app falls back to the Telegram share sheet):
-//   bugReport.botToken=123456789:ABC...
-//   bugReport.chatId=-100<supergroup id>
-//   bugReport.threadId=4
-def _localProps = new Properties()
-def _localPropsFile = rootProject.file('local.properties')
-if (_localPropsFile.exists()) {
-    _localPropsFile.withInputStream { _localProps.load(it) }
-}
+// Reporting credentials are NOT part of the build any more (audit AUD-001).
+//
+// They used to be injected from local.properties into BuildConfig, which put them in the DEX of a
+// publicly downloadable APK. They now live in EncryptedSharedPreferences on each device and are
+// provisioned at runtime by ReportChannel.
+//
+// A device is normally provisioned by nothing at all: uploads go through the relay, whose address
+// is compiled in and is not a credential (see RelayUploader). The file route below exists only for
+// a device that must reach Telegram or Azure directly.
+//
+// NEVER PUSH local.properties ITSELF. It is the maintainer's build file and holds keys that have no
+// business on a tester's car: azure.primary.key is a storage ACCOUNT key, granting read, write and
+// delete over the whole account, and the Download folder is readable by every app on the head unit.
+// Write a file containing only what the device needs:
+//   printf 'bugReport.botToken=...\\nbugReport.chatId=...\\n' > /tmp/dashcast_channel.properties
+//   adb push /tmp/dashcast_channel.properties /data/local/tmp/
+// Accepted keys: bugReport.botToken / chatId / threadId / hudThreadId, azure.blobUrl / azure.sas,
+// relay.url. Anything else in the file is ignored by the parser, but it still lands on the car.
 
 android {
+    // AUD-156 — the keystore is gitignored, so a fresh clone does not have it. Declaring a
+    // signingConfig that points at a missing file made `./gradlew assembleDebug` fail outright on
+    // any machine but this one, while SECURITY.md tells readers to "build from source" if they want
+    // author-level trust. They could not.
+    //
+    // The signature itself cannot be shipped and should not be: it is what grants the bydauto
+    // system permissions, and an APK signed with it is a privileged APK. So the config becomes
+    // conditional. With the keystore present nothing changes.
+    //
+    // The first version of this was half right, and the half that was wrong shipped in 1.8.33.
+    // Leaving `signingConfig` unset is enough for DEBUG, where AGP applies its own debug config —
+    // but for RELEASE, AGP applies nothing, and the build produced an APK that `apksigner verify`
+    // answers DOES NOT VERIFY on, under the ordinary release filename, while this comment, the
+    // console line below and README all claimed it would install and run. An unsigned APK does not
+    // install at all. So release now points explicitly at the debug config, which is what all
+    // three texts already described.
+    //
+    // The filename says so too. An unofficially-signed release must be impossible to confuse with
+    // a real one — nobody should be able to attach it to a GitHub Release by reaching for the
+    // usual name.
+    def platformKeystore = file('./keystore/platform.keystore')
+    def hasPlatformKeystore = platformKeystore.exists()
+    if (!hasPlatformKeystore) {
+        // logger.quiet, not logger.lifecycle: LIFECYCLE is above QUIET, so `gradlew -q` — how this
+        // project's own build commands are written — swallowed the warning entirely.
+        logger.quiet("DashCast: app/keystore/platform.keystore is absent. Debug and release are "
+                + "both signed with Gradle's DEBUG key instead, and the release APK is renamed "
+                + "-release-debugsigned so it cannot be mistaken for a publishable build. It "
+                + "installs and runs; the bydauto system APIs (cluster projection, HUD, uid-2000 "
+                + "daemon) are denied at runtime because those need the platform signature.")
+    }
+
     signingConfigs {
         // BYD signature required to access bydauto system APIs
-        bydPlatform {
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-            storeFile file('./keystore/platform.keystore')
-            storePassword 'android'
+        if (hasPlatformKeystore) {
+            bydPlatform {
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+                storeFile platformKeystore
+                storePassword 'android'
+            }
         }
     }
 
     // La Seal EU tourne sur Android 10 (API 29) — DiLink 3.0
     // compileSdk bumpé à 33 pour pouvoir utiliser Material 3 (com.google.android.material 1.9.x).
     // targetSdkVersion reste à 29 → comportement runtime inchangé sur la Seal.
-    namespace "com.byd.dashcast"
+    namespace = "com.byd.dashcast"
     compileSdkVersion 33
     // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
 
@@ -607,8 +648,1269 @@ android {
         // "start at vehicle boot"). No daemon protocol change; DL3/DL5 launch paths untouched.
         // +1 string x13 locales. Build + lint 0/0, 164 unit tests green.)
         // 590 = 1.7.0 (FIRST STABLE RELEASE since 1.5.4 — merged to main, marked Latest. MILESTONE: the codebase has crossed >50% Kotlin (Kotlin now outnumbers Java) after migrating the voice package, the report/ bug reporter, ui/nav, cluster dpi/display/mirror, infrastructure helpers and a batch of pure-logic policy classes; the Java diagnostics screen + its test runners were emptied to be rebuilt cleanly in Kotlin. 1.7.0 ships the whole 1.6.x beta series — DL5 cluster projection + signing-wall hardening, DL3 HUD turn-by-turn arrows, headless boot auto-launch, layout auto-start, screenshot recorder for bug reports, TetherFi hotspot keep-alive, CarPlay fullscreen tool, silent OTA auto-install + relaunch, keyboard-free bug wizard — plus, since 1.6.148: emptied Java diagnostics and 8 pure-logic classes migrated to Kotlin (unit-test validated). No daemon protocol change; DL3/DL5 unaffected; lint 0/0.)
-        versionCode 590
-        versionName "1.7.0"
+        // 591 = 1.8.1-beta (Kotlin migration continues on the beta channel after the 1.7.0 stable: 6 more pure-logic helper classes converted Java→Kotlin, batch #2 — AppProjectionIndicator, MirrorProjection, PackagePseudonymizer, LayoutAutoStartPolicy, FissionTeardownPlan, OtaInstallCommand. Each conversion's behaviour is validated by its existing unit test (full suite 326 tests green): OtaInstallCommand's shell transaction preserved byte-for-byte, MirrorProjection keeps @JvmField field access for MirrorCoordinator.java, FissionTeardownPlan keeps its @Throws Operations interface for the Java caller. NO functional change; no daemon protocol change; DL3/DL5 unaffected; lint 0/0. Pre-release from switch-kotlin — NOT merged to main, NOT Latest.)
+        // 592 = 1.8.2-beta (the cluster fills the panel again — INC-20260725-211405.
+        // A tester filed "informazioni mancanti": the projected app was cut off on all four sides.
+        // Measured from the report's own cluster capture: 1600x522 of a 1920x720 panel, 40% black.
+        // ROOT CAUSE — the 80/50 margin was applied TWICE, by two different mechanisms, and the
+        // pair was never meant to stack: applyClusterFreeformBounds set the task's launch bounds
+        // to Rect(80,50,1840,670) — a task already shrunk to 1760x620 — and then a display-level
+        // `wm overscan 80,50,80,50` shrank the app's content again INSIDE that task, landing at
+        // exactly 160/100 per side pair. So it was never an over-aggressive setting: it was double
+        // counting, and 80/50 were the built-in DEFAULTS, so every unit shipped this way with the
+        // driver having changed nothing.
+        // The whole global-overscan feature is therefore gone rather than re-tuned: the default,
+        // the Settings card (sliders, ± buttons, visual mode, safe-zone mockup) and the automatic
+        // application on cluster connect. The symmetric per-app inset seekbars go with it — they
+        // fed the same doubled path and defaulted to the same global value. A per-app hand-drawn
+        // rectangle is now the ONLY thing that shrinks a cluster app; with none, the app fills the
+        // panel. "Adjust" in the cluster control panel opens that editor directly, so the single
+        // remaining mechanism keeps a visible entry point.
+        // Reverting cleanly needs two one-time cleanups, because neither state clears itself:
+        // (a) DashCastApp wipes the stored global + per-app insets + saved rectangles once, since
+        //     values tuned against the doubled geometry describe a panel that no longer exists and
+        //     the global would otherwise stay applied with no UI left to reach it; and
+        // (b) ClusterService now issues `wm overscan reset` on every cluster connect — that state
+        //     lives in WindowManager, not in our prefs, so a unit updating from a build that set
+        //     80,50 would keep the inset forever. Both resets target the RESOLVED cluster display
+        //     id, never a hardcoded 1 (a fission VD has been seen as display 3) and never display 0.
+        // Net -1074 lines; 195 strings dropped across 13 locales. No daemon protocol change; DL5 is
+        // untouched (wm overscan is gone from API 30+, so those units never had the defect).
+        // 593 = 1.8.3-beta (Kotlin migration continues on the beta channel: 12 more classes converted Java→Kotlin since 1.8.2, each validated by its unit test (full suite 324 tests green). util/concurrent is now 100% Kotlin (batch #3: WorkerLifecycleController, BoundedSerialExecutor, DeathLease, SingleFlight, CloseableResourceSlot, LatestValueDispatcher); + system/CanBatchOperation and ui/main/DashboardSelectionTracker; + 4 proxy/daemon pure-logic helpers (TaskMoveResult, TaskLaunchRecovery, FissionWatchdogRegistry, FissionWatchdogPolicy). Concurrency preserved verbatim (@Synchronized, @Volatile, Atomic*, CountDownLatch) and Java-facing interop preserved for the sensitive consumers ProxyClient/MirrorDaemon/MapNotificationListenerService/Phase4TaskVerbs/VoskTranscriber (fun interfaces for Kotlin SAM, boolean is-properties, defensive-copy getters, @Throws). NO functional change; no daemon protocol change; DL3/DL5 unaffected; lint 0/0. Pre-release from switch-kotlin — NOT merged to main, NOT Latest.)
+        // 594 = 1.8.4-beta (DiLink 4: reach the cluster through the uid-2000 daemon, because the
+        // firmware hides it from us — INC-20260727-203241, and four earlier DL4 reports.
+        // ROOT CAUSE, proven. On DL4 the cluster VirtualDisplay EXISTS and sits idle and ready
+        // (`Display 1: fission_bg_xdjaVirtualSurface, 1920x720, layerStack 1, owner
+        // com.xdja.containerservice, state ON` in every DL4 capture, and ActivityTaskManager lists
+        // it) — but the OEM patched DisplayManagerService.getDisplayIdsInternal with an app
+        // whitelist that refuses our uid the display-id list. From INC-20260713-180803, the one DL4
+        // capture whose logcat still covered an activation: 378x "forbid for:10167", 252x
+        // "getDisplayIdsInternal isPermittedApp:false" (never once true), 126x "reject for:10167 to
+        // get id" — uid 10167 IS DashCast. That gate does not exist in AOSP and does not appear on
+        // DL3. So DashCast polled DisplayManager ~68 times over 80 s, logged ZERO candidates, and
+        // timed out, while a uid-2000 shell dump 29 s later listed the display plainly.
+        // Two corollaries the evidence forces: the DL4 display PRE-EXISTS the activation sequence
+        // (the set DMS iterated never changed across 54.6 s, before and after cmd 16/35), so the
+        // old comment claiming cmd 35 creates it ~8-9 s later was a mis-inference and the 12->20 s
+        // timeout bump rested on it; and DL4 has NEVER worked — 5 reports, 3 app generations
+        // including pre-Kotlin 1.6.109, with ADAS-window-fix ON already tested 5 times. Raising the
+        // timeout is proven pointless: the display is not late, it is hidden.
+        // THE FIX. The daemon can see what the app cannot, and already launches and mirrors, so on
+        // DL4 ONLY the cluster is now discovered by parsing `dumpsys display` through the uid-2000
+        // shell, and the whole pipeline was made to work from injected values (id/width/height/
+        // layerStack) since the app can never hold a real Display object there. Every touched site
+        // is gated on Platform.isDiLink4(); DL3/DL5 are provably untouched (isDiLink3 is DEFINED as
+        // !DL2 && !DL4 && !DL5, and the new registry's single writer sits behind the DL4 gate).
+        // The enumerator refuses displays it may not drive — FLAG_PRIVATE or owned by a third-party
+        // uid — because `dumpsys` as uid 2000 lists EVERY logical display, unlike the app API: a
+        // foreign `dudu-auto-ui-pip` private display (present in 4 tester reports) would otherwise
+        // have been driven, mirrored and launched onto. When nothing drivable is found the user is
+        // told projection is unavailable on this firmware instead of the generic "disconnected".
+        // Also: the bug report's tag-filtered logcat now keeps DisplayManagerService at :V (the one
+        // character that had hidden the proof) plus ClusterManager:V, and a truncated report says
+        // so out loud; the activation log no longer claims to send "30->16->35" while sending
+        // "16->35"; the in-app SurfaceControl mirror is no longer attempted with no display, which
+        // was emitting ERROR-level "ACCESS_SURFACE_FLINGER?" noise that reads like a security
+        // regression; and the post-OTA daemon bootstrap stops printing two contradictory verdicts.
+        // HONEST LIMIT: it remains UNPROVEN whether the firmware also blocks cross-display activity
+        // launches for our uid. This ships to LEARN as much as to fix — the new one-line
+        // "display resolution — app=[…] daemon=[…] shellOk=…" trace is designed to settle it from
+        // the next capture. No daemon protocol change. 176 unit tests, lint 0/0.
+        // 595 = 1.8.5-beta (name the two uid-2000 daemons apart, and stop pairing one's binder with
+        // the other's DESCRIPTOR. Structural clarification + one leak fix; NO user-visible change.
+        // WHY. DashCast drives the cluster through TWO uid-2000 processes and the code never said
+        // which does what: ProxyDaemon "DOES" things (shell + one-shot verbs: activation, launch,
+        // resize, force-stop; if it dies you retry the command), SurfaceDaemon "HOLDS" things
+        // (the preview mirror, and on the cluster the Layout slot overlay windows and their TRUSTED
+        // VirtualDisplays, plus touch injection; if it dies the graphical state is lost). The name
+        // "MirrorDaemon" hid the second half — it owns CLUSTER surfaces, not just the preview — and
+        // that misunderstanding had already produced a real defect twice.
+        // THE DEFECT, in two places. ClusterMirrorManager.stopPreview and ClusterResizeActivity both
+        // wrote SurfaceDaemon.DESCRIPTOR onto ProxyClient.getDaemonBinder(), which is the PROXY
+        // daemon's binder; the receiving enforceInterface rejects it and the transact silently does
+        // nothing. Consequence of the first: on stopProjectionNoAdb / onDestroy the surface daemon
+        // was never told to drop its SurfaceControl token, so it kept compositing after a stop.
+        // Consequence of the second: the resize editor's live preview has never worked.
+        // WHAT WAS DONE. The class was renamed MirrorDaemon -> SurfaceDaemon (CODE identity only —
+        // every wire/persisted identity is byte-identical: ServiceManager name byd_mirror_daemon,
+        // the DESCRIPTOR, transaction codes, both process names, /data/local/tmp paths, broadcast
+        // action/extra/permission, the "--- MIRRORDAEMON LOG ---" report section and the MirrorDaemon
+        // log TAG, because a daemon spawned by an older APK keeps running across an update and
+        // because triagers grep historical reports). Verified against the release APK's dex.
+        // More important than the class name: three accessors called getDaemonBinder() returned TWO
+        // different daemons, and that is the identifier through which the mistake was actually made.
+        // They are now getProxyDaemonBinder() / getSurfaceDaemonBinder(), so a missed call site is a
+        // compile error. FissionClient's duplicate ServiceManager lookup now delegates to the single
+        // resolver, and the boundary docs were corrected to be TRUE — the previous wording asserted
+        // a "single accessor" invariant that did not hold and would have made an auditor miss the
+        // entire Layout subsystem plus the main preview and every touch.
+        // The dead in-app fallbacks (SurfaceControl mirror, InputManager injection — 235 failures
+        // and 0 successes across the report corpus) are now attempted ONCE per process and then
+        // skipped, at WARN instead of ERROR: an unprivileged app can never hold
+        // ACCESS_SURFACE_FLINGER, so the old ERROR read like a security regression and misled
+        // several triages. They are NOT deleted: there is no formal proof the permission is denied,
+        // only 235/0, and deleting would break any unit where it does work.
+        // NOT DONE, deliberately: pointing the resize editor at the correct binder was implemented,
+        // reviewed, and REVERTED — the surface daemon owns exactly ONE mirror, so a working call
+        // there re-targets it away from MainActivity's preview and nothing restores it on close
+        // (MirrorCoordinator.attemptStart short-circuits on a stale mMirrorActive), leaving the main
+        // preview frozen. Trading a preview nobody has ever had for a broken one is a bad deal; the
+        // editor keeps today's behaviour and the code documents the correct implementation.
+        // Two adversarial review rounds; the second caught that regression. Build + lint 0/0, 177
+        // unit tests green. No daemon protocol change; DL3/DL4/DL5 behaviour identical.
+        // 596 = 1.8.6-beta (Layout soundness pass + the DL4/DL5 diagnostic that step two depends on.
+        // FOUR REAL DEFECTS, all on the Layout Manager's own Activate button, which is the only way
+        // to start a layout other than auto-start: (1) it never ran ensureClusterProjectionThen, so
+        // slots were created while Qt still scanned out the OEM's native view — invisible; (2) it
+        // never started the SurfaceDaemon, it only probed the binder and gave up with "daemon not
+        // connected", so it was a no-op toast on a cold cluster; (3) it used the batch
+        // ACTIVATE_LAYOUT verb, which keys slots "layout_<label>_<i>" and never puts the package on
+        // the wire, so nothing it created could be found again by QUERY/RESIZE/RELEASE_SLOT (all
+        // three look up by package) — the manual button now sends one ATTACH_SLOT per zone, keyed by
+        // package, and FissionClient.activateLayout is gone (the daemon still ANSWERS the verb: it
+        // outlives an app update); (4) handleDeactivateLayout filtered on the "layout_" prefix, which
+        // with per-package keys matches nothing — it now releases every slot (sSlots is
+        // Layout-exclusive; the standard path uses MIRROR_START/STOP, INJECT_*, CAPTURE_DISPLAY and
+        // never touches it). Free zones (no app bound) still paint — re-created via attachSlot keyed
+        // "zone<i>_<label>", index-disambiguated because nextSlotLabel() is "Zone "+(size+1) and is
+        // NOT unique, and the daemon's attach does remove+release on a same-key slot.
+        // DEAD CODE REMOVED: FissionActivity + FissionLayoutEditorActivity (719 lines, 5 layouts, 35
+        // strings x 13 locales). Proven unreachable: manifest declarations with no intent-filter,
+        // zero startActivity, zero Intent(...class), zero setClassName/Class.forName route; the live
+        // editor is LayoutManagerActivity, a strict superset (it also binds packages).
+        // THE DIAGNOSTIC: Layout has never produced one trace on DL4/DL5.1/DX_BYD_AUTO, and the two
+        // DL5.0 captures die between step3 and step4 on "SecurityException: Given calling package
+        // android does not match caller's uid 2000" with nothing recording which statement threw.
+        // ATTACH_SLOT now carries a stage ref (step3a..step5) naming the statement in flight, a full
+        // STACK TRACE via err() into the same daemon log, step3a printing packageName/opPackageName
+        // of both contexts (the DL5.0 wording is AMS.enforceCallingPackage — this one line separates
+        // "unfixable A12 gate" from "wrong op-package, fixable"), and the display descriptor
+        // (flags/type/owner) on the step2 SUCCESS line, because every platform HAS a display 1:
+        // DL3's is the real cluster, DL4's is the OEM's VIRTUAL fission_bg_xdjaVirtualSurface owned
+        // by com.xdja.containerservice, DX's an EXTERNAL HDMI Screen — id+name cannot tell them
+        // apart. Daemon log tail 200 -> 400 (two captures already sat at exactly 200) and the daemon
+        // now prints its own build at startup, because it is reused across an APK reinstall when the
+        // marker build matches, so a capture can contain plausible lines from a daemon several
+        // versions old. THIS versionCode bump is what forces the respawn — without it none of the
+        // above executes on a tester already running 595.
+        // REVIEW CAUGHT (fixed here, not shipped): a main-thread RejectedExecutionException crash —
+        // Activate preset B then Deactivate preset A during the multi-second cluster sequence shuts
+        // the executor down, and onDisplayReady then calls execute() on it with no try/catch; the
+        // same shape pre-existed on the auto-start path and is closed too. Plus: the Activate button
+        // is now gated on the Layouts-mode setting (this screen is reachable from the nav rail with
+        // no runtime gate, and the button went from a no-op toast to driving the cluster and spawning
+        // a uid-2000 daemon); a re-entrancy guard (a second tap built a second ClusterManager whose
+        // cancel() cannot unregister the first instance's DisplayListener — the 1.2.29 listener leak);
+        // failure codes kept ENGLISH for the bug-report journal and mapped to R.string only for the
+        // toast; free-zone displayId cleared before a retry so a failed attach is not reported as
+        // success. Also corrected a false claim in the implementation notes: the batch path HAS been
+        // observed working (18 "OK surface valid pkg=layout_Zone_*" lines across INC-20260614-131051
+        // and -131118, both DiLink 3) — the platform is the differentiator, not the verb.
+        // Standard projection path untouched; no daemon protocol change; DL3/DL4/DL5 identical.)
+        // 597 = 1.8.7-beta (stop projection now WAITS for each evicted app to be observed back on
+        // display 0 before killing it — and, just as importantly, RECORDS where it actually was.
+        // INC-20260729-201204 (DL3, 596): after stopping projection, tapping NewPipe in the
+        // launcher on the CENTRE screen re-opened it on the CLUSTER. Captured verbatim: task #42
+        // on Display #1 with launchedFromPackage=com.lexwah.kinex (the launcher) versus the same
+        // app in INC-20260729-134202 with launchedFromPackage=com.android.shell (us). The owner
+        // reports it for EVERY projected app, so the display affinity is being remembered
+        // per-component somewhere and our teardown never rewrites it.
+        // WHAT THE TEARDOWN DID: on this ROM IActivityTaskManager.moveTaskToDisplay does not exist
+        // ("method unavailable on ROM -> fallback launch"), so the "move" is an asynchronous
+        // RELAUNCH, and ClusterSessionTracker force-stopped in the launch callback — 2 ms after
+        // startActivity RETURNED. New: awaitLandingThenForceStop polls the typed daemon verb
+        // findTaskLocationForPackage until matchDisplay(0)==ON_EXPECTED_DISPLAY, then settles
+        // 250 ms, then force-stops. Decision extracted to ClusterEvictionPolicy (pure, 9 tests).
+        // The budget is SHARED by the whole eviction (2 s), not per package: onAllDone is what
+        // triggers restoreBydOnCluster, so a per-package budget would multiply the delay before
+        // the OEM cluster returns by the number of projected apps. Worst case stays under 2.5 s;
+        // measured landing on DL3 is ~110 ms. An unconfirmed landing NEVER skips the force-stop —
+        // trading a display-affinity bug for an app left alive on the cluster would be worse. A
+        // failed probe returns UNKNOWN and keeps waiting rather than concluding, which is the
+        // whole point of the TaskLocation type.
+        // HONEST SCOPE — this is NOT yet proven to fix the symptom. Re-reading the capture line by
+        // line AFTER writing the fix: am_focused_stack [0,0,37,31,reparentToDisplay] at
+        // 20:11:46.088 shows task 41 DID reach display 0 and was focused there ~110 ms before the
+        // kill. So "we killed it before it landed" was wrong; what is true is that we killed it
+        // ~110 ms after landing and then called removeTask. Either the record had not committed,
+        // or removeTask discarded it. This build closes the real hole (never conclude from a
+        // request) and adds the line that will settle it: the journal now carries
+        // "evict: <pkg> LANDED display=0 after <ms> (<n> probes)" or "NOT-LANDED ... lastSeen[...]".
+        // Leading hypothesis for the next build: removeTask, issued as part of force-stop, is what
+        // erases the display-0 record. Not acted on here — removeTask exists to prevent orphan
+        // tasks reappearing, and swapping one regression for another without evidence is exactly
+        // what this release refuses to do.
+        // No daemon protocol change; standard projection and Layout paths untouched.)
+        // 598 = 1.8.8-beta (BYD APK Extraction — a tool for interoperability analysis of the OEM
+        // cluster. On DiLink 5.1 ("trinket"/D50F_LC) the cluster has NEVER displayed anything, and
+        // INC-20260731-214358 finally showed why the app cannot tell: the Android side is flawless.
+        // The nav app IS composited into the virtual display "fission_bg_XDJAScreenProjection"
+        // (owner com.xdja.containerservice, FLAG_OWN_CONTENT_ONLY, toInternalDisplay=false), which
+        // the OEM never routes to the panel; our mirror reads the SAME layerStack so the preview and
+        // screenshots look perfect while the driver sees nothing. Corpus-wide the activation call
+        // `service call AutoContainer 2 i32 1000 i32 16` returns 0 on DiLink 3/4 and 1 on DiLink 5.0
+        // but -1 (Parcel ffffffff) on trinket in 9 captures out of 9. That return logic lives in the
+        // OEM's own com.xdja.containerservice; reading it is interoperability RE of software on the
+        // tester's own vehicle (lawful under the EU Software Directive art.6). The empty Kotlin-stub
+        // DiagActivity now hosts one button, "BYD APK Extraction": inventory of every installed
+        // package (path/size/versionCode/signer) + cluster context (dumpsys display, SurfaceFlinger
+        // virtual displays, service list, AutoContainer dump) + native backend (fission/container
+        // bins, init.svc, ps — AutoContainerNative is native, not dex) + the OEM cluster APKs
+        // themselves, zipped and sent via the already-configured report channel. Selection =
+        // ApkExtractionPolicy (pure, 14 tests): TIER1 names com.xdja.containerservice /
+        // com.byd.launchermap / com.example.amapservice explicitly first (the primary target's name
+        // has neither "byd" nor "cluster", so a pattern-only filter would MISS it), TIER2 sweeps
+        // name-OR-path for cluster|xdja|fission|instrument|meter|dilink|autocontainer|automap|byd on
+        // ALL partitions (so a "cluster" app under /data is caught too; partition is recorded in the
+        // manifest, never used to exclude). Budget 42 MB total / 26 MB per file / 14 max — solely
+        // Telegram's 50 MB sendDocument ceiling, not a policy limit. Every skip is written to the
+        // manifest so a reader tells "excluded" from "absent on this ROM". Diagnostics-only, dev
+        // screen, English-only by project rule; NO production path touched — cluster projection,
+        // Layout, HUD, mirror, boot, hotspot, daemon protocol all zero-diff. 3 files; build + lint
+        // 0/0; 187 -> 201 unit tests.)
+        // 599 = 1.8.9-beta (TRINKET FIX + native-binary extraction, both from RE of the extracted
+        // OEM APKs. RE FINDING (com.example.amapservice vc10513003 / com.xdja.containerservice vc33,
+        // both A13, pulled by the 1.8.8 tool): the -1 from `service call AutoContainer 2 i32 1000
+        // i32 16` was a RED HERRING. Its Parcel(00000000 ffffffff) = writeNoException + return -1,
+        // so NOT missing-service (that IllegalStateException = 0xfffffffb) and NOT permission
+        // (SecurityException = 0xffffffff in the FIRST word) — the Java bridge fully succeeds and the
+        // NATIVE AutoContainerNative (registered by the running fission_service[ivi]) rejects the
+        // clusterdebug channel type=1000. But type=1000 places NO pixels anywhere: the OEM nav gets
+        // onto the panel by LAUNCHING AN ACTIVITY onto the display named
+        // "shared_fission_bg_XDJAScreenProjection_0" (proven in BydProjectionService: getName().equals
+        // → getDisplayId → setLaunchDisplayId), a NEW virtual display present only on trinket.
+        // AutoSharedDisplay composites those shared containers at layer 100/101 ABOVE the plain
+        // fission_bg_XDJAScreenProjection (the OEM's DEBUG target, mDebugClusterProjectionDisplayId) —
+        // so DashCast, which projected onto the plain display, was drawn UNDER the panel foreground.
+        // Exactly the symptom: composited on fission_bg, panel blank.
+        // THE FIX: ClusterDisplayNames.clusterNamePriority prefers shared_..._0 > _1 > plain among
+        // cluster displays, and findClusterDisplay picks the best instead of the first match. It is
+        // the OEM's OWN primitive (setLaunchDisplayId+startActivity), needs NO signature-gated API
+        // (unlike IContentProjectionManager / AutoContainerManager, both refused to our testkey), and
+        // is SELF-GATING: "shared_" exists only on trinket, so on DL3/DL5.0/DL4 every candidate ranks
+        // equal-last and the previous first-match order is preserved bit-for-bit (6 unit tests).
+        // Conservatively KEEPS the existing sendInfo(1000,16) — one variable at a time; dropping it
+        // could remove a needed projection-mode side-effect. Open risk (only an on-car capture can
+        // settle): whether the app enumerates shared_0 at our projection time, and whether cross-
+        // display launch onto it is permitted; the every-candidate log line makes the capture decisive.
+        // NATIVE EXTRACTION: the -1 is decided in the native fission_service binary, which the APK-only
+        // 1.8.8 tool could not reach. BYD APK Extraction now also pulls named native binaries
+        // (fission_service, fission_screennproject, BydClusterManager…) + a fission|cluster|container|
+        // xdja sweep of /system/bin,/vendor/bin,/system_ext/bin,/odm/bin through the uid-2000 daemon
+        // (the app process cannot read system_file under SELinux), chunked via TXN_READ_FILE_CHUNK,
+        // per-file cap 4 MB (skips the 8 MB Kanzi renderers), sharing the one 42 MB bundle budget so
+        // the zip stays under Telegram's 50 MB (7 unit tests). Standard/DL3/DL4/DL5.0 projection
+        // untouched; no daemon protocol change; build + lint 0/0; 201 -> 214 unit tests.)
+        // 600 = 1.8.10-beta (BYD APK Extraction tuning — capture the RIGHT things. Two changes,
+        // diagnostics-only, no production path touched. (1) .SO LIBRARIES: RE of the 1.8.9 DL3
+        // native pull showed the /system/bin fission_* files are thin CLI front-ends — they link
+        // libfission_services.so / libfission_event.so / the JNI bridge libxdjacontainerservice_jni.so
+        // (System.loadLibrary in the containerservice APK), and THAT is where AutoContainerNative and
+        // the projection routing (and the -1) actually live. The tool now also pulls named + swept
+        // .so from /system/lib64, /vendor/lib64, /system_ext/lib64, /odm/lib64 (+ 32-bit lib) through
+        // the uid-2000 daemon's TXN_READ_FILE_CHUNK, same as the bins. NATIVE_GREP is a proven
+        // superset of every NATIVE_PATTERNS term and NATIVE_NAMED file so the shell pre-filter can
+        // never drop something classifyNative would accept (unit-tested). (2) NARROWED APK SCOPE:
+        // the old TIER2 sweep matched the generic "byd"/"dilink" and dragged in dozens of unrelated
+        // system apps (acquisitioncontrol, xcall, filemanager, androidauto, media.autoplay,
+        // networksetting, logswitch, appstartmanagement…) — all RE'd, none touch projection. Those
+        // terms are removed; TIER2 is now cluster/xdja/fission/autocontainer/automap/amap/projection/
+        // instrument/meter only, and TIER1 gains com.byd.clusterdebug (the reference type=1000 client)
+        // and com.byd.automap (the running OEM nav). (3) BUDGET REBALANCE: shrinking the APK set freed
+        // room, and a NATIVE_RESERVE (16 MB) now caps APK spending at APK_BUDGET (26 MB) so a fat APK
+        // set can never again starve the .so pull — which is exactly why 1.8.9 came back with 40 MB
+        // of APKs and no libs. Whole-bundle ceiling stays 42 MB < Telegram's 50 MB. Every skip
+        // recorded in the manifest with [native]/[system|data] labels. 214 -> 219 unit tests; lint
+        // 0/0; no daemon protocol change; standard/DL3/DL4/DL5 projection untouched.)
+        // 601 = 1.8.11-beta (BYD APK Extraction — capture the DL5.0/DL5.1 container service too.
+        // Diagnostics-only. The 1.8.10 scope-narrowing dropped the generic "byd" pattern, and a
+        // DiLink 5.0 extraction revealed the gap: DL5.0's container service is com.byd.containerservice
+        // (package BydContainerService, native libcontainerservice_jni.so) — a DIFFERENT implementation
+        // from DiLink 3 / trinket's com.xdja.containerservice (libxdjacontainerservice_jni.so) — and it
+        // matched no TIER2 term (name has "container" but the pattern only had "autocontainer"), so it
+        // was never pulled. Fix: add com.byd.containerservice to TIER1, and broaden the sweep term
+        // "autocontainer" -> "container" (a superset) so any container-service package/lib is caught
+        // wherever it lives. DL5.0 is the WORKING DL5 platform, so its container service is a prime
+        // comparison target for the trinket -1. No behaviour change beyond what the extractor collects;
+        // 219 -> 221 unit tests; lint 0/0; no daemon protocol change; no production path touched.)
+        // 602 = 1.8.12-beta (BYD APK Extraction — gate DiLink 3 / DiLink 5.0 as fully mined.
+        // Diagnostics-only. After multiple DL3 + DL5.0 extractions (container service, amapservice,
+        // clusterdebug, the full native fission/.so stack incl. libProjectionMsgSdk), those two
+        // platforms are exhausted — a further run only re-uploads what we already have. On DL3 and
+        // DL5.0 the button now shows "Reverse engineering complete for this platform — nothing to
+        // collect or send" and does NOT extract or upload. Extraction STAYS LIVE where we still need
+        // data: DiLink 5.1/trinket (to confirm libProjectionMsgSdk is absent) and DiLink 4. Decision
+        // in ApkExtractionPolicy.isPlatformFullyMined(isDiLink3, isDiLink5, apiLevel) =
+        // isDiLink3 || (isDiLink5 && apiLevel < 33): the DiLink generation tracks the Android
+        // version, so API<33 (Android 12) = DL5.0 while trinket (Android 13 / API 33) is ALWAYS
+        // left live — the critical property, tested. DiagActivity fails OPEN if platform detection
+        // throws (never silently blocks a platform we might need). 221 -> 226 unit tests; lint 0/0;
+        // no daemon protocol change; no production path touched.)
+        // 603 = 1.8.13-beta (HUD bench: sendInfo2 NaviInfo injection, native OEM channel — experimental.
+        // Re-examined whether the DL3/DL5.0 RE opened anything reachable via the uid-2000 daemon
+        // specifically. Disassembled ClusterNativeService::checkPermission (libProjectionMsgSdk.so):
+        // it reads the real caller uid via IPCThreadState but is dead code — no sendJson/sendInfo/
+        // sendInfo2/registerCallback path in that binary calls it. The load-bearing gate is the Java
+        // AutoContainerService.checkSendPermissionAndAllowType/checkCallbackPermission (byte-identical
+        // on DL3 xdja and DL5.0 byd): both short-circuit on pm.checkSignatures(selfUid, callingUid)==0,
+        // which uid 2000 (shell, <10000) always satisfies — BEFORE the type/package allow-list check.
+        // So sendJson/sendInfo/sendInfo2/registerCallback are all reachable for ANY type, not only the
+        // type=1000 we already use; only getProjectionDisplayInfo stays hard-blocked unconditionally.
+        // Since the OEM's own nav app (AmapService, decompiled) drives the HUD via exactly
+        // sendInfo2(4, NaviInfo-flatbuffer), added a new daemon verb (TXN_AUTOCONTAINER_SEND_INFO2,
+        // Phase4ProcessVerbs.autoContainerSendInfo2) exposing that same call, a vendored
+        // byd.fbs.naviInfo.NaviInfo FlatBuffer accessor (byd/fbs/naviInfo/NaviInfo.java — ported from
+        // the OEM's schema-generated class; fixed __init to route through Table.__reset() since this
+        // FlatBuffers runtime (2.0.3) caches vtable_start/vtable_size there, not on raw bb/bb_pos
+        // assignment — the decompiled source used an older runtime where that didn't matter), and a
+        // 4th HUD-bench tool (HudDiagActivity) sending a test NaviInfo payload via sendInfo2(4, …) so
+        // a DL3 tester can confirm whether this native channel renders on the physical HUD independent
+        // of CAN/BYDAutoInstrumentDevice and of notification-text parsing. Protocol v22. 228 unit tests
+        // (2 new: FlatBuffer round-trip catches vtable-offset mistakes); lint 0/0; no daemon verb this
+        // touches was previously wired to anything — purely additive.)
+        // 604 = 1.8.14-beta (fix: HUD bench was orphaned. 1.8.13-beta added the sendInfo2 NaviInfo
+        // test as a 4th tool inside HudDiagActivity, but that Activity was only manifest-registered
+        // — nothing in the app's own Diagnostics screen launched it, so a tester could only reach it
+        // via a hand-fed `adb shell am start`. DiagActivity (rewritten in Kotlin, one button so far:
+        // BYD APK Extraction) gets a second button, "HUD bench (DL3) — sendInfo2 NaviInfo test",
+        // that simply starts HudDiagActivity. No change inside HudDiagActivity itself. 228 unit
+        // tests; lint 0/0; diagnostics-only.)
+        // 605 = 1.8.15-beta (HUD bench: show ONLY Tool 4 (sendInfo2 NaviInfo) and hide the proven
+        // Tools 1-3, plus make Tool 4 conclusive — add the OEM container nav-mode enable
+        // sendInfo(5,0,"") before the sendInfo2(4,...) loop (without it the container accepts the
+        // payload and renders nothing), fix the STRAIGHT icon to the raw AMap NEW_ICON id 9 (1 =
+        // "none" = no arrow), and tell the tester to watch the CLUSTER and windshield and note WHERE
+        // guidance appears — since sendInfo2 targets the 1for2 cluster, not the CAN-driven windshield
+        // HUD. Diagnostics-only; no production/daemon change.)
+        // 606 = 1.8.16-beta (HUD bench follow-ups after sendInfo2→cluster was CONFIRMED on-car — an
+        // owner's DL3 SX326 and a DL5.0 SW155 both render turn arrows on the CLUSTER via
+        // sendInfo2(4,NaviInfo). (1) Result picker adds "arrow on CLUSTER" + re-labels "arrow on HUD
+        // (windshield)" + reworded title asking WHERE, so a HUD-less tester records a YES instead of
+        // "other" (the owner's own run landed as "NO/PARTIAL — other — godzilla"). (2) New icon-sweep
+        // bench: sends AMap NEW_ICON ids 0..28 via sendInfo2, each ~3s with the id in the road-name
+        // field so ONE cluster photo maps id→glyph — the 1for2 cluster icon scheme is NOT AMap's, so
+        // straight/left/right ids must be confirmed on-glass; zipped under hud_iconsweep_. +1 string /
+        // 3 updated ×13 locales. Diagnostics-only; no production/daemon change.)
+        // 607 = 1.8.17-beta (INC-20260804-171617 "Phase 0": make the NEXT DiLink 5.0 report readable.
+        // Root cause of that incident is NOT ours — the OEM BydProjectionService re-fronts
+        // com.byd.launchermap/MeterActivity onto cluster display 3 within ~1.1-2s of every launch
+        // (proven in the WM events buffer) — and the app's own diagnostics could not see it at all.
+        // Diagnostics-only, no projection/daemon-protocol change, and every shared-code change fails
+        // OPEN so DL3/DL4/trinket/AAOS keep today's behaviour. Five items: (1) cluster screenshots
+        // captured the WRONG layerStack on DL5 — the app launches onto shadow display 3/4 whose
+        // content composites onto layerStack 2, so all 34 shots in that report were the same
+        // 8937-byte black frame of a legitimately empty surface, and got mis-read as "the panel was
+        // black"; the DL5 3/4→2 rule the mirror already applied is now a shared, unit-tested pure
+        // policy (ClusterLayerStackPolicy) that the recorder uses too, so the two cannot drift again.
+        // (2) The bug report now captures the OEM projection manager's own logcat (grep-based extra
+        // section — deliberately NOT a new tag in the filterspec, where a malformed entry would kill
+        // that section on every platform) and whitelists Phase4TaskVerbs:I so the daemon transcript
+        // survives a log flood. (3) The fission watchdog no longer adopts a HOME-typed task: it had
+        // latched onto the head-unit launcher task on display 0 and re-anchored it 180× — every call
+        // refused by the framework — flooding ~5000 lines and evicting the framework evidence from
+        // the report. Uses the existing 4-route readActivityType (a hand-rolled topActivityType read
+        // short-circuits on the boxed 0 = UNDEFINED and would have been a silent no-op), and is
+        // scoped to the watchdog so the eviction landing-wait and the slot verbs still see every
+        // task. (4) The watchdog logs WHO is on top of the cluster display when it changes (sampled
+        // 2s) — observation only, nothing acts on it; TaskLocation carries no z-order, which is why
+        // this failure mode was invisible, and `visible` is useless here since the OEM overlay is
+        // translucent and non-occluding. (5) A read-only "OEM cluster probes" button in Diagnostics
+        // (HOME resolution, byd_map_package, adb persistence props, component-state permission
+        // against OUR OWN component). Adversarially reviewed across DL3/DL4/DL5.1/AAOS: 8 defects
+        // found and fixed before release, incl. the silent-no-op above and a probe that would have
+        // reset+force-stopped the OEM cluster map. 228 -> 232 unit tests; lint 0/0.)
+        // 608 = 1.8.18-beta (DUAL-PATH navigation — the real feature, on both surfaces. New
+        // ClusterNavPusher pushes live turn-by-turn onto the instrument CLUSTER through the OEM
+        // AutoContainer channel (sendInfo(5,0) nav-mode enable, then sendInfo2(4, NaviInfo) per
+        // frame — the same call AmapService makes), wired into HudController alongside the existing
+        // CAN writes. One parsed Maps notification now drives BOTH: CAN → windshield HUD
+        // (video-confirmed) and sendInfo2 → cluster (on-car confirmed on two SX326 cars + a DiLink
+        // 5.0). Cars WITHOUT a windshield HUD get arrows from the cluster path alone. push()
+        // self-heals the nav-mode enable so the cluster never depends on the CAN activation
+        // succeeding. Uses the icon namespace decoded from a 29-photo on-car sweep, which also
+        // exposed a REAL PROD BUG now fixed: mapToAmapIcon sent NEW_ICON=2 for every maneuver and 12
+        // for the destination — but 2 is turn-LEFT and 12 is a roundabout, so the AUTONAVI broadcast
+        // path drew a LEFT arrow for every straight/right maneuver and a roundabout on arrival. Both
+        // paths now share one verified table (2=left 3=right 9=straight, all three verified on the
+        // photos). Icon-sweep bench also fixed: it reused a picker hardcoded to "NO/PARTIAL — other"
+        // so every sweep filed as a failure; it now has its own picker and points testers at the
+        // CLUSTER. +3 strings x13 locales. DL3-gated as before; no daemon protocol change.)
+        // 609 = 1.8.19-beta (makes SDK write rejections visible, drops the register the SDK refuses,
+        // and re-opens APK extraction on DiLink 3. A tester's SX326 reported featureID 0x43f01030
+        // returning "You have no permission" — verified real (200 occurrences across the corpus) but
+        // NOT the cause of a missing arrow: 0x43f01030 is a redundant "dual-display" write the OEM
+        // never makes, setInt returns the SDK code rather than throwing so the batch never aborted,
+        // and cars whose arrows render fine show the same refusal. Chasing it exposed the real gap:
+        // every caller DISCARDED the SDK result code (the daemon's batch writer returns void, the HUD
+        // bench prints a hardcoded rc=0 whenever nothing threw), so a refused write has been
+        // indistinguishable from an accepted one in every report and bench zip ever collected —
+        // very likely why the NO results were never explainable. Rejections are now logged once per
+        // (feature, rc) per 30s at the single point every write reaches the SDK, covering the batch
+        // path, the single-write path and production. 0x43F01030 is no longer written (guidance batch
+        // + nav-stop clear). APK extraction is re-enabled on DL3: the windshield-HUD question is open
+        // there and testers must be able to send their system APKs; only DiLink 5.0 (API<33) stays
+        // blocked. 250 unit tests pass; no daemon protocol change.)
+        // 610 = 1.8.20-beta (fixes a real rendering bug found by RE of a tester's DL3 Seal extraction:
+        // the next-street name was sent in the WRONG ENCODING. The OEM nav writes that register with
+        // str.getBytes("UnicodeLittleUnmarked") = UTF-16LE without BOM, so the MCU decodes UTF-16LE;
+        // DashCast sent UTF-8 from day one, which the MCU rendered as arbitrary CJK codepoints — a
+        // field report literally described "distance and some Chinese text" on the HUD and it was
+        // misfiled as a partial failure. Verified byte-for-byte against AmapService.java:489/623/628.
+        // Also: the INSTRUMENT_GUIDE_ROAD_DISTANCE (0x43F01030) constant is deleted outright — RE
+        // shows the OEM writes exactly 15 INSTRUMENT_* registers and this is not one, and the SDK
+        // refuses it (344 occurrences in the corpus, including on cars whose arrows render fine).
+        // Extraction gains a ~5 KB text-only probe artefact (05_hud_probes.txt: firmware/car identity,
+        // the BYDAUTO permission namespace and who holds it, the AutoContainer type allow-list, the
+        // OEM navs' exported-service tables, BOOTCLASSPATH, nav/cluster processes) plus
+        // com.byd.auto.permission in TIER1 — all reads, answering the open questions without pulling
+        // the 307 MB Telenav APK or the framework. No daemon protocol change.
+        // 611 = 1.8.21-beta (unlimited RE pulls: Azure Blob sink, and the artefacts it unlocks.
+        // AzureBlobUploader (4 MB block upload, per-block retry, commit-on-completion) means a
+        // bundle is no longer capped by the 50 MB messaging ceiling, and with a container configured
+        // every budget opens: 2 GB total, 512 MB per file, 60 files, and the native per-file cap goes
+        // 4 MB -> 256 MB. That cap is exactly what had been excluding the two artefacts we most want:
+        // the cluster Qt theme bundles (~126 MB + ~118 MB, which hold the instrument-cluster glyph
+        // library previously mapped one photo at a time) and the renderer libBydCluster.so (~29 MB).
+        // Also sweeps /system/framework and adds "byd" to the native name patterns, to reach the
+        // bydauto SDK jar whose AbsBYDAutoDevice.checkDeviceFeatures holds the feature-device table
+        // deciding which INSTRUMENT_* registers a car accepts — the open question behind the
+        // 0x43f01030 refusals. The probe file now also lists every framework jar with its size, so
+        // the right one can be named outright next time instead of matched by pattern. Credentials
+        // come from local.properties via BuildConfig; the SAS is create/write only, no read, no list.
+        // With no container configured the feature is inert and every budget is unchanged.
+        // 250 unit tests pass; no daemon protocol change.)
+        // 612 = 1.8.22-beta (fixes the Azure upload commit. On the first real 270 MB pull every
+        // block uploaded fine and only the final Put Block List failed, HTTP 400: the shared request
+        // builder was setting x-ms-blob-type on EVERY request, but that header belongs to the
+        // single-shot Put Blob operation — Put Block List does not define it. Removed. Second, and
+        // the reason the cause had to be inferred rather than read: the uploader threw away Azure's
+        // error body, so a rejection surfaced only as "HTTP 400". It now parses the returned
+        // <Code>/<Message> into the message, on both the block and the commit path, so any future
+        // rejection names itself. Note the previously uploaded blocks stay valid on the service for
+        // 7 days, but the simplest recovery is to re-run the extraction on this build.)
+        // 613 = 1.8.23-beta (diagnostics-only, builds directly on 1.8.21's framework SWEEP: the BYD
+        // APK Extraction now PULLS the bydauto SDK. planFramework() + isFrameworkArtifact() pull the
+        // boot-classpath jars (framework/ext/services.jar + their .vdex/.odex bytecode, the dex
+        // container on API 29) and any *byd* framework jar into a new framework/ subdir, so
+        // android.hardware.bydauto.* — AbsBYDAutoDevice.checkDeviceFeatures / BYDAutoFeatureIds, the
+        // class behind the 0x43f01030 refusals — finally comes out with the pull; the 1.8.21 probe
+        // proved there is no discrete bydauto.jar so it is baked into a boot-classpath jar the "byd"
+        // filter skipped. New 06_bydauto_sdk.txt probe resolves the INSTRUMENT_{GET,SET,COMMON}
+        // permission tiers (COMMON is not in com.byd.auto.permission) and dumps the runtime
+        // per-device feature-enable flags (deviceType 1007 = BYDAUTO_DEVICE_INSTRUMENT) — the only
+        // place the feature-device table exists. PlannedNative gained a subdir field. Daemon respawns
+        // on this bump. Unit tests pass; assembleDebug + assembleRelease (R8) + lintRelease green.)
+        // 614 = 1.8.24-beta (unlocks hidden APIs in the uid-2000 daemon process, ProxyDaemonMain —
+        // the one process that actually makes the calls the 1.8.23 framework.jar/services.jar RE
+        // proved are PRESENT in this ROM's own bytecode but invisible to getMethod():
+        // setDisplayToSingleTaskInstance (IActivityTaskManager transaction 159) and
+        // setCustomTaskWindowingMode (transaction 164, a real BYD split-screen-docking feature,
+        // log string "py_dock setCustomeWindowingMode"). Both have been silently falling back to
+        // DashCast's own NoSuchMethodException handling in Phase4TaskVerbs since day one — exactly
+        // the symptom of Android's P+ hidden-API greylist filtering getMethod() itself, not a
+        // genuine platform absence. SurfaceDaemon.java and ClusterMirrorManager.kt each ALREADY
+        // hand-roll a setHiddenApiExemptions unlock via double reflection, but that state is
+        // per-process/per-ART-VM — it never covered ProxyDaemonMain. Adds
+        // org.lsposed.hiddenapibypass:hiddenapibypass:6.1 (Apache 2.0, Unsafe-based HiddenApiBypass
+        // class — not the faster LSPass, which the library's own README says cannot reach core
+        // platform API, exactly what every target here is) and calls
+        // HiddenApiBypass.setHiddenApiExemptions("Landroid/","Lcom/android/","Ljava/lang/") as the
+        // literal first statement in main(), before renameProcess() or anything else gets a chance
+        // to resolve (and cache a negative on) a reflective Method. Self-proving: a new
+        // hiddenApiSelfTest() logs BEFORE/AFTER getMethod() visibility of
+        // setDisplayToSingleTaskInstance, read-only (getMethod() only, never invoke()), wrapped so
+        // it can never itself throw — the next bug report confirms or refutes the whole hypothesis
+        // with a plain log line. No platform gate: hidden-API enforcement is an ART-wide P+
+        // mechanism, not DiLink-version-specific, so this runs unconditionally on DL3/DL4/DL5.0/
+        // DL5.1/AAOS alike; widening what's reflectively visible cannot regress anything already
+        // working. Daemon respawns on this bump. Diagnostics/RE-only; no daemon protocol change; no
+        // production behavior change unless a call that was silently falling back starts
+        // succeeding. Unit tests pass; assembleDebug + assembleRelease (R8) + lintRelease green.)
+        // 615 = 1.8.25-beta (three defects found while reading INC-20260809-162829 and
+        // INC-20260809-122719. (1) INC-20260809-122719: an app sent to the main display and then
+        // left behind on the cluster. restoreBydDashboard keyed its verified eviction off
+        // mCurrentDashboardPkg, which onSendToMain nulls the instant the UNVERIFIED move is
+        // REQUESTED, so Stop projection arrived with main=null/second=null, evictAllThen got an
+        // empty list and short-circuited — App Manager stayed RESUMED on the OEM cluster display,
+        // proven by the report's own WM dump 23s after "BYD restored", and tapping it only brought
+        // that invisible task forward. evictAllThen now also draws on the session tracker (new pure
+        // ClusterEvictionPolicy.evictionList) and the two unverified moveToMainDisplay() calls that
+        // CLEARED the tracker first are deleted. Widening the list is only safe because eviction now
+        // PROBES before acting: ClusterService.moveTaskToDisplay falls back to a LAUNCH when a
+        // package has no task, so the old blind loop was already cold-starting dead apps on
+        // display 0 at every stop; now ABSENT and "already on display 0" are skipped outright —
+        // never force-stop an app the driver may be using. (2) InsetAutoApplicator retried 3/3 on
+        // every DiLink 3 launch: its break condition was "transcript contains no ERR" but
+        // moveAndResize ALWAYS reports "ERR resizeTask ... not allowed" there (canResizeTask() is
+        // FREEFORM-only and BYD's docking verb leaves the task outside FREEFORM) while the rect
+        // lands anyway — 10/10 corpus reports show attempt 3/3 and the retry never once changed the
+        // outcome. The criterion is now the actual outcome, the closing getTaskBounds, via the new
+        // unit-tested pure parser MoveAndResizeOutcome. (3) resizeTask's verdict was misreported on
+        // every platform: API 29 throws and we labelled it ERR (a platform rule, not a defect);
+        // API 30+ logs and returns false and we DISCARDED that return and said OK —
+        // INC-20260804-171617 has system_server logging "resizeTask not allowed on task=#122" and
+        // our transcript claiming "OK resizeTask(122,...)" 2ms later, nine times. Both report SKIP
+        // now. Also: hardenAgainstOom's javadoc claimed uid 2000 can always write
+        // /proc/self/oom_score_adj — it cannot, DiLink 3's SELinux denies the shell domain
+        // proc_oom_adj and the corpus splits cleanly (79/80 DL3 fail, 20/20 other platforms
+        // succeed); comment corrected, log no longer reads as a failure. Two adversarial review
+        // passes: 28 findings/4 fixed on (2)(3), then 15 findings/0 confirmed on (1). 251 unit
+        // tests (9 new); assembleDebug + assembleRelease (R8) + lintRelease green.)
+        // 616 = 1.8.26-beta (three read-only/diagnostic Diag buttons built from firmware RE
+        // findings that had never been turned into code: (1) FissionHostSvc.getAutoCarDisplay
+        // (native transaction 101, DL3 only) — a pure getter over a single-slot IBinder-producer
+        // registry, disassembly-confirmed to be the same registry AutoContainerNative's own
+        // getQtProjectionDispInfoNative reads to feed the Qt cluster compositor; the reply layout
+        // is a disassembly READING not a spec, so every call logs the raw reply hex before any
+        // best-effort structured decode. (2) AutoContainer.registerCallback (AIDL transaction 4,
+        // documented in ClusterManager.kt since the DL3 RE pass, never called before this release)
+        // — arms the daemon's own raw Binder callback so a FUTURE bug report captures the native
+        // container service's serviceDied()/receivedJson/Info/Info2() pushes; rate-limited into
+        // the daemon's own dashcast_proxy.log (the one bug-report section that survives a logcat
+        // flood) rather than android.util.Log. (3) a 60s registry sampler (start/drain, matching
+        // the existing CAN_LISTEN_START/DRAIN idiom rather than a single blocking transact) around
+        // a tester's normal projection cycle, to answer the open question of whether the OEM
+        // itself uses the FissionHostSvc registry — the prerequisite before setAutoCarDisplay (the
+        // write side) could ever be considered safe. All three fail open ("SERVICE NOT FOUND" is a
+        // normal, expected answer on 4 of 5 platforms) and touch no production code path.
+        // Adversarially reviewed twice: 4 findings fixed on the underlying moveAndResize/resizeTask
+        // work already shipped in 1.8.25, then 10 more found+fixed here — the most serious being
+        // ContainerCallbackBinder skipping only half of writeInterfaceToken()'s wire header
+        // (a leading strict-mode-policy int32 the Java Parcel API doesn't expose a plain accessor
+        // for), which silently corrupted every decoded field; also fixed: unsynchronized callback
+        // registration/rate-limiter, a silently-defaulted-to-0 result code indistinguishable from
+        // a genuine empty reply, and no cross-button gating on the Diag screen letting two probes
+        // stomp the same log view. 251 unit tests; assembleDebug + assembleRelease (R8) +
+        // lintRelease green. Daemon respawns on this bump.
+        // 617 = 1.8.27-beta (protects the 8.8" clusters from a shape command that degrades them,
+        // and makes the deferred cluster re-anchor actually work on DiLink 3.
+        // (1) THE 8.8" GUARD. sendInfo(1000, 29|30|31) switches the cluster GEOMETRY preset
+        // (29 = 8.8"/1280x480 Atto 3 & Dolphin, 30 = 12.3"/1920x720, 31 = 10.25"). On a 1280x480
+        // panel, 30 and 31 drop the instrument cluster into its degraded "simple mode" — owners
+        // sent photographs. That is vehicle-level harm, worse than any projection failure. New
+        // pure ClusterGeometryPolicy refuses 30/31 whenever the app has evidence of a small panel
+        // (configured type 29, OR a persisted sighting of a 1280x480 cluster); 29 is always
+        // allowed, since shrinking to native is what those cars want. The evidence must be
+        // PERSISTED, not read live: a panel already pushed to 1920x720 reports 1920x720 for good,
+        // so a live check goes blind on exactly the cars already damaged. Enforced at three
+        // points because the first attempt guarded one sender and missed the dominant one: the
+        // ADAS window fix (activation), restoreOriginCluster (the DEFAULT Stop flow, which passed
+        // the raw preference whose default is 30), and AdbLocalClient.sendInfo as a backstop.
+        // Decisive evidence, found by adversarial review and re-verified: the corpus contains
+        // exactly TWO reports self-categorised "Cluster simple mode" — INC-20260625-173900 and
+        // INC-20260715-141429 — both 1280x480, both showing restoreOriginCluster sending cmd 30
+        // (6x and 2x), NEITHER with any ADAS-fix activity. 2 of 2 came through the Stop path the
+        // ADAS-only guard did not cover. Cars with a 10.25"/12.3" cluster are untouched: the ADAS
+        // fix still forces 12.3" there, which is what removes the ADAS window bug.
+        // (2) enforceTaskOnDisplay REWRITTEN. It reflected into IActivityTaskManager
+        // .moveTaskToDisplay from the APP process; DiLink 3 strips that method, so it threw,
+        // logged a WARN claiming "using launcher fallback", and then did not fall back — the
+        // enforceOnly branch skipped it. A silent no-op with a lying log, on the platform that
+        // needs it. Now it probes findTaskLocationForPackage first and acts only on
+        // ON_OTHER_DISPLAY, routing the move through the uid-2000 daemon (moveAndResize), which
+        // works there. ABSENT/UNKNOWN never act. The dead enforceOnly parameter and its ternaries
+        // are gone, which is what makes the surviving WARN true again.
+        // (3) That removal also deleted a load-bearing SIDE EFFECT: the re-anchor was what latched
+        // sMoveTaskToDisplayAvailable on DL3 (82% of corpus sessions latched it ONLY from there),
+        // and without it the "force-stop the previous cluster app" guard never armed, so a second
+        // cold app landed split-screen — INC-20260621-130238's NPE, revived. Caught by review, not
+        // by a test. Support is now resolved on demand from isMoveTaskToDisplaySupported() via an
+        // INTERFACE lookup (no live binder: getService() can be null, can block, and forced the
+        // probe onto a worker thread, which was the only source of a race). Inconclusive stays
+        // null and retries instead of latching a guess.
+        // Also: one INFO line per activation stamping the configured cluster type and the ADAS
+        // state — without it a report reveals the type only if the tester stopped projection, and
+        // the observed "Cluster dimensions" is the geometry AFTER the ADAS switch, which is how a
+        // 10.25" car gets misread as a 12.3" one.
+        // 257 unit tests (6 new, on the pure policy); assembleDebug + assembleRelease (R8) +
+        // lintRelease green. Two adversarial review rounds; every confirmed finding fixed.
+        // 618 = 1.8.28-beta (fixes where 1.8.27's small-panel latch READS. The latch itself was
+        // right — persisted, one-way, never re-read live — but it fired from
+        // ClusterService.onDashboardDisplayConnected, i.e. AFTER activation, and therefore after
+        // the ADAS window fix may already have forced the panel to 1920x720. On exactly the 8.8"
+        // cars it protects it read the switched value and never latched: the self-concealing
+        // damage the latch exists to defeat, reintroduced one layer up. Proven on
+        // INC-20260720-073031, where the app logs "real 1920 x 720" during projection while the
+        // system's own DisplayDeviceInfo for the same fission surface reads 1280x480 once the
+        // native shape is restored — both readings correct, at different instants.
+        // ClusterManager.activateClusterDisplay now latches from the display it ALREADY holds
+        // (findClusterDisplay, step 1) before a single command goes out — the only moment the
+        // panel is guaranteed not to have been changed by us, and the same display the ADAS guard
+        // already consults. The ClusterService site stays as a second chance for DiLink 4, where
+        // the app cannot enumerate the display at all and the geometry only arrives later from the
+        // uid-2000 daemon's dumpsys parse.
+        // Also settles two leads by RE rather than by an on-car pull: libfission_config.so holds a
+        // static {count=2, 1920x1080, 1920x720} table returned by fission_disp_config_get
+        // (adrp/add/ret, no property or file read) — but INC-20260720-064201 (1920x720) and
+        // INC-20260720-073031 (1280x480) carry a BYTE-IDENTICAL ro.build.fingerprint, so one
+        // /system image ships on both panel sizes and a static table in it cannot discriminate:
+        // dead by construction. And FissionHostSvc.getAutoCarDisplay is initialised to
+        // type=0/w=-1/h=-1/producer=NULL by its constructor, so it answers -1/-1 before any
+        // projection — a falsifiable prediction for the read-only Diag button shipped in 1.8.26
+        // and still never run on a car.
+        // No behaviour change on 10.25"/12.3" clusters. 257 unit tests; assembleDebug +
+        // assembleRelease (R8) + lintRelease green.
+        // 619 = 1.8.29-beta (INC-20260815-181820: a tester projected the OEM Android Auto host onto
+        // the cluster, then could never get Android Auto back on the CENTRE screen and uninstalled
+        // DashCast over it — which could not help, because everything that survived lives in
+        // system_server, not in our APK.
+        // MECHANISM (the middle of the first hypothesis was wrong and was corrected by review): the
+        // eviction WORKED — it parked com.byd.androidauto's task on display 0 and the probe
+        // confirmed LANDED. Then forceStopApp called removeTask() BEFORE the kill and destroyed
+        // that task; then the kill failed (pid 2740 identical before and after, no am_proc_start).
+        // Net: process alive, NO task anywhere. Seven seconds later the tester tapped Android Auto
+        // in the head-unit launcher and system_server, with no task left to recycle, attached the
+        // fresh one to display 1 — before any Android Auto code ran (mCallingPackage=
+        // com.android.launcher3). Attribution is proven by a control pair inside the same log: the
+        // SAME launcher call site logs mDisplayId=0 two minutes before the session and mDisplayId=1
+        // five seconds after it. What DashCast leaves behind is a per-component display ROUTING
+        // preference, not a task and not a process. The app was NOT re-parenting itself, and
+        // mSingleTaskInstance is not implicated (it repels launches, and is not clearable anyway).
+        // FIX 1 — forceStopApp now kills, VERIFIES, and removes the task only when the kill is
+        // confirmed; on a failed kill the task is deliberately kept, because a task parked on
+        // display 0 is the app's way home. Both the typed daemon path and the ADB shell fallback.
+        // FIX 2 — new pure ProjectionSafetyPolicy (+7 tests) refusing packages projection cannot
+        // clean up after. Deliberately keyed on the failing PROPERTY, not on uid: "uid 1000 means
+        // unkillable" was the first hypothesis and the corpus refutes it — com.byd.avc and
+        // com.byd.mediacenter both run as system, force-stop cleanly, and com.byd.avc has been
+        // projected successfully 4 times, so a uid rule would have deleted a working feature. The
+        // name list is therefore the single package with an incident behind it; the general case is
+        // FLAG_PERSISTENT (inference — the report never captured that package's flags), plus the
+        // RUNTIME-resolved CATEGORY_HOME handler, because the hard-coded launcher list misses the
+        // launcher actually in use on 27 corpus cars. Wired at the picker (hide) and at
+        // launchOnDashboard (refuse), failing OPEN on any PackageManager error.
+        // FIX 3 — BootDisplayCleanup's only recovery reflected into moveTaskToDisplay, which DL3
+        // strips (this very report prints "moveTaskToDisplay stripped on ROM"), so the shipped
+        // safety net could never once have run on the platform that needs it. It now falls back to
+        // relaunching on display 0, which also rewrites the routing preference that does the harm.
+        // FIX 4 — bug reports capture logcat -b events at 2000 lines instead of 500: that buffer is
+        // what reconstructed this incident, and 500 barely covered the window.
+        // KNOWN RESIDUAL: this stops the app losing its way home, but does not erase the routing
+        // preference itself. If that preference survives a reboot, the app will be pulled back to
+        // the cluster whenever it has no task to recycle. Decisive test for the next tester:
+        // project, Stop, tap from the launcher, note the screen — then REBOOT and tap again.
+        // 264 unit tests (7 new); assembleDebug + assembleRelease (R8) + lintRelease green.
+        // 620 = 1.8.30-beta (URGENT — undoes the deny-list 1.8.29 shipped hours earlier. That
+        // release refused com.byd.androidauto by name and every FLAG_PERSISTENT process by rule,
+        // reasoning "an app we cannot force-stop cannot be brought back". The rule was sound and
+        // applying it here was not: Android Auto and CarPlay on the cluster are what DashCast is
+        // FOR — INC-20260815-181820 itself opens with the tester saying Maps and Waze via Android
+        // Auto worked on the screen behind the wheel — and com.byd.carplay.ui is persistent, so the
+        // general rule silently removed the headline feature as well as the named one. The
+        // maintainer spotted both missing from the picker within hours.
+        // The harm in that incident was never in PROJECTING those apps; it was in destroying their
+        // task on the way out. That fix (forceStopApp kills, verifies, and only then removes the
+        // task) is untouched and remains the real remedy. Prevention by removal traded the
+        // product's purpose for a cleanup bug.
+        // ProjectionSafetyPolicy now refuses exactly one thing: whatever currently resolves
+        // CATEGORY_HOME, the single case with no plausible use behind it (projecting the launcher
+        // leaves the head unit with no home screen), still resolved at runtime because the
+        // hard-coded launcher list misses the launcher in use on 27 corpus cars. The name list is
+        // kept as a named EMPTY set so the next person to reach for one reads why first.
+        // Everything else from 1.8.29 stands. 264 unit tests, rewritten to assert that Android Auto
+        // and CarPlay stay projectable. assembleDebug + assembleRelease (R8) + lintRelease green.
+        // 621 = 1.8.31-beta (the audit's reporting work reaches testers. Three things change for
+        // an owner and one of them they will meet immediately.
+        // FIRST, A QUESTION. The app now asks, once, before any diagnostic leaves the car, in each
+        // of the thirteen languages it ships. It is asked at the first Send rather than at install
+        // — a consent question raised before the user knows the feature exists gets dismissed
+        // reflexively. Either answer lets the capture proceed: refusing turns the upload into the
+        // share sheet the app already offered when no channel was configured, so a refusal keeps a
+        // report rather than losing it. Revocable in Settings, and the notice is re-readable there.
+        // The gate is in the transport, not in the eleven screens that can start an upload, so all
+        // of them inherit it through branches that were already shipped and exercised.
+        // SECOND, LESS LEAVES. Reports are filtered before upload: the VIN, Wi-Fi network names,
+        // hardware addresses of nearby devices, positions, e-mail addresses and Google account
+        // names. The rules were measured against 160 real reports (116 MB) rather than guessed,
+        // which is what kept two obvious-looking rules out — a free-floating 17-character VIN match
+        // fires 1370 times on that corpus and never once on a VIN (it eats display identifiers, the
+        // field every cluster diagnosis is made with), and a decimal coordinate pair is 92% window
+        // scales. 128 of the 160 carried something now removed; every diagnostic field verified
+        // unchanged.
+        // THIRD, THE TOKEN IS OUT OF THE BINARY. AUD-001, the audit's only P0: since versionCode
+        // 441 every published APK carried the Telegram bot token in its DEX, extractable with unzip
+        // and strings, and rotating it meant reaching every car. Uploads now go through a relay
+        // that holds the token server-side, so a decompiled APK yields an HTTPS address and nothing
+        // else. THE PRACTICAL CONSEQUENCE FOR TESTERS: the old token has been revoked, so 1.8.29
+        // and 1.8.30 can no longer upload anything at all — they fall back to a local save. This
+        // version is the fix, and there is no way back to the old channel.
+        // Also: the extraction bundle's privacy page said it collects no personal data; it writes an
+        // inventory of every installed application, and the page now says so. And the raw-nav-text
+        // opt-in did not actually gate the raw text — one ungated Log.d printed the whole
+        // notification, and only when parsing failed, which is exactly when a report gets sent.
+        // 368 unit tests. assembleDebug + assembleRelease (R8) green; release APK scanned: zero
+        // credential patterns in any dex or resource.)
+        // 632 = 1.8.42-beta (the first release in four that does not exist to fix its predecessor's
+        // fix. An eleven-pass audit loop — find, verify against two independent skeptics, fix,
+        // commit, attack the fix with the next pass — converged: pass 11 produced five candidates
+        // and none survived. Six findings fixed across passes 6-10.
+        //
+        // TWO OF THEM ARE UNBOUNDED RETENTION OF DRIVER-FACING DATA, and they are the most
+        // consequential results of the whole audit.
+        //
+        // Bug reports accumulated forever, in every version ever shipped. AppLogger.pruneOldFiles
+        // swept "byd_log_", "byd_report_" and "BYD_RE_Sniffer_"; BugReportCapture writes
+        // "byd_bugreport_". startsWith is a prefix test and those two names diverge at character
+        // five, so no bug report ever matched. Each is up to REPORT_BODY_MAX_BYTES (4 MB) holding a
+        // 5000-line logcat, an events logcat, ~20 dumpsys sections and the entire journal; on
+        // DL3/DL4 they sit in the external files dir, which any app with READ_EXTERNAL_STORAGE can
+        // read on API 29; and nothing deleted them after a successful upload. The keep-3 rotation
+        // already did the right thing — it was simply never asked to look at them.
+        //
+        // The screenshot max-age sweep stopped working in 1.8.39, and that one is mine. AUD-PERF-P2
+        // gated the app-side prune on everCaptured = sLastCaptureMs != 0L, an in-memory field, so
+        // after any process death (OTA reinstall, force-stop, LMK, swipe-away) a fresh process read
+        // 0, concluded nothing had ever been captured, and never swept again. That sweep is the
+        // ONLY thing enforcing MAX_AGE_MIN on those files. JPEGs of BOTH driver-facing screens have
+        // therefore been sitting in /data/local/tmp indefinitely on 1.8.39, 1.8.40 and 1.8.41,
+        // past the five-minute bound the code documents. I removed ~2880 wasted ADB handshakes a
+        // day and broke a retention bound on pictures of the driver's screens; that was a bad
+        // trade, it shipped, and testers should know their cars have been keeping those files.
+        // The latch is persisted now (ClusterPrefs.KEY_SHOTS_ON_DISK), answering "might shots be on
+        // disk?" rather than "did THIS process capture?", and prune reports what survived so the
+        // latch self-clears once the directory is empty — the retention bound is real without
+        // reintroducing the waste. The second half of that hole is closed too: setEnabled(false)
+        // wrote the pref before clearing and maybeCapture early-returned above the prune, so the
+        // user's own "stop recording my screens" was what stranded the recordings when the rm
+        // failed. Capturing is gated now; sweeping is not.
+        //
+        // ONE IS SAFETY-ADJACENT. The cluster keyboard bridge, finding no editable focused on the
+        // cluster, returned the display-0 candidate instead of nothing. Every keystroke then went
+        // into some head-unit app's field via ACTION_SET_TEXT — a full atomic replace of whatever
+        // was there — and pressing Done fired ACTION_IME_ENTER on it. The driver believes they are
+        // typing a destination into the cluster app; instead they overwrite and SUBMIT a field on
+        // the centre screen, which for a nav search box means starting a route nobody asked for.
+        // It logged nothing, because the "no focused editable on cluster" warning only fires when
+        // the scan returns null — exactly what the fallback prevented. That fallback only made
+        // sense below API 30, where getDisplayId does not exist; this bridge is DL5-only and DL5 is
+        // API 32, so on every car that can reach the code it bought nothing.
+        //
+        // ALSO: a cluster disconnect arriving while MainActivity was detached was dropped forever.
+        // onStop detaches the listener, and onStop is the NORMAL state during projection — the user
+        // sends an app to the cluster and leaves DashCast. setListener replayed only the connected
+        // edge, so the Activity came back showing the app as live on a display that no longer
+        // existed, and ClusterPrefs still held that package, which the next connect restores. The
+        // edge is latched and replayed now.
+        //
+        // AND ONE FIX TO A FIX, recorded because it is the method that made the rest work: the test
+        // written to guard the bug-report prefix contract declared its OWN copy of the prefix list
+        // and could not fail on the drift it existed to catch. It now asserts against the
+        // production constants, with PRUNED_PREFIXES referencing BugReportCapture.PREFIX directly
+        // so the two cannot diverge, and it is verified by mutation — remove the prefix and one
+        // test goes red.
+        //
+        // That is the audit's one durable lesson, learned six times: PROSE INVARIANTS ROT AT THE
+        // SPEED OF THE CODE, AND ONLY STRUCTURAL EXPRESSION HELD. Every load-bearing
+        // comment-enforced coupling in this tree has gone stale at least once, twice in comments
+        // written to prevent the previous rot. What held: PRUNED_PREFIXES referencing
+        // BugReportCapture.PREFIX, and TRIGGER_SLOW_POLL_MS derived from REBROADCAST_BUDGET_MS.
+        // Neither can drift, because neither restates anything.
+        //
+        // Method, since it is the reason this release is not another correction: of twelve patches
+        // written during this audit, six carried a defect found only by adversarial review and
+        // three reached testers. 565c7e72 was REVERTED outright rather than patched a third time.
+        // Every commit in this release has been attacked by a later pass, and the last pass came
+        // back clean. ~61 findings remain open and catalogued in docs/perf-audit/report.md.
+        //
+        // NOT VALIDATED ON A CAR. 453 unit tests, lint 0 errors and byte-identical to the 1.8.38
+        // baseline (0/14/16). No daemon protocol change, no binder or uid-gate change, no
+        // user-visible string.)
+        // 631 = 1.8.41-beta (supersedes 1.8.40-beta, which shipped a lost update INSIDE the fix
+        // for the lost-file bug 1.8.39 shipped. Two changes, one of them behaviour-neutral.
+        //
+        // The regression. 1.8.40's fix for R1-3 moved clear()'s latch resets to AFTER the blocking
+        // ADB round-trip, so they would only run if the delete had actually happened. Correct
+        // intent, and it opened a lost update: the ProxyKeeperService heartbeat is 10 s and the ADB
+        // TCP + RSA handshake is hundreds of ms to seconds, so a heartbeat lands inside that window
+        // routinely. When it does, maybeCapture stamps sLastCaptureMs and queues a captureRound
+        // BEHIND the in-flight clear on the single-threaded executor. The clear then completed and
+        // wrote a bare `= 0L`, erasing that fresh stamp, and the queued round wrote new JPEGs
+        // afterwards. Net state: files on disk with everCaptured == false, so shouldAppPrune
+        // returns false and the max-age sweep never runs. It self-heals on the next heartbeat while
+        // projection continues — but if projection ends first (and the live caller is the bug
+        // wizard, right after a 20 s-budgeted pull, i.e. exactly when the executor is contended and
+        // a session is ending) the flag stays false for the rest of the process and screenshots of
+        // both driver-facing screens persist past MAX_AGE_MIN, after a user who consented to ONE
+        // send. That is the precise harm R1-3 was written to prevent, re-entered through R1-3's own
+        // door. 1.8.39 could not do this: it reset synchronously, before enqueuing.
+        //
+        // Fixed by snapshotting both latches before enqueuing and compare-and-setting inside the
+        // executor: reset only if nothing else wrote them meanwhile. The executor is single-
+        // threaded so a plain CAS is sufficient. R1-3's own property — do not reset when the delete
+        // failed — is preserved. Also narrowed the comment that claimed this covers the
+        // setEnabled(false) path: it does not, because maybeCapture early-returns on !isEnabled, so
+        // no prune is scheduled again regardless of the latches. Unchanged behaviour there; called
+        // out rather than overclaimed.
+        //
+        // The behaviour-neutral half, and the more important lesson. Both guard comments written to
+        // prevent the FIRST regression had themselves rotted into falsehood. ProxyDaemonMain still
+        // narrated the reverted 10 s design four lines above SLOW_POLL_MS = 3_000L, and ProxyClient
+        // still claimed the daemon polls at 1 s and delivers "within ~1s" — which makes the 5 s
+        // rebroadcast budget read as 5x headroom when it is 1.67x. A reader reasoning from either
+        // comment gets the wrong margin, in opposite directions, from the pair specifically written
+        // to stop that happening.
+        //
+        // So the coupling is no longer prose. REBROADCAST_BUDGET_MS and TRIGGER_SLOW_POLL_MS now
+        // live together in ProxyBootstrapPolicy and are derived from each other
+        // (poll = budget - delivery margin); ProxyDaemonMain and ProxyClient both reference the
+        // shared constants instead of restating literals. The invariant cannot be violated by
+        // editing one side any more. This copies CanBatchOperation.MAX_BATCH_SIZE, which client and
+        // daemon already both reference across this same process boundary
+        // (ProxyDaemonMain.java:1109) — proof the pattern works from app_process. The derived value
+        // is unchanged at 3000 ms, so this half changes no behaviour at all.
+        //
+        // Verified clean under the same adversarial attack and unchanged: the daemon heal divider
+        // (boundary hand-walked tick by tick — the gap is exactly 30 s, and RAMP_TICKS being an
+        // exact multiple of the divisor is load-bearing), the daemonStaleMs arithmetic on BOTH the
+        // 15 s ramp and 90 s steady cadences, the seven-parameter call site checked position by
+        // position, the launch-diagnostic gate, and the AppLogger capacity hint. The first
+        // regression test pinned only the steady arm; the ramp arm is now pinned too.
+        //
+        // Open and NOT resolved here, so it is not mistaken for verified: the 3 s poll leaves a 2 s
+        // delivery margin that has never been measured, and emitBroadcast uses a plain
+        // sendBroadcast with no FLAG_RECEIVER_FOREGROUND. Wants an on-car check.
+        //
+        // Also known-open and deliberately NOT in this release, because every same-session fix this
+        // cycle has needed a second pass to catch its own defect: ProxyClient's 16 s bootstrap latch
+        // loses to a 30 s ADB idle timeout on a fresh-key first install (strands 1 of 4 pool
+        // threads); eviction's documented 2 s "hard ceiling" is checked only between probes so one
+        // probe can block a full 32 s bootstrap on the Stop path; and the OTA checker runs on every
+        // launch with no throttle and no connectivity check anywhere in the app, pulls ten full
+        // release objects to read one tag, and never deletes the APK it downloads.
+        //
+        // NOT VALIDATED ON A CAR. 450 unit tests (3 added), lint 0 errors and byte-identical to the
+        // 1.8.38 baseline (0/14/16). No daemon protocol change, no binder or uid-gate change, no
+        // user-visible string.)
+        // 630 = 1.8.40-beta (supersedes 1.8.39-beta, which shipped two regressions of its own
+        // making. An adversarial re-read of 1.8.39's five patches found three defects; two had
+        // shipped. Both shipped ones share one failure mode, and it is the lesson of this release:
+        // A TIMING CONSTANT WAS CHANGED WITHOUT AUDITING WHAT ELSE HAD BEEN CALIBRATED AGAINST IT.
+        // Neither coupling was visible at the patch site; both were documented in a comment
+        // somewhere else in the tree.
+        //
+        // The serious one. 1.8.39 ramped the uid-2000 daemon's trigger-file poll from 1 s to 10 s
+        // after the first minute. But ProxyClient.callWithRetry waits 5_000 ms for that daemon's
+        // binder rebroadcast, and the comment at ProxyClient.java:502-512 names THIS poll's 1 s
+        // period as the reason that budget is safe. REBROADCAST only ever runs against a daemon
+        // that is already alive and the same build — i.e. one whose uptime is measured in days and
+        // which is therefore always far past a 60 s ramp. So on a DL5 unit where the FileObserver
+        // has silently stopped delivering (the ONLY case the poll exists for), the app gave up at
+        // 5 s while the trigger was noticed at up to 10 s. 5 s < 10 s unconditionally: the cheap
+        // rebroadcast recovery failed deterministically and fell through to the ~31 s
+        // kill-and-respawn bootstrap. 1.8.39's own release notes asserted the ramp "preserves 1 Hz
+        // through the exact window the DL5 inotify failure appears in" — wrong, because the ramp is
+        // anchored on DAEMON start while that failure surfaces on APP restart against a long-lived
+        // daemon. Fixed by making the post-ramp poll 3 s rather than by raising ProxyClient's
+        // budget: the invariant holds with 2 s of margin and no critical file is touched. The
+        // constant now carries an explicit warning naming the coupling. Wakeups are 60/min ->
+        // 20/min instead of the claimed 6/min, which is the right trade for a working recovery
+        // path. Heal cadence is unchanged (10 s during the ramp, 30 s after) and its divisor branch
+        // is gone, since at 3 s one divisor covers both sides.
+        //
+        // The second. 1.8.39 stretched the screenshot cadence to 90 s but left the prune's
+        // daemon-staleness bound at a fixed 30 s. That stamp is refreshed only by a successful
+        // capture, so it now went stale BETWEEN captures and the app-side prune fired at t=30 s and
+        // t=60 s of every cycle: roughly 80 ADB TCP + RSA handshakes per hour of projection, where
+        // 1.8.38 had exactly zero. That is the precise cost the same release had just removed for
+        // idle cars, reintroduced during projection — the window it set out to protect. Root cause
+        // was one parameter serving two different concepts in shouldAppPrune; it now takes
+        // intervalMs AND daemonStaleMs separately, and the recorder passes one capture cycle plus a
+        // margin. Idle behaviour is provably unchanged: the clusterId <= 0 arm short-circuits
+        // before the new bound is read. Two regression tests pin both cadences.
+        //
+        // The latent one. clear() reset its latches synchronously but deleted asynchronously and
+        // swallowed every failure, so with the transport down — the common state when a report is
+        // being filed — the JPEGs survived on disk while everCaptured went permanently false and
+        // the max-age sweep never ran again. Those are screenshots of both driver-facing screens,
+        // kept after the user asked for them to be cleared. runShellBlocking now reports success
+        // and the latches reset only if the delete actually ran.
+        //
+        // Verified clean under the same attack and unchanged here: the launch-diagnostic gate (both
+        // call sites, no third caller, no state mutated, off the main thread, the AAOS
+        // start-fixed-activity probe still unconditional), the AppLogger capacity hint (snapshot
+        // and sTotalChars under one lock, symmetric accounting, no overflow, byte-identical
+        // output), and the capture ramp's own latch.
+        //
+        // Also in this release: docs/perf-audit gains a second-pass section covering the packages
+        // no lane had owned. update/ had never been audited by anyone, and it shows — the OTA check
+        // runs on every app launch with no interval throttle, no connectivity check anywhere in the
+        // app (a repo-wide grep for ConnectivityManager/NetworkCapabilities returns zero) and no
+        // opt-out; it pulls ten full GitHub release objects, each with its complete markdown
+        // changelog, to read one tag; and the downloaded APK is never deleted — there is no
+        // .delete() in update/ at all, and it sits in the external files dir where the framework
+        // will never reclaim it. Those are written up, NOT fixed here.
+        //
+        // NOT VALIDATED ON A CAR. 447 unit tests (2 added), lint 0 errors and byte-identical to the
+        // 1.8.38 baseline (0/14/16). No daemon protocol change, no binder or uid-gate change, no
+        // user-visible string.)
+        // 629 = 1.8.39-beta (five things the app did while nothing was happening. A performance
+        // audit of the whole tree; these are the five cheapest of its thirty findings, and four of
+        // them are work performed on a stationary car with an unchanged screen.
+        //
+        // The framing finding first, because it reshapes what "performance" means here: DashCast
+        // has NO frame pipeline. No MediaCodec, no MediaProjection, no per-frame code anywhere.
+        // Projection relocates a third-party task onto the OEM cluster display and SurfaceFlinger
+        // does every frame. So the app cannot make the cluster faster — it can only steal CPU, GPU
+        // and thermal headroom from the app that owns those frames. Every fix below is that.
+        //
+        // The screenshot recorder was the biggest one, and three independent audit lanes found it
+        // separately. It rides the 10 s keeper heartbeat with a 15 s threshold, is ON by default,
+        // and captures BOTH displays — two SurfaceFlinger captures and two JPEG encodes roughly
+        // every 20 s, for the entire duration of every projection, with no check for whether the
+        // screen changed. A car stopped at a light re-encoded an identical frame ~180 times an
+        // hour. Now 15 s for the first two minutes of a projection (where launch incidents are)
+        // then 90 s. Retention, ring bound and consent are untouched.
+        //
+        // Its prune tick was worse in kind: shouldAppPrune ended `clusterId <= 0 || ...`, so when
+        // NOT projecting it returned true unconditionally every 30 s, forever. Each one opens a
+        // full ADB TCP probe + RSA handshake to run a `cd ... || exit 0` against a directory that
+        // was never created — ~2 880 handshakes a day on a car that never projects. It now waits
+        // for a first capture. The daemon already bounds the ring in-process, so nothing is lost.
+        //
+        // Every cluster launch shelled `dumpsys SurfaceFlinger`, which serialises SF's whole layer
+        // tree under SF's GLOBAL LOCK, 1.5 s into the projected app's cold start — the moment the
+        // driver-facing panel can least absorb a stall — plus ~10 process forks. Its own javadoc
+        // called it "diagnostic only (no behaviour change)" and nothing read the output but a
+        // journal line. Now opt-in from the Diagnostics screen, off by default. Deliberately NOT
+        // gated with it: tryClusterFixedActivityExperiment, which despite the name invokes
+        // `cmd car_service start-fixed-activity` and has a real effect on AAOS units. Both call
+        // sites are gated, not just the one the audit first reported.
+        //
+        // The uid-2000 daemon ran `while(true) { Thread.sleep(1000) }` for its whole life — and it
+        // outlives the app, survives its kills, and lives as long as the head unit stays up. That
+        // is ~86 400 wakeups and ~86 400 stat() calls per day. It is the PRIMARY recovery path when
+        // inotify silently stops on DL5 (not a backup, as it first looked), so this is a ramp, not
+        // a backoff: full 1 Hz for the first 60 s, where that failure appears, then 10 s. The heal
+        // pass stays at ~10 s during the ramp and ~30 s after, so its wall-clock cadence holds.
+        //
+        // And AppLogger.get() sized its StringBuilder at entries*80 = 400 K for content that can
+        // reach MAX_TOTAL_CHARS = 2 M, so it doubled four times, copying the whole char[] each
+        // time, peaking around 12 MB — on every bug report and every log share, i.e. exactly when
+        // the user is already in trouble. The exact figure was one field away in sTotalChars. It is
+        // floored at the old value so it can only ever over-reserve, never under.
+        //
+        // The audit itself is in docs/perf-audit/ (architecture, measurement protocol, 30 ranked
+        // findings, backlog). Everything in it is ESTIMATED: no car was profiled, and measure.md
+        // names the one measurement that confirms or refutes each finding. Notably it also records
+        // what is already CLEAN — AppLogger's byte budget, the executor shutdowns, the receiver
+        // unregisters, the Parcel balance and the touch pre-allocation all still hold.
+        //
+        // NOT VALIDATED ON A CAR. The daemon ramp in particular only truly exercises on a head
+        // unit. 445 unit tests, lint 0 errors and byte-identical to the 1.8.38 baseline
+        // (0/14/16), no MissingTranslation, no new lint finding in any touched file. No daemon
+        // protocol change, no binder or uid-gate change, no user-visible string.)
+        // 628 = 1.8.38-beta (the translations twelve locales were still missing, and the reason
+        // four audit passes walked past them. 167 translations across 16 strings and 12 languages.
+        // The Layouts navigation label was the English word in 12 locales out of 12 — the French
+        // base included — along with the Advanced settings heading, the Beta Channel label, and the
+        // entire Hotspot screen: Back, Start, Stop, Toggle, Received, Sent, Uptime and its two
+        // progress states, plus the display row headline and the welcome subtitle.
+        //
+        // lint's MissingTranslation has two blind spots and both were live here. A string that
+        // EXISTS in a locale file but holds the English text satisfies the check — it verifies
+        // presence, not content. And a hardcoded literal in Kotlin is structurally invisible to it,
+        // because it only reads resource files: WelcomeActivity OVERWROTE the localised
+        // @string/welcome_subtitle with "BYD CLUSTER MIRROR · v…", so the welcome screen answered
+        // in English whatever language the tester had chosen. It goes through welcome_subtitle_fmt
+        // now. To find the first class, compare each locale against values-en/, NOT against
+        // values/ — values/ is FRENCH in this project, which is a measurement I got backwards once.
+        //
+        // Deliberately NOT translated, and written down so the next reader does not "fix" them:
+        // real loanwords (Hotspot, Auto, Apps, Media, Nav, DPI, px, Cluster) where translating
+        // reads worse; welcome_select_lang, which is bilingual by design because it precedes the
+        // language choice; Layouts in German and Italian, where the English word is the standard
+        // software term; and log_chip_* / sysinfo_svc_* (Info/Warn/Error, RUN/OFF/CONN), which are
+        // 11sp bold inside width-constrained pills where "Предупреждение" would overflow.
+        //
+        // No behaviour change beyond the strings themselves. 445 tests, lint 0 errors,
+        // 0 MissingTranslation, 0 ExtraTranslation; every locale file re-parsed as XML and checked
+        // for unescaped ASCII apostrophes.)
+        // 627 = 1.8.37-beta (the audit's fourth and last pass, and the one that mattered least —
+        // which is the finding. Three passes had already gone file by file; this one went after the
+        // defect classes that per-file review is structurally blind to, and came back almost empty.
+        // All 37 Binder transactions were compared field by field across the client/daemon boundary
+        // — write order against read order, type for type, the exception protocol on both sides
+        // including the error branches — and every one is consistent. That is the class that
+        // corrupts silently without ever throwing, and it has bitten this project before
+        // (writeInterfaceToken puts TWO fields on the wire). The uid gate was checked on every
+        // `case`, not sampled: TXN_EXEC and TXN_READ_FILE_CHUNK are out of reach of a third-party
+        // app. Eleven of my own fixes were re-read adversarially with no regression found; two
+        // accusations against today's work were raised and both refuted, one of them by decompiling
+        // the dadb jar to enumerate where AdbConnectException is actually constructed. I verified
+        // that refutation's premises myself rather than take the verdict.
+        //
+        // What this release actually carries is the previous pass's fixes. AUD-233 — the cluster
+        // resize editor, a screen nobody had ever reviewed, could write a TEN-PIXEL-WIDE window to a
+        // live instrument cluster: its min-size fallback recomputed from the down-rect with neither
+        // the bounds clamp nor the min-size check reapplied. Its coordinate space was also frozen at
+        // 1920x720 (a placeholder from a mirror that had never started), wrong on the 1280x480
+        // panels this project has met on a car, and its soft-snap was gated per axis instead of per
+        // edge so dragging one handle moved the opposite one. The arithmetic moved to
+        // ResizeRectPolicy because none of it was reachable while it sat in a touch handler; ten
+        // tests, five of which go red when the defects are restored, including the sliver at its
+        // exact coordinates. AUD-234 — every roundabout drew a motorway-exit arrow, because "exit"
+        // sat above "roundabout" in a first-match-wins table and real instructions say both.
+        // AUD-235 — three defects in Phase4ProcessVerbs, the one daemon file no reviewer had ever
+        // opened (its agent was killed by a safety classifier), including a repeat of AUD-225 fixed
+        // one file over the day before. AUD-236 — a dialog shown on a destroyed Activity.
+        // 445 unit tests, lint 0/0. Every behavioural fix mutation-verified.
+        //
+        // NOT in this release, and deliberately: the i18n cluster. main_nav_layouts is still the
+        // English word "Layouts" in 12 locales out of 12, and lint cannot see it because the string
+        // exists — it is simply not translated.)
+        // 626 = 1.8.36-beta (the last 23 P3s of the 1.8.33 re-audit, re-opened against the tree
+        // as it is now rather than as the audit found it: 45 commits had landed since, and seven of
+        // the twenty-three no longer held — five were misreadings, two were already fixed. The
+        // sixteen that survived are here. AUD-220 — on DL5.1 the report body had NO size cap at
+        // all: the 4 MB limit and its truncation banner live in readFile(), which only Android 10
+        // reaches, so since the A13 staging path was added the cap has been dead code on exactly
+        // the platform whose dumps are largest. Capped on the device now, and `head -c` runs only
+        // when the cap is actually exceeded so the ordinary path stays the plain `cat` it has
+        // always been. Same file: the DL3 dump was getting the 60 s wedged-transport timeout
+        // instead of the 120 s constant that exists for it, and an interrupted capture stranded a
+        // multi-megabyte UNREDACTED dump in /data/local/tmp that nothing ever swept. AUD-221 — the
+        // relay retried a read timeout that happened AFTER the body was fully written, against a
+        // relay that does not deduplicate: one Send could post the same report twice. AUD-224 —
+        // ClusterNavPusher.stop() cleared with naviState 0 and icon 0, and both mean "carry on", so
+        // the last manoeuvre arrow stayed lit after the route ended; the OEM's own clear values
+        // (9 / -1) were already in this tree twice. AUD-222/223 — a checkbox whose default
+        // disagreed with both its consumers, a notification re-posted after a stop, a badge shown
+        // without its foreground service, Cancel not cancelling in the layout editor, and a
+        // favourite lost when the screen closed mid-activation. AUD-225 — three places trusting the
+        // wrong signal, the worst being a HUD listener that latched "armed" on having made the call
+        // rather than on the daemon's answer, so one truthful "not yet" disabled HUD capture for
+        // the life of the process. AUD-226 — the secret-scan workflow pasted the release tag into
+        // its own shell. Three test gaps closed and mutation-verified: redaction was proved nowhere
+        // it is APPLIED (deleting a call site left the suite green), the binder-throttle tests
+        // passed with the throttle removed, and the boot discriminator had none. AUD-230 — owner
+        // decisions: ReportDelivery and the AAOS diagnostic trio are deleted, HudRawCaptureActivity
+        // deliberately kept, and the OK status pill finally gets the dedicated text token the warn
+        // pill got in AUD-148 (4.26:1 -> 6.54:1 in day mode, md_status_ok untouched). A review pass
+        // over my own sixteen fixes narrowed two of them. 421 unit tests, lint 0/0, release APK
+        // -19,856 bytes.)
+        // 625 = 1.8.35-beta (eleven P2s from the 1.8.33 re-audit, and five of them are the same
+        // shape: a finding marked CORRIGE whose fix only covered half the defect. AUD-156 — a
+        // release built without the keystore was UNSIGNED, not debug-signed as three of my own
+        // texts claimed, so it could not be installed at all; explicit fallback, -debugsigned
+        // filename, and logger.quiet because logger.lifecycle is swallowed by `gradlew -q`, which
+        // is why I had not seen it. AUD-152 — the mapping archive was written inside app/build/,
+        // which `clean` deletes; moved to dist/mappings/ and the retrace procedure, never written,
+        // is now in SECURITY.md with a worked example. AUD-003 — if setNaviActive(true) threw,
+        // isHudActive stayed false forever: watchdog never armed, closeNavigation a permanent
+        // no-op, guidance writes continuing outside the guard, an arrow nothing in the app could
+        // clear; session flag and CAN acknowledgement are separate latches now, retry at 5 s
+        // instead of every guidance frame. AUD-007 — the abandoned-draft clear ran only in
+        // onDestroy, but the activity is singleTask so reopening the keyboard is onStop/onStart;
+        // the draft survived exactly the case the fix was written for. AUD-148 — reached only the
+        // services list, and its own fix took the OFF badge from 6.9:1 to 3.37:1; contrast
+        // recomputed with alpha compositing, third pill added for hidden displays, and the
+        // auto-launch badge at 1.63:1 fixed as the same class.
+        //
+        // Then the storage and report path. One unguarded getExternalFilesDir() was the FIRST
+        // statement of pruneOldFiles, and on DL5.1/A13 ROMs that throw it, the caller's
+        // catch(Throwable) meant the entire sweep silently did nothing — including the D1 voice
+        // reclaim announced to testers in 1.8.33. The screenshot pull waited with no timeout on a
+        // ~31 s daemon bootstrap per capture, on the send thread; bounded at 20 s with the
+        // non-blocking opt-out this project already uses. The send screen had no exit while that
+        // ran; a 45 s watchdog restores Cancel, in thirteen languages. The relay endpoint was
+        // storable from a file in world-writable Download without being counted or validated —
+        // counted and https-only now, and the unit test that asserted the old behaviour was
+        // pinning the defect and is flipped. Two bundles carried private copies of the zipper
+        // WITHOUT the redaction pass; a third turned up by grepping rather than assuming, in
+        // AaosDiagnosticBundle, which HudCaptureSupport's own docs claimed to protect. One
+        // ZipOutputStream left in the whole source tree. 393 unit tests, lint 0/0.)
+        // 624 = 1.8.34-beta (the report redactor was not removing positions, and the consent notice
+        // shipped in thirteen languages says it is. Found by the 1.8.33 re-audit and confirmed by
+        // running the compiled Redactor, not by reading it: three of four real location line shapes
+        // passed through in clear. The single GPS rule was anchored on "GpsMonitor", a third-party
+        // dashcam tag that exists nowhere else in the tree — not on anything the platform emits.
+        // Measured across 178 real reports: that rule covered 16 positions in 16 reports while 218
+        // in 19 reports left the car untouched, plus 14 more in 7 reports carried as lat=/lon=
+        // parameters by an OEM service. AUD-004's own counter-verification had quoted one of those
+        // framework lines as its reason for keeping the finding at P1, and the fix shipped without
+        // covering it. Two rules added, both anchored on their carrier and both measured against
+        // the corpus rather than guessed: Location[…]/Loc[…] (zero occurrences in 176 reports fall
+        // outside the pattern, all four shapes are positional) and keyed lat=/lon= (14 hits, zero
+        // outside +/-90 and +/-180). Accuracy, altitude, velocity and satellite counts are kept —
+        // they are the diagnostic content and identify nobody; a zero coordinate is kept for the
+        // same reason the all-zero MAC is. Verdict from the compiled redactor over all 176 reports:
+        // 245 positions removed across 38 reports, 0 left in clear. 383 unit tests, 11 of them new
+        // and every one built from a line copied verbatim out of a real report.)
+        // 623 = 1.8.33-beta (decision D1 — the voice subsystem is removed. Wake-word -> Vosk ->
+        // LLM -> TTS was a proof of concept that lived in the diagnostics surface, and that surface
+        // was emptied in 1.7.0: since then nothing in the tree has called VoiceService.start(), so
+        // the pipeline has shipped in every APK without a single reachable entry point. Gone: the
+        // nine files of voice/, its two tests, the three ONNX wake-word models in assets/, the
+        // RECORD_AUDIO permission and the microphone foreground service, the ONNX Runtime and Vosk
+        // dependencies, LocalBroadcastManager (the project's only AndroidX-deprecated library, whose
+        // seven consumers were six voice classes plus MainActivity's subscriber to them), the Vosk
+        // preference, three notification strings in thirteen locales, and scripts/prepare_voice_libs.sh.
+        // Kept, contrary to the audit's expectation: androidx.security:security-crypto — the audit
+        // recorded its only user as the voice engine's OpenAI key, but ReportChannel now holds the
+        // runtime-provisioned bug-report credential in it. It stays the last alpha dependency.
+        // Also a courtesy: a user who tried the PoC is holding a downloaded Vosk model (~40 MB, up
+        // to ~1.3 GB on the large one) and ~25 MB of native libraries that no code can open any
+        // more, so AppLogger's housekeeping sweep now removes those three directories outright
+        // instead of only their .download.tmp leftovers. No behaviour change on any reachable path;
+        // no daemon protocol change.)
+        // 622 = 1.8.32-beta (wave V2 of the audit: the last three P1s, all in paths a driver feels
+        // within seconds and none reproducible off a car.
+        // CLUSTER TOUCH COMES BACK BY ITSELF. AUD-009: the app runs two uid-2000 daemons, and five
+        // sites answered the death of the SURFACE one by invalidating the PROXY one's cache. The
+        // proxy daemon — alive, different process — was reconnected for nothing while the dead
+        // reference stayed cached, so every subsequent finger movement went to the same corpse and
+        // the cluster stopped responding until the app was killed. Split into seven commits, the
+        // touch path alone in its own, because it is the regression nobody can reach remotely.
+        // THE WINDSHIELD ARROW STOPS BLINKING. AUD-003: liveness was tied to content. Maps re-posts
+        // the same notification while the distance has not changed — about 28 s at 130 km/h — the
+        // listener's dedup swallowed those re-posts before lastUpdateMs was written, and the 12 s
+        // watchdog cleared a HUD that was perfectly correct. Liveness now follows a re-post of the
+        // frame already displayed, and only when that frame actually reached the HUD, so the
+        // watchdog still catches the frozen arrow it was built for.
+        // THE KEYBOARD BRIDGE SENDS WHAT YOU TYPED. AUD-007: mPendingText was shared state read at
+        // run time; between the Enter and its flush the bridge cleared its own box and that clear
+        // was relayed, so the destination went out empty and the field was wiped. Text is now
+        // captured when Done is pressed, the bridge no longer relays its own housekeeping, and a
+        // draft abandoned in one session no longer replays onto the cluster in the next.
+        // Found by a pre-release audit, before shipping: my own AUD-009 fix had put a BLOCKING
+        // pingBinder inside the view traversal — getSurfaceDaemonBinder is reached from
+        // addOnLayoutChangeListener on every layout pass, not "at mirror start and stop" as the
+        // comment claimed. A wedged daemon would have blocked the traversal. The ping now runs off
+        // the main thread and the cache is repaired for the next caller.
+        // NOT VALIDATED ON A CAR. All three need the vehicle; the release exists to get them there.
+        // 375 unit tests, lint 0/0, release APK scanned: no credential pattern.)
+        // 633 = 1.8.43-beta (nine defects found by analysing ONE bug report, INC-20260826-194829,
+        // plus the Android Auto regression that report could not have shown.
+        //
+        // The pattern behind the nine is the point: not one was a crash. Every one produced a
+        // report that looked complete and answered nothing, and not one could fail a test before
+        // it was fixed.
+        //
+        // THE SSID RULES WANTED A COLON AND THIS ROM WRITES A SPACE. 39 neighbourhood network names
+        // went out in the clear to the diagnostics group. On its own wpa_supplicant line the MAC
+        // rule redacted the BSSID and the HESSID and the name between them survived, because both
+        // SSID rules required `SSID:` — a form this ROM emits 0 times in a 10,097-line report.
+        // Every SSID test was written against it, so CI stayed green.
+        //
+        // AND THE FOOTER COULD NOT HAVE TOLD ANYONE. It listed only the rules that MATCHED, so a
+        // dead rule and a clean report printed the same line. That is why the above survived 178
+        // reports. Every rule now reports: `=0` means it ran and found nothing, `=ERR` means it
+        // threw. The footer also states its scope, and a bundle now declares its screenshots as
+        // NOT redacted — twelve of them carried four minutes of street-level position and the
+        // driver's saved Home pin, beside a footer that spoke only about text.
+        //
+        // THE HUD EVENT LOG KEPT THE OLDEST THOUSAND EVENTS. `if (size < CAP) add()` is the
+        // opposite of a ring: it went deaf at t=35.9s of a six-minute session and said nothing.
+        // Newest-wins now, and the drain declares what it dropped. Separately, one 25 Hz sensor
+        // took 903 of those 1000 lines because payload dedup identifies an event and does nothing
+        // against a stream — rate-limited per id, each line carrying the count it stands for.
+        // 1000 lines become 132; the window covers ~4.5 minutes instead of 36 seconds.
+        //
+        // THE WATCHDOG WAS UNOBSERVABLE, and that is why the Android Auto incident could not be
+        // settled. `WATCHDOG started` was its only trace in 10,097 lines: everything else went to
+        // android.util.Log, and NO DashCast tag reaches this ROM's logcat at all — 0 hits in 4,664
+        // captured lines while the same pid in the same second appears under a framework tag. Its
+        // lines now go to the daemon transcript, which survives a logcat flood.
+        //
+        // Both SurfaceFlinger passes stopped before the cluster (a bare `layerStack` matches every
+        // display-0 layer first), and the wizard grepped `realActivity`, which API 29 never prints
+        // — hence a report headed "Application inconnue" about a session whose cluster task was
+        // unambiguously Waze.
+        //
+        // AND THE ONE THAT REPAIRS A CAR: Stop projection left Android Auto owning the centre
+        // screen until reboot. We relaunch it on display 0 to fix its routing, the kill fails
+        // because it is persistent, and since 1.8.30 we correctly KEEP its task — but left it
+        // resumed and on top with a live phone session, which is a foreground for the OEM host to
+        // reclaim, handed to it by us. Keep the task, then put the launcher in front of it. Gated
+        // so every package whose kill succeeds behaves exactly as before.
+        //
+        // THE VERSION BUMP IS LOAD-BEARING, not hygiene: three of these fixes live in the uid-2000
+        // daemon, which only replaces itself when this number changes.
+        //
+        // NOT VALIDATED ON A CAR. In particular it is unproven whether startActivity(HOME) wins at
+        // that moment on Android 10; if the OEM host re-fronts over the launcher too, the Android
+        // Auto fix is insufficient and the next step is bigger. The watchdog logging above is what
+        // makes the next report able to say.
+        // 504 unit tests, lint unchanged (14 warnings, all pre-existing elsewhere, 0 on the files
+        // touched).)
+        // 634 = 1.8.44-beta (supersedes 1.8.43-beta, published minutes earlier and withdrawn.
+        //
+        // Two reasons, and both are the same mistake this release series exists to correct.
+        //
+        // 1.8.43's cluster-layer pattern matched nothing. `layerStack=[1-9]` cannot match a layer
+        // line on this ROM, which pads the field — `layerStack=   0, z=`. It was "verified by
+        // simulation" against a dump I wrote myself, unpadded, so the check confirmed my assumption
+        // instead of the ROM. Fixed with ` *` and a test using the real padded form.
+        //
+        // And 1.8.43's own release notes told testers "position, VIN and addresses were being
+        // removed correctly" while only Wi-Fi names had leaked. That is false. Redaction did not
+        // exist before 1.8.31-beta, and 7e704a31 measured 229 of 245 positions still leaving the
+        // car before 1.8.34-beta. An adversarial check of those notes against the diff caught it,
+        // and it landed after publication because the release was cut before the check returned.
+        // The notes are rewritten and 1.8.43 is marked withdrawn.
+        //
+        // Everything else is 1.8.43 unchanged: nine report blind spots and the Android Auto fix.
+        // The version bump is still load-bearing — three fixes live in the uid-2000 daemon, which
+        // only replaces itself when this number changes.
+        //
+        // NOT VALIDATED ON A CAR. 504 unit tests, lint unchanged.)
+        // 635 = 1.8.45-beta (the address rule never matched this ROM's BSSIDs.
+        //
+        // 1.8.44 was cut to withdraw a false privacy sentence from 1.8.43 and shipped another one.
+        // Both said the hardware address next to each leaked network name had been correctly
+        // hidden. It had not: this ROM masks two groups itself — `BSSID 14:0c:76:**:**:3f` — and
+        // the MAC rule wanted six hex pairs, so it matched none of them. 150 occurrences, 53
+        // distinct access points, with per-AP signal strength and the set they were seen together
+        // in. The 14 the footer credited were the fully-hex HESSID fields alone.
+        //
+        // Also fixed: our own second redaction pass, which every report with screenshots goes
+        // through, was rewriting the footer's own `wifi-ssid=0` / `=ERR` into a token — destroying
+        // the one signal f8424f87 exists to carry, on the default path.
+        // Also fixed: the z-order pass covered 18 of 86 layers and they were the bottom of the
+        // stack; and the tag-filtered logcat's `-t 1500` covered 3.8 seconds on this unit and came
+        // back empty.
+        //
+        // Found by auditing my own commits AFTER publishing them. Every one of the four has the
+        // same root as the two caught yesterday: a check written against text I chose instead of
+        // text the car emits. Two of my own tests asserted the broken behaviour was correct.
+        //
+        // NOT VALIDATED ON A CAR. 508 unit tests, lint unchanged.)
+        // 636 = 1.8.46-beta (twelve adversarially re-verified fixes across the two privileged
+        // daemons, fission resource ownership, display/input/IME routing, HUD parsing, report
+        // provisioning/redaction and post-crash task recovery.
+        //
+        // No product capability is removed: arbitrary app projection, auto-start, custom HTTPS
+        // relays, the non-TRUSTED VirtualDisplay compatibility fallback, automatic cluster IME and
+        // rolling diagnostic screenshots remain available. The changes reject only unverified
+        // identities, destinations or parser output that could act on the wrong process/display.
+        //
+        // Every finding was re-read against the current source before editing, received a focused
+        // regression test, and landed as its own detailed commit. Final validation on the combined
+        // tree: 534 unit tests, zero failures; lint unchanged at 14 warnings / 16 hints.
+        //
+        // NOT VALIDATED ON A CAR.)
+        // 637 = 1.8.47-beta (post-release adversarial audit of 1.8.46: fifteen confirmed fixes
+        // across release artifact quarantine, boot/session ownership, cluster IME targeting,
+        // Azure provisioning and retries, CAN/AutoContainer result propagation, fission resize,
+        // HUD notification identity/failover, diagnostic archive cleanup and ADB-key backup.
+        //
+        // No feature is removed. Old daemon compatibility is explicit: truthful CAN batching is
+        // negotiated at protocol 24, older daemons use ordered result-preserving writes, and
+        // AutoContainer keeps its pre-v20 result-less fallback. Distributed APKs are release-only;
+        // the scanner examines every ZIP entry and blocks Telegram announcements on any finding.
+        //
+        // Final source validation before this bump: 567 unit tests, zero failures/skips; release
+        // lint zero errors (14 warnings / 16 hints); R8 release build and platform signature green.
+        // NOT VALIDATED ON A CAR.)
+        // 638 = 1.8.48-beta (complete post-1.8.47 convergence audit: ordered projection and task
+        // ownership, protocol-v25 daemon identity, transactional Layout/Fission state, durable
+        // per-file report delivery, lifecycle gates, release scanner hardening and clean lint.
+        // 738 JVM tests; this build was validated successfully in a car.)
+        // 639 = 1.9.0 stable promotion. Application logic is unchanged from 638; only version
+        // metadata plus tests, documentation and default-branch release policy changed. The 639
+        // binary itself has not been separately vehicle-tested before publication.)
+        versionCode 639
+        versionName "1.9.0"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
@@ -616,13 +1918,17 @@ android {
         // on-car OTA. Perf audit 2026-07-05 finding #16.
         resConfigs 'ar', 'be', 'de', 'en', 'es', 'it', 'kk', 'pl', 'ru', 'tr', 'uk', 'uz'
 
-        // Bug-report bot credentials (see note at top of file).
-        buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
-                "\"${_localProps.getProperty('bugReport.botToken', '')}\""
-        buildConfigField "String", "BUG_REPORT_CHAT_ID",
-                "\"${_localProps.getProperty('bugReport.chatId', '')}\""
-        buildConfigField "String", "BUG_REPORT_THREAD_ID",
-                "\"${_localProps.getProperty('bugReport.threadId', '')}\""
+        // AUD-001 — no credential is compiled into the APK any more.
+        //
+        // These used to be five buildConfigField entries fed from local.properties. A String
+        // constant is inlined by R8 into the DEX pool, so `unzip` plus `strings` handed the bot
+        // token to anyone who downloaded a release; the Azure SAS added in 1.8.21 repeated the
+        // pattern. Credentials now live in EncryptedSharedPreferences on each device and are
+        // provisioned at runtime — see ReportChannel.
+        //
+        // To provision a device that needs a direct channel, write a file holding ONLY the
+        // reporting keys and push that. Never local.properties itself: it also carries
+        // azure.primary.key, a storage account key. See the header of this file.
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
@@ -634,13 +1940,33 @@ android {
 
     buildTypes {
         debug {
-            // Platform signature is mandatory even in debug builds for BYD permissions
-            signingConfig signingConfigs.bydPlatform
+            // Platform signature is mandatory even in debug builds for BYD permissions.
+            //
+            // AUD-155 — and it makes this variant sharper than a debug build usually is. AGP leaves
+            // it `debuggable`, so the APK holds platform permissions AND accepts a debugger. On a
+            // head unit that is not academic: DashCast cannot work at all unless ADB over TCP is
+            // enabled, so the port an attacker would need is open by requirement, not by accident.
+            //
+            // Deliberately NOT set to debuggable false: that is what the variant is for, and a
+            // developer who cannot debug will simply build a release and lose the stack traces.
+            // The control is that debug builds stay off cars — stated in README.md and SECURITY.md
+            // rather than left for someone to infer from "same platform-signed APK".
+            if (hasPlatformKeystore) signingConfig = signingConfigs.bydPlatform
         }
+            // R8 enabled (issue #78 hardening). Keep rules in proguard-rules.pro
+            // are conservative (whole proxy.** kept) because the daemon is launched
+            // by name via app_process. MUST be on-car validated before shipping.
         release {
-            minifyEnabled false
+            minifyEnabled true
+            // AUD-196 — R8 has been shrinking the code since 1.8.x while every unused
+            // AndroidX and Material resource stayed in the APK. The usual reason to hold this
+            // back is a resource named at runtime, which the shrinker cannot see; there is no
+            // such call site in this app (no getIdentifier() anywhere in app/src/main/java),
+            // so no res/raw/keep.xml is needed. If one is ever added, it needs a keep rule.
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.bydPlatform
+            // Explicit fallback: unset means UNSIGNED on release, not debug-signed.
+            signingConfig = hasPlatformKeystore ? signingConfigs.bydPlatform : signingConfigs.debug
         }
     }
 
@@ -648,13 +1974,13 @@ android {
     // (ProxyDaemonMain, ProxyClient, ClusterService, UpdateChecker, Settings,
     // Welcome, DiagActivity).
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 
     // Ignore les erreurs de lint sur les permissions BYD non connues du SDK standard
     // (AGP 8 : bloc `lint` — l'ancien `lintOptions` a été supprimé)
     lint {
-        abortOnError false
+        abortOnError = false
     }
 
     packagingOptions {
@@ -670,13 +1996,6 @@ android {
         exclude 'META-INF/NOTICE.txt'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/*.kotlin_module'
-        // v1.3.32-beta — voice native libs excluded from APK (~44 MB saved).
-        // Downloaded on demand by VoiceLibsManager when voice is first enabled.
-        // See scripts/prepare_voice_libs.sh to produce the zip for hosting.
-        exclude '**/libonnxruntime.so'
-        exclude '**/libonnxruntime4j_jni.so'
-        exclude '**/libvosk.so'
-        exclude '**/libjnidispatch.so'
     }
 
     // Java 17 unlocked by AGP 8 (D8 desugars records & co down to API 28).
@@ -692,9 +2011,64 @@ android {
     }
 
 
+    // PRE-0 (audit) — Robolectric needs the merged resources and the manifest on the unit-test
+    // classpath. Nothing else changes: the 232 existing plain-JUnit tests never touch an Android
+    // API, so enabling this cannot alter their behaviour. returnDefaultValues is deliberately NOT
+    // set — it would silently turn "this test touches Android" into a passing test, which is the
+    // opposite of what a characterisation net is for.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+
     android.applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "DashCast-v${variant.versionName}-${variant.buildType.name}.apk"
+            // AUD-156 — a release the platform key did not sign must not wear the release name.
+            def suffix = (!hasPlatformKeystore && variant.buildType.name == 'release') ? '-debugsigned' : ''
+            outputFileName = "DashCast-v${variant.versionName}-${variant.buildType.name}${suffix}.apk"
+        }
+
+        // AUD-152 — keep the mapping WITH the release it belongs to.
+        //
+        // R8 renames everything outside `com.byd.dashcast.proxy.**`, so a stack trace from a car
+        // arrives as `a.b.c(SourceFile)` and means nothing without the mapping that produced it.
+        // AGP does write one, to build/outputs/mapping/release/mapping.txt — a path that is
+        // overwritten by the next build and carries no version. So the artefact needed to read a
+        // field report is destroyed by the act of preparing the following release.
+        //
+        // Copied here under the same name as the APK it decodes, so the two travel together and a
+        // report from 1.8.31 can still be read after 1.8.40 has shipped. Publishing it costs
+        // nothing: this repository is public, so the mapping reveals strictly less than the source
+        // already does.
+        if (variant.buildType.minifyEnabled) {
+            // The path, not variant.mappingFileProvider: the provider carries task references and
+            // the configuration cache refuses to serialise them, failing the build with a wall of
+            // "cannot serialize object of type ...Task". The location is stable AGP output.
+            def buildTypeName = variant.buildType.name
+            def apkVersionName = variant.versionName
+            def mappingCopy = tasks.register("copyMapping${variant.name.capitalize()}", Copy) {
+                from layout.buildDirectory.file("outputs/mapping/${buildTypeName}/mapping.txt")
+                // NOT into build/ at all — that was the hole in the first version of this fix.
+                // `outputs/mapping-archive` sat inside app/build/, which .gitignore excludes and
+                // `clean` deletes, so the artefact meant to outlive the next release was destroyed
+                // by the next release. It has to live outside the build directory to mean anything.
+                //
+                // NOT into outputs/apk either: AGP's own createReleaseApkListingFileRedirect reads
+                // that directory, and Gradle refuses the implicit dependency writing there creates.
+                into rootProject.layout.projectDirectory.dir("dist/mappings")
+                rename { "DashCast-v${apkVersionName}-mapping.txt" }
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+                // The version has to be a DECLARED input, not just a value captured by the rename
+                // closure. Gradle does not look inside the closure, so with only the source file
+                // and the destination directory tracked, bumping versionName left the task
+                // UP-TO-DATE: 1.8.35 was built and dist/mappings/ still held exactly one file,
+                // DashCast-v1.8.34-beta-mapping.txt, with 1.8.34's content. A mapping labelled
+                // with the wrong release is worse than no mapping — it decodes a trace into
+                // plausible, wrong names — and it is the same failure AUD-152 exists to prevent.
+                inputs.property("versionName", apkVersionName)
+            }
+            variant.assembleProvider.configure { finalizedBy(mappingCopy) }
         }
     }
 }
@@ -702,8 +2076,24 @@ android {
     // No resolutionStrategy.force needed with these API-29-compatible versions.
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // AUD-196 — byd-auto-api-stubs.jar is compile-time only. Its 54 classes live in the
+    // android.hardware.* namespace, which means the real ones come from the head unit's boot
+    // classpath and win over anything in our dex anyway: shipping the stubs added 49 dead
+    // classes to classes.dex. Worse if they were ever reached — a listener subclassing our
+    // stub would be rejected by the platform's own registerListener(realType). The only
+    // compile-time need is CanFeedbackListener's two `extends AbsBYDAuto*Listener` sinks
+    // (CanFeedbackListener.java:125,140,156); everything else already goes through
+    // Class.forName, and every one of those paths is inside a catch (Throwable).
+    compileOnly fileTree(include: ['*.jar'], dir: 'libs')
+    testCompileOnly fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.13.2'
+
+    // PRE-0 (audit) — characterisation-test harness. The audit established that the only test
+    // dependency was plain JUnit 4, so everything touching Context / Binder / Handler / Surface /
+    // ADB / the daemon was structurally untestable — i.e. the ~15 600 lines of the eleven files
+    // over 1 000 lines, which are exactly what waves V2, V5 and V6 modify. Robolectric 4.13 is the
+    // last release in this project's offline cache and supports Java 17 + compileSdk 33.
+    testImplementation 'org.robolectric:robolectric:4.13'
     // Android 10 era versions (API 29) — minCompileSdk ≤ 29
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
@@ -716,22 +2106,25 @@ dependencies {
     // dadb — pure-JVM ADB client (same library used by Overdrive)
     implementation 'dev.mobile:dadb:2.0.0'
 
-    // v1.2.43-beta — used by the voice PoC (VoiceService → DiagActivity).
-    // In-process broadcast only, no system-wide IPC, no extra permissions.
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+    // D1 — ONNX Runtime, Vosk and LocalBroadcastManager left with the voice subsystem
+    // in 1.8.33-beta. They were the project's only deprecated library and its heaviest
+    // native payload, and every consumer of all three was code with no entry point.
 
-    // v1.2.50-beta — ONNX Runtime for openWakeWord wake-word detection.
-    // Scope strictly limited to the Diag Voice tab (com.byd.dashcast.voice.wakeword.*).
-    // The library ships native .so for several ABIs; we restrict to arm64+armv7
-    // (the only ABIs DiLink 3/4/5 ever run on) via android.defaultConfig.ndk.abiFilters
-    // to keep the APK growth under control. The runtime is initialised lazily —
-    // production paths never reach this code unless the user toggles the wake-word
-    // switch in the Diagnostic tab.
-    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.1'
-    // v1.4.0 — Vosk offline speech recognition (post-wake transcription).
-    // Small FR model (~40 MB) downloaded on first use via StorageService.unpack().
-    implementation 'com.alphacephei:vosk-android:0.3.47'
-
-    // v1.4.2 — Encrypted storage for OpenAI API key
+    // Encrypted storage. Introduced for the voice PoC's OpenAI key; the only user now is
+    // ReportChannel, which holds the bug-report credential provisioned at runtime — so this
+    // one stays. It is the project's last alpha dependency, and it sits on the Android
+    // KeyStore path, which is the component OEM ROMs diverge on most: worth requalifying.
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+
+    // v1.8.13 — FlatBuffers runtime, to encode the OEM's own byd.fbs.naviInfo.NaviInfo
+    // wire format for AutoContainer.sendInfo2(4, bytes) (HUD turn-by-turn injection).
+    implementation 'com.google.flatbuffers:flatbuffers-java:2.0.3'
+
+    // v1.8.24 — Hidden-API bypass for the uid-2000 daemon (ProxyDaemonMain), which never had ANY
+    // hidden-API unlock (SurfaceDaemon.java / ClusterMirrorManager.kt each hand-roll their own via
+    // double reflection, but that state is per-process/per-ART-VM — it never covered the daemon
+    // process that actually makes the failing calls). Pure-Java, stable on API 10+ (does not touch
+    // internal ART structures, unlike the hand-rolled meta-reflection trick this replaces — which
+    // this library's own README warns "will be blocked"). Apache 2.0.
+    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
 }

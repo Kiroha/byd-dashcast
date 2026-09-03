@@ -32,6 +32,11 @@ export const locales = {
 
 export const languages = localeOrder.map((code) => locales[code]);
 
+// AUD-157 — membership test, not a bare index. `locales[code]` also reaches
+// Object.prototype, so ?lang=constructor / __proto__ / toString / valueOf and friends
+// used to return a truthy function or object, which the caller read as "this is a
+// locale" and mounted the manual with. Only the thirteen codes we actually ship
+// resolve; anything else falls back to the landing page, as 'zz' already did.
 export function resolveLocale(code) {
-  return locales[code] || null;
+  return localeOrder.includes(code) ? locales[code] : null;
 }

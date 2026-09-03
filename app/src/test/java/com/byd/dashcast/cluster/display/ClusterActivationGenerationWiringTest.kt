@@ -1,0 +1,79 @@
+package com.byd.dashcast.cluster.display
+
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+class ClusterActivationGenerationWiringTest {
+
+    @Test
+    fun `all asynchronous activation families reject stale generations`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/cluster/display").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(
+            root,
+            "app/src/main/java/com/byd/dashcast/cluster/display/ClusterManager.kt"
+        ).readText()
+
+        assertTrue(source.contains("resolveDl5Display(dm, callback, gen)"))
+        assertTrue(source.contains("sendWarmCmd16(found, callback, gen)"))
+        assertTrue(source.contains("sendWarmCmd16(originalDisplay, callback, gen)"))
+
+        for (method in listOf(
+            "private fun sendWarmCmd16",
+            "private fun sendActivationSequence",
+            "private fun sendActivationCmd16ThenCmd35",
+            "private fun sendActivationCmd35",
+            "private fun resolveDl5Display",
+        )) {
+            val body = source.substringAfter(method).substringBefore("\n    /**")
+            assertTrue("$method has no generation guard", body.contains("gen != mActivationGeneration") ||
+                body.contains("gen == mActivationGeneration") ||
+                body.contains("isCurrentActivation(gen)"))
+        }
+    }
+
+    @Test
+    fun `display readiness never flushes the activation command queue`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/cluster/display").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(
+            root,
+            "app/src/main/java/com/byd/dashcast/cluster/display/ClusterManager.kt"
+        ).readText()
+
+        assertTrue(Regex("(?m)^\\s*mHandler\\.removeCallbacksAndMessages\\(null\\)")
+            .findAll(source).count() == 1)
+        assertTrue(source.split("claimDisplayReady(gen)").size - 1 >= 7)
+
+        val dl5 = source.substringAfter("private fun resolveDl5Display")
+            .substringBefore("// ── Cancellation")
+        assertTrue(dl5.substringBefore("// Brief polling window")
+            .contains("if (!claimDisplayReady(gen)) return"))
+        assertTrue(dl5.substringAfter("val dd = findClusterDisplay(dm)")
+            .contains("if (!claimDisplayReady(gen)) return"))
+
+        val warm = source.substringAfter("private fun sendWarmCmd16")
+            .substringBefore("private fun latchPanelGeometry")
+        assertTrue(warm.contains("if (!claimDisplayReady(gen)) return@post"))
+    }
+
+    @Test
+    fun `warm cmd16 failure cannot report the display ready`() {
+        val root = generateSequence(File("").absoluteFile) { it.parentFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/cluster/display").isDirectory }
+        assertTrue("could not locate the repo root", root != null)
+        val source = File(
+            root,
+            "app/src/main/java/com/byd/dashcast/cluster/display/ClusterManager.kt"
+        ).readText()
+        val warm = source.substringAfter("private fun sendWarmCmd16")
+            .substringBefore("private fun latchPanelGeometry")
+        val error = warm.substringAfter("override fun onError")
+
+        assertTrue(error.contains("callback.onDisplayTimeout()"))
+        assertTrue(!error.contains("callback.onDisplayReady"))
+    }
+}

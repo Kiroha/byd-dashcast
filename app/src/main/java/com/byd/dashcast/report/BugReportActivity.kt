@@ -65,6 +65,13 @@ class BugReportActivity : Activity() {
             etTitle.requestFocus()
             return
         }
+        // Validate first, ask second: a notice raised over a form that is about to be rejected for
+        // a missing title asks the user to decide something before they have finished the task.
+        ReportConsent.askThen(this) { doSend(title) }
+    }
+
+    private fun doSend(title: String) {
+        if (mSending) return
 
         mSending = true
         btnSend.isEnabled = false
@@ -72,15 +79,27 @@ class BugReportActivity : Activity() {
         tvStatus.visibility = View.VISIBLE
         tvStatus.setText(R.string.bug_status_capturing)
 
-        val caption = buildCaption(title)
+        // Same second egress as the wizard: this string goes to Telegram beside the file, so the
+        // report's own redaction never reaches it.
+        val caption = Redactor.redact(buildCaption(title)).text
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {
+                if (!isUiAlive()) {
+                    deliverHeadlessly(file, caption)
+                    return
+                }
                 if (TelegramBugReporter.isConfigured()) {
+                    protectDelivery(file, caption)
                     tvStatus.setText(R.string.bug_status_sending)
                     TelegramBugReporter.send(this@BugReportActivity, file, caption,
                         object : TelegramBugReporter.Callback {
                             override fun onSent() {
+                                clearDelivery(file)
+                                if (!isUiAlive()) {
+                                    AppLogger.i(TAG, "legacy report sent after Activity closed")
+                                    return
+                                }
                                 Toast.makeText(this@BugReportActivity,
                                     R.string.bug_sent_ok, Toast.LENGTH_LONG).show()
                                 finish()
@@ -89,15 +108,34 @@ class BugReportActivity : Activity() {
                                 // Bot upload failed (no network to Telegram, etc.)
                                 // — fall back to the share sheet so nothing is lost.
                                 AppLogger.w(TAG, "bot send failed, share fallback: $message")
+                                if (!isUiAlive()) {
+                                    AppLogger.w(TAG, "Activity closed — report kept at ${file.absolutePath}")
+                                    return
+                                }
                                 shareFallback(file)
+                            }
+                            override fun onAmbiguous(message: String) {
+                                AppLogger.w(TAG, "report delivery uncertain; file kept: $message")
+                                if (!isUiAlive()) return
+                                tvStatus.text = getString(R.string.bug_kept_locally_fmt, file.name)
+                                Toast.makeText(this@BugReportActivity,
+                                    getString(R.string.bug_kept_locally_fmt, file.name),
+                                    Toast.LENGTH_LONG).show()
+                                finish()
                             }
                         })
                 } else {
+                    protectDelivery(file, caption)
                     shareFallback(file)
                 }
             }
 
             override fun onError(message: String, partial: File?) {
+                if (!isUiAlive()) {
+                    AppLogger.w(TAG, "legacy capture failed after Activity closed: $message"
+                        + (partial?.let { "; partial kept at ${it.absolutePath}" } ?: ""))
+                    return
+                }
                 mSending = false
                 btnSend.isEnabled = true
                 btnCancel.isEnabled = true
@@ -107,15 +145,58 @@ class BugReportActivity : Activity() {
         })
     }
 
+    private fun deliverHeadlessly(file: File, caption: String) {
+        protectDelivery(file, caption)
+        if (!TelegramBugReporter.isConfigured()) {
+            AppLogger.w(TAG, "Activity closed — report kept at ${file.absolutePath}")
+            return
+        }
+        TelegramBugReporter.send(applicationContext, file, caption,
+            object : TelegramBugReporter.Callback {
+                override fun onSent() {
+                    clearDelivery(file)
+                    AppLogger.i(TAG, "legacy report sent headlessly")
+                }
+
+                override fun onFailed(message: String) {
+                    AppLogger.w(TAG, "headless legacy upload failed: $message; kept at "
+                        + file.absolutePath)
+                }
+
+                override fun onAmbiguous(message: String) {
+                    AppLogger.w(TAG, "headless legacy delivery uncertain: $message; kept at "
+                        + file.absolutePath)
+                }
+            })
+    }
+
+    private fun protectDelivery(file: File, caption: String) {
+        if (!BugWizardPendingDelivery.protect(
+                applicationContext,
+                file,
+            caption)) {
+            AppLogger.e(TAG, "could not protect legacy pending report ${file.absolutePath}")
+        }
+    }
+
+    private fun clearDelivery(file: File) {
+        BugWizardPendingDelivery.clear(applicationContext, file)
+    }
+
+    private fun isUiAlive(): Boolean = !isFinishing && !isDestroyed
+
     private fun shareFallback(file: File) {
+        var chooserOpened = false
         try {
             AppLogger.shareFile(this, file, getString(R.string.bug_share_subject),
                 getString(R.string.bug_share_chooser))
+            chooserOpened = true
         } catch (e: Exception) {
             AppLogger.e(TAG, "share fallback failed", e)
             Toast.makeText(this, getString(R.string.bug_status_error_fmt, e.message.orEmpty()),
                 Toast.LENGTH_LONG).show()
         }
+        if (chooserOpened) clearDelivery(file)
         finish()
     }
 
