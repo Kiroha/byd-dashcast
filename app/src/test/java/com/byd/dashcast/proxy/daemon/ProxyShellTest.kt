@@ -41,7 +41,7 @@ class ProxyShellTest {
         Files.deleteIfExists(pidFile)
         var childPid: Long? = null
         try {
-            val command = "sleep 10 & echo \$! > '${pidFile.toAbsolutePath()}'"
+            val command = "sleep 10 & child=\$!; echo \$child > '${pidFile.toAbsolutePath()}'; wait \$child"
             val result = ProxyShell.exec(command, 200, 1024)
             assertEquals(-1, result.exit)
 
