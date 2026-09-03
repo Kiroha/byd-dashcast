@@ -520,12 +520,11 @@
             <!-- ═══════════════════════════════════════ -->
             <!-- LEFT PANE: apps                         -->
             <!-- ═══════════════════════════════════════ -->
-            <!-- v1.2.83 — width = 2 × favorite-tile width (80dp each) so that
-                 the Favorites strip and the 2-column grid line up vertically.
-                 Anything narrower would clip the favorite tiles. -->
+            <!-- Regular-mode baseline; MainActivity switches to fixed 160dp in compact mode. -->
             <LinearLayout
                 android:id="@+id/ll_app_list_section"
-                android:layout_width="160dp"
+                android:layout_width="0dp"
+                android:layout_weight="1.4"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:layout_marginEnd="8dp">
@@ -1180,85 +1179,6 @@
                             </LinearLayout>
 
                             <!-- Resize panel -->
-                            <LinearLayout
-                                android:id="@+id/panel_resize"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:padding="10dp"
-                                android:background="@color/md_surface_container"
-                                android:visibility="gone">
-
-                                <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical">
-                                    <TextView
-                                        android:id="@+id/tv_resize_w_label"
-                                        android:layout_width="80dp"
-                                        android:layout_height="wrap_content"
-                                        android:text="@string/label_width_inset"
-                                        android:textColor="@color/md_on_surface"
-                                        android:textSize="12sp"/>
-                                    <SeekBar
-                                        android:id="@+id/sb_resize_w"
-                                        android:layout_width="0dp"
-                                        android:layout_height="wrap_content"
-                                        android:layout_weight="1"
-                                        android:max="400"/>
-                                    <TextView
-                                        android:id="@+id/tv_resize_w_val"
-                                        android:layout_width="35dp"
-                                        android:layout_height="wrap_content"
-                                        android:textColor="@color/md_primary"
-                                        android:textSize="12sp"
-                                        android:text="0"
-                                        tools:ignore="HardcodedText"/>
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:layout_marginTop="4dp">
-                                    <TextView
-                                        android:id="@+id/tv_resize_h_label"
-                                        android:layout_width="80dp"
-                                        android:layout_height="wrap_content"
-                                        android:text="@string/label_height_inset"
-                                        android:textColor="@color/md_on_surface"
-                                        android:textSize="12sp"/>
-                                    <SeekBar
-                                        android:id="@+id/sb_resize_h"
-                                        android:layout_width="0dp"
-                                        android:layout_height="wrap_content"
-                                        android:layout_weight="1"
-                                        android:max="400"/>
-                                    <TextView
-                                        android:id="@+id/tv_resize_h_val"
-                                        android:layout_width="35dp"
-                                        android:layout_height="wrap_content"
-                                        android:textColor="@color/md_primary"
-                                        android:textSize="12sp"
-                                        android:text="0"
-                                        tools:ignore="HardcodedText"/>
-                                </LinearLayout>
-
-                                <Button
-                                    android:id="@+id/btn_resize_apply"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="36dp"
-                                    android:layout_gravity="end"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/btn_apply"
-                                    android:textSize="12sp"
-                                    android:insetTop="0dp"
-                                    android:insetBottom="0dp"
-                                    android:backgroundTint="@color/md_primary"
-                                    android:textColor="@color/md_on_primary"/>
-                            </LinearLayout>
 
                         </LinearLayout> <!-- /panel_controls_content -->
                     </LinearLayout> <!-- /panel_cluster_control -->

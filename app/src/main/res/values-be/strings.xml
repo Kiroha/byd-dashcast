@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
-    <string name="welcome_subtitle">Кантролер панэлі прыбораў</string>
+    <string name="welcome_subtitle">Кіраванне прыборнай панэллю</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
     <string name="welcome_select_lang">Выберыце мову\nPlease select your language</string>
     <string name="welcome_continue_without_change">Працягнуць без зменаў</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
@@ -41,14 +42,14 @@
     <string name="menu_log">📜 Журналы</string>
     <string name="menu_language">🌐 Мова</string>
     <string name="menu_check_updates">🔄 Праверыць абнаўленні</string>
-    <string name="settings_prerelease_label">Beta Channel</string>
+    <string name="settings_prerelease_label">Бэта-канал</string>
     <string name="settings_prerelease_hint">Атрымліваць тэставыя зборкі да афіцыйнага выпуску</string>
     <string name="cluster_label_88">8,8 цалі  (cmd=29)</string>
     <string name="cluster_label_123">12,3 цалі (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 цалі (cmd=31)</string>
     <string name="split_full_screen">⬜ На ўвесь экран</string>
-    <string name="split_left">⬜⬛ Злева (50%%)</string>
-    <string name="split_right">⬛⬜ Справа (50%%)</string>
+    <string name="split_left">⬜⬛ Злева (50%)</string>
+    <string name="split_right">⬛⬜ Справа (50%)</string>
     <string name="log_title">Журнал</string>
     <string name="log_filter_hint">Фільтр журнала (тэг, паведамленне, regex)…</string>
     <string name="log_empty">(няма запісаў)</string>
@@ -61,21 +62,12 @@
     <string name="share_report_title">Падзяліцца справаздачай…</string>
     <string name="settings_header">Налады</string>
     <string name="settings_cluster_type_title">Тып кластара</string>
-    <string name="settings_overscan_section_title">Палі дысплея (overscan)</string>
-    <string name="settings_inset_h_label">Злева / Справа:</string>
-    <string name="settings_inset_v_label">Зверху / Знізу:</string>
-    <string name="settings_btn_apply_overscan">Прымяніць цяпер</string>
-    <string name="settings_btn_reset_overscan">Скінуць (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Ужыта — Л/П: %1$d px, В/Н: %2$d px</string>
     <string name="ota_dialog_title">Даступна абнаўленне</string>
     <string name="ota_up_to_date">DashCast абноўлены</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Наладзіць</string>
-    <string name="label_width_inset">Водступ шырыні</string>
-    <string name="label_height_inset">Водступ вышыні</string>
-    <string name="btn_apply">Ужыць</string>
     <string name="toast_grid_mode_enabled">Рэжым сеткі ўключаны</string>
     <string name="toast_list_mode_enabled">Рэжым спісу ўключаны</string>
     <string name="toast_update_install_failed">Памылка ўстаноўкі: </string>
@@ -105,9 +97,6 @@
     <string name="dialog_reconnect_msg">Перазапусціць %1$s на кластары?</string>
     <string name="dialog_reconnect_yes">↺ Перазапусціць</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Наладзіць стрэлкамі (замест паўзункоў)</string>
-    <string name="visual_overscan_height">↕ Вышыня</string>
-    <string name="visual_overscan_width">↔ Шырыня</string>
     <string name="setting_boot_auto_start">Аўтаматычна запускаць праекцыю пры запуску (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навігацыя</string>
     <string name="category_media">🎵 Медыя</string>
@@ -194,7 +183,7 @@
     <string name="sysinfo_disp_main">Асноўны</string>
     <string name="sysinfo_disp_cluster">Кластар</string>
     <string name="sysinfo_disp_virtual">Віртуальны (люстэрка)</string>
-    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_row_headline">Экран %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Назірае pidof · 500 мс</string>
@@ -221,7 +210,7 @@
     <string name="log_saved_toast">Журнал захаваны: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_advanced">Пашыраныя</string>
     <string name="settings_legacy_path">Проксі-дэман не працуе. Выкарыстаць састарэлы шлях</string>
     <string name="settings_legacy_path_support">Накіроўвае ўсе прывілеяваныя каманды праз састарэлую абалонку ADB замест проксі-дэмана. Уключыце, калі дэман не адказвае або выклікае праблемы.</string>
 
@@ -248,9 +237,6 @@
     <!-- DiLink 4 — Адмысловая дыягностыка (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Палі адключаны на DiLink 2 (адзін экран).</string>
-    <string name="settings_warn_no_cluster">⚠️ Кластар не выяўлены — палі ігнаруюцца (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Няма браўзера для адкрыцця %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Перазапусціць</string>
@@ -267,35 +253,22 @@
 
     <!-- Diag — Export APK panel (v1.2.42) -->
 
-    <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_voice_notif_channel">DashCast — Галасавы PoC</string>
-    <string name="diag_voice_notif_title">DashCast — праслухоўванне мікрафона (PoC)</string>
-    <string name="diag_voice_notif_text">Узровень аўдыё аналізуецца лакальна, нічога не запісваецца.</string>
-
-    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-
-    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-
-    <!-- v1.4.2-beta — LLM API key -->
-    <!-- v1.4.3-beta — ASR model selection -->
-
-
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Лакальны папярэдні прагляд недаступны — дысплей кластара ўсё яшчэ актыўны</string>
     <string name="layout_mirror_previous">Папярэдняя праграма макета</string>
     <string name="layout_mirror_next">Наступная праграма макета</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
-    <string name="hotspot_back">Back</string>
+    <string name="hotspot_back">Назад</string>
     <string name="hotspot_hero_title">Кропка доступу 4G праз TetherFi</string>
     <string name="hotspot_hero_subtitle">Дзяліцеся мабільным інтэрнэтам некалькімі дотыкамі</string>
     <string name="hotspot_intro">Убудаваная кропка доступу недаступная на DiLink 3. Замест гэтага DashCast кіруе TetherFi (адкрыты код), які стварае кропку доступу Wi-Fi Direct + проксі SOCKS5 — без сістэмных дазволаў, а SIM-карта аўтамабіля выкарыстоўваецца як канал сувязі.</string>
-    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_unknown">⏳ вызначэнне…</string>
     <string name="hotspot_tf_status_installed">🟢 TetherFi усталяваны — версія %1$s</string>
     <string name="hotspot_tf_status_missing">🔴 TetherFi не ўсталяваны. Націсніце «Усталяваць», каб загрузіць апошнюю версію.</string>
-    <string name="hotspot_tf_start">Start</string>
-    <string name="hotspot_tf_stop">Stop</string>
-    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_start">Пуск</string>
+    <string name="hotspot_tf_stop">Спыніць</string>
+    <string name="hotspot_tf_toggle">Пераключыць</string>
     <string name="hotspot_tf_open">Адкрыць TetherFi</string>
     <string name="hotspot_tf_install">Усталяваць TetherFi</string>
     <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — адпраўлена</string>
@@ -303,8 +276,8 @@
     <string name="hotspot_tf_open_failed">Адкрыць TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Аўта-назіранне</string>
     <string name="hotspot_watchdog_hint">Аўтаматычна перазапускае кропку доступу пры збоі (праверка кожныя 30 с).</string>
-    <string name="hotspot_watchdog_idle">Off</string>
-    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_idle">Выкл.</string>
+    <string name="hotspot_watchdog_probing">⏳ праверка…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi выдалены — назіранне спынена</string>
     <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
     <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 кропка доступу ЎКЛ (перазапускі=%3$d)</string>
@@ -316,9 +289,9 @@
     <string name="hotspot_clients_title">Падключаныя кліенты</string>
     <string name="hotspot_clients_empty">Няма падключаных кліентаў</string>
     <string name="hotspot_client_default_name">Прылада %1$s</string>
-    <string name="hotspot_stat_uptime">Uptime</string>
-    <string name="hotspot_stat_rx">Received</string>
-    <string name="hotspot_stat_tx">Sent</string>
+    <string name="hotspot_stat_uptime">Час працы</string>
+    <string name="hotspot_stat_rx">Атрымана</string>
+    <string name="hotspot_stat_tx">Адпраўлена</string>
     <string name="settings_use_own_sim">Я выкарыстоўваю ўласную SIM-карту</string>
     <string name="settings_use_own_sim_support">Паказвае кнопку «Кропка доступу» на панэлі навігацыі, каб вы маглі раздаваць мабільны інтэрнэт праз TetherFi (толькі DiLink 3).</string>
     <string name="proxy_keeper_channel_name">Проксі-дэман</string>
@@ -346,48 +319,17 @@
     <string name="settings_adas_window_fix_support">Адпраўляе sendInfo(30) перад праекцыяй — выпраўляе расцяжэнне ADAS на некаторых аўтамабілях. Адключыце, калі форма кластара змяняецца пры запуску.</string>
     <string name="settings_fission_mode">Рэжым Layouts</string>
     <string name="settings_fission_mode_support">Мультыдадатак на кластары з уласнымі зонамі. Патрабуе проксі-дэман.</string>
-    <string name="fission_title">Fission — Мультыдадатак</string>
-    <string name="fission_status_idle">Націсніце +, каб праецыраваць прыкладанне</string>
-    <string name="fission_btn_add">+ Дадаць прыкладанне</string>
-    <string name="fission_btn_stop">Спыніць усё</string>
-    <string name="fission_slot_resize">Resize</string>
-    <string name="fission_menu_layouts">Layouts</string>
-    <string name="fission_editor_title">Рэдактар layouts</string>
-    <string name="fission_editor_clear">Ачысціць</string>
-    <string name="fission_editor_save">Захаваць</string>
     <string name="fission_editor_edit">Рэдагаваць</string>
     <string name="fission_editor_delete">Выдаліць</string>
-    <string name="main_nav_layouts">Layouts</string>
+    <string name="main_nav_layouts">Кампаноўкі</string>
     <string name="layout_manager_title">Кіраванне макетамі</string>
     <string name="layout_manager_new">Новы макет</string>
     <string name="layout_canvas_hint">Перацягніце, каб намаляваць зону</string>
 
     <!-- Fission — multi-app cluster -->
-    <string name="fission_active_count">Актыўных прыкладанняў: %1$d</string>
-    <string name="fission_all_projected">Усе прыкладанні ўжо праецыруюцца</string>
-    <string name="fission_close_slot_confirm">Закрыць</string>
-    <string name="fission_close_slot_title">Закрыць %1$s?</string>
-    <string name="fission_conflict_message">Праекцыя ўжо актыўная. Спыніць яе, каб працягнуць?</string>
-    <string name="fission_conflict_stop">Спыніць</string>
     <string name="fission_conflict_title">Канфлікт праекцыі</string>
-    <string name="fission_idle_hint">Націсніце +, каб праецыраваць прыкладанне</string>
-    <string name="fission_launch_in">Запусціць %1$s у…</string>
-    <string name="fission_layout_active_fmt">Макет: %1$s</string>
     <string name="fission_layout_favorite_set_toast">Улюбёны макет усталяваны ✓</string>
-    <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Вольны рэжым</string>
-    <string name="fission_layout_switch">Змяніць</string>
-    <string name="fission_mode_free">Вольны рэжым</string>
-    <string name="fission_no_apps">Няма даступных прыкладанняў</string>
-    <string name="fission_pick_app_title">Выберыце прыкладанне</string>
-    <string name="fission_place_in">Размясціць %1$s у…</string>
-    <string name="fission_resize_full">На ўвесь экран</string>
-    <string name="fission_resize_left_3q">Злева ¾</string>
-    <string name="fission_resize_left_half">Злева ½</string>
-    <string name="fission_resize_right_3q">Справа ¾</string>
-    <string name="fission_resize_right_half">Справа ½</string>
-    <string name="fission_resize_title">Змяніць памер %1$s</string>
-    <string name="fission_slot_error">Слот %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Прывязаць прыкладанне…</string>
     <string name="fission_slot_pkg_none">Няма — вольная зона</string>
     <string name="fission_slot_zone_bound_fmt">Прывязанае прыкладанне: %1$s</string>
@@ -421,25 +363,28 @@
     <string name="fo_status_stopping">Прыпынак…</string>
     <string name="lm_action_add">Дадаць</string>
     <string name="lm_action_delete">Выдаліць</string>
+    <string name="lm_section_my_layouts">МАЕ МАКЕТЫ</string>
+    <string name="lm_action_clear_all">Ачысціць усё</string>
+    <string name="lm_action_favorite">⭐ Абраны</string>
     <string name="lm_action_save">Захаваць</string>
     <string name="lm_activated_ok_fmt">%1$s актываваны ✓</string>
     <string name="lm_activated_partial_fmt">%1$s актываваны (некаторыя слоты не ўдаліся)</string>
     <string name="lm_activating_fmt">Актывацыя %1$s…</string>
-    <string name="lm_daemon_not_connected">Дэман не падключаны — спачатку запусціце праекцыю Fission</string>
+    <string name="lm_layout_mode_disabled">Спачатку ўключыце «Рэжым Layouts» у наладах.</string>
     <string name="lm_delete_confirm_fmt">Выдаліць «%1$s»?</string>
     <string name="lm_draw_zone_first">Намалюйце прынамсі адну зону</string>
-    <string name="lm_edit_zones_hint">Змяніце зоны і захавайце</string>
     <string name="lm_error_fmt">Памылка: %1$s</string>
     <string name="lm_free_mode_toast">Вольны рэжым уключаны</string>
-    <string name="lm_layout_default_name_fmt">Макет %1$d</string>
+    <string name="lm_layout_default_name_fmt">Кампаноўка %1$d</string>
     <string name="lm_layout_name_hint">Назва макета</string>
     <string name="lm_layout_save_title">Захаваць макет</string>
     <string name="lm_layout_saved_toast">Макет захаваны ✓</string>
+    <string name="lm_layout_load_failed">Не ўдалося загрузіць захаваныя макеты. Існуючыя даныя захаваны.</string>
+    <string name="lm_layout_save_failed">Не ўдалося захаваць макет. Паўтарыце спробу.</string>
+    <string name="lm_layout_selection_save_failed">Макет зменены, але не ўдалося захаваць выбар.</string>
     <string name="lm_new_layout_name">Новы макет</string>
     <string name="lm_no_layout_loaded">Макет не загружаны</string>
-    <string name="lm_no_saved_layouts">Няма захаваных макетаў\nНамалюйце зоны вышэй і захавайце.</string>
     <string name="lm_save_before_favorite">Спачатку захавайце макет, перш чым зрабіць яго ўлюбёным</string>
-    <string name="lm_zone_delete_title">Выдаліць зону?</string>
     <string name="lm_zone_edit_title_fmt">Змяніць «%1$s»</string>
     <string name="lm_zone_height">Вышыня (px)</string>
     <string name="lm_zone_name_hint">Назва зоны</string>
@@ -463,6 +408,7 @@
     <string name="bug_send">Адправіць</string>
     <string name="bug_status_capturing">Збор журнала…</string>
     <string name="bug_status_sending">Адпраўка…</string>
+    <string name="bug_status_slow">Адпраўка доўжыцца даўжэй, чым звычайна — можна скасаваць.</string>
     <string name="bug_status_error_fmt">Памылка: %1$s</string>
     <string name="bug_sent_ok">Справаздача адпраўлена ✓ Дзякуй!</string>
     <string name="bug_share_subject">DashCast — Справаздача пра памылку</string>
@@ -477,7 +423,7 @@
     <string name="bug_wizard_other_app">Іншае / Невядомае прыкладанне</string>
     <string name="bug_wizard_back">← Назад</string>
     <string name="bug_tg_title">Твой нік у Telegram</string>
-    <string name="bug_tg_message">Калі выпраўленне тваёй праблемы будзе гатова, мы звяжамся з табой непасрэдна ў Telegram і папросім пратэставаць яго першым.\n\n⚠️ Пераканайся, што ўводзіш правільны нік (прыклад: @john_doe). Без яго мы не зможам з табой звязацца.\n\nТвой нік захоўваецца толькі на гэтай прыладзе і ніколі не перадаецца.</string>
+    <string name="bug_tg_message">Калі выпраўленне тваёй праблемы будзе гатова, мы звяжамся з табой непасрэдна ў Telegram і папросім пратэставаць яго першым.\n\n⚠️ Пераканайся, што ўводзіш правільны нік (прыклад: @john_doe). Без яго мы не зможам з табой звязацца.\n\nТвой нік захоўваецца на гэтай прыладзе і дадаецца ў справаздачу, якую ты дасылаеш, — толькі каб мы маглі з табой звязацца.</string>
     <string name="bug_tg_hint">@твой_нік</string>
     <string name="bug_tg_confirm">Пацвердзіць</string>
     <string name="bug_tg_skip">Пазней</string>
@@ -561,17 +507,16 @@
     <string name="bug_wizard_pick_issue">Выберыце праблему вышэй</string>
     <string name="bug_wizard_selected_fmt">Выбрана: %1$s</string>
     <string name="toast_adb_port_refused">ADB недаступны (порт 5555) — люстраванне недаступнае на гэтай прыладзе</string>
-    <string name="hud_visual_title">Візуальная праверка HUD</string>
-    <string name="hud_visual_yes">Так</string>
-    <string name="hud_visual_no">Не</string>
-    <string name="hud_visual_unsure">Не ўпэўнены</string>
     <string name="aaos_cluster_unsupported_title">Праекцыя на прыборную панэль заблакіравана</string>
     <string name="aaos_cluster_unsupported_msg">Ваш аўтамабіль выкарыстоўвае сістэму Android Automotive ад BYD (DX_BYD_AUTO). На гэтай прыладзе прыборная панэль заблакіравана вытворцам: BYD рэзервуе яе для ўбудаванай навігацыі і блакіруе праекцыю праграм. Гэта абмежаванне аўтамабіля (а не DashCast) — абыходнага шляху няма.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Праекцыя на прыборную панэль недаступная</string>
     <string name="dl3_singleos_cluster_unsupported_msg">У гэтым аўтамабілі прыборная панэль выкарыстоўвае аднаэкранную канфігурацыю (single-OS): яна малюецца непасрэдна аўтамабілем, без асобнага экрана, на які можна праецыраваць праграмы. Праекцыя праграм на панэль тут немагчымая — гэта асаблівасць панэлі вашага аўтамабіля, а не абмежаванне DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">Праекцыя на прыборную панэль заблакаваная прашыўкай</string>
+    <string name="dl4_cluster_unsupported_msg">У гэтым аўтамабілі прашыўка не дазваляе DashCast бачыць экран прыборнай панэлі: праграма адсутнічае ў спісе праграм, якім вытворца дазволіў пералічваць экраны. DashCast таксама звярнуўся праз свой прывілеяваны памочнік, але і той не знайшоў экрана прыборнай панэлі. Таму праекцыя праграм на прыборную панэль немагчымая з гэтай версіяй прашыўкі — гэта абмежаванне вытворцы, а не DashCast.</string>
     <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
-    <string name="hud_bench_result_title">Вынік HUD — што вы ўбачылі на лабавым шкле?</string>
-    <string name="hud_bench_opt_ok">✅ Стрэлка паказана — правільны напрамак</string>
+    <string name="hud_bench_result_title">Вынік — што ты ўбачыў і ДЗЕ (CLUSTER ці лабавое шкло)?</string>
+    <string name="hud_bench_opt_cluster">✅ Стрэлка на CLUSTER (за рулём)</string>
+    <string name="hud_bench_opt_ok">✅ Стрэлка на HUD (лабавое шкло)</string>
     <string name="hud_bench_opt_wrongdir">⚠️ Стрэлка паказана — няправільны напрамак</string>
     <string name="hud_bench_opt_partial">⚠️ Адлегласць/тэкст паказаны — але без выразнай стрэлкі</string>
     <string name="hud_bench_opt_nothing">❌ На HUD нічога няма</string>
@@ -615,4 +560,26 @@
     <string name="bug_hud_no_route_msg">Зараз няма актыўнага маршруту. DashCast атрымлівае падказкі паваротаў толькі падчас актыўнага вядзення па маршруце: проста адкрыць Google Maps ці Waze недастаткова. Задай маршрут да пункта прызначэння, а потым паглядзі на HUD — стрэлка павінна з’явіцца.</string>
     <string name="bug_hud_no_route_understood">Зразумела, зараз задам маршрут</string>
     <string name="bug_hud_no_notif_access_msg">У DashCast няма доступу да апавяшчэнняў. Гэта абавязкова: падказкі пра павароты чытаюцца з апавяшчэння Google Maps або Waze. Зайдзі ў Налады Android → Апавяшчэнні → Доступ да апавяшчэнняў, дазволь DashCast, а потым запусці маршрут яшчэ раз.</string>
+    <string name="hud_sweep_result_title">Перабор завершаны — што ты ўбачыў на CLUSTER?</string>
+    <string name="hud_sweep_opt_photographed">📷 Я сфатаграфаваў значкі</string>
+    <string name="hud_sweep_opt_nothing">❌ На CLUSTER нічога не з’явілася</string>
+    <!-- Bug report delivery — pairing. -->
+    <string name="pairing_row_title">Адпраўка справаздач пра памылкі</string>
+    <string name="pairing_state_on">Уключана — вашы справаздачы ідуць камандзе DashCast</string>
+    <string name="pairing_state_off">Выключана — вашы справаздачы застаюцца на гэтай прыладзе</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Згода дадзена, але на гэтай прыладзе не наладжаны канал</string>
+    <string name="consent_title">Адпраўляць дыягностыку камандзе DashCast?</string>
+    <string name="consent_body">Каб выправіць праблему, камандзе DashCast трэба ведаць, што адбывалася ў машыне ў той момант.\n\nПерад адпраўкай DashCast аўтаматычна прыбірае з кожнай справаздачы VIN, назвы сетак Wi-Fi, апаратныя адрасы прылад і месцазнаходжанні.\n\nШто застаецца:\n\n•  журнал DashCast і сістэмны журнал Android, скапіяваныя як ёсць — у іх трапляе тое, што запісалі іншыя праграмы, і мы не можам ведаць загадзя, што менавіта;\n\n•  звесткі пра аўтамабіль і галоўную прыладу: мадэль, версія, налады, усталяваныя праграмы;\n\n•  лакальны IP-адрас машыны;\n\n•  тое, што вы напішаце ў форме, і пазначаны вамі нік у Telegram;\n\n•  здымкі экрана, уключаныя па змаўчанні: незамазаныя выявы цэнтральнага экрана і прыборнай панэлі, на якіх можа быць карта з вашым пунктам прызначэння — выяву нельга адфільтраваць так, як тэкст. Пра іх пытаюцца асобна пры кожнай адпраўцы.\n\nНіводная справаздача не пакідае машыну, пакуль вы не націснеце «Адправіць». Справаздачы чытае каманда DashCast у закрытай групе. DashCast не адпраўляе ні аўдыязапісаў, ні фотаздымкаў, ні кантактаў, ні паведамленняў.\n\nКалі вы адмовіцеся, справаздача застанецца на гэтай прыладзе і вы зможаце перадаць яе самі. Перадумаць можна ў любы час у наладах.</string>
+    <string name="consent_accept">Пагаджаюся</string>
+    <string name="consent_refuse">Адмовіцца</string>
+    <string name="consent_revoke">Адклікаць</string>
+    <string name="consent_close">Закрыць</string>
+    <string name="consent_result_granted">Дзякуй. Вашы справаздачы будуць ісці камандзе DashCast.</string>
+    <string name="consent_result_refused">Адмоўлена. Вашы справаздачы застануцца на гэтай прыладзе.</string>
+    <string name="consent_result_revoked">Згода адклікана. Вашы справаздачы застануцца на гэтай прыладзе.</string>
+    <string name="bug_kept_locally_fmt">Справаздача захавана на гэтай прыладзе: %1$s. Выберыце, як яе перадаць.</string>
 </resources>

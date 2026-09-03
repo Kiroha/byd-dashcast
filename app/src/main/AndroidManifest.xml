@@ -19,12 +19,6 @@
     <!-- Foreground Service pour maintenir la projection cluster en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
-    <!-- v1.2.43-beta — Voice PoC (Diagnostic tab). Microphone access is
-         requested at runtime from the new VoiceService. FG service type
-         "microphone" is required on API 30+ to read AudioRecord from a
-         foreground service while the activity is in the background. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-
     <!-- Connexion TCP localhost:5555 pour dadb (ADB local → popup autorisation) -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
@@ -125,6 +119,8 @@
     <application
         android:name=".DashCastApp"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -216,12 +212,6 @@
             android:label="HUD raw logcat recorder"
             android:screenOrientation="landscape"/>
 
-        <!-- AAOS cluster diagnostic (DX_BYD_AUTO) — one-tap full capture → zip -->
-        <activity
-            android:name=".hud.AaosDiagActivity"
-            android:label="AAOS cluster diagnostic"
-            android:screenOrientation="landscape"/>
-
         <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
         <activity
             android:name=".cluster.dpi.ClusterResizeActivity"
@@ -239,7 +229,7 @@
         <!-- Real-time log viewer -->
         <activity
             android:name=".ui.log.LogActivity"
-            android:label="Journal"
+            android:label="@string/log_title"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
             android:launchMode="singleTop"/>
@@ -248,7 +238,7 @@
              runtime-gated by Platform.isDiLink3()). Activity is exported=false. -->
         <activity
             android:name=".ui.hotspot.HotspotActivity"
-            android:label="Hotspot AOSP"
+            android:label="@string/hotspot_title"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="false"/>
@@ -260,22 +250,9 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
-        <!-- v1.3.30-beta — Fission multi-app projection (gated by PREF_FISSION_MODE) -->
-        <activity
-            android:name=".fission.FissionActivity"
-            android:label="@string/fission_title"
-            android:screenOrientation="landscape"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="false"/>
-
-        <activity
-            android:name=".fission.FissionLayoutEditorActivity"
-            android:label="@string/fission_editor_title"
-            android:screenOrientation="landscape"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="false"/>
-
-        <!-- v1.4.9-beta — Global layout manager accessible from navRail -->
+        <!-- v1.4.9-beta — Global layout manager accessible from navRail
+             (it replaced FissionActivity + FissionLayoutEditorActivity, both removed:
+             nothing started them and it is a strict superset of the editor) -->
         <activity
             android:name=".fission.LayoutManagerActivity"
             android:label="@string/layout_manager_title"
@@ -303,14 +280,6 @@
             android:name=".system.FloatingRemoteButton"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
-
-        <!-- v1.2.43-beta — Voice PoC service. Fully isolated, only started
-             from the Diagnostic > Voice tab. Reads AudioRecord 16 kHz mono
-             and broadcasts RMS/peak/clip metrics. No machine learning yet. -->
-        <service
-            android:name=".voice.VoiceService"
-            android:exported="false"
-            android:foregroundServiceType="microphone"/>
 
         <!-- v1.4.11-beta — HUD navigation: parses Google Maps / Waze navigation
              notifications to drive the BYD cluster HUD via CanBusController.

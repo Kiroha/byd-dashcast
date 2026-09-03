@@ -179,7 +179,8 @@ public final class ProxyDaemonContract {
     public static final int TXN_FIND_TASK_LOCATION      = IBinder.FIRST_CALL_TRANSACTION + 28; // 29
 
     /** Ordered list of {@code CanBatchOperation} records → {@code int appliedCount}.
-     *  The daemon executes records sequentially and stops at the first thrown SDK error. */
+        *  The daemon executes records sequentially and stops at the first thrown SDK error or
+        *  non-zero native result code. Truthful native-result semantics require protocol v24. */
     public static final int TXN_CAN_BATCH               = IBinder.FIRST_CALL_TRANSACTION + 29; // 30
 
     /** {@code int type, int info, String str} → {@code int nativeResult}.
@@ -192,4 +193,42 @@ public final class ProxyDaemonContract {
      *  Stops one package guardian, or all guardians when packageName is null. */
     public static final int TXN_CANCEL_FISSION_WATCHDOG =
             IBinder.FIRST_CALL_TRANSACTION + 31; // 32
+
+    /** {@code int type, byte[] data} → void (or remote exception).
+     *  Typed verb for {@code AutoContainer.sendInfo2(type, data)} (AIDL transaction 3) — the same
+     *  binder method the OEM's own navigation app uses to push a serialized {@code NaviInfo}
+     *  FlatBuffer (type=4) to the instrument-cluster HUD. Reaches the same {@code checkSignatures}
+     *  fast-path as {@link #TXN_AUTOCONTAINER_SEND_INFO}, so any {@code type} is accepted from the
+     *  daemon's uid, not only the values the OEM's {@code container_comm_cfg.json} allow-lists. */
+    public static final int TXN_AUTOCONTAINER_SEND_INFO2 =
+            IBinder.FIRST_CALL_TRANSACTION + 32; // 33
+
+    /** No args → {@code String report} (raw hex + best-effort decode, never throws for "no
+     *  service" — that IS the diagnostic answer on non-DL3 platforms).
+     *  Read-only probe of the native {@code FissionHostSvc} display registry
+     *  (transaction 101 = {@code getAutoCarDisplay}), DL3 only. See
+     *  {@link FissionHostSvcVerbs}. */
+    public static final int TXN_FISSION_GET_AUTOCAR_DISPLAY =
+            IBinder.FIRST_CALL_TRANSACTION + 33; // 34
+
+    /** No args → {@code int resultCode}.
+     *  Registers the daemon's own callback Binder with {@code AutoContainer.registerCallback}
+     *  (AIDL transaction 4) so a future bug report captures {@code serviceDied()}/
+     *  {@code receivedJson/Info/Info2()} pushes from the native container service — diagnostic
+     *  only, never called before this release. See {@link Phase4ProcessVerbs}. */
+    public static final int TXN_AUTOCONTAINER_REGISTER_CALLBACK =
+            IBinder.FIRST_CALL_TRANSACTION + 34; // 35
+
+    /** No args → void.
+     *  Arms a background sampler of the {@code FissionHostSvc} registry (one sample every ~2s,
+     *  logged only on change, hard-capped at 90s so a forgotten trace cannot run forever) so the
+     *  app can watch it across a normal projection start/stop cycle. See
+     *  {@link #TXN_PROJECTION_TRACE_DRAIN}. */
+    public static final int TXN_PROJECTION_TRACE_START =
+            IBinder.FIRST_CALL_TRANSACTION + 35; // 36
+
+    /** No args → {@code String report}. Stops the sampler (if still running) and returns every
+     *  change recorded since {@link #TXN_PROJECTION_TRACE_START}. */
+    public static final int TXN_PROJECTION_TRACE_DRAIN =
+            IBinder.FIRST_CALL_TRANSACTION + 36; // 37
 }

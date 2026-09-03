@@ -4,7 +4,7 @@ export default {
   name: "O'zbekcha",
   title: "DashCast — Foydalanuvchi qo'llanmasi",
   manualName: "Foydalanuvchi qo'llanmasi",
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Mundarija',
 
   intro: {
@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        "🔒 Hisobot faqat DashCast jurnallarini va texnik qurilma/klaster holatini o'z ichiga oladi — kontaktlarsiz, GPS pozitsiyasisiz, ilova mazmunisiz.",
+        '🔒 Yuborishdan oldin DashCast VIN raqamini, Wi-Fi tarmoq nomlarini, apparat manzillarini va joylashuvlarni olib tashlaydi. DashCast jurnali va Android tizim jurnali boricha qoladi — ularda boshqa ilovalar yozganlari boʻladi. Har qanday yuborishdan oldin bir marta soʻraladi, rad etsangiz avtomobildan hech narsa chiqmaydi.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        "🔒 Hech qanday shaxsiy ma'lumot (kontaktlar, GPS pozitsiyasi, ilova mazmuni) qayd etilmaydi — faqat DashCast amallari va texnik qaytarish kodlari.",
+        '🔒 Jurnal DashCast nima qilayotganini yozadi, jumladan paket nomlari va bajarilgan buyruqlar chiqishini. Bu ekrandan ulashsangiz, u boricha yuboriladi — VIN raqamini, tarmoq nomlarini va joylashuvlarni olib tashlaydigan filtrlash xato hisobotlari uchun ishlaydi, bu yerda emas.',
     },
   ],
 

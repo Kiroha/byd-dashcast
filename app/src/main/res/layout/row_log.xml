@@ -58,6 +58,5 @@
         android:textSize="12sp"
         android:textColor="@color/md_on_surface"
         android:fontFamily="monospace"
-        android:textIsSelectable="true"
         android:text="message"/>
 </LinearLayout>

@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "TELEGRAM_BOT_TOKEN": "put-the-token-here-locally-only",
+    "TELEGRAM_CHAT_ID": "-100999999999",
+    "TELEGRAM_THREAD_BUG": "2",
+    "TELEGRAM_THREAD_HUD": "4"
+  }
+}

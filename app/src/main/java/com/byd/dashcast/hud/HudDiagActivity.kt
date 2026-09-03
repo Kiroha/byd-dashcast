@@ -19,6 +19,7 @@ import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.util.concurrent.LifecycleGate
 import com.byd.dashcast.util.AppLogger
 import java.io.File
 import java.text.SimpleDateFormat
@@ -30,7 +31,16 @@ import java.util.Locale
  * `com.byd.carsettings` HalSetter logcat (log.docx): each windshield-HUD control maps to a
  * BYDAutoSettingDevice feature id (ECU 0x4C1 / sub 0xE).
  *
- * Three tools:
+ * Three tools were built. **Only tool 4 (sendInfo2) is reachable from this screen today** —
+ * commit 084a5849 narrowed the bench to it on the grounds that tools ①–③ were PROVEN, and removed
+ * their buttons. Tools 1 and 3 live in this file and are simply not wired; tool 2 is a separate
+ * Activity, [HudRawCaptureActivity], 271 lines, still declared in AndroidManifest.xml and
+ * reachable by nothing. This list describes what exists, not what a tester can open — the previous
+ * version of it read as an inventory of live features and cost a re-audit finding to correct.
+ *
+ * Whether tool 2 comes back or goes is a decision, not a cleanup: the code works, the manifest
+ * entry is valid, and the HUD investigation it was built for is still open.
+ *
  *  1. **Confirm the discoveries** — we send each HUD command ourselves and, after every command,
  *     ask the tester whether the expected effect happened (OK / KO). The answers + SDK result
  *     codes are zipped and uploaded to Telegram.
@@ -53,7 +63,11 @@ class HudDiagActivity : AppCompatActivity() {
     private lateinit var out: TextView
     private lateinit var confirmBtn: Button
     private lateinit var benchBtn: Button
+    private lateinit var sendInfo2Btn: Button
+    private lateinit var iconSweepBtn: Button
     private lateinit var bar: ProgressBar
+    private var benchKind = "canbench"   // "canbench" | "sendinfo2" | "iconsweep" — drives the zip prefix
+    private val lifecycleGate = LifecycleGate()
 
     private val stamp = SimpleDateFormat("HH:mm:ss", Locale.US)
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
@@ -63,6 +77,10 @@ class HudDiagActivity : AppCompatActivity() {
     // ── confirmation-sequence state ─────────────────────────────────────────
     private val report = StringBuilder()
     private var stepIdx = 0
+
+    /** Bench button to re-enable when [finishBench] completes — shared between Tool 3 (CAN) and
+     *  Tool 4 (sendInfo2), which reuse the same [askBench] / [finishBench] result-picker + upload flow. */
+    private var activeBenchButton: Button? = null
 
     /** One HUD command to confirm: it performs the writes ([run] returns a log line) and asks [question]. */
     private data class Step(val id: String, val title: String, val question: String, val run: () -> String)
@@ -145,43 +163,49 @@ class HudDiagActivity : AppCompatActivity() {
             setPadding(0, dp(4), 0, 0)
         })
 
-        // ── TOOL 1 — confirm the 5 discoveries ──────────────────────────────
-        root.addView(sectionHeader("① Confirmer les découvertes HUD"))
-        root.addView(hint("On envoie chaque commande HUD (allumage, ADAS, luminosité, hauteur, angle, " +
-                "extinction). Après CHAQUE commande, réponds OUI/NON à la question. À la fin ça envoie un ZIP."))
-        confirmBtn = Button(this).apply {
-            text = "▶  Lancer la confirmation (6 commandes)"
-            isAllCaps = false
-            setOnClickListener { startConfirmation() }
-        }
-        root.addView(confirmBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+        // ── Shared progress bar (Tool ④ uses it) ────────────────────────────
         bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = true
             visibility = View.GONE
         }
+
+        // Tools ①–③ (HUD-control confirmation, raw-logcat recorder, CAN→HUD bench) are PROVEN, so they
+        // are HIDDEN to focus testers on the still-experimental sendInfo2 channel (Tool ④). Their
+        // buttons are still created so the (now-unreachable) code paths stay valid; re-add to expose.
+        confirmBtn = Button(this).apply { isAllCaps = false; setOnClickListener { startConfirmation() } }
+        benchBtn   = Button(this).apply { isAllCaps = false; setOnClickListener { startCanHudBench() } }
+
+        // ── TOOL 4 — sendInfo2 NaviInfo injection (native OEM cluster channel) — the ONLY visible tool ──
+        // AutoContainer.sendInfo2(4, NaviInfo-flatbuffer) is the SAME binder call the OEM's own nav app
+        // (AmapService.sendNaviInfoTo1for2Clster) uses to push nav CONTENT to the 1for2 CLUSTER — not
+        // the CAN bus. The windshield HUD itself is CAN-driven (Tool ③, already proven); this tool
+        // tests whether the cluster nav strip can be driven straight through the container service.
+        root.addView(sectionHeader("④ Injection NaviInfo via sendInfo2 (canal natif OEM)"))
+        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie un guidage de test dans le " +
+                "MÊME format FlatBuffer que l'appli de nav OEM, via sendInfo2(4, …) précédé de l'activation " +
+                "sendInfo(5,0) — pas le CAN. Regarde le CLUSTER (panneau derrière le volant) ET le pare-brise, " +
+                "et note OÙ un guidage apparaît."))
         root.addView(bar, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(4) })
-
-        // ── TOOL 2 — raw logcat recorder (arrows) ───────────────────────────
-        root.addView(sectionHeader("② Enregistreur logcat brut (flèches, en roulant)"))
-        root.addView(hint("Capture un logcat NON filtré (tout, horodaté). Un passager tape la flèche " +
-                "affichée sur le HUD à chaque changement → on décode les codes de guidage. Passager uniquement."))
-        root.addView(Button(this).apply {
-            text = "▶  Ouvrir l'enregistreur logcat brut"
+        sendInfo2Btn = Button(this).apply {
+            text = "▶  Envoyer un NaviInfo test via sendInfo2(4)"
             isAllCaps = false
-            setOnClickListener { startActivity(Intent(this@HudDiagActivity, HudRawCaptureActivity::class.java)) }
-        }, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
-
-        // ── TOOL 3 — CAN → HUD bench (does the HUD MCU consume our nav CAN frames?) ──
-        root.addView(sectionHeader("③ Bench CAN → HUD (firmware à flèches)"))
-        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie NOUS-MÊMES un guidage " +
-                "sur le CAN (flèche + distance + route) : tout droit, gauche, droite (~6 s chacun). Regarde le " +
-                "PARE-BRISE : si une flèche apparaît, le HUD est pilotable par nous. Puis réponds OUI/NON → ZIP."))
-        benchBtn = Button(this).apply {
-            text = "▶  Émettre un guidage CAN → regarde le HUD"
-            isAllCaps = false
-            setOnClickListener { startCanHudBench() }
+            setOnClickListener { startSendInfo2Bench() }
         }
-        root.addView(benchBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+        root.addView(sendInfo2Btn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+
+        // Icon sweep — discover which AMap NEW_ICON id renders which CLUSTER glyph. Each id is sent
+        // with "ICON n" in the road-name field so a photo of the cluster maps id→glyph (the 1for2
+        // cluster's icon scheme is NOT identical to AMap's, so straight/left/right ids must be
+        // confirmed on-glass before wiring nav content for real).
+        root.addView(hint("↳ Balayage d'icônes : envoie les id 0→28 (~3 s chacun) avec « ICON n » comme " +
+                "nom de route. ⚠️ REGARDE LE CLUSTER (le panneau derrière le volant) — c'est lui que ce canal " +
+                "pilote, pas le pare-brise — et PHOTOGRAPHIE-le à chaque id pour mapper id→glyphe."))
+        iconSweepBtn = Button(this).apply {
+            text = "▶  Balayage d'icônes (0→28) — mappe les glyphes du cluster"
+            isAllCaps = false
+            setOnClickListener { startIconSweepBench() }
+        }
+        root.addView(iconSweepBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
 
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
@@ -222,12 +246,13 @@ class HudDiagActivity : AppCompatActivity() {
         bg {
             val rc = try { step.run() }
                      catch (t: Throwable) { "EXCEPTION ${t.javaClass.simpleName}: ${t.message}" }
-            runOnUiThread { askStep(step, rc) }
+            postUi { askStep(step, rc) }
         }
     }
 
     /** Popup after each command: says what was sent + asks whether the expected effect happened. */
     private fun askStep(step: Step, rc: String) {
+        if (!isUiAlive()) return
         log("   $rc")
         AlertDialog.Builder(this)
             .setTitle(step.title)
@@ -241,6 +266,7 @@ class HudDiagActivity : AppCompatActivity() {
 
     /** On NON, offer an optional free-text note before recording. */
     private fun askStepNote(step: Step, rc: String) {
+        if (!isUiAlive()) return
         val input = EditText(this).apply {
             hint = getString(R.string.hud_bench_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -278,13 +304,13 @@ class HudDiagActivity : AppCompatActivity() {
             File(work, "01_confirm.txt").writeText(report.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
             writeDiagLogs(work)
-            val zip = HudCaptureSupport.zipDir(work)
+            val zip = HudCaptureSupport.zipDirToStore(this, work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 HUD control confirmation — ${Build.PRODUCT}")
             } finally {
                 // Always restore the UI, even if the zip/upload/diag work threw (bg's outer
                 // catch only logs) — otherwise the button stays disabled + spinner visible.
-                runOnUiThread {
+                postUi {
                     confirmBtn.isEnabled = true
                     bar.visibility = View.GONE
                     showProdNudge()
@@ -310,6 +336,8 @@ class HudDiagActivity : AppCompatActivity() {
     // rendered by the OEM nav (e.g. Telenav) and not CAN-injectable. Only meaningful on arrow-capable
     // firmware (recent inswver) — the label is captured in the zip so we can correlate.
     private fun startCanHudBench() {
+        activeBenchButton = benchBtn
+        benchKind = "canbench"
         benchBtn.isEnabled = false
         bar.visibility = View.VISIBLE
         log("──── CAN→HUD bench started (OEM nav must be OFF) ────")
@@ -342,7 +370,105 @@ class HudDiagActivity : AppCompatActivity() {
                 }
                 sb.append("[$en] icon=$icon sustained 6s (dist 300→) rc=$rc\n")
             }
-            runOnUiThread { askBench(sb) }
+            postUi { askBench(sb) }
+        }
+    }
+
+    // ── TOOL 4 — sendInfo2 NaviInfo injection ───────────────────────────────
+    // Sends a test byd.fbs.naviInfo.NaviInfo FlatBuffer via AutoContainer.sendInfo2(4, bytes) — the
+    // exact binder call the OEM's own nav app (AmapService) uses to drive the HUD. Unlike Tool 3,
+    // this never touches BYDAutoInstrumentDevice/CAN: it goes straight through the container
+    // service, using the same uid-2000 checkSignatures fast-path already proven for sendInfo(1000,…).
+    private fun startSendInfo2Bench() {
+        activeBenchButton = sendInfo2Btn
+        benchKind = "sendinfo2"
+        sendInfo2Btn.isEnabled = false
+        bar.visibility = View.VISIBLE
+        log("──── sendInfo2 NaviInfo bench started (OEM nav must be OFF) ────")
+        bg {
+            val sb = StringBuilder("=== DL3 sendInfo2(4, NaviInfo) BENCH — native OEM channel (uid 2000) ===\n")
+            sb.append("${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — ")
+                .append("${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+                .append("HUD firmware (inswver): ${Platform.hudFirmwareVersion()}\n")
+                .append("Sends byd.fbs.naviInfo.NaviInfo via AutoContainer.sendInfo2(4, bytes) — same channel as AmapService.\n\n")
+            fun step(label: String, block: () -> Unit) {
+                val line = try { block(); "$label ok" } catch (t: Throwable) { "$label ERR ${t.message}" }
+                sb.append(line).append('\n'); log(line)
+            }
+            step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
+            // OEM parity: on the 1for2 branch AmapService switches the container into nav mode with
+            // sendInfo(5,0,"") (AutoContainer — NOT the CAN bus) BEFORE pushing sendInfo2(4,…). Without
+            // this enable the container can accept every NaviInfo and render nothing (a false NO).
+            step("sendInfo(5,0) [container nav-mode enable]") { ProxyClient.autoContainerSendInfo(5, 0, "") }
+            // nextTurnIcon carries the RAW AMap NEW_ICON id — the OEM passes it UN-remapped into the
+            // FlatBuffer (TurnIdMapToCAN is applied only on the CAN path). Straight = 9, NOT 1: AMap
+            // id 1 ≈ "none" → no arrow. Left = 2, right = 3 (correct raw AMap ids).
+            val maneuvers = listOf(
+                Triple("TOUT DROIT", 9, "STRAIGHT"),
+                Triple("GAUCHE", 2, "LEFT"),
+                Triple("DROITE", 3, "RIGHT"))
+            for ((fr, icon, en) in maneuvers) {
+                log("▶▶ REGARDE LE CLUSTER + PARE-BRISE — '$fr' (nextTurnIcon=$icon, sendInfo2) ~6 s")
+                var dist = 300
+                repeat(6) {
+                    val payload = NaviInfoPayloadBuilder.build(
+                        naviState = 1,
+                        nextRouteName = "DashCast test $fr",
+                        curToSegmentDist = dist,
+                        nextTurnIcon = icon,
+                        routeRemainTime = 300,
+                        routeRemainDist = 1200)
+                    step("sendInfo2(4, ${payload.size}B, icon=$icon, dist=$dist)") {
+                        ProxyClient.autoContainerSendInfo2(4, payload)
+                    }
+                    dist = (dist - 40).coerceAtLeast(40); sleep(1000)
+                }
+                sb.append("[$en] nextTurnIcon=$icon sustained 6s (dist 300→)\n")
+            }
+            postUi { askBench(sb) }
+        }
+    }
+
+    // ── Icon sweep — map AMap NEW_ICON id → cluster glyph ───────────────────
+    // The 1for2 cluster's turn-icon scheme is NOT identical to AMap's (an old test sent AMap "right"
+    // and the cluster drew a left-ish arrow), so before wiring real nav content we must confirm which
+    // id renders straight/left/right on-glass. Each id 0..28 is sent with the id written into the
+    // road-name field ("ICON n") so a single cluster photo captures the id→glyph mapping.
+    private fun startIconSweepBench() {
+        activeBenchButton = iconSweepBtn
+        benchKind = "iconsweep"
+        iconSweepBtn.isEnabled = false
+        bar.visibility = View.VISIBLE
+        log("──── icon sweep (sendInfo2) started (OEM nav must be OFF) ────")
+        bg {
+            val sb = StringBuilder("=== DL3 sendInfo2 ICON SWEEP — map AMap NEW_ICON id → cluster glyph ===\n")
+            sb.append("${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — ")
+                .append("${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+                .append("HUD firmware (inswver): ${Platform.hudFirmwareVersion()}\n")
+                .append("Each id sent ~3s with road-name = 'ICON n' so a cluster photo maps id→glyph.\n\n")
+            fun step(label: String, block: () -> Unit) {
+                val line = try { block(); "$label ok" } catch (t: Throwable) { "$label ERR ${t.message}" }
+                sb.append(line).append('\n'); log(line)
+            }
+            step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
+            step("sendInfo(5,0) [container nav-mode enable]") { ProxyClient.autoContainerSendInfo(5, 0, "") }
+            for (icon in 0..28) {
+                log("▶▶ ICON $icon — PHOTOGRAPHIE LE CLUSTER")
+                val payload = NaviInfoPayloadBuilder.build(
+                    naviState = 1,
+                    nextRouteName = "ICON $icon",
+                    curToSegmentDist = 200,
+                    nextTurnIcon = icon,
+                    routeRemainTime = 300,
+                    routeRemainDist = 1200)
+                var rc = "?"
+                repeat(3) {
+                    rc = try { ProxyClient.autoContainerSendInfo2(4, payload); "ok" } catch (t: Throwable) { "ERR ${t.message}" }
+                    sleep(1000)
+                }
+                sb.append("[icon=$icon] sent 3s (road='ICON $icon') $rc\n")
+            }
+            postUi { askSweepResult(sb) }
         }
     }
 
@@ -353,11 +479,13 @@ class HudDiagActivity : AppCompatActivity() {
      * 04_hud_state.txt, so options describe only what the tester SAW.
      */
     private fun askBench(sb: StringBuilder) {
+        if (!isUiAlive()) return
         val options = listOf(
-            getString(R.string.hud_bench_opt_ok)       to "YES — arrow on HUD",
+            getString(R.string.hud_bench_opt_cluster)  to "YES — arrow on CLUSTER",
+            getString(R.string.hud_bench_opt_ok)       to "YES — arrow on HUD (windshield)",
             getString(R.string.hud_bench_opt_wrongdir) to "NO/PARTIAL — arrow wrong direction",
             getString(R.string.hud_bench_opt_partial)  to "NO/PARTIAL — distance/text but no clear arrow",
-            getString(R.string.hud_bench_opt_nothing)  to "NO/PARTIAL — nothing on HUD",
+            getString(R.string.hud_bench_opt_nothing)  to "NO/PARTIAL — nothing",
             getString(R.string.hud_bench_opt_other)    to null,   // → optional free-text note
         )
         AlertDialog.Builder(this)
@@ -370,7 +498,32 @@ class HudDiagActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Result picker for the ICON SWEEP. The sweep's outcome is "did you capture the glyphs on the
+     * cluster", not a HUD yes/no — it previously reused [askBenchNote], which hardcodes
+     * "NO/PARTIAL — other", so every sweep was filed as a failure whatever happened (seen on-car
+     * 2026-08-07: two sweeps recorded NO/PARTIAL even though the channel was rendering fine minutes
+     * earlier). Its zip carries a distinct hud_iconsweep_ prefix and is never tallied with the benches.
+     */
+    private fun askSweepResult(sb: StringBuilder) {
+        if (!isUiAlive()) return
+        val options = listOf(
+            getString(R.string.hud_sweep_opt_photographed) to "DONE — glyphs photographed",
+            getString(R.string.hud_sweep_opt_nothing)      to "NO — nothing on cluster",
+            getString(R.string.hud_bench_opt_other)        to null,   // → free-text note
+        )
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.hud_sweep_result_title))
+            .setCancelable(false)
+            .setItems(options.map { it.first }.toTypedArray()) { _, which ->
+                val tag = options[which].second
+                if (tag == null) askBenchNote(sb) else finishBench(sb, tag)
+            }
+            .show()
+    }
+
     private fun askBenchNote(sb: StringBuilder) {
+        if (!isUiAlive()) return
         val input = EditText(this).apply {
             hint = getString(R.string.hud_bench_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -388,22 +541,45 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun finishBench(sb: StringBuilder, answer: String) {
         log("──── bench result: $answer — building zip ────")
+        val zipPrefix = when (benchKind) {
+            "iconsweep" -> "hud_iconsweep_"
+            "sendinfo2" -> "hud_sendinfo2bench_"
+            else -> "hud_canbench_"
+        }
+        val caption = when (benchKind) {
+            "iconsweep" -> "DL3 sendInfo2 icon-sweep [${firmwareLabel()}] — $answer"
+            "sendinfo2" -> "DL3 sendInfo2→cluster bench [${firmwareLabel()}] — $answer"
+            else -> "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer"
+        }
         bg {
             try {
             sb.append("\nRÉSULTAT (HUD arrow visible): $answer\n")
-            try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}  // clean up injected nav
-            val work = File(cacheDir, "hud_canbench_" +
+            val work = File(cacheDir, zipPrefix +
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
             File(work, "01_can_bench.txt").writeText(sb.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|inswver|fission_single_os|model'"))
             writeDiagLogs(work)
-            val zip = HudCaptureSupport.zipDir(work)
+            val zip = HudCaptureSupport.zipDirToStore(this, work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
-            uploadZip(zip, "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer")
+            uploadZip(zip, caption)
             } finally {
+                // Clear what the bench put on the vehicle, BEFORE anything that can fail.
+                //
+                // This used to be one setNaviActive(false) sitting in the try, above the zip and
+                // the upload. Two problems. It only cleared the CAN registers, and the reachable
+                // benches — sendinfo2 and iconsweep — write to the instrument cluster through a
+                // second path, ClusterNavPusher/sendInfo2, which nothing cleared: a fake test
+                // manoeuvre stayed latched on the cluster after the bench ended, and the way out
+                // was to start and end a real route. And being in the try meant a failed zip or a
+                // failed upload skipped the cleanup entirely, leaving the fake guidance up on
+                // precisely the run where something already went wrong.
+                //
+                // Both paths, in the finally, each guarded so one cannot prevent the other.
+                try { ClusterNavPusher.stop() } catch (_: Throwable) {}
+                try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}
                 // Always restore the UI even if the zip/upload/diag work threw (bg's outer catch
                 // only logs) — otherwise the button stays disabled + spinner visible until recreate.
-                runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
+                postUi { activeBenchButton?.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
             }
         }
     }
@@ -411,6 +587,7 @@ class HudDiagActivity : AppCompatActivity() {
     /** After a bench/confirm upload, nudge the tester toward the LIVE feature (drive Maps/Waze +
      *  report via 🐞) instead of these R&D tools. Translated (R.string.hud_prod_nudge). */
     private fun showProdNudge() {
+        if (!isUiAlive()) return
         try {
             AlertDialog.Builder(this)
                 .setMessage(getString(R.string.hud_prod_nudge))
@@ -443,18 +620,42 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun uploadZip(zip: File, caption: String) {
         if (!TelegramBugReporter.isConfigured()) {
-            log("Telegram non configuré — zip: ${zip.absolutePath}"); return
+            log("cannot upload: ${com.byd.dashcast.report.ReportConsent.transportBlockReason()} — offering the system share instead")
+            HudCaptureSupport.offerFallback(this, zip) { line -> log(line) }
+            return
         }
         TelegramBugReporter.send(this, zip, caption, HudCaptureSupport.HUD_TEST_THREAD,
             object : TelegramBugReporter.Callback {
                 override fun onSent() { log("✓ envoyé sur Telegram (topic ${HudCaptureSupport.HUD_TEST_THREAD}). Terminé.") }
-                override fun onFailed(message: String) { log("✗ échec envoi: $message — zip: ${zip.absolutePath}") }
+                override fun onFailed(message: String) {
+                    log("✗ upload failed: $message")
+                    HudCaptureSupport.offerFallback(this@HudDiagActivity, zip) { line -> log(line) }
+                }
+                override fun onAmbiguous(message: String) {
+                    log("? upload outcome unknown: $message — zip kept at ${zip.absolutePath}")
+                }
             })
     }
 
     // ── tiny view + thread helpers ──────────────────────────────────────────
     private inline fun bg(crossinline work: () -> Unit) {
         Thread { try { work() } catch (t: Throwable) { log("ERR: ${t.javaClass.simpleName}: ${t.message}") } }.start()
+    }
+
+    override fun onDestroy() {
+        lifecycleGate.invalidate()
+        super.onDestroy()
+    }
+
+    private fun isUiAlive(): Boolean =
+        lifecycleGate.capture().isValid && !isFinishing && !isDestroyed
+
+    private inline fun postUi(crossinline work: () -> Unit) {
+        val token = lifecycleGate.capture()
+        runOnUiThread {
+            if (!token.isValid || isFinishing || isDestroyed) return@runOnUiThread
+            work()
+        }
     }
 
     private fun sh(cmd: String): String =
@@ -491,10 +692,14 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (_: InterruptedException) {} }
 
-    private fun log(msg: String) = runOnUiThread {
+    private fun log(msg: String) {
         AppLogger.i("HudDiagBench", msg)
-        out.append("[${stamp.format(Date())}] $msg\n")
-        (out.parent as? ScrollView)?.post { (out.parent as ScrollView).fullScroll(View.FOCUS_DOWN) }
+        postUi {
+            out.append("[${stamp.format(Date())}] $msg\n")
+            (out.parent as? ScrollView)?.post {
+                if (isUiAlive()) (out.parent as ScrollView).fullScroll(View.FOCUS_DOWN)
+            }
+        }
     }
 
     private fun sectionHeader(t: String) = TextView(this).apply {

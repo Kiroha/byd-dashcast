@@ -14,32 +14,40 @@ import java.util.regex.Pattern;
 /**
  * ShellGateway — drop-in replacement for {@link AdbLocalClient#executeShell(Context, String)}
  * and {@link AdbLocalClient#executeShellWithResult(Context, String, AdbLocalClient.Callback)}
- * that transparently routes through the Beta Engine proxy daemon when the
- * {@code beta_proxy_enabled} flag is on.
+ * that routes a shell command through the uid-2000 proxy daemon when one is usable.
  *
- * <p>Contract — see {@link DaemonEngineGateway#safeCall}:
+ * <p>This header described a different program until the audit's second-opinion pass. It named a
+ * {@code beta_proxy_enabled} flag that exists nowhere in this codebase, pointed at a
+ * {@code DaemonEngineGateway#safeCall} that was deleted in 4a36a748 ("promote proxy daemon to main
+ * path — de-beta"), and promised a flag-off branch "bit-for-bit identical to the v1.0.1
+ * behaviour". A reader therefore believed in a kill switch, on the layer every shell command in
+ * this app passes through. Nothing in the code answers to that name.
+ *
+ * <p>Routing is decided by {@link ShellGatewayRoutingPolicy#select}, per call, twice — once before
+ * queueing and again on the worker, because the daemon can connect or die in between:
  * <ul>
- *   <li>If the proxy flag is OFF → delegates to {@link AdbLocalClient} directly
- *       (bit-for-bit identical to the v1.0.1 behaviour).</li>
- *   <li>If the proxy flag is ON → posts to its own background executor, tries
- *       (in order):
- *       <ol>
- *         <li><b>Phase 4 typed verb</b> when the command matches a known
- *             pattern ({@code wm overscan L,T,R,B -d N} or
- *             {@code wm overscan reset -d N}) — see {@link #tryTypedVerb}.
- *             Typically returns in single-digit ms.</li>
- *         <li>Generic {@link ProxyClient#runShell(String)} otherwise (or
- *             on typed-verb failure).</li>
- *         <li>{@link AdbLocalClient#executeShellWithResult} as the last-resort
- *             fallback.</li>
- *       </ol>
- *   </li>
+ *   <li><b>PROXY</b> — the legacy path is not forced AND {@link ProxyClient#isConnected()}. Tries
+ *       a {@linkplain #tryTypedVerb typed Phase-4 verb} first when the command matches a known
+ *       pattern ({@code wm overscan L,T,R,B -d N} or {@code wm overscan reset -d N}), which
+ *       returns in single-digit ms; otherwise {@link ProxyClient#runShell(String)}; and
+ *       {@link AdbLocalClient} as the last-resort fallback inside the same worker.</li>
+ *   <li><b>LEGACY</b> — {@link AdbLocalClient} directly. Selected when
+ *       {@link DaemonConfig#isLegacyPathEnabled} forces it, or simply when no daemon is
+ *       connected. This is the branch the old text called "flag OFF"; the flag it named is not
+ *       what chooses it.</li>
+ *   <li><b>FAIL_FAST</b> — no daemon AND the ADB transport is already classified unreachable. The
+ *       callback gets {@link AdbLocalClient#adbTransportDiagnosis()} instead of queueing behind a
+ *       wedged worker. The old text did not mention this state at all.</li>
  * </ul>
  *
- * <p>Migration target: any production call site of {@code AdbLocalClient.executeShell*}
- * that runs on the cluster hot path (overscan, pidof polling, app launch helpers).
- * Diagnostic / test / settings call sites must keep using {@link AdbLocalClient}
- * directly because they need to exercise the legacy code path.
+ * <p>Two guards run BEFORE any routing and refuse the command outright — neither was documented
+ * here either: {@link AdbLocalClient#blockDiLink2Resize} (a {@code wm} resize that would shrink
+ * the head unit's own UI on DiLink 2), and a {@code wm} command explicitly targeting display 0.
+ *
+ * <p>Migration target: any production call site of {@code AdbLocalClient.executeShell*} that runs
+ * on the cluster hot path (overscan, pidof polling, app launch helpers). Diagnostic / test /
+ * settings call sites keep using {@link AdbLocalClient} directly, because they need to exercise
+ * the legacy code path.
  *
  * @since v1.1.9 build 172 — phase 3 (call-site migration).
  * @since v1.1.9 build 174 — phase 4a (typed {@code wm overscan} interception).

@@ -124,6 +124,14 @@ public class ClusterCanvasView extends View {
         if (mBg != null && !mBg.isRecycled()) { mBg.recycle(); mBg = null; }
     }
 
+    /**
+     * NOT CALLED by anything in the tree — grepped across java, kotlin, xml and the manifest.
+     *
+     * Which means mTop/mBottom/mLeft/mRight are permanently 0, so the reserved-band shading at
+     * :159-162 never draws and the drag clamping at :296-300 never clamps. The feature was designed
+     * and the seam built; the wiring never happened. Kept rather than deleted: removing it would
+     * take the shading and the clamping with it, and those are the useful half.
+     */
     public void setMargins(int top, int bottom, int left, int right) {
         mTop = top; mBottom = bottom; mLeft = left; mRight = right;
         invalidate();

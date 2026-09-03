@@ -1,0 +1,276 @@
+package com.byd.dashcast.report
+
+import com.byd.dashcast.util.AppLogger
+
+import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
+
+/**
+ * Uploads large diagnostic bundles straight to Azure Blob Storage, so reverse-engineering pulls are
+ * not capped by the messaging channel (Telegram tops out at 50 MB, and the extraction budget was
+ * sized to fit under it). The OEM artefacts we actually want are far bigger — the cluster Qt theme
+ * bundles alone are ~126 MB and ~118 MB.
+ *
+ * <p><b>Credentials.</b> The container URL and its SAS token are provisioned at runtime through
+ * [ReportChannel] and kept in encrypted device storage. The SAS is expected to be **create/write
+ * only, no read, no list** and time-limited.
+ *
+ * <p><b>Why block upload.</b> A car uploads over a mobile link that drops. Each 4 MB block is a
+ * separate request with its own retries, and only the final commit makes the blob visible — a failed
+ * block costs 4 MB of retry, not the whole transfer.
+ */
+object AzureBlobUploader {
+
+    private const val TAG = "AzureBlobUploader"
+
+    /** Azure allows far larger blocks, but small ones keep a retry cheap on a flaky car link. */
+    private const val BLOCK_SIZE = 4 * 1024 * 1024
+
+    private const val ATTEMPTS_PER_REQUEST = 3
+    private const val CONNECT_TIMEOUT_MS = 30_000
+    private const val READ_TIMEOUT_MS = 120_000
+
+    /** Blob API version that supports the block operations used here. */
+    private const val API_VERSION = "2021-08-06"
+
+    interface Callback {
+        /** @param url the blob URL WITHOUT the SAS — safe to log and to post in a message. */
+        fun onUploaded(url: String)
+        fun onFailed(message: String)
+    }
+
+    /**
+     * True when this device may upload: the driver has agreed, and a container + SAS are stored.
+     *
+     * Same gate as [TelegramBugReporter.isConfigured], for the same reason — a refusal has to close
+     * every road out of the car, not just the one the user happened to be looking at.
+     */
+    @JvmStatic
+    fun isConfigured(): Boolean =
+        ReportConsent.isGranted() && ReportChannel.hasAzure()
+
+    /**
+     * Uploads [file] as [blobName]. Blocking — call it off the main thread (the extraction flow
+     * already runs on its own thread). [progress] receives a human-readable line per block.
+     */
+    @JvmStatic
+    fun upload(file: File, blobName: String, progress: (String) -> Unit, cb: Callback) {
+        if (!isConfigured()) { cb.onFailed("Azure not configured"); return }
+        val base = ReportChannel.azureUrl().trimEnd('/')
+        val sas = ReportChannel.azureSas().trimStart('?')
+        val blobUrl = "$base/${sanitise(blobName)}"
+        val total = file.length()
+        try {
+            val blockIds = ArrayList<String>()
+            FileInputStream(file).use { input ->
+                val buf = ByteArray(BLOCK_SIZE)
+                var index = 0
+                var sent = 0L
+                while (true) {
+                    val n = input.read(buf)
+                    if (n <= 0) break
+                    // Block ids must all be the same length before base64 — Azure rejects a
+                    // mixed-width block list.
+                    val id = base64(String.format(Locale.US, "%08d", index).toByteArray())
+                    putBlock("$blobUrl?comp=block&blockid=${urlEncode(id)}&$sas", buf, n)
+                    blockIds.add(id)
+                    sent += n
+                    index++
+                    progress("uploaded ${sent / 1024 / 1024} / ${total / 1024 / 1024} MB")
+                }
+            }
+            if (blockIds.isEmpty()) { cb.onFailed("empty file"); return }
+            commit("$blobUrl?comp=blocklist&$sas", blockIds)
+            AppLogger.i(TAG, "uploaded ${file.name} (${total / 1024} KB) in ${blockIds.size} block(s)")
+            cb.onUploaded(blobUrl)
+        } catch (t: Throwable) {
+            val failure = safeFailureMessage(t, sas)
+            AppLogger.w(TAG, "upload failed: $failure")
+            cb.onFailed(failure)
+        }
+    }
+
+    // ── HTTP ────────────────────────────────────────────────────────────────
+
+    private fun putBlock(url: String, buf: ByteArray, len: Int) = putBlockWithRetry(
+        url,
+        buf,
+        len,
+        ConnectionFactory { requestUrl, method -> open(requestUrl, method) },
+        RetrySleeper { delayMs -> Thread.sleep(delayMs) },
+    )
+
+    internal fun putBlockWithRetry(
+        url: String,
+        buf: ByteArray,
+        len: Int,
+        connectionFactory: ConnectionFactory,
+        sleeper: RetrySleeper,
+    ) {
+        var lastError: Throwable? = null
+        for (attempt in 1..ATTEMPTS_PER_REQUEST) {
+            var connection: HttpURLConnection? = null
+            try {
+                connection = connectionFactory.open(url, "PUT")
+                connection.setFixedLengthStreamingMode(len)
+                connection.doOutput = true
+                connection.outputStream.use { it.write(buf, 0, len) }
+                val code = connection.responseCode
+                val detail = if (code in 200..299) "" else errorDetail(connection)
+                if (code in 200..299) return
+                val failure = BlockHttpException(code, "HTTP $code$detail")
+                if (!isTransientHttpStatus(code) || attempt == ATTEMPTS_PER_REQUEST) throw failure
+                lastError = failure
+            } catch (t: Throwable) {
+                if (t is InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw t
+                }
+                val retryable = t is IOException ||
+                    (t is BlockHttpException && isTransientHttpStatus(t.statusCode))
+                if (!retryable || attempt == ATTEMPTS_PER_REQUEST) throw t
+                lastError = t
+            } finally {
+                connection?.disconnect()
+            }
+            // Linear back-off; a dropped mobile link usually recovers within a few seconds.
+            if (attempt < ATTEMPTS_PER_REQUEST) {
+                try {
+                    sleeper.sleep(1500L * attempt)
+                } catch (interrupted: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw interrupted
+                }
+            }
+        }
+        throw lastError ?: IllegalStateException("block upload failed")
+    }
+
+    internal fun interface ConnectionFactory {
+        fun open(url: String, method: String): HttpURLConnection
+    }
+
+    internal fun interface RetrySleeper {
+        fun sleep(delayMs: Long)
+    }
+
+    private class BlockHttpException(val statusCode: Int, message: String) :
+        IllegalStateException(message)
+
+    /** Commits the uploaded blocks; until this succeeds the blob does not exist. */
+    private fun commit(url: String, blockIds: List<String>) = commitWithRetry(
+        url,
+        blockIds,
+        ConnectionFactory { requestUrl, method -> open(requestUrl, method) },
+        RetrySleeper { delayMs ->
+            try {
+                Thread.sleep(delayMs)
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw interrupted
+            }
+        }
+    )
+
+    internal fun commitWithRetry(
+        url: String,
+        blockIds: List<String>,
+        connectionFactory: ConnectionFactory,
+        sleeper: RetrySleeper,
+    ) {
+        val xml = StringBuilder("<?xml version=\"1.0\" encoding=\"utf-8\"?><BlockList>")
+        for (id in blockIds) xml.append("<Latest>").append(id).append("</Latest>")
+        xml.append("</BlockList>")
+        val body = xml.toString().toByteArray(Charsets.UTF_8)
+        for (attempt in 1..ATTEMPTS_PER_REQUEST) {
+            var connection: HttpURLConnection? = null
+            try {
+                connection = connectionFactory.open(url, "PUT")
+                connection.setRequestProperty("Content-Type", "application/xml")
+                connection.setRequestProperty("x-ms-blob-content-type", "application/zip")
+                connection.setFixedLengthStreamingMode(body.size)
+                connection.doOutput = true
+                connection.outputStream.use { it.write(body) }
+                val code = connection.responseCode
+                if (code in 200..299) return
+                val failure = CommitHttpException(
+                    code,
+                    "commit failed: HTTP $code${errorDetail(connection)}"
+                )
+                if (!isTransientHttpStatus(code) || attempt == ATTEMPTS_PER_REQUEST) throw failure
+            } catch (failure: Throwable) {
+                if (failure is InterruptedException) throw failure
+                val retryable = failure is IOException ||
+                    (failure is CommitHttpException && isTransientHttpStatus(failure.statusCode))
+                if (!retryable || attempt == ATTEMPTS_PER_REQUEST) throw failure
+            } finally {
+                connection?.disconnect()
+            }
+            sleeper.sleep(1500L * attempt)
+        }
+    }
+
+    private class CommitHttpException(val statusCode: Int, message: String) :
+        IllegalStateException(message)
+
+    private fun isTransientHttpStatus(code: Int): Boolean =
+        code == 408 || code == 429 || code >= 500
+
+    private fun open(url: String, method: String): HttpURLConnection =
+        (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            instanceFollowRedirects = false
+            setRequestProperty("x-ms-version", API_VERSION)
+            // NOTE: no x-ms-blob-type here. It belongs to the single-shot Put Blob operation only;
+            // Put Block and Put Block List do not define it, and sending it made the commit fail
+            // with HTTP 400 after a 270 MB upload had already succeeded block by block.
+        }
+
+    /**
+     * Azure answers a rejected request with an XML body naming the exact cause
+     * (`<Code>UnsupportedHeader</Code>`, `InvalidBlockList`, …). Reading it turns "HTTP 400" into
+     * something actionable — without it the first real failure could only be guessed at.
+     */
+    private fun errorDetail(c: HttpURLConnection): String {
+        return try {
+            val raw = c.errorStream?.bufferedReader()?.use { it.readText() } ?: return ""
+            val code = Regex("<Code>(.*?)</Code>").find(raw)?.groupValues?.get(1)
+            val msg = Regex("<Message>(.*?)</Message>", RegexOption.DOT_MATCHES_ALL)
+                .find(raw)?.groupValues?.get(1)?.lineSequence()?.firstOrNull()?.trim()
+            when {
+                code != null && msg != null -> " ($code: $msg)"
+                code != null -> " ($code)"
+                else -> " (" + raw.take(180).replace('\n', ' ') + ")"
+            }
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    // ── helpers ─────────────────────────────────────────────────────────────
+
+    private fun base64(b: ByteArray): String =
+        android.util.Base64.encodeToString(b, android.util.Base64.NO_WRAP)
+
+    private fun urlEncode(s: String): String =
+        java.net.URLEncoder.encode(s, "UTF-8")
+
+    @JvmStatic
+    internal fun safeFailureMessage(error: Throwable, sas: String): String =
+        error.javaClass.simpleName + ": " + scrubSas(error.message, sas)
+
+    private fun scrubSas(text: String?, sas: String): String {
+        val value = text ?: return ""
+        return if (sas.isEmpty()) value else value.replace(sas, "<sas>")
+    }
+
+    /** Keeps the blob name to characters that need no escaping in a URL path. */
+    private fun sanitise(name: String): String =
+        name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+}

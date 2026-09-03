@@ -2,9 +2,7 @@ package com.byd.dashcast.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.LauncherApps
 import android.graphics.drawable.Drawable
-import android.os.Process
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +16,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.byd.dashcast.R
 import com.byd.dashcast.model.AppInfo
+import com.byd.dashcast.model.AppShortcut
 import com.byd.dashcast.ui.main.AppProjectionIndicator
 import java.util.Locale
 
@@ -29,6 +28,7 @@ class AppListAdapter(
 
     interface OnSendToDashboardListener {
         fun onSendToDashboard(app: AppInfo)
+        fun onLaunchShortcut(app: AppInfo, shortcut: AppShortcut)
         fun onSendToMain(app: AppInfo)
         fun onKillApp(app: AppInfo)
         fun onToggleFavorite(app: AppInfo)
@@ -209,16 +209,7 @@ class AppListAdapter(
                     }
                     btn.text = shortcut.label
                     btn.setOnClickListener {
-                        if (mListener != null) {
-                            mListener.onSendToDashboard(app)
-                            try {
-                                holder.launcherApps?.startShortcut(
-                                    app.packageName, shortcut.id, null, null, Process.myUserHandle()
-                                )
-                            } catch (ignored: Exception) {
-                                // Shortcut may have been removed or app uninstalled
-                            }
-                        }
+                        mListener?.onLaunchShortcut(app, shortcut)
                     }
                 }
             }
@@ -235,18 +226,7 @@ class AppListAdapter(
                     }
                     popup.setOnMenuItemClickListener { item ->
                         val chosenShortcut = app.shortcuts[item.itemId]
-                        if (holder.btnToCluster?.isVisible == true) {
-                            holder.btnToCluster.performClick()
-                        } else {
-                            mListener?.onSendToDashboard(app)
-                        }
-                        try {
-                            holder.launcherApps?.startShortcut(
-                                app.packageName, chosenShortcut.id, null, null, Process.myUserHandle()
-                            )
-                        } catch (ignored: Exception) {
-                            // Shortcut may have been removed or app uninstalled
-                        }
+                        mListener?.onLaunchShortcut(app, chosenShortcut)
                         true
                     }
                     popup.show()
@@ -318,8 +298,6 @@ class AppListAdapter(
         val btnToCluster: Button? = itemView.findViewById(R.id.btn_to_cluster)
         val btnKill: Button? = itemView.findViewById(R.id.btn_kill_app)
         val badgeAutoLaunch: TextView? = itemView.findViewById(R.id.badge_auto_launch)
-        val launcherApps: LauncherApps? =
-            itemView.context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
         /** Foreground tint on itemView: -1 unknown, 0 none, 1 active, 2 on-main. */
         var lastFgState = -1
 

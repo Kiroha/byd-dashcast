@@ -19,7 +19,29 @@ import java.lang.reflect.Method;
 import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
 
 /**
- * ProxyDaemonMain — entry point for the Beta Engine Component A daemon (v1.1.6+).
+ * ProxyDaemonMain — the uid=2000 daemon that <b>DOES</b> things; entry point for the Beta Engine
+ * Component A daemon (v1.1.6+).
+ *
+ * <h3>The two-daemon boundary (read this before touching either daemon)</h3>
+ * DashCast drives the instrument cluster through <b>two</b> uid-2000 helper processes. They are
+ * not interchangeable and they do not share a binder:
+ * <ul>
+ *   <li><b>{@code ProxyDaemonMain} (this class) — "DOES things".</b> A stateless command executor:
+ *       shell ({@link #TXN_EXEC}) plus typed one-shot verbs (launchAndForce, moveAndResize,
+ *       setOverscan, autoContainerSendInfo…). It owns no long-lived state, so if it dies you simply
+ *       retry the command. Its binder is {@code ProxyClient.getProxyDaemonBinder()}, registered in
+ *       ServiceManager as {@link #SERVICE_NAME}, and it enforces
+ *       {@link ProxyDaemonContract#DESCRIPTOR}.</li>
+ *   <li><b>{@link SurfaceDaemon} — "HOLDS things".</b> A stateful surface/window owner: the in-app
+ *       preview mirror <em>and</em>, in Layout mode, the per-slot {@code TYPE_SYSTEM_OVERLAY}
+ *       windows <b>ON THE CLUSTER</b>, the trusted VirtualDisplays built from their Surfaces, the
+ *       slot geometry, and touch injection. If it dies, the graphical state is lost and must be
+ *       rebuilt. Its binder comes from {@code DaemonBinderResolver.surfaceDaemonBinder()}
+ *       (ServiceManager name {@code byd_mirror_daemon}) and it enforces a different DESCRIPTOR.</li>
+ * </ul>
+ * Practical triage rule: <b>a failed command → ProxyDaemon; a black or frozen surface →
+ * SurfaceDaemon</b>. Never pair one daemon's DESCRIPTOR with the other's binder — the receiving
+ * {@code enforceInterface} rejects it and the transaction silently does nothing.
  *
  * <p>Started by {@link com.byd.dashcast.proxy.ProxyClient} via {@code app_process64}
  * over a local-ADB pairing session, so the JVM inherits the {@code shell} UID
@@ -28,7 +50,7 @@ import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
  * <p>Since Android 10+ SELinux denies {@code untrusted_app}→{@code shell}
  * {@code unix_stream_socket connectto} (the 1.1.5 failure mode), this version
  * does NOT expose a {@link android.net.LocalServerSocket}. Instead it follows
- * the pattern used by OpenBYD and our own {@code MirrorDaemon}:
+ * the pattern used by OpenBYD and our own {@link SurfaceDaemon}:
  * <ol>
  *   <li>Acquire a system {@link Context} via reflective
  *       {@code ActivityThread.systemMain().getSystemContext()}.</li>
@@ -43,7 +65,7 @@ import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
  * transactions identified by integer codes:
  * <ul>
  *   <li>{@link #TXN_PING}   — no args → {@code long} epoch_ms</li>
- *   <li>{@link #TXN_WHOAMI} — no args → {@code int uid, int pid, String ver}</li>
+ *   <li>{@link #TXN_WHOAMI} — no args → {@code int uid, int pid, String ver, String instance}</li>
  *   <li>{@link #TXN_EXEC}   — {@code String cmd} → {@code int exit, String combinedOutput}</li>
  * </ul>
  */
@@ -66,10 +88,17 @@ public final class ProxyDaemonMain {
     *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
     *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
     *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
+    *  v24: TXN_CAN_BATCH appliedCount stops at the first non-zero native SDK result.
     *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
     *  v21: adds TXN_CANCEL_FISSION_WATCHDOG (teardown cannot race post-launch re-anchoring).
+    *  v22: adds TXN_AUTOCONTAINER_SEND_INFO2 (raw sendInfo2 byte[] channel — NaviInfo HUD injection).
+    *  v23: adds TXN_FISSION_GET_AUTOCAR_DISPLAY (read-only FissionHostSvc registry probe, DL3),
+    *  TXN_AUTOCONTAINER_REGISTER_CALLBACK (arms serviceDied/receivedX logging, diagnostic-only,
+    *  never called before this release) and TXN_PROJECTION_TRACE_START/DRAIN (60s registry sampler
+    *  around a normal projection cycle). All three read-only or purely observational.
+    *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "21";
+    private static final String PROTOCOL_VERSION = "25";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -79,6 +108,14 @@ public final class ProxyDaemonMain {
      *  after app restart (setsid'd daemon outlives the app process) and ask
      *  for a binder rebroadcast instead of paying the ~1 s app_process cost. */
     private static final String PID_FILE = "/data/local/tmp/dashcast_proxy.pid";
+        private static final String STARTUP_LOCK_FILE =
+            "/data/local/tmp/dashcast_proxy_startup.lock";
+        private static ProxyDaemonStartupLock sStartupLock;
+
+        /** Random identity for this exact daemon process, paired with the PID for safe recovery. */
+        private static final String INSTANCE_FILE = "/data/local/tmp/dashcast_proxy_instance";
+        private static final String INSTANCE_TOKEN =
+            java.util.UUID.randomUUID().toString().replace("-", "");
 
     /** Trigger file watched via {@link FileObserver} by the running daemon.
      *  The bootstrap script (running as uid 2000 shell) touches this file to
@@ -120,17 +157,29 @@ public final class ProxyDaemonMain {
      *  addService (SELinux blocks untrusted apps). Public so ProxyClient can cross-check. */
     public static final String SERVICE_NAME = "byd_proxy_daemon";
 
-    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
-     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    /** Our app's uid. Resolution is retried from the Binder gate after transient PM failures. */
     private static volatile int sAppUid = -1;
 
-    /** True if {@code uid} may drive the privileged ProxyBinder verbs. Falls OPEN when the app uid
-     *  could not be resolved, so it can never block the legitimate app→daemon path. */
+    /** True if {@code uid} may drive the privileged ProxyBinder verbs. */
     private static boolean isAllowedCaller(int uid) {
-        if (sAppUid == -1) return true;              // unresolved → fall open, never break
-        if (uid == 1000) return true;                // system
-        if (uid == Process.myUid()) return true;     // the daemon's own uid (shell 2000)
-        return (uid % 100000) == (sAppUid % 100000); // our app (user-agnostic appId match)
+        int appUid = sAppUid;
+        if (appUid < 0) appUid = resolveAppUid();
+        return DaemonCallerPolicy.isAllowed(uid, Process.myUid(), appUid);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static int resolveAppUid() {
+        Context context = sSystemContext;
+        if (context == null) return -1;
+        try {
+            int resolved = context.getPackageManager()
+                    .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+            sAppUid = resolved;
+            return resolved;
+        } catch (Throwable t) {
+            log("app uid resolution failed; privileged app calls remain denied: " + t);
+            return -1;
+        }
     }
 
     /** Best-effort registration of the proxy binder in the global ServiceManager (uid-2000/system
@@ -159,8 +208,26 @@ public final class ProxyDaemonMain {
 
     private ProxyDaemonMain() {}
 
+    @SuppressWarnings("deprecation")
+    private static void prepareStandaloneMainLooper() {
+        Looper.prepareMainLooper();
+    }
+
     public static void main(String[] args) {
         try {
+            // v1.8.24 — unlock hidden APIs for THIS process before anything else touches
+            // reflection. Deliberately the very first statement: Phase4TaskVerbs/Phase4Probes/
+            // CanWriteVerbs etc. all reflect into android.app.*/android.hardware.bydauto.* classes,
+            // and setHiddenApiExemptions is per-ART-VM state — running it after any of those verbs
+            // have already resolved (and cached, or given up on) a Method would be too late for
+            // that call site. SurfaceDaemon.java and ClusterMirrorManager.kt each already unlock
+            // hidden APIs in THEIR OWN process, but that never covered this one, which is the
+            // process that actually makes the calls logged as "NoSuchMethodException" throughout
+            // Phase4TaskVerbs — a class demonstrably present in this ROM's own services.jar/
+            // framework.jar (setDisplayToSingleTaskInstance, setCustomTaskWindowingMode) is exactly
+            // the symptom of hidden-API filtering: a method invisible to getMethod() despite
+            // existing in the compiled bytecode.
+            hiddenApiSelfTest();
             renameProcess();
             // v1.2.70 hardening (Couche 3): tell the Linux OOM killer to
             // treat us as critically important. uid=2000 (shell) can write
@@ -179,8 +246,14 @@ public final class ProxyDaemonMain {
                 return;
             }
             writeVersionFile();
+            if (!writeInstanceFile()) {
+                log("FATAL: cannot persist daemon instance marker — exiting");
+                System.exit(4);
+                return;
+            }
+            releaseStartupLock();
             installPidShutdownHook();
-            Looper.prepareMainLooper();
+            prepareStandaloneMainLooper();
 
             sBinder = new ProxyBinder();
             log("binder ready uid=" + Process.myUid()
@@ -201,15 +274,10 @@ public final class ProxyDaemonMain {
             // createPackageContext is unavailable.
             sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.adoptIdentity(systemContext);
 
-            // Resolve our app's uid once so the ProxyBinder caller-gate can reject untrusted callers
-            // (the binder is registered in ServiceManager just below). Fall open on any failure.
-            try {
-                sAppUid = systemContext.getPackageManager()
-                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
-                log("app uid resolved: " + sAppUid);
-            } catch (Throwable t) {
-                log("app uid resolution failed (fall open): " + t);
-            }
+            // Resolve before publication. A transient failure is retried by isAllowedCaller();
+            // until then only system and the daemon itself may use privileged verbs.
+            int resolvedAppUid = resolveAppUid();
+            if (resolvedAppUid >= 0) log("app uid resolved: " + resolvedAppUid);
             // Best-effort ServiceManager registration for the app-side authenticity cross-check.
             registerInServiceManager(sBinder);
 
@@ -253,16 +321,68 @@ public final class ProxyDaemonMain {
         log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
     }
 
+    /**
+     * v1.8.24 — self-proving hidden-API unlock. Logs whether a method already known to be
+     * blocked on this exact car ({@code IActivityTaskManager$Stub$Proxy.setDisplayToSingleTaskInstance})
+     * is visible to {@code getMethod()} BEFORE and AFTER calling
+     * {@link HiddenApiBypass#setHiddenApiExemptions}, so the very next bug report either confirms
+     * or refutes the whole hypothesis with a plain log line — no guesswork needed on the next pull.
+     *
+     * <p>Uses the same scoped exemption list as the existing {@code unlockHiddenApis()} precedent
+     * in {@code SurfaceDaemon}/{@code ClusterMirrorManager} ({@code Landroid/}, {@code Lcom/android/},
+     * {@code Ljava/lang/}) — every reflected target across the daemon (android.app.*, android.view.*,
+     * android.hardware.bydauto.*) falls under {@code Landroid/}; nothing observed so far needs a
+     * broader exemption. Uses the library's {@code HiddenApiBypass} class specifically (backed by
+     * {@code sun.misc.Unsafe}, documented stable on API 10+ without touching internal ART
+     * structures) — not {@code LSPass}, which the library's own README says cannot reach core
+     * platform API, exactly what every target here is.
+     *
+     * <p>Read-only: only calls {@code getMethod()}, never {@code invoke()}. Cannot itself break
+     * anything even if the whole hypothesis is wrong.
+     */
+    private static void hiddenApiSelfTest() {
+        log("hiddenapi BEFORE: " + probeHiddenMethodVisibility());
+        try {
+            org.lsposed.hiddenapibypass.HiddenApiBypass.setHiddenApiExemptions(
+                    "Landroid/", "Lcom/android/", "Ljava/lang/");
+            log("hiddenapi: setHiddenApiExemptions OK");
+        } catch (Throwable t) {
+            log("hiddenapi: setHiddenApiExemptions FAILED: " + t);
+        }
+        log("hiddenapi AFTER: " + probeHiddenMethodVisibility());
+    }
+
+    /** @return "VISIBLE (...)" / "HIDDEN (NoSuchMethodException)" / "INCONCLUSIVE ..." — never throws. */
+    private static String probeHiddenMethodVisibility() {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method m = iAtm.getClass().getMethod("setDisplayToSingleTaskInstance", int.class);
+            return "VISIBLE (" + m + ")";
+        } catch (NoSuchMethodException nsme) {
+            return "HIDDEN (NoSuchMethodException)";
+        } catch (Throwable t) {
+            return "INCONCLUSIVE " + t.getClass().getSimpleName() + ": " + t.getMessage();
+        }
+    }
+
     /** v1.2.70 hardening: lower our OOM score so Linux's low-memory killer
-     *  reaches for foreground apps before us. uid=2000 can always write to
-     *  its own /proc/self/oom_score_adj. -900 sits just above the framework
-     *  reserved range (-1000..-900 used by system_server etc.). */
+     *  reaches for foreground apps before us. -900 sits just above the framework
+     *  reserved range (-1000..-900 used by system_server etc.).
+     *
+     *  <p>Best-effort, and it is <i>expected</i> to fail on DiLink 3: that ROM's SELinux policy
+     *  denies the shell domain write access to proc_oom_adj, so the open itself returns EACCES
+     *  (79 of 80 DiLink 3 reports in the corpus; every DiLink 4 / 5.0 / 5.1 / AAOS report
+     *  succeeds). The earlier claim here that "uid=2000 can always write to its own
+     *  /proc/self/oom_score_adj" was wrong. The daemon runs fine without it — it only loses a
+     *  priority hint — so this is logged as a state, not as a failure to chase. */
     private static void hardenAgainstOom() {
         try (FileOutputStream fos = new FileOutputStream("/proc/self/oom_score_adj")) {
             fos.write("-900".getBytes());
             log("oom_score_adj=-900 set");
         } catch (Throwable t) {
-            log("hardenAgainstOom failed: " + t);
+            log("oom_score_adj not settable, continuing without the priority hint"
+                    + " (expected on DiLink 3 — SELinux denies shell): " + t);
         }
     }
 
@@ -281,32 +401,44 @@ public final class ProxyDaemonMain {
      *  <p>This replaces the broken shell-side {@code flock} (see v1.2.69
      *  cascade) with an in-JVM check that has no toybox/util-linux dependency. */
     private static boolean acquirePidLock() {
+        ProxyDaemonStartupLock startupLock = null;
         try {
+            startupLock = ProxyDaemonStartupLock.tryAcquire(new File(STARTUP_LOCK_FILE));
+            if (startupLock == null) return false;
             File pidFile = new File(PID_FILE);
-            // createNewFile() is atomic (O_CREAT|O_EXCL) — eliminates TOCTOU between
-            // exists() check and FileOutputStream creation.
-            boolean created = pidFile.createNewFile();
-            if (!created) {
+            if (pidFile.exists()) {
                 // File already existed — check if a live daemon owns it.
                 String existing = readSmallFile(pidFile).trim();
                 if (!existing.isEmpty()) {
                     int otherPid = -1;
                     try { otherPid = Integer.parseInt(existing); } catch (NumberFormatException ignore) {}
                     if (otherPid > 0 && otherPid != Process.myPid() && isLiveDaemon(otherPid)) {
+                        startupLock.close();
                         return false;
                     }
                 }
-                // Stale or empty file — fall through and overwrite with our PID.
             }
-            try (FileOutputStream fos = new FileOutputStream(pidFile)) {
-                fos.write(Integer.toString(Process.myPid()).getBytes());
-            }
+            // PID and nonce are one startup transaction. Remove only after the cross-process
+            // lock proves no peer can concurrently claim either marker.
+            try { new File(INSTANCE_FILE).delete(); } catch (Throwable ignore) {}
+            startupLock.publishPid(pidFile, Integer.toString(Process.myPid()));
+            sStartupLock = startupLock;
             return true;
         } catch (Throwable t) {
-            log("acquirePidLock error (allowing start): " + t);
-            // Fail-open: better to risk a duplicate (caught by stale-kill) than
-            // to refuse to start because /data/local/tmp had a transient glitch.
-            return true;
+            if (startupLock != null) {
+                try { startupLock.close(); } catch (Throwable ignore) {}
+            }
+            log("acquirePidLock error: " + t);
+            return false;
+        }
+    }
+
+    private static void releaseStartupLock() {
+        ProxyDaemonStartupLock lock = sStartupLock;
+        sStartupLock = null;
+        if (lock == null) return;
+        try { lock.close(); } catch (Throwable error) {
+            log("releaseStartupLock failed: " + error);
         }
     }
 
@@ -338,6 +470,15 @@ public final class ProxyDaemonMain {
         } catch (Throwable ignore) {}
     }
 
+    private static boolean writeInstanceFile() {
+        try {
+            return ProxyInstanceMarker.ensureOwned(new File(INSTANCE_FILE), INSTANCE_TOKEN);
+        } catch (Throwable error) {
+            log("writeInstanceFile failed: " + error);
+            return false;
+        }
+    }
+
     /** Remove the PID file on JVM shutdown. Pure best-effort — a SIGKILL'd
      *  daemon will leave a stale file behind, which the bootstrap script
      *  detects via {@code /proc/$PID/comm} sanity check. */
@@ -345,6 +486,15 @@ public final class ProxyDaemonMain {
         try {
             Runtime.getRuntime().addShutdownHook(new Thread("pid-cleanup") {
                 @Override public void run() {
+                    ProxyDaemonStartupLock cleanupLock = null;
+                    try {
+                        cleanupLock = ProxyDaemonStartupLock.tryAcquire(
+                                new File(STARTUP_LOCK_FILE));
+                    } catch (Throwable ignore) {}
+                    // A successor is publishing PID+nonce. Never make a cleanup decision from
+                    // markers that can change between our ownership check and delete.
+                    if (cleanupLock == null) return;
+                    try {
                     // Only clean up if THIS process still owns the lock. A duplicate daemon
                     // that lost the race and suicided (healPidLock -> System.exit) must NOT
                     // delete the SURVIVOR's PID file — otherwise a fresh bootstrap sees no
@@ -357,6 +507,15 @@ public final class ProxyDaemonMain {
                     try { new File(PID_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(TRIGGER_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(VERSION_FILE).delete(); } catch (Throwable ignore) {}
+                    try {
+                        if (INSTANCE_TOKEN.equals(
+                                readSmallFile(new File(INSTANCE_FILE)).trim())) {
+                            new File(INSTANCE_FILE).delete();
+                        }
+                    } catch (Throwable ignore) {}
+                    } finally {
+                        try { cleanupLock.close(); } catch (Throwable ignore) {}
+                    }
                 }
             });
         } catch (Throwable ignore) {
@@ -424,9 +583,32 @@ public final class ProxyDaemonMain {
                 // FUTURE writes, not the file that was there when we started.
                 long lastTriggerMtime = new File(TRIGGER_FILE).lastModified();
                 int tick = 0;
+                // AUD-PERF-P4 — cadence ramp.
+                //
+                // This poll is the PRIMARY recovery path when the FileObserver silently stops
+                // delivering on DL5 (see the class doc above), so it is not something to simply
+                // slow down. But that inotify failure manifests during bootstrap, and this loop
+                // used to run at 1 Hz for the entire life of a process that outlives the app and
+                // survives its kills: on a head unit that stays up for days that is ~86 400
+                // wakeups and ~86 400 stat() calls PER DAY, forever, for an event that in normal
+                // operation arrives over inotify anyway.
+                //
+                // So: keep full 1 Hz sensitivity through the window the failure appears in, then
+                // fall back to the steady-state period below.
+                //
+                // That steady-state period is NOT a free choice and is deliberately not written
+                // here as a literal. REBROADCAST only ever runs against an already-alive same-build
+                // daemon -- one always far past RAMP_TICKS -- so it is the steady-state interval,
+                // not the ramp interval, that must fit inside the app's rebroadcast wait. Both
+                // numbers now live in ProxyBootstrapPolicy and are derived from each other, so the
+                // invariant cannot be broken by editing one side. See the doc there for the
+                // regression that made this necessary.
+                final int  RAMP_TICKS   = 60;   // ~60 s of 1 Hz polling after daemon start
+                final long SLOW_POLL_MS =
+                        com.byd.dashcast.proxy.ProxyBootstrapPolicy.TRIGGER_SLOW_POLL_MS;
                 while (true) {
                     try {
-                        Thread.sleep(1_000L);
+                        Thread.sleep(tick < RAMP_TICKS ? 1_000L : SLOW_POLL_MS);
                     } catch (InterruptedException ignore) {
                         return;
                     }
@@ -442,17 +624,22 @@ public final class ProxyDaemonMain {
                             emitBroadcast();
                         }
                     } catch (Throwable th) { log("trigger poll: " + th); }
-                    // Every 10 ticks (10s): full self-heal (file + pid lock).
+                    // Full self-heal (file + pid lock) every 10 ticks: ~10 s during the 1 s ramp
+                    // and ~30 s at the 3 s steady rate, which is the cadence we want on each side,
+                    // so a single divisor covers both and no branch is needed here.
                     if (++tick % 10 == 0) {
                         try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
                         try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
+                        healInstanceFile();
                     }
                 }
             }
         };
         t.setDaemon(true);
         t.start();
-        log("self-heal heartbeat armed (1s poll + 10s heal)");
+        log("self-heal heartbeat armed (1s poll + 10s heal for 60s, then "
+                + (com.byd.dashcast.proxy.ProxyBootstrapPolicy.TRIGGER_SLOW_POLL_MS / 1000)
+                + "s poll + 30s heal)");
     }
 
     private static void healTriggerFile() {
@@ -487,6 +674,16 @@ public final class ProxyDaemonMain {
                 System.exit(0);
             }
         } catch (Throwable ignore) {}
+    }
+
+    private static void healInstanceFile() {
+        try {
+            if (ProxyInstanceMarker.ensureOwned(new File(INSTANCE_FILE), INSTANCE_TOKEN)) return;
+            log("self-heal: instance marker belongs to another generation → suicide");
+        } catch (Throwable error) {
+            log("self-heal: cannot restore instance marker → suicide: " + error);
+        }
+        System.exit(4);
     }
 
     /** Reflective hop to obtain a usable system {@link Context} from inside {@code app_process}. */
@@ -527,8 +724,8 @@ public final class ProxyDaemonMain {
             // Caller-identity gate: the binder is now discoverable via ServiceManager (for the
             // app-side authenticity cross-check) and TXN_EXEC runs arbitrary shell as uid 2000, so
             // only the app (+ system / the daemon's own uid) may drive any verb. The per-case
-            // enforceInterface below is NOT authentication. Falls OPEN if the app uid is unresolved
-            // → can never block the legitimate app→daemon path.
+            // enforceInterface below is NOT authentication. If PackageManager is temporarily
+            // unavailable, isAllowedCaller retries resolution and fails closed for app callers.
             int callingUid = Binder.getCallingUid();
             if (!isAllowedCaller(callingUid)) {
                 log("ProxyBinder: rejected transact code=" + code + " from uid=" + callingUid);
@@ -552,6 +749,7 @@ public final class ProxyDaemonMain {
                         reply.writeInt(Process.myUid());
                         reply.writeInt(Process.myPid());
                         reply.writeString(PROTOCOL_VERSION);
+                        reply.writeString(INSTANCE_TOKEN);
                     }
                     return true;
                 }
@@ -669,6 +867,29 @@ public final class ProxyDaemonMain {
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeInt(result);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_AUTOCONTAINER_SEND_INFO2: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int type = data.readInt();
+                    byte[] payload = data.createByteArray();
+                    try {
+                        Phase4ProcessVerbs.autoContainerSendInfo2(type, payload);
+                        if (reply != null) {
+                            reply.writeNoException();
                         }
                     } catch (Throwable ex) {
                         Throwable cause = ex;
@@ -965,35 +1186,39 @@ public final class ProxyDaemonMain {
                         if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
                         com.byd.dashcast.system.CanBatchOperation.Writer writer =
                                 new com.byd.dashcast.system.CanBatchOperation.Writer() {
-                            @Override public void setNaviStatus(int status) throws Throwable {
-                                CanWriteVerbs.setInt(ctx,
+                            @Override public int setNaviStatus(int status) throws Throwable {
+                                return CanWriteVerbs.setInt(ctx,
                                         CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, status);
                             }
-                            @Override public void setInstrumentInt(int featureId, int value)
+                            @Override public int setInstrumentInt(int featureId, int value)
                                     throws Throwable {
-                                CanWriteVerbs.setInt(ctx, featureId, value);
+                                return CanWriteVerbs.setInt(ctx, featureId, value);
                             }
-                            @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+                            @Override public int setInstrumentBytes(int featureId, byte[] bytes)
                                     throws Throwable {
-                                CanWriteVerbs.setBytes(ctx, featureId,
+                                return CanWriteVerbs.setBytes(ctx, featureId,
                                         bytes == null ? new byte[0] : bytes);
                             }
-                            @Override public void setSettingInt(int featureId, int value)
+                            @Override public int setSettingInt(int featureId, int value)
                                     throws Throwable {
-                                CanWriteVerbs.settingSetInt(ctx, featureId, value);
+                                return CanWriteVerbs.settingSetInt(ctx, featureId, value);
                             }
                         };
+                        java.util.ArrayList<com.byd.dashcast.system.CanBatchOperation> operations =
+                                new java.util.ArrayList<>(count);
                         for (int i = 0; i < count; i++) {
                             int type = data.readInt();
                             int featureId = data.readInt();
                             int intValue = data.readInt();
                             byte[] bytes = data.createByteArray();
-                            com.byd.dashcast.system.CanBatchOperation.fromWire(
-                                    type, featureId, intValue, bytes).execute(writer);
+                            operations.add(com.byd.dashcast.system.CanBatchOperation.fromWire(
+                                    type, featureId, intValue, bytes));
                         }
+                        int applied = com.byd.dashcast.system.CanBatchOperation
+                                .executeAcceptedPrefix(operations, writer);
                         if (reply != null) {
                             reply.writeNoException();
-                            reply.writeInt(count);
+                            reply.writeInt(applied);
                         }
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
@@ -1106,6 +1331,46 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_FISSION_GET_AUTOCAR_DISPLAY: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String report = FissionHostSvcVerbs.getAutoCarDisplay();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(report); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_AUTOCONTAINER_REGISTER_CALLBACK: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        int rc = Phase4ProcessVerbs.autoContainerRegisterCallback();
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_PROJECTION_TRACE_START: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        FissionHostSvcVerbs.startTrace();
+                        if (reply != null) reply.writeNoException();
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_PROJECTION_TRACE_DRAIN: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String report = FissionHostSvcVerbs.drainTrace();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(report); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
                 case INTERFACE_TRANSACTION: {
                     if (reply != null) reply.writeString(DESCRIPTOR);
                     return true;
@@ -1146,11 +1411,41 @@ public final class ProxyDaemonMain {
         if (t instanceof java.lang.reflect.InvocationTargetException && t.getCause() != null) {
             cause = t.getCause();
         }
-        if (cause instanceof Exception) return (Exception) cause;
-        return new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
+        if (isParcelEncodable(cause)) return (Exception) cause;
+        // Everything else becomes IllegalStateException, which IS encodable, carrying the original
+        // type and message in its own message so nothing is lost for triage.
+        //
+        // Handing Parcel.writeException an Exception is not enough — it only encodes eight
+        // well-known types. For anything else it writes code 0, which the client reads as "no
+        // exception", and THEN throws on the daemon side. So the app was told the verb succeeded
+        // and went on to read a zeroed return value: a failed launch, a refused CAN write or a
+        // missing task came back as success with 0, and the app acted on it. Silent wrong answers
+        // are the worst failure mode this binder can have, and this was producing them for every
+        // exception type outside that set of eight.
+        return new IllegalStateException(
+                cause.getClass().getName() + ": " + cause.getMessage(), cause);
     }
 
-    private static void log(String s) {
+    /** The exact set {@link android.os.Parcel#writeException} can encode. Anything else is code 0. */
+    private static boolean isParcelEncodable(Throwable t) {
+        return t instanceof SecurityException
+                || t instanceof android.os.BadParcelableException
+                || t instanceof IllegalArgumentException
+                || t instanceof NullPointerException
+                || t instanceof IllegalStateException
+                || t instanceof android.os.NetworkOnMainThreadException
+                || t instanceof UnsupportedOperationException
+                // By name: android.os.ServiceSpecificException is a hidden API and is not in the
+                // compileSdk 33 stubs, but it IS one of the eight the platform can encode, and a
+                // binder verb can genuinely receive one from a system service.
+                || "android.os.ServiceSpecificException".equals(t.getClass().getName());
+    }
+
+    /** Package-visible so verb classes (e.g. the AutoContainer callback listener in
+     *  {@link Phase4ProcessVerbs}) can write into the same daemon transcript — the one section of
+     *  a bug report ({@code --- PROXYDAEMON LOG ---}) that survives a logcat flood, unlike
+     *  {@code android.util.Log}. */
+    static void log(String s) {
         System.out.println("[dashcast_proxy] " + s);
     }
 }

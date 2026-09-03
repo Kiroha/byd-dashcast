@@ -4,7 +4,7 @@ export default {
   name: 'English',
   title: 'DashCast — User Manual',
   manualName: 'User Manual',
-  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
+  meta: 'BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Table of contents',
 
   intro: {
@@ -395,7 +395,7 @@ export default {
         ],
       },
       note:
-        '🔒 The report contains DashCast logs and technical device/cluster state only — no contacts, no GPS position, no app content.',
+        '🔒 Before sending, DashCast removes the vehicle serial number, Wi-Fi network names, hardware addresses and positions. What remains is the DashCast log and the Android system log, copied as they are — they hold what other apps wrote. You are asked once before anything is sent, and nothing leaves the car if you refuse.',
     },
 
     {
@@ -473,7 +473,7 @@ export default {
         ],
       },
       note:
-        '🔒 No personal data (contacts, GPS position, app content) is logged — only DashCast actions and technical return codes.',
+        '🔒 The log records what DashCast does, including package names and the output of the commands it runs. Sharing it from this screen sends it as it is — the filtering that removes the vehicle serial number, network names and positions runs on bug reports, not here.',
     },
   ],
 

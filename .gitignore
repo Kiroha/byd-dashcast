@@ -2,6 +2,9 @@
 /build/
 /app/build/
 /docs/dist/
+# Release artefacts kept ACROSS builds — outside build/ on purpose, so `clean` cannot
+# destroy the mapping a field stack trace needs (AUD-152). Not versioned: 13 MB per release.
+/dist/
 /docs/node_modules/
 /.gradle/
 *.iml
@@ -44,8 +47,27 @@ char_map.json
 app/build.gradle.bak
 scripts_work/
 
+# ── Diagnostic artefacts (tester personal data) ────────────
+# Bug reports embed logcat, dumpsys and cluster screenshots: SSIDs, account names,
+# Bluetooth device names, installed-app inventory. This repository is public and its
+# history is permanent — a single `git add -A` would publish all of it.
+# Drop triage artefacts in triage/, never at the root.
+byd_bugreport_*
+bugbundle_*
+triage/
+
 # ── Tooling artefacts (regenerated locally, not versioned) ─
 # graphify knowledge graph + per-file cache (~20 MB, regenerable)
 graphify-out/
 # local Claude Code session config
 .claude/
+
+# Azure Function relay — holds the bot token when running the relay locally.
+relay/local.settings.json
+relay/node_modules/
+
+# Audit deliverables and triage artefacts — deliberately NOT versioned.
+# SECURITY.md: "No raw diagnostic artefact in the working tree of a clone … a single
+# git add -A publishes them irrevocably." These two lines are that rule, enforced.
+audit/
+*.mp4

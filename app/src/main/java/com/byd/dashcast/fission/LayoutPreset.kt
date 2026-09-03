@@ -67,6 +67,20 @@ class LayoutPreset(@JvmField var name: String) {
 
     fun nextSlotLabel(): String = "Zone " + (slots.size + 1)
 
+    /**
+     * A detached copy, slots included.
+     *
+     * The editor drags the live object, so anything that holds the same reference sees every
+     * unsaved move. [SlotDef.copy] already existed for the same reason one level down; this is the
+     * whole-preset version, so a saved layout is a snapshot rather than a window onto the canvas.
+     */
+    fun copy(): LayoutPreset {
+        val c = LayoutPreset(name)
+        c.id = id
+        for (s in slots) c.slots.add(s.copy())
+        return c
+    }
+
     @Throws(Exception::class)
     fun toJson(): JSONObject {
         val arr = JSONArray()

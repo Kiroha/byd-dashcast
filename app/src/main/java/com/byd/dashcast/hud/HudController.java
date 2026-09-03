@@ -41,12 +41,43 @@ import java.util.concurrent.TimeUnit;
 public final class HudController {
 
     private static final String TAG = "HudController";
+    static final String AMAP_BROADCAST_ACTION = "AUTONAVI_STANDARD_BROADCAST_SEND";
+    static final String AMAP_RECEIVER_PACKAGE = "com.example.amapservice";
 
     public static final HudController INSTANCE = new HudController();
 
     // ─── Deduplication state ──────────────────────────────────────────────
 
-    private boolean isHudActive;
+    /** Volatile: {@link #noteNavFrameSeen} reads it without the lock the writers hold. */
+    private volatile boolean isHudActive;
+
+    /**
+     * Whether the CAN side of activation was actually accepted.
+     *
+     * Separate from {@link #isHudActive} on purpose, and the separation is the AUD-003 follow-up
+     * fix. The two mean different things: isHudActive means "a nav session is open and something
+     * will have to tear it down", which is true the moment we decide to open one; this means "the
+     * car acknowledged SETTING_NAVI_SCREEN_STATUS", which may never become true on a car that
+     * refuses the register. Conflating them left the close path unreachable on exactly those cars.
+     */
+    private boolean naviActiveAcked;
+
+    /**
+     * When the last CAN activation attempt ran, so a refusing car is retried but not spammed.
+     *
+     * <p>Initialised to {@link #NEVER_ATTEMPTED} rather than 0. Zero is a real
+     * {@link SystemClock#elapsedRealtime()} value — the instant the head unit booted — so a 0
+     * sentinel is indistinguishable from an attempt made in the first milliseconds of uptime, and
+     * on a car where that happened the first retry would have been silently delayed by a whole
+     * cadence. Cheap to get right, and the unit test for the predicate is what surfaced it.
+     */
+    private long lastActivationAttemptMs = NEVER_ATTEMPTED;
+
+    /** Sentinel for "no activation attempt has run yet"; cannot collide with elapsedRealtime(). */
+    static final long NEVER_ATTEMPTED = Long.MIN_VALUE;
+
+    /** Retry cadence for a refused activation. Guidance frames arrive far faster than this. */
+    private static final long ACTIVATION_RETRY_MS = 5_000L;
 
     /**
      * Cached DiLink-3 gate. The windshield-HUD nav feature is DL3-only: DL3 is the
@@ -95,14 +126,13 @@ public final class HudController {
      * <p>If {@code data.distanceMeters} is negative the update is discarded
      * (invalid parse result from the notification listener).
      */
-    public synchronized void updateNavigation(Context ctx, HudNavigationData data) {
-        if (data.distanceMeters < 0) return;
-        if (!isDiLink3Hud(ctx)) return;   // DL3-only feature (video-proven); DL5.1/AAOS excluded
+    public synchronized boolean updateNavigation(Context ctx, HudNavigationData data) {
+        if (data.distanceMeters < 0) return false;
+        if (!isDiLink3Hud(ctx)) return false;   // DL3-only feature (video-proven); DL5.1/AAOS excluded
 
-        // Liveness for the staleness watchdog — refreshed on EVERY notification (even deduped
-        // ones), so the watchdog fires only when nav updates truly STOP, not on an unchanged frame.
+        // Keep the process context before arming the watchdog, but advance its liveness timestamp
+        // only after a guidance output confirms delivery below.
         appContext = ctx.getApplicationContext();
-        lastUpdateMs = SystemClock.elapsedRealtime();
 
         ensureHudActive();
 
@@ -117,6 +147,8 @@ public final class HudController {
             Log.w(TAG, "naviStatus heartbeat failed: " + e.getMessage());
         }
 
+        boolean canFrameDelivered = true;
+
         // 1. Simple guidance (icon + distance).
         if (data.iconId != lastIconId || data.distanceMeters != lastDistance) {
             try {
@@ -124,6 +156,7 @@ public final class HudController {
                 lastIconId    = data.iconId;
                 lastDistance  = data.distanceMeters;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "sendSimpleGuidance failed: " + e.getMessage());
             }
         }
@@ -135,6 +168,7 @@ public final class HudController {
                 lastSecondaryIconId    = -1;
                 lastSecondaryDistance  = -1;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "clearSecondary failed: " + e.getMessage());
             }
         }
@@ -145,6 +179,7 @@ public final class HudController {
                 CanBusController.sendNextStreetName(data.roadName);
                 lastRoadName = data.roadName;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "sendNextStreetName failed: " + e.getMessage());
             }
         }
@@ -162,6 +197,7 @@ public final class HudController {
                     lastRestMinute  = minutes;
                     lastRestMileage = mileage;
                 } catch (ProxyClient.ProxyException e) {
+                    canFrameDelivered = false;
                     Log.w(TAG, "sendRestRoute failed: " + e.getMessage());
                 }
             }
@@ -177,12 +213,27 @@ public final class HudController {
                 lastEtaHour   = data.etaHour;
                 lastEtaMinute = data.etaMinute;
             } catch (ProxyClient.ProxyException e) {
+                canFrameDelivered = false;
                 Log.w(TAG, "sendExpectedArrival failed: " + e.getMessage());
             }
         }
 
+        // 4c. CLUSTER path — push the same maneuver through the OEM AutoContainer channel
+        //     (sendInfo2(4, NaviInfo)). Independent of CAN: this is what lights the instrument
+        //     cluster, and it is the only arrow source on cars with no windshield HUD. Sent every
+        //     update like the OEM does; guarded, never throws.
+        boolean clusterGuidanceDelivered = ClusterNavPusher.push(data);
+
         // 5. AMap broadcast — unconditional, the cluster compositor needs it every step.
         sendAmapBroadcast(ctx, data);
+        boolean delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered);
+        if (delivered) lastUpdateMs = SystemClock.elapsedRealtime();
+        return delivered;
+    }
+
+    static boolean frameDelivered(boolean allRequiredCanWritesSucceeded,
+                                  boolean clusterFrameDelivered) {
+        return allRequiredCanWritesSucceeded || clusterFrameDelivered;
     }
 
     /**
@@ -199,7 +250,9 @@ public final class HudController {
             Log.w(TAG, "setNaviActive(false) failed: " + e.getMessage());
         }
         isHudActive = false;
+        naviActiveAcked = false;
         stopWatchdog();
+        ClusterNavPusher.stop();   // clear the cluster guidance too (best-effort)
         sendAmapStopBroadcast(ctx);
         resetState();
     }
@@ -212,7 +265,27 @@ public final class HudController {
     // ─── Internal helpers ─────────────────────────────────────────────────
 
     private void ensureHudActive() {
-        if (isHudActive) return;
+        // AUD-003 follow-up — the session opens HERE, not when the car says yes.
+        //
+        // isHudActive used to be assigned inside the try, after CanBusController.setNaviActive(true).
+        // On a car that refuses that register the assignment never ran, and the consequences
+        // compounded: armWatchdog() never ran either, closeNavigation() short-circuited forever on
+        // `if (!isHudActive) return`, and the guidance writes further down updateNavigation() are
+        // outside that guard so they kept going. The result was an arrow on the windshield that
+        // nothing in the app could clear — not the end of the route, not onNotificationRemoved,
+        // not the staleness watchdog, because none of them could get past the flag. On top of that
+        // ensureHudActive() re-entered on every single guidance frame, re-issuing two CAN batches
+        // per frame at nav cadence.
+        //
+        // So the flag now means what its name says — a session is open and something will have to
+        // close it — and CAN acceptance is tracked separately in naviActiveAcked.
+        if (isHudActive) {
+            retryActivationIfRefused();
+            return;
+        }
+        isHudActive = true;
+        armWatchdog();
+
         // Turn the windshield HUD ON (DL3 feature id SET_HUD_SWITCH=1) so nav shows even
         // if the user had the HUD switched off — matches the video-proven CAN→HUD bench.
         // Best-effort: a failure here must not block nav activation. DL3 gating is enforced
@@ -223,13 +296,62 @@ public final class HudController {
         } catch (ProxyClient.ProxyException e) {
             Log.w(TAG, "SET_HUD_SWITCH on failed: " + e.getMessage());
         }
+        attemptCanActivation();
+    }
+
+    /**
+     * The CAN half of activation, and the only place naviActiveAcked is set.
+     *
+     * <p>ClusterNavPusher.enable() is the second output path — it switches the OEM container into
+     * nav mode so the instrument CLUSTER accepts our NaviInfo frames, which is where cars without a
+     * windshield HUD get their arrows. It only runs once the CAN register was accepted, exactly as
+     * before; what changed is that its failure no longer takes the session flag down with it.
+     */
+    private void attemptCanActivation() {
+        lastActivationAttemptMs = SystemClock.elapsedRealtime();
         try {
             CanBusController.setNaviActive(true);
-            isHudActive = true;
-            armWatchdog();
+            naviActiveAcked = true;
+            ClusterNavPusher.enable();
         } catch (ProxyClient.ProxyException e) {
+            naviActiveAcked = false;
             Log.w(TAG, "setNaviActive(true) failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * Re-attempt activation on a car that refused it, at most once every {@link #ACTIVATION_RETRY_MS}.
+     *
+     * <p>The old code retried on every guidance frame, which on a refusing car meant two CAN
+     * batches per frame for the whole trip. Retrying still matters — a refusal can be transient,
+     * the daemon may have been cold — but at nav cadence, not at frame cadence.
+     */
+    private void retryActivationIfRefused() {
+        if (!shouldRetryActivation(naviActiveAcked, SystemClock.elapsedRealtime(),
+                lastActivationAttemptMs, ACTIVATION_RETRY_MS)) {
+            return;
+        }
+        attemptCanActivation();
+    }
+
+    /**
+     * The retry decision, pulled out as a pure function so it can be tested.
+     *
+     * <p>Everything else on this path needs a uid-2000 daemon and a DiLink 3 car, which is why
+     * {@code HudControllerLivenessTest} says what it says about the limits of testing here. This
+     * predicate does not, and it is where the mistake would be made: an inverted comparison, or a
+     * forgotten {@code acked} check, turns the fix back into two CAN batches per guidance frame.
+     *
+     * @param acked      whether the car has already accepted SETTING_NAVI_SCREEN_STATUS
+     * @param nowMs      current {@link SystemClock#elapsedRealtime()}
+     * @param lastTryMs  when the last activation attempt ran, 0 if never
+     * @param cadenceMs  minimum interval between attempts
+     */
+    static boolean shouldRetryActivation(boolean acked, long nowMs, long lastTryMs, long cadenceMs) {
+        if (acked) return false;
+        // Explicit, not arithmetic: nowMs - Long.MIN_VALUE overflows.
+        if (lastTryMs == NEVER_ATTEMPTED) return true;
+        return nowMs - lastTryMs >= cadenceMs;
     }
 
     // ─── Staleness watchdog impl ──────────────────────────────────────────
@@ -256,6 +378,33 @@ public final class HudController {
         ScheduledFuture<?> t = watchdogTask;
         if (t != null) { t.cancel(false); watchdogTask = null; }
         if (watchdog != null) { watchdog.shutdown(); watchdog = null; }
+    }
+
+    /**
+     * Records that guidance is still live, without touching a single register — AUD-003.
+     *
+     * The watchdog's premise was that "no update in {@value #STALE_MS} ms" means the arrow is
+     * frozen. That is true when the nav app has stopped, and false in the one case that matters on
+     * a motorway: Maps and Waze re-post the SAME notification while the distance to the next
+     * manoeuvre has not changed, and the listener's content deduplication swallows those re-posts
+     * before {@link #updateNavigation} is ever reached. At 130 km/h a "40 km" frame stays identical
+     * for roughly 28 seconds, so the watchdog fired at 12 and cleared a HUD that was perfectly
+     * correct. The arrow blinked out mid-motorway and came back when the kilometre finally ticked.
+     *
+     * So liveness stops depending on content. The listener calls this when a nav app re-posts
+     * exactly the frame that is already on the HUD — which means the displayed arrow is still the
+     * right one, which is precisely what the watchdog wanted to know.
+     *
+     * Deliberately NOT synchronized and deliberately doing nothing else. It is called from the
+     * notification dispatch thread on every re-post; taking the same lock as updateNavigation and
+     * closeNavigation would put that thread behind a CAN write. Writing a volatile long is atomic,
+     * and the worst interleaving with the watchdog is one tick's delay.
+     *
+     * Ignored when the HUD is not active: a re-post cannot keep alive something that was never lit.
+     */
+    public void noteNavFrameSeen() {
+        if (!isHudActive) return;
+        lastUpdateMs = SystemClock.elapsedRealtime();
     }
 
     /**
@@ -320,7 +469,7 @@ public final class HudController {
     private void sendAmapBroadcast(Context ctx, HudNavigationData d) {
         try {
             int amapIcon = mapToAmapIcon(d.iconId);
-            Intent intent = new Intent("AUTONAVI_STANDARD_BROADCAST_SEND");
+            Intent intent = newAmapIntent();
             intent.putExtra("KEY_TYPE",            10001);
             intent.putExtra("TYPE",                8);
             intent.putExtra("EXTRA_STATE",         8);
@@ -354,7 +503,7 @@ public final class HudController {
     /** Sends {@code AUTONAVI_STANDARD_BROADCAST_SEND} (TYPE=9) to stop navigation. */
     private void sendAmapStopBroadcast(Context ctx) {
         try {
-            Intent intent = new Intent("AUTONAVI_STANDARD_BROADCAST_SEND");
+            Intent intent = newAmapIntent();
             intent.putExtra("KEY_TYPE",            10001);
             intent.putExtra("TYPE",                9);
             intent.putExtra("EXTRA_STATE",         1);
@@ -372,13 +521,22 @@ public final class HudController {
         }
     }
 
+    /** Package verified from the OEM AmapService APK's dynamic receiver registration. */
+    static Intent newAmapIntent() {
+        return new Intent(AMAP_BROADCAST_ACTION).setPackage(AMAP_RECEIVER_PACKAGE);
+    }
+
     /**
-     * Maps a BYD turn icon ID to the AMap broadcast icon value.
-     * Based on OpenBYD 2.2 {@code mapTurnKindToAmapBroadcastIcon}:
-     * destination (48) → 12; everything else → 2 (generic arrow).
+     * Maps a BYD turn icon ID to the AMap {@code NEW_ICON} value used by the broadcast.
+     *
+     * <p>This used to send {@code 2} for every maneuver and {@code 12} for the destination — but an
+     * on-car icon sweep (29 photos, ids 0..28) decoded the real namespace: <b>2 is turn-LEFT</b> and
+     * <b>12 is a roundabout</b>. So every straight/right maneuver was drawing a LEFT arrow and the
+     * arrival was drawing a roundabout. Now shares the single verified table in
+     * {@link ClusterNavPusher#toAmapIcon(int)} with the cluster path.
      */
     private static int mapToAmapIcon(int bydIconId) {
-        return bydIconId == CanBusController.ICON_DESTINATION ? 12 : 2;
+        return ClusterNavPusher.toAmapIcon(bydIconId);
     }
 
     private static String formatMeters(int meters) {

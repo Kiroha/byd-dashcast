@@ -11,6 +11,7 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import com.byd.dashcast.system.CanBusController;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.util.PackagePseudonymizer;
 import com.byd.dashcast.util.concurrent.LatestValueDispatcher;
@@ -19,6 +20,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,14 +65,17 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // keeps at most one drain task and one pending state during notification bursts.
     // appContext is the process-scoped application context (safe to retain — not
     // the service instance, so no leak).
-    private LatestValueDispatcher<HudNavigationData> hudDispatcher;
+    private LatestValueDispatcher<PendingHudUpdate> hudDispatcher;
     private volatile Context appContext;
+    private final HudDeliveryTracker hudDeliveryTracker = new HudDeliveryTracker();
 
     // Notification-level deduplication — avoid reprocessing identical notification content
     // (same pattern as OpenBYD MapNotificationListenerService lastNotification* fields).
     private String lastTitle   = "";
     private String lastText    = "";
+    private String lastBigText = "";
     private String lastSubText = "";
+    private String lastNotificationKey;
 
     // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
     // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
@@ -195,7 +201,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // before "m"; "25 min" still cannot match (the trailing \b fails on "min" for every alternative),
     // so remaining-time text is never misread as a distance.
     private static final Pattern RX_DIST =
-            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|mi|ft|yd|mt|m|м)\\b",
+            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|كم|mi|ft|yd|mt|m|м|م)\\b",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Road name: "onto X", "sur X", "on X" ────────────────────────────
@@ -208,10 +214,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // Mins:  \b(\d+)[\s ]*(?:min|mins|мин)\b
     // Both handle ASCII and Cyrillic units plus non-breaking space.
     private static final Pattern RX_HOURS =
-            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.)\\b",
+            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.|ساعة|س)\\b",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern RX_MINS =
-            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин)\\b",
+            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин|دقيقة|د)\\b",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Arrival wall-clock ETA — "· 14:32", "2:05 pm" (OEM EXPECTED_ARRIVE_*) ─
@@ -220,6 +226,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static final Pattern RX_ETA_CLOCK =
             Pattern.compile("\\b([01]?\\d|2[0-3]):([0-5]\\d)\\s*(am|pm)?\\b",
                     Pattern.CASE_INSENSITIVE);
+        private static final Pattern RX_ETA_MARKER = Pattern.compile(
+            "(?iu)(?<![\\p{L}\\p{N}])(?:eta|arriv(?:e|al|ée?|ee|o|ato|ata)|llegada|ankunft|"
+                + "прибыт\\p{L}*|прибут\\p{L}*|прыбы\\p{L}*|przyjazd|varış|varis|"
+                + "الوصول|келу|yetib)(?![\\p{L}\\p{N}])");
 
     // ─── Roundabout exit number — "3rd exit", "take the 2nd exit", "sortie 3" ─
     private static final Pattern RX_ROUNDABOUT_EXIT =
@@ -318,6 +328,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         { "tournez à gauche",         CanBusController.ICON_TURN_LEFT        },
         { "rechts abbiegen",          CanBusController.ICON_TURN_RIGHT       }, // DE
         { "links abbiegen",           CanBusController.ICON_TURN_LEFT        }, // DE
+        // Roundabout — BEFORE the exit block, and this order is load-bearing.
+        //
+        // The lookup is first-match-wins over this array (see the loop that scans it), and a real
+        // roundabout instruction almost always names an exit: "At the roundabout, take the 3rd
+        // exit", "Au rond-point, prenez la 3e sortie", "Im Kreisverkehr, nehmen Sie die 3.
+        // Ausfahrt". With "exit"/"sortie"/"ausfahrt" tested first, every one of those drew a
+        // motorway-exit arrow on the instrument cluster instead of a roundabout — the wrong glyph,
+        // in front of a driver, at the moment they need it. The same specificity rule the rest of
+        // this table already documents ("most specific first", "must not shadow more specific
+        // keys") simply had not been applied to this pair.
+        { "roundabout",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
+        { "rond-point",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
+        { "kreisverkehr",             CanBusController.ICON_ROUNDABOUT_CW_1_LAP  }, // DE
         // Exit / ramp
         { "exit right",               CanBusController.ICON_DETOUR_RIGHT     },
         { "exit left",                CanBusController.ICON_DETOUR_LEFT      },
@@ -331,10 +354,6 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         { "merge left",               CanBusController.ICON_SLIGHT_LEFT      },
         { "merge",                    CanBusController.ICON_SLIGHT_RIGHT     },
         { "rejoin",                   CanBusController.ICON_SLIGHT_RIGHT     }, // "rejoindre" and "rejoignez"
-        // Roundabout
-        { "roundabout",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
-        { "rond-point",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
-        { "kreisverkehr",             CanBusController.ICON_ROUNDABOUT_CW_1_LAP  }, // DE
         // Straight / continue (last — very generic, must not shadow more specific keys)
         { "head north",               CanBusController.ICON_STRAIGHT_SOLID   },
         { "head south",               CanBusController.ICON_STRAIGHT_SOLID   },
@@ -533,13 +552,17 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             t.setDaemon(true);
             return t;
         });
-        hudDispatcher = new LatestValueDispatcher<>(executor,
-            data -> HudController.INSTANCE.updateNavigation(processContext, data));
+        hudDispatcher = new LatestValueDispatcher<>(executor, pending -> {
+            if (HudController.INSTANCE.updateNavigation(processContext, pending.data)) {
+                hudDeliveryTracker.markDelivered(pending.generation);
+            }
+        });
     }
 
     @Override
     public void onDestroy() {
-        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        clearTrackedNavigation();
+        LatestValueDispatcher<PendingHudUpdate> dispatcher = hudDispatcher;
         hudDispatcher = null;
         Context ctx = appContext;
         appContext = null;
@@ -578,6 +601,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         super.onListenerDisconnected();
         // System unbound the listener (e.g. permission revoked, system crash).
         // Close the HUD so the cluster doesn't stay frozen on the last nav state.
+        clearTrackedNavigation();
         postNavClose();
     }
 
@@ -592,17 +616,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
         if (n == null) return;
 
-        // Only process ongoing navigation notifications.
-        if ((n.flags & Notification.FLAG_ONGOING_EVENT) == 0
-                && !Notification.CATEGORY_NAVIGATION.equals(n.category)) {
-            return;
-        }
+        if (!isNavigationNotification(n)) return;
 
-        // A supported nav app is posting GUIDANCE — i.e. a route IS running. Recorded here, BEFORE
-        // any parse step can bail out, so the bug reporter can tell "no route started" from "route
-        // running but DashCast failed to parse it". The latter is a real parser bug and must never be
-        // gated away as user error (it is exactly what the imperial-unit regex gap used to cause).
-        noteNavActivity(sbn.getPackageName(), false);
+        // NOTE: whether this counts as nav activity is decided LOWER DOWN, once we know if it looks
+        // like guidance (a resolved maneuver or a real distance) — see the guidance-signal gate after
+        // distance parsing. A nav app's NON-guidance ongoing notification (e.g. Waze's
+        // CLOSE_WAZE_CHANNEL foreground/close prompt) must NOT be recorded as a nav frame.
 
         Bundle extras = n.extras;
         if (extras == null) return;
@@ -613,10 +632,41 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String subText = charSeqToString(extras.getCharSequence("android.subText"));
 
         // Notification-level deduplication: skip if content hasn't changed since last call.
-        if (title.equals(lastTitle) && text.equals(lastText) && subText.equals(lastSubText)) return;
+        if (isSameNotificationContent(
+            sbn.getKey(), lastNotificationKey,
+            title, lastTitle, text, lastText,
+            bigText, lastBigText, subText, lastSubText)) {
+            // AUD-003 — but first, keep the HUD alive. This is a re-post of the very frame already
+            // displayed, so the arrow up there is still correct and the staleness watchdog must not
+            // read "no update" as "frozen". Only when that frame actually reached the HUD: an
+            // identical re-post of something that never parsed proves nothing, and letting it
+            // refresh liveness would disarm the watchdog for the case it exists for.
+            if (hudDeliveryTracker.currentContentWasDelivered()) {
+                HudController.INSTANCE.noteNavFrameSeen();
+            }
+            return;
+        }
         lastTitle   = title;
         lastText    = text;
+        lastBigText = bigText;
         lastSubText = subText;
+        lastNotificationKey = sbn.getKey();
+        // New content gets a generation before parsing. It is acknowledged only after the serial
+        // writer confirms a guidance output; unparseable or failed frames remain unacknowledged.
+        final long deliveryGeneration = hudDeliveryTracker.beginContent();
+
+        // OPT-IN raw capture (Diagnostics → "Capture raw nav-notification text"): the ACTUAL text a
+        // supported nav app posts, clipped — logged here for EVERY distinct notification content,
+        // BEFORE the skip / guidance gates below, so notifications that FAIL to parse (the Waze case
+        // we need to diagnose: no matchable distance/icon → early return) are still captured. Location
+        // PII; OFF by default; deduped on content by the check just above. See KEY_NAV_RAW_CAPTURE.
+        if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+            AppLogger.i(TAG, "NAV RAW pkg=" + sbn.getPackageName()
+                    + " title='" + clip(title) + "'"
+                    + " text='" + clip(text) + "'"
+                    + (bigText.isEmpty() ? "" : " big='" + clip(bigText) + "'")
+                    + (subText.isEmpty() ? "" : " sub='" + clip(subText) + "'"));
+        }
 
         // Skip noise notifications (OpenBYD MapNotificationListenerService pattern).
         // These are ongoing navigation notifications that carry no maneuver data.
@@ -627,7 +677,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
 
         // Combine title + text for pattern matching.
-        String combined = (title + " " + text + " " + bigText).trim();
+        // Normalise Eastern Arabic-Indic (U+0660-U+0669) and Extended (U+06F0-U+06F9) digits
+        // to ASCII before anything parses this. The maneuver-keyword table below has a full
+        // Arabic section, so on an Arabic head unit the ARROW resolves — while \\d in the
+        // distance and time patterns is ASCII-only, so the DISTANCE never did. An arrow with
+        // no distance is the worst of the three states: the driver sees a turn and no idea when.
+        String combined = normaliseDigits((title + " " + text + " " + bigText).trim());
         String lower    = combined.toLowerCase(Locale.ROOT);
 
         if (combined.isEmpty()) return;
@@ -645,8 +700,8 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             if (iconId > 0) {
                 iconSrc = "text";
             } else {
-                iconId = CanBusController.ICON_STRAIGHT_SOLID; // safe default
-                iconSrc = "default";
+                iconId = -1;
+                iconSrc = "unresolved";
             }
         }
 
@@ -665,9 +720,41 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
         // 2. Distance to next turn — scan title then text then combined.
         int distance = parseFirstDistance(combined);
-        if (distance < 0) {
-            Log.d(TAG, "no distance found in: " + combined);
-            return; // cannot update HUD without a valid distance
+
+        // GUIDANCE-SIGNAL GATE: only treat this as a navigation frame if it actually looks like
+        // guidance — a resolved maneuver icon OR a real forward distance (> 0). This rejects a nav
+        // app's NON-guidance ongoing notifications (e.g. Waze's CLOSE_WAZE_CHANNEL foreground/close
+        // prompt: unresolved icon + no distance), which otherwise (a) were pushed to the HUD as a
+        // bogus "straight, 0 m" arrow and (b) recorded as a false "parse-fail" that mislabelled a
+        // no-route case as a parser bug (INC-20260726-140441). Nothing recorded here ⇒ NavSeen stays
+        // "no", so the reporter correctly tells the driver to start a route.
+        boolean looksLikeGuidance = hasGuidanceSignal(iconId, distance);
+        if (!looksLikeGuidance) return;
+
+        // A supported nav app posted a GUIDANCE frame ⇒ a route IS running. Recorded now (before the
+        // parse below can still bail) so the reporter can tell "no route" from "route running but we
+        // could not fully parse it" — the latter is a real parser bug, never gated away as user error.
+        noteNavActivity(sbn.getPackageName(), false);
+
+        if (!isCompleteGuidance(iconId, distance)) {
+            if (iconId <= 0) {
+                if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+                    Log.d(TAG, "no maneuver found in: " + combined);
+                } else {
+                    Log.d(TAG, "no maneuver found (len=" + combined.length()
+                            + ", raw nav capture off — enable it in Diagnostics to see the text)");
+                }
+            } else {
+                // This printed the whole notification — current road, upcoming street,
+                // destination, ETA — with no gate. Preserve the opt-in privacy boundary.
+                if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+                    Log.d(TAG, "no distance found in: " + combined);
+                } else {
+                    Log.d(TAG, "no distance found (len=" + combined.length()
+                            + ", raw nav capture off — enable it in Diagnostics to see the text)");
+                }
+            }
+            return;
         }
 
         // 3. Road name — look for "onto X" / "sur X" pattern.
@@ -713,20 +800,132 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         noteNavActivity(sbn.getPackageName(), true);
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
-        postNavUpdate(data);
+        // Remember WHICH notification is driving the HUD, so the removal path can tell it apart
+        // from the nav app's other ongoing notifications. See onNotificationRemoved.
+        sDrivingKey = sbn.getKey();
+        postNavUpdate(data, deliveryGeneration);
     }
 
+    /** A partial frame still proves that navigation is active, but must not drive the HUD. */
+    static boolean hasGuidanceSignal(int iconId, int distanceMeters) {
+        return iconId > 0 || distanceMeters > 0;
+    }
+
+    /** Direction and distance must both be known before emitting driver-facing guidance. */
+    static boolean isCompleteGuidance(int iconId, int distanceMeters) {
+        return iconId > 0 && distanceMeters >= 0;
+    }
+
+    static boolean isSameNotificationContent(
+            String key, String previousKey,
+            String title, String previousTitle,
+            String text, String previousText,
+            String bigText, String previousBigText,
+            String subText, String previousSubText) {
+        return java.util.Objects.equals(key, previousKey)
+                && title.equals(previousTitle)
+                && text.equals(previousText)
+                && bigText.equals(previousBigText)
+                && subText.equals(previousSubText);
+    }
+
+    /** Same eligibility rule for posting and removal, including non-ongoing nav categories. */
+    static boolean isNavigationNotification(Notification notification) {
+        return notification != null
+                && ((notification.flags & Notification.FLAG_ONGOING_EVENT) != 0
+                    || Notification.CATEGORY_NAVIGATION.equals(notification.category));
+    }
+
+    /**
+     * Key of the notification currently driving the HUD, or null when none is.
+     *
+     * Written only after the guidance gate has accepted a frame, so it identifies the ONE
+     * notification whose disappearance means the route ended. Null is treated as "unknown, close
+     * anyway": a listener that reconnects mid-route has no key yet, and failing to close a HUD is
+     * worse than closing one that was already stopping.
+     */
+    private static volatile String sDrivingKey;
+
+    /**
+     * The removal path needs the same gate the posting path has.
+     *
+     * onNotificationPosted carries a GUIDANCE-SIGNAL GATE, added because a nav app's non-guidance
+     * ongoing notifications — Waze's CLOSE_WAZE_CHANNEL prompt is the documented one — were being
+     * pushed to the HUD as a bogus "straight, 0 m" arrow (INC-20260726-140441). This method had no
+     * such gate: ANY ongoing notification from a nav package tore the HUD down. So the very prompt
+     * that gate was written to reject would, on disappearing, kill live guidance mid-route.
+     *
+     * Rather than duplicate the gate's logic, this reuses its verdict: the key of the last
+     * notification that actually passed it and reached the HUD. Only that one closing means the
+     * route is over. As a side effect it also fixes the two-nav-apps case, where one app's
+     * teardown used to cancel the other's guidance.
+     */
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         if (sbn == null || !isNavPackage(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
-        if (n != null && (n.flags & Notification.FLAG_ONGOING_EVENT) != 0) {
-            Log.d(TAG, "nav notification removed → closeNavigation");
-            postNavClose();
-            lastTitle   = "";
-            lastText    = "";
-            lastSubText = "";
+        if (!isNavigationNotification(n)) return;
+
+        String key = sbn.getKey();
+        String driving = sDrivingKey;
+        if (driving != null && !driving.equals(key)) {
+            // A different ongoing notification from the same nav app. Not our guidance frame.
+            Log.d(TAG, "nav notification removed but it was not the one driving the HUD — ignored");
+            return;
         }
+        Log.d(TAG, "nav notification removed → closeNavigation");
+        sDrivingKey = null;
+        if (replayRemainingNavigation(key)) return;
+        postNavClose();
+        resetNotificationIdentity();
+    }
+
+    private boolean replayRemainingNavigation(String removedKey) {
+        StatusBarNotification[] active;
+        try {
+            active = getActiveNotifications();
+        } catch (Throwable t) {
+            Log.w(TAG, "remaining navigation rescan failed: " + t.getMessage());
+            return false;
+        }
+        for (StatusBarNotification candidate : remainingNavigationNotifications(active, removedKey)) {
+            resetNotificationIdentity();
+            onNotificationPosted(candidate);
+            if (sDrivingKey != null) {
+                Log.d(TAG, "restored remaining navigation notification after removal");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static List<StatusBarNotification> remainingNavigationNotifications(
+            StatusBarNotification[] active, String removedKey) {
+        java.util.ArrayList<StatusBarNotification> candidates = new java.util.ArrayList<>();
+        if (active == null) return candidates;
+        for (StatusBarNotification notification : active) {
+                if (notification == null
+                    || java.util.Objects.equals(removedKey, notification.getKey())) continue;
+            if (!isNavPackage(notification.getPackageName())) continue;
+            if (!isNavigationNotification(notification.getNotification())) continue;
+            candidates.add(notification);
+        }
+        candidates.sort((left, right) -> Long.compare(right.getPostTime(), left.getPostTime()));
+        return candidates;
+    }
+
+    private void resetNotificationIdentity() {
+        lastTitle   = "";
+        lastText    = "";
+        lastBigText = "";
+        lastSubText = "";
+        lastNotificationKey = null;
+        hudDeliveryTracker.invalidate();
+    }
+
+    private void clearTrackedNavigation() {
+        sDrivingKey = null;
+        resetNotificationIdentity();
     }
 
     // ─── HUD write dispatch (serial writer thread) ────────────────────────
@@ -735,10 +934,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
      * Queue a nav update on the serial HUD writer thread. If updates arrive faster than the daemon
      * drains them, only the newest pending state survives and at most one drain task stays queued.
      */
-    private void postNavUpdate(HudNavigationData data) {
+    private void postNavUpdate(HudNavigationData data, long generation) {
         if (data == null) return;
-        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
-        if (dispatcher != null) dispatcher.submit(data);
+        LatestValueDispatcher<PendingHudUpdate> dispatcher = hudDispatcher;
+        if (dispatcher != null) dispatcher.submit(new PendingHudUpdate(data, generation));
     }
 
     /**
@@ -750,7 +949,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private void postNavClose() {
         final Context ctx = appContext;
         if (ctx == null) return;
-        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        LatestValueDispatcher<PendingHudUpdate> dispatcher = hudDispatcher;
         if (dispatcher == null) {
             HudController.INSTANCE.closeNavigation(ctx);
             return;
@@ -758,6 +957,16 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         if (!dispatcher.cancelPendingAndExecute(
                 () -> HudController.INSTANCE.closeNavigation(ctx))) {
             HudController.INSTANCE.closeNavigation(ctx);
+        }
+    }
+
+    private static final class PendingHudUpdate {
+        final HudNavigationData data;
+        final long generation;
+
+        PendingHudUpdate(HudNavigationData data, long generation) {
+            this.data = data;
+            this.generation = generation;
         }
     }
 
@@ -807,7 +1016,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         }
     }
 
-    private static int resolveIconFromText(String lower) {
+    /**
+     * Package-private, not private, so NavKeywordOrderTest can drive it. The order of
+     * TEXT_KEYWORD_MAP is load-bearing — first match wins — and an ordering mistake there puts the
+     * wrong arrow on a driver's instrument cluster with nothing anywhere to say so.
+     */
+    static int resolveIconFromText(String lower) {
         for (Object[] entry : TEXT_KEYWORD_MAP) {
             if (lower.contains((String) entry[0])) return (int) entry[1];
         }
@@ -817,6 +1031,29 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // ─── Distance parsing ─────────────────────────────────────────────────
 
     /** Returns the first distance found (in metres) or -1. */
+    /**
+     * Maps Arabic-Indic digits onto ASCII, leaving everything else untouched.
+     *
+     * Two ranges, because both are in use: U+0660-U+0669 (Arabic-Indic) and U+06F0-U+06F9
+     * (Extended Arabic-Indic, Persian/Urdu). Cheap enough to run on every notification — one scan
+     * of a short string, allocating only when it actually finds a digit to convert.
+     */
+    static String normaliseDigits(String s) {
+        if (s == null || s.isEmpty()) return s;
+        StringBuilder sb = null;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            int v = -1;
+            if (c >= '\u0660' && c <= '\u0669') v = c - '\u0660';
+            else if (c >= '\u06F0' && c <= '\u06F9') v = c - '\u06F0';
+            if (v >= 0) {
+                if (sb == null) sb = new StringBuilder(s);
+                sb.setCharAt(i, (char) ('0' + v));
+            }
+        }
+        return sb == null ? s : sb.toString();
+    }
+
     private static int parseFirstDistance(String text) {
         return parseMeters(text, -1);
     }
@@ -890,20 +1127,60 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static int[] parseEtaClock(String text) {
         if (text == null) return null;
         Matcher m = RX_ETA_CLOCK.matcher(text);
-        if (!m.find()) return null;
-        try {
-            int h   = Integer.parseInt(m.group(1));
-            int min = Integer.parseInt(m.group(2));
-            String ap = m.group(3);
-            if (ap != null) {
-                ap = ap.toLowerCase(Locale.ROOT);
-                if (ap.equals("pm") && h < 12) h += 12;
-                else if (ap.equals("am") && h == 12) h = 0;
+        List<EtaClockCandidate> candidates = new ArrayList<>();
+        while (m.find()) {
+            try {
+                int h = Integer.parseInt(m.group(1));
+                int min = Integer.parseInt(m.group(2));
+                String ap = m.group(3);
+                if (ap != null) {
+                    ap = ap.toLowerCase(Locale.ROOT);
+                    if (ap.equals("pm") && h < 12) h += 12;
+                    else if (ap.equals("am") && h == 12) h = 0;
+                }
+                if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
+                    candidates.add(new EtaClockCandidate(h, min, m.start(), m.end()));
+                }
+            } catch (NumberFormatException ignored) { }
+        }
+        if (candidates.isEmpty()) return null;
+        if (candidates.size() == 1) return candidates.get(0).value();
+
+        EtaClockCandidate closest = null;
+        int closestGap = Integer.MAX_VALUE;
+        Matcher marker = RX_ETA_MARKER.matcher(text);
+        while (marker.find()) {
+            for (EtaClockCandidate candidate : candidates) {
+                int gap = candidate.end <= marker.start()
+                        ? marker.start() - candidate.end
+                        : candidate.start >= marker.end()
+                                ? candidate.start - marker.end() : 0;
+                if (gap < closestGap) {
+                    closest = candidate;
+                    closestGap = gap;
+                }
             }
-            if (h < 0 || h > 23 || min < 0 || min > 59) return null;
-            return new int[] { h, min };
-        } catch (NumberFormatException e) {
-            return null;
+        }
+        // Summary layouts without an arrival label conventionally place ETA last. Keeping that
+        // fallback preserves bare vendor formats while no longer mistaking a leading duration.
+        return (closest != null ? closest : candidates.get(candidates.size() - 1)).value();
+    }
+
+    private static final class EtaClockCandidate {
+        final int hour;
+        final int minute;
+        final int start;
+        final int end;
+
+        EtaClockCandidate(int hour, int minute, int start, int end) {
+            this.hour = hour;
+            this.minute = minute;
+            this.start = start;
+            this.end = end;
+        }
+
+        int[] value() {
+            return new int[] { hour, minute };
         }
     }
 

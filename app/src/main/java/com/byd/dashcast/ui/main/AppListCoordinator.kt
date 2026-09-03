@@ -125,13 +125,17 @@ class AppListCoordinator(
         mAdapter.setGridMode(isGrid)
         if (isGrid) {
             val prefs = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
-            val compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL, false)
+            val compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL,
+                SettingsActivity.DEFAULT_COMPACT_APPS_PANEL)
             mRvApps.layoutManager = GridLayoutManager(ctx, if (compact) 2 else 5)
         } else {
             mRvApps.layoutManager = LinearLayoutManager(ctx)
         }
         mRvApps.adapter = mAdapter
-        mBtnViewToggle?.text = if (isGrid) "☰" else "⊞"
+        mBtnViewToggle?.apply {
+            text = if (isGrid) "☰" else "⊞"
+            contentDescription = ctx.getString(viewToggleDescription(isGrid))
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -260,6 +264,10 @@ class AppListCoordinator(
     companion object {
         private const val TAG = "AppListCoordinator"
         private const val DEBOUNCE_MS = 150L
+
+        @JvmStatic
+        internal fun viewToggleDescription(isGrid: Boolean): Int =
+            if (isGrid) R.string.menu_view_list else R.string.menu_view_grid
 
         private val FILTER_TINT_ACTIVE = 0xFF1976D2.toInt()
         private val FILTER_TINT_INACTIVE = 0xFF607D8B.toInt()

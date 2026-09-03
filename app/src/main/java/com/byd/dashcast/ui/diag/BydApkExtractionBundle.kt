@@ -1,0 +1,521 @@
+package com.byd.dashcast.ui.diag
+
+import com.byd.dashcast.hud.HudCaptureSupport
+import android.content.Context
+import android.os.Build
+import com.byd.dashcast.BuildConfig
+import com.byd.dashcast.proxy.ProxyClient
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
+/**
+ * Builds the "BYD APK Extraction" bundle: an inventory, the runtime context a reader needs, and
+ * the OEM cluster APKs themselves — for interoperability analysis of how the cluster is fed.
+ *
+ * Interop target: the `AutoContainer` activation call returns -1 on every trinket/DL5.1 capture
+ * while returning 0/1 on the models where projection works. The code behind that call is in the
+ * OEM's `com.xdja.containerservice`; this bundle carries it plus the evidence to correlate the
+ * dex with the observed -1.
+ *
+ * Selection is delegated to [ApkExtractionPolicy]: the OEM cluster stack lives entirely on the
+ * read-only firmware partitions, so the target set is scoped there, named targets before a narrow
+ * pattern sweep, and a byte budget under Telegram's 50 MB document ceiling. Every rejection is
+ * written to the manifest so a reader can tell "excluded" from "absent on this ROM".
+ *
+ * Two functions only because the copy is the slow part: [plan] does the read-only gather (inventory,
+ * context) and decides the APK set without copying; [materialize] then copies the selected APKs and
+ * zips. The caller runs them back to back.
+ */
+object BydApkExtractionBundle {
+
+    /** One planned APK copy: decided in [plan], executed in [materialize]. */
+    data class PlannedApk(val pkg: String, val apkPath: String, val sizeBytes: Long, val tier: ApkExtractionPolicy.Tier)
+
+    /**
+     * One planned native/framework pull (through the daemon): decided in [plan], executed in
+     * [materialize]. [subdir] is the bundle folder the file lands in — "native" for bin/.so, or
+     * "framework" for the bydauto SDK jars/bytecode, so provenance is obvious and a jar named like a
+     * lib cannot collide with one.
+     */
+    data class PlannedNative(
+        val name: String, val path: String, val sizeBytes: Long,
+        val tier: ApkExtractionPolicy.Tier, val subdir: String = "native"
+    )
+
+    /**
+     * The read-only result of [plan]. [workDir] already holds the text artefacts (inventory +
+     * context); [accepted] / [acceptedNative] are what [materialize] will copy; [manifestSkips]
+     * records every rejection with its reason. [payloadBytes] is the total (APKs + native).
+     */
+    data class Plan(
+        val workDir: File,
+        val accepted: List<PlannedApk>,
+        val acceptedNative: List<PlannedNative>,
+        val manifestSkips: List<String>,
+        val payloadBytes: Long
+    )
+
+    private fun sh(cmd: String): String =
+        try { ProxyClient.runShell(cmd) ?: "" }
+        catch (t: Throwable) { "ERR running [$cmd]: ${t.javaClass.simpleName}: ${t.message}" }
+
+    private fun write(dir: File, name: String, content: String) {
+        try { File(dir, name).writeText(content) } catch (_: Throwable) {}
+    }
+
+    fun header(ctx: Context): String =
+        "DashCast ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) — " +
+        "${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}"
+
+    // ── Phase 1: read-only planning ─────────────────────────────────────────────
+
+    /**
+     * Collects the text artefacts and decides the APK set. Copies NO binary. Safe to run and
+     * discard. Each step is guarded: a failure writes a line into the bundle instead of throwing,
+     * so the button never crashes the app when the daemon, shell or a dump is unavailable.
+     */
+    fun plan(ctx: Context, progress: (String) -> Unit): Plan {
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val work = File(ctx.cacheDir, "byd_apk_$stamp").apply { mkdirs() }
+        var step = 0
+        val totalSteps = 9
+        fun s(label: String, block: () -> Unit) {
+            step++
+            progress("[$step/$totalSteps] $label…")
+            try { block(); progress("    ✓ $label") }
+            catch (t: Throwable) { progress("    ✗ $label: ${t.javaClass.simpleName}: ${t.message}") }
+        }
+
+        s("connect daemon") { try { ProxyClient.connect(ctx) } catch (_: Throwable) {} }
+
+        write(work, "00_header.txt", header(ctx) + "\n")
+
+        val pmOut = sh("pm list packages -f 2>/dev/null")
+        s("inventory: every package, path, version, signer") {
+            write(work, "01_inventory.txt", buildInventory(pmOut))
+        }
+
+        s("context: displays / SurfaceFlinger / AutoContainer service") {
+            val sb = StringBuilder()
+            sb.append("=== dumpsys display ===\n")
+              .append(sh("dumpsys display 2>/dev/null | head -c 250000")).append("\n\n")
+            sb.append("=== SurfaceFlinger (cluster / virtual displays) ===\n")
+              .append(sh("dumpsys SurfaceFlinger 2>/dev/null | " +
+                  "grep -iE 'display|layerStack|fission|cluster|virtual|xdja' | head -c 120000")).append("\n\n")
+            sb.append("=== service list (AutoContainer registration) ===\n")
+              .append(sh("service list 2>/dev/null | head -c 60000")).append("\n\n")
+            sb.append("=== AutoContainer service dump (if any) ===\n")
+              .append(sh("dumpsys AutoContainer 2>/dev/null | head -c 40000")).append("\n")
+            write(work, "02_context.txt", sb.toString())
+        }
+
+        s("native backend: fission/container/cluster binaries + init services") {
+            val sb = StringBuilder()
+            sb.append("=== /system/bin, /vendor/bin, /system_ext/bin matches ===\n")
+              .append(sh("ls -l /system/bin /vendor/bin /system_ext/bin 2>/dev/null | " +
+                  "grep -iE 'fission|container|cluster|xdja|instrument|autocontainer' | head -c 20000")).append("\n\n")
+            // The projection backend is partly native (AutoContainerNative): dex alone may not be
+            // enough, so record which native services exist and their state.
+            sb.append("=== init services (fission/container/cluster/xdja) ===\n")
+              .append(sh("getprop 2>/dev/null | grep -iE 'init.svc.*(fission|container|cluster|xdja)' | head -c 20000")).append("\n\n")
+            sb.append("=== running processes ===\n")
+              .append(sh("ps -A 2>/dev/null | grep -iE 'fission|container|cluster|xdja|automap' | head -c 20000")).append("\n")
+            write(work, "03_native_backend.txt", sb.toString())
+        }
+
+        // Targeted text probes, ~5 KB total, zero binaries. Each answers an open question that the
+        // APK/native pulls cannot, and each is a READ of device state:
+        //  • the bundle never collected system properties, so a car's firmware (inswver) could not
+        //    even be identified from its own extraction;
+        //  • the SDK refuses some instrument registers with "no permission … with this device: 1007"
+        //    (1007 = BYDAUTO_DEVICE_INSTRUMENT). DashCast declares no BYDAUTO_* permission, and the
+        //    daemon's PackageManager identity is com.android.shell — so the permission lists tell us
+        //    whether that is the real gate;
+        //  • the Telenav APK is ~307 MB and can never be pulled, but its exported-service table is
+        //    plain text and answers whether its nav service is reachable at all;
+        //  • container_comm_cfg.json is the allow-list the AutoContainer signature check bypasses —
+        //    its max_type reveals how many sendInfo types exist beyond the 4/5 we use.
+        s("HUD/permission probes (text only)") {
+            val sb = StringBuilder()
+            sb.append("=== firmware + car identity ===\n")
+              .append(sh("getprop 2>/dev/null | grep -iE 'inswver|fingerprint|ro\\.build\\.(id|version)|" +
+                  "fission|vehicle|car\\.|series|hud' | head -c 12000")).append("\n\n")
+            sb.append("=== BYDAUTO permission namespace ===\n")
+              .append(sh("pm list permissions 2>/dev/null | grep -i bydauto | head -c 12000")).append("\n\n")
+            sb.append("=== BYDAUTO perms held by DashCast ===\n")
+              .append(sh("dumpsys package com.byd.dashcast 2>/dev/null | grep -i bydauto | head -c 8000")).append("\n\n")
+            sb.append("=== BYDAUTO perms held by the daemon's identity (shell) ===\n")
+              .append(sh("dumpsys package com.android.shell 2>/dev/null | grep -i bydauto | head -c 8000")).append("\n\n")
+            sb.append("=== AutoContainer type allow-list ===\n")
+              .append(sh("cat /system/etc/container_comm_cfg.json 2>/dev/null | head -c 12000")).append("\n\n")
+            sb.append("=== OEM nav: exported services (Telenav / AmapService) ===\n")
+              .append(sh("dumpsys package com.telenav.app.arp 2>/dev/null | " +
+                  "sed -n '/Service Resolver Table/,/Registered/p' | head -c 12000")).append("\n")
+              .append(sh("dumpsys package com.example.amapservice 2>/dev/null | " +
+                  "sed -n '/Service Resolver Table/,/Registered/p' | head -c 6000")).append("\n\n")
+            sb.append("=== boot classpath (where the bydauto SDK lives) ===\n")
+              .append(sh("sh -c 'echo \$BOOTCLASSPATH' 2>/dev/null | head -c 4000")).append("\n\n")
+            // Names + sizes of every framework jar, so the one holding AbsBYDAutoDevice (whose
+            // feature↔device table decides which INSTRUMENT_* registers a car accepts) can be named
+            // outright on the next pull instead of guessed from a pattern.
+            sb.append("=== framework jars (candidates for the bydauto SDK) ===\n")
+              .append(sh("ls -l /system/framework/*.jar /system/framework/oat/*/*.jar 2>/dev/null | " +
+                  "head -c 12000")).append("\n\n")
+            sb.append("=== nav / cluster processes (unfiltered by name) ===\n")
+              .append(sh("ps -A 2>/dev/null | grep -iE 'telenav|amap|byd|cluster|fission|qt' | head -c 12000")).append("\n")
+            write(work, "05_hud_probes.txt", sb.toString())
+        }
+
+        // The three gaps the DL3 SX326 extraction could not answer, each a READ of device state:
+        //  • WHERE the bydauto SDK jar is (pm list libraries + the permission-XML library mapping),
+        //    so planFramework can pull the boot-classpath jar that holds AbsBYDAutoDevice;
+        //  • WHO declares BYDAUTO_INSTRUMENT_{GET,SET,COMMON} and at what protectionLevel — COMMON is
+        //    NOT in com.byd.auto.permission, so its declaring package/level was previously unknown;
+        //  • the runtime feature↔device gate: libbydautoservice.so's isEnable(deviceType, featureId)
+        //    over per-device MCU bitmaps — the ONLY way to see which INSTRUMENT_* registers the
+        //    instrument device (deviceType 1007 = BYDAUTO_DEVICE_INSTRUMENT) accepts on THIS car
+        //    (0x43f01030 = INSTRUMENT_GUIDE_ROAD_DISTANCE is the one refused on the SX326 unit).
+        val permDirs = ApkExtractionPolicy.PERMISSION_DIRS.joinToString(" ")
+        s("bydauto SDK + feature-gate probes (text only)") {
+            val sb = StringBuilder()
+            sb.append("=== shared libraries (bydauto SDK registration) ===\n")
+              .append(sh("pm list libraries 2>/dev/null | grep -iE 'byd|auto|instrument' | head -c 6000")).append("\n\n")
+            sb.append("=== permission/sysconfig XMLs — library→jar mapping + privapp allow-list ===\n")
+              .append(sh("for d in $permDirs; do grep -rilE 'bydauto|com\\.byd|instrument|hardware.byd' \"\$d\" 2>/dev/null; done | head -c 4000")).append("\n")
+              .append(sh("for d in $permDirs; do grep -rhE 'library name|bydauto|BYDAUTO_INSTRUMENT|com\\.byd' \"\$d\" 2>/dev/null; done | head -c 16000")).append("\n\n")
+            sb.append("=== INSTRUMENT permission declarations (sourcePackage + protectionLevel) ===\n")
+            for (p in listOf("BYDAUTO_INSTRUMENT_GET", "BYDAUTO_INSTRUMENT_SET", "BYDAUTO_INSTRUMENT_COMMON")) {
+                sb.append("--- android.permission.$p ---\n")
+                  .append(sh("dumpsys package permission android.permission.$p 2>/dev/null | head -c 2000")).append("\n")
+            }
+            val svcList = sh("service list 2>/dev/null")
+            sb.append("\n=== bydauto service registration ===\n")
+            svcList.lineSequence()
+                .filter { l -> listOf("byd", "auto", "instrument", "hmi", "cluster").any { l.contains(it, ignoreCase = true) } }
+                .forEach { sb.append(it.trim()).append("\n") }
+            sb.append("\n")
+            // Derive the ACTUAL service names to dump from the live list. The bydauto system service
+            // registers as `autoservice` -> android.gui.BYDAutoServer; the previous hardcoded guesses
+            // (bydauto/BYDAutoService/…) never matched it, so this section came back empty. The name
+            // is the token before ':' on each matching line (e.g. "205  autoservice: [android.gui…]").
+            val svcNames = LinkedHashSet<String>()
+            svcNames.add("autoservice")          // android.gui.BYDAutoServer — the bydauto system service
+            svcNames.add("AutoContainerNative")
+            val nameRe = Regex("""^\s*\d+\s+([A-Za-z0-9_.-]+):""")
+            for (l in svcList.lineSequence()) {
+                if (listOf("byd", "auto", "instrument").none { l.contains(it, ignoreCase = true) }) continue
+                nameRe.find(l)?.groupValues?.get(1)?.let { svcNames.add(it) }
+            }
+            sb.append("=== bydauto service dumps (per-device feature/enable flags if exposed) ===\n")
+            for (svc in svcNames) {
+                val d = sh("dumpsys $svc 2>/dev/null | head -c 8000")
+                if (d.isNotBlank() && !d.startsWith("ERR")) sb.append("--- dumpsys $svc ---\n").append(d).append("\n")
+            }
+            sb.append("\n=== device / car identity (deviceType 1007 = INSTRUMENT; car.type gates the bitmap) ===\n")
+              .append(sh("getprop 2>/dev/null | grep -iE 'car\\.type|vehicle|40d_code|vehiclecode|bydauto|instrument|device.*id' | head -c 8000")).append("\n")
+            write(work, "06_bydauto_sdk.txt", sb.toString())
+        }
+
+        val accepted = ArrayList<PlannedApk>()
+        val skips = ArrayList<String>()
+        s("select OEM cluster APKs") {
+            planApks(pmOut, accepted, skips)
+        }
+
+        val apkBytes = accepted.sumOf { it.sizeBytes }
+        val acceptedNative = ArrayList<PlannedNative>()
+        s("select native cluster/projection binaries + .so libraries") {
+            planNative(apkBytes, acceptedNative, skips)
+        }
+
+        // The bydauto SDK jars + bytecode last, drawing from whatever budget the APKs and native
+        // left. They are big and only fit with a large sink — but the skip lines make that explicit
+        // instead of silently omitting the class that holds the instrument feature gate.
+        s("select bydauto framework SDK jars + bytecode") {
+            planFramework(apkBytes + acceptedNative.sumOf { it.sizeBytes }, acceptedNative, skips)
+        }
+
+        val payload = apkBytes + acceptedNative.sumOf { it.sizeBytes }
+        return Plan(work, accepted, acceptedNative, skips, payload)
+    }
+
+    /**
+     * Enumerates the native cluster/projection executables AND .so libraries and decides which to
+     * pull, drawing from the budget already spent by the APKs so the whole bundle stays under
+     * Telegram's ceiling. The .so libraries matter most: RE showed the /system/bin fission_* files
+     * are thin CLI front-ends and the real routing lives in libfission_services.so / the JNI bridge.
+     *
+     * Enumeration is done by the daemon shell (uid 2000), which can `stat` firmware files the app
+     * process cannot. A file the shell cannot stat (SELinux — it shows as `-????` in a listing)
+     * yields no size line and is recorded as unreadable; nothing is copied here.
+     */
+    private fun planNative(apkBytes: Long, accepted: MutableList<PlannedNative>, skips: MutableList<String>) {
+        val dirs = (ApkExtractionPolicy.NATIVE_BIN_DIRS + ApkExtractionPolicy.NATIVE_LIB_DIRS +
+            ApkExtractionPolicy.NATIVE_FRAMEWORK_DIRS).joinToString(" ")
+        val pat = ApkExtractionPolicy.NATIVE_GREP
+        // Emit "path|size" per matching, stat-able file. `stat` failing (unreadable) drops the line.
+        val listing = sh(
+            "for d in $dirs; do " +
+            "for f in \$(ls \"\$d\" 2>/dev/null | grep -iE '$pat'); do " +
+            "p=\"\$d/\$f\"; sz=\$(stat -c %s \"\$p\" 2>/dev/null) && echo \"\$p|\$sz\"; " +
+            "done; done"
+        )
+
+        data class Cand(val name: String, val path: String, val size: Long, val tier: ApkExtractionPolicy.Tier)
+        val cands = ArrayList<Cand>()
+        val seen = HashSet<String>()
+        for (raw in listing.lineSequence()) {
+            val line = raw.trim()
+            val bar = line.lastIndexOf('|')
+            if (bar <= 0) continue
+            val path = line.substring(0, bar)
+            val size = line.substring(bar + 1).toLongOrNull() ?: continue
+            val name = path.substringAfterLast('/')
+            if (!seen.add(name)) continue // same binary symlinked/duplicated across dirs
+            val tier = ApkExtractionPolicy.classifyNative(name)
+            if (tier == ApkExtractionPolicy.Tier.EXCLUDED) continue
+            cands.add(Cand(name, path, size, tier))
+        }
+        cands.sortBy { ApkExtractionPolicy.order(it.tier) }
+
+        var bundleBytes = apkBytes
+        for (c in cands) {
+            if (c.size <= 0) { skips.add("SKIP native ${c.name}: unreadable/zero"); continue }
+            when (ApkExtractionPolicy.admitNative(c.size, bundleBytes, accepted.size)) {
+                ApkExtractionPolicy.Skip.NONE -> {
+                    accepted.add(PlannedNative(c.name, c.path, c.size, c.tier))
+                    bundleBytes += c.size
+                }
+                ApkExtractionPolicy.Skip.TOO_BIG ->
+                    skips.add("SKIP native ${c.name}: too big (${c.size / 1024 / 1024} MB > per-file cap)")
+                ApkExtractionPolicy.Skip.OVER_BUDGET ->
+                    skips.add("SKIP native ${c.name}: over bundle budget (${c.size / 1024} KB)")
+                ApkExtractionPolicy.Skip.MAX_COUNT ->
+                    skips.add("SKIP native ${c.name}: max native count reached")
+            }
+        }
+    }
+
+    /**
+     * Enumerates the boot-classpath SDK jars (+ their .vdex/.odex bytecode) and any BYD-specific
+     * framework jar, and plans them for the framework/ subdir. This is where the Java gate
+     * `AbsBYDAutoDevice.checkDeviceFeatures` + `BYDAutoFeatureIds` live — invisible to both the APK
+     * sweep (not an APK) and the bin/lib native sweep (name-filtered out). Enumeration and pull go
+     * through the daemon (uid 2000); the app process cannot stat/read system_file under SELinux.
+     */
+    private fun planFramework(bundleBytes: Long, accepted: MutableList<PlannedNative>, skips: MutableList<String>) {
+        val dirs = (ApkExtractionPolicy.NATIVE_FRAMEWORK_DIRS + ApkExtractionPolicy.FRAMEWORK_OAT_DIRS)
+            .joinToString(" ")
+        // Emit "path|size" for every jar/vdex/odex the shell can stat; a failing stat drops the line.
+        val listing = sh(
+            "for d in $dirs; do " +
+            "for f in \$(ls \"\$d\" 2>/dev/null); do " +
+            "case \"\$f\" in *.jar|*.vdex|*.odex) " +
+            "p=\"\$d/\$f\"; sz=\$(stat -c %s \"\$p\" 2>/dev/null) && echo \"\$p|\$sz\";; esac; " +
+            "done; done"
+        )
+        var bytes = bundleBytes
+        val seen = HashSet<String>()
+        for (raw in listing.lineSequence()) {
+            val line = raw.trim()
+            val bar = line.lastIndexOf('|')
+            if (bar <= 0) continue
+            val path = line.substring(0, bar)
+            val size = line.substring(bar + 1).toLongOrNull() ?: continue
+            val name = path.substringAfterLast('/')
+            if (!ApkExtractionPolicy.isFrameworkArtifact(name)) continue
+            if (!seen.add(name)) continue // arm64 wins over arm for a same-named .vdex/.odex
+            if (size <= 0) { skips.add("SKIP framework $name: unreadable/zero"); continue }
+            when (ApkExtractionPolicy.admitNative(size, bytes, accepted.size)) {
+                ApkExtractionPolicy.Skip.NONE -> {
+                    accepted.add(PlannedNative(name, path, size, ApkExtractionPolicy.Tier.TIER1, subdir = "framework"))
+                    bytes += size
+                }
+                ApkExtractionPolicy.Skip.TOO_BIG ->
+                    skips.add("SKIP framework $name: too big (${size / 1024 / 1024} MB > per-file cap)")
+                ApkExtractionPolicy.Skip.OVER_BUDGET ->
+                    skips.add("SKIP framework $name: over bundle budget (${size / 1024} KB)")
+                ApkExtractionPolicy.Skip.MAX_COUNT ->
+                    skips.add("SKIP framework $name: max native count reached")
+            }
+        }
+    }
+
+    private fun buildInventory(pmOut: String): String {
+        val sb = StringBuilder("BYD extraction inventory — every installed package\n")
+        sb.append("pkg | apkPath | sizeKB | versionCode | versionName | signer\n")
+        for (raw in pmOut.lineSequence()) {
+            val line = raw.trim()
+            if (!line.startsWith("package:")) continue
+            val body = line.removePrefix("package:")
+            val eq = body.lastIndexOf('=')
+            if (eq <= 0) continue
+            val apk = body.substring(0, eq)
+            val pkg = body.substring(eq + 1)
+            val sizeKb = try { File(apk).length() / 1024 } catch (_: Throwable) { -1L }
+            val vc = firstMatch(sh("dumpsys package $pkg 2>/dev/null | grep -m1 versionCode"), "versionCode=([0-9]+)")
+            val vn = firstMatch(sh("dumpsys package $pkg 2>/dev/null | grep -m1 versionName"), "versionName=(\\S+)")
+            sb.append("$pkg | $apk | $sizeKb | ${vc ?: "?"} | ${vn ?: "?"} | ${signerOf(pkg)}\n")
+        }
+        return sb.toString()
+    }
+
+    private fun signerOf(pkg: String): String {
+        val out = sh("dumpsys package $pkg 2>/dev/null | grep -m1 -iE 'signatures|signerId'")
+        return firstMatch(out, "\\[([0-9a-fA-F]{6,})") ?: "?"
+    }
+
+    private fun firstMatch(text: String, regex: String): String? =
+        Regex(regex).find(text)?.groupValues?.getOrNull(1)
+
+    private fun planApks(pmOut: String, accepted: MutableList<PlannedApk>, skips: MutableList<String>) {
+        data class Cand(val pkg: String, val apk: String, val tier: ApkExtractionPolicy.Tier)
+        val cands = ArrayList<Cand>()
+        for (raw in pmOut.lineSequence()) {
+            val line = raw.trim()
+            if (!line.startsWith("package:")) continue
+            val body = line.removePrefix("package:")
+            val eq = body.lastIndexOf('=')
+            if (eq <= 0) continue
+            val apk = body.substring(0, eq)
+            val pkg = body.substring(eq + 1)
+            val tier = ApkExtractionPolicy.classify(pkg, apk)
+            if (tier == ApkExtractionPolicy.Tier.EXCLUDED) continue
+            cands.add(Cand(pkg, apk, tier))
+        }
+        cands.sortBy { ApkExtractionPolicy.order(it.tier) }
+
+        var acceptedBytes = 0L
+        for (c in cands) {
+            val size = try { File(c.apk).length() } catch (_: Throwable) { -1L }
+            if (size <= 0) { skips.add("SKIP ${c.pkg}: unreadable/zero (${c.apk})"); continue }
+            when (ApkExtractionPolicy.admit(size, acceptedBytes, accepted.size)) {
+                ApkExtractionPolicy.Skip.NONE -> {
+                    accepted.add(PlannedApk(c.pkg, c.apk, size, c.tier))
+                    acceptedBytes += size
+                }
+                ApkExtractionPolicy.Skip.TOO_BIG ->
+                    skips.add("SKIP ${c.pkg}: too big (${size / 1024 / 1024} MB > per-file cap)")
+                ApkExtractionPolicy.Skip.OVER_BUDGET ->
+                    skips.add("SKIP ${c.pkg}: over ${ApkExtractionPolicy.BUDGET_TOTAL / 1024 / 1024} MB total budget (${size / 1024} KB)")
+                ApkExtractionPolicy.Skip.MAX_COUNT ->
+                    skips.add("SKIP ${c.pkg}: max count reached")
+            }
+        }
+    }
+
+    // ── Phase 2: copy + zip (only after the tester confirms) ────────────────────
+
+    /**
+     * Copies the [Plan.accepted] APKs into the working dir, writes the manifest, and zips.
+     * A copy that fails or an APK that changed size mid-copy is recorded, not fatal.
+     */
+    fun materialize(plan: Plan, zipDest: File? = null, progress: (String) -> Unit): File {
+        val apkDir = File(plan.workDir, "apks").apply { mkdirs() }
+        val manifest = StringBuilder("BYD APK pull manifest (budget ")
+            .append(ApkExtractionPolicy.BUDGET_TOTAL / 1024 / 1024).append(" MB)\n")
+        var copied = 0
+        var bytes = 0L
+        for (a in plan.accepted) {
+            val src = File(a.apkPath)
+            try {
+                if (!src.canRead()) { manifest.append("SKIP ${a.pkg}: became unreadable\n"); continue }
+                val dst = File(apkDir, a.pkg + ".apk")
+                src.inputStream().use { input -> FileOutputStream(dst).use { input.copyTo(it) } }
+                copied++
+                bytes += dst.length()
+                val where = ApkExtractionPolicy.partitionLabel(a.apkPath)
+                progress("    + ${a.pkg} (${dst.length() / 1024} KB, $where)")
+                manifest.append("OK   ${a.pkg} [${a.tier}/$where] (${dst.length() / 1024} KB) ${a.apkPath}\n")
+            } catch (t: Throwable) {
+                manifest.append("FAIL ${a.pkg}: ${t.javaClass.simpleName}: ${t.message}\n")
+            }
+        }
+        // Native + framework files — pulled through the daemon into their [PlannedNative.subdir]
+        // (native/ or framework/), since the app process cannot read system_file. A pull that yields
+        // no bytes (SELinux denied the daemon too) is recorded.
+        var nativeCopied = 0
+        for (n in plan.acceptedNative) {
+            try {
+                val destDir = File(plan.workDir, n.subdir).apply { mkdirs() }
+                val got = pullViaDaemon(n.path, File(destDir, n.name), n.sizeBytes)
+                if (got > 0) {
+                    nativeCopied++
+                    bytes += got
+                    progress("    + ${n.subdir} ${n.name} (${got / 1024} KB)")
+                    manifest.append("OK   ${n.subdir} ${n.name} [${n.tier}] (${got / 1024} KB) ${n.path}\n")
+                } else {
+                    manifest.append("FAIL ${n.subdir} ${n.name}: daemon read returned no bytes (SELinux?) ${n.path}\n")
+                }
+            } catch (t: Throwable) {
+                manifest.append("FAIL ${n.subdir} ${n.name}: ${t.javaClass.simpleName}: ${t.message}\n")
+            }
+        }
+
+        manifest.append("\n")
+        for (line in plan.manifestSkips) manifest.append(line).append("\n")
+        manifest.append("\nCopied: $copied APK(s) + $nativeCopied native, ${bytes / 1024 / 1024} MB\n")
+        write(plan.workDir, "04_apk_manifest.txt", manifest.toString())
+
+        progress("zipping…")
+        // Default keeps the archive beside the work directory; DiagActivity passes a destination in
+        // the report store so the result is reachable instead of stranded in cacheDir.
+        return HudCaptureSupport.zipDir(plan.workDir, zipDest ?: File(plan.workDir.parentFile, plan.workDir.name + ".zip"))
+    }
+
+    /** Chunk size per daemon read — well under the ~1 MB binder transaction limit. */
+    private const val PULL_CHUNK = 512 * 1024
+
+    /**
+     * Streams [path] out of the device through the uid-2000 daemon into [dst], chunk by chunk.
+     * Returns the number of bytes written (0 if the daemon could read nothing). [expected] bounds
+     * the loop so a misbehaving reader cannot spin forever.
+     */
+    private fun pullViaDaemon(path: String, dst: File, expected: Long): Long {
+        var offset = 0L
+        FileOutputStream(dst).use { out ->
+            while (offset < expected + PULL_CHUNK) {
+                val chunk = ProxyClient.readFileChunk(path, offset, PULL_CHUNK)
+                if (chunk.isEmpty()) break
+                out.write(chunk)
+                offset += chunk.size
+                if (chunk.size < PULL_CHUNK) break // short read = EOF
+            }
+        }
+        val written = dst.length()
+        if (written <= 0) { try { dst.delete() } catch (_: Throwable) {} }
+        return written
+    }
+
+    /**
+     * Deleted on purpose — this file used to carry its own zipper.
+     *
+     * It was a copy of [HudCaptureSupport.zipDir] minus the one thing that matters: the redaction
+     * pass every other bundle goes through. So the APK-extraction bundle uploaded its getprop and
+     * dumpsys sweeps raw, under the same consent notice that tells the driver in thirteen
+     * languages that the vehicle serial, Wi-Fi names, hardware addresses and positions are removed
+     * from every report.
+     *
+     * The shared function is used directly now. Its REDACTABLE extension set does not contain apk,
+     * so, vdex or odex, so the payloads this bundle exists to carry come out byte-identical.
+     */
+
+    /** Best-effort cleanup of a working dir and an explicitly consumed archive. */
+    fun cleanup(work: File?, consumedArchive: File? = null) {
+        if (consumedArchive != null) {
+            try { consumedArchive.delete() } catch (_: Throwable) {}
+        }
+        if (work == null) return
+        val defaultArchive = File(work.parentFile, work.name + ".zip")
+        if (consumedArchive == null || consumedArchive.absolutePath != defaultArchive.absolutePath) {
+            try { defaultArchive.delete() } catch (_: Throwable) {}
+        }
+        try { work.deleteRecursively() } catch (_: Throwable) {}
+    }
+}

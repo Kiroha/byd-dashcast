@@ -49,8 +49,11 @@ public final class CanWriteVerbs {
     /** Simple guidance: primary turn icon ID + distance-to-turn in metres. */
     public static final int INSTRUMENT_GUIDE_SIMPLE          = 1139806224; // 0x43F01010
 
-    /** Guidance with road-ahead distance (secondary display variant). */
-    public static final int INSTRUMENT_GUIDE_ROAD_DISTANCE   = 1139806256; // 0x43F01030
+    // REMOVED: INSTRUMENT_GUIDE_ROAD_DISTANCE (0x43F01030). RE of the OEM nav bridge shows it
+    // writes exactly 15 INSTRUMENT_* registers and this is NOT one of them, and the SDK refuses it
+    // ("no permission to use the feature: 0x43f01030 with this device: 1007!", 344x in the tester
+    // corpus — including on cars whose arrows render perfectly). It was never part of the contract;
+    // the constant is gone so no bench or future code can reintroduce the write.
 
     /** Distance to the next crossing / intersection in metres. */
     public static final int INSTRUMENT_FRONT_CROSSING_DIST   = 1139806232; // 0x43F01018
@@ -176,8 +179,36 @@ public final class CanWriteVerbs {
         Class<?> evClass = ensureEvClass();
         Object ev = evClass.newInstance();
         ensureIntField().set(ev, value);
-        return (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        int rc = (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        logIfRejected("instrument", featureId, rc);
+        return rc;
     }
+
+    /**
+     * Makes an SDK REJECTION visible. The BYD SDK does not throw when it refuses a feature — it
+     * logs its own "no permission to use the feature: 0x… with this device: …!" line and returns a
+    * non-zero code, which callers historically discarded. That made a refused write
+    * indistinguishable from an accepted one in bug reports and bench zips.
+     *
+     * <p>One line, at the only place every write actually reaches the SDK, so it covers the batch
+     * path, the single-write path and production alike. Throttled per (feature, rc) so a per-frame
+     * guidance write cannot flood the log.
+     */
+    private static void logIfRejected(String device, int featureId, int rc) {
+        if (rc == 0) return;
+        long key = (((long) featureId) << 32) | (rc & 0xFFFFFFFFL);
+        Long last = sRejectLog.get(key);
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (last != null && now - last < 30_000L) return;
+        sRejectLog.put(key, now);
+        android.util.Log.w("CanWriteVerbs", String.format(
+                "CAN WRITE REJECTED %s feature=0x%08X rc=%d — the SDK refused this register on this car",
+                device, featureId, rc));
+    }
+
+    /** (featureId,rc) → last time we logged it, so a rejected per-frame write logs ~every 30 s. */
+    private static final java.util.concurrent.ConcurrentHashMap<Long, Long> sRejectLog =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Write a byte buffer to a CAN instrument feature (e.g. street name encoded as UTF-8).
@@ -193,7 +224,9 @@ public final class CanWriteVerbs {
         Class<?> evClass = ensureEvClass();
         Object ev = evClass.newInstance();
         ensureBytesField().set(ev, data);
-        return (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        int rc = (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+        logIfRejected("instrument", featureId, rc);
+        return rc;
     }
 
     /**

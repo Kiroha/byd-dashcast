@@ -21,6 +21,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.ui.diag.DiagActivity;
 import com.byd.dashcast.ui.hotspot.HotspotActivity;
@@ -81,8 +82,13 @@ public class LayoutManagerActivity extends Activity {
                 ? (LinearLayout) mHsvChips.getChildAt(0) : null;
 
         // Load saved data
-        mPresets  = LayoutPrefs.load(this);
-        mActiveId = LayoutPrefs.getFavoriteId(this);
+        LayoutPrefs.LoadResult loaded = LayoutPrefs.loadResult(this);
+        mPresets  = new ArrayList<>(loaded.presets);
+        mActiveId = LayoutPrefs.getValidFavoriteId(this, mPresets);
+        if (loaded.status == LayoutPrefs.LoadStatus.CORRUPT
+            || loaded.status == LayoutPrefs.LoadStatus.STORAGE_ERROR) {
+            Toast.makeText(this, R.string.lm_layout_load_failed, Toast.LENGTH_LONG).show();
+        }
 
         // RecyclerView
         mRecycler.setLayoutManager(new LinearLayoutManager(this));
@@ -324,6 +330,7 @@ public class LayoutManagerActivity extends Activity {
     }
 
     /** Opens an app-picker dialog and writes the selected package into {@code pickedPkg[0]}. */
+    @SuppressWarnings("deprecation")
     private void showPackagePickerForZone(TextView tvBound, String[] pickedPkg) {
         mExec.execute(() -> {
             PackageManager pm = getPackageManager();
@@ -349,7 +356,16 @@ public class LayoutManagerActivity extends Activity {
                 pkgs[i]   = sorted.get(i).getKey();
                 labels[i] = sorted.get(i).getValue() + "  —  " + pkgs[i];
             }
-            runOnUiThread(() -> new AlertDialog.Builder(this)
+            runOnUiThread(() -> {
+                // Same guard activateLayout already carries, and for the same reason: this runnable
+                // is posted from a background query of the package manager, which on a head unit
+                // with a few hundred packages takes long enough for the user to leave. Showing a
+                // dialog on a destroyed Activity throws
+                // WindowManager$BadTokenException("Unable to add window — token is not valid"),
+                // an uncaught RuntimeException on the main thread, and a crash here blanks the
+                // driver's cluster with the rest of the process.
+                if (isFinishing() || isDestroyed()) return;
+                new AlertDialog.Builder(this)
                     .setTitle(getString(R.string.fission_slot_pick_pkg))
                     .setItems(labels, (d2, idx) -> {
                         pickedPkg[0] = pkgs[idx];
@@ -360,7 +376,8 @@ public class LayoutManagerActivity extends Activity {
                         tvBound.setText(getString(R.string.fission_slot_pkg_none));
                     })
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show());
+                    .show();
+            });
         });
     }
 
@@ -417,14 +434,24 @@ public class LayoutManagerActivity extends Activity {
                     String name = et.getText().toString().trim();
                     if (name.isEmpty()) name = getString(R.string.lm_layout_default_name_fmt, mPresets.size() + 1);
                     mEditing.name = name;
+                    // Store a SNAPSHOT, not the live object. mEditing is what the canvas drags,
+                    // so putting it in mPresets made the saved layout a window onto the editor:
+                    // every later move was already "saved", the next LayoutPrefs.save wrote it to
+                    // disk, and Cancel cancelled nothing. The canvas keeps the live object.
+                    LayoutPreset snapshot = mEditing.copy();
+                    List<LayoutPreset> updated = new ArrayList<>(mPresets);
                     boolean replaced = false;
-                    for (int i = 0; i < mPresets.size(); i++) {
-                        if (mPresets.get(i).id.equals(mEditing.id)) {
-                            mPresets.set(i, mEditing); replaced = true; break;
+                    for (int i = 0; i < updated.size(); i++) {
+                        if (updated.get(i).id.equals(snapshot.id)) {
+                            updated.set(i, snapshot); replaced = true; break;
                         }
                     }
-                    if (!replaced) mPresets.add(mEditing);
-                    LayoutPrefs.save(this, mPresets);
+                    if (!replaced) updated.add(snapshot);
+                    if (!LayoutPrefs.save(this, updated)) {
+                        Toast.makeText(this, R.string.lm_layout_save_failed, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    mPresets = updated;
                     mAdapter.update(mPresets, mActiveId);
                     setCanvasTitle(mEditing.name);
                     Toast.makeText(this, R.string.lm_layout_saved_toast, Toast.LENGTH_SHORT).show();
@@ -437,9 +464,20 @@ public class LayoutManagerActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.lm_delete_confirm_fmt, preset.name))
                 .setPositiveButton(R.string.lm_action_delete, (d, w) -> {
-                    if (preset.id.equals(mActiveId)) deactivateLayout();
-                    mPresets.remove(preset);
-                    LayoutPrefs.save(this, mPresets);
+                        boolean wasActive = preset.id.equals(mActiveId);
+                        boolean wasFavorite = preset.id.equals(
+                            LayoutPrefs.getValidFavoriteId(this, mPresets));
+                    List<LayoutPreset> updated = new ArrayList<>(mPresets);
+                    updated.remove(preset);
+                        boolean saved = wasFavorite
+                            ? LayoutPrefs.saveState(this, updated, null)
+                            : LayoutPrefs.save(this, updated);
+                    if (!saved) {
+                        Toast.makeText(this, R.string.lm_layout_save_failed, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    mPresets = updated;
+                    if (wasActive) deactivateLayout(false);
                     mAdapter.update(mPresets, mActiveId);
                     if (mEditing != null && mEditing.id.equals(preset.id)) startNewLayout();
                 })
@@ -447,53 +485,127 @@ public class LayoutManagerActivity extends Activity {
                 .show();
     }
 
+    /**
+     * Activates a layout through {@link FissionOrchestrator#activateLayoutManually}, i.e. the
+     * same sequence the auto-start path runs: cluster projection first, then the SurfaceDaemon
+     * is <em>started</em> (not merely probed — this button used to stop at "daemon not
+     * connected"), then one slot per zone keyed by package. The orchestrator launches the bound
+     * apps itself, so the former separate launch pass is gone.
+     *
+     * <p>Gated on the Layout-mode setting. This screen is reachable from the nav rail on every
+     * activity with no runtime gate ({@code NavRailLayouts} — "Always visible"), and the button
+     * used to be a no-op toast whenever the daemon was not already up. Now it drives the OEM
+     * cluster into projection mode and spawns the uid-2000 daemon, which must not happen to
+     * someone who has Layout mode switched off and merely tapped a leftover preset.
+     */
     private void activateLayout(LayoutPreset preset) {
-        IBinder binder = FissionClient.getBinderFromServiceManager();
-        if (binder == null) {
-            Toast.makeText(this,
-                    getString(R.string.lm_daemon_not_connected),
-                    Toast.LENGTH_LONG).show();
+        if (!DaemonConfig.isFissionModeEnabled(this)) {
+            // Journal it, in English. Without this line a capture from a tester who was asked to
+            // "activate a layout and send a report" is indistinguishable from one where they
+            // never tried — same absence of ATTACH_SLOT lines, no explanation, one wasted round
+            // trip. The setting defaults to OFF and this screen is reachable with no gate.
+            AppLogger.w(TAG, "activateLayout refused: Layouts mode is disabled in Settings");
+            Toast.makeText(this, getString(R.string.lm_layout_mode_disabled), Toast.LENGTH_LONG).show();
             return;
         }
         Toast.makeText(this, getString(R.string.lm_activating_fmt, preset.name), Toast.LENGTH_SHORT).show();
-        mExec.execute(() -> {
-            if (mActiveId != null && !mActiveId.equals(preset.id)) {
-                try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
+        // Activation takes seconds, and the user is free to leave this screen while it runs. What
+        // must survive that is the record of what is now on the cluster; only the view work must
+        // not. Splitting them is why the app context is captured here.
+        final android.content.Context appCtx = getApplicationContext();
+        FissionOrchestrator.activateLayoutManually(this, preset, (ok, error) -> {
+            boolean selectionSaved = true;
+            boolean runtimeKept = error == null;
+            if (error == null) {
+                // Unchanged contract: the activated layout only becomes the favourite when the
+                // activation actually ran to completion. It is written before the lifecycle guard
+                // because the layout really IS running — a screen that closed mid-activation must
+                // not leave the favourite pointing at the previous one.
+                LayoutPrefs.FavoriteWriteStatus selectionStatus =
+                        LayoutPrefs.setFavoriteIdIfPresentResult(appCtx, preset.id);
+                selectionSaved = selectionStatus == LayoutPrefs.FavoriteWriteStatus.SAVED;
+                if (!selectionSaved) {
+                    AppLogger.e(TAG, "activated layout but failed to persist favourite selection");
+                    if (selectionStatus == LayoutPrefs.FavoriteWriteStatus.MISSING) {
+                        AppLogger.w(TAG, "activated layout was deleted before completion; stopping it");
+                        FissionOrchestrator.stopAutoOrchestrator(null);
+                        runtimeKept = false;
+                    }
+                }
+            } else {
+                // Journalled before the guard for the same reason: losing the failure line because
+                // the user navigated away costs a diagnostic round trip with a tester.
+                //
+                // In English, with only the toast translated. Precisely: the "activateLayout
+                // failed:" prefix and every ERR_* code are English and greppable corpus-wide,
+                // and an exception carries its class name — also English. What can still be
+                // localised is an exception's own MESSAGE, because doStartSlot throws
+                // fo_err_attach_fmt. So classify on the prefix and the class name, never on the
+                // message tail.
+                AppLogger.e(TAG, "activateLayout failed: " + error);
             }
-            try {
-                boolean ok = FissionClient.activateLayout(binder, preset);
+            if (isFinishing() || isDestroyed()) return;   // from here down it is all UI
+            if (error == null && runtimeKept) {
                 mActiveId = preset.id;
-                LayoutPrefs.setFavoriteId(LayoutManagerActivity.this, mActiveId);
-                // Launch bound apps into the newly created VDs so the cluster
-                // shows live content instead of a frozen/blank slot.
-                FissionOrchestrator.launchAppsIntoPreset(LayoutManagerActivity.this, preset);
-                runOnUiThread(() -> {
-                    mAdapter.update(mPresets, mActiveId);
-                    Toast.makeText(this,
-                            ok ? getString(R.string.lm_activated_ok_fmt, preset.name)
-                               : getString(R.string.lm_activated_partial_fmt, preset.name),
-                            Toast.LENGTH_SHORT).show();
-                });
-            } catch (Exception e) {
-                AppLogger.e(TAG, "activateLayout failed", e);
-                runOnUiThread(() -> Toast.makeText(this, getString(R.string.lm_error_fmt, e.getMessage()),
-                        Toast.LENGTH_LONG).show());
+                mAdapter.update(mPresets, mActiveId);
             }
+            String text = (error != null)
+                    ? activationErrorText(error, preset.name)
+                    : !selectionSaved ? getString(R.string.lm_layout_selection_save_failed)
+                    : ok ? getString(R.string.lm_activated_ok_fmt, preset.name)
+                         : getString(R.string.lm_activated_partial_fmt, preset.name);
+            Toast.makeText(this, text,
+                    error != null ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
         });
     }
 
+    /**
+     * Maps a {@link FissionOrchestrator} {@code ERR_*} code to translated user text.
+     *
+     * <p>The codes stay English so the journal is greppable; anything unrecognised is a raw
+     * exception message and goes through the existing {@code lm_error_fmt} wrapper, which has
+     * always carried untranslated exception text.
+     *
+     * <p>Never returns {@code null}. An earlier version showed nothing for {@code ERR_BUSY} /
+     * {@code ERR_ABANDONED}, reasoning that the user had caused both. That is wrong during a
+     * diagnostic campaign, and wrong generally: the "Activating…" toast is SHORT and long gone
+     * by the time either lands, so the button reads as dead and the tester stops rather than
+     * retrying — producing no capture at all.
+     */
+    private String activationErrorText(String error, String presetName) {
+        if (FissionOrchestrator.ERR_CLUSTER_TIMEOUT.equals(error)) {
+            return getString(R.string.toast_activate_timeout);
+        }
+        if (FissionOrchestrator.ERR_PROJECTION_CONFLICT.equals(error)) {
+            return getString(R.string.fission_conflict_title);
+        }
+        if (FissionOrchestrator.ERR_NO_DAEMON.equals(error)) {
+            return getString(R.string.fo_err_daemon);
+        }
+        if (FissionOrchestrator.ERR_BUSY.equals(error)) {
+            // Truthful, not an error: the activation they asked for IS still running.
+            return getString(R.string.lm_activating_fmt, presetName);
+        }
+        return getString(R.string.lm_error_fmt, error);
+    }
+
     private void deactivateLayout() {
-        IBinder binder = FissionClient.getBinderFromServiceManager();
+        deactivateLayout(true);
+    }
+
+    private boolean deactivateLayout(boolean persistSelection) {
+        if (persistSelection && !LayoutPrefs.setFavoriteId(this, null)) {
+            Toast.makeText(this, R.string.lm_layout_selection_save_failed, Toast.LENGTH_LONG).show();
+            return false;
+        }
         mActiveId = null;
         for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
-        LayoutPrefs.setFavoriteId(this, null);
         mAdapter.update(mPresets, mActiveId);
-        if (binder != null) {
-            mExec.execute(() -> {
-                try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
-            });
-        }
+        // The global purge is part of the old owner's serialized teardown; activation stays gated
+        // until it completes, so it cannot delete slots attached by a newer layout.
+        FissionOrchestrator.stopAutoOrchestratorAndPurge(this, null);
         Toast.makeText(this, R.string.lm_free_mode_toast, Toast.LENGTH_SHORT).show();
+        return true;
     }
 
     private void setCurrentLayoutAsFavorite() {
@@ -511,7 +623,10 @@ public class LayoutManagerActivity extends Activity {
                     Toast.LENGTH_SHORT).show();
             return;
         }
-        LayoutPrefs.setFavoriteId(this, mEditing.id);
+        if (!LayoutPrefs.setFavoriteIdIfPresent(this, mEditing.id)) {
+            Toast.makeText(this, R.string.lm_layout_selection_save_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
         Toast.makeText(this,
                 getString(R.string.fission_layout_favorite_set_toast), Toast.LENGTH_SHORT).show();
     }

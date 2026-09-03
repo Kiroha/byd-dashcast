@@ -9,6 +9,7 @@
 | AGP | 8.13.2 | Dernier 8.x ; AGP 9.x = migration majeure séparée (voir plafonds) |
 | Gradle | 8.14.5 | Dernier 8.x ; ≥ 8.13 requis par AGP 8.13 ; dans la fenêtre KGP 2.4.0 |
 | Java | source/target 17 | Débloqué par AGP 8 ; `kotlinOptions.jvmTarget = '17'` aligné |
+| R8 | 8.13.19 (embarqué par AGP) | Kotlin 2.4 requiert R8 9.1.29+ ; voir limite vérifiée ci-dessous |
 | compileSdk / target / min | 33 / 29 / 28 | Aucun blocage Kotlin |
 | SDK | android.jar BYD custom (bydauto APIs) | Kotlin compile contre le même jar — vérifié OK |
 | Tests | **aucun** | Le build + lint 0/0 sont les seuls filets de sécurité → migration par petits lots obligatoire |
@@ -26,6 +27,7 @@
 | Cible | Bloqué par | Pour lever |
 |---|---|---|
 | Kotlin 2.4.0 (actuel) | — | Dernière version publiée ✅ (fenêtre : Gradle 7.6.3–9.5.0, AGP 8.5.2–9.1.0) |
+| Métadonnées Kotlin 2.4 dans R8 release | R8 8.13.19 embarqué | R8 9.1.29+ requis officiellement. Essais 9.1.31 et 9.1.43 : métadonnées OK, mais 2 warnings de fallback synchrone car le provider AGP 8.13 n'implémente pas l'API async de R8 9.1. Aucun warning ne peut être supprimé sans changer le couple de versions. |
 | Java 17 (actuel) | — | Java 21 source n'apporterait rien (code converti en Kotlin, ART API 29) et exigerait un JDK 21 local |
 | AGP 8.13.2 / Gradle 8.14.5 (actuels) | Migration AGP 9 | Voir checklist ci-dessous |
 | AGP 9.0/9.1 + Gradle 9.x | Chantier dédié | **Checklist AGP 9** : ① réécrire `applicationVariants.all` (nommage APK) en `androidComponents.onVariants()` — l'ancienne Variant API est supprimée ; ② Kotlin intégré par défaut (`kotlin-android` incompatible — opt-out `android.builtInKotlin=false` possible) ; ③ Build Tools 36.0.0 minimum à installer dans le SDK BYD custom ; ④ nouveaux defaults (`enableAppCompileTimeRClass`, R8 resource shrinking…) ; ⑤ Gradle 9.1+ requis. Plafond Kotlin : KGP 2.4.0 supporte AGP ≤ 9.1.0 → **AGP 9.2.x exclu** tant que KGP ne l'étend pas |
