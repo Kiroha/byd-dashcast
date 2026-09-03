@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import base64
+import hashlib
 import importlib.util
 import os
 import re
@@ -26,6 +28,28 @@ class ScanReleaseAssetsTest(unittest.TestCase):
         with zipfile.ZipFile(directory / "DashCast.apk", "w") as archive:
             archive.writestr("AndroidManifest.xml", manifest)
             archive.writestr("classes.dex", dex)
+
+    def signer_output(
+        self,
+        certificates: list[bytes],
+        *,
+        v2: str = "true",
+        include_count: bool = True,
+        labels: list[str] | None = None,
+    ) -> str:
+        lines = [f"Verified using v2 scheme (APK Signature Scheme v2): {v2}"]
+        if include_count:
+            lines.append(f"Number of signers: {len(certificates)}")
+        for index, certificate in enumerate(certificates, start=1):
+            label = labels[index - 1] if labels is not None else f"Signer #{index}"
+            lines.extend([
+                f"{label} certificate DN: CN=Test",
+                "Signer #1 certificate SHA-256 digest: " + "0" * 64,
+                "-----BEGIN CERTIFICATE-----",
+                base64.b64encode(certificate).decode("ascii"),
+                "-----END CERTIFICATE-----",
+            ])
+        return "\n".join(lines) + "\n"
 
     def test_missing_apk_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -440,6 +464,7 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             signer = root / "apksigner"
             aapt.touch()
             signer.touch()
+            certificate = b"trusted signer certificate"
             runner = Mock(side_effect=[
                 scanner.subprocess.CompletedProcess(
                     [], 0,
@@ -448,20 +473,95 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                     "",
                 ),
                 scanner.subprocess.CompletedProcess(
+                    [], 0, self.signer_output([certificate]), "",
+                ),
+            ])
+
+            expected = hashlib.sha256(certificate).hexdigest()
+            with patch.object(scanner, "EXPECTED_CERT_SHA256", expected):
+                self.assertEqual(
+                    scanner.verify_release_contract(
+                        root, "v1.8.48-beta", str(aapt), str(signer), runner
+                    ),
+                    [],
+                )
+            self.assertIn("--print-certs-pem", runner.call_args_list[1].args[0])
+
+    def test_release_contract_uses_pem_when_human_digest_and_count_formats_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apk = root / "DashCast-v1.8.48-beta-release.apk"
+            apk.write_bytes(b"apk")
+            aapt = root / "aapt"
+            signer = root / "apksigner"
+            aapt.touch()
+            signer.touch()
+            certificate = b"alternate format signer certificate"
+            runner = Mock(side_effect=[
+                scanner.subprocess.CompletedProcess(
                     [], 0,
-                    "Verified using v2 scheme (APK Signature Scheme v2): true\n"
-                    "Number of signers: 1\n"
-                    f"Signer #1 certificate SHA-256 digest: {scanner.EXPECTED_CERT_SHA256}\n",
+                    "package: name='com.byd.dashcast' versionCode='638' "
+                    "versionName='1.8.48-beta'\n",
+                    "",
+                ),
+                scanner.subprocess.CompletedProcess(
+                    [], 0,
+                    self.signer_output(
+                        [certificate],
+                        v2="TRUE",
+                        include_count=False,
+                        labels=["V2 Signer:"],
+                    ),
                     "",
                 ),
             ])
 
-            self.assertEqual(
-                scanner.verify_release_contract(
-                    root, "v1.8.48-beta", str(aapt), str(signer), runner
-                ),
-                [],
-            )
+            expected = hashlib.sha256(certificate).hexdigest()
+            with patch.object(scanner, "EXPECTED_CERT_SHA256", expected):
+                self.assertEqual(
+                    scanner.verify_release_contract(
+                        root, "v1.8.48-beta", str(aapt), str(signer), runner
+                    ),
+                    [],
+                )
+
+    def test_signer_certificate_digests_ignore_source_stamp_pem(self) -> None:
+        source_stamp = b"source stamp certificate"
+        signer = b"APK signer certificate"
+        output = "\n".join([
+            "Source Stamp Signer certificate DN: CN=Stamp",
+            "-----BEGIN CERTIFICATE-----",
+            base64.b64encode(source_stamp).decode("ascii"),
+            "-----END CERTIFICATE-----",
+            "Signer #1 certificate DN: CN=APK",
+            "-----BEGIN CERTIFICATE-----",
+            base64.b64encode(signer).decode("ascii"),
+            "-----END CERTIFICATE-----",
+        ])
+
+        self.assertEqual(
+            [hashlib.sha256(signer).hexdigest()],
+            scanner.signer_certificate_digests(output),
+        )
+
+    def test_signature_diagnostic_never_echoes_certificate_or_dn(self) -> None:
+        certificate = base64.b64encode(b"private diagnostic fixture").decode("ascii")
+        output = "\n".join([
+            "Signer #1 certificate DN: CN=Private Driver",
+            "-----BEGIN CERTIFICATE-----",
+            certificate,
+            "-----END CERTIFICATE-----",
+        ])
+
+        diagnostic = scanner.signature_parse_diagnostic(
+            output, "/sdk/build-tools/36.0.0/apksigner"
+        )
+
+        self.assertIn("pem_begin=1", diagnostic)
+        self.assertIn("pem_end=1", diagnostic)
+        self.assertIn("labels=['Signer #1']", diagnostic)
+        self.assertNotIn(certificate, diagnostic)
+        self.assertNotIn("Private Driver", diagnostic)
 
     def test_release_contract_rejects_debug_wrong_identity_and_signer(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -480,10 +580,7 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                     "",
                 ),
                 scanner.subprocess.CompletedProcess(
-                    [], 0,
-                    "Verified using v2 scheme (APK Signature Scheme v2): false\n"
-                    "Signer #1 certificate SHA-256 digest: " + "0" * 64 + "\n",
-                    "",
+                    [], 0, self.signer_output([b"wrong signer"], v2="false"), "",
                 ),
             ])
 
@@ -509,6 +606,29 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             self.assertIn("release :: aapt unavailable; identity not verified", findings)
             self.assertIn("release :: apksigner unavailable; signature not verified", findings)
 
+    def test_android_sdk_build_tool_wins_over_path_executable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_tool = root / "path" / "apksigner"
+            old_tool.parent.mkdir()
+            old_tool.touch()
+            sdk = root / "sdk"
+            for version in ("35.0.0", "36.0.0"):
+                tool = sdk / "build-tools" / version / "apksigner"
+                tool.parent.mkdir(parents=True)
+                tool.touch()
+
+            with patch.dict(os.environ, {
+                "ANDROID_HOME": str(sdk),
+                "ANDROID_SDK_ROOT": str(sdk),
+            }), patch.object(scanner.shutil, "which", return_value=str(old_tool)):
+                selected = scanner.find_android_tool("apksigner")
+
+            self.assertEqual(
+                str(sdk / "build-tools" / "36.0.0" / "apksigner"),
+                selected,
+            )
+
     def test_release_contract_rejects_an_extra_untrusted_signer(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -518,6 +638,7 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             signer = root / "apksigner"
             aapt.touch()
             signer.touch()
+            trusted = b"trusted signer certificate"
             runner = Mock(side_effect=[
                 scanner.subprocess.CompletedProcess(
                     [], 0,
@@ -525,18 +646,16 @@ class ScanReleaseAssetsTest(unittest.TestCase):
                     "",
                 ),
                 scanner.subprocess.CompletedProcess(
-                    [], 0,
-                    "Verified using v2 scheme (APK Signature Scheme v2): true\n"
-                    "Number of signers: 2\n"
-                    f"Signer #1 certificate SHA-256 digest: {scanner.EXPECTED_CERT_SHA256}\n"
-                    "Signer #2 certificate SHA-256 digest: " + "0" * 64 + "\n",
-                    "",
+                    [], 0, self.signer_output([trusted, b"extra signer"]), "",
                 ),
             ])
 
-            findings = scanner.verify_release_contract(
-                root, "v1.8.48", str(aapt), str(signer), runner
-            )
+            with patch.object(
+                scanner, "EXPECTED_CERT_SHA256", hashlib.sha256(trusted).hexdigest()
+            ):
+                findings = scanner.verify_release_contract(
+                    root, "v1.8.48", str(aapt), str(signer), runner
+                )
 
             self.assertIn(f"{apk.name} :: expected exactly one APK signer", findings)
             self.assertIn(f"{apk.name} :: unexpected signing certificate", findings)
@@ -549,6 +668,14 @@ class ScanReleaseAssetsTest(unittest.TestCase):
             send = source.index("Send changelog to Telegram")
             self.assertLess(scan, send, name)
             self.assertIn('--tag "$TAG"', source[scan:send], name)
+
+    def test_telegram_markdown_urls_are_escaped_as_html_attributes(self) -> None:
+        workflows = SCRIPT.parent.parent / "workflows"
+        for name in ("telegram-changelog.yml", "telegram-stable-release.yml"):
+            source = (workflows / name).read_text(encoding="utf-8")
+            self.assertIn("def html_attr_esc(s):", source, name)
+            self.assertIn("replace('\"', '&quot;')", source, name)
+            self.assertIn('href="{html_attr_esc(m.group(5))}"', source, name)
 
     def test_privileged_workflows_never_execute_scanner_from_release_tag(self) -> None:
         workflows = SCRIPT.parent.parent / "workflows"
@@ -584,6 +711,17 @@ class ScanReleaseAssetsTest(unittest.TestCase):
         self.assertIn("scan_release_assets.py " + "\\", workflow)
         self.assertIn('"$asset_dir" --tag "$tag"', workflow)
         self.assertIn('gh release edit "$tag" --repo "$REPO" --draft', workflow)
+
+    def test_release_scanner_can_preflight_a_draft_tag(self) -> None:
+        workflow = (
+            SCRIPT.parent.parent / "workflows" / "release-secret-scan.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch:\n    inputs:\n      tag:", workflow)
+        self.assertIn("github.event_name == 'release' || inputs.tag != ''", workflow)
+        self.assertIn("github.event.release.tag_name || inputs.tag", workflow)
+        self.assertIn("TAG:      ${{ env.RELEASE_TAG }}", workflow)
+        self.assertIn("github.event_name != 'release' && inputs.tag == ''", workflow)
 
     def test_every_external_action_is_pinned_to_an_immutable_commit(self) -> None:
         workflows = SCRIPT.parent.parent / "workflows"

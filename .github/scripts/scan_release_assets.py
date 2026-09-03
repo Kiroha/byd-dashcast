@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import base64
+import binascii
+import hashlib
 import os
 import re
 import secrets
@@ -428,7 +431,7 @@ def verify_release_contract(
         findings.append("release :: apksigner unavailable; signature not verified")
     else:
         result = runner(
-            [apksigner, "verify", "--verbose", "--print-certs", str(apk)],
+            [apksigner, "verify", "--verbose", "--print-certs-pem", str(apk)],
             capture_output=True,
             text=True,
             check=False,
@@ -436,32 +439,36 @@ def verify_release_contract(
         signature = (result.stdout or "") + "\n" + (result.stderr or "")
         if result.returncode != 0:
             findings.append(f"{single_line(apk.name)} :: APK signature verification failed")
-        if "Verified using v2 scheme (APK Signature Scheme v2): true" not in signature:
+        if not re.search(
+            r"^Verified using v2 scheme \(APK Signature Scheme v2\):\s*true\s*$",
+            signature,
+            re.MULTILINE | re.IGNORECASE,
+        ):
             findings.append(f"{single_line(apk.name)} :: APK Signature Scheme v2 missing")
         signer_count = re.search(r"Number of signers:\s*(\d+)", signature)
-        certs = re.findall(
-            r"Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]{64})", signature
-        )
-        if signer_count is None or signer_count.group(1) != "1" or len(certs) != 1:
+        certs = signer_certificate_digests(signature)
+        if len(certs) != 1 or (signer_count is not None and signer_count.group(1) != "1"):
+            print(signature_parse_diagnostic(signature, apksigner))
             findings.append(f"{single_line(apk.name)} :: expected exactly one APK signer")
-        if len(certs) != 1 or certs[0].lower() != EXPECTED_CERT_SHA256:
+        if len(certs) != 1 or certs[0] != EXPECTED_CERT_SHA256:
             findings.append(f"{single_line(apk.name)} :: unexpected signing certificate")
 
     return sorted(set(findings))
 
 
 def find_android_tool(name: str) -> str | None:
-    direct = shutil.which(name)
-    if direct:
-        return direct
+    candidates: list[Path] = []
     for variable in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
         root = os.environ.get(variable)
         if not root:
             continue
-        candidates = list((Path(root) / "build-tools").glob(f"*/{name}"))
-        if candidates:
-            return str(max(candidates, key=lambda path: version_key(path.parent.name)))
-    return None
+        candidates.extend(
+            path for path in (Path(root) / "build-tools").glob(f"*/{name}")
+            if path.is_file()
+        )
+    if candidates:
+        return str(max(candidates, key=lambda path: version_key(path.parent.name)))
+    return shutil.which(name)
 
 
 def version_key(value: str) -> tuple[int, ...]:
@@ -470,6 +477,50 @@ def version_key(value: str) -> tuple[int, ...]:
 
 def single_line(value: str) -> str:
     return re.sub(r"[\x00\r\n]", "?", value)
+
+
+def signer_certificate_digests(signature: str) -> list[str]:
+    digests: list[str] = []
+    pem_pattern = re.compile(
+        r"-----BEGIN CERTIFICATE-----\s*([A-Za-z0-9+/=\r\n]+?)\s*"
+        r"-----END CERTIFICATE-----",
+        re.MULTILINE,
+    )
+    previous_end = 0
+    for match in pem_pattern.finditer(signature):
+        header = signature[previous_end:match.start()]
+        labels = re.findall(
+            r"^([^\r\n]*\bSigner\b[^\r\n]*) certificate DN:",
+            header,
+            re.MULTILINE | re.IGNORECASE,
+        )
+        previous_end = match.end()
+        if not labels or labels[-1].strip().lower().startswith("source stamp signer"):
+            continue
+        encoded = re.sub(r"\s", "", match.group(1))
+        try:
+            certificate = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        digests.append(hashlib.sha256(certificate).hexdigest())
+    return digests
+
+
+def signature_parse_diagnostic(signature: str, apksigner: str) -> str:
+    labels = []
+    for match in re.finditer(
+        r"^([^\r\n]{1,120}) certificate DN:",
+        signature,
+        re.MULTILINE | re.IGNORECASE,
+    ):
+        labels.append(single_line(match.group(1).strip()))
+    return (
+        "INFO: apksigner certificate markers "
+        f"tool={single_line(apksigner)} "
+        f"pem_begin={signature.count('-----BEGIN CERTIFICATE-----')} "
+        f"pem_end={signature.count('-----END CERTIFICATE-----')} "
+        f"labels={labels}"
+    )
 
 
 def write_github_output(findings: list[str]) -> None:
