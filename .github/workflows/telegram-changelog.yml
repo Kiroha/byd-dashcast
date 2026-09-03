@@ -57,6 +57,9 @@ jobs:
           def html_esc(s):
               return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
+          def html_attr_esc(s):
+              return html_esc(s).replace('"', '&quot;')
+
           def inline_html(text):
               """Convert inline Markdown to Telegram HTML, escaping plain text."""
               pattern = re.compile(
@@ -77,7 +80,7 @@ jobs:
                   elif full.startswith('`'):
                       result += f'<code>{html_esc(m.group(3))}</code>'
                   else:
-                      result += f'<a href="{m.group(5)}">{html_esc(m.group(4))}</a>'
+                      result += f'<a href="{html_attr_esc(m.group(5))}">{html_esc(m.group(4))}</a>'
                   last = m.end()
               return result + html_esc(text[last:])
 
