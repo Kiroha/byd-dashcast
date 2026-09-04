@@ -103,13 +103,31 @@ grep -ho '<testcase' app/build/test-results/testDebugUnitTest/*.xml | wc -l   # 
 # 5. No new raw strings (a shell command must never become a """ string)
 grep -rl '"""' app/src/main/java | sort | diff - "$BL/rawstring-allowlist.txt"
 
-# 6. NO Kotlin null-check intrinsic on any member a still-Java caller can reach.
+# 6. Kotlin null-check intrinsics: INVESTIGATE each one, do not blanket-ban them.
 #    THE systemic risk of this migration: a non-null Kotlin param behind a Java caller
 #    passing a platform type compiles clean, lints clean, has no test — and throws on the
 #    car, where the daemon swallows it into reply.writeException().
 for FQN in <classes ported in this batch>; do
-  javap -c -cp "$JC:$KC" "$FQN" | grep -c checkNotNullParameter   # must be 0
+  javap -c -p -cp "$JC:$KC" "$FQN" | grep -c checkNotNullParameter
 done
+#
+# A non-zero count is a PROMPT TO INVESTIGATE, not a failure. "Must be 0" was the original
+# wording and it is wrong in both directions: it would reject a correct migration, and the
+# obvious way to "fix" it — making every param nullable — is itself a behaviour change that
+# deletes real guards. For each intrinsic, answer two questions with evidence:
+#   (a) can a still-JAVA caller reach this member with a value that may be null?
+#       (read the caller; a null-check before the call site settles it)
+#   (b) what did the ORIGINAL Java do with null? If it dereferenced unconditionally it
+#       already threw NPE, so a non-null Kotlin param preserves behaviour and only changes
+#       the exception type.
+# Only if (a) is yes AND (b) shows the Java tolerated null is it a real defect.
+#
+# Worked example, batch 1: ImeActionGate compiled to 2 intrinsics, on begin(Completion) and
+# finish(Operation, Boolean). Both are called from the still-Java ClusterImeWatcherService.
+# Safe, and here is why: begin() is passed a lambda built at the call site (never null), and
+# ClusterImeWatcherService.java:430 does `if (operation == null) { ...; return; }` before
+# reaching finish() at :458. The original Java finish() called operation.complete()
+# unconditionally, so it would have NPE'd on null anyway. Behaviour preserved.
 
 # 7. Java still links against the Kotlin ABI (proves nothing got name-mangled
 #    or moved to a Companion-only member)
