@@ -31,12 +31,20 @@ lint.** The lint XML report is the only real gate.
 | Lint issues (release) | **0** | `lint-issue-count.txt` |
 | Files using raw strings | **3** | `rawstring-allowlist.txt` |
 
-Compiled-class paths (AGP 8 nests javac output under the task name — the obvious path is wrong):
+Compiled-class paths. Both are non-obvious, and the Kotlin one MOVED when the project went to
+AGP 9 with built-in Kotlin:
 
 ```
 JC=app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes
-KC=app/build/tmp/kotlin-classes/debug
+KC=app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes
 ```
+
+> **Trap.** The pre-AGP-9 Kotlin output directory `app/build/tmp/kotlin-classes/<variant>` is
+> still present on disk and still full of classes — they are just STALE, left by the previous
+> toolchain. `javap` against that path succeeds and reports the OLD bytecode, so every invariant
+> below would come back green while measuring nothing. Use `built_in_kotlinc`, or run
+> `./gradlew clean` first. This is the same failure shape as the three grep traps recorded below:
+> a check that cannot fail is worse than no check.
 
 ---
 
@@ -67,7 +75,7 @@ is worse than no gate at all.
 
 ```bash
 JC=app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes
-KC=app/build/tmp/kotlin-classes/debug
+KC=app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes
 BL=docs/migration/kotlin-baseline
 
 # 1. Wire constants frozen (ConstantValue attributes must not drift)
