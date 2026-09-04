@@ -200,8 +200,21 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // route. Italian "300 mt" failed the same way. Alternation is longest-first so "mi"/"mt" are tried
     // before "m"; "25 min" still cannot match (the trailing \b fails on "min" for every alternative),
     // so remaining-time text is never misread as a distance.
+    // PORTABILITY (2026-09) — \b replaced by explicit lookarounds in RX_DIST / RX_HOURS / RX_MINS.
+    //
+    // \b is defined on ASCII word chars, so a boundary that follows a non-ASCII unit token
+    // (Arabic "م", Cyrillic "м") is engine-dependent. Proven with the identical pattern on two JVMs:
+    // JDK 17 matched "400 م" and "300 м"; JDK 21 matched NEITHER, while ASCII "300 m" matched on
+    // both. That is not a formatting nuance - the parser returns nothing, and an arrow with no
+    // distance is the worst state for a driver.
+    //
+    // (?<![\p{L}\p{N}]) ... (?![\p{L}\p{N}]) says exactly what \b was meant to say here and
+    // gives the same answer on both JVMs. It deliberately does NOT use UNICODE_CHARACTER_CLASS,
+    // which would also make \d match Arabic-Indic digits directly and bypass normaliseDigits().
+    // The "25 min must not parse as a distance" guarantee above is preserved: after "m" the next
+    // char is "i", a letter, so the lookahead fails exactly as the trailing \b did.
     private static final Pattern RX_DIST =
-            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|كم|mi|ft|yd|mt|m|м|م)\\b",
+            Pattern.compile("(?<![\\p{L}\\p{N}])(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|كم|mi|ft|yd|mt|m|м|م)(?![\\p{L}\\p{N}])",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Road name: "onto X", "sur X", "on X" ────────────────────────────
@@ -214,10 +227,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // Mins:  \b(\d+)[\s ]*(?:min|mins|мин)\b
     // Both handle ASCII and Cyrillic units plus non-breaking space.
     private static final Pattern RX_HOURS =
-            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.|ساعة|س)\\b",
+            Pattern.compile("(?<![\\p{L}\\p{N}])(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.|ساعة|س)(?![\\p{L}\\p{N}])",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern RX_MINS =
-            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин|دقيقة|د)\\b",
+            Pattern.compile("(?<![\\p{L}\\p{N}])(\\d+)[\\s\\u00A0]*(?:min|mins|мин|دقيقة|د)(?![\\p{L}\\p{N}])",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Arrival wall-clock ETA — "· 14:32", "2:05 pm" (OEM EXPECTED_ARRIVE_*) ─

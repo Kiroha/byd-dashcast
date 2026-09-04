@@ -20,9 +20,9 @@ class ArabicNavParsingTest {
 
     // Same alternations as the service. If one drifts, these go red and say which.
     private val dist = Pattern.compile(
-        """\b(\d+[.,]?\d*)[\s ]*(km|км|كم|mi|ft|yd|mt|m|м|م)\b""", Pattern.CASE_INSENSITIVE)
+        """(?<![\p{L}\p{N}])(\d+[.,]?\d*)[\s ]*(km|км|كم|mi|ft|yd|mt|m|м|م)(?![\p{L}\p{N}])""", Pattern.CASE_INSENSITIVE)
     private val mins = Pattern.compile(
-        """\b(\d+)[\s ]*(?:min|mins|мин|دقيقة|د)\b""", Pattern.CASE_INSENSITIVE)
+        """(?<![\p{L}\p{N}])(\d+)[\s ]*(?:min|mins|мин|دقيقة|د)(?![\p{L}\p{N}])""", Pattern.CASE_INSENSITIVE)
 
     private fun firstDistance(raw: String): String? {
         val m = dist.matcher(MapNotificationListenerService.normaliseDigits(raw))
