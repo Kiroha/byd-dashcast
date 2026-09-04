@@ -1,0 +1,2 @@
+12:        if (callingUid == SYSTEM_UID || callingUid == daemonUid) return true;
+13:        if (appUid < 0 || callingUid < 0) return false;
