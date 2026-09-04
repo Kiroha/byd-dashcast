@@ -1,0 +1,3 @@
+com.byd.dashcast.proxy.daemon.ProxyDaemonMain static-main=1
+com.byd.dashcast.proxy.daemon.SurfaceDaemon static-main=1
+com.byd.dashcast.proxy.daemon.TaskRemover static-main=1
