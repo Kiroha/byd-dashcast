@@ -1717,6 +1717,11 @@ class MainActivity : AppCompatActivity(),
         mFullscreenCoordinator?.exit()
     }
 
+    // Deprecated since API 33 in favour of OnBackPressedDispatcher. Deliberately kept:
+    // predictive back is targetSdk-gated and this app is pinned at targetSdk 29, so the
+    // dispatcher buys nothing here, while adding androidx.activity would change the
+    // back-handling path of a car-facing app for no runtime benefit.
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         val coord = mFullscreenCoordinator
         if (coord != null && coord.isFullscreen()) {

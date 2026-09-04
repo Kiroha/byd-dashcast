@@ -303,12 +303,12 @@ class AppListAdapter(
 
         init {
             itemView.setOnClickListener {
-                val app = adapter.getAppAt(adapterPosition)
+                val app = adapter.getAppAt(bindingAdapterPosition)
                 if (app != null) listener?.onSendToDashboard(app)
             }
             // Long click — v0.9.72 opens the action bottom sheet.
             itemView.setOnLongClickListener {
-                val app = adapter.getAppAt(adapterPosition)
+                val app = adapter.getAppAt(bindingAdapterPosition)
                 if (app != null && listener != null) {
                     listener.onShowActions(app)
                     true
@@ -317,15 +317,15 @@ class AppListAdapter(
                 }
             }
             btnToMain?.setOnClickListener {
-                val app = adapter.getAppAt(adapterPosition)
+                val app = adapter.getAppAt(bindingAdapterPosition)
                 if (app != null) listener?.onSendToMain(app)
             }
             btnToCluster?.setOnClickListener {
-                val app = adapter.getAppAt(adapterPosition)
+                val app = adapter.getAppAt(bindingAdapterPosition)
                 if (app != null) listener?.onSendToDashboard(app)
             }
             btnKill?.setOnClickListener {
-                val app = adapter.getAppAt(adapterPosition)
+                val app = adapter.getAppAt(bindingAdapterPosition)
                 if (app != null) listener?.onKillApp(app)
             }
         }
