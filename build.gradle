@@ -14,8 +14,7 @@ buildscript {
         // AGP 9.x is a separate migration (old variant API removed, built-in
         // Kotlin, Build Tools 36) — see docs/KOTLIN_MIGRATION_AUDIT.md.
         // Requires a full JDK 17 (jlink).
-        classpath 'com.android.tools.build:gradle:8.13.2'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0'
+        classpath 'com.android.tools.build:gradle:9.4.0'
     }
 }
 

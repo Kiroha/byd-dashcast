@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
 
 // Reporting credentials are NOT part of the build any more (audit AUD-001).
 //
@@ -1964,7 +1963,7 @@ android {
             // such call site in this app (no getIdentifier() anywhere in app/src/main/java),
             // so no res/raw/keep.xml is needed. If one is ever added, it needs a keep rule.
             shrinkResources = true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-r8-neutral.pro'
             // Explicit fallback: unset means UNSIGNED on release, not debug-signed.
             signingConfig = hasPlatformKeystore ? signingConfigs.bydPlatform : signingConfigs.debug
         }
@@ -2006,29 +2005,6 @@ android {
 
     // Kotlin migration — must match compileOptions (Java 17) so mixed
     // Java/Kotlin compilation stays consistent during the transition.
-    kotlinOptions {
-        jvmTarget = '17'
-        // Kotlin<->Java interop guard for Kotlin interfaces that carry a default body and are
-        // implemented from Java.
-        //
-        // CORRECTION (an earlier version of this comment named the wrong site): this flag has NO
-        // effect on AdbLocalClient.Callback.onEvictionOutcome. That is a *Java* `default` method
-        // (AdbLocalClient.java:345); a Kotlin compiler flag cannot change javac output, so its 17
-        // anonymous Java implementers are unaffected either way.
-        //
-        // The site that IS governed by this flag is ClusterManager.DisplayReadyCallback
-        // (ClusterManager.kt:48) - a KOTLIN interface whose onDisplayLateReady has a default body -
-        // implemented from Java at FissionOrchestrator.java:823. Note that implementer already
-        // overrides the method explicitly (:844, with the reason at :840-843), so nothing in the
-        // tree would fail to compile today if the flag were dropped. The flag is insurance against
-        // the FIRST Kotlin interface default that a Java class does not override: without it the
-        // DefaultImpls-only encoding leaves that class abstract and fails as a runtime
-        // AbstractMethodError on the car, not at build time.
-        //
-        // Mode `enable` (not `no-compatibility`) also keeps DefaultImpls for binary compatibility.
-        // Verified in bytecode: both DisplayReadyCallback.class and its $DefaultImpls.class exist.
-        freeCompilerArgs += ['-jvm-default=enable']
-    }
 
 
     // PRE-0 (audit) — Robolectric needs the merged resources and the manifest on the unit-test
@@ -2042,53 +2018,74 @@ android {
         }
     }
 
-    android.applicationVariants.all { variant ->
-        variant.outputs.all { output ->
-            // AUD-156 — a release the platform key did not sign must not wear the release name.
-            def suffix = (!hasPlatformKeystore && variant.buildType.name == 'release') ? '-debugsigned' : ''
-            outputFileName = "DashCast-v${variant.versionName}-${variant.buildType.name}${suffix}.apk"
-        }
+    // AGP 9 — migrated off the legacy `android.applicationVariants` API.
+    //
+    // Not a stylistic change: in AGP 9 the `android` extension is an ApplicationExtensionImpl,
+    // which no longer carries applicationVariants at all ("Could not get unknown property
+    // 'applicationVariants'"). The class still ships in the AGP jar, so introspecting the jar
+    // suggests it survived - it did not survive as a reachable property. The new API is the only
+    // route. AGP 9.3 is also the first release where VariantOutput exposes outputFileName, which
+    // is what makes the AUD-156 rename below expressible at all; it does not exist in AGP 8.
+    androidComponents {
+        onVariants(selector().all()) { variant ->
+            def btName = variant.buildType
 
-        // AUD-152 — keep the mapping WITH the release it belongs to.
-        //
-        // R8 renames everything outside `com.byd.dashcast.proxy.**`, so a stack trace from a car
-        // arrives as `a.b.c(SourceFile)` and means nothing without the mapping that produced it.
-        // AGP does write one, to build/outputs/mapping/release/mapping.txt — a path that is
-        // overwritten by the next build and carries no version. So the artefact needed to read a
-        // field report is destroyed by the act of preparing the following release.
-        //
-        // Copied here under the same name as the APK it decodes, so the two travel together and a
-        // report from 1.8.31 can still be read after 1.8.40 has shipped. Publishing it costs
-        // nothing: this repository is public, so the mapping reveals strictly less than the source
-        // already does.
-        if (variant.buildType.minifyEnabled) {
-            // The path, not variant.mappingFileProvider: the provider carries task references and
-            // the configuration cache refuses to serialise them, failing the build with a wall of
-            // "cannot serialize object of type ...Task". The location is stable AGP output.
-            def buildTypeName = variant.buildType.name
-            def apkVersionName = variant.versionName
-            def mappingCopy = tasks.register("copyMapping${variant.name.capitalize()}", Copy) {
-                from layout.buildDirectory.file("outputs/mapping/${buildTypeName}/mapping.txt")
-                // NOT into build/ at all — that was the hole in the first version of this fix.
-                // `outputs/mapping-archive` sat inside app/build/, which .gitignore excludes and
-                // `clean` deletes, so the artefact meant to outlive the next release was destroyed
-                // by the next release. It has to live outside the build directory to mean anything.
-                //
-                // NOT into outputs/apk either: AGP's own createReleaseApkListingFileRedirect reads
-                // that directory, and Gradle refuses the implicit dependency writing there creates.
-                into rootProject.layout.projectDirectory.dir("dist/mappings")
-                rename { "DashCast-v${apkVersionName}-mapping.txt" }
-                duplicatesStrategy = DuplicatesStrategy.INCLUDE
-                // The version has to be a DECLARED input, not just a value captured by the rename
-                // closure. Gradle does not look inside the closure, so with only the source file
-                // and the destination directory tracked, bumping versionName left the task
-                // UP-TO-DATE: 1.8.35 was built and dist/mappings/ still held exactly one file,
-                // DashCast-v1.8.34-beta-mapping.txt, with 1.8.34's content. A mapping labelled
-                // with the wrong release is worse than no mapping — it decodes a trace into
-                // plausible, wrong names — and it is the same failure AUD-152 exists to prevent.
-                inputs.property("versionName", apkVersionName)
+            // AUD-156 — a release the platform key did not sign must not wear the release name.
+            def suffix = (!hasPlatformKeystore && btName == 'release') ? '-debugsigned' : ''
+            variant.outputs.each { output ->
+                output.outputFileName.set(
+                    output.versionName.map { v -> "DashCast-v${v}-${btName}${suffix}.apk".toString() }
+                )
             }
-            variant.assembleProvider.configure { finalizedBy(mappingCopy) }
+
+            // AUD-152 — keep the mapping WITH the release it belongs to.
+            //
+            // R8 renames everything outside `com.byd.dashcast.proxy.**`, so a stack trace from a
+            // car arrives as `a.b.c(SourceFile)` and means nothing without the mapping that
+            // produced it. AGP writes one to build/outputs/mapping/<type>/mapping.txt — a path
+            // overwritten by the next build and carrying no version. So the artefact needed to
+            // read a field report is destroyed by the act of preparing the following release.
+            //
+            // Copied here under the same name as the APK it decodes, so the two travel together
+            // and a report from 1.8.31 can still be read after 1.8.40 has shipped.
+            if (variant.minifyEnabled) {
+                // The typed artifact, not a hardcoded path. The old code used the literal path
+                // specifically to dodge a configuration-cache failure with variant.mappingFileProvider
+                // ("cannot serialize object of type ...Task"); the artifacts API is the supported
+                // lazy accessor and does not carry task references, so the path hack is no longer
+                // needed and the location is no longer duplicated in this file.
+                def mappingProvider = variant.artifacts.get(
+                    com.android.build.api.artifact.SingleArtifact.OBFUSCATION_MAPPING_FILE.INSTANCE)
+                def verProvider = variant.outputs.first().versionName
+                def mappingCopy = tasks.register("copyMapping${variant.name.capitalize()}", Copy) {
+                    from(mappingProvider)
+                    // NOT into build/ at all — that was the hole in the first version of this fix.
+                    // `outputs/mapping-archive` sat inside app/build/, which .gitignore excludes and
+                    // `clean` deletes, so the artefact meant to outlive the next release was
+                    // destroyed by the next release. It has to live outside the build directory.
+                    //
+                    // NOT into outputs/apk either: AGP's own createReleaseApkListingFileRedirect
+                    // reads that directory, and Gradle refuses the implicit dependency it creates.
+                    into rootProject.layout.projectDirectory.dir("dist/mappings")
+                    rename { "DashCast-v${verProvider.get()}-mapping.txt".toString() }
+                    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+                    // The version has to be a DECLARED input, not just a value captured by the
+                    // rename closure. Gradle does not look inside the closure, so with only the
+                    // source file and destination tracked, bumping versionName left the task
+                    // UP-TO-DATE: 1.8.35 was built and dist/mappings/ still held exactly one file,
+                    // DashCast-v1.8.34-beta-mapping.txt, with 1.8.34's content. A mapping labelled
+                    // with the wrong release is worse than no mapping — it decodes a trace into
+                    // plausible, wrong names — and it is the same failure AUD-152 exists to prevent.
+                    inputs.property("versionName", verProvider)
+                }
+                // tasks.named() would fail here: onVariants runs BEFORE AGP creates the
+                // assemble tasks ("Task with name 'assembleRelease' not found"). matching{} +
+                // configureEach{} defers the wiring until the task actually exists, and stays lazy.
+                def assembleName = "assemble${variant.name.capitalize()}".toString()
+                tasks.matching { it.name == assembleName }.configureEach {
+                    finalizedBy(mappingCopy)
+                }
+            }
         }
     }
 }
@@ -2147,4 +2144,39 @@ dependencies {
     // internal ART structures, unlike the hand-rolled meta-reflection trick this replaces — which
     // this library's own README warns "will be blocked"). Apache 2.0.
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
+}
+
+
+// AGP 9 compiles Kotlin itself (built-in Kotlin), and the android.kotlinOptions DSL is gone.
+// This is its replacement and it is NOT a like-for-like move:
+//   * the block is top-level, a sibling of android{}, not nested inside it;
+//   * freeCompilerArgs is a lazy ListProperty here, so `+=` silently does nothing -
+//     it MUST be .add(). A dropped flag would not fail the build, which is exactly the
+//     failure mode the comment below exists to prevent.
+// jvmTarget would default to android.compileOptions.targetCompatibility (17) under built-in
+// Kotlin, but it is set explicitly so a change to compileOptions cannot move it silently.
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        // Kotlin<->Java interop guard for Kotlin interfaces that carry a default body and are
+        // implemented from Java.
+        //
+        // CORRECTION (an earlier version of this comment named the wrong site): this flag has NO
+        // effect on AdbLocalClient.Callback.onEvictionOutcome. That is a *Java* `default` method
+        // (AdbLocalClient.java:345); a Kotlin compiler flag cannot change javac output, so its 17
+        // anonymous Java implementers are unaffected either way.
+        //
+        // The site that IS governed by this flag is ClusterManager.DisplayReadyCallback
+        // (ClusterManager.kt:48) - a KOTLIN interface whose onDisplayLateReady has a default body -
+        // implemented from Java at FissionOrchestrator.java:823. Note that implementer already
+        // overrides the method explicitly (:844, with the reason at :840-843), so nothing in the
+        // tree would fail to compile today if the flag were dropped. The flag is insurance against
+        // the FIRST Kotlin interface default that a Java class does not override: without it the
+        // DefaultImpls-only encoding leaves that class abstract and fails as a runtime
+        // AbstractMethodError on the car, not at build time.
+        //
+        // Mode `enable` (not `no-compatibility`) also keeps DefaultImpls for binary compatibility.
+        // Verified in bytecode: both DisplayReadyCallback.class and its $DefaultImpls.class exist.
+        freeCompilerArgs.add('-jvm-default=enable')
+    }
 }
