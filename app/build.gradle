@@ -2008,13 +2008,25 @@ android {
     // Java/Kotlin compilation stays consistent during the transition.
     kotlinOptions {
         jvmTarget = '17'
-        // Kotlin<->Java migration guard. AdbLocalClient.Callback.onEvictionOutcome is a Java
-        // `default` method (AdbLocalClient.java:345) that ~20 anonymous Java implementers omit.
-        // When that interface is ported to Kotlin (last batch), its default body MUST compile to
-        // a real JVM default method; the DefaultImpls-only encoding would leave those implementers
-        // abstract and break them. Kotlin 2.x happens to default to `enable`, but nothing pinned
-        // it. Pinned explicitly here, while every implementer is still Java and would fail loudly.
+        // Kotlin<->Java interop guard for Kotlin interfaces that carry a default body and are
+        // implemented from Java.
+        //
+        // CORRECTION (an earlier version of this comment named the wrong site): this flag has NO
+        // effect on AdbLocalClient.Callback.onEvictionOutcome. That is a *Java* `default` method
+        // (AdbLocalClient.java:345); a Kotlin compiler flag cannot change javac output, so its 17
+        // anonymous Java implementers are unaffected either way.
+        //
+        // The site that IS governed by this flag is ClusterManager.DisplayReadyCallback
+        // (ClusterManager.kt:48) - a KOTLIN interface whose onDisplayLateReady has a default body -
+        // implemented from Java at FissionOrchestrator.java:823. Note that implementer already
+        // overrides the method explicitly (:844, with the reason at :840-843), so nothing in the
+        // tree would fail to compile today if the flag were dropped. The flag is insurance against
+        // the FIRST Kotlin interface default that a Java class does not override: without it the
+        // DefaultImpls-only encoding leaves that class abstract and fails as a runtime
+        // AbstractMethodError on the car, not at build time.
+        //
         // Mode `enable` (not `no-compatibility`) also keeps DefaultImpls for binary compatibility.
+        // Verified in bytecode: both DisplayReadyCallback.class and its $DefaultImpls.class exist.
         freeCompilerArgs += ['-jvm-default=enable']
     }
 
