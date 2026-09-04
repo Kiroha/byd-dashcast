@@ -469,13 +469,18 @@ class BugWizardActivity : Activity() {
         if (AdbLocalClient.isAdbTransportUnreachable()) return
         AdbLocalClient.executeShellWithResult(this, "ps -A 2>/dev/null",
             object : AdbLocalClient.Callback {
-                override fun onSuccess(out: String) {
+                // String? deliberately: AdbLocalClient.Callback is still unannotated Java, so these
+                // are platform types today and either nullability compiles. When AdbLocalClient
+                // becomes Kotlin (last batch of the migration) the interface will declare String?,
+                // and a non-null override here would be an illegal narrowing — forcing an edit
+                // inside the riskiest commit of the whole migration. Pinned now, while it is free.
+                override fun onSuccess(out: String?) {
                     val hit = MapNotificationListenerService.firstUnsupportedNavProcess(out)
                     if (!hit.isNullOrEmpty()) runOnUiThread {
                         if (isUiAlive()) mActiveNav = hit
                     }
                 }
-                override fun onError(err: String) {}
+                override fun onError(err: String?) {}
             }, AdbLocalClient.PROBE_IDLE_TIMEOUT_MS)
     }
 
@@ -519,12 +524,15 @@ class BugWizardActivity : Activity() {
             " | grep -E '${ForegroundPackageLine.GREP_ALTERNATION}'" +
             " | head -1"
         AdbLocalClient.executeShellWithResult(this, cmd, object : AdbLocalClient.Callback {
-            override fun onSuccess(out: String) {
-                val pkg = ForegroundPackageLine.parse(out.trim())
+            // String? pinned for the same reason as probeUnsupportedNav above.
+            // ForegroundPackageLine.parse already accepts String? and returns String?, so the
+            // null case flows to onDetectionResult(null, null) — the same outcome as onError.
+            override fun onSuccess(out: String?) {
+                val pkg = ForegroundPackageLine.parse(out?.trim())
                 val label = if (pkg != null) labelFor(pkg) else null
                 runOnUiThread { if (isUiAlive()) onDetectionResult(pkg, label) }
             }
-            override fun onError(err: String) {
+            override fun onError(err: String?) {
                 runOnUiThread { if (isUiAlive()) onDetectionResult(null, null) }
             }
         }, AdbLocalClient.PROBE_IDLE_TIMEOUT_MS)

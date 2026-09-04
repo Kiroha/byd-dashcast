@@ -2008,6 +2008,14 @@ android {
     // Java/Kotlin compilation stays consistent during the transition.
     kotlinOptions {
         jvmTarget = '17'
+        // Kotlin<->Java migration guard. AdbLocalClient.Callback.onEvictionOutcome is a Java
+        // `default` method (AdbLocalClient.java:345) that ~20 anonymous Java implementers omit.
+        // When that interface is ported to Kotlin (last batch), its default body MUST compile to
+        // a real JVM default method; the DefaultImpls-only encoding would leave those implementers
+        // abstract and break them. Kotlin 2.x happens to default to `enable`, but nothing pinned
+        // it. Pinned explicitly here, while every implementer is still Java and would fail loudly.
+        // Mode `enable` (not `no-compatibility`) also keeps DefaultImpls for binary compatibility.
+        freeCompilerArgs += ['-jvm-default=enable']
     }
 
 
