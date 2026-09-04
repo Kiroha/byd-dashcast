@@ -119,11 +119,29 @@ git diff --name-status -M <batch-base> HEAD \
 ## Decisions locked in Batch 0
 
 - **`-jvm-default=enable` pinned** in `kotlinOptions`.
-  `AdbLocalClient.Callback.onEvictionOutcome` is a Java `default` method
-  (`AdbLocalClient.java:345`) that ~20 anonymous Java implementers omit. When that interface is
-  ported (last batch) its default body must compile to a real JVM default method. Kotlin 2.x
-  happens to default to `enable`, but nothing pinned it. Mode `enable` (not `no-compatibility`)
-  keeps `DefaultImpls` for binary compatibility.
+
+  **CORRECTED.** The original rationale here was wrong and is kept visible on purpose. It claimed
+  the flag protected `AdbLocalClient.Callback.onEvictionOutcome` and its "~20 anonymous Java
+  implementers". It does not: `AdbLocalClient.Callback` is a **Java** interface
+  (`AdbLocalClient.java:345`), and a Kotlin compiler flag cannot change javac output. Its
+  implementers (17, not ~20) are unaffected either way.
+
+  The site the flag actually governs is `ClusterManager.DisplayReadyCallback`
+  (`ClusterManager.kt:48`) — a **Kotlin** interface whose `onDisplayLateReady` has a default body —
+  implemented from Java at `FissionOrchestrator.java:823`. That implementer *already* overrides the
+  method explicitly (`:844`, reason at `:840-843`), so **nothing in the tree would fail to compile
+  today if the flag were dropped.** The flag is insurance against the first Kotlin interface default
+  that a Java class does *not* override: without it the `DefaultImpls`-only encoding leaves that
+  class abstract and fails as a runtime `AbstractMethodError` on the car, never at build time.
+
+  Mode `enable` (not `no-compatibility`) keeps `DefaultImpls` for binary compatibility — verified in
+  bytecode: both `ClusterManager$DisplayReadyCallback.class` and its `$DefaultImpls.class` exist.
+
+  A guard asserting `AdbLocalClient.Callback#onEvictionOutcome` `isDefault()` would be a
+  **tautology** — `Method.isDefault()` is `true` for a Java default method regardless of any Kotlin
+  flag. A real guard must target the Kotlin interface AND assert that the `$DefaultImpls` class
+  resolves, since that is what distinguishes `enable` from `no-compatibility`. Write it in Kotlin:
+  `compileDebugUnitTestJavaWithJavac` is currently `NO-SOURCE` (all 738 tests are Kotlin).
 
 - **`AdbLocalClient.Callback` nullability pinned now**, in `BugWizardActivity.kt`
   (`onSuccess`/`onError` → `String?`, 4 overrides). The interface is unannotated Java today, so
