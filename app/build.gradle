@@ -2109,7 +2109,7 @@ dependencies {
 
     // Material Components (Material 3) — fournit Theme.Material3.*
     // 1.9.0 = dernière version compatible compileSdk 33.
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'com.google.android.material:material:1.14.0'
 
     // dadb — pure-JVM ADB client (same library used by Overdrive)
     implementation 'dev.mobile:dadb:2.0.0'
