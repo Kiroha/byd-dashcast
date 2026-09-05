@@ -71,3 +71,6 @@ relay/node_modules/
 # git add -A publishes them irrevocably." These two lines are that rule, enforced.
 audit/
 *.mp4
+
+# Kotlin build-tool scratch (error logs written by the Kotlin daemon)
+.kotlin/
