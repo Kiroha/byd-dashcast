@@ -14,10 +14,10 @@ class OtaDefaultChannelTest {
 
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .firstOrNull { File(it,
-                "app/src/main/java/com/byd/dashcast/update/UpdateChecker.java").isFile }
+                "app/src/main/java/com/byd/dashcast/update/UpdateChecker.kt").isFile }
         assertTrue("could not locate the repo root", root != null)
         val checker = File(root,
-            "app/src/main/java/com/byd/dashcast/update/UpdateChecker.java").readText()
+            "app/src/main/java/com/byd/dashcast/update/UpdateChecker.kt").readText()
         val settings = File(root,
             "app/src/main/java/com/byd/dashcast/ui/settings/SettingsActivity.kt").readText()
 
