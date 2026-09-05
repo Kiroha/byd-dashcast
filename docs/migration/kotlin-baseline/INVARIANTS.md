@@ -48,10 +48,11 @@ KC=app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes
 
 ---
 
-## Three traps that produced FALSE facts while capturing this baseline
+## Traps that produced FALSE facts in this migration
 
 Recorded because each silently reported a wrong number, and a wrong number in a migration gate
-is worse than no gate at all.
+is worse than no gate at all. Traps 1–3 were found while capturing the baseline; 4–6 were found
+later, by which time two of them had been reading green over four real defects.
 
 1. **`TXN_` count.** `grep -cE 'TXN_[A-Z_]+\s*='` reports **35**. The real count is **37** —
    the pattern drops names containing digits (`TXN_PHASE4_*`). Use `[A-Z0-9_]`.
@@ -68,6 +69,37 @@ is worse than no gate at all.
    ```
    grep -cE 'public static (final )?void main\(java\.lang\.String\[\]\)'
    ```
+
+4. **A NUL byte in a source file silences the lint gate — via grep's binary mode.**
+   `Phase4Probes.kt` carried a *literal* `0x00` byte inside a char literal (the
+   `/proc/<pid>/cmdline` separator). Lint copies the offending source line into
+   `errorLine1` of its XML report, so the NUL propagated into
+   `lint-results-release.xml`; `file` reported the report as `data`, and grep, in
+   binary mode, **suppressed its output entirely**. `grep -c '<issue '` then printed
+   *nothing at all* — not `0` — which inside `echo "issues: $(…)"` renders as a blank
+   and reads as zero to a human. Defence: `grep -a` on every generated report, and
+   never let a check's "pass" be indistinguishable from its "no output".
+
+5. **`<issue ` with a trailing space stopped matching under AGP 9.** Trap 2 above
+   prescribed the trailing space to avoid matching the `<issues>` ROOT element. Lint
+   9.4.0 pretty-prints each issue with its attributes on their own lines, so the tag
+   is now `<issue\n        id="…"` — no space follows it, and the prescribed pattern
+   matches **0** forever. Combined with trap 4, the lint invariant had been unable to
+   fail across the whole toolchain upgrade, hiding 2 `UseKtx` warnings and 2
+   `TrimLambda` hints. Use a pattern that excludes only the root element:
+
+   ```bash
+   grep -acE '<issue([^s]|$)' app/build/reports/lint-results-release.xml   # must be 0
+   ```
+
+   And prove it can still fail — append a synthetic `<issue id="FakeCheck" …/>` to a
+   copy of the report and confirm the pattern returns 1.
+
+6. **The raw-string check counts `"""` inside COMMENTS.** Invariant 5 flagged
+   `ProxyShell.kt` as a new raw-string user. It is not: the match is a KDoc line that
+   *documents* that raw strings are deliberately avoided there. A grep for a code
+   construct that also appears in prose about that construct will keep producing this.
+   Read the matching line before treating it as a violation.
 
 ---
 
@@ -94,14 +126,22 @@ for c in com.byd.dashcast.proxy.daemon.ProxyDaemonMain \
     | grep -cE 'public static (final )?void main\(java\.lang\.String\[\]\)'
 done   # must print 1, 1, 1
 
-# 3. Lint really is 0
-grep -c '<issue ' app/build/reports/lint-results-release.xml   # must be 0
+# 3. Lint really is 0.  -a because a NUL in any flagged source line turns the report
+#    binary and makes grep print NOTHING (trap 4); the pattern excludes only the
+#    <issues> root, because AGP 9 puts a NEWLINE after <issue (trap 5).
+grep -acE '<issue([^s]|$)' app/build/reports/lint-results-release.xml   # must be 0
+#    Sanity-check the checker itself, or it will read green over real issues:
+#    append a synthetic <issue id="FakeCheck" .../> to a COPY of the report and
+#    confirm the same pattern then returns 1.
 
 # 4. Test count never drops
 grep -ho '<testcase' app/build/test-results/testDebugUnitTest/*.xml | wc -l   # >= 738
 
-# 5. No new raw strings (a shell command must never become a """ string)
-grep -rl '"""' app/src/main/java | sort | diff - "$BL/rawstring-allowlist.txt"
+# 5. No new raw strings (a shell command must never become a """ string).
+#    The leading [^*/]* skips KDoc/line-comment matches, which are prose ABOUT raw
+#    strings rather than uses of them (trap 6). Mutation-tested: adding a real
+#    `private val X = """…"""` to ProxyShell.kt is still caught.
+grep -rlE '^[^*/]*"""' app/src/main/java | sort | diff - "$BL/rawstring-allowlist.txt"
 
 # 6. Kotlin null-check intrinsics: INVESTIGATE each one, do not blanket-ban them.
 #    THE systemic risk of this migration: a non-null Kotlin param behind a Java caller
