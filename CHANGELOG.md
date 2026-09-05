@@ -15,6 +15,20 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.1-beta (versionCode 640)
+
+**Full-Kotlin beta — expect breakage.** The 24 Java files that remained after 1.9.0 were ported to
+Kotlin one commit each, ending with `ClusterService`, `ProxyDaemonMain`, `SurfaceDaemon` and
+`AdbLocalClient`; the application logic is intended to be unchanged and was gated mechanically
+(145 frozen daemon wire constants with zero drift, every interpolated shell command byte-compared,
+all three `app_process` mains intact, every compiler-inserted null-check traced to its callers,
+738 tests, lint 0). Only `byd/fbs/naviInfo/NaviInfo.java` stays Java: it is flatc-generated OEM
+wire format. **Nothing in this build has run in a car**; both DiLink 3 and DiLink 5 must be
+validated. Three pre-existing defects the port surfaced (the proxy daemon's two exception policies,
+`FileObserver(File, Int)` being API 29 on minSdk 28, two weak source-scraping tests) are documented
+and deliberately left for their own releases. `1.9.0` remains the stable release. Full notes and
+the parked-car test checklist: [docs/releases/1.9.1-beta.md](docs/releases/1.9.1-beta.md).
+
 ### 1.8.48-beta (versionCode 638)
 
 **The full post-1.8.47 convergence audit: projection and task ownership are serialized, daemon
