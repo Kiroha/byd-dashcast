@@ -7,6 +7,8 @@ import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 
+import androidx.core.view.isVisible
+
 import com.byd.dashcast.R
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.ime.ClusterImeWatcherService
@@ -80,7 +82,7 @@ class PermissionBannerCoordinator(
                 val dismissed = ClusterPrefs.isImeBannerDismissed(mHost.getContext())
                 val enabled = ClusterImeWatcherService.isEnabled(mHost.getContext())
                 shouldShow = !dismissed && !enabled
-                if (enabled && card.visibility == View.VISIBLE) {
+                if (enabled && card.isVisible) {
                     try {
                         Toast.makeText(mHost.getContext(), R.string.ime_banner_toast_enabled,
                                 Toast.LENGTH_SHORT).show()

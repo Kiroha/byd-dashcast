@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.view.isNotEmpty
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.byd.dashcast.R
@@ -184,7 +185,7 @@ class AppListAdapter(
             val want = app.shortcuts.size
             if (want == 0) {
                 container.visibility = View.GONE
-                if (container.childCount > 0) container.removeAllViews()
+                if (container.isNotEmpty()) container.removeAllViews()
             } else {
                 container.visibility = View.VISIBLE
                 while (container.childCount > want) {
