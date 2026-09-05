@@ -227,15 +227,15 @@ class HotspotActivity : AppCompatActivity() {
             return
         }
         TetherFiUpdateChecker.check(this, object : TetherFiUpdateChecker.Callback {
-            override fun onResult(r: TetherFiUpdateChecker.Result) {
+            override fun onResult(result: TetherFiUpdateChecker.Result) {
                 if (isFinishing || isDestroyed) return
                 val update = tvUpdate ?: return
-                if (r.isUpdateAvailable) {
+                if (result.isUpdateAvailable) {
                     update.text = getString(
                         R.string.hotspot_tf_update_available,
-                        r.installedVersionCode, r.remoteVersionCode
+                        result.installedVersionCode, result.remoteVersionCode
                     )
-                    update.tag = r.releasePageUrl
+                    update.tag = result.releasePageUrl
                     update.visibility = View.VISIBLE
                 } else {
                     update.visibility = View.GONE
