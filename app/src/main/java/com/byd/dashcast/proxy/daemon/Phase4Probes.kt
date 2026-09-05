@@ -229,7 +229,7 @@ object Phase4Probes {
                 n = FileInputStream(cmd).use { fis -> fis.read(buf) }
             } catch (ignore: Throwable) { continue }
             if (n <= 0) continue
-            val s = String(buf, 0, n).replace('\u0000', ' ').trim { it <= ' ' }
+            val s = String(buf, 0, n).replace('\u0000', ' ').trim()
             if (s.contains(needle)) matched++
         }
         return "PASS:scanned " + scanned + " procs, matched " + matched + " '" + needle + "'"
@@ -259,7 +259,7 @@ object Phase4Probes {
         for (w in wanted) {
             sb.append(w).append('=').append(if (all.contains(w)) '1' else '0').append(' ')
         }
-        return sb.toString().trim { it <= ' ' }
+        return sb.toString().trim()
     }
 
     /** P10 — {@code IPackageManager.getInstallerPackageName}. Cheap read API to
