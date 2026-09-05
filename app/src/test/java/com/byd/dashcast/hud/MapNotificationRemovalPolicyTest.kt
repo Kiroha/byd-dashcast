@@ -39,9 +39,9 @@ class MapNotificationRemovalPolicyTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.java"
+            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.kt"
         ).readText()
 
-        assertTrue(source.split("if (!isNavigationNotification(n)) return;").size - 1 == 2)
+        assertTrue(source.split("if (!isNavigationNotification(n)) return").size - 1 == 2)
     }
 }

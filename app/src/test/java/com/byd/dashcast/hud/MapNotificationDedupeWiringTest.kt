@@ -13,15 +13,15 @@ class MapNotificationDedupeWiringTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.java"
+            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.kt"
         ).readText()
 
         assertTrue(source.contains("bigText, lastBigText"))
-        assertTrue(source.contains("sbn.getKey(), lastNotificationKey"))
-        assertTrue(source.contains("lastBigText = bigText;"))
-        assertTrue(source.contains("lastNotificationKey = sbn.getKey();"))
-        assertTrue(source.contains("lastBigText = \"\";"))
-        assertTrue(source.contains("lastNotificationKey = null;"))
+        assertTrue(source.contains("sbn.key, lastNotificationKey"))
+        assertTrue(source.contains("lastBigText = bigText"))
+        assertTrue(source.contains("lastNotificationKey = sbn.key"))
+        assertTrue(source.contains("lastBigText = \"\""))
+        assertTrue(source.contains("lastNotificationKey = null"))
     }
 
     @Test
@@ -49,10 +49,10 @@ class MapNotificationDedupeWiringTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.java"
+            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.kt"
         ).readText()
-        val disconnected = source.substringAfter("public void onListenerDisconnected()")
-            .substringBefore("@Override", "")
+        val disconnected = source.substringAfter("override fun onListenerDisconnected()")
+            .substringBefore("override fun onNotificationPosted", "")
 
         assertTrue(disconnected.indexOf("clearTrackedNavigation()") in
             0 until disconnected.indexOf("postNavClose()"))
