@@ -661,7 +661,7 @@ class ClusterImeWatcherService : AccessibilityService() {
         private fun activeClusterDisplayId(): Int {
             val service = ClusterService.getInstance()
             if (service == null || !service.isProjectionActive()) return -1
-            val displayId = service.getDisplayId()
+            val displayId = service.displayId
             return if (displayId > 0) displayId else -1
         }
     }

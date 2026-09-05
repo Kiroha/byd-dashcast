@@ -123,7 +123,7 @@ class SplitReplacementStateTest {
         assertTrue(shortcutPath.contains("isCurrentSecondDashboardReplacement(generation)"))
         assertTrue(splitPath.contains("mSessionTracker.remove(previousSecond)"))
         assertTrue(shortcutPath.contains("mSessionTracker.remove(splitOccupantToStop)"))
-        assertTrue(splitPath.contains("if (launched) cleanupStaleSplitLaunch(pkgName)"))
+        assertTrue(splitPath.contains("if (success) cleanupStaleSplitLaunch(pkgName)"))
         val appError = splitPath.substringAfter("override fun onError(error: String?)").take(700)
         val shortcutError = shortcutPath.substringAfter("override fun onError(error: String?)").take(700)
         assertTrue(appError.contains("toast_kill_failed"))

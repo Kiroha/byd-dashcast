@@ -22,7 +22,7 @@ class ClusterEvictionMoveWatchdogWiringTest {
         assertTrue(continuation.contains("awaitLandingThenForceStop"))
         assertTrue(move.contains("main.postDelayed(timeout, MOVE_CALLBACK_TIMEOUT_MS)"))
         assertTrue(move.contains("continueAfterMove(false, \"callback-timeout\")"))
-        assertTrue(move.contains("continueAfterMove(ok, \"callback\")"))
+        assertTrue(move.contains("continueAfterMove(success, \"callback\")"))
         assertTrue(source.contains("sEvictionGate.tryBeginDestructive(candidate.token)"))
         assertTrue(source.contains("postDeferredLaunch(completion?.deferredLaunch)"))
         val blind = source.substringAfter("if (svc == null)")

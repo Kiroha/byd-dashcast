@@ -154,8 +154,8 @@ class MirrorCoordinator(
         if (mDestroyed) return
         val svc = mHost.getClusterServiceIfBound()
         if (svc != null) {
-            val mm = svc.getMirrorManager()
-            if (mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
+            val mm = svc.mirrorManager
+            if (mm != null && mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
                 AppLogger.i(TAG, "Daemon arrived after direct-path mirror — restarting via daemon")
                 stopMirror()
             }
@@ -233,7 +233,7 @@ class MirrorCoordinator(
 
         val svc = mHost.getClusterServiceIfBound() ?: return
 
-        val mm = svc.getMirrorManager()
+        val mm = svc.mirrorManager ?: return
         if (mm.isMirrorActive()) {
             AppLogger.d(TAG, "attemptStart: mirror already active")
             mTextureView.visibility = View.VISIBLE
@@ -243,7 +243,7 @@ class MirrorCoordinator(
 
         val ctx = mHost.getContext()
         var clusterDisplay: Display? = null
-        val displayId = svc.getDisplayId()
+        val displayId = svc.displayId
         if (displayId >= 0) {
             val dm = ctx.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager?
             if (dm != null) clusterDisplay = dm.getDisplay(displayId)
@@ -314,7 +314,7 @@ class MirrorCoordinator(
 
     private fun stopNormalMirror() {
         val svc = mHost.getClusterServiceIfBound() ?: return
-        val mirror = svc.getMirrorManager()
+        val mirror = svc.mirrorManager ?: return
         if (mirror.isMirrorViaDaemon()) mirror.stopMirrorViaDaemon(mHost.getSurfaceDaemonBinder())
         mirror.stopMirror()
     }
@@ -373,9 +373,9 @@ class MirrorCoordinator(
             return
         }
         val svc = mHost.getClusterServiceIfBound() ?: return
-        val forwarder = svc.getInputForwarder() ?: return
+        val forwarder = svc.inputForwarder ?: return
 
-        val mirror = svc.getMirrorManager() ?: return
+        val mirror = svc.mirrorManager ?: return
 
         // Use the projection params stored when setDisplayProjection was called.
         // This guarantees the touch offset/scale matches the actual rendered projection,

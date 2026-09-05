@@ -41,7 +41,7 @@ class ClusterSessionOwnershipWiringTest {
 
         assertTrue(success.contains("mSessionTracker.remove(app.packageName)"))
         assertTrue(error.contains("mSessionTracker.add(app.packageName)"))
-        assertFalse(kill.substringAfter("override fun onResult(ok: Boolean)")
+        assertFalse(kill.substringAfter("override fun onResult(success: Boolean)")
             .substringBefore("})\n        } else").contains("mSessionTracker.remove"))
     }
 }

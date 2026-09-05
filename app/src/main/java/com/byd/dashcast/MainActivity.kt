@@ -124,9 +124,9 @@ class MainActivity : AppCompatActivity(),
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             mClusterService = (binder as ClusterService.LocalBinder).getService()
             mServiceBound = true
-            mDashboardLauncher = mClusterService!!.getLauncher()
+            mDashboardLauncher = mClusterService!!.launcher
             mClusterService!!.setListener(this@MainActivity)
-            AppLogger.log(TAG, "Bind ClusterService OK — displayId=" + mClusterService!!.getDisplayId())
+            AppLogger.log(TAG, "Bind ClusterService OK — displayId=" + mClusterService!!.displayId)
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -202,7 +202,7 @@ class MainActivity : AppCompatActivity(),
         DaemonBinderResolver.createActionReceiver { binder ->
             mDaemonBinder = binder
             val svc = if (mServiceBound) mClusterService else null
-            svc?.getInputForwarder()?.setDaemonBinder(binder)
+            svc?.inputForwarder?.setDaemonBinder(binder)
             mMirrorCoordinator?.onDaemonBinderAvailable(binder)
         }
     private var mDaemonReadyReceiverRegistered = false
@@ -510,7 +510,7 @@ class MainActivity : AppCompatActivity(),
         mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
             if (isFinishing || isDestroyed) return@Runnable
             val activeService = mClusterService ?: return@Runnable
-            val displayId = activeService.getDisplayId()
+            val displayId = activeService.displayId
             if (displayId <= 0) {
                 AppLogger.w(TAG, "quickSwitchToApp: cluster display unavailable — reactivating")
                 mAppRepo.findByPackage(pkgName)?.let { mPendingAppAfterActivation = it }
@@ -520,8 +520,8 @@ class MainActivity : AppCompatActivity(),
             mSessionTracker.remove(pkgName)
             activeService.moveTaskToDisplay(pkgName, displayId,
                 object : ClusterService.LaunchCallback {
-                    override fun onResult(launched: Boolean) {
-                        if (launched) {
+                    override fun onResult(success: Boolean) {
+                        if (success) {
                             mLastLaunchTime = System.currentTimeMillis()
                             mCurrentDashboardPkg = pkgName
                             mSessionTracker.add(pkgName)
@@ -578,7 +578,7 @@ class MainActivity : AppCompatActivity(),
             svc.setListener(this)
             // v1.2.82 — re-sync the status UI if the cluster display is currently up.
             try {
-                val curDispId = svc.getDisplayId()
+                val curDispId = svc.displayId
                 if (curDispId > 0) {
                     updateDashboardStatus(mCurrentDashboardApp)
                 }
@@ -622,10 +622,10 @@ class MainActivity : AppCompatActivity(),
         // Keep the daemon mirror alive when a nav app is actively streaming on the cluster.
         val svc = mClusterService
         val clusterAppActive = mCurrentDashboardApp != null &&
-            mServiceBound && svc != null && svc.getDisplayId() > 0
+            mServiceBound && svc != null && svc.displayId > 0
         // DL3 keepalive: the daemon mirror (layerStack=2 fallback) must survive onStop.
         val keepDaemonMirror = mServiceBound && svc != null &&
-            svc.getMirrorManager().isMirrorViaDaemon() && svc.getDisplayId() <= 0
+            svc.mirrorManager?.isMirrorViaDaemon() == true && svc.displayId <= 0
         if (!clusterAppActive && !keepDaemonMirror) {
             stopClusterMirror()
         }
@@ -682,7 +682,7 @@ class MainActivity : AppCompatActivity(),
         )
         val svc = mClusterService
         if (mServiceBound && svc != null) {
-            mDashboardLauncher = svc.getLauncher()
+            mDashboardLauncher = svc.launcher
         }
         runOnUiThread {
             if (isFinishing || isDestroyed) return@runOnUiThread
@@ -863,7 +863,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // v1.2.83 — same auto-activation if bound but projection was stopped (displayId=-1).
-        if (svc.getDisplayId() <= 0) {
+        if (svc.displayId <= 0) {
             AppLogger.i(TAG, "ClusterService bound but displayId<=0 — auto-activating for " + app.packageName)
             mPendingAppAfterActivation = app
             activateCluster()
@@ -986,12 +986,12 @@ class MainActivity : AppCompatActivity(),
                     mSessionTracker.remove(pkgName)
                     svc.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, h,
                         object : ClusterService.LaunchCallback {
-                            override fun onResult(launched: Boolean) {
+                            override fun onResult(success: Boolean) {
                                 if (!split.isCurrentSecondDashboardReplacement(replacementGeneration)) {
-                                    if (launched) cleanupStaleSplitLaunch(pkgName)
+                                    if (success) cleanupStaleSplitLaunch(pkgName)
                                     return
                                 }
-                                if (launched) {
+                                if (success) {
                                     mLastLaunchTime = System.currentTimeMillis()
                                     split.setSecondDashboardApp(appName)
                                     split.setSecondDashboardPkg(pkgName)
@@ -1045,7 +1045,7 @@ class MainActivity : AppCompatActivity(),
             mSessionTracker.runWhenSafeToLaunch(pkgName, Runnable {
                 if (isFinishing || isDestroyed) return@Runnable
                 val activeService = mClusterService ?: return@Runnable
-                val clusterDisplayId = activeService.getDisplayId()
+                val clusterDisplayId = activeService.displayId
                 if (clusterDisplayId <= 0) {
                     AppLogger.w(TAG, "proceedMove: cluster display disappeared — reactivating")
                     mPendingAppAfterActivation = app
@@ -1056,13 +1056,13 @@ class MainActivity : AppCompatActivity(),
                 val targetDisplayId = clusterDisplayId
                 activeService.moveTaskToDisplay(pkgName, targetDisplayId,
                     object : ClusterService.LaunchCallback {
-                        override fun onResult(launched: Boolean) {
+                        override fun onResult(success: Boolean) {
                             AppLogger.log(
                                 TAG, "moveTaskToDisplay " + pkgName + " → display=" +
                                     targetDisplayId + " " +
-                                    (if (launched) "OK" else "FAILED")
+                                    (if (success) "OK" else "FAILED")
                             )
-                            if (launched) {
+                            if (success) {
                                 mLastLaunchTime = System.currentTimeMillis()
                                 mUsageTracker.trackStop(mCurrentDashboardPkg)
                                 mCurrentDashboardApp = appName
@@ -1433,8 +1433,8 @@ class MainActivity : AppCompatActivity(),
         val svc = mClusterService
         if (mSessionTracker.contains(app.packageName) && mServiceBound && svc != null) {
             svc.moveTaskToDisplay(app.packageName, 0, object : ClusterService.LaunchCallback {
-                override fun onResult(ok: Boolean) {
-                    AppLogger.i(TAG, "doKillApp: move→display0 " + (if (ok) "OK" else "KO") + " for " + app.packageName + " — now force-stop")
+                override fun onResult(success: Boolean) {
+                    AppLogger.i(TAG, "doKillApp: move→display0 " + (if (success) "OK" else "KO") + " for " + app.packageName + " — now force-stop")
                     AdbLocalClient.forceStopApp(this@MainActivity, app.packageName, killCallback)
                 }
             })
@@ -1452,12 +1452,12 @@ class MainActivity : AppCompatActivity(),
             if (isFinishing || isDestroyed) return@fetch
             mDaemonBinder = binder
             val svc = if (mServiceBound) mClusterService else null
-            svc?.getInputForwarder()?.setDaemonBinder(binder)
+            svc?.inputForwarder?.setDaemonBinder(binder)
             // Restart mirror if currently shown so the daemon path can take over.
             if (mCurrentDashboardApp != null && frameMirror.isVisible) {
                 if (svc != null) {
-                    val mm = svc.getMirrorManager()
-                    if (mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
+                    val mm = svc.mirrorManager
+                    if (mm != null && mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
                         AppLogger.i(TAG, "Daemon resolved late — restarting mirror via daemon")
                         stopClusterMirror()
                     }
@@ -1508,7 +1508,7 @@ class MainActivity : AppCompatActivity(),
         // DL3 keepalive: the daemon mirror (layerStack=2 fallback) must survive the periodic timeout.
         val svc = mClusterService
         val keepDaemonMirror = mServiceBound && svc != null &&
-            svc.getMirrorManager().isMirrorViaDaemon() && svc.getDisplayId() <= 0
+            svc.mirrorManager?.isMirrorViaDaemon() == true && svc.displayId <= 0
         if (!keepDaemonMirror) {
             stopClusterMirror()
         }
@@ -1541,7 +1541,7 @@ class MainActivity : AppCompatActivity(),
         AppLogger.log(
             TAG, "activateCluster() — serviceBound=" + mServiceBound +
                 " bindRequested=" + mBindRequested +
-                " displayId=" + (mClusterService?.getDisplayId() ?: "N/A")
+                " displayId=" + (mClusterService?.displayId ?: "N/A")
         )
 
         val svc = mClusterService
@@ -1736,7 +1736,7 @@ class MainActivity : AppCompatActivity(),
         val overlay = mInsetOverlay ?: return
         val svc = mClusterService
         if (!mServiceBound || svc == null) return
-        val mirror = svc.getMirrorManager()
+        val mirror = svc.mirrorManager ?: return
         overlay.setProjection(mirror.getProjScale(), mirror.getProjOffsetX().toFloat(), mirror.getProjOffsetY().toFloat())
         // v1.8.2 — the inset seekbars that fed this preview are gone; the cluster is always
         // full-screen unless a hand-drawn rectangle says otherwise, so there is no band to draw.
@@ -2152,7 +2152,7 @@ class MainActivity : AppCompatActivity(),
     /** Main thread. Replaces the cached surface binder and tells the touch path about it. */
     private fun adoptSurfaceBinder(fresh: IBinder?, why: String) {
         mDaemonBinder = fresh
-        if (mServiceBound) mClusterService?.getInputForwarder()?.setDaemonBinder(fresh)
+        if (mServiceBound) mClusterService?.inputForwarder?.setDaemonBinder(fresh)
         AppLogger.w(TAG, "surface binder " + why + " — "
                 + (if (fresh != null) "re-acquired" else "dropped, waiting for the daemon"))
     }

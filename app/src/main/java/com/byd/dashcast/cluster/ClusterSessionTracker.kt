@@ -315,8 +315,8 @@ class ClusterSessionTracker(context: Context) {
                 main.postDelayed(timeout, MOVE_CALLBACK_TIMEOUT_MS)
                 try {
                     svc.moveTaskToDisplay(pkg, 0, object : ClusterService.LaunchCallback {
-                        override fun onResult(ok: Boolean) {
-                            continueAfterMove(ok, "callback")
+                        override fun onResult(success: Boolean) {
+                            continueAfterMove(success, "callback")
                         }
                     })
                 } catch (error: Throwable) {

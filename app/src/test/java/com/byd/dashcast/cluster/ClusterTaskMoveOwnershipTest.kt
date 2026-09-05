@@ -71,13 +71,19 @@ class ClusterTaskMoveOwnershipTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/cluster/ClusterService.java"
+            "app/src/main/java/com/byd/dashcast/cluster/ClusterService.kt"
         ).readText()
-        val teardown = source.substringAfter("public void onDestroy()")
+        val teardown = source.substringAfter("override fun onDestroy()")
             .substringBefore("// ─────────────────────────────────────────────────────────────────────────")
 
-        assertTrue(teardown.indexOf("releaseTaskMoveOwnership()") >
-            teardown.indexOf("mDisplayHelper.stop()"))
+        // Presence FIRST: `indexOf(a) > indexOf(b)` alone reads GREEN when the display teardown
+        // is deleted outright (-1 < any index), i.e. it could not fail for the very regression
+        // it names.
+        val release = teardown.indexOf("releaseTaskMoveOwnership()")
+        val stop = teardown.indexOf("mDisplayHelper.stop()")
+        assertTrue("onDestroy must release task-move ownership", release >= 0)
+        assertTrue("onDestroy must stop the display helper", stop >= 0)
+        assertTrue("ownership must be released only after the display teardown", release > stop)
     }
 
     @Test
@@ -87,10 +93,10 @@ class ClusterTaskMoveOwnershipTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/cluster/ClusterService.java"
+            "app/src/main/java/com/byd/dashcast/cluster/ClusterService.kt"
         ).readText()
-        val onCreate = source.substringAfter("public void onCreate()")
-            .substringBefore("private void initializeAfterOwnershipClaim()")
+        val onCreate = source.substringAfter("override fun onCreate()")
+            .substringBefore("private fun initializeAfterOwnershipClaim()")
 
         assertTrue(onCreate.indexOf("claimTaskMoveOwnership()") in
             0 until onCreate.indexOf("initializeAfterOwnershipClaim()"))
