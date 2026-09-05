@@ -116,7 +116,7 @@ class CanBatchOperationTest {
         ).readText()
         val daemon = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/proxy/daemon/ProxyDaemonMain.java"
+            "app/src/main/java/com/byd/dashcast/proxy/daemon/ProxyDaemonMain.kt"
         ).readText()
 
         assertTrue(controller.contains("supportsProtocol(24)"))

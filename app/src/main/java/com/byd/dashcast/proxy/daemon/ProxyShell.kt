@@ -29,8 +29,8 @@ internal object ProxyShell {
     private const val DEFAULT_MAX_OUTPUT_BYTES = 256 * 1024
     private const val TRUNCATION_MARKER = "[output truncated]"
 
-    /** Result of an [exec] call. `exit` and `output` are read as bare fields from
-     *  ProxyDaemonMain.java, so both carry @JvmField. */
+    /** Result of an [exec] call. The @JvmField pair dates from when ProxyDaemonMain was Java and
+     *  read `exit`/`output` as bare fields; kept so the field-level ABI does not change. */
     class Result(@JvmField val exit: Int, @JvmField val output: String)
 
     /**
