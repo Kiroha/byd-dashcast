@@ -25,7 +25,8 @@ class ArabicNavParsingTest {
         """(?<![\p{L}\p{N}])(\d+)[\s ]*(?:min|mins|мин|دقيقة|د)(?![\p{L}\p{N}])""", Pattern.CASE_INSENSITIVE)
 
     private fun firstDistance(raw: String): String? {
-        val m = dist.matcher(MapNotificationListenerService.normaliseDigits(raw))
+        // normaliseDigits returns null only for a null argument; `raw` is non-null.
+        val m = dist.matcher(requireNotNull(MapNotificationListenerService.normaliseDigits(raw)))
         if (!m.find()) return null
         val value = requireNotNull(m.group(1))
         val unit = requireNotNull(m.group(2))
@@ -66,7 +67,8 @@ class ArabicNavParsingTest {
 
     @Test
     fun `remaining time in arabic parses`() {
-        val m = mins.matcher(MapNotificationListenerService.normaliseDigits("٢٥ دقيقة"))
+        val m = mins.matcher(
+            requireNotNull(MapNotificationListenerService.normaliseDigits("٢٥ دقيقة")))
         assertEquals(true, m.find())
         assertEquals("25", m.group(1))
     }
