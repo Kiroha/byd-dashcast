@@ -52,14 +52,14 @@ class StagedReportCleanupTest {
     @Test
     fun `startup and shell error paths both invoke staged cleanup`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
-            .first { File(it, "app/src/main/java/com/byd/dashcast/report/BugReportCapture.java").isFile }
+            .first { File(it, "app/src/main/java/com/byd/dashcast/report/BugReportCapture.kt").isFile }
         val capture = File(root,
-            "app/src/main/java/com/byd/dashcast/report/BugReportCapture.java").readText()
+            "app/src/main/java/com/byd/dashcast/report/BugReportCapture.kt").readText()
         val startup = File(root,
             "app/src/main/java/com/byd/dashcast/app/AppStartupTasks.kt").readText()
 
-        val onError = capture.substringAfter("@Override public void onError(String err)")
-            .substringBefore("};")
+        val onError = capture.substringAfter("override fun onError(err: String?)")
+            .substringBefore("// Both branches run the SAME dump")
         assertTrue(onError.contains("removeStagedReport(app, p)"))
         assertTrue(startup.contains("BugReportCapture.pruneStagedReports(ctx)"))
     }
