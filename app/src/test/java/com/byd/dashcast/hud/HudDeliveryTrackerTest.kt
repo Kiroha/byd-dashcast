@@ -45,14 +45,14 @@ class HudDeliveryTrackerTest {
     @Test
     fun `production advances watchdog only after delivery is known`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
-            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/hud/HudController.java").isFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/hud/HudController.kt").isFile }
         assertTrue("could not locate the repo root", root != null)
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/hud/HudController.java").readText()
-        val update = source.substringAfter("public synchronized boolean updateNavigation")
-            .substringBefore("public synchronized void closeNavigation")
+            "app/src/main/java/com/byd/dashcast/hud/HudController.kt").readText()
+        val update = source.substringAfter("fun updateNavigation")
+            .substringBefore("fun closeNavigation")
 
-        val deliveryDecision = update.indexOf("boolean delivered =")
+        val deliveryDecision = update.indexOf("val delivered =")
         val watchdogWrite = update.indexOf("lastUpdateMs = SystemClock.elapsedRealtime()")
         assertTrue(deliveryDecision >= 0)
         assertTrue(watchdogWrite > deliveryDecision)
@@ -68,12 +68,12 @@ class HudDeliveryTrackerTest {
     @Test
     fun `every changed CAN field failure participates in production verdict`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
-            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/hud/HudController.java").isFile }
+            .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/hud/HudController.kt").isFile }
         assertTrue("could not locate the repo root", root != null)
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/hud/HudController.java").readText()
-        val update = source.substringAfter("public synchronized boolean updateNavigation")
-            .substringBefore("static boolean frameDelivered")
+            "app/src/main/java/com/byd/dashcast/hud/HudController.kt").readText()
+        val update = source.substringAfter("fun updateNavigation")
+            .substringBefore("fun frameDelivered")
 
         for (message in listOf(
             "sendSimpleGuidance failed",

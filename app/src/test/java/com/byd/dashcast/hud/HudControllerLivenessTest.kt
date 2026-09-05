@@ -28,16 +28,16 @@ class HudControllerLivenessTest {
         // The call means "what is displayed is still current", not "display this". If it could
         // activate the HUD, a re-post arriving after closeNavigation would resurrect an arrow the
         // watchdog had just and correctly removed.
-        assertFalse("precondition: nothing has opened the HUD", HudController.INSTANCE.isHudActive)
-        HudController.INSTANCE.noteNavFrameSeen()
-        assertFalse("must still be inactive", HudController.INSTANCE.isHudActive)
+        assertFalse("precondition: nothing has opened the HUD", HudController.isHudActive)
+        HudController.noteNavFrameSeen()
+        assertFalse("must still be inactive", HudController.isHudActive)
     }
 
     @Test
     fun `noting a frame on an inactive HUD is safe to call repeatedly`() {
         // It runs on the system notification dispatch thread on every re-post — several times a
         // second while guiding. Throwing there would take the nav listener down with it.
-        repeat(50) { HudController.INSTANCE.noteNavFrameSeen() }
-        assertFalse(HudController.INSTANCE.isHudActive)
+        repeat(50) { HudController.noteNavFrameSeen() }
+        assertFalse(HudController.isHudActive)
     }
 }
