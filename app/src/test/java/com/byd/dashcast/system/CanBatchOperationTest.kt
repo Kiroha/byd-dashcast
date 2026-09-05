@@ -48,10 +48,10 @@ class CanBatchOperationTest {
         assertEquals(listOf("bytes:1140461576=82,0,117,0,101,0"), events)
         val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
             .first { java.io.File(it,
-                "app/src/main/java/com/byd/dashcast/system/CanBusController.java").isFile }
+                "app/src/main/java/com/byd/dashcast/system/CanBusController.kt").isFile }
         val controller = java.io.File(root,
-            "app/src/main/java/com/byd/dashcast/system/CanBusController.java").readText()
-        val method = controller.substringAfter("public static void sendNextStreetName")
+            "app/src/main/java/com/byd/dashcast/system/CanBusController.kt").readText()
+        val method = controller.substringAfter("fun sendNextStreetName")
             .substringBefore("// ─── Remaining route info")
         assertTrue(method.contains("sendBatch(CanNavigationBatches.nextStreetName(bytes))"))
         assertTrue(!method.contains("ProxyClient.canInstrumentBytes"))
@@ -112,7 +112,7 @@ class CanBatchOperationTest {
         assertTrue("could not locate the repo root", root != null)
         val controller = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/system/CanBusController.java"
+            "app/src/main/java/com/byd/dashcast/system/CanBusController.kt"
         ).readText()
         val daemon = java.io.File(
             root,
