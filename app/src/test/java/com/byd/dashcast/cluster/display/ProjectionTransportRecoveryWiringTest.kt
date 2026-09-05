@@ -17,7 +17,7 @@ class ProjectionTransportRecoveryWiringTest {
         val adb = File(root,
             "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").readText()
         val proxy = File(root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
 
         assertTrue(bus.contains("ProjectionTransportRecovery.watchdog"))
         assertTrue(bus.contains("if (watchdog.shouldAbortFallback()) return"))
@@ -32,12 +32,17 @@ class ProjectionTransportRecoveryWiringTest {
         assertTrue(typed.contains("ProxyClient.setNonBlockingReconnect(true)"))
         assertTrue(typed.contains("typedObserver.shouldAbortFallback()"))
         assertTrue(typed.contains("fallback suppressed"))
-        val recovery = proxy.substringAfter("public static boolean terminateHungDaemonViaAdb")
+        val recovery = proxy.substringAfter("fun terminateHungDaemonViaAdb")
             .substringBefore("// ─── Auto-recovery helpers")
         assertTrue(recovery.contains("executeShellWithResultBlocking"))
         assertTrue(recovery.contains("INSTANCE_CHANGED"))
-        assertTrue(recovery.contains("sBinder == expected.binder"))
+        assertTrue(recovery.contains("sBinder === expected.binder"))
         assertTrue(recovery.contains("kill -9"))
-        assertTrue(recovery.indexOf("KILLED") < recovery.indexOf("sBinder = null"))
+        // indexOf-only ordering passes VACUOUSLY when either side is deleted (-1 < n).
+        val killed = recovery.indexOf("KILLED")
+        val cleared = recovery.indexOf("sBinder = null")
+        assertTrue("the recovery must assert the kill happened", killed >= 0)
+        assertTrue("and must clear the cached binder afterwards", cleared >= 0)
+        assertTrue(killed < cleared)
     }
 }

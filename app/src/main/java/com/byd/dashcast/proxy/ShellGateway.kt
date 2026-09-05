@@ -164,7 +164,9 @@ object ShellGateway {
                 val out = ProxyClient.runShell(cmd)
                 val dt = SystemClock.elapsedRealtime() - t0
                 AppLogger.d(TAG, "beta runShell ok (" + dt + "ms): " + cmd)
-                deliverSuccess(cb, if (out == null) "" else out.trim())
+                // ProxyProcessVerbs.runShell never returns null (it throws instead), which the
+                // Kotlin signature now states — the old null branch was unreachable.
+                deliverSuccess(cb, out.trim())
             } catch (t: Throwable) {
                 if (t is InterruptedException) Thread.currentThread().interrupt()
                 val dt = SystemClock.elapsedRealtime() - t0

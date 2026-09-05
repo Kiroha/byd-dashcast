@@ -511,7 +511,7 @@ object UpdateChecker {
                     context.packageName, component)
             AppLogger.i(TAG, "daemon silent install: staging " + apkFile.length() + " bytes")
             val out = ProxyClient.runShell(cmd)
-            if (out != null && out.contains("Success")) {
+            if (out.contains("Success")) {
                 AppLogger.i(TAG, "daemon install reported Success")
                 return true
             }
