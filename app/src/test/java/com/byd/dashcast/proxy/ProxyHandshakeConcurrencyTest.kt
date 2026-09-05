@@ -161,33 +161,33 @@ class ProxyHandshakeConcurrencyTest {
     fun `receiver invalidates old identity before publishing replacement binder`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .firstOrNull { File(it,
-                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").isFile }
         assertTrue("could not locate the repo root", root != null)
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
         val receiverPublish = source.substringAfter("// Unhook the previous death recipient")
             .substringBefore("AppLogger.i(TAG, \"live binder received from daemon\")")
 
         assertTrue(receiverPublish.indexOf("sDaemonUid = -1") <
-            receiverPublish.indexOf("sBinder = bp.binder"))
+            receiverPublish.indexOf("sBinder = incoming"))
     }
 
     @Test
     fun `death recipient clears only the binder it captured`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
-        val death = source.substringAfter("private static void linkDeathLocked")
-            .substringBefore("private static void unlinkDeathLocked")
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
+        val death = source.substringAfter("private fun linkDeathLocked")
+            .substringBefore("private fun unlinkDeathLocked")
         val receiver = source.substringAfter("// Unhook the previous death recipient")
             .substringBefore("AppLogger.i(TAG, \"live binder received from daemon\")")
 
-        assertTrue(death.contains("if (sBinder != watchedBinder) return"))
+        assertTrue(death.contains("if (sBinder !== watchedBinder) return"))
         assertTrue(death.contains("sBinder = null"))
-        assertTrue(receiver.contains("unlinkDeathLocked(sBinder)"))
-        assertTrue(receiver.contains("linkDeathLocked(sBinder)"))
+        assertTrue(receiver.contains("unlinkDeathLocked(current)"))
+        assertTrue(receiver.contains("linkDeathLocked(incoming)"))
     }
 
     @Test
@@ -230,9 +230,9 @@ class ProxyHandshakeConcurrencyTest {
     fun `virtual display transact and cleanup use the same captured binder`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
         val create = source.substringAfter("public static int createVirtualDisplay")
             .substringBefore("public static void releaseVirtualDisplay")
 
@@ -244,15 +244,15 @@ class ProxyHandshakeConcurrencyTest {
     fun `failed connection paths clear the complete captured generation`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
         val failedWait = source.substringAfter("// Late-arrival recovery:")
             .substringBefore("result = isConnected()")
         val handshakeFailure = source.substringAfter("handshake failed (")
-            .substringBefore("return false;")
+            .substringBefore("return false")
 
-        assertTrue(failedWait.contains("IBinder failedBinder = sBinder"))
+        assertTrue(failedWait.contains("val failedBinder = sBinder"))
         assertTrue(failedWait.contains("clearConnectionIfCurrent(failedBinder)"))
         assertTrue(handshakeFailure.contains("clearConnectionIfCurrent(expectedBinder)"))
     }
@@ -261,9 +261,9 @@ class ProxyHandshakeConcurrencyTest {
     fun `manual transact failures invalidate only their captured binder`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
 
         val probes = source.substringAfter("public static String runPhase4Probes")
             .substringBefore("public static int createVirtualDisplay")

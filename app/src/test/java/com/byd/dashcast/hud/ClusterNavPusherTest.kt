@@ -96,7 +96,7 @@ class ClusterNavPusherTest {
 
         val proxy = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.java"
+            "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt"
         ).readText()
         val compatible = proxy.substringAfter("autoContainerSendInfoResultCompatible")
             .substringBefore("/**", "")
