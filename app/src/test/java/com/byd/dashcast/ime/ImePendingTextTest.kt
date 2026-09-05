@@ -48,13 +48,15 @@ class ImePendingTextTest {
         val watcher = File(root,
             "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java").readText()
         val bridge = File(root,
-            "app/src/main/java/com/byd/dashcast/ime/KeyboardBridgeActivity.java").readText()
+            "app/src/main/java/com/byd/dashcast/ime/KeyboardBridgeActivity.kt").readText()
 
         assertTrue(watcher.contains("accepted = node.performAction(actionId)"))
         assertTrue(watcher.contains("completeImeAction(callback, accepted)"))
-        assertTrue(bridge.contains("void onComplete(final boolean accepted)"))
+        assertTrue(bridge.contains("override fun onComplete(accepted: Boolean)"))
         assertTrue(bridge.contains("submittedGeneration != mInputGeneration"))
         assertTrue(bridge.contains("actionGeneration != mImeActionGeneration"))
+        // The clear must never key off a SYNCHRONOUS return value — in either language's spelling.
         assertFalse(bridge.contains("boolean ok = ClusterImeWatcherService.performImeEnterOnCluster"))
+        assertFalse(bridge.contains("val ok = ClusterImeWatcherService.performImeEnterOnCluster"))
     }
 }
