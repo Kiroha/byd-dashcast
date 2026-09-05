@@ -36,16 +36,21 @@ class FissionMirrorStopDeliveryTest {
     fun `orchestrator clears state only after acceptance or owner death`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").isFile }
+                "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").readText()
-        val stop = source.substringAfter("public static void stopSelectedLayoutMirror")
-            .substringBefore("public static boolean injectSelectedLayoutMotion")
+            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").readText()
+        val stop = source.substringAfter("fun stopSelectedLayoutMirror")
+            .substringBefore("fun injectSelectedLayoutMotion")
 
-        assertTrue(stop.contains("boolean accepted = FissionClient.stopMirror(binder)"))
-        assertTrue(stop.contains("boolean ownerGone = binder == null || !binder.isBinderAlive()"))
+        assertTrue(stop.contains("val accepted = FissionClient.stopMirror(binder)"))
+        assertTrue(stop.contains("val ownerGone = binder == null || !binder.isBinderAlive"))
         assertTrue(stop.contains("recoverSurfaceBinderIfCurrent(binder, \"LayoutMirrorStop\")"))
-        assertTrue(stop.indexOf("if (accepted || ownerGone)") <
-            stop.indexOf("o.mMirrorReady = false"))
+        // indexOf-only ordering passes VACUOUSLY when the gate is deleted (-1 < n) — the same
+        // hole found in ClusterImeRelaySessionTest and LayoutPrefsTest. Assert presence first.
+        val gate = stop.indexOf("if (accepted || ownerGone)")
+        val clear = stop.indexOf("o.mMirrorReady = false")
+        assertTrue("the local state must stay gated on the daemon's verdict", gate >= 0)
+        assertTrue(clear >= 0)
+        assertTrue(gate < clear)
     }
 }

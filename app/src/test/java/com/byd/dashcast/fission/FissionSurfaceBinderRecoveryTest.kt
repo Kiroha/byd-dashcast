@@ -32,7 +32,7 @@ class FissionSurfaceBinderRecoveryTest {
                 override fun stopProjectionIfActive(onStopped: Runnable?) = onStopped?.run() ?: Unit
             },
             object : FissionOrchestrator.Callbacks {
-                override fun onSlotsChanged(slots: MutableCollection<FissionOrchestrator.SlotState>?) {}
+                override fun onSlotsChanged(slots: Collection<FissionOrchestrator.SlotState>) {}
                 override fun onDaemonBinderAcquired(binder: IBinder?) {}
                 override fun onStatusMessage(message: String?) {}
                 override fun onSlotError(pkg: String?, message: String?) {}

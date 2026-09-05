@@ -11,17 +11,17 @@ class FissionGlobalPurgeOrderingTest {
     fun `free mode purge completes before activation gate is released`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").isFile }
+                "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").readText()
-        val staticStop = source.substringAfter("private static void stopAutoOrchestrator(")
+            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").readText()
+        val staticStop = source.substringAfter("private fun stopAutoOrchestrator(")
             .substringBefore("// ── Public API")
-        val instanceStop = source.substringAfter("private void stopAll(boolean purgeDaemonSlots")
-            .substringBefore("private boolean forceStopAndWaitForResult")
+        val instanceStop = source.substringAfter("private fun stopAll(purgeDaemonSlots: Boolean")
+            .substringBefore("private fun forceStopAndWaitForResult")
 
-        assertTrue(staticStop.indexOf("final long teardownToken = sActivationGate.forceAcquire") <
+        assertTrue(staticStop.indexOf("val teardownToken = sActivationGate.forceAcquire") <
             staticStop.indexOf("o.stopAllAndPurge(complete)"))
-        val completion = staticStop.substringAfter("Runnable complete = () -> {")
+        val completion = staticStop.substringAfter("val complete = Runnable {")
             .substringBefore("};")
         assertTrue(completion.contains("sActivationGate.release(teardownToken)"))
         assertTrue(staticStop.contains("else o.stopAll(complete)"))

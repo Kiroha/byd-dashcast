@@ -42,20 +42,20 @@ class FissionReleaseDebtTest {
     fun `orchestrator retries debt before reuse and retains failed free zones`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").isFile }
+                "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").readText()
-        val ensure = source.substringAfter("private boolean ensureDaemon")
-            .substringBefore("private void doStartSlot")
-        val free = source.substringAfter("private void releaseFreeZones")
-            .substringBefore("private boolean publishDisplayIds")
-        val startError = source.substringAfter("public void startSlot")
-            .substringBefore("public void stopAll()")
+            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").readText()
+        val ensure = source.substringAfter("private fun ensureDaemon")
+            .substringBefore("private fun doStartSlot")
+        val free = source.substringAfter("private fun releaseFreeZones")
+            .substringBefore("private fun publishDisplayIds")
+        val startError = source.substringAfter("fun startSlot")
+            .substringBefore("fun stopAll()")
 
         assertTrue(ensure.contains("retryReleaseDebt(b)"))
         assertTrue(ensure.split("if (!retryReleaseDebt(b)) return false").size - 1 >= 2)
         assertTrue(source.indexOf("if (!retryReleaseDebt(b)) return false") <
-            source.indexOf("private void doStartSlot"))
+            source.indexOf("private fun doStartSlot"))
         assertTrue(free.contains("FissionReleaseDebt.record(key)"))
         assertTrue(free.indexOf("FissionClient.releaseSlot") < free.indexOf("mFreeZoneKeys.remove(key)"))
         assertTrue(!startError.contains("FissionClient.releaseSlot"))
