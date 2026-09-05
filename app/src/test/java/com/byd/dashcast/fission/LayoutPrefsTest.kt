@@ -155,19 +155,28 @@ class LayoutPrefsTest {
     fun `manager checks persistence before success UI or runtime teardown`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .firstOrNull { File(it,
-                "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.java").isFile }
+                "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.kt").isFile }
         assertTrue("could not locate the repo root", root != null)
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.java").readText()
-        val save = source.substringAfter("private void saveLayout()")
-            .substringBefore("private void deleteLayout")
-        val deactivate = source.substringAfter("private boolean deactivateLayout")
+            "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.kt").readText()
+        val save = source.substringAfter("private fun saveLayout()")
+            .substringBefore("private fun deleteLayout")
+        val deactivate = source.substringAfter("private fun deactivateLayout(persistSelection: Boolean): Boolean")
             .substringBefore("private void purgeDaemonSlotsAsync")
 
-        assertTrue(save.indexOf("if (!LayoutPrefs.save") <
-            save.indexOf("R.string.lm_layout_saved_toast"))
-        assertTrue(deactivate.indexOf("LayoutPrefs.setFavoriteId") <
-            deactivate.indexOf("FissionOrchestrator.stopAutoOrchestrator"))
+        // indexOf-only ordering passes VACUOUSLY when the earlier call is deleted (-1 < n).
+        // Proven by mutation: removing saveLayout's persistence check left this green.
+        val saveCheck = save.indexOf("if (!LayoutPrefs.save")
+        val saveToast = save.indexOf("R.string.lm_layout_saved_toast")
+        assertTrue("saveLayout must check persistence before claiming success", saveCheck >= 0)
+        assertTrue(saveToast >= 0)
+        assertTrue(saveCheck < saveToast)
+
+        val favWrite = deactivate.indexOf("LayoutPrefs.setFavoriteId")
+        val teardown = deactivate.indexOf("FissionOrchestrator.stopAutoOrchestrator")
+        assertTrue("deactivate must persist the selection before tearing down", favWrite >= 0)
+        assertTrue(teardown >= 0)
+        assertTrue(favWrite < teardown)
         assertTrue(source.contains("LayoutPrefs.setFavoriteIdIfPresentResult(appCtx, preset.id)"))
     }
 }

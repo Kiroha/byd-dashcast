@@ -35,9 +35,9 @@ class FissionGlobalPurgeOrderingTest {
     fun `layout manager has no detached post-teardown purge`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.java").isFile }
+                "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.java").readText()
+            "app/src/main/java/com/byd/dashcast/fission/LayoutManagerActivity.kt").readText()
 
         assertTrue(source.contains("stopAutoOrchestratorAndPurge(this, null)"))
         assertFalse(source.contains("purgeDaemonSlotsAsync"))
