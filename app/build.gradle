@@ -1908,8 +1908,17 @@ android {
         // 639 = 1.9.0 stable promotion. Application logic is unchanged from 638; only version
         // metadata plus tests, documentation and default-branch release policy changed. The 639
         // binary itself has not been separately vehicle-tested before publication.)
-        versionCode 639
-        versionName "1.9.0"
+        // 640 = 1.9.1-beta (FULL-KOTLIN BETA — expect breakage. The 24 remaining Java files were
+        // ported one commit each after 1.9.0, ending with ClusterService, ProxyDaemonMain,
+        // SurfaceDaemon and AdbLocalClient. Application logic intended unchanged: 145 frozen daemon
+        // wire constants zero drift, every interpolated shell command byte-compared, all 3
+        // app_process mains intact, every inserted null-check traced to its callers, 738 tests,
+        // lint 0, 0 kotlinc warnings. NaviInfo.java stays Java (flatc-generated OEM wire format).
+        // Surfaced but NOT fixed here: the daemon's two exception policies (11 verbs can return
+        // "no error" on a non-encodable exception) and FileObserver(File,Int) being API 29 on
+        // minSdk 28. This binary has not run in a car; DL3 and DL5 must both be validated.)
+        versionCode 640
+        versionName "1.9.1-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
