@@ -742,8 +742,8 @@ class MainActivity : AppCompatActivity(),
                 if (pending.packageName == mCurrentDashboardPkg) {
                     val checkPkg = pending.packageName
                     ShellGateway.execShellWithResult(this, "pidof $checkPkg", object : AdbLocalClient.Callback {
-                        override fun onSuccess(output: String?) {
-                            val alive = output != null && output.trim().isNotEmpty()
+                        override fun onSuccess(out: String?) {
+                            val alive = out != null && out.trim().isNotEmpty()
                             runOnUiThread {
                                 if (isFinishing || isDestroyed) return@runOnUiThread
                                 if (!alive) {
@@ -754,8 +754,8 @@ class MainActivity : AppCompatActivity(),
                             }
                         }
 
-                        override fun onError(error: String?) {
-                            AppLogger.w(TAG, "auto-restore: pidof failed ($error) — proceeding with mirror shortcut")
+                        override fun onError(err: String?) {
+                            AppLogger.w(TAG, "auto-restore: pidof failed ($err) — proceeding with mirror shortcut")
                             runOnUiThread {
                                 if (isFinishing || isDestroyed) return@runOnUiThread
                                 onSendToDashboard(pending)
@@ -1009,7 +1009,7 @@ class MainActivity : AppCompatActivity(),
             val previousSecond = split.getSecondDashboardPkg()
             if (previousSecond != null) {
                 AdbLocalClient.forceStopApp(this, previousSecond, object : AdbLocalClient.Callback {
-                    override fun onSuccess(report: String?) {
+                    override fun onSuccess(out: String?) {
                         runOnUiThread {
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             if (!split.clearSecondDashboardIfMatches(
@@ -1019,14 +1019,14 @@ class MainActivity : AppCompatActivity(),
                         }
                     }
 
-                    override fun onError(error: String?) {
+                    override fun onError(err: String?) {
                         runOnUiThread {
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             if (split.isCurrentSecondDashboardReplacement(replacementGeneration) &&
                                 split.getSecondDashboardPkg() == previousSecond) {
-                                AppLogger.w(TAG, "split replacement kept $previousSecond: $error")
+                                AppLogger.w(TAG, "split replacement kept $previousSecond: $err")
                                 Toast.makeText(applicationContext,
-                                    getString(R.string.toast_kill_failed, error),
+                                    getString(R.string.toast_kill_failed, err),
                                     Toast.LENGTH_LONG).show()
                             }
                         }
@@ -1108,11 +1108,11 @@ class MainActivity : AppCompatActivity(),
                     " and moveTaskToDisplay unavailable → stopping it before launching " + pkgName
             )
             AdbLocalClient.forceStopApp(this, previousClusterPkg, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     runOnUiThread { if (!isFinishing && !isDestroyed) proceedMove() }
                 }
 
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     runOnUiThread { if (!isFinishing && !isDestroyed) proceedMove() }
                 }
             })
@@ -1244,7 +1244,7 @@ class MainActivity : AppCompatActivity(),
         val previous = mCurrentDashboardPkg
         if (splitOccupantToStop != null) {
             AdbLocalClient.forceStopApp(this, splitOccupantToStop, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     runOnUiThread {
                         if (isFinishing || isDestroyed) return@runOnUiThread
                         val generation = splitReplacementGeneration ?: return@runOnUiThread
@@ -1254,16 +1254,16 @@ class MainActivity : AppCompatActivity(),
                         launch()
                     }
                 }
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     runOnUiThread {
                         if (isFinishing || isDestroyed) return@runOnUiThread
                         val generation = splitReplacementGeneration ?: return@runOnUiThread
                         if (split!!.isCurrentSecondDashboardReplacement(generation) &&
                             split.getSecondDashboardPkg() == splitOccupantToStop) {
                             AppLogger.w(TAG, "split shortcut replacement kept " +
-                                "$splitOccupantToStop: $error")
+                                "$splitOccupantToStop: $err")
                             Toast.makeText(applicationContext,
-                                getString(R.string.toast_kill_failed, error),
+                                getString(R.string.toast_kill_failed, err),
                                 Toast.LENGTH_LONG).show()
                         }
                     }
@@ -1273,10 +1273,10 @@ class MainActivity : AppCompatActivity(),
             previous != null && previous != app.packageName
                 && service != null && !service.isMoveTaskToDisplaySupported()) {
             AdbLocalClient.forceStopApp(this, previous, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
                 }
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     runOnUiThread { if (!isFinishing && !isDestroyed) launch() }
                 }
             })
@@ -1290,14 +1290,14 @@ class MainActivity : AppCompatActivity(),
         mSessionTracker.add(packageName)
         AppLogger.w(TAG, "cleaning stale split launch: $packageName")
         AdbLocalClient.forceStopApp(this, packageName, object : AdbLocalClient.Callback {
-            override fun onSuccess(report: String?) {
+            override fun onSuccess(out: String?) {
                 mSessionTracker.remove(packageName)
                 AppLogger.i(TAG, "stale split launch removed: $packageName")
             }
 
-            override fun onError(error: String?) {
+            override fun onError(err: String?) {
                 // Keep it in the persisted session history so Stop retries the eviction.
-                AppLogger.e(TAG, "stale split launch cleanup failed for $packageName: $error")
+                AppLogger.e(TAG, "stale split launch cleanup failed for $packageName: $err")
             }
         })
     }
@@ -1403,7 +1403,7 @@ class MainActivity : AppCompatActivity(),
 
         // 2. Move the app back to Display 0 before killing (serialised move → forceStop).
         val killCallback = object : AdbLocalClient.Callback {
-            override fun onSuccess(report: String?) {
+            override fun onSuccess(out: String?) {
                 mSessionTracker.remove(app.packageName)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
@@ -1419,13 +1419,13 @@ class MainActivity : AppCompatActivity(),
                 }
             }
 
-            override fun onError(error: String?) {
+            override fun onError(err: String?) {
                 // It may still own a cluster task. Keep it in persisted history for Stop retry.
                 mSessionTracker.add(app.packageName)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
-                    Toast.makeText(applicationContext, getString(R.string.toast_kill_failed, error), Toast.LENGTH_LONG).show()
-                    AppLogger.log(TAG, "forceStop FAILED: $error")
+                    Toast.makeText(applicationContext, getString(R.string.toast_kill_failed, err), Toast.LENGTH_LONG).show()
+                    AppLogger.log(TAG, "forceStop FAILED: $err")
                 }
             }
         }
@@ -1639,7 +1639,7 @@ class MainActivity : AppCompatActivity(),
         ) { restoreHome, callerComplete ->
             // Cluster pkg already killed → pass null so the helper only sends sendInfo(18+0).
             AdbLocalClient.restoreBydOnCluster(this, null, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     runOnUiThread {
                         try {
                             restoreHomeIfRequested(restoreHome)
@@ -1660,14 +1660,14 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
 
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     runOnUiThread {
                         try {
                             restoreHomeIfRequested(restoreHome)
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             btnRestoreCluster.isEnabled = true
-                            Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show()
-                            AppLogger.log(TAG, "Restore FAILED: $error")
+                            Toast.makeText(applicationContext, getString(R.string.toast_restore_failed, err), Toast.LENGTH_LONG).show()
+                            AppLogger.log(TAG, "Restore FAILED: $err")
                             // The hazardous state was created by the EVICTION, which has already
                             // finished. Whether the separate cluster-restore call then succeeded says
                             // nothing about it — and that call has several documented flaky paths, so
@@ -1750,12 +1750,12 @@ class MainActivity : AppCompatActivity(),
         val pkg = mCurrentDashboardPkg ?: return
         AppLogger.i(TAG, "relaunchCurrentApp → $pkg")
         AdbLocalClient.forceStopApp(this, pkg, object : AdbLocalClient.Callback {
-            override fun onSuccess(ignored: String?) {
+            override fun onSuccess(out: String?) {
                 relaunchFromList(pkg)
             }
 
-            override fun onError(error: String?) {
-                AppLogger.w(TAG, "relaunchCurrentApp: forceStop error: $error")
+            override fun onError(err: String?) {
+                AppLogger.w(TAG, "relaunchCurrentApp: forceStop error: $err")
                 relaunchFromList(pkg)
             }
         })
@@ -1817,7 +1817,7 @@ class MainActivity : AppCompatActivity(),
             capturedClusterPkg, capturedSecondPkg
         ) { restoreHome, callerComplete ->
             AdbLocalClient.restoreOriginCluster(this, ClusterPrefs.getClusterType(this), null, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     runOnUiThread {
                         try {
                             restoreHomeIfRequested(restoreHome)
@@ -1836,14 +1836,14 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
 
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     runOnUiThread {
                         try {
                             restoreHomeIfRequested(restoreHome)
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             btnRestoreCluster.isEnabled = true
-                            Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show()
-                            AppLogger.log(TAG, "originCluster FAILED: $error")
+                            Toast.makeText(applicationContext, getString(R.string.toast_origin_failed, err), Toast.LENGTH_LONG).show()
+                            AppLogger.log(TAG, "originCluster FAILED: $err")
                             // The hazardous state was created by the EVICTION, which has already
                             // finished. Whether the separate cluster-restore call then succeeded says
                             // nothing about it — and that call has several documented flaky paths, so

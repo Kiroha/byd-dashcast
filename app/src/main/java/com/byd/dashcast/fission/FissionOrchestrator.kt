@@ -480,14 +480,14 @@ class FissionOrchestrator(
         val done = CountDownLatch(1)
         val killed = AtomicBoolean(false)
         AdbLocalClient.forceStopApp(mAppCtx, pkg, object : AdbLocalClient.Callback {
-            override fun onSuccess(result: String?) {
+            override fun onSuccess(out: String?) {
                 killed.set(true)
-                AppLogger.i(TAG, "Layout teardown force-stop verified pkg=$pkg → $result")
+                AppLogger.i(TAG, "Layout teardown force-stop verified pkg=$pkg → $out")
                 done.countDown()
             }
 
-            override fun onError(error: String?) {
-                AppLogger.w(TAG, "Layout teardown force-stop failed pkg=$pkg → $error")
+            override fun onError(err: String?) {
+                AppLogger.w(TAG, "Layout teardown force-stop failed pkg=$pkg → $err")
                 done.countDown()
             }
         })

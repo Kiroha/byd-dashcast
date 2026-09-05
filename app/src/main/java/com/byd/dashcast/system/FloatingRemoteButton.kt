@@ -136,15 +136,15 @@ class FloatingRemoteButton : Service() {
             mGrantAttempted = true
             AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW not granted — attempting auto-grant via ADB…")
             AdbLocalClient.grantOverlayPermission(this, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     if (mDestroyed) return
                     AppLogger.i(TAG, "SYSTEM_ALERT_WINDOW granted via ADB ✓")
                     mDimHandler.post {
                         if (!mDestroyed) createOverlay()
                     }
                 }
-                override fun onError(error: String?) {
-                    AppLogger.e(TAG, "Auto-grant SYSTEM_ALERT_WINDOW failed: $error")
+                override fun onError(err: String?) {
+                    AppLogger.e(TAG, "Auto-grant SYSTEM_ALERT_WINDOW failed: $err")
                 }
             })
             return

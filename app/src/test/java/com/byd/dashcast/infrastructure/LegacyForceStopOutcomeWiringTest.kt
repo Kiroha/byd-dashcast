@@ -10,10 +10,10 @@ class LegacyForceStopOutcomeWiringTest {
     fun `legacy force stop emits outcome before every terminal callback`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").readText()
-        val legacy = source.substringAfter("TaskLocation> legacyLocations")
+            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").readText()
+        val legacy = source.substringAfter("legacyLocations: List<TaskLocation>")
             .substringBefore("// LOT 4")
 
         assertTrue(legacy.contains("LegacyTaskLocationParser.parseAll"))

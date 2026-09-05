@@ -53,12 +53,12 @@ class ShellTaskResizer(context: Context) : TaskResizer {
                     " | grep -E 'mBounds|WindowingMode|displayId|resizeMode|#" + taskId + " '" +
                     " | head -25"
                 ShellGateway.execShellWithResult(mContext, verify, object : AdbLocalClient.Callback {
-                    override fun onSuccess(dump: String?) {
-                        AppLogger.i(TAG, "VERIFY taskId=$taskId pkg=$packageName →\n" + (dump?.trim() ?: ""))
+                    override fun onSuccess(out: String?) {
+                        AppLogger.i(TAG, "VERIFY taskId=$taskId pkg=$packageName →\n" + (out?.trim() ?: ""))
                     }
 
-                    override fun onError(e: String?) {
-                        AppLogger.w(TAG, "VERIFY error: $e")
+                    override fun onError(err: String?) {
+                        AppLogger.w(TAG, "VERIFY error: $err")
                     }
                 })
             }
@@ -84,12 +84,12 @@ class ShellTaskResizer(context: Context) : TaskResizer {
                 if (looksOk) return
                 AppLogger.i(TAG, "am task resize looksOk=false — falling back to cmd activity")
                 ShellGateway.execShellWithResult(mContext, cmdAct, object : AdbLocalClient.Callback {
-                    override fun onSuccess(out2: String?) {
-                        AppLogger.i(TAG, "cmd activity task resize → " + (out2?.trim() ?: ""))
+                    override fun onSuccess(out: String?) {
+                        AppLogger.i(TAG, "cmd activity task resize → " + (out?.trim() ?: ""))
                     }
 
-                    override fun onError(err2: String?) {
-                        AppLogger.w(TAG, "cmd activity task resize error: $err2")
+                    override fun onError(err: String?) {
+                        AppLogger.w(TAG, "cmd activity task resize error: $err")
                     }
                 })
             }

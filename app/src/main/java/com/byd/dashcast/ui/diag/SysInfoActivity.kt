@@ -258,8 +258,8 @@ class SysInfoActivity : AppCompatActivity() {
                 this,
                 "dumpsys display | grep -E 'DisplayDeviceInfo\\{|^\\s+(mDisplayId|mLayerStack|isPrivate)=' | head -120",
                 object : AdbLocalClient.Callback {
-                    override fun onSuccess(r: String?) { shellOut[0] = r; latch.countDown() }
-                    override fun onError(e: String?) { shellOut[0] = "[shell error: $e]"; latch.countDown() }
+                    override fun onSuccess(out: String?) { shellOut[0] = out; latch.countDown() }
+                    override fun onError(err: String?) { shellOut[0] = "[shell error: $err]"; latch.countDown() }
                 },
                 AdbLocalClient.PROBE_IDLE_TIMEOUT_MS
             )
@@ -821,11 +821,11 @@ class SysInfoActivity : AppCompatActivity() {
             this,
             "dumpsys display | grep -E '^\\s+mDisplayId=[0-9]|^\\s+mLayerStack=[0-9]' | head -80",
             object : AdbLocalClient.Callback {
-                override fun onSuccess(raw: String?) {
+                override fun onSuccess(out: String?) {
                     // Parse id → layerStack. Lines alternate mDisplayId / mLayerStack.
                     val idToStack = LinkedHashMap<Int, Int>()
                     var lastId = -1
-                    for (line in (raw ?: "").split("\n")) {
+                    for (line in (out ?: "").split("\n")) {
                         val t = line.trim()
                         if (t.startsWith("mDisplayId=")) {
                             lastId = try {
@@ -896,12 +896,12 @@ class SysInfoActivity : AppCompatActivity() {
                 AppLogger.log("SysInfoActivity", "replay cmd=30 OK: $out")
                 h.postDelayed({
                     AdbLocalClient.sendInfo(this@SysInfoActivity, 1000, 16, "", object : AdbLocalClient.Callback {
-                        override fun onSuccess(out2: String?) {
-                            AppLogger.log("SysInfoActivity", "replay cmd=16 OK: $out2")
+                        override fun onSuccess(out: String?) {
+                            AppLogger.log("SysInfoActivity", "replay cmd=16 OK: $out")
                             h.postDelayed({
                                 AdbLocalClient.sendInfo(this@SysInfoActivity, 1000, 0, "", object : AdbLocalClient.Callback {
-                                    override fun onSuccess(out3: String?) {
-                                        AppLogger.log("SysInfoActivity", "replay cmd=0 OK: $out3")
+                                    override fun onSuccess(out: String?) {
+                                        AppLogger.log("SysInfoActivity", "replay cmd=0 OK: $out")
                                         // Sync the projection-mode flag and re-init ClusterService so its
                                         // DashboardLauncher re-discovers the cluster display.
                                         ClusterManager.notifyProjectionActive()
@@ -1100,7 +1100,7 @@ class SysInfoActivity : AppCompatActivity() {
             false, true /* useConnBadge */, null /* no manual restart */
         )
         AdbLocalClient.executeShellWithResult(this, "echo ok", object : AdbLocalClient.Callback {
-            override fun onSuccess(report: String?) {
+            override fun onSuccess(out: String?) {
                 runOnUiThread {
                     if (mDestroyed) return@runOnUiThread
                     setServiceRowState(adbRow, true, true, "127.0.0.1:5555")
