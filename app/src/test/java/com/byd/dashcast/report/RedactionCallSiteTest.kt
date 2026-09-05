@@ -168,7 +168,7 @@ class RedactionCallSiteTest {
     @Test
     fun `there are exactly four redaction call sites`() {
         val sites = listOf(
-            "app/src/main/java/com/byd/dashcast/report/BugReportCapture.java",   // the report body
+            "app/src/main/java/com/byd/dashcast/report/BugReportCapture.kt",   // the report body
             "app/src/main/java/com/byd/dashcast/hud/HudCaptureSupport.kt",       // every zip entry
             "app/src/main/java/com/byd/dashcast/report/BugReportActivity.kt",    // the caption
             "app/src/main/java/com/byd/dashcast/report/BugWizardActivity.kt",    // the caption
