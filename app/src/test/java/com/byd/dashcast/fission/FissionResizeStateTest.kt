@@ -40,10 +40,10 @@ class FissionResizeStateTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/proxy/daemon/SurfaceDaemon.java"
+            "app/src/main/java/com/byd/dashcast/proxy/daemon/SurfaceDaemon.kt"
         ).readText()
-        val resize = source.substringAfter("private static boolean handleResizeSlot")
-            .substringBefore("private static void applySlotOverlayGeometry")
+        val resize = source.substringAfter("private fun handleResizeSlot")
+            .substringBefore("private fun applySlotOverlayGeometry")
 
         assertTrue(resize.contains("resizeGeneration.incrementAndGet()"))
         assertTrue(resize.contains("isCurrentResize(pkg, slot, generation)"))
