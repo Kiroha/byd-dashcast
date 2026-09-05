@@ -1,19 +1,19 @@
-package com.byd.dashcast;
+package com.byd.dashcast
 
-import android.app.Application;
-import android.content.Context;
-import androidx.appcompat.app.AppCompatDelegate;
+import android.app.Application
+import android.content.ComponentCallbacks2
+import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 
-import com.byd.dashcast.platform.Platform;
-import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.platform.Platform
+import com.byd.dashcast.util.AppLogger
 
-public class DashCastApp extends Application {
-    @Override
-    public void onCreate() {
-        super.onCreate();
+class DashCastApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
         // appcompat:1.1.0 defaults to MODE_NIGHT_UNSPECIFIED (= always light).
         // Explicitly follow the system dark/light setting so DayNight theme works.
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
 
         // Initialise platform detection once. Reads ro.product.name, Build.* etc.
         // Snapshot is process-wide and immutable. The DiLink-5 override (auto /
@@ -21,12 +21,12 @@ public class DashCastApp extends Application {
         // Register the application context for ReportChannel before anything can read a
         // credential. Storing a reference is free; the encrypted store itself is opened lazily and
         // warmed off the main thread below, so cold start is unaffected.
-        com.byd.dashcast.report.ReportChannel.init(getApplicationContext());
+        com.byd.dashcast.report.ReportChannel.init(applicationContext)
         // Same reason, for the consent gate: TelegramBugReporter.isConfigured() is called from
         // places with no Context, and it must be able to answer "no" before anything uploads.
-        com.byd.dashcast.report.ReportConsent.init(getApplicationContext());
+        com.byd.dashcast.report.ReportConsent.init(applicationContext)
 
-        final Platform p = Platform.get();
+        val p = Platform.get()
         // Build/SystemProperties-derived fields only — none of these touch
         // SharedPreferences, so the line is safe to build synchronously here.
         // effectiveDiLink5 is logged from the worker below instead: resolving it
@@ -37,7 +37,7 @@ public class DashCastApp extends Application {
                 + " model="   + p.rawModel()
                 + " api="     + p.androidApi()
                 + " autoDiLink5=" + p.isAutoDetectedDiLink5()
-                + " autoDiLink3=" + p.isAutoDetectedDiLink3());
+                + " autoDiLink3=" + p.isAutoDetectedDiLink3())
 
         // Move every SharedPreferences-touching platform step off the main thread.
         // Both isDiLink5(app) (first byd_app_prefs read) and the gate inside
@@ -48,39 +48,37 @@ public class DashCastApp extends Application {
         // is idempotent, forks its own shell worker, and no onCreate step below
         // depends on its result, so the deferral is contract-safe. It early-returns
         // (still off-main) on DL2/DL3/DL4.
-        final Context app = getApplicationContext();
-        Thread platformInit = new Thread(new Runnable() {
-            @Override public void run() {
-                // KeyStore IPC + a file read. Off the main thread for the same reason every
-                // SharedPreferences touch below is: it must not sit on the cold-start path.
-                try { com.byd.dashcast.report.ReportChannel.warm(); }
-                catch (Throwable t) { AppLogger.w("ReportChannel", "warm failed: " + t.getMessage()); }
+        val app: Context = applicationContext
+        val platformInit = Thread(Runnable {
+            // KeyStore IPC + a file read. Off the main thread for the same reason every
+            // SharedPreferences touch below is: it must not sit on the cold-start path.
+            try { com.byd.dashcast.report.ReportChannel.warm() }
+            catch (t: Throwable) { AppLogger.w("ReportChannel", "warm failed: " + t.message) }
 
-                // Pair on its own if a provisioning file is sitting in Download. Only runs while
-                // the device is unpaired, so it costs nothing once it has succeeded — and it means
-                // a tester never has to find a button in the Diagnostics screen.
-                try { com.byd.dashcast.report.ReportChannel.autoPairIfNeeded(app); }
-                catch (Throwable t) { AppLogger.w("ReportChannel", "auto-pair failed: " + t.getMessage()); }
-                try {
-                    AppLogger.i("Platform", "effectiveDiLink5=" + p.isDiLink5(app));
-                    p.primeClusterResizeProbe(app);
-                } catch (Throwable t) {
-                    // Never let a prefs/probe failure crash the process via the
-                    // default uncaught-exception handler on this daemon thread.
-                    AppLogger.e("Platform", "platform-init worker failed", t);
-                }
+            // Pair on its own if a provisioning file is sitting in Download. Only runs while
+            // the device is unpaired, so it costs nothing once it has succeeded — and it means
+            // a tester never has to find a button in the Diagnostics screen.
+            try { com.byd.dashcast.report.ReportChannel.autoPairIfNeeded(app) }
+            catch (t: Throwable) { AppLogger.w("ReportChannel", "auto-pair failed: " + t.message) }
+            try {
+                AppLogger.i("Platform", "effectiveDiLink5=" + p.isDiLink5(app))
+                p.primeClusterResizeProbe(app)
+            } catch (t: Throwable) {
+                // Never let a prefs/probe failure crash the process via the
+                // default uncaught-exception handler on this daemon thread.
+                AppLogger.e("Platform", "platform-init worker failed", t)
             }
-        }, "platform-init");
-        platformInit.setDaemon(true);
-        platformInit.start();
+        }, "platform-init")
+        platformInit.isDaemon = true
+        platformInit.start()
 
-        clearLegacyOverscanPrefs();
+        clearLegacyOverscanPrefs()
 
         // Foreground fallback monitor for the proxy daemon. It releases its
         // HandlerThread while the stronger always-on keeper below is active.
-        com.byd.dashcast.proxy.ProxyWatchdog.install(this);
+        com.byd.dashcast.proxy.ProxyWatchdog.install(this)
         // Always-on foreground service that monitors the daemon every 10 s.
-        com.byd.dashcast.proxy.ProxyKeeperService.ensureRunning(this);
+        com.byd.dashcast.proxy.ProxyKeeperService.ensureRunning(this)
     }
 
     /**
@@ -103,33 +101,35 @@ public class DashCastApp extends Application {
      * previous build may have left in WindowManager is cleared separately, on every cluster
      * connect, by {@code ClusterService.onDashboardDisplayConnected}.
      */
-    private void clearLegacyOverscanPrefs() {
+    private fun clearLegacyOverscanPrefs() {
         try {
-            android.content.SharedPreferences p = getSharedPreferences(
-                    com.byd.dashcast.data.prefs.ClusterPrefs.PREFS_NAME, MODE_PRIVATE);
-            if (p.getBoolean(PREF_OVERSCAN_RESET_DONE, false)) return;
-            android.content.SharedPreferences.Editor e = p.edit();
-            e.remove("overscan_inset_h").remove("overscan_inset_v").remove("visual_overscan_mode");
-            int perApp = 0;
-            for (String key : p.getAll().keySet()) {
-                if (key == null) continue;
+            val p: android.content.SharedPreferences = getSharedPreferences(
+                    com.byd.dashcast.data.prefs.ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
+            if (p.getBoolean(PREF_OVERSCAN_RESET_DONE, false)) return
+            val e: android.content.SharedPreferences.Editor = p.edit()
+            e.remove("overscan_inset_h").remove("overscan_inset_v").remove("visual_overscan_mode")
+            var perApp = 0
+            for (key: String? in p.all.keys) {
+                if (key == null) continue
                 if (key.startsWith("inset_h_") || key.startsWith("inset_v_")
                         || key.startsWith("cluster_rect_")) {
-                    e.remove(key);
-                    perApp++;
+                    e.remove(key)
+                    perApp++
                 }
             }
-            e.putBoolean(PREF_OVERSCAN_RESET_DONE, true).apply();
+            e.putBoolean(PREF_OVERSCAN_RESET_DONE, true).apply()
             AppLogger.i("DashCastApp", "cluster sizing reset to full-screen: cleared global "
-                    + "overscan + " + perApp + " per-app entries (one-time)");
-        } catch (Throwable t) {
+                    + "overscan + " + perApp + " per-app entries (one-time)")
+        } catch (t: Throwable) {
             // A prefs failure must never prevent the app from starting.
-            AppLogger.w("DashCastApp", "legacy overscan cleanup failed: " + t.getMessage());
+            AppLogger.w("DashCastApp", "legacy overscan cleanup failed: " + t.message)
         }
     }
 
-    /** Guard so the clean slate above runs exactly once per install, not on every launch. */
-    private static final String PREF_OVERSCAN_RESET_DONE = "overscan_cleared_v182";
+    companion object {
+        /** Guard so the clean slate above runs exactly once per install, not on every launch. */
+        private const val PREF_OVERSCAN_RESET_DONE = "overscan_cleared_v182"
+    }
 
     /**
      * Cooperative memory shedding. The Application owns exactly one process-wide
@@ -147,11 +147,11 @@ public class DashCastApp extends Application {
      * anyway, and COMPLETE is never delivered while the app is foreground, so this
      * never destroys a diagnostic capture the user is about to share.
      */
-    @Override
-    public void onTrimMemory(int level) {
-        super.onTrimMemory(level);
-        if (level >= TRIM_MEMORY_COMPLETE) {
-            shedProcessWideCaches();
+    @Suppress("DEPRECATION")
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            shedProcessWideCaches()
         }
     }
 
@@ -160,14 +160,13 @@ public class DashCastApp extends Application {
      * onTrimMemory(TRIM_MEMORY_COMPLETE); both may fire and AppLogger.clear() is
      * idempotent, so routing them through the same shed path is safe.
      */
-    @Override
-    public void onLowMemory() {
-        super.onLowMemory();
-        shedProcessWideCaches();
+    override fun onLowMemory() {
+        super.onLowMemory()
+        shedProcessWideCaches()
     }
 
     /** Releases the only process-wide cache the Application owns. */
-    private void shedProcessWideCaches() {
-        AppLogger.clear();
+    private fun shedProcessWideCaches() {
+        AppLogger.clear()
     }
 }
