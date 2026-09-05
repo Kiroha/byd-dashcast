@@ -85,7 +85,7 @@ class ClusterControlCoordinator(
     private fun openRectEditor() {
         val svc = mHost.getClusterServiceIfBound()
         val pkg = mHost.getCurrentDashboardPkg()
-        val clusterId = if (svc != null) svc.getDisplayId() else -1
+        val clusterId = if (svc != null) svc.displayId else -1
         if (pkg == null || clusterId <= 0) {
             AppLogger.w(TAG, "openRectEditor: not ready (pkg=" + pkg + " display=" + clusterId + ")")
             return

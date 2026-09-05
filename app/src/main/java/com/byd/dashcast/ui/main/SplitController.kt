@@ -255,8 +255,8 @@ class SplitController(private val mHost: Host) {
     }
 
     private fun getClusterDimensions(svc: ClusterService): IntArray {
-        val w = svc.getMirrorManager().getClusterWidth()
-        val h = svc.getMirrorManager().getClusterHeight()
+        val w = svc.mirrorManager?.getClusterWidth() ?: 0
+        val h = svc.mirrorManager?.getClusterHeight() ?: 0
         if (w > 0 && h > 0) return intArrayOf(w, h)
         AppLogger.w(TAG, "getClusterDimensions → fallback 1920×720")
         return intArrayOf(1920, 720)
