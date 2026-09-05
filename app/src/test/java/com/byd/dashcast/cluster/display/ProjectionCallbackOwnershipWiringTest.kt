@@ -14,7 +14,7 @@ class ProjectionCallbackOwnershipWiringTest {
         val manager = File(root,
             "app/src/main/java/com/byd/dashcast/cluster/display/ClusterManager.kt").readText()
         val fission = File(root,
-            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java").readText()
+            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt").readText()
 
         val claim = manager.substringAfter("private fun claimDisplayReady")
             .substringBefore("private fun sendProjectionInfo")
@@ -23,9 +23,9 @@ class ProjectionCallbackOwnershipWiringTest {
         assertTrue(manager.substringAfter("fun abandon()")
             .substringBefore("companion object").contains("ProjectionCommandBus.endSession"))
         assertTrue(fission.contains("mClusterActivationManager = manager"))
-        assertTrue(fission.substringAfter("private void stopAll(boolean purgeDaemonSlots")
+        assertTrue(fission.substringAfter("private fun stopAll(purgeDaemonSlots: Boolean")
             .take(180).contains("abandonClusterActivation()"))
-        assertTrue(fission.substringAfter("public void destroy(boolean isFinishing)")
+        assertTrue(fission.substringAfter("fun destroy(isFinishing: Boolean)")
             .take(180).contains("abandonClusterActivation()"))
     }
 }

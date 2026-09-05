@@ -57,12 +57,12 @@ class FissionResizeStateTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.java"
+            "app/src/main/java/com/byd/dashcast/fission/FissionOrchestrator.kt"
         ).readText()
         val reuse = source.substringAfter("if (existingId > 0)")
             .substringBefore("} else {")
 
-        assertTrue(reuse.contains("boolean resized = FissionClient.resizeSlot"))
+        assertTrue(reuse.contains("val resized = FissionClient.resizeSlot"))
         assertTrue(reuse.contains("if (!resized)"))
         assertTrue(reuse.indexOf("if (!resized)") < reuse.indexOf("displayId = existingId"))
     }
