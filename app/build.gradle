@@ -1963,7 +1963,7 @@ android {
             // such call site in this app (no getIdentifier() anywhere in app/src/main/java),
             // so no res/raw/keep.xml is needed. If one is ever added, it needs a keep rule.
             shrinkResources = true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-r8-neutral.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // Explicit fallback: unset means UNSIGNED on release, not debug-signed.
             signingConfig = hasPlatformKeystore ? signingConfigs.bydPlatform : signingConfigs.debug
         }
