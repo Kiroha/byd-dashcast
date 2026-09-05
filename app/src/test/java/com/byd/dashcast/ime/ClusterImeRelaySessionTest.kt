@@ -57,10 +57,10 @@ class ClusterImeRelaySessionTest {
 
         val watcher = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java"
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.kt"
         ).readText()
-        val method = watcher.substringAfter("public static boolean prepareAndLaunchBridgeManually()")
-            .substringBefore("\n    /**")
+        val method = watcher.substringAfter("fun prepareAndLaunchBridgeManually(): Boolean")
+            .substringBefore("private fun pickFocusedEditableFrom")
         assertTrue("manual target must be bound before the bridge opens",
             method.indexOf("mRelaySession.bind") in 0 until method.indexOf("launchBridge()"))
     }
@@ -72,17 +72,26 @@ class ClusterImeRelaySessionTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java"
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.kt"
         ).readText()
-        val touchProbe = source.substringAfter("public static void checkAndLaunchBridgeIfNeeded")
-            .substringBefore("public static boolean prepareAndLaunchBridgeManually")
-        val launch = source.substringAfter("private void launchBridge()")
+        val touchProbe = source.substringAfter("fun checkAndLaunchBridgeIfNeeded")
+            .substringBefore("fun prepareAndLaunchBridgeManually")
+        val launch = source.substringAfter("private fun launchBridge()")
             .substringBefore("// ─────────────────────────────────────────────────────────────────────────")
 
         assertTrue(touchProbe.split(
-            "sInstance != svc || activeClusterDisplayId() != activeDisplayId").size - 1 >= 2)
-        assertTrue(launch.indexOf("sInstance != this") < launch.indexOf("startActivity(i)"))
-        assertTrue(launch.indexOf("mRelaySession.hasTargetOn") < launch.indexOf("startActivity(i)"))
+            "sInstance !== svc || activeClusterDisplayId() != activeDisplayId").size - 1 >= 2)
+        // indexOf-only ordering passes vacuously when a guard is DELETED (-1 < n), which a
+        // mutation test proved: removing the whole revalidation block still satisfied it.
+        // Assert presence first, then order.
+        val serviceGuard = launch.indexOf("sInstance !== this")
+        val sessionGuard = launch.indexOf("mRelaySession.hasTargetOn")
+        val start = launch.indexOf("startActivity(i)")
+        assertTrue("launchBridge must re-check the service instance", serviceGuard >= 0)
+        assertTrue("launchBridge must re-check the relay target", sessionGuard >= 0)
+        assertTrue(start >= 0)
+        assertTrue(serviceGuard < start)
+        assertTrue(sessionGuard < start)
     }
 
     @Test
@@ -92,12 +101,12 @@ class ClusterImeRelaySessionTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java"
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.kt"
         ).readText()
 
         assertEquals(11, source.split("recycleNode(").size - 1)
-        val helper = source.substringAfter("private static void recycleNode")
-            .substringBefore("private static int activeClusterDisplayId")
+        val helper = source.substringAfter("private fun recycleNode")
+            .substringBefore("private fun activeClusterDisplayId")
         assertTrue(helper.contains("node.recycle()"))
     }
 }

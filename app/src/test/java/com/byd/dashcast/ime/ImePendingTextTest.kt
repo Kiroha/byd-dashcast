@@ -46,7 +46,7 @@ class ImePendingTextTest {
             .firstOrNull { File(it, "app/src/main/java/com/byd/dashcast/ime").isDirectory }
         assertTrue("could not locate the repo root", root != null)
         val watcher = File(root,
-            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.java").readText()
+            "app/src/main/java/com/byd/dashcast/ime/ClusterImeWatcherService.kt").readText()
         val bridge = File(root,
             "app/src/main/java/com/byd/dashcast/ime/KeyboardBridgeActivity.kt").readText()
 
