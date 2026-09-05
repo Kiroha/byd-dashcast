@@ -27,8 +27,8 @@ class SplitReplacementStateTest {
 
         assertTrue(controller.clearSecondDashboardIfMatches("old.pkg", generation))
 
-        assertNull(controller.secondDashboardApp)
-        assertNull(controller.secondDashboardPkg)
+        assertNull(controller.getSecondDashboardApp())
+        assertNull(controller.getSecondDashboardPkg())
         assertEquals(1, host.changes)
     }
 
@@ -43,8 +43,8 @@ class SplitReplacementStateTest {
 
         assertFalse(controller.clearSecondDashboardIfMatches("old.pkg", oldGeneration))
 
-        assertEquals("New app", controller.secondDashboardApp)
-        assertEquals("new.pkg", controller.secondDashboardPkg)
+        assertEquals("New app", controller.getSecondDashboardApp())
+        assertEquals("new.pkg", controller.getSecondDashboardPkg())
         assertEquals(0, host.changes)
     }
 
@@ -75,13 +75,13 @@ class SplitReplacementStateTest {
         val current = controller.beginSecondDashboardReplacement()
 
         assertFalse(controller.commitFullScreenIfMatches("old.pkg", stale))
-        assertTrue(controller.isInSplitMode)
-        assertEquals("old.pkg", controller.secondDashboardPkg)
+        assertTrue(controller.isInSplitMode())
+        assertEquals("old.pkg", controller.getSecondDashboardPkg())
 
         assertTrue(controller.commitFullScreenIfMatches("old.pkg", current))
-        assertFalse(controller.isInSplitMode)
-        assertNull(controller.secondDashboardPkg)
-        assertNull(controller.secondDashboardApp)
+        assertFalse(controller.isInSplitMode())
+        assertNull(controller.getSecondDashboardPkg())
+        assertNull(controller.getSecondDashboardApp())
         assertEquals(1, host.changes)
     }
 
@@ -89,19 +89,19 @@ class SplitReplacementStateTest {
     fun `full screen flow waits for secondary stop success before state commit`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/ui/main/SplitController.java").isFile }
+                "app/src/main/java/com/byd/dashcast/ui/main/SplitController.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/ui/main/SplitController.java").readText()
-        val apply = source.substringAfter("public void applySplitSlot")
-            .substringBefore("private void relaunchPrimaryInSlot")
-        val success = apply.substringAfter("@Override public void onSuccess")
-            .substringBefore("@Override public void onError")
-        val error = apply.substringAfter("@Override public void onError")
+            "app/src/main/java/com/byd/dashcast/ui/main/SplitController.kt").readText()
+        val apply = source.substringAfter("fun applySplitSlot")
+            .substringBefore("private fun relaunchPrimaryInSlot")
+        val success = apply.substringAfter("override fun onSuccess")
+            .substringBefore("override fun onError")
+        val error = apply.substringAfter("override fun onError")
 
         assertTrue(success.contains("commitFullScreenIfMatches(secondPkg, generation)"))
         assertTrue(error.contains("isCurrentSecondDashboardReplacement(generation)"))
         assertTrue(error.contains("toast_kill_failed"))
-        assertFalse(apply.substringBefore("@Override public void onSuccess")
+        assertFalse(apply.substringBefore("override fun onSuccess")
             .contains("mSecondDashboardPkg = null"))
     }
 
