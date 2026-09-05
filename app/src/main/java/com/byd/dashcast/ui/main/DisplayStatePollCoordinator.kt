@@ -71,8 +71,8 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
         // (below, WARN) is an event worth recording.
         ShellGateway.execShellWithResult(mHost.getContext(), "pidof $clusterPkg",
             object : AdbLocalClient.Callback {
-                override fun onSuccess(output: String?) {
-                    val alive = output != null && output.trim().isNotEmpty()
+                override fun onSuccess(out: String?) {
+                    val alive = out != null && out.trim().isNotEmpty()
                     if (alive) {
                         return
                     }
@@ -84,8 +84,8 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
                     })
                 }
 
-                override fun onError(error: String?) {
-                    AppLogger.w(TAG, "pidof failed: $error")
+                override fun onError(err: String?) {
+                    AppLogger.w(TAG, "pidof failed: $err")
                 }
             })
     }
@@ -97,8 +97,8 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
 
         ShellGateway.execShellWithResult(mHost.getContext(), "pidof $mainPkg",
             object : AdbLocalClient.Callback {
-                override fun onSuccess(output: String?) {
-                    val alive = output != null && output.trim().isNotEmpty()
+                override fun onSuccess(out: String?) {
+                    val alive = out != null && out.trim().isNotEmpty()
                     if (alive) return
                     mHost.runOnMainThread(Runnable {
                         if (!mHost.isActivityAlive()) return@Runnable
@@ -108,8 +108,8 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
                     })
                 }
 
-                override fun onError(error: String?) {
-                    AppLogger.w(TAG, "main pidof failed: $error")
+                override fun onError(err: String?) {
+                    AppLogger.w(TAG, "main pidof failed: $err")
                 }
             })
     }

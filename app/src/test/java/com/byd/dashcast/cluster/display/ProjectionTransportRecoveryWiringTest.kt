@@ -15,7 +15,7 @@ class ProjectionTransportRecoveryWiringTest {
             "app/src/main/java/com/byd/dashcast/cluster/display/ProjectionCommandSequencer.kt")
             .readText()
         val adb = File(root,
-            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").readText()
         val proxy = File(root,
             "app/src/main/java/com/byd/dashcast/proxy/ProxyClient.kt").readText()
 

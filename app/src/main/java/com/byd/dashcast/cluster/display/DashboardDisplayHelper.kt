@@ -130,8 +130,8 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
                     ProjectionCommandBus.sendInfo(
                         mContext, session, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_RESTORE_NATIVE, "",
                         object : AdbLocalClient.Callback {
-                            override fun onSuccess(o: String?) { AppLogger.i(TAG, "restoreNative ADB(cmd=0): $o") }
-                            override fun onError(e: String?) { AppLogger.e(TAG, "restoreNative ADB error: $e") }
+                            override fun onSuccess(out: String?) { AppLogger.i(TAG, "restoreNative ADB(cmd=0): $out") }
+                            override fun onError(err: String?) { AppLogger.e(TAG, "restoreNative ADB error: $err") }
                         })
                 }
 

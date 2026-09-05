@@ -117,7 +117,7 @@ class PermissionBannerCoordinator(
             ShellGateway.execShellWithResult(mHost.getContext(), cmd, object : AdbLocalClient.Callback {
                 // String? per the Batch 0 pin: AdbLocalClient.Callback is ported last and will
                 // declare String?; a non-null override here would become an illegal narrowing.
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     mHost.runOnUiThread {
                         if (!mHost.isActivityAlive()) return@runOnUiThread
                         val ok = ClusterImeWatcherService.isEnabled(mHost.getContext())
@@ -131,16 +131,16 @@ class PermissionBannerCoordinator(
                             mCardIme?.visibility = View.GONE
                             btnEnable?.isEnabled = true
                         } else {
-                            AppLogger.w(TAG, "shell OK but a11y not enabled — fallback. report=" + report)
+                            AppLogger.w(TAG, "shell OK but a11y not enabled — fallback. report=" + out)
                             openA11ySettingsFallback()
                             btnEnable?.isEnabled = true
                         }
                     }
                 }
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     mHost.runOnUiThread {
                         if (!mHost.isActivityAlive()) return@runOnUiThread
-                        AppLogger.w(TAG, "one-click a11y shell failed: " + error + " — fallback")
+                        AppLogger.w(TAG, "one-click a11y shell failed: " + err + " — fallback")
                         openA11ySettingsFallback()
                         btnEnable?.isEnabled = true
                     }
@@ -229,7 +229,7 @@ class PermissionBannerCoordinator(
             val cmd = "cmd notification allow_listener " + comp
 
             ShellGateway.execShellWithResult(mHost.getContext(), cmd, object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     mHost.runOnUiThread {
                         if (!mHost.isActivityAlive()) return@runOnUiThread
                         val listeners = Settings.Secure.getString(
@@ -246,16 +246,16 @@ class PermissionBannerCoordinator(
                             mCardHudNotif?.visibility = View.GONE
                             btnEnable?.isEnabled = true
                         } else {
-                            AppLogger.w(TAG, "shell OK but listener not enabled — fallback. report=" + report)
+                            AppLogger.w(TAG, "shell OK but listener not enabled — fallback. report=" + out)
                             openNotifListenerSettingsFallback()
                             btnEnable?.isEnabled = true
                         }
                     }
                 }
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     mHost.runOnUiThread {
                         if (!mHost.isActivityAlive()) return@runOnUiThread
-                        AppLogger.w(TAG, "one-click notif listener shell failed: " + error + " — fallback")
+                        AppLogger.w(TAG, "one-click notif listener shell failed: " + err + " — fallback")
                         openNotifListenerSettingsFallback()
                         btnEnable?.isEnabled = true
                     }

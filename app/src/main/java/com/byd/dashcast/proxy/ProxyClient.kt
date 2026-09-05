@@ -623,11 +623,11 @@ object ProxyClient {
      */
     @JvmStatic
     fun readDaemonLogTail(ctx: Context): String {
-        val out = AtomicReference<String>()
+        val result = AtomicReference<String>()
         val latch = CountDownLatch(1)
         AdbLocalClient.executeShellWithResult(ctx, READ_LOG_CMD, object : AdbLocalClient.Callback {
-            override fun onSuccess(s: String?) { out.set(s); latch.countDown() }
-            override fun onError(e: String?) { out.set("<log read failed: $e>"); latch.countDown() }
+            override fun onSuccess(out: String?) { result.set(out); latch.countDown() }
+            override fun onError(err: String?) { result.set("<log read failed: $err>"); latch.countDown() }
         })
         try {
             if (!latch.await(5, TimeUnit.SECONDS)) return "<log read timed out>"
@@ -635,7 +635,7 @@ object ProxyClient {
             Thread.currentThread().interrupt()
             return "<interrupted>"
         }
-        val s = out.get()
+        val s = result.get()
         return if (s == null || s.isEmpty()) "<empty>" else s
     }
 
@@ -1490,11 +1490,11 @@ object ProxyClient {
 
     /** Issue the bootstrap script via legacy ADB and wait (briefly) for it to finish. */
     private fun bootstrap(ctx: Context): String? {
-        val out = AtomicReference<String>()
+        val result = AtomicReference<String>()
         val latch = CountDownLatch(1)
         AdbLocalClient.executeShellWithResult(ctx, BOOTSTRAP_CMD, object : AdbLocalClient.Callback {
-            override fun onSuccess(report: String?) { out.set(report); latch.countDown() }
-            override fun onError(error: String?) { out.set("ERR $error"); latch.countDown() }
+            override fun onSuccess(out: String?) { result.set(out); latch.countDown() }
+            override fun onError(err: String?) { result.set("ERR $err"); latch.countDown() }
         }, AdbLocalClient.BOOTSTRAP_IDLE_TIMEOUT_MS)
         try {
             if (!latch.await(BOOTSTRAP_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)) {
@@ -1504,7 +1504,7 @@ object ProxyClient {
             Thread.currentThread().interrupt()
             return "ERR interrupted"
         }
-        return out.get()
+        return result.get()
     }
 
     /** Thrown when the proxy daemon path fails — caller should fall back to legacy. */

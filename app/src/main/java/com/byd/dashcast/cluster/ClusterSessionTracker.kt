@@ -186,8 +186,8 @@ class ClusterSessionTracker(context: Context) {
                 try {
                     AdbLocalClient.forceStopAppForBlindEviction(
                         mAppCtx, p, object : AdbLocalClient.Callback {
-                        override fun onSuccess(result: String?) = completeBlind(true, null)
-                        override fun onError(error: String?) = completeBlind(false, error)
+                        override fun onSuccess(out: String?) = completeBlind(true, null)
+                        override fun onError(err: String?) = completeBlind(false, err)
                     })
                 } catch (error: Throwable) {
                     AppLogger.e(TAG, "blind forceStop dispatch failed for $p", error)
@@ -421,7 +421,7 @@ class ClusterSessionTracker(context: Context) {
         }
         try {
             AdbLocalClient.forceStopApp(mAppCtx, pkg, object : AdbLocalClient.Callback {
-                override fun onSuccess(r: String?) = completeForceStop(true, null)
+                override fun onSuccess(out: String?) = completeForceStop(true, null)
 
                 override fun onEvictionOutcome(outcome: EvictionOutcomePolicy.Outcome) {
                 // Reported by forceStopApp from the probe it took itself, immediately before the
@@ -437,7 +437,7 @@ class ClusterSessionTracker(context: Context) {
                     })
                 }
 
-                override fun onError(e: String?) = completeForceStop(false, e)
+                override fun onError(err: String?) = completeForceStop(false, err)
             })
         } catch (error: Throwable) {
             AppLogger.e(TAG, "evict: forceStop dispatch failed for $pkg", error)

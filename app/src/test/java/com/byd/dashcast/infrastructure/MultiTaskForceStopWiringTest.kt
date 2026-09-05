@@ -11,18 +11,18 @@ class MultiTaskForceStopWiringTest {
     fun `typed and legacy paths apply aggregate task decisions`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").readText()
-        val forceStop = source.substringAfter("public static void forceStopApp")
+            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").readText()
+        val forceStop = source.substringAfter("fun forceStopApp")
             .substringBefore("// LOT 4")
 
         assertTrue(forceStop.contains("findTaskLocationsForEviction(packageName)"))
         assertTrue(forceStop.split("EvictionTaskSetPolicy.decide").size - 1 >= 3)
-        assertTrue(forceStop.contains("removeTypedTasks(decision.getTaskIdsToRemove())"))
-        assertTrue(forceStop.contains("removeLegacyTasks(dadb, context, decision.getTaskIdsToRemove())"))
+        assertTrue(forceStop.contains("removeTypedTasks(decision.taskIdsToRemove)"))
+        assertTrue(forceStop.contains("removeLegacyTasks(dadb, context, decision.taskIdsToRemove)"))
         assertTrue(source.contains("LegacyTaskLocationParser.parseAll"))
-        val legacyBeforeVerification = forceStop.substringAfter("TaskLocation> legacyLocations")
+        val legacyBeforeVerification = forceStop.substringAfter("legacyLocations: List<TaskLocation>")
             .substringBefore("verifyForceStopViaAdb")
         assertFalse(legacyBeforeVerification.contains("grep -F"))
         assertFalse(legacyBeforeVerification.contains("TaskRemover"))

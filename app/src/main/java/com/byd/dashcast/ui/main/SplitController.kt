@@ -158,7 +158,7 @@ class SplitController(private val mHost: Host) {
                 // String? deliberately: AdbLocalClient.Callback is still unannotated Java, so
                 // either nullability compiles today, but it will declare String? when that class
                 // is ported last — and a non-null override would then be an illegal narrowing.
-                override fun onSuccess(report: String?) {
+                override fun onSuccess(out: String?) {
                     mHost.runOnUiThread {
                         if (!mHost.isActivityAlive()) return@runOnUiThread
                         if (!commitFullScreenIfMatches(secondPkg, generation)) return@runOnUiThread
@@ -166,13 +166,13 @@ class SplitController(private val mHost: Host) {
                     }
                 }
 
-                override fun onError(error: String?) {
+                override fun onError(err: String?) {
                     mHost.runOnUiThread {
                         if (!mHost.isActivityAlive()) return@runOnUiThread
                         if (!isCurrentSecondDashboardReplacement(generation)) return@runOnUiThread
-                        AppLogger.e(TAG, "split → full screen: secondary stop failed: " + error)
+                        AppLogger.e(TAG, "split → full screen: secondary stop failed: " + err)
                         Toast.makeText(mHost.getContext(),
-                                mHost.getContext().getString(R.string.toast_kill_failed, error),
+                                mHost.getContext().getString(R.string.toast_kill_failed, err),
                                 Toast.LENGTH_LONG).show()
                     }
                 }
@@ -187,12 +187,12 @@ class SplitController(private val mHost: Host) {
                                       l: Int, t: Int, r: Int, b: Int, slot: Int, generation: Int) {
         if (!mHost.isActivityAlive()) return
         AdbLocalClient.forceStopApp(mHost.getContext(), splitPkg, object : AdbLocalClient.Callback {
-            override fun onSuccess(ignored: String?) {
+            override fun onSuccess(out: String?) {
                 if (mHost.isActivityAlive() && isCurrentSecondDashboardReplacement(generation)) {
                     launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation)
                 }
             }
-            override fun onError(error: String?) {
+            override fun onError(err: String?) {
                 // force-stop failed: attempt relaunch anyway
                 if (mHost.isActivityAlive() && isCurrentSecondDashboardReplacement(generation)) {
                     launchInSlot(svc, splitPkg, splitApp, l, t, r, b, slot, generation)

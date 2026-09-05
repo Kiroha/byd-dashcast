@@ -10,12 +10,12 @@ class BlindEvictionForceStopWiringTest {
     fun `blind force stop has dedicated workers and never enters typed binder`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").isFile }
+                "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.java").readText()
+            "app/src/main/java/com/byd/dashcast/infrastructure/AdbLocalClient.kt").readText()
         val entry = source.substringAfter("forceStopAppForBlindEviction")
-            .substringBefore("private static void forceStopAppInternal")
-        val implementation = source.substringAfter("private static void forceStopAppInternal")
+            .substringBefore("private fun forceStopAppInternal")
+        val implementation = source.substringAfter("private fun forceStopAppInternal")
             .substringBefore("// LOT 4")
 
         assertTrue(entry.contains("sBlindEvictionExecutor, false"))

@@ -378,7 +378,7 @@ object ClusterShotRecorder {
                 "ls -t $SHOTS_DIR/shot_*.jpg 2>/dev/null",
                 object : AdbLocalClient.Callback {
                     override fun onSuccess(out: String?) { holder[0] = out; latch.countDown() }
-                    override fun onError(error: String?) { latch.countDown() }
+                    override fun onError(err: String?) { latch.countDown() }
                 })
         try { latch.await(5, TimeUnit.SECONDS) } catch (ie: InterruptedException) {
             Thread.currentThread().interrupt()

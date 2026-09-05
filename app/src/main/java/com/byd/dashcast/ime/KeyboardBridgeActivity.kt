@@ -251,8 +251,8 @@ class KeyboardBridgeActivity : Activity() {
         AppLogger.i(TAG, "tryAdbEnableA11y: invoking local ADB settings put secure …")
         ShellGateway.execShellWithResult(this, a11yEnableCommand(packageName),
                 object : AdbLocalClient.Callback {
-            override fun onSuccess(report: String?) {
-                val r = report?.trim() ?: ""
+            override fun onSuccess(out: String?) {
+                val r = out?.trim() ?: ""
                 val ok = r.startsWith("OK")
                 runOnUiThread {
                     // 1.2.30 — the ADB callback fires on a worker thread well after
@@ -282,12 +282,12 @@ class KeyboardBridgeActivity : Activity() {
                     }
                 }
             }
-            override fun onError(error: String?) {
+            override fun onError(err: String?) {
                 runOnUiThread {
                     // 1.2.30 — same guard as onSuccess: don't open Settings on
                     // top of a finished bridge activity.
                     if (isFinishing || isDestroyed) return@runOnUiThread
-                    AppLogger.w(TAG, "tryAdbEnableA11y ADB unavailable: $error"
+                    AppLogger.w(TAG, "tryAdbEnableA11y ADB unavailable: $err"
                             + " — falling back to Settings UI")
                     promptAndOpenSettings()
                 }
@@ -506,15 +506,15 @@ class KeyboardBridgeActivity : Activity() {
             } catch (ignored: Throwable) { }
             ShellGateway.execShellWithResult(ctx, a11yEnableCommand(ctx.packageName),
                     object : AdbLocalClient.Callback {
-                override fun onSuccess(report: String?) {
-                    if (report != null && report.trim().startsWith("OK")) {
+                override fun onSuccess(out: String?) {
+                    if (out != null && out.trim().startsWith("OK")) {
                         AppLogger.i(TAG, "ensureClusterImeEnabled proactive OK")
                     } else {
-                        AppLogger.w(TAG, "ensureClusterImeEnabled unexpected reply: $report")
+                        AppLogger.w(TAG, "ensureClusterImeEnabled unexpected reply: $out")
                     }
                 }
-                override fun onError(error: String?) {
-                    AppLogger.w(TAG, "ensureClusterImeEnabled ADB error: $error")
+                override fun onError(err: String?) {
+                    AppLogger.w(TAG, "ensureClusterImeEnabled ADB error: $err")
                 }
             })
         }
