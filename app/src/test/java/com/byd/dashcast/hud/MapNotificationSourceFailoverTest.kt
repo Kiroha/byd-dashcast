@@ -36,9 +36,9 @@ class MapNotificationSourceFailoverTest {
         assertTrue("could not locate the repo root", root != null)
         val source = java.io.File(
             root,
-            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.java"
+            "app/src/main/java/com/byd/dashcast/hud/MapNotificationListenerService.kt"
         ).readText()
-        val removal = source.substringAfter("public void onNotificationRemoved")
+        val removal = source.substringAfter("override fun onNotificationRemoved")
             .substringBefore("// ─── HUD write dispatch")
 
         assertTrue(removal.indexOf("replayRemainingNavigation(key)") in
