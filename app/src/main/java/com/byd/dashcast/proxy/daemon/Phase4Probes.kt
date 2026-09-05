@@ -229,7 +229,7 @@ object Phase4Probes {
                 n = FileInputStream(cmd).use { fis -> fis.read(buf) }
             } catch (ignore: Throwable) { continue }
             if (n <= 0) continue
-            val s = String(buf, 0, n).replace(' ', ' ').trim { it <= ' ' }
+            val s = String(buf, 0, n).replace('\u0000', ' ').trim { it <= ' ' }
             if (s.contains(needle)) matched++
         }
         return "PASS:scanned " + scanned + " procs, matched " + matched + " '" + needle + "'"
