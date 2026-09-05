@@ -1,5 +1,13 @@
 # Kotlin migration — Batch 0 baseline and invariants
 
+> **STATUS 2026-09-05 — MIGRATION COMPLETE.** Every application source file is Kotlin as of
+> commit `ff594348` (`AdbLocalClient`, the last one). The single remaining `.java` is
+> `byd/fbs/naviInfo/NaviInfo.java`: flatc-generated FlatBuffers accessors vendored from the OEM
+> `amapservice` APK, whose `add*` order and vtable offsets ARE the `sendInfo2` HUD wire format.
+> It stays Java by the owner's decision — a hand rewrite is unverifiable without a golden-bytes
+> test and has nothing to gain. The gates below still apply to every future commit; the
+> per-batch sequencing notes are historical.
+
 Captured on `feat/hud-2.0` at versionCode 639 / 1.9.0, **before any file is ported**.
 Every later batch diffs against the artefacts in this directory.
 
@@ -231,6 +239,9 @@ git diff --name-status -M <batch-base> HEAD \
   (5 call sites) can be ported in batches 18/19 **without widening those methods**, so
   `ProxyDaemonMain.java` stays byte-stable from batch 16 through 21 and the
   `git diff --exit-code -- ProxyDaemonMain.java` proof keeps its meaning.
+  **Retired 2026-09-05:** that proof served its purpose (Phase4ProcessVerbs and Phase4TaskVerbs
+  were ported first and still reach `ProxyDaemonMain.log`); `ProxyDaemonMain` itself was then
+  ported in `dc25ab16`, so the `.java` no longer exists to diff.
 
 - **A Kotlin `object` runs its `<clinit>` BEFORE the `@JvmStatic main` bridge body.** Checking
   that `hiddenApiSelfTest()` is the first statement of `main()` is therefore NOT sufficient for
