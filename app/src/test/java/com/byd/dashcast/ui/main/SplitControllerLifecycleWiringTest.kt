@@ -10,15 +10,15 @@ class SplitControllerLifecycleWiringTest {
     fun `every asynchronous split callback checks host liveness`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }
             .first { File(it,
-                "app/src/main/java/com/byd/dashcast/ui/main/SplitController.java").isFile }
+                "app/src/main/java/com/byd/dashcast/ui/main/SplitController.kt").isFile }
         val source = File(root,
-            "app/src/main/java/com/byd/dashcast/ui/main/SplitController.java").readText()
+            "app/src/main/java/com/byd/dashcast/ui/main/SplitController.kt").readText()
         val fullScreen = source.substringAfter("if (slot == 0 && mSecondDashboardPkg != null)")
-            .substringBefore("private void relaunchPrimaryInSlot")
-        val relaunch = source.substringAfter("private void relaunchPrimaryInSlot")
-            .substringBefore("private void launchInSlot")
-        val result = source.substringAfter("private void launchInSlot")
-            .substringBefore("public void clearSplitState")
+            .substringBefore("private fun relaunchPrimaryInSlot")
+        val relaunch = source.substringAfter("private fun relaunchPrimaryInSlot")
+            .substringBefore("private fun launchInSlot")
+        val result = source.substringAfter("private fun launchInSlot")
+            .substringBefore("fun clearSplitState")
 
         assertTrue(fullScreen.split("mHost.runOnUiThread").drop(1)
             .all { it.take(180).contains("!mHost.isActivityAlive()") })
