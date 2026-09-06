@@ -231,7 +231,20 @@ object Redactor {
 
     private val WIFI_SCAN_PAIR = Rule(
         "wifi-scan",
-        Regex("""(?<![A-Za-z0-9_.\-])([A-Za-z0-9_.\-]{1,32}):((?:[0-9a-fA-F]{2}|\*\*)(?::(?:[0-9a-fA-F]{2}|\*\*)){5})(\((?:2\.4|5)GHz\))"""),
+        // Anchored on the ENTRY boundary, not on a character class for the name. The first version
+        // used `[A-Za-z0-9_.\-]{1,32}` and a space, an apostrophe or an accent ended the name — so
+        // `CELERITY_ALVARADO CABALLERIA:d0:76:8f:…` had its address and its surname taken and
+        // `CELERITY_ALVARADO ` left in the clear, while the rule counted a successful substitution.
+        // Across the corpus that leaked 19 distinct name fragments — `BLIK-BELLO ESPINOSA`,
+        // `Eliane's Galaxy S20 FE`, `Réseau Wi-Fi de` — and missed `Ara net :60:a4:…` entirely,
+        // because a name ending in a space put the separator where the rule wanted the name.
+        //
+        // `.{1,40}?` from the entry boundary is what a name actually is here: everything up to its
+        // own address. Non-greedy, so it stops at the first `address(band)` rather than running
+        // into the next entry, and `.` does not cross a line. Measured over the corpus: 91 distinct
+        // names, zero residue, zero addresses left on a scan line — including `69/3 www.24it.pl`,
+        // whose slash the previous character class could not contain.
+        Regex("""(?:(?<=strength: )|(?<= / ))(.{1,40}?):((?:[0-9a-fA-F]{2}|\*\*)(?::(?:[0-9a-fA-F]{2}|\*\*)){5})(\((?:2\.4|5)GHz\))"""),
     ) { m, tok ->
         if (isToken(m.groupValues[1])) m.value
         else "<ssid:" + tok(m.groupValues[1]) + ">:<mac:" + tok(m.groupValues[2]) + ">" +
