@@ -553,4 +553,71 @@ class RedactorTest {
         assertFalse(r.text, r.text.contains("14:0c:76"))
         assertTrue("the frame stays readable", r.text.contains("BSS: Add new id 530"))
     }
+    // ── the scan line that walked through every rule we had ─────────────────────────────────
+
+    /**
+     * VERBATIM from INC-20260906-184059, with the owner's network names and addresses replaced.
+     * The shape is the point: no `SSID` keyword anywhere, so no name rule fires, and the address
+     * is preceded by the `:` that [MAC]'s lookbehind refuses.
+     */
+    private val scanLine =
+        "09-06 18:40:50.790 618 1175 D WifiNetworkSelector: Networks filtered out due to " +
+            "low signal strength: Bbox-1A2B3C4D:cc:58:30:**:**:56(2.4GHz)-85 / " +
+            "Neighbour-Home:8c:30:66:**:**:eb(5GHz)-87 / Neighbour-Media:96:30:66:**:**:eb(5GHz)-87"
+
+    @Test
+    fun `a scan line loses both the network name and its address`() {
+        val r = redact(scanLine)
+        for (name in listOf("Bbox-1A2B3C4D", "Neighbour-Home", "Neighbour-Media")) {
+            assertFalse("$name survived: ${r.text}", r.text.contains(name))
+        }
+        for (addr in listOf("cc:58:30", "8c:30:66", "96:30:66")) {
+            assertFalse("$addr survived: ${r.text}", r.text.contains(addr))
+        }
+        assertEquals("three access points on this line", 3, r.counts["wifi-scan"])
+    }
+
+    @Test
+    fun `the scan line keeps what makes it diagnostic`() {
+        val r = redact(scanLine)
+        assertTrue(r.text, r.text.contains("Networks filtered out due to low signal strength"))
+        assertTrue("the band identifies nobody and explains the filtering", r.text.contains("(5GHz)"))
+        assertTrue("so does the signal strength", r.text.contains("-85"))
+        assertTrue("the separator structure survives", r.text.contains(" / "))
+    }
+
+    @Test
+    fun `an interface name followed by an address is not a network`() {
+        // The reason the rule requires the (band) suffix: without it, anything of the shape
+        // `word:address` would be read as a network name, and `wlan0` is not one.
+        val r = redact("wlan0:1a:2b:3c:**:**:6f is up")
+        assertEquals("no network was seen", null, r.counts["wifi-scan"])
+        assertTrue("the interface name stays readable", r.text.contains("wlan0"))
+        assertEquals("but the address is still an address", 1, r.counts["mac"])
+    }
+
+    @Test
+    fun `a scan line is not relabelled on a second pass`() {
+        val once = redact(scanLine)
+        val twice = Redactor.redact(once.text, SALT)
+        assertEquals(once.text, twice.text)
+        assertEquals(0, twice.total)
+    }
+    /**
+     * VERBATIM shapes from INC-20260906-184059, names replaced. There is no `SSID` token anywhere
+     * on these lines, which is exactly why every keyword-anchored rule above walked past them.
+     */
+    @Test
+    fun `a network named without the word SSID is still a network`() {
+        for (line in listOf(
+            "09-06 18:40:50.789 618 1175 D PasspointManager: ANQP entry not found for: Bbox-1A2B3C4D",
+            "09-06 18:40:50.789 618 1175 D PasspointManager: No service provider found for Bbox-1A2B3C4D",
+        )) {
+            val r = redact(line)
+            assertFalse(r.text, r.text.contains("Bbox-1A2B3C4D"))
+            assertEquals(line, 1, r.counts["wifi-ssid"])
+            assertTrue("the reason the lookup failed is the diagnostic content",
+                r.text.contains("PasspointManager: "))
+        }
+    }
 }
