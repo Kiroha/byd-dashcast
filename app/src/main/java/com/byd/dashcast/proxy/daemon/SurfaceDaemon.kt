@@ -1003,8 +1003,14 @@ object SurfaceDaemon {
             val vmRuntime = getRuntimeMethod.invoke(null)
             val setExemptions = getDeclaredMethod.invoke(vmRuntimeClass,
                 "setHiddenApiExemptions", arrayOf<Class<*>>(Array<String>::class.java)) as Method
-            setExemptions.invoke(vmRuntime,
-                arrayOf<Any>(arrayOf("Landroid/", "Lcom/android/", "Ljava/lang/")))
+            // NO extra Object[] wrapper. Method.invoke is `invoke(Object, Object...)`, so Kotlin
+            // already builds the varargs array; passing arrayOf<Any>(arrayOf(...)) made argument 0
+            // an Object[] holding the String[] instead of the String[] itself, and
+            // setHiddenApiExemptions(String[]) rejected it with IllegalArgumentException — caught
+            // below and visible only in logcat, while main() had already printed
+            // "unlockHiddenApis OK" into the log the bug reports ship. Same shape as the working
+            // copy in ClusterMirrorManager.unlockHiddenApis.
+            setExemptions.invoke(vmRuntime, arrayOf("Landroid/", "Lcom/android/", "Ljava/lang/"))
             Log.i(TAG, "unlockHiddenApis OK")
         } catch (e: Exception) {
             Log.e(TAG, "unlockHiddenApis failed", e)
