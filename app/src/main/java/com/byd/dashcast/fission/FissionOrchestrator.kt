@@ -428,7 +428,7 @@ class FissionOrchestrator(
                                     !result.startsWith("no task for "))) {
                         throw IllegalStateException(result ?: "empty move result")
                     }
-                    AppLogger.i(TAG, "Layout teardown move verified packageName=$packageName → $result")
+                    AppLogger.i(TAG, "Layout teardown move verified pkg=$packageName → $result")
                     return result
                 }
 
