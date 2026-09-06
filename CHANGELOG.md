@@ -15,6 +15,30 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.2-beta (versionCode 641)
+
+**Replaces 1.9.1-beta, which shipped two real port regressions.** Rather than wait for a tester to
+hit them, the migrated files were audited against the Java they replaced. Two silent defects were
+found and are fixed here, each verified at the bytecode level. **(1)** `SurfaceDaemon.unlockHiddenApis`
+wrapped its reflection argument one array too deep — `Method.invoke` is `invoke(Object, Object...)`,
+so Kotlin already builds the varargs array — making argument 0 an `Object[]` holding the `String[]`;
+`setHiddenApiExemptions` rejected it, the surrounding catch swallowed the exception, and `main()`
+had already printed `unlockHiddenApis OK` into the log bug reports ship. That daemon reflects into
+filtered framework API (`SurfaceControl.createDisplay`/`setDisplaySurface`,
+`InputManager.injectInputEvent`), so on a ROM that enforces hidden-API filtering the mirror, Layout
+overlays and touch injection could fail with no diagnosable cause. **(2)** Java guarded the Layout
+auto-start state with a single monitor (`FissionOrchestrator.class`) taken from four sites; Kotlin's
+`@Synchronized` on a companion function locks the companion *instance*, so two of the four moved to
+a different monitor and the automatic and manual activation paths stopped being serialised —
+re-opening the `sAutoStartFired` lost update and the double-`ClusterManager` listener leak fixed in
+1.2.29. Also fixed: `parseRoundaboutExit` used `!!` where Java relied on `NumberFormatException`
+being caught, so a null capture group would have escaped the notification callback as an NPE; and a
+teardown log line lost its `pkg=` token, hiding the move step from report greps. Three Java-vs-Kotlin
+`trim()` divergences were traced and deliberately left unchanged. Still not car-tested, still
+full-Kotlin, still expect breakage; this beta carries two unvalidated changes, the Kotlin port and
+the R8 optimizer enabled after 1.9.0. `1.9.0` remains the stable release. Full notes and the
+parked-car test checklist: [docs/releases/1.9.2-beta.md](docs/releases/1.9.2-beta.md).
+
 ### 1.9.1-beta (versionCode 640)
 
 **Full-Kotlin beta — expect breakage.** The 24 Java files that remained after 1.9.0 were ported to
@@ -28,6 +52,8 @@ validated. Three pre-existing defects the port surfaced (the proxy daemon's two 
 `FileObserver(File, Int)` being API 29 on minSdk 28, two weak source-scraping tests) are documented
 and deliberately left for their own releases. `1.9.0` remains the stable release. Full notes and
 the parked-car test checklist: [docs/releases/1.9.1-beta.md](docs/releases/1.9.1-beta.md).
+**Superseded by 1.9.2-beta**, which fixes two port regressions this build contains — do not
+install 1.9.1-beta.
 
 ### 1.8.48-beta (versionCode 638)
 
