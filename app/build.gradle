@@ -1931,8 +1931,23 @@ android {
         // class, so the auto-start monitor Java kept single was split in two and the Layout
         // auto-start/manual-activate race re-opened. Plus two low fixes (teardown log token pkg=,
         // parseRoundaboutExit no longer throws where Java returned 0). Still NOT car-tested.)
-        versionCode 641
-        versionName "1.9.2-beta"
+        // 642 = 1.9.3-beta (DEPENDENCY CURRENCY. All eleven third-party libraries plus the
+        // build toolchain were checked against their repositories rather than against memory:
+        // appcompat 1.8.0, recyclerview 1.4.0, constraintlayout 2.2.2, material 1.14.0, dadb
+        // 2.0.0, hiddenapibypass 6.1, junit 4.13.2, AGP 9.4.0 and Gradle 9.7.1 were ALREADY at
+        // their latest stable. Three were behind and are updated here, one commit each:
+        // flatbuffers-java 2.0.3 -> 25.2.10, security-crypto 1.1.0-alpha06 -> 1.1.0 (the
+        // project's last alpha coordinate), robolectric 4.13 -> 4.16.1 (test-only).
+        // The two that could reach a car were proven rather than assumed: the NaviInfo HUD
+        // buffer is byte-for-byte identical under both FlatBuffers runtimes across a
+        // 20 000-case fuzz, and security-crypto's on-disk keyset format does not move (Tink
+        // stays 1.8.0), so a credential already provisioned on a paired car stays readable.
+        // Also: the five pinned GitHub Actions and the docs Node runtime, and a sweep of build
+        // comments that still named AGP 8.13.2, Gradle 9.5.0, compileSdk 33 and Material 1.9.0.
+        // NOT car-tested — and note this build now carries THREE unvalidated changes stacked:
+        // the Kotlin port, the R8 optimizer enabled in 4f183433, and these dependencies.)
+        versionCode 642
+        versionName "1.9.3-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
