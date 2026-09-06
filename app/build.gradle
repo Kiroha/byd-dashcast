@@ -2126,9 +2126,36 @@ dependencies {
     // PRE-0 (audit) — characterisation-test harness. The audit established that the only test
     // dependency was plain JUnit 4, so everything touching Context / Binder / Handler / Surface /
     // ADB / the daemon was structurally untestable — i.e. the ~15 600 lines of the eleven files
-    // over 1 000 lines, which are exactly what waves V2, V5 and V6 modify. Robolectric 4.13 is the
-    // last release in this project's offline cache and supports Java 17 + compileSdk 33.
-    testImplementation 'org.robolectric:robolectric:4.13'
+    // over 1 000 lines, which are exactly what waves V2, V5 and V6 modify.
+    //
+    // 4.13 -> 4.16.1 (4.17 exists but is still beta). Test-only: it reaches no shipping
+    // classpath, so a bad upgrade here breaks the JVM suite on a developer machine and can
+    // never reach a car. Validated by running it, not by reading notes — an A/B through a
+    // Gradle init script gave 158 suites / 738 tests / 0 failures on both versions, identical
+    // suite by suite, and the Robolectric-backed suites were confirmed to genuinely load the
+    // new jar (the shadow stack frames differ between runs) rather than silently falling back.
+    //
+    // Three real behaviour changes, none of which bites today:
+    //   * @Config lost packageName/resourceDir/assetDir/libraries. All 29 @Config annotations
+    //     here are byte-identically @Config(sdk = [29]), so nothing references them.
+    //   * The emulated-SDK floor rises from API 21 to 23 (and 35/36 are added). Every suite
+    //     pins 29, which sits mid-table in both.
+    //   * ShadowBinder now shadows linkToDeath/unlinkToDeath where 4.13 let the real AOSP
+    //     Binder run, so unlinkToDeath can now return false. This IS daemon-binder territory,
+    //     so the call sites were read rather than trusted: ProxyClient.kt:301 and :324 and
+    //     BinderDeathOwner.kt:39 all discard the boolean inside try/catch, so the changed
+    //     return is unreachable as a branch. If anything ever starts BRANCHING on it — or
+    //     relies on linkToDeath throwing DeadObjectException, which ProxyClient.kt:1403
+    //     catches and DiLink 3 really does exercise — that code is now validated against a
+    //     Robolectric stub instead of the framework, and could pass here and fail on a car.
+    //
+    // Operational note, replacing an earlier claim here that 4.13 was "the last release in
+    // this project's offline cache": that was true and is now stale. Robolectric fetches its
+    // android-all-instrumented jar (the suffix moves i6 -> i7; ~111 MB for API 29) at TEST RUN
+    // time through its OWN resolver, so Gradle's repositories and --offline do not govern it.
+    // It is cached on this machine now; any other machine, container or air-gapped build pays
+    // that fetch on the first test run. No CI job runs Gradle tests, so CI is unaffected.
+    testImplementation 'org.robolectric:robolectric:4.16.1'
     // Android 10 era versions (API 29) — minCompileSdk ≤ 29
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
