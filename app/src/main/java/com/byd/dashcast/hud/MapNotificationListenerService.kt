@@ -1270,7 +1270,12 @@ class MapNotificationListenerService : NotificationListenerService() {
             if (!m.find()) return 0
             val g = m.group(1) ?: m.group(2)
             return try {
-                val n = g!!.toInt()
+                // `?: ""` and NOT `!!`: Java fed a possibly-null group straight to
+                // Integer.parseInt, whose NumberFormatException the catch below turned into 0.
+                // A `!!` throws NullPointerException instead, which this catch cannot match, so a
+                // future third alternative in RX_ROUNDABOUT_EXIT that sets neither group would
+                // escape parseRoundaboutExit and kill the notification listener mid-route.
+                val n = (g ?: "").toInt()
                 if (n in 1..10) n else 0
             } catch (e: NumberFormatException) {
                 0
