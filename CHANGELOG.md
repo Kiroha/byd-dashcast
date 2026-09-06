@@ -15,6 +15,31 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.3-beta (versionCode 642)
+
+**Dependency currency, on top of everything in 1.9.2-beta.** Every third-party library and the
+build toolchain were checked against their own repositories: eight of the eleven libraries plus
+AGP 9.4.0 and Gradle 9.7.1 were already at their latest stable, and the three that were behind
+are updated here, one commit each. **FlatBuffers 2.0.3 → 25.2.10** decides the bytes the cluster
+renderer parses, so it was proven rather than assumed — the flatc-generated `NaviInfo.java` was
+compiled against both runtimes and three independent harnesses agree the emitted buffer is
+byte-for-byte identical across all-defaults, a typical route, a roundabout, the clear frame,
+CJK/Arabic/Cyrillic/emoji names, dedup-exercising duplicates, integer extremes, a growth case and
+a 20 000-run fuzz with matching SHA-256; a 2.x-generated file survives because the library's only
+source-incompatible change is a version marker it never references. **security-crypto
+1.1.0-alpha06 → 1.1.0** retires the project's last alpha coordinate; the storage format does not
+move (Tink stays 1.8.0, keyset aliases and buffer layouts bytecode-identical), so a credential
+already provisioned on a paired car stays readable — but that is the one claim only an
+over-the-top install on a paired vehicle can confirm, and it is item 7 of the test checklist. The
+now-deprecated API family is kept deliberately, under a function-scoped suppression rather than a
+file-wide one. **Robolectric 4.13 → 4.16.1** is test-only and reaches no shipping classpath. Also:
+the five pinned GitHub Actions, the docs Node runtime (22 → 24 LTS), a 36-package docs lockfile
+refresh, and a sweep of build comments still naming AGP 8.13.2, Gradle 9.5.0, compileSdk 33 and
+Material 1.9.0. **Nothing in the 1.9.x beta line has run in a car, and this build now stacks
+three unvalidated changes — the Kotlin port, the R8 optimizer enabled after 1.9.0, and these
+dependencies.** Validating 1.9.2-beta first separates them. `1.9.0` remains the stable release.
+Full notes and the parked-car checklist: [docs/releases/1.9.3-beta.md](docs/releases/1.9.3-beta.md).
+
 ### 1.9.2-beta (versionCode 641)
 
 **Replaces 1.9.1-beta, which shipped two real port regressions.** Rather than wait for a tester to
