@@ -2147,9 +2147,36 @@ dependencies {
 
     // Encrypted storage. Introduced for the voice PoC's OpenAI key; the only user now is
     // ReportChannel, which holds the bug-report credential provisioned at runtime — so this
-    // one stays. It is the project's last alpha dependency, and it sits on the Android
-    // KeyStore path, which is the component OEM ROMs diverge on most: worth requalifying.
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    // one stays. It sits on the Android KeyStore path, the component OEM ROMs diverge on most.
+    //
+    // 1.1.0-alpha06 -> 1.1.0. This was the project's LAST alpha coordinate; nothing else in
+    // this block is alpha, beta or rc. The risk that mattered was field data loss: a format
+    // change would make a credential already provisioned on a tester's car unreadable after
+    // the update, silently. It does not change. Tink — which actually owns the keyset file —
+    // stays at 1.8.0 in both, confirmed in the POMs and in the resolved runtime classpath,
+    // and a bytecode diff of the two AARs shows the only delta in EncryptedSharedPreferences
+    // is an enum switch-map elision; the keyset aliases, NULL_VALUE, the AndroidKeysetManager
+    // builder sequence, the EncryptedType ids and every ByteBuffer layout are identical, and
+    // MasterKey's KeyGenParameterSpec construction is byte-identical.
+    //
+    // The whole API family is now class-level @Deprecated (androidx points at
+    // javax.crypto.KeyGenerator with AndroidKeyStore), but deprecated is not removed: every
+    // signature ReportChannel calls is still present and public. The cost is 11 Kotlin
+    // deprecation warnings, handled by a function-scoped @Suppress in ReportChannel.prefs()
+    // — see the comment there for why the imports were dropped rather than the file
+    // blanket-suppressed. Android lint is unaffected: no check in lint 9.4.0's registry so
+    // much as references java.lang.Deprecated, so the 0/0 gate was never at risk.
+    //
+    // Resolved graph is unchanged: annotation 1.8.1, collection 1.4.2 and jspecify 1.0.0 are
+    // already on the runtime classpath from other dependencies. No minSdk move (both AARs
+    // declare 21; the SDK_INT guards are structurally identical, so DiLink 3 at API 28 runs
+    // exactly the branches it runs today) and no Java-level move (Java 8 bytecode in both).
+    //
+    // NOT proven, and only a car can prove it: that a DiLink 3 or DL5.1 ALREADY holding a
+    // provisioned credential still reads it back after an over-the-top install. No JVM test
+    // covers this path — ReportChannelTest installs a plain SharedPreferences through
+    // setPrefsForTesting() precisely because Robolectric cannot emulate the Android KeyStore.
+    implementation 'androidx.security:security-crypto:1.1.0'
 
     // v1.8.13 — FlatBuffers runtime, to encode the OEM's own byd.fbs.naviInfo.NaviInfo
     // wire format for AutoContainer.sendInfo2(4, bytes) (HUD turn-by-turn injection).

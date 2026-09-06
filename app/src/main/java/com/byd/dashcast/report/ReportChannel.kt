@@ -1,8 +1,6 @@
 package com.byd.dashcast.report
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.byd.dashcast.util.AppLogger
 import java.net.URI
 
@@ -17,7 +15,7 @@ import java.net.URI
  *
  * The fix D2 settled on is not a relay — a single maintainer cannot be asked to keep a service
  * alive, and the day it stops the whole fleet goes silent with no OTA to recover it. Credentials are
- * provisioned at runtime instead: pasted once per device, held in [EncryptedSharedPreferences], and
+ * provisioned at runtime instead: pasted once per device, held in EncryptedSharedPreferences, and
  * rotatable in the two minutes it takes to edit a pinned message rather than never.
  *
  * **There is no build-time fallback.** The five `buildConfigField` entries that used to feed this
@@ -75,7 +73,7 @@ object ReportChannel {
     }
 
     /**
-     * Test seam. [EncryptedSharedPreferences] needs the Android KeyStore, which Robolectric does
+     * Test seam. EncryptedSharedPreferences needs the Android KeyStore, which Robolectric does
      * not emulate, so without this the precedence and normalisation rules below would ship with no
      * coverage at all on a security-critical path. Production never calls it; it is not a fallback
      * and there is deliberately no automatic downgrade to plaintext preferences when the encrypted
@@ -542,20 +540,39 @@ object ReportChannel {
      * ROMs; callers then fall back to the build-time value and the feature degrades instead of
      * crashing.
      */
+    // androidx.security:security-crypto 1.1.0 deprecates this whole family — MasterKey,
+    // MasterKey.Builder, MasterKey.KeyScheme, EncryptedSharedPreferences and both of its
+    // scheme enums — pointing at javax.crypto.KeyGenerator with AndroidKeyStore instead. We
+    // keep using it deliberately: the replacement does not read the keyset already written on
+    // every paired car, and migrating storage would strand the bug-report credential a tester
+    // has already provisioned. Deprecated is not removed; every signature below is still
+    // present and public, and the on-disk format is unchanged (Tink stays at 1.8.0 and the
+    // keyset aliases, EncryptedType ids and ByteBuffer layouts are bytecode-identical).
+    //
+    // The suppression is scoped to this function, and the two imports were dropped in favour
+    // of fully-qualified names, because two of the eleven deprecation warnings land on the
+    // IMPORT lines where a function-scoped @Suppress cannot reach them. A file-level
+    // @file:Suppress would have covered them too, but it would blanket a 560-line file that
+    // also holds shell provisioning, URI validation and the redaction contract, and would
+    // silently swallow every future deprecation in it.
+    @Suppress("DEPRECATION")
     private fun prefs(ctx: Context): android.content.SharedPreferences? {
         sPrefs?.let { return it }
         synchronized(ReportChannel::class.java) {
             sPrefs?.let { return it }
             return try {
-                val masterKey = MasterKey.Builder(ctx.applicationContext)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                val masterKey = androidx.security.crypto.MasterKey
+                    .Builder(ctx.applicationContext)
+                    .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
                     .build()
-                val p = EncryptedSharedPreferences.create(
+                val p = androidx.security.crypto.EncryptedSharedPreferences.create(
                     ctx.applicationContext,
                     PREFS_NAME,
                     masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    androidx.security.crypto.EncryptedSharedPreferences
+                        .PrefKeyEncryptionScheme.AES256_SIV,
+                    androidx.security.crypto.EncryptedSharedPreferences
+                        .PrefValueEncryptionScheme.AES256_GCM
                 )
                 sPrefs = p
                 p
