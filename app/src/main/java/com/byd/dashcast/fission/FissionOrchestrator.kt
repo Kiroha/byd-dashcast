@@ -1069,7 +1069,7 @@ class FissionOrchestrator(
             AppLogger.w(TAG, "stale auto-start failure ignored: $reason")
             return
         }
-        synchronized(FissionOrchestrator::class.java) {
+        synchronized(FissionOrchestrator.Companion) {
             if (sAutoStartOrchestrator === this) sAutoStartOrchestrator = null
             sAutoStartFired = false
             // The failure funnel of the auto-start path. Release the activation guard here too:
@@ -1326,6 +1326,12 @@ class FissionOrchestrator(
                     ClusterPrefs.isFissionAutoLayout(appCtx))
         }
 
+        // @Synchronized on a companion function locks the COMPANION INSTANCE, not the class —
+        // the Java `static synchronized` here locked FissionOrchestrator.class, the very monitor
+        // markAutoStartFailed() and the activation callback take. The port split one monitor into
+        // two, so those two blocks now lock FissionOrchestrator.Companion as well. Any single
+        // shared object restores the Java exclusion; the Companion is the one @Synchronized
+        // already picks, so it is the one that needs no signature change.
         @JvmStatic
         @Synchronized
         fun maybeAutoStartOnAppLaunch(context: Context): AutoStartResult {
@@ -1514,7 +1520,7 @@ class FissionOrchestrator(
                 // Only a hard failure re-arms, and only if nothing else already re-armed it. A
                 // PARTIAL activation must NOT re-arm: it still owns the cluster, and the next
                 // onResume would tear it down and rebuild it.
-                synchronized(FissionOrchestrator::class.java) {
+                synchronized(FissionOrchestrator.Companion) {
                     if (ownedCompletion && error != null && sAutoStartFired) {
                         sAutoStartFired = previouslyFired
                     }
