@@ -34,7 +34,7 @@ jobs:
     if: ${{ !github.event.release.prerelease && !contains(join(github.event.release.assets.*.name, ','), '-debug.apk') }}
     steps:
       - name: Check out the release scanner
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
                     # Run policy from the reviewed default branch, never from the release tag being judged.
                     ref: ${{ github.event.repository.default_branch }}
