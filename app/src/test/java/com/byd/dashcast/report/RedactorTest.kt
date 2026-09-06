@@ -620,4 +620,26 @@ class RedactorTest {
                 r.text.contains("PasspointManager: "))
         }
     }
+    /**
+     * The shapes that defeated the first version of this rule, all taken from the corpus with the
+     * names replaced. Each one is a network name the character class could not hold: a space, an
+     * apostrophe, a trailing space before the colon, and a slash.
+     */
+    @Test
+    fun `a network name is whatever precedes its address, not a set of safe characters`() {
+        val line = "D WifiNetworkSelector: Networks filtered out due to low signal strength: " +
+            "ACME_ALVARADO CABALLERIA:d0:76:8f:**:**:1b(2.4GHz)-81 / " +
+            "Eliane's Galaxy S20 FE:76:34:2b:**:**:5c(5GHz)-81 / " +
+            "Ara net :60:a4:b7:**:**:2e(2.4GHz)-90 / " +
+            "69/3 www.example.pl:e0:5a:9f:**:**:88(2.4GHz)-91"
+        val r = redact(line)
+        for (fragment in listOf(
+            "ACME_ALVARADO", "CABALLERIA", "Eliane", "Galaxy S20 FE", "Ara net", "www.example.pl",
+        )) {
+            assertFalse("$fragment survived: ${r.text}", r.text.contains(fragment))
+        }
+        assertEquals("four access points", 4, r.counts["wifi-scan"])
+        assertTrue("the band still explains the filtering", r.text.contains("(5GHz)"))
+        assertTrue("and so does the signal strength", r.text.contains("-90"))
+    }
 }
