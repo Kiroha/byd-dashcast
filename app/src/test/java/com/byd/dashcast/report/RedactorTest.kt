@@ -642,4 +642,119 @@ class RedactorTest {
         assertTrue("the band still explains the filtering", r.text.contains("(5GHz)"))
         assertTrue("and so does the signal strength", r.text.contains("-90"))
     }
+    // ── the identifier families the ruleset had never had a rule for ────────────────────────
+    //
+    // Every line below is a VERBATIM shape from the corpus with the identifying value replaced.
+    // Written that way on purpose: four defects this month came from a pattern checked against a
+    // sample its author typed, and each time the ROM's real shape differed in one character.
+
+    @Test
+    fun `a network named in quotes with no SSID keyword is still a network`() {
+        val r = redact(
+            "06-19 15:33:50.124 673 1212 V WifiConfigManager: Updating scan detail cache " +
+                "freq=2437 BSSID=c2:95:77:**:**:0f RSSI=-37 for \"Someone's Galaxy S26 Ultra\"WPA_PSK")
+        assertFalse(r.text, r.text.contains("Someone's Galaxy S26 Ultra"))
+        assertTrue("the signal strength is diagnostic", r.text.contains("RSSI=-37"))
+        assertTrue("so is the band", r.text.contains("freq=2437"))
+        assertEquals("the address is still an address", 1, r.counts["mac"])
+    }
+
+    @Test
+    fun `a network named after a bare key is still a network`() {
+        val r = redact("06-19 15:33:50.134 1446 1446 D StatusBarInfoWifiView: " +
+            "updateWifiStateData mConnectWifiName = Someone's Galaxy S26 Ultra")
+        assertFalse(r.text, r.text.contains("Someone's Galaxy"))
+        assertTrue(r.text.contains("mConnectWifiName = <ssid:"))
+    }
+
+    @Test
+    fun `a bluetooth device name is a person's name`() {
+        val r = redact("09-02 00:44:31.237 2954 3289 I AutoiotService:::AutoBLESysListenRunnable: " +
+            "name: Someone Sherwan, address: 28:D5*******F3:AA, connectionState: 0, other")
+        assertFalse(r.text, r.text.contains("Someone Sherwan"))
+        assertTrue("the connection state is the diagnostic", r.text.contains("connectionState: 0"))
+    }
+
+    /**
+     * The property that makes this the worst of the set: the ROM writes this address identically
+     * in every report from a given car, so it linked thirteen incidents across three months —
+     * exactly the cross-report linkage the per-report salt exists to destroy.
+     */
+    @Test
+    fun `a bluetooth address the ROM collapsed is still an address`() {
+        for (addr in listOf("B8:********:7B:FA", "28:D5*******F3:AA", "5C:AB:********:31:0E")) {
+            val r = redact("D BluetoothRemoteDevices: Same Operator Name for device $addr received")
+            assertFalse("$addr survived: ${r.text}", r.text.contains(addr))
+            assertEquals(addr, 1, r.counts["mac"])
+        }
+    }
+
+    @Test
+    fun `the word Device is not mistaken for the start of an address`() {
+        // Without the letter guard in the lookbehind, the `ce` of `Device:` is absorbed as a
+        // leading group — seventeen times across the corpus.
+        val r = redact("BluetoothRemoteDevices: Device: B8:********:7B:FA state")
+        assertTrue("the tag stays readable", r.text.contains("Device: "))
+        assertEquals(1, r.counts["mac"])
+    }
+
+    /**
+     * The contradiction was inside the file: GPS_FRAMEWORK's own KDoc says these ROMs print the
+     * pair with the decimal point implied, and GPS_KEYED — written for the same ROMs — required
+     * the point back.
+     */
+    @Test
+    fun `a position written as scaled integers is still a position`() {
+        val r = redact("09-02 00:44:30.655 D GpsInfoUpdateRunnable: {MCUInfo {latType:2, " +
+            "longType:1, lat:147573, lon:042017, alt:417.4865, bear:301.9, fix:1}}")
+        assertFalse(r.text, r.text.contains("147573"))
+        assertFalse(r.text, r.text.contains("042017"))
+        assertTrue("altitude, heading and fix quality identify nobody", r.text.contains("bear:301.9"))
+        assertTrue(r.text.contains("fix:1"))
+    }
+
+    @Test
+    fun `GpsMonitor says more than one sentence`() {
+        val r = redact("07-17 15:37:05.285 I CameraDaemon: GpsMonitor: " +
+            "Loaded GPS from primary cache: 50.66552504, 3.12043717")
+        assertFalse(r.text, r.text.contains("50.66552504"))
+        assertTrue("which cache it came from is the diagnostic",
+            r.text.contains("Loaded GPS from primary cache"))
+    }
+
+    @Test
+    fun `a serving cell is a location`() {
+        val r = redact("CellIdentityLte:{ mCi=128649750 mPci=417 mTac=25143 mEarfcn=9360 " +
+            "mBandwidth=2147483647 mMcc=452 mMnc=04 mAlphaLong=Viettel}")
+        assertFalse(r.text, r.text.contains("128649750"))
+        assertFalse(r.text, r.text.contains("25143"))
+        assertEquals(2, r.counts["cell-id"])
+        // Breaking the unique id is what kills the lookup; the rest is the radio diagnostic.
+        for (kept in listOf("mPci=417", "mEarfcn=9360", "mMcc=452", "mMnc=04", "mBandwidth="))
+            assertTrue(kept, r.text.contains(kept))
+    }
+
+    @Test
+    fun `a music library is a personal fingerprint`() {
+        val r = redact("07-16 20:03:08.590 I NEU_LocalMediaManager: " +
+            "searchLocalMedia title=title ==A Song Someone Likes")
+        assertFalse(r.text, r.text.contains("A Song Someone Likes"))
+        assertTrue(r.text.contains("NEU_LocalMediaManager"))
+    }
+
+    @Test
+    fun `the name the car broadcasts continuously`() {
+        val r = redact("[persist.sys.byd.bluetooth_name]: [Someone Car]")
+        assertFalse(r.text, r.text.contains("Someone Car"))
+        // The factory default is kept: knowing it was never changed is itself the diagnostic.
+        val d = redact("[persist.sys.byd.bluetooth_name]: [BYD]")
+        assertEquals("[persist.sys.byd.bluetooth_name]: [BYD]", d.text)
+    }
+
+    @Test
+    fun `the SIM serial is not a diagnostic`() {
+        val r = redact("D CrashInfo: crashInfo iccid = 898***********878447")
+        assertFalse(r.text, r.text.contains("878447"))
+        assertEquals(1, r.counts["iccid"])
+    }
 }

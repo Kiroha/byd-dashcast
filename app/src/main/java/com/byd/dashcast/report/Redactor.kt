@@ -221,6 +221,203 @@ object Redactor {
      * The tag and the sentence are kept — they say why the association failed, which is the
      * diagnostic content, and neither identifies anyone.
      */
+    /**
+     * A network name as a bare quoted string, with no `SSID` token anywhere on the line.
+     *
+     * `WifiConfiguration.getPrintableSsid()` returns the name already quoted, so the framework's
+     * own Wi-Fi tags print it with no key at all. 362 occurrences across 74 of 185 corpus
+     * reports — 40% — and these are not neighbourhood noise: `L2ConnectedState` and
+     * `Updating scan detail cache … for` name the access point the car is ASSOCIATED with. The
+     * values are people: `Jan's Galaxy S26 Ultra`, `A56 de Gaël`, `Dmitry's iPhone`, `FAMILIA
+     * HURTADO R`.
+     *
+     * Worse than silent: [MAC] fires on the BSSID of the same line, so the count rises and the
+     * line reads as handled, while the footer states `wifi-ssid=0` over six lines naming the
+     * network. A false all-clear is worse than no line at all.
+     *
+     * Anchored on the CARRIER — the tag — rather than on a key, because there is no key. The
+     * quoted run is the only free text these lines carry; everything diagnostic on them (rssi,
+     * freq, f=, sc=, link speed, the BSSID) is outside the quotes and survives untouched.
+     */
+    private val WIFI_QUOTED_NAME = Rule(
+        "wifi-ssid",
+        Regex("""\b(?:WifiClientModeImpl(?:\[[a-z0-9]+\])?|WifiConfigManager|WifiScoreCard|WifiLastResortWatchdog|WifiGbk|WifiNetworkSelector|WifiConnectivityManager|WifiStateMachine|SupplicantStaIfaceHal|StatusBarInfoWifiView)[ \t]*:[^"\n]{0,140}"([^"\n]{1,32})""""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[1])) m.value
+        else m.value.substring(0, m.value.length - m.groupValues[1].length - 1) +
+            "<ssid:" + tok(m.groupValues[1]) + ">\""
+    }
+
+    /**
+     * A paired Bluetooth device's name, from the OEM's own listener thread.
+     *
+     * There was no Bluetooth rule of any kind — the word does not appear anywhere else in this
+     * file. Bluetooth names are the highest personal-name density in the corpus: five of seven
+     * distinct values are people (`Ahmad sherwan`, `YUSIF`, `wesam's Infinix`), because a phone
+     * announces itself as its owner. One of them, `Mohy's Iphone`, also appears a hundred times in
+     * another report as the associated Wi-Fi network — the same person, two carriers.
+     *
+     * `connectionState` and the rest of the line are numbers and enums; only the name is text.
+     */
+    private val BT_DEVICE_NAME = Rule(
+        "bt-name",
+        Regex("""(AutoBLESysListen[A-Za-z]*[^\n]{0,40}?(?:\bname|not connected):[ \t]*)([^,\n]{1,48})"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2].trim())) m.value
+        else m.groupValues[1] + "<bt:" + tok(m.groupValues[2].trim()) + ">"
+    }
+
+    /**
+     * A Bluetooth address where the ROM collapses the middle into one run of asterisks —
+     * `B8:********:7B:FA`, `28:D5*******F3:AA` — rather than masking whole groups like the Wi-Fi
+     * stack does.
+     *
+     * [MAC] is six colon-separated groups where a mask fills exactly one group, so it cannot see
+     * these at all: 333 occurrences across 29 reports. The retained octets are the first and the
+     * last two — the device-specific tail, not an OUI — and the surrounding lines carry the
+     * phone's mobile operator and battery level, which adds carrier and country to the print.
+     *
+     * The property that makes this the worst of the set: the string is byte-identical in every
+     * report from a given car. `B8:********:7B:FA` recurs unchanged across thirteen incidents over
+     * three months, which is precisely the cross-report linkage the per-report salt exists to
+     * destroy. Tokenising it restores that.
+     *
+     * The extra `(?<![A-Za-z])` is not decoration: without it the `ce` of `Device:` is absorbed as
+     * a leading group seventeen times.
+     */
+    private val BT_ADDR_COLLAPSED = Rule(
+        "mac",
+        Regex("""(?<![0-9A-Za-z:*])(?:[0-9A-Fa-f]{2}:){0,4}[0-9A-Fa-f]{2}:?\*{3,}:?[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){0,4}(?![0-9A-Fa-f*])"""),
+    ) { m, tok -> "<mac:" + tok(m.value) + ">" }
+
+    /**
+     * A position written as scaled integers, the decimal point implied: `lat:147573, lon:042017`.
+     *
+     * The contradiction was inside this file. [GPS_FRAMEWORK]'s own KDoc says these ROMs print the
+     * pair with the point implied and handles it; [GPS_KEYED], written for the same ROMs, requires
+     * `-?\d+\.\d+` — the point back. One report carries the identical pair in both shapes twelve
+     * lines apart: the `Location[gps,655440,265461` form was redacted and the `lat:655440,
+     * lon:265461` form shipped.
+     *
+     * At 1 Hz with altitude and heading this is a short track, not a point.
+     */
+    private val GPS_SCALED = Rule(
+        "gps",
+        Regex("""\b(lat|lon|latitude|longitude)(:[ \t]*)(-?\d{4,9})\b""", RegexOption.IGNORE_CASE),
+    ) { m, tok ->
+        if (isToken(m.groupValues[3])) m.value
+        else m.groupValues[1] + m.groupValues[2] + "<coords:" + tok(m.groupValues[3]) + ">"
+    }
+
+    /**
+     * The rest of what `GpsMonitor` says. [GPS] anchors on the tag and then insists on the literal
+     * `GPS:` — the tag identified the carrier, and `GPS:` was a picture of the one sentence its
+     * author had seen. The others print the pair too:
+     *
+     *     GpsMonitor: Loaded GPS from primary cache: 50.66552504, 3.12043717
+     *
+     * Eight decimal places, and a CACHED fix: where the car was parked. In the only report that
+     * carries them, these two lines are the sole GpsMonitor output, so nothing else hinted a
+     * position had been disclosed.
+     */
+    private val GPS_MONITOR_PAIR = Rule(
+        "gps",
+        Regex("""(GpsMonitor:[^\n]{0,60}?)(-?\d{1,3}\.\d{3,10}[ \t]*,[ \t]*-?\d{1,3}\.\d{3,10})"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2])) m.value
+        else m.groupValues[1] + "<coords:" + tok(m.groupValues[2]) + ">"
+    }
+
+    /**
+     * Serving-cell identity — a location written as integers, arriving through a channel no
+     * coordinate rule watches. MCC+MNC+TAC+CI resolves to a tower sector on any public cell
+     * database, a few hundred metres.
+     *
+     * It is bound to a name: the wizard keeps the reporter's Telegram handle on purpose, and one
+     * handle appears with the same eNodeB, sectors 3 and 5, at three times of day across separate
+     * reports. A repeated sector at a repeated hour is a habitual location.
+     *
+     * Only the unique identifiers go. `mMcc`, `mMnc`, `mPci`, `mEarfcn`, `mBandwidth`,
+     * `mAlphaLong` and the registration state stay — that is the radio diagnostic, and breaking
+     * the identifier is what kills the lookup.
+     */
+    private val CELL_IDENTITY = Rule(
+        "cell-id",
+        Regex("""(?<![A-Za-z])(m(?:Ci|Tac|Lac|Cid)=)(\d{3,12})\b"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2])) m.value
+        else m.groupValues[1] + "<cell:" + tok(m.groupValues[2]) + ">"
+    }
+
+    /**
+     * Track and artist names from the head unit's media scan. One report enumerates 1,019 distinct
+     * titles — a personal-taste print that pins language and, for religious recitation, a
+     * special-category attribute. It is also 1,072 lines of pure noise in a cluster-projection
+     * report, so removing it costs the diagnostic nothing at all.
+     *
+     * Anchored on the three media carriers, so ordinary JSON `"name":` elsewhere is untouched.
+     */
+    private val MEDIA_TITLE = Rule(
+        "media",
+        Regex("""((?:NEU_LocalMediaManager|MediaCenterHelper|AvrcpTrackInfo)[^\n]{0,80}?(?:searchLocalMedia title=title ==|trackTitle=|albumTitle=|artist=|"artist"[ \t]*:[ \t]*"|"name"[ \t]*:[ \t]*"))([^\n",]{1,60})"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2].trim())) m.value
+        else m.groupValues[1] + "<media:" + tok(m.groupValues[2].trim()) + ">"
+    }
+
+    /**
+     * The Bluetooth name the car itself broadcasts. Most are the factory `[BYD]` or a model
+     * designation, but owners rename them: `Abdulhadi Car`, `BYD Dani`, `BYD mrku`. The edit is
+     * provable — `default_name` stays `[BYD]` in exactly those cases.
+     *
+     * This is the only leaked name the vehicle announces CONTINUOUSLY: anyone within Bluetooth
+     * range can match the report to the car in the street. One report ships it alongside the same
+     * given name as the connected network — one person, two independent carriers.
+     *
+     * `BYD` alone is allowed through: it is the factory default, and knowing it was never changed
+     * is itself the diagnostic.
+     */
+    private val BT_CAR_NAME = Rule(
+        "bt-name",
+        Regex("""(\[persist\.sys\.[a-z_.]*(?:bluetooth_name|default_name)\][ \t]*:[ \t]*\[)([^\]\n]{1,64})(\])"""),
+    ) { m, tok ->
+        val v = m.groupValues[2]
+        if (v == "BYD" || v.isEmpty() || isToken(v)) m.value
+        else m.groupValues[1] + "<bt:" + tok(v) + ">" + m.groupValues[3]
+    }
+
+    /**
+     * The SIM's ICCID, in the OEM crash blob. Nine of twenty digits survive the ROM's own masking,
+     * including the last six — the per-SIM serial tail. The field is named
+     * `combVINICCIDSWVersion`, so the OEM itself files it beside the VIN.
+     */
+    private val ICCID = Rule(
+        "iccid",
+        Regex("""(?i)("?iccid"?[ \t]*[=:][ \t]*"?)([0-9*]{10,25})"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2])) m.value
+        else m.groupValues[1] + "<iccid:" + tok(m.groupValues[2]) + ">"
+    }
+
+    /**
+     * The same network name again, this time with no quotes and no `SSID` — the status bar's own
+     * view logs what it is about to draw:
+     *
+     *     StatusBarInfoWifiView: updateWifiStateData mConnectWifiName = Jan's Galaxy S26 Ultra
+     *
+     * 28 occurrences. The value runs to the end of the line, so no character class describes it;
+     * the key does. This is the third distinct shape for one piece of data, which is the argument
+     * for anchoring on carriers rather than enumerating keys — see the class KDoc.
+     */
+    private val WIFI_NAME_KEYED = Rule(
+        "wifi-ssid",
+        Regex("""((?:mConnectWifiName|mWifiName|mSsidName)[ \t]*=[ \t]*)([^\n,]{1,40})"""),
+    ) { m, tok ->
+        val v = m.groupValues[2].trim()
+        if (v.isEmpty() || isToken(v)) m.value
+        else m.groupValues[1] + "<ssid:" + tok(v) + ">"
+    }
+
     private val WIFI_PASSPOINT_NAME = Rule(
         "wifi-ssid",
         Regex("""((?:ANQP entry not found for|No service provider found for):?[ \t]+)([^\s,]{1,32})"""),
@@ -496,7 +693,9 @@ object Redactor {
     private val RULES = listOf(
         VIN_PROP, VIN_CLOUD, VIN_KEY, VIN_RAW, ACTIVATION,
         GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, SSID_SPACED_QUOTED, SSID_SPACED_BARE,
-        WIFI_PASSPOINT_NAME, WIFI_SCAN_PAIR, MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
+        WIFI_QUOTED_NAME, WIFI_NAME_KEYED, WIFI_PASSPOINT_NAME, WIFI_SCAN_PAIR,
+        BT_DEVICE_NAME, BT_CAR_NAME, BT_ADDR_COLLAPSED, MAC,
+        CELL_IDENTITY, MEDIA_TITLE, ICCID, GPS, GPS_FRAMEWORK, GPS_KEYED, GPS_SCALED, GPS_MONITOR_PAIR,
         TELEGRAM_TOKEN, TELEGRAM_TOKEN_BARE)
 
     /**
