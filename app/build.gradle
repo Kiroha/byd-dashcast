@@ -1917,8 +1917,17 @@ android {
         // Surfaced but NOT fixed here: the daemon's two exception policies (11 verbs can return
         // "no error" on a non-encodable exception) and FileObserver(File,Int) being API 29 on
         // minSdk 28. This binary has not run in a car; DL3 and DL5 must both be validated.)
-        versionCode 640
-        versionName "1.9.1-beta"
+        // 641 = 1.9.2-beta (SUPERSEDES 1.9.1-beta, which shipped two port regressions found by a
+        // port-fidelity audit of the migrated files and fixed here: (1) SurfaceDaemon.unlockHiddenApis
+        // passed an Object[] where setHiddenApiExemptions wanted a String[] — one extra arrayOf<Any>
+        // wrapper — so the uid-2000 surface daemon ran with hidden APIs still filtered while its log
+        // said "OK"; SurfaceControl/InputManager reflection is what that daemon does for a living.
+        // (2) FissionOrchestrator: @Synchronized on a companion function locks the Companion, not the
+        // class, so the auto-start monitor Java kept single was split in two and the Layout
+        // auto-start/manual-activate race re-opened. Plus two low fixes (teardown log token pkg=,
+        // parseRoundaboutExit no longer throws where Java returned 0). Still NOT car-tested.)
+        versionCode 641
+        versionName "1.9.2-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
