@@ -187,6 +187,57 @@ object Redactor {
      * `wpa_supplicant` frame is itself the diagnostic — replacing them would delete signal and
      * protect no one.
      */
+    /**
+     * `<name>:<bssid>(<band>)<rssi>`, the shape `WifiNetworkSelector` writes when it lists the
+     * access points it rejected:
+     *
+     *     Networks filtered out due to low signal strength:
+     *     Bbox-6F49BE84:cc:58:30:**:**:56(2.4GHz)-85 / Kiro-Home:8c:30:66:**:**:eb(5GHz)-87 / ...
+     *
+     * Both halves walked through every rule we had, and the two guards cancelled each other out to
+     * let them. No rule fired on the NAME because the line never says `SSID`. And [MAC] could not
+     * take the address because its lookbehind refuses a preceding `:` — which is right when the
+     * colon belongs to a longer address, and exactly wrong here, where it is the separator between
+     * the name and the address.
+     *
+     * INC-20260906-184059 carried five of these from the owner's own driveway, home network names
+     * and all, each with its signal strength. A name, an address and an RSSI together locate a car
+     * far better than the coordinates we are careful to remove.
+     *
+     * The `(<band>)` suffix is what makes this safe to match: it is specific enough that no
+     * interface name or log prefix in the corpus is mistaken for a network. Band and RSSI are
+     * deliberately kept — they are the diagnostic content, and they identify nobody on their own.
+     */
+    /**
+     * A network name with no keyword in front of it at all, in the Passpoint lines:
+     *
+     *     PasspointManager: ANQP entry not found for: Bbox-6F49BE84
+     *     PasspointManager: No service provider found for Bbox-6F49BE84
+     *
+     * Third shape from the same report, and the same lesson: every rule above waits for the token
+     * `SSID`, so a line that simply names the network walks past all of them. Anchored on the two
+     * sentences rather than on a keyword, because there is no keyword to anchor on.
+     *
+     * The tag and the sentence are kept — they say why the association failed, which is the
+     * diagnostic content, and neither identifies anyone.
+     */
+    private val WIFI_PASSPOINT_NAME = Rule(
+        "wifi-ssid",
+        Regex("""((?:ANQP entry not found for|No service provider found for):?[ \t]+)([^\s,]{1,32})"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[2])) m.value
+        else m.groupValues[1] + "<ssid:" + tok(m.groupValues[2]) + ">"
+    }
+
+    private val WIFI_SCAN_PAIR = Rule(
+        "wifi-scan",
+        Regex("""(?<![A-Za-z0-9_.\-])([A-Za-z0-9_.\-]{1,32}):((?:[0-9a-fA-F]{2}|\*\*)(?::(?:[0-9a-fA-F]{2}|\*\*)){5})(\((?:2\.4|5)GHz\))"""),
+    ) { m, tok ->
+        if (isToken(m.groupValues[1])) m.value
+        else "<ssid:" + tok(m.groupValues[1]) + ">:<mac:" + tok(m.groupValues[2]) + ">" +
+            m.groupValues[3]
+    }
+
     private val MAC = Rule(
         "mac",
         // `**` groups are part of the address, not a redaction of ours. This ROM prints
@@ -198,7 +249,14 @@ object Redactor {
         //
         // No `\b` at the ends: there is no word boundary beside `*`. The lookarounds do the same
         // job for every character an address group can start or end with.
-        Regex("""(?<![0-9a-fA-F:*])(?:(?:[0-9a-fA-F]{2}|\*\*):){5}(?:[0-9a-fA-F]{2}|\*\*)(?![0-9a-fA-F:*])"""),
+        //
+        // The lookbehind excludes a hex digit but NOT a colon, and that distinction is the whole
+        // point. Refusing a preceding colon looks prudent — it stops the rule taking the last six
+        // groups of a longer run — but every `name:address` line in this ROM puts a colon right
+        // there, so it refused the addresses it exists to take: `wlan0:1a:2b:..`, and the whole of
+        // WifiNetworkSelector's scan list. Allowing it costs at worst one group left behind on a
+        // seven-group string, which is strictly better than leaving all six.
+        Regex("""(?<![0-9a-fA-F*])(?:(?:[0-9a-fA-F]{2}|\*\*):){5}(?:[0-9a-fA-F]{2}|\*\*)(?![0-9a-fA-F:*])"""),
     ) { m, tok ->
         val v = m.value.lowercase()
         if (v == "ff:ff:ff:ff:ff:ff" || v == "00:00:00:00:00:00") m.value
@@ -425,7 +483,7 @@ object Redactor {
     private val RULES = listOf(
         VIN_PROP, VIN_CLOUD, VIN_KEY, VIN_RAW, ACTIVATION,
         GMS_ACCOUNT, EMAIL, SSID, SSID_BARE, SSID_SPACED_QUOTED, SSID_SPACED_BARE,
-        MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
+        WIFI_PASSPOINT_NAME, WIFI_SCAN_PAIR, MAC, GPS, GPS_FRAMEWORK, GPS_KEYED,
         TELEGRAM_TOKEN, TELEGRAM_TOKEN_BARE)
 
     /**
