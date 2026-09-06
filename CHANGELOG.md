@@ -35,9 +35,13 @@ now-deprecated API family is kept deliberately, under a function-scoped suppress
 file-wide one. **Robolectric 4.13 → 4.16.1** is test-only and reaches no shipping classpath. Also:
 the five pinned GitHub Actions, the docs Node runtime (22 → 24 LTS), a 36-package docs lockfile
 refresh, and a sweep of build comments still naming AGP 8.13.2, Gradle 9.5.0, compileSdk 33 and
-Material 1.9.0. **Nothing in the 1.9.x beta line has run in a car, and this build now stacks
-three unvalidated changes — the Kotlin port, the R8 optimizer enabled after 1.9.0, and these
-dependencies.** Validating 1.9.2-beta first separates them. `1.9.0` remains the stable release.
+Material 1.9.0. **Validated on a DiLink 3.0 head unit after publication**: projection works and a
+diagnostic report still sends from an already-paired car, which clears in one go the three
+changes that had never run in a vehicle — the Kotlin port of both uid-2000 daemons (projection
+cannot work without them), R8's first on-car run since the optimizer was enabled, and these
+dependency updates. **Still open: DiLink 5.0/5.1 are untested on this build, and HUD
+turn-by-turn injection — the one path the FlatBuffers change touches — is unverified in the
+field because the tester's car has no HUD.** `1.9.0` remains the stable release.
 Full notes and the parked-car checklist: [docs/releases/1.9.3-beta.md](docs/releases/1.9.3-beta.md).
 
 ### 1.9.2-beta (versionCode 641)
