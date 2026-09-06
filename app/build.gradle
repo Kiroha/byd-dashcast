@@ -64,12 +64,17 @@ android {
         }
     }
 
-    // La Seal EU tourne sur Android 10 (API 29) — DiLink 3.0
-    // compileSdk bumpé à 33 pour pouvoir utiliser Material 3 (com.google.android.material 1.9.x).
-    // targetSdkVersion reste à 29 → comportement runtime inchangé sur la Seal.
+    // The Seal EU runs Android 10 (API 29) — DiLink 3.0. DiLink 5 / 5.1 are Android 12 / 13.
+    //
+    // compileSdk 36 = compile against the newest platform, which is what lets the app SEE
+    // recent APIs; it says nothing about what it runs on. minSdk 28 and targetSdk 29 below are
+    // the ones that decide runtime behaviour, and targetSdk 29 is deliberate — see the
+    // ExpiredTargetSdkVersion entry in app/lint.xml. (This comment used to say "compileSdk
+    // bumped to 33 for Material 3 1.9.x"; both numbers moved long ago.)
     namespace = "com.byd.dashcast"
     compileSdkVersion 36
-    // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
+    // buildToolsVersion is deliberately not pinned: AGP picks the version it ships with, so
+    // the build follows the plugin instead of drifting against it.
 
     defaultConfig {
         applicationId "com.byd.dashcast"
@@ -2161,8 +2166,9 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.2'
 
-    // Material Components (Material 3) — fournit Theme.Material3.*
-    // 1.9.0 = dernière version compatible compileSdk 33.
+    // Material Components (Material 3) — provides Theme.Material3.*
+    // 1.14.0 is the latest stable on Google's Maven. (The old note here — "1.9.0 = last
+    // version compatible with compileSdk 33" — described a compileSdk this build left behind.)
     implementation 'com.google.android.material:material:1.14.0'
 
     // dadb — pure-JVM ADB client (same library used by Overdrive)
