@@ -5,15 +5,21 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // AGP 8.13.2 (last 8.x) + Gradle 8.14.5 are inside KGP 2.4.0's tested
-        // window (Gradle 7.6.3-9.5.0, AGP 8.5.2-9.1.0). This does not cover
-        // R8 metadata: AGP embeds R8 8.13.19 while Kotlin 2.4 requires 9.1.29+.
-        // A standalone 9.1.x override parses the metadata but AGP 8.13's class
-        // provider then falls back synchronously with two integration warnings.
-        // Keep the chosen versions until that boundary is changed as a tested unit.
-        // AGP 9.x is a separate migration (old variant API removed, built-in
-        // Kotlin, Build Tools 36) — see docs/KOTLIN_MIGRATION_AUDIT.md.
-        // Requires a full JDK 17 (jlink).
+        // AGP 9.4.0 is the latest STABLE Android Gradle Plugin: 9.5.0 exists only as
+        // -alpha01..-alpha04 on Google's Maven, so this is the ceiling, not a lag.
+        // (The AGP 8.x migration this comment used to describe is done; the note about
+        // staying on 8.13.2 for KGP 2.4.0's tested window no longer describes this build.)
+        //
+        // AGP 9 compiles Kotlin itself — there is no Kotlin plugin declared anywhere in this
+        // project. The APP's Kotlin is whatever AGP bundles: it resolves kotlin-stdlib 2.2.10.
+        // Do NOT read that off `./gradlew --version`, which prints "Kotlin: 2.4.0" — that is
+        // the Kotlin embedded in Gradle for build SCRIPTS, a different thing. Compiler options
+        // live in the top-level kotlin{} block in app/build.gradle, AGP 9's replacement for
+        // the removed kotlinOptions DSL.
+        //
+        // The Gradle DAEMON runs on JDK 21 (~/.gradle/gradle.properties sets
+        // org.gradle.java.home=~/.jdks/jdk-21.0.12.1+1; the launcher JVM is the system 17).
+        // Java source/target and jvmTarget are 17.
         classpath 'com.android.tools.build:gradle:9.4.0'
     }
 }
