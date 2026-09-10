@@ -130,7 +130,7 @@ object HudCaptureSupport {
     /**
      * The bundles' redaction point, and the reason it exists here.
      *
-     * The consent notice tells a driver, in thirteen languages, that the vehicle serial number,
+     * The consent notice tells a driver, in fourteen languages, that the vehicle serial number,
      * Wi-Fi network names, hardware addresses and positions are removed from **every** report. That
      * was true of the bug report and false of the three bundles that come through this function —
      * the HUD bench, the raw HUD capture and the AAOS diagnostic — which carry the same

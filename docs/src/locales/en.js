@@ -15,7 +15,7 @@ export default {
       '✅ Works on DiLink 3 (Seal EU / 6125F) and DiLink 5 (newer BYD head units).',
       '✅ No system modification: DashCast installs like any other app.',
       '✅ Local ADB over TCP — no computer needed after the first authorisation.',
-      '✅ 13 interface languages, chosen at first launch, changeable any time.',
+      '✅ 14 interface languages, chosen at first launch, changeable any time.',
       '✅ Real-time touch mirror: drive the cluster from the central screen.',
       '✅ Layouts mode: several apps side by side on the cluster, zones drawn with a finger.',
       '✅ Auto-start: projection + app (or favourite layout) as soon as DashCast opens.',
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Welcome screen — language selection',
       lead:
-        'On the very first launch, DashCast shows a grid with the 13 available languages. Tap yours: the choice is remembered and the screen never reappears. You can change the language at any time in Settings.',
+        'On the very first launch, DashCast shows a grid with the 14 available languages. Tap yours: the choice is remembered and the screen never reappears. You can change the language at any time in Settings.',
       mockupLabel: 'View screen 1 (Welcome)',
       featuresTitle: 'Details',
       features: [
         {
-          title: '13 supported languages',
+          title: '14 supported languages',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. The chosen language is applied immediately, no restart needed.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. The chosen language is applied immediately, no restart needed.",
         },
         {
           title: 'Automatic reading direction',
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Language',
-          text: '13 languages — switching is instant.',
+          text: '14 languages — switching is instant.',
         },
       ],
       howTo: {

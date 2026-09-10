@@ -66,6 +66,7 @@
     <string name="ota_up_to_date">DashCast абноўлены</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_pl">🇵🇱  Polski</string>
+    <string name="btn_lang_pt">🇧🇷  Português (Brasil)</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Наладзіць</string>
     <string name="toast_grid_mode_enabled">Рэжым сеткі ўключаны</string>

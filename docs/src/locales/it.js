@@ -15,7 +15,7 @@ export default {
       '✅ Funziona su DiLink 3 (Seal EU / 6125F) e DiLink 5 (head unit BYD più recenti).',
       '✅ Nessuna modifica di sistema: DashCast si installa come qualsiasi altra app.',
       '✅ ADB locale su TCP — nessun computer necessario dopo la prima autorizzazione.',
-      "✅ 13 lingue d'interfaccia, scelte al primo avvio, modificabili in qualsiasi momento.",
+      "✅ 14 lingue d'interfaccia, scelte al primo avvio, modificabili in qualsiasi momento.",
       '✅ Mirror touch in tempo reale: controlla il cluster dallo schermo centrale.',
       '✅ Modalità Layout: più app affiancate sul cluster, zone disegnate col dito.',
       '✅ Avvio automatico: proiezione + app (o layout preferito) appena DashCast si apre.',
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Schermata di benvenuto — scelta della lingua',
       lead:
-        'Al primissimo avvio, DashCast mostra la griglia con le 13 lingue disponibili. Tocca la tua: la scelta viene memorizzata e la schermata non riappare più. Potrai cambiare lingua in qualsiasi momento dalle Impostazioni.',
+        'Al primissimo avvio, DashCast mostra la griglia con le 14 lingue disponibili. Tocca la tua: la scelta viene memorizzata e la schermata non riappare più. Potrai cambiare lingua in qualsiasi momento dalle Impostazioni.',
       mockupLabel: 'Vedi schermata 1 (Benvenuto)',
       featuresTitle: 'Dettagli',
       features: [
         {
-          title: '13 lingue supportate',
+          title: '14 lingue supportate',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. La lingua scelta è applicata subito, senza riavvio.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. La lingua scelta è applicata subito, senza riavvio.",
         },
         {
           title: 'Direzione di lettura automatica',
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Lingua',
-          text: '13 lingue — il cambio è istantaneo.',
+          text: '14 lingue — il cambio è istantaneo.',
         },
       ],
       howTo: {
