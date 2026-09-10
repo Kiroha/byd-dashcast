@@ -1916,7 +1916,7 @@ android {
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
         // folders from resources.arsc — smaller APK for the bandwidth-limited
         // on-car OTA. Perf audit 2026-07-05 finding #16.
-        resConfigs 'ar', 'be', 'de', 'en', 'es', 'it', 'kk', 'pl', 'ru', 'tr', 'uk', 'uz'
+        resConfigs 'ar', 'be', 'de', 'en', 'es', 'it', 'kk', 'pl', 'pt', 'ru', 'tr', 'uk', 'uz'
 
         // AUD-001 — no credential is compiled into the APK any more.
         //

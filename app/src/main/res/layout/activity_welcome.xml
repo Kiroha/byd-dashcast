@@ -6,8 +6,7 @@
       • Hero logo (96dp, primary-container tonal square, cast_connected glyph)
       • DashCast title (HeadlineLarge), primary-tinted version subtitle with letter-spacing
       • Welcome prompt, then 4×3 grid of outlined language buttons.
-    All 12 button IDs are preserved (btn_lang_fr/en/de/it/tr/es/ru/uk/ar/uz/kk/be)
-    so WelcomeActivity.java keeps working without changes.
+    Language buttons: FR/EN/DE, IT/TR/ES, RU/UK/AR, UZ/KK/BE, PL/PT.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -236,7 +235,7 @@
 
                 </LinearLayout>
 
-                <!-- Row 5: PL -->
+                <!-- Row 5: PL / PT -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -248,7 +247,16 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/btn_lang_pl"/>
+                        android:text="@string/btn_lang_pl"
+                        android:layout_marginEnd="14dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_pt"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_pt"/>
 
                 </LinearLayout>
 

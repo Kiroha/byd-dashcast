@@ -18,6 +18,7 @@
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_pl">🇵🇱  Polski</string>
+    <string name="btn_lang_pt">🇧🇷  Português (Brasil)</string>
     <string name="status_disconnected">Dashboard: non connesso</string>
     <string name="btn_origin_cluster">Ripristina Dashboard originale</string>
     <string name="mirror_placeholder">Display attivo su cluster ✓</string>

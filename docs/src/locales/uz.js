@@ -15,7 +15,7 @@ export default {
       '✅ DiLink 3 (Seal EU / 6125F) va DiLink 5 (yangiroq BYD bosh qurilmalari) bilan ishlaydi.',
       "✅ Tizim o'zgartirilmaydi: DashCast boshqa har qanday ilova kabi o'rnatiladi.",
       '✅ TCP orqali mahalliy ADB — birinchi avtorizatsiyadan keyin kompyuter kerak emas.',
-      "✅ 13 ta interfeys tili, birinchi ishga tushirishda tanlanadi, istalgan vaqtda o'zgartiriladi.",
+      "✅ 14 ta interfeys tili, birinchi ishga tushirishda tanlanadi, istalgan vaqtda o'zgartiriladi.",
       '✅ Real vaqtdagi sensorli oyna: klasterni markaziy ekrandan boshqaring.',
       "✅ «Tartiblar» rejimi: klasterda yonma-yon bir nechta ilova, zonalar barmoq bilan chiziladi.",
       '✅ Avtoishga tushirish: DashCast ochilishi bilan proyeksiya + ilova (yoki sevimli tartib).',
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Salomlashish ekrani — til tanlash',
       lead:
-        "Eng birinchi ishga tushirishda DashCast 13 ta mavjud til panjarasini ko'rsatadi. O'zingiznikiga teging: tanlov saqlanadi va ekran boshqa ko'rinmaydi. Tilni istalgan vaqtda Sozlamalardan o'zgartirish mumkin.",
+        "Eng birinchi ishga tushirishda DashCast 14 ta mavjud til panjarasini ko'rsatadi. O'zingiznikiga teging: tanlov saqlanadi va ekran boshqa ko'rinmaydi. Tilni istalgan vaqtda Sozlamalardan o'zgartirish mumkin.",
       mockupLabel: "1-ekranni ko'rish (Salomlashish)",
       featuresTitle: 'Tafsilotlar',
       features: [
         {
-          title: "13 ta qo'llab-quvvatlanadigan til",
+          title: "14 ta qo'llab-quvvatlanadigan til",
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Tanlangan til darhol qo'llanadi, qayta ishga tushirish kerak emas.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Tanlangan til darhol qo'llanadi, qayta ishga tushirish kerak emas.",
         },
         {
           title: "Avtomatik o'qish yo'nalishi",
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Til',
-          text: '13 til — almashish oniy.',
+          text: '14 til — almashish oniy.',
         },
       ],
       howTo: {

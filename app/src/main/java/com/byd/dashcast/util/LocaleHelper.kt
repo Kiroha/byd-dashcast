@@ -32,6 +32,10 @@ object LocaleHelper {
     const val LANG_KK = "kk"
     const val LANG_BE = "be"
     const val LANG_PL = "pl"
+    const val LANG_PT = "pt"
+
+    fun localeFor(lang: String): Locale =
+        if (lang == LANG_PT) Locale("pt", "BR") else Locale(lang)
 
     /**
      * Applies the saved locale to the given context without re-saving the preference.
@@ -41,7 +45,7 @@ object LocaleHelper {
     @JvmStatic
     fun applyLocale(context: Context): Context {
         val lang = getSavedLanguage(context) ?: return context
-        val locale = Locale(lang)
+        val locale = localeFor(lang)
         Locale.setDefault(locale)
         val res = context.resources
         val config = Configuration(res.configuration)
@@ -54,7 +58,7 @@ object LocaleHelper {
     fun setLocale(context: Context, lang: String): Context {
         saveLanguage(context, lang)
 
-        val locale = Locale(lang)
+        val locale = localeFor(lang)
         Locale.setDefault(locale)
 
         val res = context.resources

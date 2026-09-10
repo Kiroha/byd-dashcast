@@ -1,0 +1,602 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">DashCast</string>
+    <string name="welcome_subtitle">Controle do painel de instrumentos</string>
+    <string name="welcome_subtitle_fmt">BYD CLUSTER MIRROR · v%1$s</string>
+    <string name="welcome_select_lang">Escolha o seu idioma\nPlease select your language</string>
+    <string name="welcome_continue_without_change">Continuar sem alterar</string>
+    <string name="btn_lang_fr">🇫🇷  Français</string>
+    <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
+    <string name="btn_lang_ru">🇷🇺  Русский</string>
+    <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
+    <string name="btn_lang_kk">🇰🇿  Қазақша</string>
+    <string name="btn_lang_be">🇧🇾  Беларуская</string>
+    <string name="btn_lang_uk">🇺🇦  Українська</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
+    <string name="btn_lang_pt">🇧🇷  Português (Brasil)</string>
+    <string name="status_disconnected">Painel: desconectado</string>
+    <string name="btn_origin_cluster">Restaurar painel original</string>
+    <string name="mirror_placeholder">Tela ativa no cluster ✓</string>
+    <string name="mirror_unavailable">Prévia local indisponível — a tela do cluster continua ativa</string>
+    <string name="layout_mirror_previous">App anterior do layout</string>
+    <string name="layout_mirror_next">Próximo app do layout</string>
+    <string name="btn_cluster_split">⬛⬛ Dividir</string>
+    <string name="cluster_control_title">Controle do cluster</string>
+    <string name="cluster_control_hide">Ocultar ▼</string>
+    <string name="btn_app_to_main">← Principal</string>
+    <string name="btn_app_to_cluster">→ Cluster</string>
+    <string name="status_starting_cluster">Iniciando cluster…</string>
+    <string name="status_activating_cluster">Ativando cluster…</string>
+    <string name="status_restoring_cluster">Restaurando cluster…</string>
+    <string name="status_restoring_origin">Restaurando o cluster original…</string>
+    <string name="status_dashboard_byd">Projeção pronta — escolha um app</string>
+    <string name="status_dashboard_app">Painel: %1$s</string>
+    <string name="toast_app_launch_failed">%1$s: falha ao abrir no cluster (veja o Log)</string>
+    <string name="toast_app_already_cluster">O app já está no cluster</string>
+    <string name="toast_restore_failed">Falha ao restaurar: %1$s</string>
+    <string name="toast_origin_failed">Falha ao restaurar o cluster original: %1$s</string>
+    <string name="toast_app_stopped">%1$s encerrado</string>
+    <string name="toast_kill_failed">Falha ao encerrar: %1$s</string>
+    <string name="toast_no_app_cluster">Nenhum app no cluster</string>
+    <string name="menu_settings">⚙️ Configurações</string>
+    <string name="menu_diagnostic">🔧 Diagnóstico</string>
+    <string name="menu_system_report">📋 Relatório do sistema</string>
+    <string name="menu_log">📜 Logs</string>
+    <string name="menu_language">🌐 Idioma</string>
+    <string name="menu_check_updates">🔄 Verificar atualizações</string>
+    <string name="settings_prerelease_label">Canal beta</string>
+    <string name="settings_prerelease_hint">Receber builds de teste antes das versões oficiais</string>
+    <string name="cluster_label_88">8,8 polegadas  (cmd=29)</string>
+    <string name="cluster_label_123">12,3 polegadas (cmd=30) — Seal EU</string>
+    <string name="cluster_label_1025">10,25 polegadas (cmd=31)</string>
+    <string name="split_full_screen">⬜ Tela cheia</string>
+    <string name="split_left">⬜⬛ Esquerda (50%)</string>
+    <string name="split_right">⬛⬜ Direita (50%)</string>
+    <string name="log_title">Diário</string>
+    <string name="log_filter_hint">Filtrar o diário (tag, mensagem, regex)…</string>
+    <string name="log_empty">(sem entradas)</string>
+    <string name="sysinfo_title">Relatório do sistema BYD</string>
+    <string name="sysinfo_hint">Toque em \'Gerar relatório\' para começar.</string>
+    <string name="sysinfo_generating">Gerando…\n</string>
+    <string name="toast_write_error">Erro de gravação: %1$s</string>
+    <string name="toast_report_saved">Relatório salvo:\n%1$s</string>
+    <string name="share_log_title">Compartilhar log…</string>
+    <string name="share_report_title">Compartilhar relatório…</string>
+    <string name="settings_header">Configurações</string>
+    <string name="settings_cluster_type_title">Tipo de cluster</string>
+    <string name="ota_dialog_title">Atualização disponível</string>
+    <string name="ota_up_to_date">O DashCast está atualizado</string>
+    <string name="btn_adjust">Ajustar</string>
+    <string name="toast_grid_mode_enabled">Modo grade ativado</string>
+    <string name="toast_list_mode_enabled">Modo lista ativado</string>
+    <string name="toast_update_install_failed">Falha ao instalar a atualização: </string>
+    <string name="app_state_auto">Auto</string>
+    <string name="ota_btn_update_now">Atualizar agora</string>
+    <string name="ota_btn_later">Depois</string>
+    <string name="ota_downloading">Baixando…</string>
+    <string name="notif_remote_channel_name">Botão do espelho do cluster</string>
+    <string name="notif_remote_content">📺 Espelho do cluster ativo</string>
+    <string name="notif_cluster_channel_name">Projeção no cluster</string>
+    <string name="notif_cluster_channel_desc">Mantém a tela no cluster da BYD</string>
+    <string name="notif_cluster_initializing">Cluster: inicializando…</string>
+    <string name="notif_cluster_active">Cluster ativo — tela %1$d</string>
+    <string name="notif_cluster_disconnected">Cluster: desconectado</string>
+    <string name="sysinfo_file_saved">\n\nArquivo: %1$s\nComando ADB: adb pull \"%1$s\"</string>
+    <string name="menu_view_grid">⊞ Modo grade</string>
+    <string name="menu_view_list">📋 Modo lista</string>
+    <string name="hint_search_apps">Buscar um app…</string>
+    <string name="tooltip_tap_send">Toque em um app para enviá-lo à tela do cluster</string>
+    <string name="split_btn_exit">↩ Tela cheia</string>
+    <string name="confirm_kill_title">Encerrar o app?</string>
+    <string name="confirm_kill_msg">Forçar o encerramento de %1$s?</string>
+    <string name="confirm_kill_ok">Encerrar</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Cluster inacessível — tente de novo</string>
+    <string name="dialog_reconnect_title">Reabrir o app?</string>
+    <string name="dialog_reconnect_msg">Reabrir %1$s no cluster?</string>
+    <string name="dialog_reconnect_yes">↺ Reabrir</string>
+    <string name="favorite_prefix">⭐ </string>
+    <string name="setting_boot_auto_start">Iniciar a projeção automaticamente na partida (Auto-Boot)</string>
+    <string name="category_navigation">🗺 Navegação</string>
+    <string name="category_media">🎵 Mídia</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_nav">🗺 Nav</string>
+    <string name="filter_media">🎵 Mídia</string>
+    <string name="settings_show_category_filters">Mostrar filtros de categoria (Todos / Nav / Mídia)</string>
+    <string name="settings_reconnect_popup">Oferecer reabrir o último app ao reconectar o cluster</string>
+    <string name="quick_switch_title">Apps recentes</string>
+    <!-- Bug reporter -->
+    <string name="main_nav_bug_report">Relatar</string>
+    <string name="bug_report_menu">🐞 Relatar um problema</string>
+    <string name="bug_title_header">Relatar um problema</string>
+    <string name="bug_subtitle">Descreva o problema. Um log técnico é anexado automaticamente.</string>
+    <string name="bug_field_title">Título</string>
+    <string name="bug_field_steps">Passos para reproduzir</string>
+    <string name="bug_field_result">Resultado observado</string>
+    <string name="bug_title_required">Informe um título</string>
+    <string name="bug_send">Enviar</string>
+    <string name="bug_status_capturing">Capturando log…</string>
+    <string name="bug_status_sending">Enviando…</string>
+    <string name="bug_status_slow">O envio está demorando mais que o esperado — você pode cancelar.</string>
+    <string name="bug_status_error_fmt">Erro: %1$s</string>
+    <string name="bug_sent_ok">Relatório enviado ✓ Obrigado!</string>
+    <string name="bug_share_subject">DashCast — Relatório de problema</string>
+    <string name="bug_share_chooser">Enviar o relatório via…</string>
+    <string name="menu_usage_stats">📊 Estatísticas de uso</string>
+    <string name="usage_title">Tempo de uso do cluster</string>
+    <string name="usage_empty">Sem dados de uso</string>
+    <string name="usage_reset">Zerar</string>
+    <string name="toast_usage_stats_reset">Estatísticas de uso apagadas</string>
+
+    <!-- Settings page (M3 redesign) -->
+    <string name="settings_cluster_88_desc">Configuração padrão — recomendada</string>
+    <string name="settings_cluster_123_desc">Seal EU — premium</string>
+    <string name="settings_cluster_1025_desc">Experimental</string>
+    <string name="settings_section_behavior">Comportamento</string>
+    <string name="settings_boot_auto_start_support">Ativar o espelho na partida do veículo</string>
+    <string name="settings_reconnect_popup_support">Restaurar se a conexão cair de forma inesperada</string>
+    <string name="settings_quick_stop">Parada rápida (sem restaurar o cluster original)</string>
+    <string name="settings_quick_stop_support">Envia apenas sendInfo 18 + 0, sem redimensionar</string>
+    <string name="settings_category_filters_support">Mostrar chips no menu de apps</string>
+    <string name="settings_compact_apps_panel">Modo compacto (lista de apps estreita)</string>
+    <string name="settings_compact_apps_panel_support">Libera espaço para a prévia do cluster — 2 colunas em vez de 5</string>
+    <string name="settings_section_about">Sobre</string>
+    <string name="settings_about_version_label">Versão</string>
+    <string name="settings_check_update_title">Verificar atualizações</string>
+    <string name="settings_check_update_support">Verifica se há uma versão nova</string>
+    <string name="settings_check_update_button">Verificar</string>
+    <string name="settings_source_code_title">Código-fonte</string>
+    <string name="main_nav_apps">Apps</string>
+    <string name="main_nav_settings">Ajustes</string>
+    <string name="main_nav_diag">Diag</string>
+    <string name="main_nav_sysinfo">Sistema</string>
+    <string name="main_nav_log">Log</string>
+    <string name="main_nav_help">Ajuda</string>
+    <!-- v1.2.37 / v1.2.42 — Hotspot screen (TetherFi-only since v1.2.42) -->
+    <string name="main_nav_hotspot">Hotspot</string>
+    <string name="hotspot_title">Hotspot</string>
+    <string name="hotspot_back">Voltar</string>
+    <string name="hotspot_hero_title">Hotspot 4G via TetherFi</string>
+    <string name="hotspot_hero_subtitle">Compartilhe seus dados móveis em poucos toques</string>
+    <string name="hotspot_intro">O hotspot nativo não é acessível no DiLink 3. O DashCast controla o TetherFi (código aberto), que cria um ponto de acesso Wi-Fi Direct + proxy SOCKS5 — sem permissão de sistema, usando o SIM do veículo como uplink.</string>
+    <string name="hotspot_tf_status_unknown">⏳ Detectando…</string>
+    <string name="hotspot_tf_status_installed">🟢 TetherFi instalado — versão %1$s</string>
+    <string name="hotspot_tf_status_missing">🔴 O TetherFi não está instalado. Toque em “Instalar” para baixar a versão mais recente.</string>
+    <string name="hotspot_tf_start">Iniciar</string>
+    <string name="hotspot_tf_stop">Parar</string>
+    <string name="hotspot_tf_toggle">Alternar</string>
+    <string name="hotspot_tf_open">Abrir TetherFi</string>
+    <string name="hotspot_tf_install">Instalar TetherFi</string>
+    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — enviado</string>
+    <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
+    <string name="hotspot_tf_open_failed">Abrir TetherFi: %1$s</string>
+    <!-- Watchdog -->
+    <string name="hotspot_watchdog_title">Watchdog automático</string>
+    <string name="hotspot_watchdog_hint">Reinicia o hotspot automaticamente se ele cair (verifica a cada 30 s).</string>
+    <string name="hotspot_watchdog_idle">Desligado</string>
+    <string name="hotspot_watchdog_probing">⏳ verificando…</string>
+    <string name="hotspot_watchdog_tf_gone">⛔ TetherFi desinstalado — watchdog parado</string>
+    <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
+    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot LIGADO (reinícios=%3$d)</string>
+    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 CAIU — espera %3$d s</string>
+    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 CAIU → reinício #%3$d</string>
+    <!-- v1.2.42 — App settings -->
+    <string name="hotspot_autostart_boot_title">Iniciar na partida do veículo</string>
+    <string name="hotspot_autostart_boot_hint">Abre o TetherFi automaticamente alguns segundos após a partida.</string>
+    <string name="hotspot_tf_update_available">🆕 Atualização do TetherFi: v%1$d → v%2$d (toque para baixar)</string>
+    <!-- v1.2.44 — Clients + live stats card -->
+    <string name="hotspot_clients_title">Clientes conectados</string>
+    <string name="hotspot_clients_empty">Nenhum cliente conectado</string>
+    <string name="hotspot_client_default_name">Dispositivo %1$s</string>
+    <string name="hotspot_stat_uptime">Tempo ligado</string>
+    <string name="hotspot_stat_rx">Recebido</string>
+    <string name="hotspot_stat_tx">Enviado</string>
+    <string name="settings_use_own_sim">Eu uso o meu próprio chip SIM</string>
+    <string name="settings_use_own_sim_support">Mostra o botão “Hotspot” na barra de navegação para compartilhar seus dados móveis via TetherFi (somente DiLink 3).</string>
+    <string name="main_cluster_label">ESTADO DO CLUSTER</string>
+    <string name="main_cluster_status_subtitle">Ative a projeção para começar</string>
+    <string name="main_preview_section">Prévia ao vivo</string>
+    <string name="main_btn_full_preview">Espelho em tela cheia</string>
+    <string name="main_btn_stop_mirror">Parar projeção</string>
+    <string name="main_btn_launch_layout_apps">Abrir apps do layout</string>
+    <string name="main_section_favorites">FAVORITOS</string>
+    <string name="main_section_all_apps">Todos os aplicativos</string>
+    <string name="sheet_auto_launch">Abrir automaticamente no início</string>
+    <string name="sheet_add_favorite">Adicionar aos favoritos</string>
+    <string name="sheet_remove_favorite">Remover dos favoritos</string>
+    <string name="sheet_to_main">Enviar para a tela principal</string>
+    <string name="sheet_to_cluster">Enviar para o cluster</string>
+    <string name="sheet_resize_move">Redimensionar e mover</string>
+    <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
+    <string name="resize_btn_cancel">Cancelar</string>
+    <string name="resize_btn_ok">Confirmar</string>
+    <string name="resize_preset_full">Tela cheia</string>
+    <string name="resize_preset_left">Esquerda ½</string>
+    <string name="resize_preset_right">Direita ½</string>
+    <string name="resize_preset_center">Centro 60%</string>
+    <string name="resize_btn_close">Fechar</string>
+    <string name="resize_live_label">Prévia ao vivo</string>
+    <string name="resize_live_warn_title">Ativar a prévia ao vivo?</string>
+    <string name="resize_live_warn_msg">A prévia ao vivo aplica cada movimento no cluster em tempo real. Isso pode causar flashes e artefatos visuais na tela do cluster enquanto você ajusta. Continuar?</string>
+    <string name="resize_live_warn_ok">Ativar</string>
+    <string name="resize_no_package">Nenhum pacote</string>
+    <string name="sheet_force_stop">Forçar encerramento</string>
+    <string name="main_cluster_status_off">Projeção desligada</string>
+    <string name="main_btn_exit_fullscreen">Sair da tela cheia</string>
+    <!-- v0.9.81 — Diag M3 cards -->
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Salvar</string>
+    <string name="sysinfo_btn_share">Compartilhar</string>
+    <string name="sysinfo_btn_regen">Gerar de novo</string>
+    <string name="sysinfo_section_overview">Visão geral</string>
+    <string name="sysinfo_section_displays">Telas detectadas</string>
+    <string name="sysinfo_section_services">Serviços</string>
+    <string name="sysinfo_section_full_report">Relatório completo</string>
+    <string name="sysinfo_tile_vehicle">Veículo</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Tempo ligado</string>
+    <string name="sysinfo_tile_uptime_since">Desde %1$s</string>
+    <string name="sysinfo_disp_main">Principal</string>
+    <string name="sysinfo_disp_cluster">Cluster</string>
+    <string name="sysinfo_disp_virtual">Virtual (espelho)</string>
+    <string name="sysinfo_disp_row_headline">Tela %1$d — %2$s</string>
+    <string name="sysinfo_disp_hidden">Oculta (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">Não visível pela API DisplayManager</string>
+    <string name="sysinfo_svc_run">LIG</string>
+    <string name="sysinfo_svc_off">DESL</string>
+    <string name="sysinfo_svc_mirror_sub">Monitorando pidof · 500 ms</string>
+    <string name="sysinfo_svc_checking">Verificando…</string>
+    <string name="sysinfo_svc_stopped">Parado</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 inacessível</string>
+    <string name="sysinfo_svc_conn">CON</string>
+    <string name="sysinfo_tile_dashcast_platform_signed">assinado com chave de plataforma</string>
+    <string name="sysinfo_tile_dashcast_user_signed">assinado pelo usuário</string>
+    <string name="log_chip_all">Tudo (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Aviso (%1$d)</string>
+    <string name="log_chip_error">Erro (%1$d)</string>
+    <string name="log_chip_all_zero">Tudo (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Aviso (0)</string>
+    <string name="log_chip_error_zero">Erro (0)</string>
+    <string name="log_btn_pause_cd">Pausar</string>
+    <string name="log_btn_resume_cd">Retomar</string>
+    <string name="log_btn_clear_cd">Limpar</string>
+    <string name="log_btn_share_cd">Compartilhar</string>
+    <string name="log_btn_save_cd">Salvar</string>
+    <string name="log_save_failed">Falha ao salvar o diário</string>
+    <string name="log_saved_toast">Diário salvo: %1$s</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_advanced">Avançado</string>
+    <string name="settings_legacy_path">O daemon proxy não está funcionando. Usar o caminho legado</string>
+    <string name="settings_legacy_path_support">Encaminha todos os comandos privilegiados pelo shell ADB legado em vez do daemon proxy. Ative se o daemon não responder ou estiver causando problemas.</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+
+    <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <!-- v1.3.12 — VD pipeline test battery. -->
+
+    <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
+
+    <!-- Settings — DiLink 5 -->
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Teclado automático no cluster (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Mostra o teclado intermediário quando você toca em um campo de texto no cluster.</string>
+    <string name="a11y_ime_watcher_description">Observa eventos de foco na tela do cluster para abrir automaticamente a ponte de teclado do DashCast. Não lê nem armazena o conteúdo dos campos.</string>
+    <string name="ime_banner_title">Teclado automático no cluster</string>
+    <string name="ime_banner_body">Neste veículo (DiLink 5) o teclado do sistema não pode aparecer no cluster. Ative o serviço de acessibilidade para o DashCast abrir a ponte de teclado automaticamente ao tocar em um campo de texto. Caso contrário, use o botão ⌨ no espelho.</string>
+    <string name="ime_banner_btn_enable">Ativar</string>
+    <string name="ime_banner_btn_later">Depois</string>
+    <string name="ime_banner_btn_dismiss">Não mostrar de novo</string>
+    <string name="ime_banner_toast_enabled">Teclado automático ativo ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Não foi possível abrir as Configurações — ative manualmente o serviço de acessibilidade « Teclado automático no cluster ».</string>
+    <string name="hud_notif_banner_title">Navegação no HUD — acesso a notificações necessário</string>
+    <string name="hud_notif_banner_body">O DashCast precisa de acesso às notificações para mostrar instruções de navegação no cluster. Ative em Configurações → Acesso especial a apps → Acesso a notificações → DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">Acesso a notificações concedido ✓</string>
+    <string name="keyboard_bridge_a11y_required_toast">Ative « DashCast Cluster IME » em Configurações → Acessibilidade para o teclado funcionar no cluster.</string>
+    <string name="btn_keyboard">⌨</string>
+    <string name="btn_keyboard_desc">Teclado</string>
+    <string name="keyboard_bridge_title">Teclado intermediário</string>
+
+    <!-- DiLink 4 — Dedicated diagnostic (v1.2.28) -->
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="settings_no_browser_fmt">Nenhum navegador disponível para abrir %1$s</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+    <string name="sysinfo_restart_action">Reiniciar</string>
+    <string name="sysinfo_restart_started">Reiniciando…</string>
+    <string name="sysinfo_restart_failed">Falha ao reiniciar</string>
+    <string name="sysinfo_svc_projection">Projeção</string>
+    <string name="sysinfo_svc_projection_sub">toque: 30→3s→16→3s→0</string>
+    <string name="sysinfo_svc_force_resizable">Forçar redimensionável</string>
+    <string name="sysinfo_svc_force_resizable_sub">Override de dev DL5 · valor %1$s</string>
+    <string name="sysinfo_svc_force_resizable_checking">DL5 · verificando…</string>
+
+    <!-- Cluster POC Diagnostics (v1.2.30) -->
+
+    <!-- Auto-aligned fallback strings (v1.2.51) -->
+    <string name="proxy_keeper_channel_name">Daemon proxy</string>
+    <string name="proxy_keeper_channel_desc">Mantém o daemon proxy disponível em segundo plano</string>
+    <string name="proxy_keeper_notif_title">DashCast — proxy ativo</string>
+    <string name="proxy_keeper_notif_text">Daemon verificado a cada 10 s</string>
+    <string name="adb_transport_unresponsive">O ADB aceita a conexão, mas não responde aos comandos. Reinicie a depuração Android (adbd) e abra o DashCast de novo.</string>
+    <string name="adb_transport_key_unauthorized">O ADB está acessível, mas a chave do DashCast não está autorizada. Aceite o aviso “Permitir depuração USB” com “Sempre permitir” e abra o DashCast de novo.</string>
+    <string name="adb_transport_unreachable">O ADB por TCP não está acessível neste veículo. Ative a depuração Android por TCP na porta 5555 e abra o DashCast de novo.</string>
+    <string name="adb_transport_handshake">O handshake do ADB falhou temporariamente. O DashCast vai tentar de novo automaticamente.</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Reiniciar</string>
+    <string name="sysinfo_reboot_title">Reiniciar o tablet?</string>
+    <string name="sysinfo_reboot_message">O sistema vai desligar e ligar de novo. Todos os apps em execução serão fechados.</string>
+    <string name="sysinfo_reboot_confirm">Reiniciar</string>
+    <string name="sysinfo_reboot_toast">Reiniciando…</string>
+    <string name="sysinfo_reboot_failed">Falha ao reiniciar. Verifique se o ADB local está ativo.</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Densidade da tela</string>
+    <string name="sheet_dpi_value_default">Padrão</string>
+    <string name="dpi_dialog_title">DPI do cluster — %1$s</string>
+    <string name="dpi_default">Padrão do sistema</string>
+    <string name="dpi_custom">Personalizado…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Será aplicado na próxima abertura</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">Correção da janela ADAS</string>
+    <string name="settings_adas_window_fix_support">Envia sendInfo(30) antes da projeção — corrige o esticamento do ADAS em alguns veículos. Desative se o formato do cluster mudar na partida.</string>
+    <string name="settings_fission_mode">Modo Layouts</string>
+    <string name="settings_fission_mode_support">Projeção de vários apps no cluster com zonas personalizadas. Requer o daemon proxy.</string>
+    <string name="settings_fission_auto_layout">Layout favorito automático</string>
+    <string name="settings_fission_auto_layout_support">Ao abrir o DashCast: ativa a projeção no cluster, o layout favorito e depois abre todos os apps vinculados</string>
+    <string name="settings_fission_precreate_slots">Pré-criar slots na partida</string>
+    <string name="settings_fission_precreate_slots_support">Prepara os Virtual Displays do layout favorito quando o Fission abre (sem abrir os apps)</string>
+    <string name="fission_editor_edit">Editar</string>
+    <string name="fission_editor_delete">Excluir</string>
+    <string name="fission_layout_mode_free">Modo livre</string>
+    <string name="fission_layout_favorite_set_toast">Layout favorito definido ✓</string>
+    <string name="fission_slot_zone_bound_fmt">App vinculado: %1$s</string>
+    <string name="fission_slot_pick_pkg">Vincular um aplicativo…</string>
+    <string name="fission_slot_pkg_none">Nenhum — zona livre</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Gerenciador de layouts</string>
+    <string name="layout_manager_new">Novo layout</string>
+    <string name="layout_canvas_hint">Arraste para desenhar uma zona</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_conflict_title">Conflito de projeção</string>
+    <string name="layout_preset_activate">Ativar</string>
+    <string name="layout_preset_active_badge">ATIVO</string>
+    <string name="layout_preset_deactivate">Desativar</string>
+    <string name="fission_zone_count">%1$d zona(s)</string>
+    <string name="fo_err_attach_fmt">Não foi possível criar o slot para %1$s</string>
+    <string name="fo_err_daemon">Daemon indisponível</string>
+    <string name="fo_err_proxy">Daemon proxy ADB não conectado. Ative-o em Configurações.</string>
+    <string name="fo_status_autoactivate">Ativando layout automaticamente…</string>
+    <string name="fo_status_autolayout_err_fmt">Erro no auto-layout: %1$s</string>
+    <string name="fo_status_create_fmt">Criando slot para %1$s…</string>
+    <string name="fo_status_daemon">Iniciando daemon…</string>
+    <string name="fo_status_launching_fmt">Abrindo %1$s (tela %2$d)…</string>
+    <string name="fo_status_mirror">Iniciando espelho…</string>
+    <string name="fo_status_precreate">Pré-criando slots…</string>
+    <string name="fo_status_projection">Ativando projeção no cluster…</string>
+    <string name="fo_status_reuse_fmt">Reusando slot para %1$s…</string>
+    <string name="fo_status_starting_fmt">Iniciando %1$s…</string>
+    <string name="fo_status_stopping">Parando…</string>
+    <string name="lm_action_add">Adicionar</string>
+    <string name="lm_action_delete">Excluir</string>
+    <string name="lm_section_my_layouts">MEUS LAYOUTS</string>
+    <string name="lm_action_clear_all">Limpar tudo</string>
+    <string name="lm_action_favorite">⭐ Favorito</string>
+    <string name="lm_action_save">Salvar</string>
+    <string name="lm_activated_ok_fmt">%1$s ativado ✓</string>
+    <string name="lm_activated_partial_fmt">%1$s ativado (alguns slots falharam)</string>
+    <string name="lm_activating_fmt">Ativando %1$s…</string>
+    <string name="lm_layout_mode_disabled">Ative primeiro o “Modo Layouts” nas Configurações.</string>
+    <string name="lm_delete_confirm_fmt">Excluir “%1$s”?</string>
+    <string name="lm_draw_zone_first">Desenhe pelo menos uma zona</string>
+    <string name="lm_error_fmt">Erro: %1$s</string>
+    <string name="lm_free_mode_toast">Modo livre ativado</string>
+    <string name="lm_layout_default_name_fmt">Layout %1$d</string>
+    <string name="lm_layout_name_hint">Nome do layout</string>
+    <string name="lm_layout_save_title">Salvar layout</string>
+    <string name="lm_layout_saved_toast">Layout salvo ✓</string>
+    <string name="lm_layout_load_failed">Não foi possível carregar os layouts salvos. Os dados existentes foram preservados.</string>
+    <string name="lm_layout_save_failed">Não foi possível salvar o layout. Tente de novo.</string>
+    <string name="lm_layout_selection_save_failed">O layout mudou, mas a seleção não pôde ser salva.</string>
+    <string name="lm_new_layout_name">Novo layout</string>
+    <string name="lm_no_layout_loaded">Nenhum layout carregado</string>
+    <string name="lm_save_before_favorite">Salve o layout antes de defini-lo como favorito</string>
+    <string name="lm_zone_edit_title_fmt">Editar “%1$s”</string>
+    <string name="lm_zone_height">Altura (px)</string>
+    <string name="lm_zone_name_hint">Nome da zona</string>
+    <string name="lm_zone_new_title_fmt">Nova zona — %1$d×%2$d px</string>
+    <string name="lm_zone_position_section">Posição e dimensões</string>
+    <string name="lm_zone_width">Largura (px)</string>
+    <string name="lm_zone_x">X (px)</string>
+    <string name="lm_zone_y">Y (px)</string>
+    <string name="main_layout_section">Layout do cluster</string>
+    <string name="main_layout_free_sub">Sem layout</string>
+    <string name="main_layout_manage">Gerenciar</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Que tipo de problema?</string>
+    <string name="bug_wizard_step_app">Qual app foi afetado?</string>
+    <string name="bug_wizard_step_issue">O que aconteceu exatamente?</string>
+    <string name="bug_wizard_detecting">Detectando o app no cluster…</string>
+    <string name="bug_wizard_no_app">Nenhum app específico</string>
+    <string name="bug_wizard_other_app">Outro / app desconhecido</string>
+    <string name="bug_wizard_back">← Voltar</string>
+    <string name="bug_tg_title">Seu usuário do Telegram</string>
+    <string name="bug_tg_message">Quando houver uma correção para o seu problema, vamos falar com você no Telegram para pedir que teste primeiro.\n\n⚠️ Confira se o usuário está certo (exemplo: @fulano_silva). Sem ele, não conseguimos te encontrar.\n\nO usuário fica neste aparelho e entra no relatório que você envia, só para podermos te contactar.</string>
+    <string name="bug_tg_hint">@seu_usuario</string>
+    <string name="bug_tg_confirm">Confirmar</string>
+    <string name="bug_tg_skip">Depois</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Usuário do Telegram não definido — toque para informar</string>
+    <string-array name="bug_categories">
+        <item>Navegação no HUD</item>
+        <item>Espelho / Projeção</item>
+        <item>Exibição do app</item>
+        <item>Som</item>
+        <item>Conexão</item>
+        <item>Travamento / Crash</item>
+        <item>Modo simples do cluster</item>
+        <item>Outro</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Tela preta</item>
+        <item>Tamanho / posição errados</item>
+        <item>App não aparece</item>
+        <item>Desconectado</item>
+        <item>Piscando</item>
+        <item>Toque não funciona</item>
+        <item>Toque desalinhado</item>
+        <item>Travamentos / engasgos</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App travado</item>
+        <item>Tela preta</item>
+        <item>Posição errada</item>
+        <item>App fechou sozinho</item>
+        <item>Conteúdo faltando</item>
+        <item>DPI / tamanho do texto errados</item>
+        <item>Tela dividida indesejada</item>
+        <item>Tamanho não foi mantido</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Sem som</item>
+        <item>Áudio distorcido</item>
+        <item>Muito baixo</item>
+        <item>Problema no microfone</item>
+        <item>Eco / microfonia</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Não conecta</item>
+        <item>Quedas frequentes</item>
+        <item>Muito lento</item>
+        <item>Sem tela no cluster</item>
+        <item>Problema de Wi-Fi</item>
+        <item>Daemon / proxy parado</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App fechou sozinho</item>
+        <item>Tela congelada</item>
+        <item>O DashCast fechou sozinho</item>
+        <item>Tela do carro preta</item>
+        <item>Precisei reiniciar</item>
+        <item>Lento depois de parar a projeção</item>
+        <item>Tablet lento</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Congelado</item>
+        <item>Tela preta</item>
+        <item>Conteúdo errado</item>
+        <item>Informação faltando</item>
+        <item>Não aparece</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problema de desempenho</item>
+        <item>Lento / tablet engasgando</item>
+        <item>Abertura automática não funciona</item>
+        <item>Layout / Fission</item>
+        <item>Consumo de bateria</item>
+        <item>Ajustes de tela</item>
+        <item>Sugestão</item>
+        <item>Outra coisa</item>
+    </string-array>
+
+    <!-- Bug wizard — issue step: optional free-text details + send button -->
+    <string name="bug_wizard_details_label">Detalhes (opcional)</string>
+    <string name="bug_wizard_details_hint">O que você estava fazendo? O que esperava? Acrescente o que for útil.</string>
+    <string name="bug_wizard_send">Enviar relatório</string>
+    <string name="bug_wizard_pick_issue">Escolha um problema acima</string>
+    <string name="bug_wizard_selected_fmt">Selecionado: %1$s</string>
+    <string name="toast_adb_port_refused">ADB inacessível (porta 5555) — espelhamento indisponível neste aparelho</string>
+    <string name="aaos_cluster_unsupported_title">Projeção no cluster bloqueada</string>
+    <string name="aaos_cluster_unsupported_msg">Seu carro usa o Android Automotive da BYD (DX_BYD_AUTO), em que o painel de instrumentos é travado pelo fabricante: a BYD reserva o cluster para a navegação nativa e bloqueia a projeção de apps. Isto é uma restrição do veículo (não uma limitação do DashCast) — não há contorno.</string>
+    <string name="dl3_singleos_cluster_unsupported_title">Projeção no cluster indisponível</string>
+    <string name="dl3_singleos_cluster_unsupported_msg">Neste veículo o painel de instrumentos usa um layout de tela única (single-OS): ele é desenhado direto pelo carro, sem uma tela separada para a qual os apps possam ser projetados. A projeção de apps no cluster não é possível aqui — isto é uma característica do cluster do seu veículo, não uma limitação do DashCast.</string>
+    <string name="dl4_cluster_unsupported_title">Projeção no cluster bloqueada pelo firmware</string>
+    <string name="dl4_cluster_unsupported_msg">Neste veículo o firmware não permite que o DashCast veja a tela do painel de instrumentos: o app não está na lista de programas autorizados pelo fabricante a enumerar telas. O DashCast também perguntou pelo auxiliar privilegiado, que também não encontrou a tela do cluster. A projeção de apps no cluster, portanto, não é possível nesta versão de firmware — isto é uma restrição do fabricante, não uma limitação do DashCast.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">Resultado — o que você viu, e ONDE (cluster ou para-brisa)?</string>
+    <string name="hud_bench_opt_cluster">✅ Seta no CLUSTER (atrás do volante)</string>
+    <string name="hud_bench_opt_ok">✅ Seta no HUD (para-brisa)</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ Seta apareceu — direção errada</string>
+    <string name="hud_bench_opt_partial">⚠️ Distância/texto apareceu — mas sem seta clara</string>
+    <string name="hud_bench_opt_nothing">❌ Nada no HUD</string>
+    <string name="hud_bench_opt_other">❓ Outro / não tenho certeza…</string>
+    <string name="hud_bench_note_title">O que você viu?</string>
+    <string name="hud_bench_note_hint">Descreva o que apareceu no HUD (opcional)</string>
+    <string name="hud_report_send">Enviar</string>
+    <string name="hud_confirm_yes">✓ Sim</string>
+    <string name="hud_confirm_no">✗ Não</string>
+    <string name="hud_confirm_skip">Pular</string>
+    <string-array name="bug_issues_hud">
+        <item>Sem seta no HUD</item>
+        <item>Direção errada</item>
+        <item>Distância / via errada</item>
+        <item>HUD permanece desligado</item>
+        <item>Seta congelada</item>
+        <item>Outro problema no HUD</item>
+    </string-array>
+    <string name="bug_shots_consent_title">Incluir capturas de tela?</string>
+    <string name="bug_shots_consent_msg">O relatório pode incluir as capturas mais recentes do cluster e da tela principal. Elas podem mostrar o que estava na tela (mapa, destino, informações pessoais). Anexar?</string>
+    <string name="bug_shots_consent_yes">Incluir</string>
+    <string name="bug_shots_consent_no">Sem capturas</string>
+    <string name="settings_capture_shots">Capturar telas para relatórios de problema</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ A navegação no HUD agora está ATIVA em produção. Para ajudar, DIRIJA com o Google Maps / Waze e relate pelo botão 🐞 (barra lateral). As ferramentas abaixo (①②③) são de P&amp;D — use só quando pedirem.</string>
+    <string name="hud_prod_nudge">✅ Enviado. Mas o teste de verdade agora é navegar com o Google Maps / Waze e relatar pelo botão 🐞 Relatar um problema.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">Setas do HUD</string>
+    <string name="bug_hud_gate_msg">Antes de relatar: a navegação NATIVA do seu carro já mostra setas de conversão no HUD do para-brisa?</string>
+    <string name="bug_hud_gate_yes">✅ Sim, mostra setas</string>
+    <string name="bug_hud_gate_no">❌ Não, nunca</string>
+    <string name="bug_hud_gate_unknown">❓ Não sei</string>
+    <string name="bug_hud_no_arrows_msg">Então o firmware do seu HUD não consegue mostrar setas de conversão — o DashCast também não consegue adicioná-las. Não há o que corrigir, então não precisa enviar este relatório. Obrigado mesmo assim!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Qual app você usa para navegação?</string>
+    <string name="bug_hud_nav_oem">A navegação nativa do carro</string>
+    <string name="bug_hud_nav_unsupported_msg">O DashCast só consegue espelhar as setas no HUD a partir do Google Maps ou do Waze. A navegação nativa do carro (Telenav…) envia os dados num formato que o DashCast não lê — mas ela já mostra as próprias setas no HUD. Para ter setas pelo DashCast, inicie uma rota no Google Maps ou no Waze.</string>
+    <string name="bug_hud_nav_understood">Entendi, vou usar o Maps ou o Waze</string>
+    <string name="bug_hud_nav_report_anyway">Enviar o relatório mesmo assim</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Nenhuma rota está em andamento agora. O DashCast só recebe as conversões enquanto a navegação está ativa: só abrir o Google Maps ou o Waze não basta. Inicie uma rota até um destino e olhe o HUD — a seta deve aparecer.</string>
+    <string name="bug_hud_no_route_understood">Entendi, vou iniciar uma rota</string>
+    <string name="bug_hud_no_notif_access_msg">O DashCast não tem acesso às notificações. Ele precisa disso de verdade: as conversões são lidas da notificação do Google Maps ou do Waze. Vá em Configurações do Android → Notificações → Acesso a notificações e permita o DashCast, depois inicie a rota de novo.</string>
+    <string name="hud_sweep_result_title">Varredura concluída — o que você viu no CLUSTER?</string>
+    <string name="hud_sweep_opt_photographed">📷 Fotografei os ícones</string>
+    <string name="hud_sweep_opt_nothing">❌ Nada apareceu no cluster</string>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Bug report delivery — pairing.
+         Credentials are no longer built into the APK, so an unpaired device keeps its reports
+         to itself. Safe by default, but only acceptable if pairing is something a user can do
+         without a computer: hence a folder, a clipboard, and plain words for both states.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="pairing_row_title">Envio de relatórios de problema</string>
+    <string name="pairing_state_on">Ligado — seus relatórios vão para a equipe do DashCast</string>
+    <string name="pairing_state_off">Desligado — seus relatórios ficam neste aparelho</string>
+    <!-- Consent to send diagnostics. Shown the first time the user taps Send on a report,
+         and re-readable from Settings. The body lists what a report actually contains: it was
+         written from a verified inventory of the collection code, not from memory. If what the
+         app collects changes, the list changes AND ReportConsent.NOTICE_VERSION goes up. -->
+    <string name="pairing_state_on_no_channel">Aceito, mas nenhum canal está configurado neste aparelho</string>
+    <string name="consent_title">Enviar diagnósticos para a equipe do DashCast?</string>
+    <string name="consent_body">Para corrigir um problema, a equipe do DashCast precisa saber o que estava acontecendo no carro naquele momento.\n\nAntes do envio, o DashCast remove automaticamente o número de série do veículo (VIN), nomes de redes Wi-Fi, endereços de hardware dos aparelhos e posições de cada relatório.\n\nO que permanece:\n\n•  o diário do DashCast e o log do sistema Android, copiados como estão — eles guardam o que outros apps escreveram, e não dá para saber de antemão o que é;\n\n•  informações sobre o carro e a central: modelo, versão, ajustes, apps instalados;\n\n•  o endereço IP local do carro;\n\n•  o que você escreve no formulário e o usuário do Telegram que informar;\n\n•  capturas de tela, ativas por padrão: imagens sem desfoque da tela central e do painel de instrumentos, que podem mostrar um mapa com o seu destino — uma imagem não pode ser filtrada como o texto. Você é perguntado sobre elas a cada envio.\n\nNenhum relatório sai do carro até você tocar em “Enviar”. Os relatórios são lidos pela equipe do DashCast num grupo privado. O DashCast nunca envia gravação de áudio, foto, contato ou mensagem.\n\nSe você recusar, o relatório fica neste aparelho e você pode compartilhá-lo por conta própria. Dá para mudar de ideia a qualquer momento em Configurações.</string>
+    <string name="consent_accept">Aceitar</string>
+    <string name="consent_refuse">Recusar</string>
+    <string name="consent_revoke">Retirar</string>
+    <string name="consent_close">Fechar</string>
+    <string name="consent_result_granted">Obrigado. Seus relatórios serão enviados à equipe do DashCast.</string>
+    <string name="consent_result_refused">Recusado. Seus relatórios ficarão neste aparelho.</string>
+    <string name="consent_result_revoked">Retirado. Seus relatórios ficarão neste aparelho.</string>
+    <string name="bug_kept_locally_fmt">Relatório mantido neste aparelho: %1$s. Escolha como encaminhá-lo.</string>
+</resources>

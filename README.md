@@ -58,7 +58,7 @@ Android application for **BYD vehicles (DiLink 3 and DiLink 5)** to push any ins
 | 11 | **Diagnostics** *(rebuilding)* | The Java diagnostics screen + test runners were **emptied in v1.7.0** to be rebuilt cleanly in Kotlin; a Kotlin stub keeps the menu entry. The HUD/AAOS diagnostic tools remain |
 | 12 | **System report** | Displays, system properties, BYD packages, permissions, proxy metrics, DiLink probe results |
 | 13 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, auto-scroll, share |
-| 14 | **Multilingual** | French / English / German / Italian / Spanish / Polish / Turkish / Russian / Ukrainian / Arabic / Uzbek / Kazakh / Belarusian (13 languages), selected on first launch |
+| 14 | **Multilingual** | French / English / German / Italian / Spanish / Polish / Portuguese (Brazil) / Turkish / Russian / Ukrainian / Arabic / Uzbek / Kazakh / Belarusian (14 languages), selected on first launch |
 | 15 | **Floating overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
 | 16 | **Hotspot control** | Toggle and monitor Wi-Fi hotspot from within the app |
 | 17 | **Display affinity safeguards** | Moves session apps back to Display 0 when projection stops or app is killed |
