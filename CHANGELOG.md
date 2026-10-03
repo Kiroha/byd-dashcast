@@ -23,6 +23,11 @@ prioritizes `com.ts.car.someip.service` and `com.byd.naviauto`, and adds
 The old DiLink 5.0 projection-complete gate no longer blocks this HUD collection. Existing
 size limits, file manifests, consent, text redaction and report delivery still apply.
 
+**OpenBYD is not open source and its source code is not shared.** Continuing DashCast's
+HUD integration therefore requires reverse-engineering the OpenBYD 2.5 APK's HUD
+protocol and verifying the findings against the vehicle's OEM services. This collection
+provides the OEM APKs and receiver evidence needed for that verification.
+
 This beta also introduces the HUD output lifecycle and an **inactive** SOME/IP Binder
 transport foundation with race/error tests. AUTO continues to select the legacy DL3 path;
 no SOME/IP receiver profile or vehicle compatibility is claimed. It includes the report
