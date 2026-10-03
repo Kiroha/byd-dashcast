@@ -15,6 +15,21 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.4-beta (versionCode 643)
+
+**Collect HUD OEM evidence from Diag.** The existing **BYD APK Extraction** action now
+prioritizes `com.ts.car.someip.service` and `com.byd.naviauto`, and adds
+`07_hud_someip_receiver.txt` with bounded build, package, service and permission evidence.
+The old DiLink 5.0 projection-complete gate no longer blocks this HUD collection. Existing
+size limits, file manifests, consent, text redaction and report delivery still apply.
+
+This beta also introduces the HUD output lifecycle and an **inactive** SOME/IP Binder
+transport foundation with race/error tests. AUTO continues to select the legacy DL3 path;
+no SOME/IP receiver profile or vehicle compatibility is claimed. It includes the report
+redaction fixes committed since 1.9.3-beta. Offline validation: **791 tests pass, lint 0**.
+This exact build has not been tested in a vehicle. `1.9.0` remains stable; this pre-release
+is published from `feat/hud-2.0`. [Release notes and collection steps](docs/releases/1.9.4-beta.md).
+
 ### 1.9.3-beta (versionCode 642)
 
 **Dependency currency, on top of everything in 1.9.2-beta.** Every third-party library and the

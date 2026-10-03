@@ -1946,8 +1946,13 @@ android {
         // comments that still named AGP 8.13.2, Gradle 9.5.0, compileSdk 33 and Material 1.9.0.
         // NOT car-tested — and note this build now carries THREE unvalidated changes stacked:
         // the Kotlin port, the R8 optimizer enabled in 4f183433, and these dependencies.)
-        versionCode 642
-        versionName "1.9.3-beta"
+        // 643 = 1.9.4-beta (HUD OEM EVIDENCE COLLECTION. Diag prioritizes the SOME/IP and
+        // naviauto APKs and includes bounded receiver/permission dumps. Adds the HUD output
+        // lifecycle and an inactive SOME/IP transport foundation; AUTO still selects only
+        // the validated legacy DL3 path. Includes the report-redaction fixes since 1.9.3.
+        // Offline tests and release checks only; this exact build has not run in a vehicle.)
+        versionCode 643
+        versionName "1.9.4-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

@@ -84,7 +84,7 @@ object BydApkExtractionBundle {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val work = File(ctx.cacheDir, "byd_apk_$stamp").apply { mkdirs() }
         var step = 0
-        val totalSteps = 9
+        val totalSteps = 10
         fun s(label: String, block: () -> Unit) {
             step++
             progress("[$step/$totalSteps] $label…")
@@ -182,6 +182,9 @@ object BydApkExtractionBundle {
         //    instrument device (deviceType 1007 = BYDAUTO_DEVICE_INSTRUMENT) accepts on THIS car
         //    (0x43f01030 = INSTRUMENT_GUIDE_ROAD_DISTANCE is the one refused on the SX326 unit).
         val permDirs = ApkExtractionPolicy.PERMISSION_DIRS.joinToString(" ")
+        s("HUD SOME/IP receiver evidence (text only)") {
+            write(work, "07_hud_someip_receiver.txt", HudOemEvidenceCapture.collect(::sh))
+        }
         s("bydauto SDK + feature-gate probes (text only)") {
             val sb = StringBuilder()
             sb.append("=== shared libraries (bydauto SDK registration) ===\n")
@@ -389,7 +392,7 @@ object BydApkExtractionBundle {
             if (tier == ApkExtractionPolicy.Tier.EXCLUDED) continue
             cands.add(Cand(pkg, apk, tier))
         }
-        cands.sortBy { ApkExtractionPolicy.order(it.tier) }
+        cands.sortBy { ApkExtractionPolicy.apkOrder(it.pkg, it.tier) }
 
         var acceptedBytes = 0L
         for (c in cands) {
