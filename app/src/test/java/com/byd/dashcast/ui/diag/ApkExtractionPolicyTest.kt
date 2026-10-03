@@ -50,6 +50,16 @@ class ApkExtractionPolicyTest {
     }
 
     @Test
+    fun `HUD server and native navigation resources are explicit targets without broadening the sweep`() {
+        for (pkg in listOf("com.ts.car.someip.service", "com.byd.naviauto")) {
+            assertEquals(Tier.TIER1, ApkExtractionPolicy.classify(pkg, "/system/app/receiver/base.apk"))
+            assertEquals(Tier.TIER1, ApkExtractionPolicy.classify(pkg, "/data/app/receiver/base.apk"))
+        }
+        assertEquals(Tier.EXCLUDED, ApkExtractionPolicy.classify(
+            "com.ts.car.unrelated", "/system/app/unrelated/base.apk"))
+    }
+
+    @Test
     fun `a container-named package is caught by the sweep wherever it lives`() {
         // Belt-and-suspenders beyond the named list: the "container" pattern subsumes "autocontainer".
         assertEquals(Tier.TIER2, ApkExtractionPolicy.classify(
@@ -154,6 +164,15 @@ class ApkExtractionPolicyTest {
     fun `DiLink 4 is not gated - firmware still wanted`() {
         // DL4 is neither isDiLink3 nor isDiLink5.
         assertFalse(ApkExtractionPolicy.isPlatformFullyMined(isDiLink3 = false, isDiLink5 = false, apiLevel = 29))
+    }
+
+    @Test
+    fun `HUD receiver evidence is allowed even when projection was already mined`() {
+        for (api in listOf(29, 30, 32, 33, 34)) {
+            assertFalse(ApkExtractionPolicy.isPlatformFullyMined(
+                isDiLink3 = api == 29, isDiLink5 = api != 29, apiLevel = api,
+                collectHudReceiverEvidence = true))
+        }
     }
 
     // ── budget: APKs are capped below a native reserve ──────────────────────────

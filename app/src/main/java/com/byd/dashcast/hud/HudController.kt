@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit
  * Receives parsed [HudNavigationData] from [MapNotificationListenerService] and drives the BYD
  * instrument cluster HUD via [CanBusController]. Mirrors the OpenBYD 2.2 `HudController` logic:
  *  - Deduplication: only writes to CAN when a value actually changed.
- *  - Lifecycle management: [ensureHudActive] activates the cluster navigation lane on the first
- *    update of a session.
+ *  - Lifecycle management: [ensureLegacyDl3Active] activates the legacy navigation outputs on the
+ *    first update of a session.
  *  - AMap broadcast: emits `AUTONAVI_STANDARD_BROADCAST_SEND` so BYD's built-in cluster display
  *    layer also receives the navigation state.
  *  - Full register clear on [closeNavigation].
@@ -47,9 +47,11 @@ object HudController {
     // ─── Deduplication state ──────────────────────────────────────────────
 
     /**
-     * Whether the HUD is currently active (i.e. the cluster nav lane is open).
+     * Whether a navigation-output session is currently open.
      *
-     * Volatile: [noteNavFrameSeen] reads it without the lock the writers hold.
+     * This is owned by the orchestrator, not by a transport, so a future SOME/IP session follows
+     * the same liveness and close rules as DL3. Volatile: [noteNavFrameSeen] reads it without the
+     * lock the writers hold.
      */
     @Volatile
     var isHudActive: Boolean = false
@@ -90,6 +92,30 @@ object HudController {
      * them from here. The platform is fixed at boot, so resolve once. `null` = not yet resolved.
      */
     private var isDl3Hud: Boolean? = null
+
+    /**
+     * Lot 1 keeps the shipped behaviour in AUTO. A user-facing preference is intentionally not
+     * introduced here: new routes remain unavailable until a receiver/profile has been proven.
+     */
+    private val outputMode: HudOutputMode = HudOutputMode.Auto
+
+    /** Output that owns the currently open session, so stop never follows a newly-read setting. */
+    private var activeOutput: HudOutput? = null
+
+    /** Whether the DL3 adapter has issued its once-per-session start sequence. */
+    private var legacyDl3SessionStarted = false
+
+    /** Adapter around the existing DL3 path; its CAN/cluster/AMap behaviour is unchanged. */
+    private val legacyDl3Output: HudOutput = object : HudOutput {
+        override val route: HudOutputRoute = HudOutputRoute.LegacyDl3
+
+        override fun begin(context: Context): HudOutputResult = beginLegacyDl3Navigation(context)
+
+        override fun update(context: Context, data: HudNavigationData): HudOutputResult =
+            updateLegacyDl3Navigation(context, data)
+
+        override fun end(context: Context): HudOutputResult = closeLegacyDl3Navigation(context)
+    }
 
     private var lastRoadName = ""
     private var lastIconId = -1
@@ -134,18 +160,45 @@ object HudController {
     @Synchronized
     fun updateNavigation(ctx: Context, data: HudNavigationData): Boolean {
         if (data.distanceMeters < 0) return false
-        if (!isDiLink3Hud(ctx)) return false   // DL3-only feature (video-proven); DL5.1/AAOS excluded
 
-        // Keep the process context before arming the watchdog, but advance its liveness timestamp
-        // only after a guidance output confirms delivery below.
+        val output = resolveOutput(ctx) ?: return false
+        val previous = activeOutput
+        if (previous != null && previous.route != output.route) {
+            // Close the resource that was actually opened. A future preference/profile change
+            // must never use the new selection as a proxy for the old resource inventory.
+            closeActiveOutput(ctx)
+        }
+        if (activeOutput == null) {
+            // Preserve the proven DL3 order: session/watchdog first, then transport start, then
+            // the first guidance frame. Keeping this state here makes the same order reusable by
+            // a later SOME/IP output without coupling it to legacy CAN flags.
+            appContext = ctx.applicationContext
+            activeOutput = output
+            isHudActive = true
+            armWatchdog()
+        }
+        output.begin(ctx) // idempotent; also performs the existing rate-limited DL3 retry
+        return output.update(ctx, data).delivered
+    }
+
+    private fun beginLegacyDl3Navigation(ctx: Context): HudOutputResult {
+        // Preserve the previous behaviour of refreshing the retained process context on every
+        // update; this is the context the shared watchdog uses for an eventual asynchronous stop.
         appContext = ctx.applicationContext
+        ensureLegacyDl3Active()
+        return if (naviActiveAcked) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
+    }
 
-        ensureHudActive()
+    private fun updateLegacyDl3Navigation(
+        ctx: Context,
+        data: HudNavigationData
+    ): HudOutputResult {
 
         // OEM parity (B2, ref. AmapService.sendNavigateInfoToCAN): the factory nav re-writes
         // INSTRUMENT_SEND_NAVI_STATUS=active on EVERY guidance frame — its only always-written
-        // register. ensureHudActive() asserts it just once at nav-start; a cluster that reads it as a
-        // liveness heartbeat can drop the guidance widget on a long step with no icon/distance change.
+        // register. ensureLegacyDl3Active() asserts it just once at nav-start; a cluster that reads
+        // it as a liveness heartbeat can drop the guidance widget on a long step with no
+        // icon/distance change.
         // Re-assert it on every update (even deduped ones) so the widget survives. Best-effort.
         try {
             CanBusController.sendNaviStatusHeartbeat()
@@ -238,7 +291,7 @@ object HudController {
         sendAmapBroadcast(ctx, data)
         val delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered)
         if (delivered) lastUpdateMs = SystemClock.elapsedRealtime()
-        return delivered
+        return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
     }
 
     internal fun frameDelivered(allRequiredCanWritesSucceeded: Boolean,
@@ -253,24 +306,45 @@ object HudController {
      */
     @Synchronized
     fun closeNavigation(ctx: Context) {
-        if (!isHudActive) return
+        if (!isHudActive && activeOutput == null) return
+        closeActiveOutput(ctx)
+    }
+
+    private fun closeActiveOutput(ctx: Context): HudOutputResult {
+        val output = activeOutput
+        return try {
+            output?.end(ctx) ?: HudOutputResult.DELIVERED
+        } finally {
+            activeOutput = null
+            isHudActive = false
+            stopWatchdog()
+            resetState()
+        }
+    }
+
+    private fun closeLegacyDl3Navigation(ctx: Context): HudOutputResult {
+        if (!legacyDl3SessionStarted) return HudOutputResult.DELIVERED
+        var delivered = true
         try {
             CanBusController.setNaviActive(false)
         } catch (e: ProxyClient.ProxyException) {
+            delivered = false
             Log.w(TAG, "setNaviActive(false) failed: " + e.message)
+        } finally {
+            legacyDl3SessionStarted = false
+            naviActiveAcked = false
         }
-        isHudActive = false
-        naviActiveAcked = false
-        stopWatchdog()
         ClusterNavPusher.stop()   // clear the cluster guidance too (best-effort)
         sendAmapStopBroadcast(ctx)
-        resetState()
+        return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
     }
 
     // ─── Internal helpers ─────────────────────────────────────────────────
 
-    private fun ensureHudActive() {
-        // AUD-003 follow-up — the session opens HERE, not when the car says yes.
+    private fun ensureLegacyDl3Active() {
+        // AUD-003 follow-up — the orchestrator opens isHudActive before invoking this adapter,
+        // not when the car says yes. This separate flag tracks whether the legacy start sequence
+        // itself has run for the active session.
         //
         // isHudActive used to be assigned inside the try, after CanBusController.setNaviActive(true).
         // On a car that refuses that register the assignment never ran, and the consequences
@@ -279,17 +353,17 @@ object HudController {
         // outside that guard so they kept going. The result was an arrow on the windshield that
         // nothing in the app could clear — not the end of the route, not onNotificationRemoved,
         // not the staleness watchdog, because none of them could get past the flag. On top of that
-        // ensureHudActive() re-entered on every single guidance frame, re-issuing two CAN batches
-        // per frame at nav cadence.
+        // ensureLegacyDl3Active() re-entered on every single guidance frame, re-issuing two CAN
+        // batches per frame at nav cadence.
         //
-        // So the flag now means what its name says — a session is open and something will have to
-        // close it — and CAN acceptance is tracked separately in naviActiveAcked.
-        if (isHudActive) {
+        // So the controller session flag now means what its name says — a session is open and
+        // something will have to close it — while this adapter and naviActiveAcked track the
+        // legacy transport lifecycle and CAN acceptance separately.
+        if (legacyDl3SessionStarted) {
             retryActivationIfRefused()
             return
         }
-        isHudActive = true
-        armWatchdog()
+        legacyDl3SessionStarted = true
 
         // Turn the windshield HUD ON (DL3 feature id SET_HUD_SWITCH=1) so nav shows even
         // if the user had the HUD switched off — matches the video-proven CAN→HUD bench.
@@ -450,6 +524,23 @@ object HudController {
         }
         isDl3Hud = dl3
         return dl3
+    }
+
+    /**
+     * Resolve the current output without guessing. Lot 1 exposes only the already validated DL3
+     * adapter; SOME/IP routes exist in the selection model but have no transport capability yet.
+     */
+    private fun resolveOutput(ctx: Context): HudOutput? {
+        val capabilities = if (isDiLink3Hud(ctx)) {
+            HudOutputCapabilities.LEGACY_DL3
+        } else {
+            HudOutputCapabilities.NONE
+        }
+        return when (HudOutputSelector.select(outputMode, capabilities)) {
+            HudOutputRoute.LegacyDl3 -> legacyDl3Output
+            is HudOutputRoute.SomeIp -> null
+            null -> null
+        }
     }
 
     private fun resetState() {

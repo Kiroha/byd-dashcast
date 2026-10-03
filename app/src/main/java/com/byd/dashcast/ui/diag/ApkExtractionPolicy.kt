@@ -13,7 +13,8 @@ import java.util.Locale
  * from `AutoContainer` is decided in the NATIVE fission stack. Studying this is interoperability
  * analysis of software running on the tester's own vehicle.
  *
- * SCOPE — deliberately narrowed to the cluster/projection surface. Earlier builds swept every
+ * SCOPE — deliberately narrowed to the cluster/projection surface and named HUD receiver packages.
+ * Earlier builds swept every
  * `com.byd.*` package; RE showed the rest (acquisitioncontrol, xcall, filemanager, androidauto, …)
  * has nothing to do with projection, so it is no longer pulled. What is kept: the container service
  * (`AutoContainer`), the OEM nav (amap and its projection-manager derivatives), `clusterdebug` (the
@@ -80,7 +81,10 @@ object ApkExtractionPolicy {
      *    DiLink 3 (the platform where it works); does ONLY `sendInfo(1000, cmd, "")`.
      *  - `com.byd.launchermap` — hosts `com.byd.automap.meter.MeterActivity`, the OEM cluster map.
      */
-    val TIER1 = listOf(
+    /** Receiver and resource package observed in OpenBYD; collection does not prove compatibility. */
+    val HUD_OEM_PACKAGES = listOf("com.ts.car.someip.service", "com.byd.naviauto")
+
+    val TIER1 = HUD_OEM_PACKAGES + listOf(
         "com.xdja.containerservice",
         "com.byd.containerservice",
         "com.example.amapservice",
@@ -94,7 +98,8 @@ object ApkExtractionPolicy {
     )
 
     /**
-     * Name/path sweep for the OEM cluster/projection surface. Deliberately does NOT include the
+     * Name/path sweep for the OEM cluster/projection surface. HUD packages are named above.
+     * Deliberately does NOT include the
      * generic "byd" / "dilink" — those matched dozens of unrelated system apps. Every term here is
      * cluster/projection-specific. "container" (subsumes the old "autocontainer") catches BOTH
      * container-service implementations wherever they are, belt-and-suspenders to the named list.
@@ -150,6 +155,13 @@ object ApkExtractionPolicy {
         Tier.EXCLUDED -> 2
     }
 
+    /** HUD receiver evidence claims the APK budget before the older projection targets. */
+    @JvmStatic
+    fun apkOrder(pkg: String, tier: Tier): Int {
+        val hudPriority = HUD_OEM_PACKAGES.indexOf(pkg)
+        return if (hudPriority >= 0) hudPriority else HUD_OEM_PACKAGES.size + order(tier)
+    }
+
     /**
      * True on the platforms whose OEM firmware has already been fully extracted and reverse-
      * engineered, so a further extraction would only re-send what we already have. The diagnostic
@@ -164,14 +176,23 @@ object ApkExtractionPolicy {
      * DL5 variants: DL5.0 = Android 12 (API ≤ 32), DL5.1 = Android 13 (API 33). Gating on
      * `apiLevel < 33` therefore captures DL5.0 while ALWAYS leaving trinket (API 33) live — the
      * critical property, since a wrongly-gated trinket would block the extraction we are waiting on.
+     *
+     * [collectHudReceiverEvidence] bypasses this projection-only gate: the SOME/IP server and its
+     * resource/permission contracts are still unknown, including on previously mined DL5.0 builds.
      */
     @JvmStatic
-    fun isPlatformFullyMined(isDiLink3: Boolean, isDiLink5: Boolean, apiLevel: Int): Boolean =
+    fun isPlatformFullyMined(
+        isDiLink3: Boolean,
+        isDiLink5: Boolean,
+        apiLevel: Int,
+        collectHudReceiverEvidence: Boolean = false
+    ): Boolean =
         // DiLink 3 was un-blocked 2026-08-09: the windshield-HUD question is still OPEN on DL3
         // (a tester's SX326 refuses featureID 0x43f01030, and we need his system APKs to look for
         // HUD-specific services), so the platform is NOT fully mined and extraction must stay
         // available. Only DiLink 5.0 (API < 33) remains blocked.
-        isDiLink5 && apiLevel < 33
+        // Projection being mined does not establish the HUD receiver contract of this build.
+        !collectHudReceiverEvidence && isDiLink5 && apiLevel < 33
 
     // ── Native binaries and .so libraries ───────────────────────────────────────
     //

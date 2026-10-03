@@ -35,7 +35,8 @@ import java.lang.ref.WeakReference
  *     `AutoContainer` activation call returns -1 on DiLink 5.1 while returning 0/1 on the models
  *     where projection works (9/9 trinket captures). The answer is in the OEM's own
  *     `com.xdja.containerservice`, running on the tester's own vehicle. One button, one flow:
- *     inventory + runtime context, select the OEM cluster APKs ([ApkExtractionPolicy]: firmware
+ *     Also collects the SOME/IP HUD receiver and its native navigation resources. One flow:
+ *     inventory + runtime context, select the OEM cluster/HUD APKs ([ApkExtractionPolicy]: firmware
  *     partitions, named targets first, budgeted under Telegram's 50 MB ceiling), zip, and upload
  *     via the already-configured report channel. Runs off the UI thread with a visible progress log.
  *  2. **HUD bench (DL3)** — opens [HudDiagActivity], which now includes the `sendInfo2(4, NaviInfo)`
@@ -97,8 +98,7 @@ class DiagActivity : Activity() {
         root.addView(TextView(this).apply { text = "Diagnostics"; textSize = 20f })
         runBtn = Button(this).apply {
             text = "BYD APK Extraction"
-            // On DiLink 3 / DiLink 5.0 the OEM firmware has already been fully extracted; the
-            // button reports that and sends nothing. Everywhere else it runs the extraction.
+            // Projection may already be mined, but HUD receiver evidence is still needed.
             setOnClickListener { if (reComplete) showReCompleteMessage() else start() }
         }
         root.addView(runBtn)
@@ -226,16 +226,17 @@ class DiagActivity : Activity() {
             runBtn.text = "BYD APK Extraction — complete on this platform"
             showReCompleteMessage()
         } else {
-            log("Ready. Extracts the OEM cluster APKs from this vehicle and sends them for analysis.")
+            log("Ready. Extracts OEM cluster and HUD APKs from this vehicle and sends them for analysis.")
         }
     }
 
-    /** DiLink 3 / DiLink 5.0 are fully mined — see [ApkExtractionPolicy.isPlatformFullyMined]. */
+    /** Collect the HUD receiver even when this platform's projection has already been mined. */
     private val reComplete: Boolean by lazy {
         try {
             val p = Platform.get()
             ApkExtractionPolicy.isPlatformFullyMined(
-                p.isDiLink3(this), p.isDiLink5(this), Build.VERSION.SDK_INT)
+                p.isDiLink3(this), p.isDiLink5(this), Build.VERSION.SDK_INT,
+                collectHudReceiverEvidence = true)
         } catch (t: Throwable) {
             // Fail OPEN: if platform detection throws, keep extraction available rather than
             // silently blocking it on a platform we might still need.
