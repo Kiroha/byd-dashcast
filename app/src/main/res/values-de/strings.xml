@@ -226,8 +226,8 @@
     <string name="ime_banner_btn_dismiss">Nicht mehr anzeigen</string>
     <string name="ime_banner_toast_enabled">Auto-Tastatur aktiv ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Einstellungen können nicht geöffnet werden — bitte aktivieren Sie den Bedienungshilfen-Dienst « Cluster-Auto-Tastatur » manuell.</string>
-    <string name="hud_notif_banner_title">HUD Navigation — Benachrichtigungszugriff erforderlich</string>
-    <string name="hud_notif_banner_body">DashCast benötigt Zugriff auf Benachrichtigungen, um Navigationshinweise auf dem Cluster anzuzeigen. Aktivieren unter Einstellungen → Spezieller App-Zugriff → Benachrichtigungszugriff → DashCast.</string>
+    <string name="hud_notif_banner_title">Navigation — Benachrichtigungszugriff erforderlich</string>
+    <string name="hud_notif_banner_body">DashCast benötigt Zugriff auf Benachrichtigungen, um Navigationshinweise auf den ausgewählten Anzeigen anzuzeigen. Aktivieren unter Einstellungen → Spezieller App-Zugriff → Benachrichtigungszugriff → DashCast.</string>
     <string name="hud_notif_banner_toast_enabled">Benachrichtigungszugriff aktiviert ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Aktiviere « DashCast Cluster IME » unter Einstellungen → Bedienungshilfen, damit die Tastatur auf dem Cluster funktioniert.</string>
     <string name="btn_keyboard">⌨</string>
@@ -582,4 +582,10 @@
     <string name="consent_result_refused">Abgelehnt. Deine Berichte bleiben auf diesem Gerät.</string>
     <string name="consent_result_revoked">Widerrufen. Deine Berichte bleiben auf diesem Gerät.</string>
     <string name="bug_kept_locally_fmt">Bericht auf diesem Gerät gespeichert: %1$s. Wähle, wie du ihn weitergibst.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">Navigationshinweise</string>
+    <string name="settings_navigation_support">Zeigen Sie Anweisungen von Maps/Waze an. Das Kombiinstrument funktioniert auch ohne HUD. Der Benachrichtigungszugriff muss erlaubt sein.</string>
+    <string name="settings_navigation_enabled">Navigationshinweise aktivieren</string>
+    <string name="settings_navigation_hud">HUD (Windschutzscheibe)</string>
+    <string name="settings_navigation_cluster">Kombiinstrument (hinter dem Lenkrad)</string>
 </resources>

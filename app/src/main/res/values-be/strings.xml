@@ -226,8 +226,8 @@
     <string name="ime_banner_btn_dismiss">Больш не паказваць</string>
     <string name="ime_banner_toast_enabled">Аўта-клавіятура актыўная ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Немагчыма адкрыць Налады — уключыце ўручную службу спецыяльных магчымасцей « Аўта-клавіятура кластара ».</string>
-    <string name="hud_notif_banner_title">HUD Навігацыя — патрабуецца доступ да апавяшчэнняў</string>
-    <string name="hud_notif_banner_body">DashCast патрабуе доступу да апавяшчэнняў для адлюстравання навігацыйных падказак на кластары. Уключыце ў Налады → Спецыяльны доступ → Доступ да апавяшчэнняў → DashCast.</string>
+    <string name="hud_notif_banner_title">Навігацыя — патрабуецца доступ да апавяшчэнняў</string>
+    <string name="hud_notif_banner_body">DashCast патрабуе доступу да апавяшчэнняў для адлюстравання навігацыйных падказак на выбраных экранах. Уключыце ў Налады → Спецыяльны доступ → Доступ да апавяшчэнняў → DashCast.</string>
     <string name="hud_notif_banner_toast_enabled">Доступ да апавяшчэнняў уключаны ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Уключыце « DashCast Cluster IME » у Налады → Спецыяльныя магчымасці, каб клавіятура працавала на прыборнай панэлі.</string>
     <string name="btn_keyboard">⌨</string>
@@ -582,4 +582,10 @@
     <string name="consent_result_refused">Адмоўлена. Вашы справаздачы застануцца на гэтай прыладзе.</string>
     <string name="consent_result_revoked">Згода адклікана. Вашы справаздачы застануцца на гэтай прыладзе.</string>
     <string name="bug_kept_locally_fmt">Справаздача захавана на гэтай прыладзе: %1$s. Выберыце, як яе перадаць.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">Навігацыйныя падказкі</string>
+    <string name="settings_navigation_support">Паказвайце ўказанні Maps/Waze. Панэль прыбораў працуе і без HUD. Неабходна дазволіць доступ да апавяшчэнняў.</string>
+    <string name="settings_navigation_enabled">Уключыць падказкі</string>
+    <string name="settings_navigation_hud">HUD (лабавое шкло)</string>
+    <string name="settings_navigation_cluster">Панэль прыбораў (за рулём)</string>
 </resources>

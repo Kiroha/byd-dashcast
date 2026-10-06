@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.SystemClock
 import android.util.Log
 
+import com.byd.dashcast.data.prefs.ClusterPrefs
+import com.byd.dashcast.data.prefs.NavigationOutputs
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
@@ -20,12 +22,12 @@ import java.util.concurrent.TimeUnit
  * HudController — navigation HUD orchestration singleton.
  *
  * Receives parsed [HudNavigationData] from [MapNotificationListenerService] and drives the BYD
- * instrument cluster HUD via [CanBusController]. Mirrors the OpenBYD 2.2 `HudController` logic:
+ * windshield HUD via [CanBusController] and instrument cluster via [ClusterNavPusher]:
  *  - Deduplication: only writes to CAN when a value actually changed.
  *  - Lifecycle management: [ensureLegacyDl3Active] activates the legacy navigation outputs on the
  *    first update of a session.
- *  - AMap broadcast: emits `AUTONAVI_STANDARD_BROADCAST_SEND` so BYD's built-in cluster display
- *    layer also receives the navigation state.
+ *  - Destination selection: HUD, cluster, both, or neither. The OEM Amap bridge runs only when
+ *    both are selected, since its receiver also writes CAN and cannot isolate either surface.
  *  - Full register clear on [closeNavigation].
  *  - Staleness watchdog: clears the HUD after `STALE_MS` with no update so a "frozen arrow"
  *    (stale latched CAN guidance) cannot persist when nav updates stop — field report
@@ -94,18 +96,21 @@ object HudController {
     private var isDl3Hud: Boolean? = null
 
     /**
-     * Lot 1 keeps the shipped behaviour in AUTO. A user-facing preference is intentionally not
-     * introduced here: new routes remain unavailable until a receiver/profile has been proven.
+     * Destination preferences do not authorize a new protocol: AUTO still selects only proven
+     * platforms. In particular, enabling either switch must never activate an unverified SOME/IP route.
      */
     private val outputMode: HudOutputMode = HudOutputMode.Auto
 
     /** Output that owns the currently open session, so stop never follows a newly-read setting. */
     private var activeOutput: HudOutput? = null
 
+    /** Destinations actually opened; cleanup must not follow newly changed preferences. */
+    private var activeDestinations = NavigationOutputs.NONE
+
     /** Whether the DL3 adapter has issued its once-per-session start sequence. */
     private var legacyDl3SessionStarted = false
 
-    /** Adapter around the existing DL3 path; its CAN/cluster/AMap behaviour is unchanged. */
+    /** DL3 adapter with independently selectable CAN/HUD and AutoContainer/cluster destinations. */
     private val legacyDl3Output: HudOutput = object : HudOutput {
         override val route: HudOutputRoute = HudOutputRoute.LegacyDl3
 
@@ -148,11 +153,11 @@ object HudController {
     // ─── Public API ───────────────────────────────────────────────────────
 
     /**
-     * Push a navigation update to the cluster HUD.
+     * Push a navigation update to the enabled destinations.
      *
      * Activates the HUD on first call of a session, then applies deduplication so we only write
-     * CAN registers whose value has changed. Sends the AMap broadcast unconditionally (the BYD
-     * cluster compositor needs it every update).
+     * CAN registers whose value has changed. The cluster receives its independent AutoContainer
+     * frame even when HUD control is disabled or CAN activation fails.
      *
      * If `data.distanceMeters` is negative the update is discarded (invalid parse result from the
      * notification listener).
@@ -161,9 +166,15 @@ object HudController {
     fun updateNavigation(ctx: Context, data: HudNavigationData): Boolean {
         if (data.distanceMeters < 0) return false
 
+        val destinations = ClusterPrefs.getNavigationOutputs(ctx)
+        if (!destinations.enabled) {
+            closeNavigation(ctx)
+            return false
+        }
         val output = resolveOutput(ctx) ?: return false
         val previous = activeOutput
-        if (previous != null && previous.route != output.route) {
+        if (previous != null && (previous.route != output.route ||
+                activeDestinations != destinations)) {
             // Close the resource that was actually opened. A future preference/profile change
             // must never use the new selection as a proxy for the old resource inventory.
             closeActiveOutput(ctx)
@@ -174,6 +185,7 @@ object HudController {
             // a later SOME/IP output without coupling it to legacy CAN flags.
             appContext = ctx.applicationContext
             activeOutput = output
+            activeDestinations = destinations
             isHudActive = true
             armWatchdog()
         }
@@ -181,11 +193,19 @@ object HudController {
         return output.update(ctx, data).delivered
     }
 
+    /** Called on the notification writer: disable old destinations without replaying stale data. */
+    @Synchronized
+    fun refreshOutputPreferences(ctx: Context) {
+        if (activeOutput != null && activeDestinations != ClusterPrefs.getNavigationOutputs(ctx)) {
+            closeActiveOutput(ctx)
+        }
+    }
+
     private fun beginLegacyDl3Navigation(ctx: Context): HudOutputResult {
         // Preserve the previous behaviour of refreshing the retained process context on every
         // update; this is the context the shared watchdog uses for an eventual asynchronous stop.
         appContext = ctx.applicationContext
-        ensureLegacyDl3Active()
+        if (activeDestinations.hud) ensureLegacyDl3Active()
         return if (naviActiveAcked) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
     }
 
@@ -193,7 +213,17 @@ object HudController {
         ctx: Context,
         data: HudNavigationData
     ): HudOutputResult {
+        val canFrameDelivered = activeDestinations.hud && updateCanNavigation(data)
+        // push() owns cluster activation; neither CAN acceptance nor physical HUD presence gates it.
+        val clusterGuidanceDelivered = activeDestinations.cluster && ClusterNavPusher.push(data)
+        if (activeDestinations.useAmapBridge) sendAmapBroadcast(ctx, data)
+        val delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered)
+        if (delivered) lastUpdateMs = SystemClock.elapsedRealtime()
+        return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
+    }
 
+    private fun updateCanNavigation(data: HudNavigationData): Boolean {
+        var canFrameDelivered = naviActiveAcked
         // OEM parity (B2, ref. AmapService.sendNavigateInfoToCAN): the factory nav re-writes
         // INSTRUMENT_SEND_NAVI_STATUS=active on EVERY guidance frame — its only always-written
         // register. ensureLegacyDl3Active() asserts it just once at nav-start; a cluster that reads
@@ -203,10 +233,9 @@ object HudController {
         try {
             CanBusController.sendNaviStatusHeartbeat()
         } catch (e: ProxyClient.ProxyException) {
+            canFrameDelivered = false
             Log.w(TAG, "naviStatus heartbeat failed: " + e.message)
         }
-
-        var canFrameDelivered = true
 
         // 1. Simple guidance (icon + distance).
         if (data.iconId != lastIconId || data.distanceMeters != lastDistance) {
@@ -281,17 +310,7 @@ object HudController {
             }
         }
 
-        // 4c. CLUSTER path — push the same maneuver through the OEM AutoContainer channel
-        //     (sendInfo2(4, NaviInfo)). Independent of CAN: this is what lights the instrument
-        //     cluster, and it is the only arrow source on cars with no windshield HUD. Sent every
-        //     update like the OEM does; guarded, never throws.
-        val clusterGuidanceDelivered = ClusterNavPusher.push(data)
-
-        // 5. AMap broadcast — unconditional, the cluster compositor needs it every step.
-        sendAmapBroadcast(ctx, data)
-        val delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered)
-        if (delivered) lastUpdateMs = SystemClock.elapsedRealtime()
-        return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
+        return canFrameDelivered
     }
 
     internal fun frameDelivered(allRequiredCanWritesSucceeded: Boolean,
@@ -301,8 +320,8 @@ object HudController {
     /**
      * Stop navigation and reset the cluster HUD to its default state.
      *
-     * Clears all CAN registers (via [CanBusController.setNaviActive]), sends the AMap stop
-     * broadcast, and resets all deduplication state.
+     * Clears only the resources opened by this session and resets deduplication state. In
+     * cluster-only mode, neither start, guidance nor cleanup touches CAN or the Amap receiver.
      */
     @Synchronized
     fun closeNavigation(ctx: Context) {
@@ -316,6 +335,7 @@ object HudController {
             output?.end(ctx) ?: HudOutputResult.DELIVERED
         } finally {
             activeOutput = null
+            activeDestinations = NavigationOutputs.NONE
             isHudActive = false
             stopWatchdog()
             resetState()
@@ -323,19 +343,20 @@ object HudController {
     }
 
     private fun closeLegacyDl3Navigation(ctx: Context): HudOutputResult {
-        if (!legacyDl3SessionStarted) return HudOutputResult.DELIVERED
         var delivered = true
-        try {
-            CanBusController.setNaviActive(false)
-        } catch (e: ProxyClient.ProxyException) {
-            delivered = false
-            Log.w(TAG, "setNaviActive(false) failed: " + e.message)
-        } finally {
-            legacyDl3SessionStarted = false
-            naviActiveAcked = false
+        if (legacyDl3SessionStarted) {
+            try {
+                CanBusController.setNaviActive(false)
+            } catch (e: ProxyClient.ProxyException) {
+                delivered = false
+                Log.w(TAG, "setNaviActive(false) failed: " + e.message)
+            } finally {
+                legacyDl3SessionStarted = false
+                naviActiveAcked = false
+            }
         }
-        ClusterNavPusher.stop()   // clear the cluster guidance too (best-effort)
-        sendAmapStopBroadcast(ctx)
+        if (activeDestinations.cluster) ClusterNavPusher.stop()
+        if (activeDestinations.useAmapBridge) sendAmapStopBroadcast(ctx)
         return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
     }
 
@@ -381,17 +402,14 @@ object HudController {
     /**
      * The CAN half of activation, and the only place naviActiveAcked is set.
      *
-     * ClusterNavPusher.enable() is the second output path — it switches the OEM container into
-     * nav mode so the instrument CLUSTER accepts our NaviInfo frames, which is where cars without
-     * a windshield HUD get their arrows. It only runs once the CAN register was accepted, exactly
-     * as before; what changed is that its failure no longer takes the session flag down with it.
+     * Cluster activation belongs to ClusterNavPusher.push(), so a HUD refusal or a disabled HUD
+     * cannot prevent a car without windshield HUD from receiving cluster guidance.
      */
     private fun attemptCanActivation() {
         lastActivationAttemptMs = SystemClock.elapsedRealtime()
         try {
             CanBusController.setNaviActive(true)
             naviActiveAcked = true
-            ClusterNavPusher.enable()
         } catch (e: ProxyClient.ProxyException) {
             naviActiveAcked = false
             Log.w(TAG, "setNaviActive(true) failed: " + e.message)
@@ -559,9 +577,9 @@ object HudController {
     // ─── AMap broadcast ───────────────────────────────────────────────────
 
     /**
-     * Sends `AUTONAVI_STANDARD_BROADCAST_SEND` (TYPE=8) matching the OpenBYD 2.2
-     * `sendStandardAmapBroadcast` implementation. This intent is received by the BYD cluster
-     * compositor to update its own navigation overlay independently of the raw CAN writes above.
+     * Sends `AUTONAVI_STANDARD_BROADCAST_SEND` (TYPE=8) to the verified OEM Amap receiver.
+     * Reverse engineering confirms that receiver writes CAN as well as cluster content; call
+     * only when both destinations are selected, never as a cluster-only fallback.
      */
     private fun sendAmapBroadcast(ctx: Context, d: HudNavigationData) {
         try {

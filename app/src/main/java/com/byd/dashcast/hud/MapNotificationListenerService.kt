@@ -16,6 +16,7 @@ import com.byd.dashcast.util.PackagePseudonymizer
 import com.byd.dashcast.util.concurrent.LatestValueDispatcher
 
 import java.io.File
+import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
@@ -63,6 +64,7 @@ class MapNotificationListenerService : NotificationListenerService() {
     // appContext is the process-scoped application context (safe to retain — not
     // the service instance, so no leak).
     private var hudDispatcher: LatestValueDispatcher<PendingHudUpdate>? = null
+    private var navigationPreferencesObserver: Closeable? = null
 
     @Volatile private var appContext: Context? = null
 
@@ -108,9 +110,21 @@ class MapNotificationListenerService : NotificationListenerService() {
                 hudDeliveryTracker.markDelivered(pending.generation)
             }
         }
+        navigationPreferencesObserver = ClusterPrefs.observeNavigationOutputs(processContext) {
+            AppLogger.i(TAG, "navigation outputs: " + ClusterPrefs.getNavigationOutputs(processContext))
+            // Invalidate acknowledgements and pending frames before closing the old destinations.
+            // The next fresh notification, including identical content, starts the new selection.
+            // Do not rescan old notifications here: an expired route must never be resurrected.
+            resetNotificationIdentity()
+            hudDispatcher?.cancelPendingAndExecute {
+                HudController.refreshOutputPreferences(processContext)
+            }
+        }
     }
 
     override fun onDestroy() {
+        navigationPreferencesObserver?.close()
+        navigationPreferencesObserver = null
         clearTrackedNavigation()
         val dispatcher = hudDispatcher
         hudDispatcher = null

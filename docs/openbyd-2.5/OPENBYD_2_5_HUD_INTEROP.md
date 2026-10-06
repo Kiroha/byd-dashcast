@@ -377,7 +377,7 @@ Ce bloc reproduit le coeur de la voie CAN via l'API **existante** de DashCast, p
 - **V** `CanNavigationBatches.simpleGuidance` omet intentionnellement `0x43F01030` avec une note de refus SDK dans le corpus de testeurs ; cet APK continue de l'ecrire. Garder cette distinction. [D2 :50, E8 :1765]
 - **V** Le start DashCast est statut + layout ; OpenBYD ajoute Statistic nav/ISA et des appels SDK specialises. C'est un delta observe, PAS la preuve que ces ajouts sont requis ou souhaitables sur ton vehicule. [D2 :9, E8 :1391]
 - **V** DashCast envoie deja un heartbeat CAN et sait ecrire l'ETA jour/heure/minute/seconde ; OpenBYD n'ecrit directement que la minute d'horloge dans `sendRestRouteInfo`. Ne pas regresser vers ce sous-ensemble. [D1 :169/:263, D2 :105, E8 :1669]
-- **V** Aucun `SomeIp`/`SOMEIP`/`someip` retrouve dans `app/src/main`. Une prise en charge SOME/IP serait une nouvelle sortie a choisir seulement apres identification du profil, pas une modification des codes CAN existants.
+- **V, etat de l'audit initial** Aucun transport SOME/IP n'etait present dans `app/src/main`. Depuis le 2026-10-03, un socle `SomeIpHudTransport` existe, mais reste inactif en production. L'[export pilote DL3 / SX361 du 2026-10-06](OEM_EVIDENCE_DL3_SX361_20261006.md) ne contient pas de recepteur SOME/IP installe. Cette sortie exige toujours l'identification d'un profil et de son serveur ; les codes CAN existants restent distincts.
 
 ## Risques et inconnues
 

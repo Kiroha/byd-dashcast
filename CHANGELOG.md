@@ -15,6 +15,33 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.6-beta (versionCode 645)
+
+**Select HUD and instrument-cluster guidance independently in Settings.** A master
+switch enables navigation guidance, with separate windshield-HUD and instrument-cluster
+switches. Turning off the master retains the destination choices. Cluster-only mode
+uses AutoContainer without any CAN/HUD command or OEM Amap broadcast, including on
+start and stop, so a SEAL without HUD can request cluster guidance. HUD-only mode
+does not activate or send navigation content to AutoContainer. The default remains
+both outputs, including the existing OEM bridge. Settings changes clear the old
+session on the serial notification writer and the next fresh navigation notification
+resumes the chosen outputs; expired instructions are not replayed. The platform gate
+and app-projection controls are unchanged. Cluster rendering needs validation on
+the SX361 SEAL; testing HUD-only and both outputs requires a HUD-equipped car.
+These settings are introduced in 1.9.6-beta. Fourteen new regression
+cases exercise the controller/listener against a recording daemon Binder and verify
+preference persistence. The complete 812-test suite, release lint and release build pass.
+
+**Preserve native executables in diagnostic exports.** Extensionless ELF files
+such as `fissiond` were treated as text by the archive redaction pass, corrupting
+their bytes. Detect the ELF signature before redacting extensionless files; keep
+extensionless logs and explicitly named text files redacted. Regression coverage
+verifies ELF32/ELF64 byte preservation and continued text redaction. The
+[DL3 / SX361 OEM evidence analysis](docs/openbyd-2.5/OEM_EVIDENCE_DL3_SX361_20261006.md)
+records the affected files and confirms that the exported APKs remain intact.
+
+**Installation:** Android 10 / DiLink 3 users on 1.9.4-beta or older must install manually over the existing app. Users on 1.9.5-beta can test the corrected OTA path; end-to-end installation still needs vehicle verification. **1.9.0 remains stable.** [Release notes and SEAL configuration](docs/releases/1.9.6-beta.md).
+
 ### 1.9.5-beta (versionCode 644)
 
 **Manual installation required.** Download `DashCast-v1.9.5-beta-release.apk` and

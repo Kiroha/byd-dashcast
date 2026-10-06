@@ -95,6 +95,46 @@ class RedactionCallSiteTest {
     }
 
     @Test
+    fun `extensionless ELF executables pass through byte-identical`() {
+        val work = File(ctx.cacheDir, "zip_work_elf").apply { mkdirs() }
+        File(work, "native").mkdirs()
+        val payloads = (1..2).associate { elfClass ->
+            val name = "native/fission$elfClass"
+            // Both ELF32 and ELF64 contain bytes that cannot round-trip through UTF-8.
+            val header = byteArrayOf(0x7f, 'E'.code.toByte(), 'L'.code.toByte(),
+                'F'.code.toByte(), elfClass.toByte(), 1, 1, 0)
+            name to (header + ByteArray(4096) { (it * 31 % 251).toByte() })
+        }
+        payloads.forEach { (name, bytes) -> File(work, name).writeBytes(bytes) }
+        val zip = HudCaptureSupport.zipDir(work, File(ctx.cacheDir, "out_elf.zip"))
+
+        ZipFile(zip).use { archive ->
+            payloads.forEach { (name, bytes) ->
+                val stored = archive.getInputStream(archive.getEntry(name)).readBytes()
+                assertArrayEquals("$name must retain its original bytes", bytes, stored)
+            }
+        }
+    }
+
+    @Test
+    fun `extensionless text and explicitly named text remain redacted`() {
+        val work = File(ctx.cacheDir, "zip_work_extensionless_text").apply { mkdirs() }
+        File(work, "native").mkdirs()
+        File(work, "native/context").writeText(canaryText())
+        // A binary-looking prefix must not exempt a file explicitly named as text.
+        File(work, "context.txt").writeText("\u007fELF\n" + canaryText())
+        val zip = HudCaptureSupport.zipDir(work, File(ctx.cacheDir, "out_extensionless_text.zip"))
+
+        ZipFile(zip).use { archive ->
+            for (name in listOf("native/context", "context.txt")) {
+                val stored = archive.getInputStream(archive.getEntry(name)).bufferedReader().readText()
+                assertClean("the archived $name", stored)
+                assertTrue("$name must still pass through redaction", stored.contains("<vin:"))
+            }
+        }
+    }
+
+    @Test
     fun `an oversized text file is redacted without loading the whole file`() {
         val work = File(ctx.cacheDir, "zip_work_huge").apply { mkdirs() }
         val filler = "x".repeat(1024 * 1024)

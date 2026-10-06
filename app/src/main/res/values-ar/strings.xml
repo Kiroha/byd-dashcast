@@ -231,8 +231,8 @@
     <string name="ime_banner_btn_dismiss">عدم الإظهار مرة أخرى</string>
     <string name="ime_banner_toast_enabled">لوحة المفاتيح التلقائية نشطة ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">تعذر فتح الإعدادات — فعّل يدويًا خدمة إمكانية الوصول « لوحة المفاتيح التلقائية للعنقود ».</string>
-    <string name="hud_notif_banner_title">HUD ملاحة — مطلوب الوصول إلى الإشعارات</string>
-    <string name="hud_notif_banner_body">يحتاج DashCast إلى الوصول إلى الإشعارات لعرض تعليمات الملاحة على لوحة العدادات. فعّله من الإعدادات ← الوصول الخاص للتطبيقات ← الوصول إلى الإشعارات ← DashCast.</string>
+    <string name="hud_notif_banner_title">الملاحة — مطلوب الوصول إلى الإشعارات</string>
+    <string name="hud_notif_banner_body">يحتاج DashCast إلى الوصول إلى الإشعارات لعرض تعليمات الملاحة على الشاشات المحددة. فعّله من الإعدادات ← الوصول الخاص للتطبيقات ← الوصول إلى الإشعارات ← DashCast.</string>
     <string name="hud_notif_banner_toast_enabled">تم تفعيل الوصول إلى الإشعارات ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">فعّل « DashCast Cluster IME » من الإعدادات ← إمكانية الوصول حتى تعمل لوحة المفاتيح على لوحة العدادات.</string>
     <string name="btn_keyboard">⌨</string>
@@ -587,4 +587,10 @@
     <string name="consent_result_refused">تم الرفض. ستبقى تقاريرك على هذا الجهاز.</string>
     <string name="consent_result_revoked">تم سحب الموافقة. ستبقى تقاريرك على هذا الجهاز.</string>
     <string name="bug_kept_locally_fmt">حُفظ التقرير على هذا الجهاز: %1$s. اختر كيف تريد إرساله.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">إرشادات الملاحة</string>
+    <string name="settings_navigation_support">اعرض إرشادات Maps/Waze. تعمل لوحة العدادات أيضًا بدون HUD. يجب السماح بالوصول إلى الإشعارات.</string>
+    <string name="settings_navigation_enabled">تفعيل الإرشادات</string>
+    <string name="settings_navigation_hud">HUD (الزجاج الأمامي)</string>
+    <string name="settings_navigation_cluster">لوحة العدادات (خلف المقود)</string>
 </resources>

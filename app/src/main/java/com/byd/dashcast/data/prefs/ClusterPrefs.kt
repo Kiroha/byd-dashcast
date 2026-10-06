@@ -2,6 +2,7 @@ package com.byd.dashcast.data.prefs
 
 import android.content.Context
 import android.content.SharedPreferences
+import java.io.Closeable
 import java.util.LinkedList
 
 /**
@@ -65,6 +66,11 @@ object ClusterPrefs {
 
     /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
     const val KEY_NAV_RAW_CAPTURE = "nav_raw_capture"
+
+    // Keep destination choices when the master switch is off; defaults preserve deployed behaviour.
+    private const val KEY_NAVIGATION_ENABLED = "navigation_guidance_enabled"
+    private const val KEY_NAVIGATION_HUD = "navigation_hud_enabled"
+    private const val KEY_NAVIGATION_CLUSTER = "navigation_cluster_enabled"
 
     /** True while cluster/main screenshots may still be on disk. See the accessors below. */
     const val KEY_SHOTS_ON_DISK = "shots_on_disk"
@@ -294,6 +300,47 @@ object ClusterPrefs {
     @JvmStatic
     fun setNavRawCaptureEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_NAV_RAW_CAPTURE, enabled).apply()
+    }
+
+    fun isNavigationEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_NAVIGATION_ENABLED, true)
+
+    fun setNavigationEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_NAVIGATION_ENABLED, enabled).apply()
+    }
+
+    fun isNavigationHudEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_NAVIGATION_HUD, true)
+
+    fun setNavigationHudEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_NAVIGATION_HUD, enabled).apply()
+    }
+
+    fun isNavigationClusterEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_NAVIGATION_CLUSTER, true)
+
+    fun setNavigationClusterEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_NAVIGATION_CLUSTER, enabled).apply()
+    }
+
+    fun getNavigationOutputs(ctx: Context): NavigationOutputs {
+        val p = prefs(ctx)
+        val enabled = p.getBoolean(KEY_NAVIGATION_ENABLED, true)
+        return NavigationOutputs(
+            hud = enabled && p.getBoolean(KEY_NAVIGATION_HUD, true),
+            cluster = enabled && p.getBoolean(KEY_NAVIGATION_CLUSTER, true),
+        )
+    }
+
+    /** The owner retains this handle, keeping the weak preference listener alive until close. */
+    fun observeNavigationOutputs(ctx: Context, onChanged: () -> Unit): Closeable {
+        val p = prefs(ctx)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == KEY_NAVIGATION_ENABLED || key == KEY_NAVIGATION_HUD ||
+                key == KEY_NAVIGATION_CLUSTER) onChanged()
+        }
+        p.registerOnSharedPreferenceChangeListener(listener)
+        return Closeable { p.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
     /**

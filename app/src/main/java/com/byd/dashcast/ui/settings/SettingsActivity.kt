@@ -66,6 +66,9 @@ class SettingsActivity : AppCompatActivity() {
     // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
     private lateinit var cbPrerelease: CompoundButton
     private lateinit var cbBootAutoStart: CompoundButton
+    private lateinit var swNavigationEnabled: CompoundButton
+    private lateinit var swNavigationHud: CompoundButton
+    private lateinit var swNavigationCluster: CompoundButton
     private lateinit var cbShowCategoryFilters: CompoundButton
     private lateinit var cbReconnectPopup: CompoundButton
     private lateinit var cbQuickStop: CompoundButton
@@ -248,6 +251,9 @@ class SettingsActivity : AppCompatActivity() {
         rgClusterType = findViewById(R.id.rg_cluster_type)
         cbPrerelease = findViewById(R.id.cb_prerelease)
         cbBootAutoStart = findViewById(R.id.cb_boot_auto_start)
+        swNavigationEnabled = findViewById(R.id.sw_navigation_enabled)
+        swNavigationHud = findViewById(R.id.sw_navigation_hud)
+        swNavigationCluster = findViewById(R.id.sw_navigation_cluster)
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters)
         cbCaptureShots = findViewById(R.id.cb_capture_shots)
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup)
@@ -264,6 +270,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun loadPreferences() {
         mPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val prefs = mPrefs
+
+        swNavigationEnabled.isChecked = ClusterPrefs.isNavigationEnabled(this)
+        swNavigationHud.isChecked = ClusterPrefs.isNavigationHudEnabled(this)
+        swNavigationCluster.isChecked = ClusterPrefs.isNavigationClusterEnabled(this)
+        updateNavigationSwitches()
 
         // Cluster type radio
         when (ClusterPrefs.getClusterType(this)) {
@@ -311,7 +322,22 @@ class SettingsActivity : AppCompatActivity() {
         // was removed in 1.4.23.
     }
 
+    private fun updateNavigationSwitches() {
+        swNavigationHud.isEnabled = swNavigationEnabled.isChecked
+        swNavigationCluster.isEnabled = swNavigationEnabled.isChecked
+    }
+
     private fun wireListeners() {
+        swNavigationEnabled.setOnCheckedChangeListener { _, enabled ->
+            ClusterPrefs.setNavigationEnabled(this, enabled)
+            updateNavigationSwitches()
+        }
+        swNavigationHud.setOnCheckedChangeListener { _, enabled ->
+            ClusterPrefs.setNavigationHudEnabled(this, enabled)
+        }
+        swNavigationCluster.setOnCheckedChangeListener { _, enabled ->
+            ClusterPrefs.setNavigationClusterEnabled(this, enabled)
+        }
         // Cluster type: save immediately on selection change
         rgClusterType.setOnCheckedChangeListener { _, checkedId ->
             val cmd = when (checkedId) {

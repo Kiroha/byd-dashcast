@@ -278,8 +278,8 @@
     <string name="ime_banner_btn_dismiss">Nie pokazuj ponownie</string>
     <string name="ime_banner_toast_enabled">Auto-klawiatura aktywna ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Nie można otworzyć Ustawień — włącz ręcznie usługę ułatwień dostępu „Klaster auto-klawiatura”.</string>
-    <string name="hud_notif_banner_title">HUD Nawigacja — wymagany dostęp do powiadomień</string>
-    <string name="hud_notif_banner_body">DashCast potrzebuje dostępu do powiadomień, aby wyświetlać wskazówki nawigacji na klastrze. Włącz w Ustawienia → Dostęp specjalny → Dostęp do powiadomień → DashCast.</string>
+    <string name="hud_notif_banner_title">Nawigacja — wymagany dostęp do powiadomień</string>
+    <string name="hud_notif_banner_body">DashCast potrzebuje dostępu do powiadomień, aby wyświetlać wskazówki nawigacji na wybranych ekranach. Włącz w Ustawienia → Dostęp specjalny → Dostęp do powiadomień → DashCast.</string>
     <string name="hud_notif_banner_toast_enabled">Dostęp do powiadomień przyznany ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Włącz „DashCast Cluster IME” w Ustawienia → Ułatwienia dostępu, aby klawiatura działała na klastrze.</string>
     <string name="btn_keyboard">⌨</string>
@@ -591,4 +591,10 @@
     <string name="consent_result_refused">Odmówiono. Twoje zgłoszenia zostaną na tym urządzeniu.</string>
     <string name="consent_result_revoked">Wycofano. Twoje zgłoszenia zostaną na tym urządzeniu.</string>
     <string name="bug_kept_locally_fmt">Zgłoszenie zapisane na tym urządzeniu: %1$s. Wybierz, jak je przekazać.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">Wskazówki nawigacyjne</string>
+    <string name="settings_navigation_support">Wyświetlaj wskazówki z Maps/Waze. Zestaw wskaźników działa również bez HUD. Wymagany jest dostęp do powiadomień.</string>
+    <string name="settings_navigation_enabled">Włącz wskazówki</string>
+    <string name="settings_navigation_hud">HUD (przednia szyba)</string>
+    <string name="settings_navigation_cluster">Zestaw wskaźników (za kierownicą)</string>
 </resources>

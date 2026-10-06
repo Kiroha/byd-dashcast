@@ -136,8 +136,8 @@
     <string name="ime_banner_btn_dismiss">Ne plus afficher</string>
     <string name="ime_banner_toast_enabled">Clavier automatique actif ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Impossible d\'ouvrir les Réglages — activez manuellement le service d\'accessibilité « Clavier auto cluster ».</string>
-    <string name="hud_notif_banner_title">HUD Navigation — Accès aux notifications requis</string>
-    <string name="hud_notif_banner_body">DashCast doit pouvoir lire les notifications pour afficher les instructions de navigation sur le cluster. Activez l\'accès dans Paramètres → Accès spéciaux → Accès aux notifications → DashCast.</string>
+    <string name="hud_notif_banner_title">Navigation — Accès aux notifications requis</string>
+    <string name="hud_notif_banner_body">DashCast doit pouvoir lire les notifications pour afficher les instructions de navigation sur les écrans choisis. Activez l\'accès dans Paramètres → Accès spéciaux → Accès aux notifications → DashCast.</string>
     <string name="hud_notif_banner_toast_enabled">Accès aux notifications activé ✓</string>
     <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
     <string name="toast_adb_port_refused">ADB injoignable (port 5555) — miroir indisponible sur cet appareil</string>
@@ -638,4 +638,10 @@
     <string name="consent_result_refused">Refusé. Vos rapports resteront sur cet appareil.</string>
     <string name="consent_result_revoked">Révoqué. Vos rapports resteront sur cet appareil.</string>
     <string name="bug_kept_locally_fmt">Rapport conservé sur cet appareil : %1$s. Choisissez comment le transmettre.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">Guidage de navigation</string>
+    <string name="settings_navigation_support">Affichez les instructions de Maps/Waze. Le combiné fonctionne aussi sans HUD. L’accès aux notifications doit être autorisé.</string>
+    <string name="settings_navigation_enabled">Activer le guidage</string>
+    <string name="settings_navigation_hud">HUD (pare-brise)</string>
+    <string name="settings_navigation_cluster">Combiné d’instruments (derrière le volant)</string>
 </resources>

@@ -17,10 +17,10 @@ import com.byd.dashcast.system.CanBusController
  *    second SX326, and a DiLink 5.0 SW155 all render arrows this way).
  *
  * Cars **without** a windshield HUD — the majority — get turn arrows on the cluster from this path
- * alone, which is why it ships alongside, not instead of, the CAN path.
+ * alone. Settings can select this output without starting the CAN/HUD path.
  *
- * Every call is best-effort and fully guarded: the cluster is a bonus surface and must never break
- * the proven CAN path, the notification pipeline, or the daemon.
+ * Every call is best-effort and fully guarded: a failure must never break another selected output,
+ * the notification pipeline, or the daemon.
  */
 object ClusterNavPusher {
 

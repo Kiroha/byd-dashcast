@@ -142,7 +142,18 @@ object HudCaptureSupport {
      */
     private val REDACTABLE = setOf("txt", "log", "json", "xml", "properties", "csv", "md", "")
 
-    private fun isRedactableText(f: File): Boolean = f.extension.lowercase() in REDACTABLE
+    private fun isRedactableText(f: File): Boolean {
+        val extension = f.extension.lowercase()
+        if (extension !in REDACTABLE) return false
+        if (extension.isNotEmpty()) return true
+
+        // Native executables such as fissiond have no extension. Preserve their ELF bytes;
+        // extensionless logs still need the same redaction as other diagnostic text.
+        return FileInputStream(f).use { input ->
+            !(input.read() == 0x7f && input.read() == 'E'.code
+                    && input.read() == 'L'.code && input.read() == 'F'.code)
+        }
+    }
 
     /** Smaller files retain whole-document redaction; larger ones are processed incrementally. */
     private const val MAX_IN_MEMORY_REDACTION_BYTES = 8L * 1024 * 1024
