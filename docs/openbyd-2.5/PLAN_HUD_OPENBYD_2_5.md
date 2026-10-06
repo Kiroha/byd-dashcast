@@ -1,14 +1,14 @@
 # Plan d'integration HUD OpenBYD 2.5 dans DashCast
 
-Statut : collecte OEM depuis Diag ajoutee au lot 0, lot 1 implemente et socle transport du lot 2 ajoute hors vehicule ; SOME/IP reste inactif. Plan initial : 2026-09-12.
-Derniere verification : 2026-10-03.
+Statut : collecte OEM depuis Diag ajoutee au lot 0, lot 1 implemente avec choix HUD/cluster independants et socle transport du lot 2 ajoute hors vehicule ; SOME/IP reste inactif. Plan initial : 2026-09-12.
+Derniere verification : 2026-10-06 (export pilote DL3 / SX361).
 Contrat de reference : [OPENBYD_2_5_HUD_INTEROP.md](OPENBYD_2_5_HUD_INTEROP.md).
 
 ## Audit disponible
 
 Reprise apres le plantage : **29 tests du banc smali passent**, 9415 fichiers identiques entre deux extractions, 80/828 methodes exercees. [Banc et limites](audit/README.md). Les encodeurs des trois profils sont compares a protobufjs pour les fixtures couvertes ; cela ne valide pas le serveur OEM ni le rendu.
 
-Un framework **DL3/API29** reel precise les bornes et controles SDK. Ses constantes `TURN_KIND_*` different des noms/codes OpenBYD : le portage doit conserver des tables par protocole/profil, pas generaliser une enum. L'archive DL5 disponible inventorie le service SOME/IP mais **ne contient pas son APK**. Le lot 0 reste bloque sur ce recepteur et l'identification du vehicule cible.
+Un framework **DL3/API29** reel precise les bornes et controles SDK. Ses constantes `TURN_KIND_*` different des noms/codes OpenBYD : le portage doit conserver des tables par protocole/profil, pas generaliser une enum. L'archive DL5 disponible inventorie le service SOME/IP mais **ne contient pas son APK**. Le nouvel [export pilote DL3 / SX361](OEM_EVIDENCE_DL3_SX361_20261006.md) confirme la presence d'AmapService et l'absence des deux packages SOME/IP/naviauto sur ce systeme. La voie DL3 est a conserver pour ce pilote ; le lot 0 des profils SOME/IP reste bloque sur un recepteur et un vehicule pilote correspondants.
 
 ## Decision d'architecture
 
@@ -50,6 +50,10 @@ Verification de cette extension : **791 tests complets passes**, dont **8 nouvea
 
 **Sortie :** un premier profil candidat choisi sur preuve, droits d'acces connus, criteres de test physique definis. Le developpement hors vehicule des lots suivants peut commencer ; l'activation SOME/IP sur vehicule reste bloquee tant que cette validation manque.
 
+**Export pilote recu le 2026-10-06 :** `byd_apk_20261006_062116.zip`, produit par **1.9.5-beta / build 644**, identifie Android 10 / DL3 et le firmware `6125f_1for2_USER_SIGN_SX361_202606100404_Q2700`, confirme par l'utilisateur. Les quatre APK OEM sont intacts et identiques au precedent dump DL3 ; le nouveau desassemblage d'AmapService confirme le recepteur broadcast et son chemin CAN. `pm path`, les dumps de package et l'inventaire indiquent l'absence de `com.ts.car.someip.service` et `com.byd.naviauto` : leur manque dans le ZIP n'est pas un echec de copie. Ne pas deduire un profil SOME/IP de la seule propriete `ro.vehicle.type=DiLink50_5.0UI` sur ce systeme API29.
+
+L'analyse decouvre aussi neuf executables sans extension corrompus par la conversion texte du zipper. Le correctif local conserve les ELF32/ELF64 sans relacher l'anonymisation des textes ; les APK et `.so` de cet export restent exploitables. Ce correctif est inclus dans le candidat 1.9.6-beta / build 645, et non dans l'APK 1.9.5-beta. [Preuves, limites et suite pour le pilote](OEM_EVIDENCE_DL3_SX361_20261006.md).
+
 ### Lot 1 : separer le routage sans changer la voie DL3
 
 Points d'ancrage : `HudController`, `ClusterNavPusher`, `MapNotificationListenerService`, [HudNavigationData.kt](../../app/src/main/java/com/byd/dashcast/hud/HudNavigationData.kt).
@@ -65,6 +69,14 @@ Points d'ancrage : `HudController`, `ClusterNavPusher`, `MapNotificationListener
 **Mise en oeuvre du 2026-09-14 :** [HudOutput.kt](../../app/src/main/java/com/byd/dashcast/hud/HudOutput.kt) definit le contrat `begin/update/end`, le resultat explicite, les modes et les profils. `HudController` enveloppe la voie DL3 existante, conserve la sortie effectivement ouverte pour la fermeture et resout le mode de production `AUTO` vers DL3 uniquement lorsque le filtre DL3/non-AAOS existant est satisfait. Aucun transport SOME/IP, reglage utilisateur, droit Android ou comportement de projection n'a ete ajoute. Le selecteur refuse un profil non prouve et ne fait aucun fallback CAN.
 
 Verification : **760 tests unitaires** passent apres `--rerun-tasks`, dont les cinq cas de [HudOutputSelectorTest.kt](../../app/src/test/java/com/byd/dashcast/hud/HudOutputSelectorTest.kt) ; `:app:lintDebug` passe. Le banc OpenBYD reste a **29 PASS, 0 FAIL/SKIP**. Cela valide le refactoring et les modeles hors vehicule, pas le rendu physique.
+
+**Choix des destinations ajoute le 2026-10-06 :** le pilote est une **BYD SEAL sans HUD**, Android 10 / DL3 / SX361. Son premier objectif est le guidage sur le combine derriere le volant ; l'absence de HUD ne doit pas bloquer cette sortie. **Parametres -> Guidage de navigation** propose un interrupteur general et deux choix persistants **HUD (pare-brise)** / **Combine d'instruments**. Les quatre combinaisons sont possibles ; l'arret general conserve les choix individuels. Le defaut reste les deux sorties pour les installations existantes.
+
+Le mode **cluster seul** utilise `ClusterNavPusher` / `sendInfo2(4, NaviInfo)` sans activation, guidage ni effacement CAN/HUD. Le mode **HUD seul** utilise la voie CAN sans activation ni guidage AutoContainer. Le broadcast OEM Amap ne reste actif que lorsque les deux destinations sont choisies : son recepteur ecrit lui-meme sur CAN et ne convient donc pas a un mode exclusif. L'activation du cluster ne depend plus de l'acceptation CAN. La fermeture suit les ressources de l'ancienne session, jamais les nouveaux reglages.
+
+Un changement de preference invalide la deduplication, annule la trame en attente et ferme l'ancienne session sur le writer serie. La prochaine notification de navigation fraiche ouvre le nouveau choix, meme si son texte est identique ; aucun replay d'une ancienne notification a partir des reglages. Le watchdog protege aussi le cluster seul. Ce choix ne modifie pas la projection d'apps et n'autorise aucun profil SOME/IP non valide. La separation des appels est testee hors vehicule ; le rendu et l'absence d'effets indirects des registres CAN sur le combine en mode HUD seul doivent encore etre verifies sur un vehicule equipe des deux ecrans. Ces reglages sont inclus dans le candidat 1.9.6-beta / build 645 ; ils ne sont pas dans la 1.9.5-beta.
+
+Verification : **14 nouveaux tests**, dont les appels reels du controller/listener contre un Binder daemon factice ([routage](../../app/src/test/java/com/byd/dashcast/hud/NavigationOutputRoutingTest.kt), [preferences](../../app/src/test/java/com/byd/dashcast/hud/NavigationOutputPreferencesTest.kt)). Ils couvrent les quatre choix, l'effacement de l'ancienne destination, le refus CAN independant du cluster, la plateforme inconnue, le watchdog du cluster seul, la notification identique apres changement et l'annulation d'une trame en attente pendant une emission. Suite complete : **812 tests / 165 suites**, aucun echec, erreur ou skip. Lint release : **0 issue** ; APK release compile. Graphe AST actualise. Cela ne remplace pas les essais physiques du pilote.
 
 ### Lot 2 : implementer un seul profil SOME/IP
 

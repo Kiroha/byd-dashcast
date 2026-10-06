@@ -1955,11 +1955,16 @@ android {
         // needs GET_SIGNATURES alongside GET_SIGNING_CERTIFICATES to populate signingInfo.
         // Preserve digest and exact current-signer checks; diagnose missing certificates
         // separately. Manual installation is required to replace the broken updater.)
-        versionCode 644
-        versionName "1.9.5-beta"
+        // 645 = 1.9.6-beta (INDEPENDENT NAVIGATION DESTINATIONS. Settings exposes a
+        // master switch and separate HUD/cluster choices. Cluster-only uses AutoContainer
+        // without CAN or Amap; settings changes clear on the serial notification writer.
+        // Preserve extensionless ELF bytes in OEM exports while still redacting text.
+        // All guidance labels cover the 13 app languages. Vehicle rendering remains to test.)
+        versionCode 645
+        versionName "1.9.6-beta"
 
         // Ship only the locales the app actually translates (verified against
-        // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
+        // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
         // folders from resources.arsc — smaller APK for the bandwidth-limited
         // on-car OTA. Perf audit 2026-07-05 finding #16.
         resConfigs 'ar', 'be', 'de', 'en', 'es', 'it', 'kk', 'pl', 'ru', 'tr', 'uk', 'uz'

@@ -226,8 +226,8 @@
     <string name="ime_banner_btn_dismiss">Қайта көрсетпеу</string>
     <string name="ime_banner_toast_enabled">Авто-пернетақта белсенді ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Параметрлерді ашу мүмкін емес — « Кластер авто-пернетақтасы » арнайы мүмкіндіктер қызметін қолмен қосыңыз.</string>
-    <string name="hud_notif_banner_title">HUD Навигация — хабарландыруларға қатынасу қажет</string>
-    <string name="hud_notif_banner_body">DashCast кластер экранында навигация нұсқаулықтарын көрсету үшін хабарландыруларға қатынасуды қажет етеді. Параметрлер → Арнайы қолданба қатынасы → Хабарландыруларға қатынасу → DashCast тармағынан қосыңыз.</string>
+    <string name="hud_notif_banner_title">Навигация — хабарландыруларға қатынасу қажет</string>
+    <string name="hud_notif_banner_body">DashCast таңдалған экрандарда навигация нұсқауларын көрсету үшін хабарландыруларға қатынасуды қажет етеді. Параметрлер → Арнайы қолданба қатынасы → Хабарландыруларға қатынасу → DashCast тармағынан қосыңыз.</string>
     <string name="hud_notif_banner_toast_enabled">Хабарландыруларға қатынасу берілді ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Пернетақта аспаптар тақтасында жұмыс істеуі үшін Параметрлер → Арнайы мүмкіндіктер бөлімінде « DashCast Cluster IME » қызметін қосыңыз.</string>
     <string name="btn_keyboard">⌨</string>
@@ -582,4 +582,10 @@
     <string name="consent_result_refused">Бас тартылды. Есептеріңіз осы құрылғыда қалады.</string>
     <string name="consent_result_revoked">Келісім кері қайтарылды. Есептеріңіз осы құрылғыда қалады.</string>
     <string name="bug_kept_locally_fmt">Есеп осы құрылғыда сақталды: %1$s. Оны қалай жіберетініңізді таңдаңыз.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">Навигация нұсқаулары</string>
+    <string name="settings_navigation_support">Maps/Waze нұсқауларын көрсетіңіз. Аспаптар панелі HUD болмаса да жұмыс істейді. Хабарландыруларға қол жеткізуге рұқсат беру керек.</string>
+    <string name="settings_navigation_enabled">Нұсқауларды қосу</string>
+    <string name="settings_navigation_hud">HUD (алдыңғы әйнек)</string>
+    <string name="settings_navigation_cluster">Аспаптар панелі (рульдің артында)</string>
 </resources>

@@ -226,8 +226,8 @@
     <string name="ime_banner_btn_dismiss">Boshqa ko\'rsatilmasin</string>
     <string name="ime_banner_toast_enabled">Avto-klaviatura faol ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Sozlamalarni ochib bo\'lmadi — « Klaster avto-klaviaturasi » maxsus imkoniyatlar xizmatini qo\'lda yoqing.</string>
-    <string name="hud_notif_banner_title">HUD Navigatsiya — bildirishnomaga kirish talab qilinadi</string>
-    <string name="hud_notif_banner_body">DashCast klaster ekranida navigatsiya ko\'rsatmalarini ko\'rsatish uchun bildirishnomalarga kirishni talab qiladi. Sozlamalar → Maxsus ilova kirishi → Bildirishnomalarga kirish → DashCast bo\'limidan yoqing.</string>
+    <string name="hud_notif_banner_title">Navigatsiya — bildirishnomaga kirish talab qilinadi</string>
+    <string name="hud_notif_banner_body">DashCast tanlangan ekranlarda navigatsiya ko\'rsatmalarini ko\'rsatish uchun bildirishnomalarga kirishni talab qiladi. Sozlamalar → Maxsus ilova kirishi → Bildirishnomalarga kirish → DashCast bo\'limidan yoqing.</string>
     <string name="hud_notif_banner_toast_enabled">Bildirishnomalarga kirish berildi ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Klaviatura asboblar paneli ekranida ishlashi uchun Sozlamalar → Maxsus imkoniyatlar bo\'limidan « DashCast Cluster IME » xizmatini yoqing.</string>
     <string name="btn_keyboard">⌨</string>
@@ -582,4 +582,10 @@
     <string name="consent_result_refused">Rad etildi. Hisobotlaringiz shu qurilmada qoladi.</string>
     <string name="consent_result_revoked">Rozilik bekor qilindi. Hisobotlaringiz shu qurilmada qoladi.</string>
     <string name="bug_kept_locally_fmt">Hisobot shu qurilmada saqlandi: %1$s. Uni qanday uzatishni tanlang.</string>
+    <!-- Navigation guidance destinations -->
+    <string name="settings_navigation_title">Navigatsiya ko‘rsatmalari</string>
+    <string name="settings_navigation_support">Maps/Waze ko‘rsatmalarini ko‘rsating. Asboblar paneli HUD bo‘lmasa ham ishlaydi. Bildirishnomalarga kirishga ruxsat berish kerak.</string>
+    <string name="settings_navigation_enabled">Ko‘rsatmalarni yoqish</string>
+    <string name="settings_navigation_hud">HUD (old oyna)</string>
+    <string name="settings_navigation_cluster">Asboblar paneli (rul orqasida)</string>
 </resources>

@@ -209,7 +209,7 @@ class PermissionBannerCoordinator(
         var shouldShow = false
         try {
             val dismissed = ClusterPrefs.isHudBannerDismissed(mHost.getContext())
-            if (!dismissed) {
+            if (!dismissed && ClusterPrefs.getNavigationOutputs(mHost.getContext()).enabled) {
                 val listeners = Settings.Secure.getString(
                         mHost.getContext().contentResolver, "enabled_notification_listeners")
                 val granted = listeners != null
