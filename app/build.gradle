@@ -1951,8 +1951,12 @@ android {
         // lifecycle and an inactive SOME/IP transport foundation; AUTO still selects only
         // the validated legacy DL3 path. Includes the report-redaction fixes since 1.9.3.
         // Offline tests and release checks only; this exact build has not run in a vehicle.)
-        versionCode 643
-        versionName "1.9.4-beta"
+        // 644 = 1.9.5-beta (OTA CERTIFICATE COLLECTION FIX. Android 10 archive parsing
+        // needs GET_SIGNATURES alongside GET_SIGNING_CERTIFICATES to populate signingInfo.
+        // Preserve digest and exact current-signer checks; diagnose missing certificates
+        // separately. Manual installation is required to replace the broken updater.)
+        versionCode 644
+        versionName "1.9.5-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

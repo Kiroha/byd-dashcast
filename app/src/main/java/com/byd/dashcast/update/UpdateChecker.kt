@@ -349,8 +349,11 @@ object UpdateChecker {
             throw Exception("APK SHA-256 mismatch")
         }
         val pm = context.packageManager
+        // Android 10 only collects archive certificates when GET_SIGNATURES is set.
+        // Request both flags so signingInfo contains the current APK signers.
         val downloaded = pm.getPackageArchiveInfo(
-                apkFile.absolutePath, PackageManager.GET_SIGNING_CERTIFICATES)
+                apkFile.absolutePath,
+                PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES)
         val installed = pm.getPackageInfo(
                 context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
         if (downloaded == null || downloaded.applicationInfo == null) {
@@ -370,6 +373,12 @@ object UpdateChecker {
         }
         val downloadedSigners = downloaded.signingInfo?.apkContentsSigners
         val installedSigners = installed.signingInfo?.apkContentsSigners
+        if (downloadedSigners.isNullOrEmpty()) {
+            throw Exception("Downloaded APK signing certificates unavailable")
+        }
+        if (installedSigners.isNullOrEmpty()) {
+            throw Exception("Installed app signing certificates unavailable")
+        }
         if (!sameSignerSet(downloadedSigners, installedSigners)) {
             throw Exception("APK signer mismatch")
         }

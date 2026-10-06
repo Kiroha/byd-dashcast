@@ -15,6 +15,25 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.5-beta (versionCode 644)
+
+**Manual installation required.** Download `DashCast-v1.9.5-beta-release.apk` and
+install it over the existing app; do not uninstall first. The older updater rejects
+the APK before installation and therefore cannot deliver its own correction through
+the failing OTA path. [Release notes and manual installation steps](docs/releases/1.9.5-beta.md).
+
+**Fix OTA APK validation on Android 10 / DiLink 3.** Request both archive-signing
+flags so Android collects the downloaded APK's certificates before comparing its
+current signers with the installed app. Previously, absent certificate data was
+reported as `APK signer mismatch`, stopping the update before installation. Missing
+certificates now produce a distinct error; SHA-256 verification and exact signer
+matching remain enforced. [Incident analysis](docs/incidents/INC-20261005-230720-OTA-CERTIFICATES.md).
+
+Includes the HUD OEM evidence collection introduced in 1.9.4-beta. Offline validation:
+**796 tests pass, release lint 0 issues, release assembly successful**. This exact build
+and OTA installation of a subsequent version remain to be verified on a vehicle.
+`1.9.0` remains the stable release.
+
 ### 1.9.4-beta (versionCode 643)
 
 **Collect HUD OEM evidence from Diag.** The existing **BYD APK Extraction** action now
