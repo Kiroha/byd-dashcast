@@ -15,6 +15,24 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.7-beta (versionCode 646)
+
+**Recognize Maps Morphe navigation notifications.** The SX361 SEAL pilot runs
+`app.morphe.android.apps.maps`, which 1.9.6-beta rejected before parsing or sending
+guidance to AutoContainer. Add this exact package to the existing navigation
+allowlist for posting, reconnect scanning, source handover and route removal.
+Keep the existing parsers and HUD/cluster routing. Regression coverage exercises
+cluster-only guidance and clearing, source handover, and rejection of a similarly
+named unknown package. Vehicle rendering remains to be verified after installation.
+The complete **815-test suite / 165 suites** passes, with **release lint 0 issues**.
+
+**SEAL without HUD:** enable guidance, disable HUD and enable Instrument cluster.
+The existing settings remain translated in all 13 app languages; this patch adds
+no user-facing strings. Android 10 users on 1.9.4-beta or older must install
+manually over the existing app. Builds 1.9.5-beta and newer contain the OTA
+certificate correction, but vehicle installation remains to verify.
+[Release notes and testing steps](docs/releases/1.9.7-beta.md).
+
 ### 1.9.6-beta (versionCode 645)
 
 **Select HUD and instrument-cluster guidance independently in Settings.** A master

@@ -1,7 +1,7 @@
 # Plan d'integration HUD OpenBYD 2.5 dans DashCast
 
 Statut : collecte OEM depuis Diag ajoutee au lot 0, lot 1 implemente avec choix HUD/cluster independants et socle transport du lot 2 ajoute hors vehicule ; SOME/IP reste inactif. Plan initial : 2026-09-12.
-Derniere verification : 2026-10-06 (export pilote DL3 / SX361).
+Derniere verification : 2026-10-08 (bug report Maps Morphe du pilote DL3 / SX361).
 Contrat de reference : [OPENBYD_2_5_HUD_INTEROP.md](OPENBYD_2_5_HUD_INTEROP.md).
 
 ## Audit disponible
@@ -53,6 +53,10 @@ Verification de cette extension : **791 tests complets passes**, dont **8 nouvea
 **Export pilote recu le 2026-10-06 :** `byd_apk_20261006_062116.zip`, produit par **1.9.5-beta / build 644**, identifie Android 10 / DL3 et le firmware `6125f_1for2_USER_SIGN_SX361_202606100404_Q2700`, confirme par l'utilisateur. Les quatre APK OEM sont intacts et identiques au precedent dump DL3 ; le nouveau desassemblage d'AmapService confirme le recepteur broadcast et son chemin CAN. `pm path`, les dumps de package et l'inventaire indiquent l'absence de `com.ts.car.someip.service` et `com.byd.naviauto` : leur manque dans le ZIP n'est pas un echec de copie. Ne pas deduire un profil SOME/IP de la seule propriete `ro.vehicle.type=DiLink50_5.0UI` sur ce systeme API29.
 
 L'analyse decouvre aussi neuf executables sans extension corrompus par la conversion texte du zipper. Le correctif local conserve les ELF32/ELF64 sans relacher l'anonymisation des textes ; les APK et `.so` de cet export restent exploitables. Ce correctif est inclus dans le candidat 1.9.6-beta / build 645, et non dans l'APK 1.9.5-beta. [Preuves, limites et suite pour le pilote](OEM_EVIDENCE_DL3_SX361_20261006.md).
+
+**Nouvel export recu le 2026-10-07 :** `byd_apk_20261007_192600.zip`, produit par la pre-release publiee **1.9.6-beta / build 645**, confirme le meme firmware SX361 et la presence du collecteur corrige sur la SEAL. Les neuf executables sont maintenant des ELF64 AArch64 valides : tables, segments et sections controles, lecture `readelf` sans erreur. Les quatre APK signes, les seize `.so` et les deux fichiers de framework sont identiques a ceux du 6 octobre ; les packages SOME/IP/naviauto restent absents. L'aide de `fission_screencap` fournit une piste de capture du combine, encore non verifiee sur vehicule. La prochaine preuve attendue pour ce pilote est le rendu du guidage AutoContainer en mode cluster seul, et non un nouvel export identique. [Comparaison, empreintes et essais restants](OEM_EVIDENCE_DL3_SX361_20261007.md).
+
+**Essai Maps recu le 2026-10-08 :** le pilote ne voit aucun guidage sur le combine. Le rapport 1.9.6-beta montre l'acces aux notifications accorde, Maps `app.morphe.android.apps.maps` en navigation et des notifications publiees, mais aucun `NAV PARSE`. Ce package n'est pas dans la liste reconnue par le listener : il est rejete avant tout guidage AutoContainer. Le correctif **1.9.7-beta / build 646** ajoute ce package precis, avec reproduction de l'echec puis tests du guidage/effacement en mode cluster seul et de la reprise de source. Le dernier choix journalise est les deux sorties ; le prochain essai doit conserver HUD OFF / combine ON. Le correctif n'est pas dans la 1.9.6-beta publiee, et le rendu physique reste a verifier apres installation d'un build corrige. [Analyse et limites](../incidents/INC-20261008-195115-MAPS-MORPHE-CLUSTER.md) ; [notes et essais 1.9.7-beta](../releases/1.9.7-beta.md).
 
 ### Lot 1 : separer le routage sans changer la voie DL3
 
