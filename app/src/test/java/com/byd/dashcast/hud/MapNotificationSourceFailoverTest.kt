@@ -30,6 +30,19 @@ class MapNotificationSourceFailoverTest {
     }
 
     @Test
+    fun `Morphe Maps remains eligible when another navigation source disappears`() {
+        val morphe = notification("app.morphe.android.apps.maps", 1, 100L)
+        val removedWaze = notification("com.waze", 2, 200L)
+        val lookalike = notification("app.morphe.android.apps.maps.fake", 3, 300L)
+
+        val remaining = MapNotificationListenerService.remainingNavigationNotifications(
+            arrayOf(removedWaze, lookalike, morphe), removedWaze.key,
+        )
+
+        assertEquals(listOf(morphe.key), remaining.map { it.key })
+    }
+
+    @Test
     fun `removal replays remaining guidance before closing the HUD`() {
         val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
             .firstOrNull { java.io.File(it, "app/src/main/java/com/byd/dashcast/hud").isDirectory }

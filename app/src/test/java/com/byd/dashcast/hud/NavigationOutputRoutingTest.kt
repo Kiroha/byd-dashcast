@@ -187,6 +187,57 @@ class NavigationOutputRoutingTest {
     }
 
     @Test
+    fun `Morphe Maps notification drives and clears cluster-only guidance`() {
+        select(hud = false, cluster = true)
+        val serviceController = Robolectric.buildService(MapNotificationListenerService::class.java).create()
+        val service = serviceController.get()
+        try {
+            val notification = navigationNotification(pkg = "app.morphe.android.apps.maps")
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+
+            assertEquals("Morphe Maps guidance must reach AutoContainer", 1, daemon.clusterFrames.size)
+            assertEquals(listOf(5), daemon.containerModes)
+            val guidance = decode(daemon.clusterFrames.single())
+            assertEquals(1, guidance.naviState())
+            assertEquals(3, guidance.nextTurnIcon())
+            assertEquals(200, guidance.curToSegmentDist())
+
+            service.onNotificationRemoved(notification)
+            awaitWriter(service)
+            assertEquals(listOf(1, 9), daemon.clusterFrames.map { decode(it).naviState() })
+            assertFalse(HudController.isHudActive)
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+        } finally {
+            val executor = writerExecutor(service)
+            serviceController.destroy()
+            assertTrue(executor.awaitTermination(3, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun `an unknown package resembling Morphe Maps cannot drive navigation`() {
+        select(hud = false, cluster = true)
+        val serviceController = Robolectric.buildService(MapNotificationListenerService::class.java).create()
+        val service = serviceController.get()
+        try {
+            service.onNotificationPosted(navigationNotification(pkg = "app.morphe.android.apps.maps.fake"))
+            awaitWriter(service)
+
+            assertFalse(HudController.isHudActive)
+            assertTrue(daemon.containerModes.isEmpty())
+            assertTrue(daemon.clusterFrames.isEmpty())
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+        } finally {
+            val executor = writerExecutor(service)
+            serviceController.destroy()
+            assertTrue(executor.awaitTermination(3, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
     fun `changing settings during guidance clears on writer and identical new content resumes`() {
         select(hud = false, cluster = true)
         val serviceController = Robolectric.buildService(MapNotificationListenerService::class.java).create()
@@ -268,14 +319,17 @@ class NavigationOutputRoutingTest {
     private fun decode(payload: ByteArray): NaviInfo = NaviInfo.getRootAsNaviInfo(ByteBuffer.wrap(payload))
 
     @Suppress("DEPRECATION")
-    private fun navigationNotification(title: String = "Turn right in 200 m"): StatusBarNotification {
+    private fun navigationNotification(
+        title: String = "Turn right in 200 m",
+        pkg: String = "com.google.android.apps.maps"
+    ): StatusBarNotification {
         val notification = Notification().apply {
             flags = Notification.FLAG_ONGOING_EVENT
             category = Notification.CATEGORY_NAVIGATION
             extras.putCharSequence(Notification.EXTRA_TITLE, title)
             extras.putCharSequence(Notification.EXTRA_TEXT, "Test road")
         }
-        return StatusBarNotification("com.google.android.apps.maps", "com.google.android.apps.maps",
+        return StatusBarNotification(pkg, pkg,
             1, "navigation", 10_001, 20_001, 0, notification, Process.myUserHandle(), 1_000L)
     }
 

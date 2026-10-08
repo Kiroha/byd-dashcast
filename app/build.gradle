@@ -1960,8 +1960,12 @@ android {
         // without CAN or Amap; settings changes clear on the serial notification writer.
         // Preserve extensionless ELF bytes in OEM exports while still redacting text.
         // All guidance labels cover the 13 app languages. Vehicle rendering remains to test.)
-        versionCode 645
-        versionName "1.9.6-beta"
+        // 646 = 1.9.7-beta (MAPS MORPHE NAVIGATION. Recognize the exact package found
+        // in the SX361 SEAL report before notification parsing. Cover cluster-only
+        // guidance/cleanup and source handover; reject similarly named unknown apps.
+        // Preserve destination settings and protocol routing. Vehicle rendering still needs a test.)
+        versionCode 646
+        versionName "1.9.7-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

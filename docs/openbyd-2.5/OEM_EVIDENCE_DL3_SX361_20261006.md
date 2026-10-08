@@ -122,5 +122,6 @@ erreur ou skip ; **lint release : 0 issue**. `graphify update .` termine.
 3. Pour SOME/IP, obtenir un export d'un vehicule possedant effectivement
    `com.ts.car.someip.service`. L'APK recepteur, ses ACL et son contrat serveur
    restent a etablir pour les profils UI7/CN D5/Launcher.
-4. Integrer le correctif ZIP au prochain build avant de recollecter les
-   executables natifs, si ces preuves deviennent necessaires.
+4. Correctif ZIP livre en **1.9.6-beta / build 645** ; le nouvel
+   [export du 7 octobre](OEM_EVIDENCE_DL3_SX361_20261007.md) confirme la
+   recuperation des neuf executables natifs en ELF64 AArch64 valides.

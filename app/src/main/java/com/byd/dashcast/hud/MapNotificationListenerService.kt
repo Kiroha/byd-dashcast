@@ -39,6 +39,7 @@ import java.util.regex.Pattern
  * Supported navigation apps:
  *  - `com.google.android.apps.maps` — Google Maps
  *  - `app.revanced.android.apps.maps` — Maps ReVanced
+ *  - `app.morphe.android.apps.maps` — Maps Morphe
  *  - `com.waze` — Waze (best-effort text parsing)
  *
  * Parsing strategy (applied in order):
@@ -601,6 +602,7 @@ class MapNotificationListenerService : NotificationListenerService() {
 
         private const val PKG_MAPS = "com.google.android.apps.maps"
         private const val PKG_MAPS_REVANCED = "app.revanced.android.apps.maps"
+        private const val PKG_MAPS_MORPHE = "app.morphe.android.apps.maps"
         private const val PKG_WAZE = "com.waze"
 
         /**
@@ -1299,7 +1301,10 @@ class MapNotificationListenerService : NotificationListenerService() {
         // ─── Helpers ──────────────────────────────────────────────────────────
 
         private fun isNavPackage(pkg: String?): Boolean =
-                PKG_MAPS == pkg || PKG_MAPS_REVANCED == pkg || PKG_WAZE == pkg
+                // The SX361 report uses this exact Maps package. Keep an explicit allowlist:
+                // category=navigation alone does not establish a supported notification format.
+                PKG_MAPS == pkg || PKG_MAPS_REVANCED == pkg ||
+                        PKG_MAPS_MORPHE == pkg || PKG_WAZE == pkg
 
         // Known navigation apps we do NOT support: their guidance is not exposed as a parseable
         // notification (e.g. Telenav delivers binary NaviInfo AIDL, not text). Prefix match on the pkg.
