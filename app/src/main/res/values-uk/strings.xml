@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Не вдалося зберегти значки Maps.</string>
     <string name="diag_nav_icons_ready">ZIP збережено: %1$s\n\nКнопка «Надіслати» передає зображення до підтримки DashCast. Вони можуть містити текст або особисті дані.</string>
     <string name="diag_nav_icons_keep">Залишити на цьому пристрої</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Пристрій-супутник</string>
+    <string name="satellite_description">Експериментальна функція. Підключіть зовнішній пристрій для отримання навігаційних підказок або показу його карти на панелі приладів. Підказки супутника замінюють підказки застосунків автомобіля.</string>
+    <string name="satellite_enable">Увімкнути приймач супутника</string>
+    <string name="satellite_guidance">Використовувати підказки супутника</string>
+    <string name="satellite_waiting">Очікування супутника…</string>
+    <string name="satellite_pair">Сполучити пристрій</string>
+    <string name="satellite_revoke">Скасувати сполучення</string>
+    <string name="satellite_revoke_confirm">Скасувати сполучення? Пристрої доведеться сполучити знову.</string>
+    <string name="satellite_preview">Перегляд отриманої карти</string>
+    <string name="satellite_project">Показати на панелі приладів</string>
+    <string name="satellite_enable_first">Увімкніть приймач супутника.</string>
+    <string name="satellite_cluster_first">Спочатку увімкніть проєкцію на панель приладів у DashCast.</string>
+    <string name="satellite_unavailable">Прийом на цьому пристрої недоступний.</string>
 </resources>

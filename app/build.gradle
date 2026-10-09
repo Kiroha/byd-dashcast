@@ -2165,6 +2165,9 @@ dependencies {
     compileOnly fileTree(include: ['*.jar'], dir: 'libs')
     testCompileOnly fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.13.2'
+    // Opt-in satellite control/signalling only; video uses the installed WebView WebRTC engine.
+    // Keep this pure-Java dependency pinned and avoid adding native codecs to the base APK.
+    implementation 'org.java-websocket:Java-WebSocket:1.6.0'
 
     // PRE-0 (audit) — characterisation-test harness. The audit established that the only test
     // dependency was plain JUnit 4, so everything touching Context / Binder / Handler / Surface /

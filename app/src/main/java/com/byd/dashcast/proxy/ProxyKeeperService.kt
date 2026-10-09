@@ -131,6 +131,8 @@ class ProxyKeeperService : Service() {
         val ctx = applicationContext
         // Independent of the daemon Binder: a down proxy must not block notification recovery.
         NavigationListenerKeeper.maybeKeepAlive(ctx)
+        // Disabled by default; the existing boot/background keeper owns opt-in receiver recovery.
+        com.byd.dashcast.satellite.SatelliteReceiverService.maybeKeepAlive(ctx)
         // v1.6.x — app-wide persistent hotspot keep-alive rides this always-on FG heartbeat so
         // the hotspot "always on" survives HotspotActivity being closed (INC-20260705-195419: the
         // in-Activity watchdog stopped on onPause). No-op unless the user enabled it; internally

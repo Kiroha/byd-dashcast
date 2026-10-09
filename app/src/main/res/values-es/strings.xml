@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">No se pudieron capturar los iconos de Maps.</string>
     <string name="diag_nav_icons_ready">ZIP guardado: %1$s\n\n«Enviar» transmite las imágenes al soporte de DashCast. Pueden contener texto o información personal.</string>
     <string name="diag_nav_icons_keep">Guardar en este dispositivo</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Dispositivo satélite</string>
+    <string name="satellite_description">Experimental. Vincula un dispositivo externo para recibir sus indicaciones o mostrar su mapa en el cuadro de instrumentos. Las indicaciones del satélite sustituyen a las de las aplicaciones del coche.</string>
+    <string name="satellite_enable">Activar receptor satélite</string>
+    <string name="satellite_guidance">Usar indicaciones del satélite</string>
+    <string name="satellite_waiting">Esperando al satélite…</string>
+    <string name="satellite_pair">Vincular un dispositivo</string>
+    <string name="satellite_revoke">Revocar dispositivos vinculados</string>
+    <string name="satellite_revoke_confirm">¿Revocar los dispositivos vinculados? Tendrán que vincularse de nuevo.</string>
+    <string name="satellite_preview">Vista previa del mapa recibido</string>
+    <string name="satellite_project">Mostrar en el cuadro de instrumentos</string>
+    <string name="satellite_enable_first">Activa el receptor satélite.</string>
+    <string name="satellite_cluster_first">Activa primero la proyección del cuadro de instrumentos en DashCast.</string>
+    <string name="satellite_unavailable">Recepción no disponible en este dispositivo.</string>
 </resources>

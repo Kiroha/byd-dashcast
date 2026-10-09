@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Maps белгішелерін түсіру сәтсіз аяқталды.</string>
     <string name="diag_nav_icons_ready">ZIP сақталды: %1$s\n\n«Жіберу» суреттерді DashCast қолдау қызметіне жібереді. Оларда мәтін немесе жеке ақпарат болуы мүмкін.</string>
     <string name="diag_nav_icons_keep">Осы құрылғыда сақтау</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Серіктес құрылғы</string>
+    <string name="satellite_description">Тәжірибелік мүмкіндік. Бағыт нұсқауларын алу немесе картасын аспаптар панелінде көрсету үшін сыртқы құрылғыны жұптаңыз. Серіктес нұсқаулары көлікте орнатылған қолданбалардың нұсқауларын алмастырады.</string>
+    <string name="satellite_enable">Серіктес қабылдағышты қосу</string>
+    <string name="satellite_guidance">Серіктес нұсқауларын пайдалану</string>
+    <string name="satellite_waiting">Серіктес күтілуде…</string>
+    <string name="satellite_pair">Құрылғыны жұптау</string>
+    <string name="satellite_revoke">Жұптауларды жою</string>
+    <string name="satellite_revoke_confirm">Жұптаулар жойылсын ба? Құрылғыларды қайта жұптау қажет болады.</string>
+    <string name="satellite_preview">Алынған картаны алдын ала көру</string>
+    <string name="satellite_project">Аспаптар панелінде көрсету</string>
+    <string name="satellite_enable_first">Серіктес қабылдағышты қосыңыз.</string>
+    <string name="satellite_cluster_first">Алдымен DashCast ішінде аспаптар панеліне проекцияны қосыңыз.</string>
+    <string name="satellite_unavailable">Бұл құрылғыда қабылдау қолжетімсіз.</string>
 </resources>

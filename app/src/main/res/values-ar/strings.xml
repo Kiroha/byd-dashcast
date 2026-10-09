@@ -603,4 +603,19 @@
     <string name="diag_nav_icons_failed">تعذر التقاط أيقونات Maps.</string>
     <string name="diag_nav_icons_ready">تم حفظ ملف ZIP: %1$s\n\nيرسل زر «إرسال» الصور إلى دعم DashCast. قد تحتوي على نص أو معلومات شخصية.</string>
     <string name="diag_nav_icons_keep">الاحتفاظ على هذا الجهاز</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">جهاز تابع</string>
+    <string name="satellite_description">ميزة تجريبية. أقرن جهازًا خارجيًا لتلقي إرشاداته أو عرض خريطته على لوحة العدادات. تحل إرشادات الجهاز التابع محل إرشادات التطبيقات المثبتة في السيارة.</string>
+    <string name="satellite_enable">تفعيل مستقبل الجهاز التابع</string>
+    <string name="satellite_guidance">استخدام إرشادات الجهاز التابع</string>
+    <string name="satellite_waiting">بانتظار الجهاز التابع…</string>
+    <string name="satellite_pair">إقران جهاز</string>
+    <string name="satellite_revoke">إلغاء الأجهزة المقترنة</string>
+    <string name="satellite_revoke_confirm">هل تريد إلغاء الأجهزة المقترنة؟ ستحتاج إلى إقرانها مجددًا.</string>
+    <string name="satellite_preview">معاينة الخريطة المستلمة</string>
+    <string name="satellite_project">العرض على لوحة العدادات</string>
+    <string name="satellite_enable_first">فعّل مستقبل الجهاز التابع.</string>
+    <string name="satellite_cluster_first">فعّل أولًا العرض على لوحة العدادات في DashCast.</string>
+    <string name="satellite_unavailable">الاستقبال غير متاح على هذا الجهاز.</string>
 </resources>

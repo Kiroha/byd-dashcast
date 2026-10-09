@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Die Erfassung der Maps-Symbole ist fehlgeschlagen.</string>
     <string name="diag_nav_icons_ready">ZIP gespeichert: %1$s\n\nMit „Senden“ werden die Bilder an den DashCast-Support übertragen. Sie können Text oder persönliche Informationen enthalten.</string>
     <string name="diag_nav_icons_keep">Auf diesem Gerät behalten</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Satellitengerät</string>
+    <string name="satellite_description">Experimentell. Koppeln Sie ein externes Gerät, um dessen Navigation zu empfangen oder seine Karte im Kombiinstrument anzuzeigen. Die Satellitennavigation ersetzt die Navigation der Apps im Fahrzeug.</string>
+    <string name="satellite_enable">Satellitenempfänger aktivieren</string>
+    <string name="satellite_guidance">Navigation vom Satellitengerät verwenden</string>
+    <string name="satellite_waiting">Warten auf Satellitengerät…</string>
+    <string name="satellite_pair">Gerät koppeln</string>
+    <string name="satellite_revoke">Gekoppelte Geräte widerrufen</string>
+    <string name="satellite_revoke_confirm">Gekoppelte Geräte widerrufen? Sie müssen erneut gekoppelt werden.</string>
+    <string name="satellite_preview">Empfangene Karte ansehen</string>
+    <string name="satellite_project">Im Kombiinstrument anzeigen</string>
+    <string name="satellite_enable_first">Aktivieren Sie den Satellitenempfänger.</string>
+    <string name="satellite_cluster_first">Aktivieren Sie zuerst die Projektion im Kombiinstrument in DashCast.</string>
+    <string name="satellite_unavailable">Empfang auf diesem Gerät nicht verfügbar.</string>
 </resources>

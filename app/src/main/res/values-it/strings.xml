@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Acquisizione delle icone di Maps non riuscita.</string>
     <string name="diag_nav_icons_ready">ZIP salvato: %1$s\n\n«Invia» trasmette le immagini al supporto DashCast. Possono contenere testo o informazioni personali.</string>
     <string name="diag_nav_icons_keep">Mantieni su questo dispositivo</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Dispositivo satellite</string>
+    <string name="satellite_description">Sperimentale. Associa un dispositivo esterno per riceverne le indicazioni o mostrarne la mappa sul quadro strumenti. Le indicazioni del satellite sostituiscono quelle delle app installate in auto.</string>
+    <string name="satellite_enable">Attiva ricevitore satellite</string>
+    <string name="satellite_guidance">Usa indicazioni del satellite</string>
+    <string name="satellite_waiting">In attesa del satellite…</string>
+    <string name="satellite_pair">Associa un dispositivo</string>
+    <string name="satellite_revoke">Revoca dispositivi associati</string>
+    <string name="satellite_revoke_confirm">Revocare i dispositivi associati? Dovranno essere associati di nuovo.</string>
+    <string name="satellite_preview">Anteprima della mappa ricevuta</string>
+    <string name="satellite_project">Mostra sul quadro strumenti</string>
+    <string name="satellite_enable_first">Attiva il ricevitore satellite.</string>
+    <string name="satellite_cluster_first">Attiva prima la proiezione sul quadro strumenti in DashCast.</string>
+    <string name="satellite_unavailable">Ricezione non disponibile su questo dispositivo.</string>
 </resources>

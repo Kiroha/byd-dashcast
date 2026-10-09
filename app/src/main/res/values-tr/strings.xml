@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Maps simgeleri kaydedilemedi.</string>
     <string name="diag_nav_icons_ready">ZIP kaydedildi: %1$s\n\n“Gönder” görselleri DashCast desteğine iletir. Metin veya kişisel bilgi içerebilirler.</string>
     <string name="diag_nav_icons_keep">Bu cihazda tut</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Uydu cihazı</string>
+    <string name="satellite_description">Deneysel. Yol tariflerini almak veya haritasını gösterge panelinde göstermek için harici bir cihaz eşleştirin. Uydu yol tarifleri, araçta yüklü uygulamaların yol tariflerinin yerini alır.</string>
+    <string name="satellite_enable">Uydu alıcısını etkinleştir</string>
+    <string name="satellite_guidance">Uydu yol tariflerini kullan</string>
+    <string name="satellite_waiting">Uydu bekleniyor…</string>
+    <string name="satellite_pair">Cihaz eşleştir</string>
+    <string name="satellite_revoke">Eşleştirmeleri iptal et</string>
+    <string name="satellite_revoke_confirm">Eşleştirmeler iptal edilsin mi? Cihazların yeniden eşleştirilmesi gerekir.</string>
+    <string name="satellite_preview">Alınan haritayı önizle</string>
+    <string name="satellite_project">Gösterge panelinde göster</string>
+    <string name="satellite_enable_first">Uydu alıcısını etkinleştirin.</string>
+    <string name="satellite_cluster_first">Önce DashCast içinde gösterge paneli yansıtmasını etkinleştirin.</string>
+    <string name="satellite_unavailable">Bu cihazda alım kullanılamıyor.</string>
 </resources>

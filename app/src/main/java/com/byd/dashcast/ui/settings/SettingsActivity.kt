@@ -115,6 +115,9 @@ class SettingsActivity : AppCompatActivity() {
         // Bug report delivery — where the answer is visible, and where it can be changed.
         findViewById<View>(R.id.row_report_channel)?.setOnClickListener { showConsentDialog() }
         refreshReportChannelRow()
+        findViewById<View>(R.id.btn_satellite)?.setOnClickListener {
+            startActivity(Intent(this, com.byd.dashcast.satellite.SatelliteSettingsActivity::class.java))
+        }
     }
 
     // ── Bug report delivery (consent) ────────────────────────────────────────
