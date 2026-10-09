@@ -1975,8 +1975,13 @@ android {
         // Reassert only an already-approved listener after repeated unconfirmed rebinds.
         // Include the opt-in satellite guidance/WebRTC receiver, disabled by default, with
         // settings in all 13 languages. Other image maneuvers and vehicle recovery need tests.)
-        versionCode 648
-        versionName "1.9.9-beta"
+        // 649 = 1.9.10-beta (SIX-DIGIT SATELLITE PAIRING. Integrate PR #93 and keep
+        // f09d84ae in the publication history. A two-minute foreground-owned code window
+        // pairs Satellite 0.2.0-dev through mutually confirmed J-PAKE and an encrypted profile.
+        // Preserve protocol-v1 pinned WSS, explicit source/output selection and the existing
+        // HUD/listener fixes. Pairing strings cover all 13 languages; vehicle validation is pending.)
+        versionCode 649
+        versionName "1.9.10-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

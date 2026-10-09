@@ -15,6 +15,30 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.10-beta (versionCode 649)
+
+**Pair DashCast Satellite with a temporary six-digit code.** Integrate
+[PR #93](https://github.com/Kiroha/byd-dashcast/pull/93), preserving commit
+`f09d84aea9cb28633727062b6797bc711c0d3c1e` on `feat/hud-2.0` and the existing
+1.9.9-beta navigation fixes. **Compatible with DashCast Satellite 0.2.0-dev.**
+Enable the receiver, select **Pair a device**, switch to the Tbox and enter the
+code in Satellite → **Pair with DashCast**. The foreground receiver keeps the
+same two-minute window while switching screens; no JSON file or camera is needed.
+
+Mutual J-PAKE confirmation precedes the encrypted pairing-profile transfer.
+Expiry, cancellation, receiver shutdown, token revocation and authenticated WSS
+close the temporary endpoint. Code pairing leaves protocol-v1 guidance and
+certificate pinning unchanged; remote guidance and HUD/cluster outputs remain
+explicit choices. The receiver remains disabled by default. All pairing labels
+cover the **13 app languages**.
+
+Validation: **919 JVM tests / 176 suites**, **10 JavaScript viewer scenarios**,
+release lint **0 issues**, and matching Satellite 0.2.0-dev pairing fixtures.
+Install this newly versioned vehicle APK manually over 1.9.9-beta or its pairing
+preview without uninstalling. **Real pairing, hotspot gateway detection and HUD/
+cluster guidance on the car remain to be validated. 1.9.0 remains stable.**
+[Release notes and pairing steps](docs/releases/1.9.10-beta.md).
+
 ### 1.9.9-beta (versionCode 648)
 
 **Decode the Maps turn image captured on the SEAL.** Recognize the captured
