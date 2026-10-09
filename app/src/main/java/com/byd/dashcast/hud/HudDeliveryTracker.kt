@@ -19,6 +19,8 @@ internal class HudDeliveryTracker {
         return deliveredGeneration.get() == currentGeneration.get()
     }
 
+    fun isCurrent(generation: Long): Boolean = currentGeneration.get() == generation
+
     fun invalidate() {
         currentGeneration.incrementAndGet()
     }

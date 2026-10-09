@@ -25,6 +25,8 @@ import java.util.Locale
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import java.util.regex.Pattern
 import java.lang.ref.WeakReference
 
@@ -48,6 +50,8 @@ import java.lang.ref.WeakReference
  *     (most reliable, version-independent).
  *  2. Fall back to keyword-based text parsing of the notification title + text (handles all
  *     locales, but less precise for ambiguous instructions).
+ *  3. On the serial writer, match Maps' large bitmap against capture-validated turn masks.
+ *     Unknown images remain unresolved; they never replace an already known text/resource icon.
  *
  * Kotlin port note: the six regexes and the two 240-entry lookup tables were transposed by script
  * and diffed against a golden dump of the Java's own compiled Patterns. RX_ROAD_ONTO contains a
@@ -83,6 +87,12 @@ class MapNotificationListenerService : NotificationListenerService() {
     private var lastBigText = ""
     private var lastSubText = ""
     private var lastNotificationKey: String? = null
+    private var lastHadLargeIcon = false
+    @Volatile private var lastImageIdentity: ImageIdentity? = null
+    private var lastImageDecoded = false
+    private var lastImageDelivered = false
+    private val notificationSequence = AtomicLong()
+    private val pendingImage = AtomicReference<ImageFlight?>()
 
     // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
     // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
@@ -113,18 +123,7 @@ class MapNotificationListenerService : NotificationListenerService() {
             t
         }
         hudDispatcher = LatestValueDispatcher(executor) { pending ->
-            val enabled = ClusterPrefs.getNavigationOutputs(processContext).enabled &&
-                !com.byd.dashcast.satellite.SatellitePrefs.usesRemoteGuidance(processContext)
-            try {
-                val accepted = com.byd.dashcast.satellite.NavigationInputRouter.updateLocal(processContext, pending.data)
-                diagnostics.delivery(pending.sourcePackage, enabled, accepted, SystemClock.elapsedRealtime())
-                    ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
-                if (accepted) hudDeliveryTracker.markDelivered(pending.generation)
-            } catch (e: Exception) {
-                diagnostics.delivery(pending.sourcePackage, enabled, false,
-                    SystemClock.elapsedRealtime(), e.javaClass.simpleName)
-                    ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
-            }
+            deliverHudUpdate(processContext, pending)
         }
         navigationPreferencesObserver = ClusterPrefs.observeNavigationOutputs(processContext) {
             AppLogger.i(TAG, "navigation outputs: " + ClusterPrefs.getNavigationOutputs(processContext))
@@ -195,6 +194,10 @@ class MapNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        parseNotification(sbn)
+    }
+
+    private fun parseNotification(sbn: StatusBarNotification?, inline: Boolean = false) {
         if (sbn == null) return
 
         val n = sbn.notification
@@ -205,6 +208,7 @@ class MapNotificationListenerService : NotificationListenerService() {
         if (n == null) return
 
         if (!isNavigationNotification(n)) return
+        if (!inline) notificationSequence.incrementAndGet()
         diagnostics.observe(sbn.packageName, SystemClock.elapsedRealtime())
 
         // NOTE: whether this counts as nav activity is decided LOWER DOWN, once we know if it looks
@@ -221,12 +225,16 @@ class MapNotificationListenerService : NotificationListenerService() {
         val text = charSeqToString(extras.getCharSequence("android.text"))
         val bigText = charSeqToString(extras.getCharSequence("android.bigText"))
         val subText = charSeqToString(extras.getCharSequence("android.subText"))
+        // Maps can change only its large bitmap while every text stays identical. Reading and
+        // matching that image belongs to the bounded writer, so defer image-frame dedup to it.
+        val largeIcon = if (isMapsPackage(sbn.packageName)) n.getLargeIcon() else null
 
         // Notification-level deduplication: skip if content hasn't changed since last call.
-        if (isSameNotificationContent(
+        val sameText = isSameNotificationContent(
                         sbn.key, lastNotificationKey,
                         title, lastTitle, text, lastText,
-                        bigText, lastBigText, subText, lastSubText)) {
+                        bigText, lastBigText, subText, lastSubText)
+        if (sameText && largeIcon == null && !lastHadLargeIcon) {
             diagnostics.duplicate()
             // AUD-003 — but first, keep the HUD alive. This is a re-post of the very frame already
             // displayed, so the arrow up there is still correct and the staleness watchdog must not
@@ -243,6 +251,7 @@ class MapNotificationListenerService : NotificationListenerService() {
         lastBigText = bigText
         lastSubText = subText
         lastNotificationKey = sbn.key
+        lastHadLargeIcon = largeIcon != null
         // New content gets a generation before parsing. It is acknowledged only after the serial
         // writer confirms a guidance output; unparseable or failed frames remain unacknowledged.
         val deliveryGeneration = hudDeliveryTracker.beginContent()
@@ -252,7 +261,7 @@ class MapNotificationListenerService : NotificationListenerService() {
         // BEFORE the skip / guidance gates below, so notifications that FAIL to parse (the Waze case
         // we need to diagnose: no matchable distance/icon → early return) are still captured. Location
         // PII; OFF by default; deduped on content by the check just above. See KEY_NAV_RAW_CAPTURE.
-        if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
+        if (ClusterPrefs.isNavRawCaptureEnabled(this) && !sameText) {
             AppLogger.i(TAG, "NAV RAW pkg=" + sbn.packageName +
                     " title='" + clip(title) + "'" +
                     " text='" + clip(text) + "'" +
@@ -322,6 +331,14 @@ class MapNotificationListenerService : NotificationListenerService() {
         // 2. Distance to next turn — scan title then text then combined.
         val distance = parseFirstDistance(combined)
 
+        if (largeIcon != null) {
+            if (hasGuidanceSignal(iconId, distance)) noteNavActivity(sbn.packageName, false)
+            postNavUpdate(navigationData(iconId, distance, combined, text, subText),
+                deliveryGeneration, sbn.packageName, ImageCandidate(largeIcon,
+                    ImageIdentity(sbn.key, title, text, bigText, subText, ""), iconResName), inline)
+            return
+        }
+
         // GUIDANCE-SIGNAL GATE: only treat this as a navigation frame if it actually looks like
         // guidance — a resolved maneuver icon OR a real forward distance (> 0). This rejects a nav
         // app's NON-guidance ongoing notifications (e.g. Waze's CLOSE_WAZE_CHANNEL foreground/close
@@ -366,21 +383,8 @@ class MapNotificationListenerService : NotificationListenerService() {
         }
 
         // 3. Road name — look for "onto X" / "sur X" pattern.
-        val roadName = parseRoadName(combined)
-
-        // 4. Remaining route (from subText or parenthetical in text).
-        val routeSrc = if (subText.isEmpty()) text else subText
-        val remainSec = parseRemainingSeconds(routeSrc)
-        val remainDist = parseRemainingMeters(routeSrc)
-
-        // 5. Arrival wall-clock ETA (OEM EXPECTED_ARRIVE_* family) — best-effort from the summary
-        //    line; distinct from the remaining DURATION above. A notification carries no day-code.
-        val eta = parseEtaClock(routeSrc)
-        val etaHour = eta?.get(0)
-        val etaMinute = eta?.get(1)
-
-        val data = HudNavigationData(
-                iconId, distance, roadName, remainDist, remainSec, etaHour, etaMinute)
+        val data = navigationData(iconId, distance, combined, text, subText)
+        val roadName = data.roadName
 
         // NAV PARSE diagnostic (raw notification → parsed icon), written to the DashCast journal so
         // every bug report shows GROUND TRUTH: what the nav app's notification actually said vs the
@@ -398,11 +402,11 @@ class MapNotificationListenerService : NotificationListenerService() {
                     " titleLen=" + title.length + " textLen=" + text.length +
                     (if (bigText.isEmpty()) "" else " bigLen=" + bigText.length) +
                     " -> dist=" + distance + " road=" + (if (roadName.isEmpty()) "no" else "yes") +
-                    " eta=" + (if (eta != null) "yes" else "no"))
+                    " eta=" + (if (data.etaHour != null) "yes" else "no"))
         }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance +
                 " road=" + (if (roadName.isEmpty()) "no" else "yes") +
-                " remDist=" + remainDist + " remSec=" + remainSec)
+                " remDist=" + data.remainingDistanceMeters + " remSec=" + data.remainingTimeSeconds)
 
         // Fully parsed into a HudNavigationData ⇒ we understood the frame, not just received it.
         noteNavActivity(sbn.packageName, true)
@@ -412,7 +416,90 @@ class MapNotificationListenerService : NotificationListenerService() {
         // Remember WHICH notification is driving the HUD, so the removal path can tell it apart
         // from the nav app's other ongoing notifications. See onNotificationRemoved.
         sDrivingKey = sbn.key
-        postNavUpdate(data, deliveryGeneration, sbn.packageName)
+        postNavUpdate(data, deliveryGeneration, sbn.packageName, inline = inline)
+    }
+
+    private fun navigationData(iconId: Int, distance: Int, combined: String, text: String,
+                               subText: String): HudNavigationData {
+        val routeSrc = if (subText.isEmpty()) text else subText
+        val eta = parseEtaClock(routeSrc)
+        return HudNavigationData(iconId, distance, parseRoadName(combined),
+            parseRemainingMeters(routeSrc), parseRemainingSeconds(routeSrc), eta?.get(0), eta?.get(1))
+    }
+
+    private fun deliverHudUpdate(ctx: Context, pending: PendingHudUpdate) {
+        val flight = pendingImage.get()?.takeIf { it.generation == pending.generation }
+        try { deliverResolvedUpdate(ctx, pending) }
+        finally { if (flight != null) pendingImage.compareAndSet(flight, null) }
+    }
+
+    private fun deliverResolvedUpdate(ctx: Context, pending: PendingHudUpdate) {
+        val data = if (pending.image == null) pending.data else resolveImageGuidance(ctx, pending)
+        if (data == null) return
+        val enabled = ClusterPrefs.getNavigationOutputs(ctx).enabled &&
+            !com.byd.dashcast.satellite.SatellitePrefs.usesRemoteGuidance(ctx)
+        try {
+            val accepted = com.byd.dashcast.satellite.NavigationInputRouter.updateLocal(ctx, data)
+            if (pending.image != null) lastImageDelivered = accepted
+            diagnostics.delivery(pending.sourcePackage, enabled, accepted, SystemClock.elapsedRealtime())
+                ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
+            if (accepted) hudDeliveryTracker.markDelivered(pending.generation)
+        } catch (e: Exception) {
+            if (pending.image != null) lastImageDelivered = false
+            diagnostics.delivery(pending.sourcePackage, enabled, false,
+                SystemClock.elapsedRealtime(), e.javaClass.simpleName)
+                ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
+        }
+    }
+
+    /** Only the serial worker owns image classification; newer posts and terminal resets fence it. */
+    private fun resolveImageGuidance(ctx: Context, pending: PendingHudUpdate): HudNavigationData? {
+        if (!hudDeliveryTracker.isCurrent(pending.generation)) return null
+        val candidate = requireNotNull(pending.image)
+        val image = MapsManeuverImage.read(ctx, candidate.icon)
+        if (!hudDeliveryTracker.isCurrent(pending.generation)) return null
+        val identity = candidate.content.copy(image = "${pending.data.iconId}:${image.identity}")
+        val sameImageFrame = identity == lastImageIdentity
+        if (sameImageFrame && (!lastImageDecoded || (lastImageDelivered && HudController.isHudActive))) {
+            diagnostics.duplicate()
+            if (lastImageDelivered && lastImageDecoded) {
+                com.byd.dashcast.satellite.NavigationInputRouter.noteLocal(ctx)
+                hudDeliveryTracker.markDelivered(pending.generation)
+            }
+            return null
+        }
+        lastImageIdentity = identity
+        lastImageDecoded = false
+        lastImageDelivered = false
+        // Preserve resource/text behavior, including the existing U-turn and roundabout parsing.
+        val iconId = pending.data.iconId.takeIf { it > 0 } ?: image.iconId
+        val distance = pending.data.distanceMeters
+        if (hasGuidanceSignal(iconId, distance)) noteNavActivity(pending.sourcePackage, false)
+        if (!isCompleteGuidance(iconId, distance)) {
+            val reason = when {
+                !hasGuidanceSignal(iconId, distance) -> NavigationDiagnostics.Rejection.NO_GUIDANCE
+                iconId <= 0 -> NavigationDiagnostics.Rejection.NO_MANEUVER
+                else -> NavigationDiagnostics.Rejection.NO_DISTANCE
+            }
+            recordRejection(pending.sourcePackage, reason, candidate.resourceName, distance,
+                identity.title.length, identity.text.length, identity.bigText.length)
+            return null
+        }
+        val data = pending.data.let { HudNavigationData(iconId, distance, it.roadName,
+            it.remainingDistanceMeters, it.remainingTimeSeconds, it.etaHour, it.etaMinute) }
+        lastImageDecoded = true
+        noteNavActivity(pending.sourcePackage, true)
+        diagnostics.parsed()
+        sDrivingKey = identity.key
+        val navKey = "$iconId|${data.roadName}"
+        if (navKey != lastLoggedNav) {
+            lastLoggedNav = navKey
+            AppLogger.i(TAG, "NAV PARSE icon=$iconId src=" +
+                (if (pending.data.iconId > 0) "resource_or_text" else "large_icon") +
+                " smallIcon='${candidate.resourceName}' titleLen=${identity.title.length}" +
+                " textLen=${identity.text.length} -> dist=$distance road=${data.roadName.isNotEmpty()}")
+        }
+        return data
     }
 
     private fun recordRejection(
@@ -446,15 +533,43 @@ class MapNotificationListenerService : NotificationListenerService() {
         val key = sbn.key
         val driving = sDrivingKey
         if (driving != null && driving != key) {
+            cancelRemovedImage(key)
+            // The writer may have accepted this candidate just as removal entered the callback.
+            if (sDrivingKey == key) {
+                sDrivingKey = null
+                notificationSequence.incrementAndGet()
+                if (replayRemainingNavigation(key)) return
+                postNavClose()
+                resetNotificationIdentity()
+                return
+            }
             // A different ongoing notification from the same nav app. Not our guidance frame.
             Log.d(TAG, "nav notification removed but it was not the one driving the HUD — ignored")
             return
         }
         Log.d(TAG, "nav notification removed → closeNavigation")
+        notificationSequence.incrementAndGet()
         sDrivingKey = null
         if (replayRemainingNavigation(key)) return
         postNavClose()
         resetNotificationIdentity()
+    }
+
+    private fun cancelRemovedImage(key: String) {
+        val flight = pendingImage.get() ?: return
+        if (flight.key != key || !pendingImage.compareAndSet(flight, null) ||
+            !hudDeliveryTracker.isCurrent(flight.generation)) return
+        hudDeliveryTracker.invalidate()
+        notificationSequence.incrementAndGet()
+        val ctx = appContext ?: return
+        // Preserve another live source. If decoding crossed the final generation check, this
+        // ordered cleanup clears only the removed image that actually became the driving source.
+        hudDispatcher?.cancelPendingAndExecute {
+            if (sDrivingKey == key) {
+                clearTrackedNavigation()
+                com.byd.dashcast.satellite.NavigationInputRouter.closeLocal(ctx)
+            }
+        }
     }
 
     private fun replayRemainingNavigation(removedKey: String?): Boolean {
@@ -464,7 +579,27 @@ class MapNotificationListenerService : NotificationListenerService() {
             Log.w(TAG, "remaining navigation rescan failed: " + t.message)
             return false
         }
-        for (candidate in remainingNavigationNotifications(active, removedKey)) {
+        val remaining = remainingNavigationNotifications(active, removedKey)
+        if (remaining.any { isMapsPackage(it.packageName) && it.notification.getLargeIcon() != null }) {
+            val ctx = appContext ?: return false
+            val sequence = notificationSequence.get()
+            // Removal must not cancel an image candidate merely because decoding is asynchronous.
+            // Resolve the remaining sources serially, and fence handover if a fresh post arrives.
+            return hudDispatcher?.cancelPendingAndExecute {
+                for (candidate in remaining) {
+                    if (notificationSequence.get() != sequence) return@cancelPendingAndExecute
+                    resetNotificationIdentity()
+                    parseNotification(candidate, inline = true)
+                    if (notificationSequence.get() != sequence) return@cancelPendingAndExecute
+                    if (sDrivingKey != null) return@cancelPendingAndExecute
+                }
+                if (notificationSequence.get() == sequence) {
+                    clearTrackedNavigation()
+                    com.byd.dashcast.satellite.NavigationInputRouter.closeLocal(ctx)
+                }
+            } == true
+        }
+        for (candidate in remaining) {
             resetNotificationIdentity()
             onNotificationPosted(candidate)
             if (sDrivingKey != null) {
@@ -481,10 +616,14 @@ class MapNotificationListenerService : NotificationListenerService() {
         lastBigText = ""
         lastSubText = ""
         lastNotificationKey = null
+        lastHadLargeIcon = false
+        lastImageIdentity = null
+        pendingImage.set(null)
         hudDeliveryTracker.invalidate()
     }
 
     private fun clearTrackedNavigation() {
+        notificationSequence.incrementAndGet()
         sDrivingKey = null
         resetNotificationIdentity()
     }
@@ -495,9 +634,13 @@ class MapNotificationListenerService : NotificationListenerService() {
      * Queue a nav update on the serial HUD writer thread. If updates arrive faster than the daemon
      * drains them, only the newest pending state survives and at most one drain task stays queued.
      */
-    private fun postNavUpdate(data: HudNavigationData?, generation: Long, sourcePackage: String) {
+    private fun postNavUpdate(data: HudNavigationData?, generation: Long, sourcePackage: String,
+                              image: ImageCandidate? = null, inline: Boolean = false) {
         if (data == null) return
-        hudDispatcher?.submit(PendingHudUpdate(data, generation, sourcePackage))
+        val pending = PendingHudUpdate(data, generation, sourcePackage, image)
+        if (image != null) pendingImage.set(ImageFlight(image.content.key, generation))
+        if (inline) appContext?.let { deliverHudUpdate(it, pending) }
+        else hudDispatcher?.submit(pending)
     }
 
     /**
@@ -518,7 +661,12 @@ class MapNotificationListenerService : NotificationListenerService() {
         }
     }
 
-    private class PendingHudUpdate(val data: HudNavigationData, val generation: Long, val sourcePackage: String)
+    private data class ImageIdentity(val key: String, val title: String, val text: String,
+        val bigText: String, val subText: String, val image: String)
+    private class ImageCandidate(val icon: Icon, val content: ImageIdentity, val resourceName: String)
+    private data class ImageFlight(val key: String, val generation: Long)
+    private class PendingHudUpdate(val data: HudNavigationData, val generation: Long,
+        val sourcePackage: String, val image: ImageCandidate? = null)
 
     // ─── Icon resolution ──────────────────────────────────────────────────
 

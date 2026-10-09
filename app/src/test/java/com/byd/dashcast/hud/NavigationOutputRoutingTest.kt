@@ -2,6 +2,10 @@ package com.byd.dashcast.hud
 
 import android.app.Application
 import android.app.Notification
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.graphics.drawable.Icon
 import android.os.Binder
 import android.os.Looper
 import android.os.Parcel
@@ -26,6 +30,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowSystemClock
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowNotificationListenerService
@@ -66,6 +71,160 @@ class NavigationOutputRoutingTest {
         setStatic(HudController::class.java, "isDl3Hud", null)
         setStatic(ProxyClient::class.java, "sBinder", null)
         setStatic(ProxyClient::class.java, "sDaemonVer", null)
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `captured Morphe left bitmap drives cluster with distance and no maneuver text`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = capturedLeftIcon()
+        try {
+            val notification = imageNotification(bitmap)
+            assertNotNull(notification.notification.getLargeIcon())
+            val recognition = MapsManeuverImage.read(context, notification.notification.getLargeIcon())
+            assertEquals(recognition.identity, CanBusController.ICON_TURN_LEFT, recognition.iconId)
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertEquals(MapNotificationListenerService.diagnosticsSummary() + AppLogger.get(),
+                1, daemon.clusterFrames.size)
+            val guidance = decode(daemon.clusterFrames.single())
+            assertEquals(2, guidance.nextTurnIcon())
+            assertEquals(80, guidance.curToSegmentDist())
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+            assertFalse(bitmap.isRecycled)
+        } finally { service.onDestroy(); bitmap.recycle() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `image-only direction changes bypass text dedup while identical images keep guidance alive`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val left = capturedLeftIcon()
+        val right = Bitmap.createBitmap(left, 0, 0, left.width, left.height,
+            Matrix().apply { setScale(-1f, 1f) }, false)
+        try {
+            service.onNotificationPosted(imageNotification(left))
+            awaitWriter(service)
+            service.onNotificationPosted(imageNotification(right))
+            awaitWriter(service)
+            assertEquals(listOf(2, 3), daemon.clusterFrames.map { decode(it).nextTurnIcon() })
+            service.onNotificationPosted(imageNotification(right))
+            awaitWriter(service)
+            assertEquals(2, daemon.clusterFrames.size)
+            ShadowSystemClock.advanceBy(Duration.ofSeconds(10))
+            service.onNotificationPosted(imageNotification(right))
+            awaitWriter(service)
+            ShadowSystemClock.advanceBy(Duration.ofSeconds(5))
+            HudController::class.java.getDeclaredMethod("closeIfStale")
+                .apply { isAccessible = true }.invoke(HudController)
+            assertTrue(HudController.isHudActive)
+            assertEquals(0, daemon.canCalls)
+        } finally { service.onDestroy(); left.recycle(); right.recycle() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `removing a pending Maps image keeps the existing Waze route and drops the removed candidate`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = capturedLeftIcon()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        try {
+            service.onNotificationPosted(navigationNotification(pkg = "com.waze"))
+            awaitWriter(service)
+            writerExecutor(service).execute { entered.countDown(); release.await(3, TimeUnit.SECONDS) }
+            assertTrue(entered.await(3, TimeUnit.SECONDS))
+            val maps = imageNotification(bitmap)
+            service.onNotificationPosted(maps)
+            service.onNotificationRemoved(maps)
+            release.countDown()
+            awaitWriter(service)
+            assertTrue(HudController.isHudActive)
+            assertEquals(1, daemon.clusterFrames.size)
+            assertEquals(3, decode(daemon.clusterFrames.single()).nextTurnIcon())
+        } finally { release.countDown(); service.onDestroy(); bitmap.recycle() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `remaining Maps image guidance takes over when a Waze route is removed`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = capturedLeftIcon()
+        try {
+            val waze = navigationNotification(pkg = "com.waze")
+            service.onNotificationPosted(waze)
+            awaitWriter(service)
+            Shadow.extract<ShadowNotificationListenerService>(service)
+                .addActiveNotification(imageNotification(bitmap))
+            service.onNotificationRemoved(waze)
+            awaitWriter(service)
+            assertTrue(HudController.isHudActive)
+            assertEquals(2, decode(daemon.clusterFrames.last()).nextTurnIcon())
+            assertEquals(0, daemon.canCalls)
+        } finally { service.onDestroy(); bitmap.recycle() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a fresh identical image reopens guidance after watchdog expiry`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = capturedLeftIcon()
+        try {
+            val notification = imageNotification(bitmap)
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            ShadowSystemClock.advanceBy(Duration.ofSeconds(13))
+            HudController::class.java.getDeclaredMethod("closeIfStale")
+                .apply { isAccessible = true }.invoke(HudController)
+            assertFalse(HudController.isHudActive)
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertTrue(HudController.isHudActive)
+            assertEquals(listOf(1, 9, 1), daemon.clusterFrames.map { decode(it).naviState() })
+        } finally { service.onDestroy(); bitmap.recycle() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `removing an image notification while writer is busy cannot reopen its ended route`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = capturedLeftIcon()
+        val release = CountDownLatch(1)
+        val entered = CountDownLatch(1)
+        try {
+            writerExecutor(service).execute { entered.countDown(); release.await(3, TimeUnit.SECONDS) }
+            assertTrue(entered.await(3, TimeUnit.SECONDS))
+            val notification = imageNotification(bitmap)
+            service.onNotificationPosted(notification)
+            service.onNotificationRemoved(notification)
+            release.countDown()
+            awaitWriter(service)
+            assertFalse(HudController.isHudActive)
+            assertTrue(daemon.clusterFrames.none { decode(it).naviState() == 1 })
+        } finally { release.countDown(); service.onDestroy(); bitmap.recycle() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `existing U-turn text survives an unknown large image without guessing its bitmap`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = Bitmap.createBitmap(54, 54, Bitmap.Config.ARGB_8888)
+        try {
+            val notification = imageNotification(bitmap)
+            notification.notification.extras.putCharSequence(Notification.EXTRA_TEXT, "Faites demi-tour")
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertEquals(8, decode(daemon.clusterFrames.single()).nextTurnIcon())
+            assertEquals(0, daemon.canCalls)
+        } finally { service.onDestroy(); bitmap.recycle() }
     }
 
     @Test
@@ -559,6 +718,21 @@ class NavigationOutputRoutingTest {
     private fun frameAtDistance(distance: Int) = HudNavigationData(frame.iconId, distance,
         frame.roadName, frame.remainingDistanceMeters, frame.remainingTimeSeconds,
         frame.etaHour, frame.etaMinute)
+
+    private fun capturedLeftIcon(): Bitmap = requireNotNull(BitmapFactory.decodeStream(
+        javaClass.getResourceAsStream("/navigation/maps-left-seal-20261009.png")))
+
+    @Suppress("DEPRECATION")
+    private fun imageNotification(bitmap: Bitmap): StatusBarNotification {
+        val pkg = "app.morphe.android.apps.maps"
+        val notification = Notification.Builder(context, "navigation")
+            .setSmallIcon(android.R.drawable.ic_dialog_map)
+            .setLargeIcon(Icon.createWithBitmap(bitmap))
+            .setContentTitle("80 m").setContentText("Test road")
+            .setCategory(Notification.CATEGORY_NAVIGATION).setOngoing(true).build()
+        return StatusBarNotification(pkg, pkg, 1, "navigation", 10_001, 20_001, 0,
+            notification, Process.myUserHandle(), 1_000L)
+    }
 
     private fun awaitWriter(service: MapNotificationListenerService) {
         val executor = writerExecutor(service)

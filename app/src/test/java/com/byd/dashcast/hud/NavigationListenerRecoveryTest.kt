@@ -7,6 +7,23 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class NavigationListenerRecoveryTest {
+    @Test fun `approval refresh has its own bounded cadence and stops after confirmed binding`() {
+        val recovery = NavigationListenerRecovery()
+        val token = Any()
+        recovery.onCreated(token)
+        var refreshed = 0
+        recovery.maybeRecover(0, true, true) {}
+        assertFalse(recovery.maybeRefresh(0) { refreshed++ })
+        recovery.maybeRecover(30_000, true, true) {}
+        assertTrue(recovery.maybeRefresh(30_000) { refreshed++ })
+        assertFalse(recovery.maybeRefresh(90_000) { refreshed++ })
+        assertFalse(recovery.snapshot(90_000).connected)
+        assertTrue(recovery.maybeRefresh(330_000) { refreshed++ })
+        assertEquals(2, refreshed)
+        recovery.onConnected(token)
+        assertFalse(recovery.maybeRefresh(900_000) { refreshed++ })
+    }
+
     @Test
     fun `cold start requests immediately and zero uptime still respects retry cadence`() {
         val recovery = NavigationListenerRecovery()
