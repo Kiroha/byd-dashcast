@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Увімкнути підказки</string>
     <string name="settings_navigation_hud">HUD (лобове скло)</string>
     <string name="settings_navigation_cluster">Панель приладів (за кермом)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Експортувати значки Maps</string>
+    <string name="diag_nav_icons_consent">Зберегти зараз значки активних сповіщень навігації Maps? Зображення можуть містити текст або особисті дані. ZIP залишається на цьому пристрої, доки ви не вирішите ним поділитися.</string>
+    <string name="diag_nav_icons_capture">Зберегти</string>
+    <string name="diag_nav_icons_no_listener">Служба сповіщень DashCast відключена. Дозвольте їй доступ до сповіщень і повторіть спробу.</string>
+    <string name="diag_nav_icons_none">Немає активного сповіщення навігації Maps. Запустіть маршрут у Maps і повторіть спробу.</string>
+    <string name="diag_nav_icons_failed">Не вдалося зберегти значки Maps.</string>
+    <string name="diag_nav_icons_ready">ZIP збережено: %1$s\n\nКнопка «Надіслати» передає зображення до підтримки DashCast. Вони можуть містити текст або особисті дані.</string>
+    <string name="diag_nav_icons_keep">Залишити на цьому пристрої</string>
 </resources>

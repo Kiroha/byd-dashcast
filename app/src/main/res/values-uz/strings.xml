@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Ko‘rsatmalarni yoqish</string>
     <string name="settings_navigation_hud">HUD (old oyna)</string>
     <string name="settings_navigation_cluster">Asboblar paneli (rul orqasida)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Maps belgilarini eksport qilish</string>
+    <string name="diag_nav_icons_consent">Faol Maps navigatsiya bildirishnomalarining belgilarini hozir saqlaysizmi? Rasmlarda matn yoki shaxsiy ma’lumotlar bo‘lishi mumkin. ZIP fayl uni ulashishni tanlaguningizcha shu qurilmada qoladi.</string>
+    <string name="diag_nav_icons_capture">Saqlash</string>
+    <string name="diag_nav_icons_no_listener">DashCast bildirishnoma xizmati uzilgan. Bildirishnomalarga kirishga ruxsat berib, qayta urinib ko‘ring.</string>
+    <string name="diag_nav_icons_none">Faol Maps navigatsiya bildirishnomasi yo‘q. Maps marshrutini boshlang va qayta urinib ko‘ring.</string>
+    <string name="diag_nav_icons_failed">Maps belgilarini saqlab bo‘lmadi.</string>
+    <string name="diag_nav_icons_ready">ZIP saqlandi: %1$s\n\n«Yuborish» rasmlarni DashCast yordam xizmatiga yuboradi. Ularda matn yoki shaxsiy ma’lumotlar bo‘lishi mumkin.</string>
+    <string name="diag_nav_icons_keep">Shu qurilmada saqlash</string>
 </resources>

@@ -15,6 +15,9 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.hud.HudDiagActivity
+import com.byd.dashcast.hud.HudCaptureSupport
+import com.byd.dashcast.hud.MapNotificationListenerService
+import com.byd.dashcast.hud.NavigationIconCapture
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.R
@@ -60,12 +63,13 @@ class DiagActivity : Activity() {
     private lateinit var fissionRegistryBtn: Button
     private lateinit var armCallbackBtn: Button
     private lateinit var traceBtn: Button
+    private lateinit var navIconCaptureBtn: Button
 
     /** Shared across every probe on this screen — they all write into the same [logView], and
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -107,6 +111,19 @@ class DiagActivity : Activity() {
             text = "HUD bench (DL3) — sendInfo2 NaviInfo test"
             setOnClickListener { startActivity(Intent(this@DiagActivity, HudDiagActivity::class.java)) }
         })
+
+        navIconCaptureBtn = Button(this).apply {
+            setText(R.string.diag_nav_icons_title)
+            setOnClickListener {
+                AlertDialog.Builder(this@DiagActivity)
+                    .setTitle(R.string.diag_nav_icons_title)
+                    .setMessage(R.string.diag_nav_icons_consent)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.diag_nav_icons_capture) { _, _ -> captureNavigationIcons() }
+                    .show()
+            }
+        }
+        root.addView(navIconCaptureBtn)
 
         probeBtn = Button(this).apply {
             text = "OEM cluster probes (read-only)"
@@ -515,6 +532,72 @@ class DiagActivity : Activity() {
                 releaseBusy()
             }
         }, "projection-trace").start()
+    }
+
+    private fun captureNavigationIcons() {
+        if (!claimBusyOrWarn()) return
+        allDiagButtons().forEach { it.isEnabled = false }
+        val app = applicationContext
+        val owner = WeakReference(this)
+        Thread({
+            try {
+                val active = MapNotificationListenerService.activeMapsNotificationsForCapture()
+                if (active == null) {
+                    logExtraction(owner, app.getString(R.string.diag_nav_icons_no_listener))
+                    return@Thread
+                }
+                if (active.isEmpty()) {
+                    logExtraction(owner, app.getString(R.string.diag_nav_icons_none))
+                    return@Thread
+                }
+                val zip = NavigationIconCapture.capture(app, active)
+                logExtraction(owner, "Maps icon snapshot kept locally: ${zip.absolutePath}")
+                val activity = owner.get() ?: return@Thread
+                activity.runOnUiThread {
+                    if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                    activity.showNavigationIconExport(zip)
+                }
+            } catch (e: Exception) {
+                logExtraction(owner, app.getString(R.string.diag_nav_icons_failed) + " (${e.javaClass.simpleName})")
+            } finally {
+                completeExtraction(owner)
+            }
+        }, "nav-icon-capture").start()
+    }
+
+    private fun showNavigationIconExport(zip: File) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.diag_nav_icons_title)
+            .setMessage(getString(R.string.diag_nav_icons_ready, zip.absolutePath))
+            .setNegativeButton(R.string.diag_nav_icons_keep, null)
+            .setNeutralButton(R.string.bug_share_chooser) { _, _ ->
+                AppLogger.shareFile(this, zip, getString(R.string.diag_nav_icons_title),
+                    getString(R.string.bug_share_chooser))
+            }
+            .setPositiveButton(R.string.bug_send) { _, _ ->
+                com.byd.dashcast.report.ReportConsent.askThen(this) {
+                    val app = applicationContext
+                    val owner = WeakReference(this)
+                    Thread({
+                        TelegramBugReporter.send(app, zip,
+                            "Maps notification icon snapshot — DashCast ${com.byd.dashcast.BuildConfig.VERSION_NAME}",
+                            HudCaptureSupport.HUD_TEST_THREAD,
+                            object : TelegramBugReporter.Callback {
+                                override fun onSent() { logExtraction(owner, "Maps icon snapshot sent.") }
+                                override fun onFailed(message: String) {
+                                    logExtraction(owner, "Upload failed; ZIP kept locally: ${zip.absolutePath}")
+                                    owner.get()?.let { activity ->
+                                        HudCaptureSupport.offerFallback(activity, zip) { logExtraction(owner, it) }
+                                    }
+                                }
+                                override fun onAmbiguous(message: String) {
+                                    logExtraction(owner, "Upload outcome unknown; ZIP kept locally: ${zip.absolutePath}")
+                                }
+                            })
+                    }, "nav-icon-upload").start()
+                }
+            }
+            .show()
     }
 
     private fun log(line: String) {

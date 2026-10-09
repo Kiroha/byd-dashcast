@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Уключыць падказкі</string>
     <string name="settings_navigation_hud">HUD (лабавое шкло)</string>
     <string name="settings_navigation_cluster">Панэль прыбораў (за рулём)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Экспартаваць значкі Maps</string>
+    <string name="diag_nav_icons_consent">Захапіць зараз значкі актыўных апавяшчэнняў навігацыі Maps? Выявы могуць змяшчаць тэкст або асабістыя звесткі. ZIP застаецца на гэтай прыладзе, пакуль вы не вырашыце ім падзяліцца.</string>
+    <string name="diag_nav_icons_capture">Захапіць</string>
+    <string name="diag_nav_icons_no_listener">Служба апавяшчэнняў DashCast адключана. Дазвольце ёй доступ да апавяшчэнняў і паўтарыце спробу.</string>
+    <string name="diag_nav_icons_none">Няма актыўнага апавяшчэння навігацыі Maps. Запусціце маршрут у Maps і паўтарыце спробу.</string>
+    <string name="diag_nav_icons_failed">Не ўдалося захапіць значкі Maps.</string>
+    <string name="diag_nav_icons_ready">ZIP захаваны: %1$s\n\nКнопка «Адправіць» перадае выявы ў падтрымку DashCast. Яны могуць змяшчаць тэкст або асабістыя звесткі.</string>
+    <string name="diag_nav_icons_keep">Пакінуць на гэтай прыладзе</string>
 </resources>

@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Navigationshinweise aktivieren</string>
     <string name="settings_navigation_hud">HUD (Windschutzscheibe)</string>
     <string name="settings_navigation_cluster">Kombiinstrument (hinter dem Lenkrad)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Maps-Symbole exportieren</string>
+    <string name="diag_nav_icons_consent">Die Symbole der aktiven Maps-Navigationsbenachrichtigungen jetzt erfassen? Bilder können Text oder persönliche Informationen enthalten. Die ZIP-Datei bleibt auf diesem Gerät, bis Sie sie teilen.</string>
+    <string name="diag_nav_icons_capture">Erfassen</string>
+    <string name="diag_nav_icons_no_listener">Der DashCast-Benachrichtigungsdienst ist getrennt. Erlauben Sie den Benachrichtigungszugriff und versuchen Sie es erneut.</string>
+    <string name="diag_nav_icons_none">Keine aktive Maps-Navigationsbenachrichtigung. Starten Sie eine Maps-Route und versuchen Sie es erneut.</string>
+    <string name="diag_nav_icons_failed">Die Erfassung der Maps-Symbole ist fehlgeschlagen.</string>
+    <string name="diag_nav_icons_ready">ZIP gespeichert: %1$s\n\nMit „Senden“ werden die Bilder an den DashCast-Support übertragen. Sie können Text oder persönliche Informationen enthalten.</string>
+    <string name="diag_nav_icons_keep">Auf diesem Gerät behalten</string>
 </resources>

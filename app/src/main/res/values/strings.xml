@@ -644,4 +644,14 @@
     <string name="settings_navigation_enabled">Activer le guidage</string>
     <string name="settings_navigation_hud">HUD (pare-brise)</string>
     <string name="settings_navigation_cluster">Combiné d’instruments (derrière le volant)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Exporter les icônes Maps</string>
+    <string name="diag_nav_icons_consent">Capturer maintenant les icônes des notifications de navigation Maps ? Les images peuvent contenir du texte ou des informations personnelles. Le ZIP reste sur cet appareil jusqu’à ce que vous choisissiez de le partager.</string>
+    <string name="diag_nav_icons_capture">Capturer</string>
+    <string name="diag_nav_icons_no_listener">Le service de notifications DashCast est déconnecté. Autorisez son accès aux notifications, puis réessayez.</string>
+    <string name="diag_nav_icons_none">Aucune notification de navigation Maps active. Lancez un itinéraire Maps, puis réessayez.</string>
+    <string name="diag_nav_icons_failed">La capture des icônes Maps a échoué.</string>
+    <string name="diag_nav_icons_ready">ZIP enregistré : %1$s\n\n« Envoyer » transmet les images au support DashCast. Elles peuvent contenir du texte ou des informations personnelles.</string>
+    <string name="diag_nav_icons_keep">Garder sur cet appareil</string>
 </resources>

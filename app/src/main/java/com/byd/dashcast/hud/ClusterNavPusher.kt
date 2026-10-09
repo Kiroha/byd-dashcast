@@ -1,9 +1,10 @@
 package com.byd.dashcast.hud
 
-import android.util.Log
+import android.os.IBinder
 
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.util.AppLogger
 
 /**
  * Pushes live turn-by-turn onto the DiLink instrument **CLUSTER** through the OEM's own
@@ -57,8 +58,9 @@ object ClusterNavPusher {
      */
     private const val NO_TURN_ICON = -1
 
-    /** Set once the container has been switched into nav mode for the current session. */
+    /** Last accepted activation, valid only for the proxy that issued it. */
     @Volatile private var enabled = false
+    private var enabledProxy: IBinder? = null
 
     /** CCW (counter-clockwise, "left") roundabout with a known exit index, 1..10 → cluster round_left_N. */
     private val ROUNDABOUT_CCW =
@@ -131,24 +133,35 @@ object ClusterNavPusher {
     }
 
     /**
-     * Switches the container into navigation mode (idempotent for the session). The OEM sends this
+     * Switches the container into navigation mode (idempotent for the session's live proxy). The OEM sends this
      * once on the 1for2 branch before pushing content; without it the container can accept every
      * NaviInfo and render nothing — proven on-car, it is what turned a silent bench into arrows.
      */
     @JvmStatic
+    @Synchronized
     fun enable() {
-        if (enabled) return
+        val currentProxy = ProxyClient.getProxyDaemonBinder()
+        if (enabled && currentProxy != null && enabledProxy === currentProxy) return
+        invalidateActivation()
         try {
             val result = ProxyClient.autoContainerSendInfoResultCompatible(TYPE_NAV_MODE, 0, "")
             if (!activationAccepted(result)) {
-                Log.w(TAG, "cluster nav-mode rejected (sendInfo(5,0) rc=$result)")
+                AppLogger.w(TAG, "cluster nav-mode rejected (sendInfo(5,0) rc=$result)")
                 return
             }
+            // The call may have bootstrapped a fresh daemon. Cache the live proxy after it returns,
+            // and check it again around content delivery in case recovery replaces it mid-frame.
+            enabledProxy = ProxyClient.getProxyDaemonBinder()
             enabled = true
-            Log.i(TAG, "cluster nav-mode enabled (sendInfo(5,0))")
+            AppLogger.i(TAG, "cluster nav-mode requested (sendInfo(5,0) rc=${result ?: "legacy"})")
         } catch (t: Throwable) {
-            Log.w(TAG, "cluster nav-mode enable failed: ${t.message}")
+            AppLogger.w(TAG, "cluster nav-mode enable failed: ${t.javaClass.simpleName}")
         }
+    }
+
+    private fun invalidateActivation() {
+        enabled = false
+        enabledProxy = null
     }
 
     internal fun activationAccepted(nativeResult: Int?): Boolean =
@@ -156,11 +169,10 @@ object ClusterNavPusher {
 
     /** Pushes one guidance frame onto the cluster and reports whether the active channel accepted it. */
     @JvmStatic
+    @Synchronized
     fun push(d: HudNavigationData): Boolean {
-        // Self-heal: the caller enables nav mode when the CAN path activates, but the cluster must not
-        // depend on CAN succeeding — on a car with no windshield HUD this is the ONLY arrow surface,
-        // and a container that never received sendInfo(5,0) accepts every frame and renders nothing.
-        if (!enabled) enable()
+        // Activation follows the live proxy, independently of CAN and windshield HUD presence.
+        // A container can accept content while its navigation mode is unset and render nothing.
         try {
             val payload = NaviInfoPayloadBuilder.build(
                 naviState = NAVI_STATE_GUIDING,
@@ -170,10 +182,24 @@ object ClusterNavPusher {
                 routeRemainTime = d.remainingTimeSeconds ?: 0,
                 routeRemainDist = d.remainingDistanceMeters ?: 0,
                 roungAboutNum = roundaboutExitNum(d.iconId))
-            ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, payload)
-            return enabled
+            repeat(2) {
+                enable()
+                val sendingProxy = ProxyClient.getProxyDaemonBinder()
+                ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, payload)
+                if (sendingProxy != null && ProxyClient.getProxyDaemonBinder() === sendingProxy) {
+                    return enabled && enabledProxy === sendingProxy
+                }
+                // ProxyClient can retry the CONTENT on a replacement daemon, which has not run
+                // our mode activation. Re-arm it and resend this fresh frame at most once.
+                invalidateActivation()
+                AppLogger.w(TAG, "proxy changed during cluster guidance; nav-mode must be rearmed")
+            }
+            return false
         } catch (t: Throwable) {
-            Log.w(TAG, "cluster push failed: ${t.message}")
+            // A service-side failure can reset mode while leaving the shell proxy alive.
+            // The next fresh guidance must reinitialize it, rather than trust the old flag.
+            invalidateActivation()
+            AppLogger.w(TAG, "cluster push failed: ${t.javaClass.simpleName}; nav-mode invalidated")
             return false
         }
     }
@@ -196,13 +222,14 @@ object ClusterNavPusher {
 
     /** Clears the cluster guidance at the end of a route. Best-effort; never throws. */
     @JvmStatic
+    @Synchronized
     fun stop() {
         try {
             ProxyClient.autoContainerSendInfo2(TYPE_NAVI_INFO, buildClearPayload())
         } catch (t: Throwable) {
-            Log.w(TAG, "cluster stop failed: ${t.message}")
+            AppLogger.w(TAG, "cluster stop failed: ${t.javaClass.simpleName}")
         } finally {
-            enabled = false   // next route re-sends the nav-mode enable
+            invalidateActivation()   // next route re-sends the nav-mode enable
         }
     }
 }

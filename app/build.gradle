@@ -1964,8 +1964,13 @@ android {
         // in the SX361 SEAL report before notification parsing. Cover cluster-only
         // guidance/cleanup and source handover; reject similarly named unknown apps.
         // Preserve destination settings and protocol routing. Vehicle rendering still needs a test.)
-        versionCode 646
-        versionName "1.9.7-beta"
+        // 647 = 1.9.8-beta (NAVIGATION RECOVERY AND EVIDENCE. Supervise the notification
+        // listener from the existing keeper and re-arm AutoContainer after proxy changes or
+        // send failures. Include Morphe in Maps report status and preserve bounded pipeline
+        // diagnostics. Add an explicit, local-first Maps icon export in all 13 languages.
+        // Image-only maneuver recognition and cold-start rendering still need vehicle evidence.)
+        versionCode 647
+        versionName "1.9.8-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

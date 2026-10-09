@@ -597,4 +597,14 @@
     <string name="settings_navigation_enabled">Włącz wskazówki</string>
     <string name="settings_navigation_hud">HUD (przednia szyba)</string>
     <string name="settings_navigation_cluster">Zestaw wskaźników (za kierownicą)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Eksportuj ikony Maps</string>
+    <string name="diag_nav_icons_consent">Przechwycić teraz ikony aktywnych powiadomień nawigacji Maps? Obrazy mogą zawierać tekst lub dane osobowe. Plik ZIP pozostaje na tym urządzeniu, dopóki nie zdecydujesz się go udostępnić.</string>
+    <string name="diag_nav_icons_capture">Przechwyć</string>
+    <string name="diag_nav_icons_no_listener">Usługa powiadomień DashCast jest rozłączona. Zezwól jej na dostęp do powiadomień i spróbuj ponownie.</string>
+    <string name="diag_nav_icons_none">Brak aktywnego powiadomienia nawigacji Maps. Uruchom trasę w Maps i spróbuj ponownie.</string>
+    <string name="diag_nav_icons_failed">Nie udało się przechwycić ikon Maps.</string>
+    <string name="diag_nav_icons_ready">ZIP zapisany: %1$s\n\n„Wyślij” przekazuje obrazy do wsparcia DashCast. Mogą one zawierać tekst lub dane osobowe.</string>
+    <string name="diag_nav_icons_keep">Zachowaj na tym urządzeniu</string>
 </resources>

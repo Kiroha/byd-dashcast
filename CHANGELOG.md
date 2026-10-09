@@ -15,6 +15,34 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.8-beta (versionCode 647)
+
+**Recover navigation in the background and re-arm the instrument-cluster channel.**
+The existing keeper supervises the notification listener at boot, DiLink restart
+and during its heartbeat. It requests a rebind only when guidance and notification
+access are enabled, confirms recovery through Android callbacks, and retries with
+bounded backoff. AutoContainer activation now follows the live proxy; a send error
+invalidates the cached activation and a proxy replacement during delivery permits
+one reactivation and resend of the fresh frame. HUD-only, cluster-only and both-output
+settings retain their existing routing. Cold-start rendering and the cause of the
+SEAL U DM-i bench workaround still require vehicle confirmation.
+
+**Make Morphe reports useful and collect real Maps icons.** The Maps report status
+now includes Morphe, using the same exact-package filter as guidance. Bug reports
+include pipeline counters and bounded rejection/delivery diagnostics; HUD bench
+archives add `06_navigation.txt` with listener status, output choices and the journal.
+Diag adds an explicitly confirmed, local-first Maps icon export, translated into
+all **13 app languages**, with optional sharing or support submission. It exports
+available small/large icons and metadata without copying notification text into
+the manifest. **Automatic image-only maneuver recognition is not implemented yet**;
+the export supplies the missing real-image corpus.
+
+Validation: **854 tests / 169 suites pass**, release lint **0 issues**, signed release
+assembly successful. Install over the current app without uninstalling; manual
+installation is recommended for this test and required from 1.9.4-beta or older.
+Test a first route after a restart **before opening Diag or running a HUD bench**.
+**1.9.0 remains stable.** [Release notes and testing steps](docs/releases/1.9.8-beta.md).
+
 ### 1.9.7-beta (versionCode 646)
 
 **Recognize Maps Morphe navigation notifications.** The SX361 SEAL pilot runs

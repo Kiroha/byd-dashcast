@@ -14,6 +14,7 @@ import android.os.SystemClock
 
 import com.byd.dashcast.MainActivity
 import com.byd.dashcast.R
+import com.byd.dashcast.hud.NavigationListenerKeeper
 import com.byd.dashcast.util.AppLogger
 
 import java.util.concurrent.ExecutorService
@@ -90,6 +91,11 @@ class ProxyKeeperService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // START_STICKY: if Android kills us we get re-created with a null intent. The onCreate
         // path above is enough to bootstrap state.
+        // DiLink can re-deliver BOOT_COMPLETED at ACC-on while this service is already alive.
+        // Probe promptly on the existing worker without creating a second heartbeat loop.
+        mHandler?.post {
+            if (mRunning) NavigationListenerKeeper.maybeKeepAlive(applicationContext)
+        }
         return START_STICKY
     }
 
@@ -123,6 +129,8 @@ class ProxyKeeperService : Service() {
 
     private fun tickInternal() {
         val ctx = applicationContext
+        // Independent of the daemon Binder: a down proxy must not block notification recovery.
+        NavigationListenerKeeper.maybeKeepAlive(ctx)
         // v1.6.x — app-wide persistent hotspot keep-alive rides this always-on FG heartbeat so
         // the hotspot "always on" survives HotspotActivity being closed (INC-20260705-195419: the
         // in-Activity watchdog stopped on onPause). No-op unless the user enabled it; internally
