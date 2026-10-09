@@ -15,6 +15,36 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.9-beta (versionCode 648)
+
+**Decode the Maps turn image captured on the SEAL.** Recognize the captured
+left-turn shape and its horizontal reflection on the existing bounded navigation
+writer. Preserve resource/text parsing priority, including U-turns and roundabouts.
+Image-only direction changes now update guidance; fresh identical images keep it
+alive and can resume it after watchdog expiry. Removed or obsolete notifications
+cannot reopen an ended route or clear another navigation source. Unknown images
+remain rejected: this is not a complete Maps maneuver corpus, and the mirrored
+right-turn shape still needs its own vehicle capture.
+
+**Recover an already-approved Android 10 listener after repeated rebind failures.**
+After two unconfirmed requests, the existing shell proxy may reassert the exact
+listener's existing approval, at most once every five minutes. Recheck permission,
+owning user and output settings before the command; never grant missing access or
+revoke/toggle components. Only Android lifecycle callbacks confirm reconnection.
+The OEM firmware still requires a cold-start test before running a diagnostic bench.
+
+**Add an experimental satellite receiver, disabled by default.** Paired local WSS
+guidance can use the existing independent HUD/cluster outputs when explicitly
+selected. A bundled receive-only WebRTC viewer offers preview and manual projection
+onto an already identified secondary display. Settings cover all **13 app languages**.
+The companion app is not included; real TLS, WebView codec support, cluster video
+rendering and coexistence with Overdrive still need device validation.
+
+Validation: **896 JVM tests / 174 suites** and **10 JavaScript viewer scenarios**
+pass; release lint reports **0 issues**. Manual installation over the existing app
+is recommended. **1.9.0 remains stable.**
+[Release notes, limits and vehicle test](docs/releases/1.9.9-beta.md).
+
 ### 1.9.8-beta (versionCode 647)
 
 **Recover navigation in the background and re-arm the instrument-cluster channel.**

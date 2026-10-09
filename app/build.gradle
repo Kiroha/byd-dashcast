@@ -1969,8 +1969,14 @@ android {
         // send failures. Include Morphe in Maps report status and preserve bounded pipeline
         // diagnostics. Add an explicit, local-first Maps icon export in all 13 languages.
         // Image-only maneuver recognition and cold-start rendering still need vehicle evidence.)
-        versionCode 647
-        versionName "1.9.8-beta"
+        // 648 = 1.9.9-beta (MAPS IMAGE GUIDANCE AND ANDROID 10 RECOVERY. Match the
+        // captured left-turn glyph and its reflection on the bounded navigation writer;
+        // preserve text/resource priority, route expiry and independent HUD/cluster outputs.
+        // Reassert only an already-approved listener after repeated unconfirmed rebinds.
+        // Include the opt-in satellite guidance/WebRTC receiver, disabled by default, with
+        // settings in all 13 languages. Other image maneuvers and vehicle recovery need tests.)
+        versionCode 648
+        versionName "1.9.9-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
