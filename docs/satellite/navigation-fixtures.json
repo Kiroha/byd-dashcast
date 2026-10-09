@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "accepted": [
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":200},
+    {"type":"navigation.update","seq":2,"ageMs":1500,"maneuver":"roundabout_ccw","exit":3,"distanceMeters":80,"roadName":"Example road","etaHour":14,"etaMinute":30},
+    {"type":"navigation.stop","seq":3,"ageMs":0}
+  ],
+  "rejected": [
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"unknown","distanceMeters":200},
+    {"type":"navigation.update","seq":1,"ageMs":1501,"maneuver":"right","distanceMeters":200},
+    {"type":"navigation.update","seq":"1","ageMs":0,"maneuver":"right","distanceMeters":200},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":1.5},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_cw","exit":11,"distanceMeters":200},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":200,"etaHour":14}
+  ]
+}

@@ -84,3 +84,6 @@
 
 # ---- Android components are auto-kept by AGP; add explicit keeps here if any
 #      helper is ever loaded via Class.forName in the future. ----
+-keepclassmembers class com.byd.dashcast.satellite.SatelliteVideoActivity$Bridge {
+    @android.webkit.JavascriptInterface <methods>;
+}

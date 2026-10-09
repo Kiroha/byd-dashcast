@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Не ўдалося захапіць значкі Maps.</string>
     <string name="diag_nav_icons_ready">ZIP захаваны: %1$s\n\nКнопка «Адправіць» перадае выявы ў падтрымку DashCast. Яны могуць змяшчаць тэкст або асабістыя звесткі.</string>
     <string name="diag_nav_icons_keep">Пакінуць на гэтай прыладзе</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Прылада-спадарожнік</string>
+    <string name="satellite_description">Эксперыментальная функцыя. Падключыце знешнюю прыладу для атрымання навігацыйных падказак або паказу яе карты на панэлі прыбораў. Падказкі спадарожніка замяняюць падказкі праграм аўтамабіля.</string>
+    <string name="satellite_enable">Уключыць прыёмнік спадарожніка</string>
+    <string name="satellite_guidance">Выкарыстоўваць падказкі спадарожніка</string>
+    <string name="satellite_waiting">Чаканне спадарожніка…</string>
+    <string name="satellite_pair">Спалучыць прыладу</string>
+    <string name="satellite_revoke">Скасаваць спалучэнні</string>
+    <string name="satellite_revoke_confirm">Скасаваць спалучэнні? Прылады трэба будзе спалучыць зноў.</string>
+    <string name="satellite_preview">Прагляд атрыманай карты</string>
+    <string name="satellite_project">Паказаць на панэлі прыбораў</string>
+    <string name="satellite_enable_first">Уключыце прыёмнік спадарожніка.</string>
+    <string name="satellite_cluster_first">Спачатку ўключыце праекцыю на панэль прыбораў у DashCast.</string>
+    <string name="satellite_unavailable">Прыём на гэтай прыладзе недаступны.</string>
 </resources>

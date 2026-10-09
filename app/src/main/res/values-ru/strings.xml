@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Не удалось сохранить значки Maps.</string>
     <string name="diag_nav_icons_ready">ZIP сохранён: %1$s\n\nКнопка «Отправить» передаёт изображения в поддержку DashCast. Они могут содержать текст или личные данные.</string>
     <string name="diag_nav_icons_keep">Оставить на этом устройстве</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Устройство-спутник</string>
+    <string name="satellite_description">Экспериментальная функция. Подключите внешнее устройство для получения навигационных подсказок или вывода его карты на приборную панель. Подсказки спутника заменяют подсказки приложений автомобиля.</string>
+    <string name="satellite_enable">Включить приёмник спутника</string>
+    <string name="satellite_guidance">Использовать подсказки спутника</string>
+    <string name="satellite_waiting">Ожидание спутника…</string>
+    <string name="satellite_pair">Сопрячь устройство</string>
+    <string name="satellite_revoke">Отозвать сопряжения</string>
+    <string name="satellite_revoke_confirm">Отозвать сопряжения? Устройства потребуется сопрячь заново.</string>
+    <string name="satellite_preview">Предпросмотр полученной карты</string>
+    <string name="satellite_project">Показать на приборной панели</string>
+    <string name="satellite_enable_first">Включите приёмник спутника.</string>
+    <string name="satellite_cluster_first">Сначала включите проекцию на приборную панель в DashCast.</string>
+    <string name="satellite_unavailable">Приём на этом устройстве недоступен.</string>
 </resources>

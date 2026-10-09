@@ -654,4 +654,19 @@
     <string name="diag_nav_icons_failed">La capture des icônes Maps a échoué.</string>
     <string name="diag_nav_icons_ready">ZIP enregistré : %1$s\n\n« Envoyer » transmet les images au support DashCast. Elles peuvent contenir du texte ou des informations personnelles.</string>
     <string name="diag_nav_icons_keep">Garder sur cet appareil</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Appareil satellite</string>
+    <string name="satellite_description">Expérimental. Associez un appareil externe pour recevoir son guidage ou afficher sa carte sur le combiné. Le guidage satellite remplace le guidage des applications installées dans la voiture.</string>
+    <string name="satellite_enable">Activer le récepteur satellite</string>
+    <string name="satellite_guidance">Utiliser le guidage du satellite</string>
+    <string name="satellite_waiting">En attente du satellite…</string>
+    <string name="satellite_pair">Associer un appareil</string>
+    <string name="satellite_revoke">Révoquer les appareils associés</string>
+    <string name="satellite_revoke_confirm">Révoquer les appareils associés ? Ils devront être associés à nouveau.</string>
+    <string name="satellite_preview">Aperçu de la carte reçue</string>
+    <string name="satellite_project">Afficher sur le combiné</string>
+    <string name="satellite_enable_first">Activez le récepteur satellite.</string>
+    <string name="satellite_cluster_first">Activez d’abord la projection du combiné dans DashCast.</string>
+    <string name="satellite_unavailable">Réception indisponible sur cet appareil.</string>
 </resources>

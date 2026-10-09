@@ -18,6 +18,8 @@
 
     <!-- Foreground Service pour maintenir la projection cluster en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Used only by the explicitly enabled local satellite receiver on API 34+. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
 
     <!-- Connexion TCP localhost:5555 pour dadb (ADB local → popup autorisation) -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -131,6 +133,15 @@
              (e.g. DX_BYD_AUTO). required=false → ignored at install on DiLink 3/5, where
              it does not exist. Used reflection-only by the AAOS cluster diag probe. -->
         <uses-library android:name="android.car" android:required="false"/>
+
+        <!-- No exported satellite entry points. Video has its own task, separate from MainActivity. -->
+        <activity android:name=".satellite.SatelliteSettingsActivity" android:exported="false" />
+        <activity android:name=".satellite.SatelliteVideoActivity" android:exported="false"
+            android:taskAffinity="com.byd.dashcast.satellite.video"
+            android:resizeableActivity="true" android:configChanges="orientation|screenSize|smallestScreenSize"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <service android:name=".satellite.SatelliteReceiverService" android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
         <!-- Welcome screen: language selection (first launch only) -->
         <activity

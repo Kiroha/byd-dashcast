@@ -12,6 +12,8 @@ import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.satellite.NavigationInputRouter
+import com.byd.dashcast.satellite.SatellitePrefs
 import com.byd.dashcast.util.AppLogger
 import com.byd.dashcast.util.concurrent.LatestValueDispatcher
 import org.junit.After
@@ -50,6 +52,7 @@ class NavigationOutputRoutingTest {
         activityField.isAccessible = true
         (activityField.get(null) as MutableMap<*, *>).clear()
         context.getSharedPreferences(ClusterPrefs.PREFS_NAME, 0).edit().clear().commit()
+        context.getSharedPreferences(SatellitePrefs.FILE, 0).edit().clear().commit()
         daemon = RecordingDaemon()
         setStatic(ProxyClient::class.java, "sBinder", daemon)
         setStatic(ProxyClient::class.java, "sDaemonVer", "25")
@@ -63,6 +66,80 @@ class NavigationOutputRoutingTest {
         setStatic(HudController::class.java, "isDl3Hud", null)
         setStatic(ProxyClient::class.java, "sBinder", null)
         setStatic(ProxyClient::class.java, "sDaemonVer", null)
+    }
+
+    @Test
+    fun `satellite selection prevents local notifications and local teardown from clearing its route`() {
+        select(hud = false, cluster = true)
+        NavigationInputRouter.enableReceiver(context, true)
+        NavigationInputRouter.selectRemote(context, true)
+        NavigationInputRouter.acquireRemote(context, "satellite")
+        assertTrue(NavigationInputRouter.updateRemote(context, "satellite", NavigationInputRouter.remoteRevision(), frame))
+        val count = daemon.clusterFrames.size
+
+        assertFalse(NavigationInputRouter.updateLocal(context, frameAtDistance(10)))
+        NavigationInputRouter.closeLocal(context)
+
+        assertTrue(HudController.isHudActive)
+        assertEquals(count, daemon.clusterFrames.size)
+        assertEquals(200, decode(daemon.clusterFrames.last()).curToSegmentDist())
+    }
+
+    @Test
+    fun `late satellite disconnect cannot clear a replacement session or local guidance`() {
+        select(hud = false, cluster = true)
+        NavigationInputRouter.enableReceiver(context, true)
+        NavigationInputRouter.selectRemote(context, true)
+        NavigationInputRouter.acquireRemote(context, "old")
+        NavigationInputRouter.acquireRemote(context, "new")
+        assertTrue(NavigationInputRouter.updateRemote(context, "new", NavigationInputRouter.remoteRevision(), frame))
+        val count = daemon.clusterFrames.size
+        NavigationInputRouter.closeRemote(context, "old", true)
+        assertEquals(count, daemon.clusterFrames.size)
+
+        NavigationInputRouter.enableReceiver(context, false)
+        assertFalse(HudController.isHudActive)
+        assertEquals(9, decode(daemon.clusterFrames.last()).naviState())
+        assertTrue(NavigationInputRouter.updateLocal(context, frameAtDistance(100)))
+        NavigationInputRouter.closeRemote(context, "new", true)
+        assertTrue(HudController.isHudActive)
+        assertEquals(100, decode(daemon.clusterFrames.last()).curToSegmentDist())
+    }
+
+    @Test
+    fun `queued satellite frames from before source changes are rejected`() {
+        select(hud = false, cluster = true)
+        NavigationInputRouter.enableReceiver(context, true)
+        NavigationInputRouter.selectRemote(context, true)
+        NavigationInputRouter.acquireRemote(context, "satellite")
+        val revision = NavigationInputRouter.remoteRevision()
+        NavigationInputRouter.selectRemote(context, false)
+        NavigationInputRouter.selectRemote(context, true)
+        assertFalse(NavigationInputRouter.updateRemote(context, "satellite", revision, frame))
+        assertTrue(daemon.clusterFrames.isEmpty())
+    }
+
+    @Test
+    fun `switching back to local accepts an identical fresh notification instead of stale dedup`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        try {
+            val notification = navigationNotification(title = "Turn right in 200 m")
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertTrue(HudController.isHudActive)
+            NavigationInputRouter.enableReceiver(context, true)
+            NavigationInputRouter.selectRemote(context, true)
+            shadowOf(Looper.getMainLooper()).idle()
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertFalse(HudController.isHudActive)
+            NavigationInputRouter.selectRemote(context, false)
+            shadowOf(Looper.getMainLooper()).idle()
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertTrue(HudController.isHudActive)
+        } finally { service.onDestroy() }
     }
 
     @Test

@@ -486,6 +486,13 @@
                             android:paddingEnd="16dp"
                             android:text="@string/settings_navigation_cluster"/>
 
+                        <Button
+                            android:id="@+id/btn_satellite"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_margin="16dp"
+                            android:text="@string/satellite_title"/>
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:">
+<style>html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:sans-serif}video{width:100%;height:100%;object-fit:contain}#status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}</style>
+</head><body><video id="video" autoplay playsinline muted></video><div id="status">__WAITING__</div>
+<script>
+'use strict';
+// Signalling crosses a local Android bridge; this page has no HTTP or WebSocket access.
+const video = document.getElementById('video');
+const status = document.getElementById('status');
+let peer = null, owner = null, negotiation = null, chain = Promise.resolve(), watchdog = null;
+let lastFrames = -1, lastProgress = 0;
+let epoch = 0, queued = 0;
+function send(type, values) {
+  if (owner && negotiation) DashCastVideo.send(owner, JSON.stringify(Object.assign({type, negotiation}, values)));
+}
+function resetReceiver(invalidate = true) {
+  if (invalidate) { epoch++; chain = Promise.resolve(); queued = 0; }
+  if (watchdog) clearInterval(watchdog);
+  watchdog = null;
+  if (peer) { peer.onicecandidate = null; peer.ontrack = null; peer.close(); }
+  peer = null; owner = null; negotiation = null;
+  video.srcObject = null; status.style.display = 'flex';
+  lastFrames = -1; lastProgress = 0;
+}
+function bounded(promise) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), 8000); });
+  return Promise.race([promise, timeout]).then(value => {
+    clearTimeout(timer); return value;
+  }, error => { clearTimeout(timer); throw error; });
+}
+async function receive(id, raw) {
+  const message = JSON.parse(raw);
+  if (message.type === 'video.offer') {
+    resetReceiver(false); owner = id; negotiation = message.negotiation;
+    const connection = new RTCPeerConnection({iceServers: [], bundlePolicy: 'max-bundle'});
+    peer = connection;
+    connection.onicecandidate = event => {
+      if (peer === connection && event.candidate) send('video.ice', event.candidate.toJSON());
+    };
+    connection.ontrack = event => {
+      if (peer !== connection || event.track.kind !== 'video') return;
+      video.srcObject = new MediaStream([event.track]);
+      video.play().catch(() => {
+        if (peer === connection) { send('video.error', {code:'playback_failed'}); resetReceiver(); }
+      });
+    };
+    connection.onconnectionstatechange = () => {
+      if (peer === connection && ['failed', 'closed', 'disconnected'].includes(connection.connectionState)) {
+        send('video.error', {code:'connection_lost'}); resetReceiver();
+      }
+    };
+    await bounded(connection.setRemoteDescription({type:'offer', sdp:message.sdp}));
+    if (peer !== connection) return;
+    const answer = await bounded(connection.createAnswer());
+    if (peer !== connection) return;
+    await bounded(connection.setLocalDescription(answer));
+    if (peer !== connection) return;
+    send('video.answer', {sdp:connection.localDescription.sdp});
+    // A stopped source must not leave a frozen map visible indefinitely.
+    lastProgress = performance.now();
+    watchdog = setInterval(async () => {
+      if (peer !== connection) return;
+      try {
+        const stats = await bounded(connection.getStats());
+        if (peer !== connection) return;
+        let frames = -1;
+        stats.forEach(report => {
+          if (report.type === 'inbound-rtp' && (report.kind === 'video' || report.mediaType === 'video'))
+            frames = report.framesDecoded === undefined ? report.bytesReceived : report.framesDecoded;
+        });
+        if (frames > 0 && frames > lastFrames) { lastFrames = frames; lastProgress = performance.now(); status.style.display = 'none'; }
+        if (performance.now() - lastProgress > 6000) {
+          send('video.error', {code:'video_timeout'}); resetReceiver();
+        }
+      } catch (_) {
+        if (peer === connection) { send('video.error', {code:'stats_failed'}); resetReceiver(); }
+      }
+    }, 1000);
+  } else if (id === owner && message.negotiation === negotiation && peer) {
+    if (message.type === 'video.ice') await peer.addIceCandidate({candidate:message.candidate,
+      sdpMid:message.sdpMid, sdpMLineIndex:message.sdpMLineIndex});
+    else if (message.type === 'video.stop') resetReceiver();
+  }
+}
+window.receiveSignal = (id, raw) => {
+  // Bound async signalling as well as native input. A reset invalidates queued old-socket ICE.
+  if (queued >= 32) { send('video.error', {code:'signalling_overflow'}); resetReceiver(); return; }
+  const submittedEpoch = epoch;
+  queued++;
+  chain = chain.then(() => {
+    if (submittedEpoch === epoch) return receive(id, raw);
+  }).catch(() => {
+    if (submittedEpoch === epoch) {
+      send('video.error', {code:'negotiation_failed'}); resetReceiver();
+    }
+  }).then(() => { if (submittedEpoch === epoch) queued--; });
+};
+window.resetReceiver = resetReceiver;
+DashCastVideo.ready(typeof RTCPeerConnection !== 'undefined');
+</script></body></html>

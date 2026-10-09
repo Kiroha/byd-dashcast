@@ -607,4 +607,19 @@
     <string name="diag_nav_icons_failed">Nie udało się przechwycić ikon Maps.</string>
     <string name="diag_nav_icons_ready">ZIP zapisany: %1$s\n\n„Wyślij” przekazuje obrazy do wsparcia DashCast. Mogą one zawierać tekst lub dane osobowe.</string>
     <string name="diag_nav_icons_keep">Zachowaj na tym urządzeniu</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Urządzenie satelitarne</string>
+    <string name="satellite_description">Funkcja eksperymentalna. Sparuj urządzenie zewnętrzne, aby odbierać wskazówki lub wyświetlać jego mapę na zestawie wskaźników. Wskazówki satelitarne zastępują wskazówki aplikacji zainstalowanych w samochodzie.</string>
+    <string name="satellite_enable">Włącz odbiornik satelitarny</string>
+    <string name="satellite_guidance">Używaj wskazówek z satelity</string>
+    <string name="satellite_waiting">Oczekiwanie na satelitę…</string>
+    <string name="satellite_pair">Sparuj urządzenie</string>
+    <string name="satellite_revoke">Cofnij parowanie urządzeń</string>
+    <string name="satellite_revoke_confirm">Cofnąć parowanie urządzeń? Trzeba będzie sparować je ponownie.</string>
+    <string name="satellite_preview">Podgląd odebranej mapy</string>
+    <string name="satellite_project">Pokaż na zestawie wskaźników</string>
+    <string name="satellite_enable_first">Włącz odbiornik satelitarny.</string>
+    <string name="satellite_cluster_first">Najpierw włącz projekcję na zestaw wskaźników w DashCast.</string>
+    <string name="satellite_unavailable">Odbiór niedostępny na tym urządzeniu.</string>
 </resources>

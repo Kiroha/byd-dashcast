@@ -614,4 +614,19 @@
     <string name="diag_nav_icons_failed">Maps icon capture failed.</string>
     <string name="diag_nav_icons_ready">ZIP saved: %1$s\n\n“Send” sends the images to DashCast support. They may contain text or personal information.</string>
     <string name="diag_nav_icons_keep">Keep on this device</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Satellite device</string>
+    <string name="satellite_description">Experimental. Pair an external device to receive its guidance or show its map on the cluster. Satellite guidance replaces guidance from apps installed in the car.</string>
+    <string name="satellite_enable">Enable satellite receiver</string>
+    <string name="satellite_guidance">Use satellite guidance</string>
+    <string name="satellite_waiting">Waiting for satellite…</string>
+    <string name="satellite_pair">Pair a device</string>
+    <string name="satellite_revoke">Revoke paired devices</string>
+    <string name="satellite_revoke_confirm">Revoke paired devices? They will need to be paired again.</string>
+    <string name="satellite_preview">Preview received map</string>
+    <string name="satellite_project">Show on cluster</string>
+    <string name="satellite_enable_first">Enable the satellite receiver.</string>
+    <string name="satellite_cluster_first">First enable cluster projection in DashCast.</string>
+    <string name="satellite_unavailable">Reception unavailable on this device.</string>
 </resources>

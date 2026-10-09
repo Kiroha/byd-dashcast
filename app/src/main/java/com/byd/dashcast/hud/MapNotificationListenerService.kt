@@ -70,6 +70,7 @@ class MapNotificationListenerService : NotificationListenerService() {
     // the service instance, so no leak).
     private var hudDispatcher: LatestValueDispatcher<PendingHudUpdate>? = null
     private var navigationPreferencesObserver: Closeable? = null
+    private var satelliteInputObserver: Closeable? = null
 
     @Volatile private var appContext: Context? = null
 
@@ -112,9 +113,10 @@ class MapNotificationListenerService : NotificationListenerService() {
             t
         }
         hudDispatcher = LatestValueDispatcher(executor) { pending ->
-            val enabled = ClusterPrefs.getNavigationOutputs(processContext).enabled
+            val enabled = ClusterPrefs.getNavigationOutputs(processContext).enabled &&
+                !com.byd.dashcast.satellite.SatellitePrefs.usesRemoteGuidance(processContext)
             try {
-                val accepted = HudController.updateNavigation(processContext, pending.data)
+                val accepted = com.byd.dashcast.satellite.NavigationInputRouter.updateLocal(processContext, pending.data)
                 diagnostics.delivery(pending.sourcePackage, enabled, accepted, SystemClock.elapsedRealtime())
                     ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
                 if (accepted) hudDeliveryTracker.markDelivered(pending.generation)
@@ -134,6 +136,10 @@ class MapNotificationListenerService : NotificationListenerService() {
                 HudController.refreshOutputPreferences(processContext)
             }
         }
+        satelliteInputObserver = com.byd.dashcast.satellite.SatellitePrefs.observeInput(processContext) {
+            // The first fresh local post after switching back must not be swallowed by old dedup.
+            resetNotificationIdentity()
+        }
     }
 
     override fun onDestroy() {
@@ -141,6 +147,8 @@ class MapNotificationListenerService : NotificationListenerService() {
         NavigationListenerKeeper.onDestroyed(recoveryToken)
         navigationPreferencesObserver?.close()
         navigationPreferencesObserver = null
+        satelliteInputObserver?.close()
+        satelliteInputObserver = null
         clearTrackedNavigation()
         val dispatcher = hudDispatcher
         hudDispatcher = null
@@ -150,7 +158,7 @@ class MapNotificationListenerService : NotificationListenerService() {
             // close() drops queued guidance, waits behind any update already executing, then
             // clears the HUD before gracefully terminating the writer. The Runnable captures
             // only application Context, not this service instance.
-            dispatcher.close { HudController.closeNavigation(ctx) }
+            dispatcher.close { com.byd.dashcast.satellite.NavigationInputRouter.closeLocal(ctx) }
         }
         super.onDestroy()
     }
@@ -226,7 +234,7 @@ class MapNotificationListenerService : NotificationListenerService() {
             // identical re-post of something that never parsed proves nothing, and letting it
             // refresh liveness would disarm the watchdog for the case it exists for.
             if (hudDeliveryTracker.currentContentWasDelivered()) {
-                HudController.noteNavFrameSeen()
+                appContext?.let { com.byd.dashcast.satellite.NavigationInputRouter.noteLocal(it) }
             }
             return
         }
@@ -502,11 +510,11 @@ class MapNotificationListenerService : NotificationListenerService() {
         val ctx = appContext ?: return
         val dispatcher = hudDispatcher
         if (dispatcher == null) {
-            HudController.closeNavigation(ctx)
+            com.byd.dashcast.satellite.NavigationInputRouter.closeLocal(ctx)
             return
         }
-        if (!dispatcher.cancelPendingAndExecute { HudController.closeNavigation(ctx) }) {
-            HudController.closeNavigation(ctx)
+        if (!dispatcher.cancelPendingAndExecute { com.byd.dashcast.satellite.NavigationInputRouter.closeLocal(ctx) }) {
+            com.byd.dashcast.satellite.NavigationInputRouter.closeLocal(ctx)
         }
     }
 

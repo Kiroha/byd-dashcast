@@ -598,4 +598,19 @@
     <string name="diag_nav_icons_failed">Maps belgilarini saqlab bo‘lmadi.</string>
     <string name="diag_nav_icons_ready">ZIP saqlandi: %1$s\n\n«Yuborish» rasmlarni DashCast yordam xizmatiga yuboradi. Ularda matn yoki shaxsiy ma’lumotlar bo‘lishi mumkin.</string>
     <string name="diag_nav_icons_keep">Shu qurilmada saqlash</string>
+
+    <!-- Opt-in external-device receiver. -->
+    <string name="satellite_title">Yo‘ldosh qurilma</string>
+    <string name="satellite_description">Tajriba funksiyasi. Yo‘l ko‘rsatmalarini olish yoki xaritasini asboblar panelida ko‘rsatish uchun tashqi qurilmani ulang. Yo‘ldosh ko‘rsatmalari avtomobildagi ilovalar ko‘rsatmalarini almashtiradi.</string>
+    <string name="satellite_enable">Yo‘ldosh qabul qilgichini yoqish</string>
+    <string name="satellite_guidance">Yo‘ldosh ko‘rsatmalaridan foydalanish</string>
+    <string name="satellite_waiting">Yo‘ldosh kutilmoqda…</string>
+    <string name="satellite_pair">Qurilmani ulash</string>
+    <string name="satellite_revoke">Ulangan qurilmalarni bekor qilish</string>
+    <string name="satellite_revoke_confirm">Ulangan qurilmalar bekor qilinsinmi? Ularni qayta ulash kerak bo‘ladi.</string>
+    <string name="satellite_preview">Olingan xaritani ko‘rish</string>
+    <string name="satellite_project">Asboblar panelida ko‘rsatish</string>
+    <string name="satellite_enable_first">Yo‘ldosh qabul qilgichini yoqing.</string>
+    <string name="satellite_cluster_first">Avval DashCast ichida asboblar paneliga proyeksiyani yoqing.</string>
+    <string name="satellite_unavailable">Bu qurilmada qabul qilish mavjud emas.</string>
 </resources>
