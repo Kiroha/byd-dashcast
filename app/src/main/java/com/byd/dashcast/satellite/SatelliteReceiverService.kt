@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import com.byd.dashcast.R
 import com.byd.dashcast.util.AppLogger
 import com.byd.dashcast.util.concurrent.LatestValueDispatcher
@@ -41,6 +43,8 @@ class SatelliteReceiverService : Service() {
     private var ownedSession: String? = null
     @Volatile private var destroyed = false
     @Volatile private var server: SatelliteWebSocketServer? = null
+    private var pairingNotice = false
+    private val notificationHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -48,14 +52,27 @@ class SatelliteReceiverService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL,
             getString(R.string.satellite_title), NotificationManager.IMPORTANCE_LOW))
+        pairingNotice = SatellitePairingSession.snapshot() != null
+        startForeground(NOTIFICATION, receiverNotification(pairingNotice))
+        transportWorker.scheduleWithFixedDelay({
+            server?.tick(SystemClock.elapsedRealtime())
+            val pairing = SatellitePairingSession.snapshot() != null
+            notificationHandler.post {
+                if (!destroyed && pairing != pairingNotice) {
+                    pairingNotice = pairing
+                    manager.notify(NOTIFICATION, receiverNotification(pairing))
+                }
+            }
+        }, 1, 1, TimeUnit.SECONDS)
+    }
+
+    private fun receiverNotification(pairing: Boolean): Notification {
         val intent = PendingIntent.getActivity(this, 0, Intent(this, SatelliteSettingsActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        startForeground(NOTIFICATION, Notification.Builder(this, CHANNEL)
+        return Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_cast).setContentTitle(getString(R.string.satellite_title))
-            .setContentText(getString(R.string.satellite_waiting)).setContentIntent(intent)
-            .setOngoing(true).build())
-        transportWorker.scheduleWithFixedDelay({ server?.tick(SystemClock.elapsedRealtime()) },
-            1, 1, TimeUnit.SECONDS)
+            .setContentText(getString(if (pairing) R.string.satellite_pair_background else R.string.satellite_waiting))
+            .setContentIntent(intent).setOngoing(true).build()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -122,7 +139,9 @@ class SatelliteReceiverService : Service() {
     }
 
     override fun onDestroy() {
+        SatellitePairingSession.close()
         destroyed = true
+        notificationHandler.removeCallbacksAndMessages(null)
         running = false
         val oldSession = synchronized(sessionLock) { currentSession = null; ownedSession }
         navigation.close { oldSession?.let { NavigationInputRouter.closeRemote(applicationContext, it, true) } }
@@ -160,6 +179,9 @@ class SatelliteReceiverService : Service() {
             }
         }
 
-        fun stop(ctx: Context) { ctx.stopService(Intent(ctx, SatelliteReceiverService::class.java)) }
+        fun stop(ctx: Context) {
+            SatellitePairingSession.close()
+            ctx.stopService(Intent(ctx, SatelliteReceiverService::class.java))
+        }
     }
 }
