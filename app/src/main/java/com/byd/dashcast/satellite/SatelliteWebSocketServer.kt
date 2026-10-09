@@ -77,6 +77,7 @@ class SatelliteWebSocketServer(
                 pending.remove(conn)
                 val created = Session(conn, UUID.randomUUID().toString())
                 active = created
+                SatellitePairingSession.close()
                 events.connected(created.id)
                 sendBounded(conn, JSONObject().put("type", "welcome").put("version", SatelliteProtocol.VERSION)
                     .put("session", created.id).put("navigationTimeoutMs", SatelliteProtocol.NAV_TIMEOUT_MS)
