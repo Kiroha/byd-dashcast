@@ -2174,6 +2174,8 @@ dependencies {
     // Opt-in satellite control/signalling only; video uses the installed WebView WebRTC engine.
     // Keep this pure-Java dependency pinned and avoid adding native codecs to the base APK.
     implementation 'org.java-websocket:Java-WebSocket:1.6.0'
+    // Temporary satellite pairing: a six-digit code with password-authenticated key exchange.
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.86'
 
     // PRE-0 (audit) — characterisation-test harness. The audit established that the only test
     // dependency was plain JUnit 4, so everything touching Context / Binder / Handler / Surface /
@@ -2207,7 +2209,10 @@ dependencies {
     // time through its OWN resolver, so Gradle's repositories and --offline do not govern it.
     // It is cached on this machine now; any other machine, container or air-gapped build pays
     // that fetch on the first test run. No CI job runs Gradle tests, so CI is unaffected.
-    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation('org.robolectric:robolectric:4.16.1') {
+        // Run pairing tests against the same pinned lightweight crypto implementation as the APK.
+        exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+    }
     // Android 10 era versions (API 29) — minCompileSdk ≤ 29
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
