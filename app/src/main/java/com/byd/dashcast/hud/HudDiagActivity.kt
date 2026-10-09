@@ -670,6 +670,12 @@ class HudDiagActivity : AppCompatActivity() {
      * exception). Runs off the main thread (called from finishBench / finishConfirmation's bg{}).
      */
     private fun writeDiagLogs(work: File) {
+        // Keep pipeline evidence even when noisy OEM logcat has already evicted the route events.
+        File(work, "06_navigation.txt").writeText(
+            "=== Listener supervision ===\n" + NavigationListenerKeeper.summary() +
+            "\n=== Pipeline counters (acceptance is not physical render) ===\n" +
+            MapNotificationListenerService.diagnosticsSummary(applicationContext) +
+            "\n=== DashCast journal (raw navigation text remains opt-in) ===\n" + AppLogger.get())
         // Recent unfiltered logcat, bounded for the ~1 MB binder reply parcel.
         File(work, "03_logcat.txt").writeText(
             sh("logcat -d -v threadtime -t 2000 2>/dev/null | head -c 400000"))

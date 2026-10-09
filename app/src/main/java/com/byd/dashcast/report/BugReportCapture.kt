@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 
 import com.byd.dashcast.BuildConfig
+import com.byd.dashcast.hud.NavigationListenerKeeper
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ShellGateway
@@ -502,6 +503,10 @@ object BugReportCapture {
             sb.append("Device: ").append(deviceLine()).append('\n')
             sb.append("Version: ").append(versionLine()).append('\n')
             sb.append("\n════════ HUD STATE (push-feedback) ════════\n").append(hudStateSnapshot())
+            sb.append("\n════════ NAVIGATION LISTENER (local supervision) ════════\n")
+                .append(NavigationListenerKeeper.summary()).append('\n')
+            sb.append("\n════════ NAVIGATION PIPELINE (local counters; acceptance is not render) ════════\n")
+                .append(com.byd.dashcast.hud.MapNotificationListenerService.diagnosticsSummary(app)).append('\n')
             if (shellError != null)
                 sb.append("[shell dump unavailable: ").append(shellError).append("]\n")
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody)

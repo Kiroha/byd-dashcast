@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Нұсқауларды қосу</string>
     <string name="settings_navigation_hud">HUD (алдыңғы әйнек)</string>
     <string name="settings_navigation_cluster">Аспаптар панелі (рульдің артында)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Maps белгішелерін экспорттау</string>
+    <string name="diag_nav_icons_consent">Белсенді Maps навигация хабарландыруларының белгішелерін қазір түсіргіңіз келе ме? Суреттерде мәтін немесе жеке ақпарат болуы мүмкін. ZIP файлы оны бөлісуді таңдағанша осы құрылғыда сақталады.</string>
+    <string name="diag_nav_icons_capture">Түсіру</string>
+    <string name="diag_nav_icons_no_listener">DashCast хабарландыру қызметі ажыратылған. Оған хабарландыруларға қол жеткізуге рұқсат беріп, қайталап көріңіз.</string>
+    <string name="diag_nav_icons_none">Белсенді Maps навигация хабарландыруы жоқ. Maps маршрутын іске қосып, қайталап көріңіз.</string>
+    <string name="diag_nav_icons_failed">Maps белгішелерін түсіру сәтсіз аяқталды.</string>
+    <string name="diag_nav_icons_ready">ZIP сақталды: %1$s\n\n«Жіберу» суреттерді DashCast қолдау қызметіне жібереді. Оларда мәтін немесе жеке ақпарат болуы мүмкін.</string>
+    <string name="diag_nav_icons_keep">Осы құрылғыда сақтау</string>
 </resources>

@@ -604,4 +604,14 @@
     <string name="settings_navigation_enabled">Enable guidance</string>
     <string name="settings_navigation_hud">HUD (windshield)</string>
     <string name="settings_navigation_cluster">Instrument cluster (behind the steering wheel)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Export Maps icons</string>
+    <string name="diag_nav_icons_consent">Capture the icons from active Maps navigation notifications now? Images may contain text or personal information. The ZIP stays on this device until you choose to share it.</string>
+    <string name="diag_nav_icons_capture">Capture</string>
+    <string name="diag_nav_icons_no_listener">The DashCast notification listener is disconnected. Grant it notification access, then try again.</string>
+    <string name="diag_nav_icons_none">No active Maps navigation notification. Start a Maps route, then try again.</string>
+    <string name="diag_nav_icons_failed">Maps icon capture failed.</string>
+    <string name="diag_nav_icons_ready">ZIP saved: %1$s\n\n“Send” sends the images to DashCast support. They may contain text or personal information.</string>
+    <string name="diag_nav_icons_keep">Keep on this device</string>
 </resources>

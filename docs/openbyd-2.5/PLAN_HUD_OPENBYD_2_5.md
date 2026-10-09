@@ -1,8 +1,10 @@
 # Plan d'integration HUD OpenBYD 2.5 dans DashCast
 
 Statut : collecte OEM depuis Diag ajoutee au lot 0, lot 1 implemente avec choix HUD/cluster independants et socle transport du lot 2 ajoute hors vehicule ; SOME/IP reste inactif. Plan initial : 2026-09-12.
-Derniere verification : 2026-10-08 (bug report Maps Morphe du pilote DL3 / SX361).
+Derniere verification : 2026-10-09 (rapports Maps Morphe SX361 et cinq rapports bug/HUD SX326, dont deux attribues a @giino01).
 Contrat de reference : [OPENBYD_2_5_HUD_INTEROP.md](OPENBYD_2_5_HUD_INTEROP.md).
+
+**Publication du 2026-10-09 :** **1.9.8-beta / build 647** rassemble la supervision du listener, la reprise d'activation AutoContainer, le filtre de diagnostic Morphe et l'export ponctuel des icones Maps. Verification complete : **854 tests / 169 suites**, lint release sans anomalie. Le rendu a froid reste a verifier et la reconnaissance automatique des grandes icones n'est pas encore implementee. [Notes et protocole d'essai](../releases/1.9.8-beta.md).
 
 ## Audit disponible
 
@@ -82,6 +84,12 @@ Un changement de preference invalide la deduplication, annule la trame en attent
 
 Verification : **14 nouveaux tests**, dont les appels reels du controller/listener contre un Binder daemon factice ([routage](../../app/src/test/java/com/byd/dashcast/hud/NavigationOutputRoutingTest.kt), [preferences](../../app/src/test/java/com/byd/dashcast/hud/NavigationOutputPreferencesTest.kt)). Ils couvrent les quatre choix, l'effacement de l'ancienne destination, le refus CAN independant du cluster, la plateforme inconnue, le watchdog du cluster seul, la notification identique apres changement et l'annulation d'une trame en attente pendant une emission. Suite complete : **812 tests / 165 suites**, aucun echec, erreur ou skip. Lint release : **0 issue** ; APK release compile. Graphe AST actualise. Cela ne remplace pas les essais physiques du pilote.
 
+**Supervision du listener ajoutee le 2026-10-09 :** le keeper controle aussi la connexion Android du listener en arriere-plan et lors de ses redemarrages boot/ACC-on. Les demandes de reconnexion respectent les sorties choisies, l'autorisation du composant et une cadence bornee, sans prendre l'absence de guidage pour une deconnexion. L'etat et les tentatives sont inclus dans les rapports de bug. **21 nouveaux tests ; 836 tests / 167 suites passent, lint release sans anomalie et APK release compile.** La reprise physique apres veille/redemarrage SX361 reste a verifier. [Fonctionnement et essais](NAVIGATION_LISTENER_RECOVERY.md). Cette modification prepare la prochaine version et n'est pas dans la 1.9.7-beta publiee.
+
+**Retour SEAL U DM-i du 2026-10-09 :** un utilisateur en HUD + combine observe des icones au banc SendInfo2 puis un rond-point numérote pendant un nouvel itineraire. Les deux activations du banc sont deja presentes dans le chemin automatique ; la commande responsable du deblocage n'est pas identifiee. Trois defauts du cache d'activation AutoContainer ont ete reproduits et corriges (proxy remplace, erreur d'envoi, remplacement pendant un envoi), avec un quatrieme test de reprise bornee. Le journal ajoute les resultats d'activation pour comparer les chemins. Cela prepare la prochaine version ; le lien causal avec cet essai et le demarrage a froid restent a verifier sur le vehicule. [Analyse et preuves](../incidents/INC-20261009-SEAL-U-DMI-BENCH-UNLOCK.md).
+
+**Rapports @giino01 et Hud Reports analyses le 2026-10-09 :** les messages 98/99 nomment explicitement @giino01 ; les trois bancs 100/101/102 sur SX326 declarent un rendu sur le combine. Les evenements Android prouvent que Maps Morphe publiait du guidage avant le banc (9 puis 126 mises a jour), et le proxy etait deja pret. Un arret du processus DashCast a 14:45 est suivi d'une relance pour le listener, sans preuve de connexion confirmee dans cette version. A 15:22:57, une notification Morphe de 100 m atteint le parseur mais est rejetee faute de manoeuvre. Ces traces distinguent acquisition et transport ; elles ne prouvent pas quelle activation a debloque le vehicule. Le diagnostic `matchesNavKey("maps", pkg)` oublie Morphe alors que le guidage l'accepte : corriger ce filtre avant d'interpreter `NavSeen: no` comme une absence de route. [Chronologie, sources et limites](../incidents/INC-20261009-SEAL-U-DMI-BENCH-UNLOCK.md#analyse-des-cinq-rapports-du-9-octobre).
+
 ### Lot 2 : implementer un seul profil SOME/IP
 
 **Socle commun du 2026-10-03, profil encore a choisir :**
@@ -123,6 +131,12 @@ Ce socle n'est instancie par aucun chemin de production ou diagnostic. Aucun enc
 **Sortie :** demarrage en cours de route, longues etapes identiques, rafales, rejet, reconnexion, fin de route, retrait des permissions, changement Maps/Waze/profil et reprise du natif passes. Aucune fleche obsolete entretenue par le keepalive.
 
 ### Lot 4 : enrichir Maps et rendre Waze exploitable
+
+**Priorite du pilote DL3 confirmee le 2026-10-09 :** les deux rapports **1.9.7-beta / build 646** recoivent maintenant Maps Morphe en mode cluster seul. Le pilote observe une fleche de demi-tour sur le combine ; le journal reconnait ce demi-tour par le texte, avec une petite icone generique `maps_2025`. La plupart des autres notifications ne donnent que distance/route et sont rejetees faute de manoeuvre. La priorite sur cette SEAL est donc l'acquisition de l'image Maps du present lot ; le recepteur SOME/IP reste une dependance distincte pour un autre vehicule. Les rapports texte n'embarquent pas les bitmaps de manoeuvre : obtenir le corpus et verifier `largeIcon` sur cette version avant de calibrer la reconnaissance. [Preuves, recouvrement des rapports et limites](../incidents/INC-20261009-134002-MAPS-MANEUVER-IMAGE.md).
+
+**Preuve complementaire SX326 :** le banc 101 de la SEAL U DM-i conserve a 15:22:57 une notification Maps Morphe avec distance 100 m et sans `bigText`, rejetee par le parseur faute de manoeuvre. Ce rejet est observe apres un banc reussi et ne se corrige pas par une activation AutoContainer. La petite icone et le bitmap de grande icone ne sont pas conserves dans cette trace : ne pas leur attribuer le format observe sur SX361 sans capture correspondante. [Analyse des rapports](../incidents/INC-20261009-SEAL-U-DMI-BENCH-UNLOCK.md).
+
+**Preparation du corpus le 2026-10-09 :** Diag ajoute un export ponctuel des icones des notifications Maps actuellement actives, avec confirmation de capture puis choix d'envoi distinct. Quatre notifications au plus, PNG de 256 pixels maximum par dimension, manifeste sans texte de route et absence de grande icone signalee. Les nouveaux controles sont traduits dans les 13 langues. Le chemin normal ne capture pas d'images ; la reconnaissance automatique attend les donnees reelles. Le candidat corrige aussi le filtre de diagnostic Morphe et conserve les compteurs reception/rejet/decodage/envoi dans les rapports, ainsi que le journal DashCast dans les archives du banc. [Outil, limites et essai](NAVIGATION_DIAGNOSTICS_AND_ICON_CAPTURE.md).
 
 **Maps en premier :**
 

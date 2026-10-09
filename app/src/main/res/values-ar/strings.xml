@@ -593,4 +593,14 @@
     <string name="settings_navigation_enabled">تفعيل الإرشادات</string>
     <string name="settings_navigation_hud">HUD (الزجاج الأمامي)</string>
     <string name="settings_navigation_cluster">لوحة العدادات (خلف المقود)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">تصدير أيقونات Maps</string>
+    <string name="diag_nav_icons_consent">هل تريد التقاط أيقونات إشعارات التنقل النشطة في Maps الآن؟ قد تحتوي الصور على نص أو معلومات شخصية. يبقى ملف ZIP على هذا الجهاز حتى تختار مشاركته.</string>
+    <string name="diag_nav_icons_capture">التقاط</string>
+    <string name="diag_nav_icons_no_listener">خدمة إشعارات DashCast غير متصلة. اسمح لها بالوصول إلى الإشعارات ثم حاول مجددًا.</string>
+    <string name="diag_nav_icons_none">لا يوجد إشعار تنقل نشط في Maps. ابدأ مسارًا في Maps ثم حاول مجددًا.</string>
+    <string name="diag_nav_icons_failed">تعذر التقاط أيقونات Maps.</string>
+    <string name="diag_nav_icons_ready">تم حفظ ملف ZIP: %1$s\n\nيرسل زر «إرسال» الصور إلى دعم DashCast. قد تحتوي على نص أو معلومات شخصية.</string>
+    <string name="diag_nav_icons_keep">الاحتفاظ على هذا الجهاز</string>
 </resources>

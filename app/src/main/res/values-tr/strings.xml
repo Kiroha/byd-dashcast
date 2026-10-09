@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Yönlendirmeleri etkinleştir</string>
     <string name="settings_navigation_hud">HUD (ön cam)</string>
     <string name="settings_navigation_cluster">Gösterge paneli (direksiyonun arkasında)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Maps simgelerini dışa aktar</string>
+    <string name="diag_nav_icons_consent">Etkin Maps navigasyon bildirimlerinin simgeleri şimdi kaydedilsin mi? Görseller metin veya kişisel bilgi içerebilir. ZIP dosyası, paylaşmayı seçene kadar bu cihazda kalır.</string>
+    <string name="diag_nav_icons_capture">Kaydet</string>
+    <string name="diag_nav_icons_no_listener">DashCast bildirim hizmetinin bağlantısı kesildi. Bildirim erişimine izin verip yeniden deneyin.</string>
+    <string name="diag_nav_icons_none">Etkin Maps navigasyon bildirimi yok. Maps üzerinde bir rota başlatıp yeniden deneyin.</string>
+    <string name="diag_nav_icons_failed">Maps simgeleri kaydedilemedi.</string>
+    <string name="diag_nav_icons_ready">ZIP kaydedildi: %1$s\n\n“Gönder” görselleri DashCast desteğine iletir. Metin veya kişisel bilgi içerebilirler.</string>
+    <string name="diag_nav_icons_keep">Bu cihazda tut</string>
 </resources>

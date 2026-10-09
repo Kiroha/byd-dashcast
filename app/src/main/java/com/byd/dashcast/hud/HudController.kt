@@ -11,6 +11,7 @@ import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.util.AppLogger
 
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -392,9 +393,14 @@ object HudController {
         // by the caller (isDiLink3Hud). We leave the HUD switch ON when nav ends (like the
         // bench) — closeNavigation only clears the nav registers, not the user's HUD switch.
         try {
-            CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON)
+            val result = CanBusController.setSettingFeature(
+                CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON)
+            // Keep the native result in the report journal so a bench's initialization can be
+            // compared with the automatic path. A successful write is not proof of rendering.
+            AppLogger.i(TAG, "HUD switch requested (SET_HUD_SWITCH=1 rc=$result)")
         } catch (e: ProxyClient.ProxyException) {
             Log.w(TAG, "SET_HUD_SWITCH on failed: " + e.message)
+            AppLogger.w(TAG, "HUD switch request failed: " + e.javaClass.simpleName)
         }
         attemptCanActivation()
     }
@@ -410,9 +416,11 @@ object HudController {
         try {
             CanBusController.setNaviActive(true)
             naviActiveAcked = true
+            AppLogger.i(TAG, "CAN navigation activation accepted")
         } catch (e: ProxyClient.ProxyException) {
             naviActiveAcked = false
             Log.w(TAG, "setNaviActive(true) failed: " + e.message)
+            AppLogger.w(TAG, "CAN navigation activation failed: " + e.javaClass.simpleName)
         }
     }
 

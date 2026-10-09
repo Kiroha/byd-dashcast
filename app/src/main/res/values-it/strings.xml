@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Attiva indicazioni</string>
     <string name="settings_navigation_hud">HUD (parabrezza)</string>
     <string name="settings_navigation_cluster">Quadro strumenti (dietro il volante)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Esporta le icone di Maps</string>
+    <string name="diag_nav_icons_consent">Acquisire ora le icone delle notifiche di navigazione attive di Maps? Le immagini possono contenere testo o informazioni personali. Il file ZIP rimane su questo dispositivo finché non scegli di condividerlo.</string>
+    <string name="diag_nav_icons_capture">Acquisisci</string>
+    <string name="diag_nav_icons_no_listener">Il servizio notifiche di DashCast è disconnesso. Autorizza il suo accesso alle notifiche e riprova.</string>
+    <string name="diag_nav_icons_none">Nessuna notifica di navigazione Maps attiva. Avvia un itinerario in Maps e riprova.</string>
+    <string name="diag_nav_icons_failed">Acquisizione delle icone di Maps non riuscita.</string>
+    <string name="diag_nav_icons_ready">ZIP salvato: %1$s\n\n«Invia» trasmette le immagini al supporto DashCast. Possono contenere testo o informazioni personali.</string>
+    <string name="diag_nav_icons_keep">Mantieni su questo dispositivo</string>
 </resources>

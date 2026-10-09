@@ -588,4 +588,14 @@
     <string name="settings_navigation_enabled">Activar indicaciones</string>
     <string name="settings_navigation_hud">HUD (parabrisas)</string>
     <string name="settings_navigation_cluster">Cuadro de instrumentos (detrás del volante)</string>
+
+    <!-- Explicit Maps icon diagnostic export. -->
+    <string name="diag_nav_icons_title">Exportar iconos de Maps</string>
+    <string name="diag_nav_icons_consent">¿Capturar ahora los iconos de las notificaciones de navegación activas de Maps? Las imágenes pueden contener texto o información personal. El ZIP permanece en este dispositivo hasta que decidas compartirlo.</string>
+    <string name="diag_nav_icons_capture">Capturar</string>
+    <string name="diag_nav_icons_no_listener">El servicio de notificaciones de DashCast está desconectado. Permite su acceso a las notificaciones y vuelve a intentarlo.</string>
+    <string name="diag_nav_icons_none">No hay ninguna notificación de navegación de Maps activa. Inicia una ruta en Maps y vuelve a intentarlo.</string>
+    <string name="diag_nav_icons_failed">No se pudieron capturar los iconos de Maps.</string>
+    <string name="diag_nav_icons_ready">ZIP guardado: %1$s\n\n«Enviar» transmite las imágenes al soporte de DashCast. Pueden contener texto o información personal.</string>
+    <string name="diag_nav_icons_keep">Guardar en este dispositivo</string>
 </resources>

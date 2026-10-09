@@ -26,6 +26,7 @@ import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
+import java.lang.ref.WeakReference
 
 /**
  * MapNotificationListenerService — parses Google Maps (and compatible) navigation notifications and
@@ -54,6 +55,9 @@ import java.util.regex.Pattern
  * different regex.
  */
 class MapNotificationListenerService : NotificationListenerService() {
+
+    // Retain only an identity token in the keeper, never a Service or Activity reference.
+    private val recoveryToken = Any()
 
     // ─── HUD write offloading ─────────────────────────────────────────────
     // All ProxyClient/CAN writes (HudController.updateNavigation/closeNavigation
@@ -99,6 +103,7 @@ class MapNotificationListenerService : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        NavigationListenerKeeper.onCreated(recoveryToken)
         val processContext = applicationContext
         appContext = processContext
         val executor = Executors.newSingleThreadExecutor { r ->
@@ -107,8 +112,16 @@ class MapNotificationListenerService : NotificationListenerService() {
             t
         }
         hudDispatcher = LatestValueDispatcher(executor) { pending ->
-            if (HudController.updateNavigation(processContext, pending.data)) {
-                hudDeliveryTracker.markDelivered(pending.generation)
+            val enabled = ClusterPrefs.getNavigationOutputs(processContext).enabled
+            try {
+                val accepted = HudController.updateNavigation(processContext, pending.data)
+                diagnostics.delivery(pending.sourcePackage, enabled, accepted, SystemClock.elapsedRealtime())
+                    ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
+                if (accepted) hudDeliveryTracker.markDelivered(pending.generation)
+            } catch (e: Exception) {
+                diagnostics.delivery(pending.sourcePackage, enabled, false,
+                    SystemClock.elapsedRealtime(), e.javaClass.simpleName)
+                    ?.let { AppLogger.w(TAG, "NAV DELIVERY $it") }
             }
         }
         navigationPreferencesObserver = ClusterPrefs.observeNavigationOutputs(processContext) {
@@ -124,6 +137,8 @@ class MapNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        if (captureListener.get() === this) captureListener.clear()
+        NavigationListenerKeeper.onDestroyed(recoveryToken)
         navigationPreferencesObserver?.close()
         navigationPreferencesObserver = null
         clearTrackedNavigation()
@@ -142,6 +157,8 @@ class MapNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        captureListener = WeakReference(this)
+        NavigationListenerKeeper.onConnected(recoveryToken)
         // The system (re)bound us — possibly mid-route, after a process restart or a rebind.
         // onNotificationPosted only fires on NEW posts, so an ALREADY-posted ongoing nav notification
         // stays invisible until the nav app next changes its content: the HUD would not resume, and
@@ -161,6 +178,8 @@ class MapNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        if (captureListener.get() === this) captureListener.clear()
+        NavigationListenerKeeper.onDisconnected(recoveryToken)
         // System unbound the listener (e.g. permission revoked, system crash).
         // Close the HUD so the cluster doesn't stay frozen on the last nav state.
         clearTrackedNavigation()
@@ -178,13 +197,17 @@ class MapNotificationListenerService : NotificationListenerService() {
         if (n == null) return
 
         if (!isNavigationNotification(n)) return
+        diagnostics.observe(sbn.packageName, SystemClock.elapsedRealtime())
 
         // NOTE: whether this counts as nav activity is decided LOWER DOWN, once we know if it looks
         // like guidance (a resolved maneuver or a real distance) — see the guidance-signal gate after
         // distance parsing. A nav app's NON-guidance ongoing notification (e.g. Waze's
         // CLOSE_WAZE_CHANNEL foreground/close prompt) must NOT be recorded as a nav frame.
 
-        val extras = n.extras ?: return
+        val extras = n.extras ?: run {
+            recordRejection(sbn.packageName, NavigationDiagnostics.Rejection.NO_EXTRAS)
+            return
+        }
 
         val title = charSeqToString(extras.getCharSequence("android.title"))
         val text = charSeqToString(extras.getCharSequence("android.text"))
@@ -196,6 +219,7 @@ class MapNotificationListenerService : NotificationListenerService() {
                         sbn.key, lastNotificationKey,
                         title, lastTitle, text, lastText,
                         bigText, lastBigText, subText, lastSubText)) {
+            diagnostics.duplicate()
             // AUD-003 — but first, keep the HUD alive. This is a re-post of the very frame already
             // displayed, so the arrow up there is still correct and the staleness watchdog must not
             // read "no update" as "frozen". Only when that frame actually reached the HUD: an
@@ -233,7 +257,10 @@ class MapNotificationListenerService : NotificationListenerService() {
         val lowerText = text.lowercase(Locale.ROOT)
         val lowerTitle = title.lowercase(Locale.ROOT)
         for (skip in SKIP_STRINGS) {
-            if (lowerText.contains(skip) || lowerTitle.contains(skip)) return
+            if (lowerText.contains(skip) || lowerTitle.contains(skip)) {
+                recordRejection(sbn.packageName, NavigationDiagnostics.Rejection.SKIPPED)
+                return
+            }
         }
 
         // Combine title + text for pattern matching.
@@ -248,7 +275,10 @@ class MapNotificationListenerService : NotificationListenerService() {
         val combined = normaliseDigits((title + " " + text + " " + bigText).trim())!!
         val lower = combined.lowercase(Locale.ROOT)
 
-        if (combined.isEmpty()) return
+        if (combined.isEmpty()) {
+            recordRejection(sbn.packageName, NavigationDiagnostics.Rejection.EMPTY)
+            return
+        }
 
         // 1. Turn icon — try icon resource name first, then text; track WHICH source resolved it so
         //    the NAV PARSE diagnostic shows whether we read the direction from the small-icon
@@ -292,7 +322,11 @@ class MapNotificationListenerService : NotificationListenerService() {
         // no-route case as a parser bug (INC-20260726-140441). Nothing recorded here ⇒ NavSeen stays
         // "no", so the reporter correctly tells the driver to start a route.
         val looksLikeGuidance = hasGuidanceSignal(iconId, distance)
-        if (!looksLikeGuidance) return
+        if (!looksLikeGuidance) {
+            recordRejection(sbn.packageName, NavigationDiagnostics.Rejection.NO_GUIDANCE,
+                iconResName, distance, title.length, text.length, bigText.length)
+            return
+        }
 
         // A supported nav app posted a GUIDANCE frame ⇒ a route IS running. Recorded now (before the
         // parse below can still bail) so the reporter can tell "no route" from "route running but we
@@ -300,6 +334,9 @@ class MapNotificationListenerService : NotificationListenerService() {
         noteNavActivity(sbn.packageName, false)
 
         if (!isCompleteGuidance(iconId, distance)) {
+            recordRejection(sbn.packageName,
+                if (iconId <= 0) NavigationDiagnostics.Rejection.NO_MANEUVER else NavigationDiagnostics.Rejection.NO_DISTANCE,
+                iconResName, distance, title.length, text.length, bigText.length)
             if (iconId <= 0) {
                 if (ClusterPrefs.isNavRawCaptureEnabled(this)) {
                     Log.d(TAG, "no maneuver found in: $combined")
@@ -361,12 +398,22 @@ class MapNotificationListenerService : NotificationListenerService() {
 
         // Fully parsed into a HudNavigationData ⇒ we understood the frame, not just received it.
         noteNavActivity(sbn.packageName, true)
+        diagnostics.parsed()
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
         // Remember WHICH notification is driving the HUD, so the removal path can tell it apart
         // from the nav app's other ongoing notifications. See onNotificationRemoved.
         sDrivingKey = sbn.key
-        postNavUpdate(data, deliveryGeneration)
+        postNavUpdate(data, deliveryGeneration, sbn.packageName)
+    }
+
+    private fun recordRejection(
+        pkg: String, reason: NavigationDiagnostics.Rejection,
+        resource: String = "", distance: Int = -1,
+        titleLength: Int = 0, textLength: Int = 0, bigTextLength: Int = 0,
+    ) {
+        diagnostics.reject(pkg, reason, SystemClock.elapsedRealtime(), resource, distance,
+            titleLength, textLength, bigTextLength)?.let { AppLogger.i(TAG, "NAV REJECT $it") }
     }
 
     /**
@@ -440,9 +487,9 @@ class MapNotificationListenerService : NotificationListenerService() {
      * Queue a nav update on the serial HUD writer thread. If updates arrive faster than the daemon
      * drains them, only the newest pending state survives and at most one drain task stays queued.
      */
-    private fun postNavUpdate(data: HudNavigationData?, generation: Long) {
+    private fun postNavUpdate(data: HudNavigationData?, generation: Long, sourcePackage: String) {
         if (data == null) return
-        hudDispatcher?.submit(PendingHudUpdate(data, generation))
+        hudDispatcher?.submit(PendingHudUpdate(data, generation, sourcePackage))
     }
 
     /**
@@ -463,7 +510,7 @@ class MapNotificationListenerService : NotificationListenerService() {
         }
     }
 
-    private class PendingHudUpdate(val data: HudNavigationData, val generation: Long)
+    private class PendingHudUpdate(val data: HudNavigationData, val generation: Long, val sourcePackage: String)
 
     // ─── Icon resolution ──────────────────────────────────────────────────
 
@@ -597,6 +644,21 @@ class MapNotificationListenerService : NotificationListenerService() {
 
         private const val TAG = "MapNavListener"
 
+        private val diagnostics = NavigationDiagnostics()
+        @Volatile private var captureListener = WeakReference<MapNotificationListenerService>(null)
+
+        @JvmStatic
+        @JvmOverloads
+        fun diagnosticsSummary(ctx: Context? = null): String =
+            (ctx?.let { "currentOutputs=${ClusterPrefs.getNavigationOutputs(it)}\n" } ?: "") +
+                diagnostics.summary(SystemClock.elapsedRealtime())
+
+        /** Read only on an explicit diagnostic request; never retain a Service strongly. */
+        internal fun activeMapsNotificationsForCapture(): List<StatusBarNotification>? {
+            val listener = captureListener.get() ?: return null
+            return NavigationIconCapture.selectNotifications(listener.activeNotifications ?: emptyArray())
+        }
+
         private const val PACKAGE_MARKER_KEY_FILE = "nav_package_marker.key"
         private const val PACKAGE_MARKER_KEY_BYTES = 32
 
@@ -662,7 +724,7 @@ class MapNotificationListenerService : NotificationListenerService() {
         private fun matchesNavKey(navAppKey: String?, pkg: String): Boolean {
             if (navAppKey == null || navAppKey.isEmpty()) return true
             if ("waze" == navAppKey) return PKG_WAZE == pkg
-            if ("maps" == navAppKey) return PKG_MAPS == pkg || PKG_MAPS_REVANCED == pkg
+            if ("maps" == navAppKey) return isMapsPackage(pkg)
             return true
         }
 
@@ -1300,11 +1362,10 @@ class MapNotificationListenerService : NotificationListenerService() {
 
         // ─── Helpers ──────────────────────────────────────────────────────────
 
-        private fun isNavPackage(pkg: String?): Boolean =
-                // The SX361 report uses this exact Maps package. Keep an explicit allowlist:
-                // category=navigation alone does not establish a supported notification format.
-                PKG_MAPS == pkg || PKG_MAPS_REVANCED == pkg ||
-                        PKG_MAPS_MORPHE == pkg || PKG_WAZE == pkg
+        internal fun isMapsPackage(pkg: String?): Boolean =
+                PKG_MAPS == pkg || PKG_MAPS_REVANCED == pkg || PKG_MAPS_MORPHE == pkg
+
+        private fun isNavPackage(pkg: String?): Boolean = isMapsPackage(pkg) || PKG_WAZE == pkg
 
         // Known navigation apps we do NOT support: their guidance is not exposed as a parseable
         // notification (e.g. Telenav delivers binary NaviInfo AIDL, not text). Prefix match on the pkg.
