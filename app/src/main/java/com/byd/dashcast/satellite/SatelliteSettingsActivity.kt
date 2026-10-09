@@ -7,7 +7,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PersistableBundle
+import android.graphics.Typeface
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
@@ -29,6 +32,20 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     private lateinit var receiverSwitch: MaterialSwitch
     private lateinit var remoteSwitch: MaterialSwitch
     private var changing = false
+    private val pairingHandler = Handler(Looper.getMainLooper())
+    private var pairingDialog: AlertDialog? = null
+    private var pairingAttempt: Long? = null
+    private var pairingCode: TextView? = null
+    private var pairingCountdown: TextView? = null
+    private var pairingAddress: TextView? = null
+    private var pairingVisible = false
+    private val pairingTicker = object : Runnable {
+        override fun run() {
+            if (!pairingVisible) return
+            renderPairing(SatellitePairingSession.snapshot())
+            pairingHandler.postDelayed(this, 500)
+        }
+    }
     override fun attachBaseContext(base: Context) = super.attachBaseContext(LocaleHelper.applyLocale(base))
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,36 +125,128 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     }
 
     private fun showPairing() {
+        if (!SatellitePrefs.isEnabled(this)) { toast(R.string.satellite_enable_first); return }
+        SatellitePairingSession.snapshot()?.let { renderPairing(it); return }
+        val app = applicationContext
+        SatelliteReceiverService.start(app)
+        val attempt = SatellitePairingSession.begin()
+        val state = SatellitePairingSession.snapshot() ?: return
+        renderPairing(state)
+        // Capture the application and attempt only. The receiver owns the window after leaving this screen.
         Thread {
-            val profile = try {
-                val hosts = NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+            val hosts = try {
+                NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
                     .filter { it.isUp }.flatMap { it.inetAddresses.toList() }
                     .filter { !it.isLoopbackAddress && SatelliteProtocol.isLocalAddress(it) }
                     .mapNotNull { it.hostAddress?.substringBefore('%') }.distinct()
+            } catch (_: Exception) { emptyList() }
+            val profile = try {
+                check(hosts.isNotEmpty())
                 JSONObject().put("version", SatelliteProtocol.VERSION).put("hosts", JSONArray(hosts))
                     .put("port", SatellitePrefs.PORT).put("path", SatelliteProtocol.PATH)
                     .put("certificateSha256", SatelliteTls.fingerprint())
-                    .put("token", SatellitePrefs.token(applicationContext)).toString(2)
+                    .put("token", SatellitePrefs.token(app)).toString(2)
             } catch (_: Exception) { null }
-            runOnUiThread {
-                if (isFinishing || isDestroyed) return@runOnUiThread
-                if (profile == null) { toast(R.string.satellite_unavailable); return@runOnUiThread }
-                val text = TextView(this).apply { this.text = profile; setTextIsSelectable(true); setPadding(24, 16, 24, 16) }
-                val dialog = AlertDialog.Builder(this).setTitle(R.string.satellite_pair).setView(text)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(android.R.string.copy) { _, _ ->
-                        val clip = ClipData.newPlainText("DashCast satellite", profile)
-                        if (Build.VERSION.SDK_INT >= 33) {
-                            clip.description.extras = PersistableBundle().apply {
-                                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
-                            }
-                        }
-                        getSystemService(ClipboardManager::class.java)
-                            .setPrimaryClip(clip)
-                    }.show()
-                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            val current = SatellitePairingSession.snapshot()?.takeIf { it.attempt == attempt }
+            if (profile == null || current == null || !SatellitePrefs.isEnabled(app)) {
+                SatellitePairingSession.close(attempt)
+                return@Thread
             }
-        }.start()
+            val server = SatellitePairingServer(profile, state.code,
+                lifetimeMs = current.remainingMs, onClosed = { SatellitePairingSession.close(attempt) })
+            if (!SatellitePairingSession.attach(attempt, server, profile, hosts) || !server.start()) {
+                server.close()
+                SatellitePairingSession.close(attempt)
+            }
+        }.apply { isDaemon = true; name = "satellite-pair-prepare" }.start()
+    }
+
+    private fun renderPairing(state: SatellitePairingSession.Snapshot?) {
+        if (!pairingVisible) return
+        if (state == null) { detachPairingDialog(); return }
+        if (pairingAttempt != state.attempt || pairingDialog == null) {
+            detachPairingDialog()
+            pairingAttempt = state.attempt
+            val codeText = TextView(this).apply {
+                textSize = 32f
+                typeface = Typeface.MONOSPACE
+                isSaveEnabled = false
+            }
+            val countdown = TextView(this)
+            val address = TextView(this)
+            pairingCode = codeText
+            pairingCountdown = countdown
+            pairingAddress = address
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                val padding = (24 * resources.displayMetrics.density).toInt()
+                setPadding(padding, padding / 2, padding, padding / 2)
+                addView(TextView(context).apply { setText(R.string.satellite_pair_instructions) })
+                addView(codeText)
+                addView(countdown)
+                addView(address)
+            }
+            val dialog = AlertDialog.Builder(this).setTitle(R.string.satellite_pair).setView(content)
+                .setNegativeButton(android.R.string.cancel) { _, _ -> SatellitePairingSession.close(state.attempt) }
+                .setNeutralButton(R.string.satellite_pair_copy_advanced, null).create()
+            pairingDialog = dialog
+            dialog.setOnDismissListener {
+                if (pairingVisible && pairingAttempt == state.attempt) {
+                    SatellitePairingSession.close(state.attempt)
+                }
+                codeText.text = ""
+            }
+            dialog.show()
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                SatellitePairingSession.snapshot()?.takeIf { it.attempt == state.attempt }?.profile?.let {
+                    copyProfile(it)
+                    SatellitePairingSession.close(state.attempt)
+                    detachPairingDialog()
+                }
+            }
+        }
+        pairingCode?.text = if (state.ready) SatellitePairingCode.format(state.code)
+            else getString(R.string.satellite_pair_preparing)
+        pairingCountdown?.text = getString(R.string.satellite_pair_remaining, (state.remainingMs + 999) / 1_000)
+        pairingAddress?.text = if (state.addresses.isEmpty()) "" else
+            getString(R.string.satellite_pair_address, state.addresses.joinToString(", "))
+        pairingDialog?.getButton(AlertDialog.BUTTON_NEUTRAL)?.isEnabled = state.ready && state.profile != null
+    }
+
+    private fun copyProfile(profile: String) {
+        val clip = ClipData.newPlainText("DashCast satellite", profile)
+        if (Build.VERSION.SDK_INT >= 33) {
+            clip.description.extras = PersistableBundle().apply {
+                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+        getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+    }
+
+    /** Leaving for the Tbox detaches views only; the foreground receiver keeps the original deadline. */
+    private fun detachPairingDialog() {
+        pairingAttempt = null
+        pairingDialog?.setOnDismissListener(null)
+        pairingDialog?.dismiss()
+        pairingDialog = null
+        pairingCode?.text = ""
+        pairingCode = null
+        pairingCountdown = null
+        pairingAddress = null
+    }
+
+    override fun onStart() {
+        super.onStart()
+        pairingVisible = true
+        pairingTicker.run()
+    }
+
+    override fun onStop() {
+        pairingVisible = false
+        pairingHandler.removeCallbacksAndMessages(null)
+        detachPairingDialog()
+        super.onStop()
     }
 
     private fun projectVideo() {

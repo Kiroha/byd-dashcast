@@ -93,6 +93,19 @@ class SatelliteWebSocketServerTest {
         assertEquals(listOf(1L, 2L), frames.map { it.sequence })
     }
 
+    @Test fun `successful WSS authentication closes the temporary pairing listener`() {
+        val attempt = SatellitePairingSession.begin()
+        val bootstrap = SatellitePairingServer("{}", SatellitePairingCode.newCode(), 0)
+        try {
+            assertTrue(SatellitePairingSession.attach(attempt, bootstrap))
+            assertTrue(bootstrap.start())
+            val socket = Socket(); open(socket); hello(socket)
+            assertEquals("welcome", JSONObject(socket.messages.first()).getString("type"))
+            assertFalse(SatellitePairingSession.isCurrent(attempt))
+            assertEquals(-1, bootstrap.localPort)
+        } finally { bootstrap.close(); SatellitePairingSession.close() }
+    }
+
     @Test fun `a second sender cannot take over or clear the authenticated route`() {
         val first = Socket(); open(first); hello(first)
         val second = Socket(); open(second); hello(second)

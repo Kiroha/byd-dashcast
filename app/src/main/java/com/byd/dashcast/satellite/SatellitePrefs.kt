@@ -20,6 +20,7 @@ object SatellitePrefs {
 
     internal fun setEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit { putBoolean("enabled", enabled) }
+        if (!enabled) SatellitePairingSession.close()
     }
 
     internal fun setRemoteGuidance(ctx: Context, enabled: Boolean) {
@@ -27,11 +28,16 @@ object SatellitePrefs {
     }
 
     @Synchronized
-    fun token(ctx: Context): String = prefs(ctx).getString("token", null) ?: rotateToken(ctx)
+    fun token(ctx: Context): String = prefs(ctx).getString("token", null) ?: createToken(ctx)
 
     @Synchronized
-    @SuppressLint("UseKtx") // Check synchronous persistence before exposing a new credential.
     fun rotateToken(ctx: Context): String {
+        SatellitePairingSession.close()
+        return createToken(ctx)
+    }
+
+    @SuppressLint("UseKtx") // Check synchronous persistence before exposing a new credential.
+    private fun createToken(ctx: Context): String {
         val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         check(prefs(ctx).edit().putString("token", token).commit())
