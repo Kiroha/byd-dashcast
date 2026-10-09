@@ -51,6 +51,40 @@ class NavigationListenerKeeperTest {
     }
 
     @Test
+    fun `unconfirmed rebind refreshes only the already approved exact listener after thirty seconds`() {
+        grant(true)
+        val refreshed = mutableListOf<ComponentName>()
+        fun probe() = NavigationListenerKeeper.recover(context,
+            refreshApprovedListener = { refreshed += it }, requestRebind = {})
+        assertTrue(probe())
+        assertTrue(refreshed.isEmpty())
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(30))
+        assertTrue(probe())
+        assertEquals(listOf(component), refreshed)
+        repeat(10) { probe() }
+        assertEquals(1, refreshed.size)
+        grant(false)
+        ShadowSystemClock.advanceBy(Duration.ofMinutes(10))
+        assertFalse(probe())
+        assertEquals(1, refreshed.size)
+    }
+
+    @Test
+    fun `a confirmed or disabled listener never refreshes its existing approval`() {
+        grant(true)
+        val token = Any()
+        NavigationListenerKeeper.onCreated(token)
+        NavigationListenerKeeper.onConnected(token)
+        ShadowSystemClock.advanceBy(Duration.ofMinutes(10))
+        assertFalse(NavigationListenerKeeper.recover(context,
+            refreshApprovedListener = { fail("healthy listener") }, requestRebind = {}))
+        NavigationListenerKeeper.onDestroyed(token)
+        ClusterPrefs.setNavigationEnabled(context, false)
+        assertFalse(NavigationListenerKeeper.recover(context,
+            refreshApprovedListener = { fail("disabled listener") }, requestRebind = {}))
+    }
+
+    @Test
     fun `recovery requires permission for the exact listener component`() {
         val requested = mutableListOf<ComponentName>()
         assertFalse(NavigationListenerKeeper.recover(context) { requested += it })

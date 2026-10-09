@@ -9,6 +9,8 @@ internal class NavigationListenerRecovery {
     private var attempts = 0
     private var lastAttemptMs: Long? = null
     private var inFlight = false
+    private var lastRefreshMs: Long? = null
+    private var refreshes = 0
 
     fun onCreated(token: Any) = synchronized(lock) {
         if (connected) resetRetries()
@@ -74,16 +76,34 @@ internal class NavigationListenerRecovery {
 
     fun snapshot(nowMs: Long): Snapshot = synchronized(lock) {
         Snapshot(connected, eligible, attempts, inFlight,
-            lastAttemptMs?.let { (nowMs - it).coerceAtLeast(0L) })
+            lastAttemptMs?.let { (nowMs - it).coerceAtLeast(0L) }, refreshes,
+            lastRefreshMs?.let { (nowMs - it).coerceAtLeast(0L) })
+    }
+
+    /** Separate fallback for Android versions whose requestBindListener is an enabled-state no-op. */
+    fun maybeRefresh(nowMs: Long, refreshApprovedListener: () -> Unit): Boolean {
+        synchronized(lock) {
+            if (!eligible || connected || inFlight || attempts < 2) return false
+            val last = lastRefreshMs
+            if (last != null && nowMs - last < 300_000L) return false
+            lastRefreshMs = nowMs
+            refreshes++
+        }
+        // The fallback also runs outside the lifecycle lock. It cannot confirm connectivity.
+        refreshApprovedListener()
+        return true
     }
 
     private fun resetRetries() {
         attempts = 0
         lastAttemptMs = null
+        lastRefreshMs = null
+        refreshes = 0
     }
 
     data class Snapshot(val connected: Boolean, val eligible: Boolean, val attempts: Int,
-                        val inFlight: Boolean, val lastAttemptAgeMs: Long?)
+                        val inFlight: Boolean, val lastAttemptAgeMs: Long?,
+                        val refreshes: Int, val lastRefreshAgeMs: Long?)
 
     companion object {
         // No attempt ceiling: a slow OEM notification manager is retried throughout the session.

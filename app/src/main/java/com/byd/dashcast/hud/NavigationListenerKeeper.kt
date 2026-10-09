@@ -32,10 +32,16 @@ object NavigationListenerKeeper {
     internal fun onDestroyed(token: Any) = recovery.onDestroyed(token)
 
     fun maybeKeepAlive(ctx: Context) {
-        recover(ctx) { NotificationListenerService.requestRebind(it) }
+        recover(ctx, refreshApprovedListener = { component ->
+            NavigationListenerApprovalRefresh.request(ctx.applicationContext, component) {
+                val state = recovery.snapshot(SystemClock.elapsedRealtime())
+                state.eligible && !state.connected
+            }
+        }) { NotificationListenerService.requestRebind(it) }
     }
 
-    internal fun recover(ctx: Context, requestRebind: (ComponentName) -> Unit): Boolean {
+    internal fun recover(ctx: Context, refreshApprovedListener: (ComponentName) -> Unit = {},
+                         requestRebind: (ComponentName) -> Unit): Boolean {
         val app = ctx.applicationContext
         val now = SystemClock.elapsedRealtime()
         return try {
@@ -44,7 +50,7 @@ object NavigationListenerKeeper {
             val manager = app.getSystemService(NotificationManager::class.java)
             // Check this exact component; another listener in the same package is not a grant.
             val granted = enabled && manager?.isNotificationListenerAccessGranted(component) == true
-            recovery.maybeRecover(now, enabled, granted) {
+            val requested = recovery.maybeRecover(now, enabled, granted) {
                 try {
                     requestRebind(component)
                     AppLogger.i(TAG, "notification listener rebind requested; " + summary())
@@ -53,6 +59,14 @@ object NavigationListenerKeeper {
                     AppLogger.w(TAG, "notification listener rebind failed: " + e.javaClass.simpleName)
                 }
             }
+            recovery.maybeRefresh(now) {
+                // Re-check after requestRebind: it may have synchronously confirmed a connection.
+                if (ClusterPrefs.getNavigationOutputs(app).enabled &&
+                    manager?.isNotificationListenerAccessGranted(component) == true) {
+                    refreshApprovedListener(component)
+                }
+            }
+            requested
         } catch (e: Exception) {
             AppLogger.w(TAG, "notification listener probe failed: " + e.javaClass.simpleName)
             false
@@ -64,6 +78,8 @@ object NavigationListenerKeeper {
         val state = recovery.snapshot(SystemClock.elapsedRealtime())
         return "connected=${state.connected} eligible=${state.eligible} " +
             "retryLevel=${state.attempts} requestInFlight=${state.inFlight} " +
-            "lastRequestAgeMs=${state.lastAttemptAgeMs ?: "none"}"
+            "lastRequestAgeMs=${state.lastAttemptAgeMs ?: "none"} " +
+            "approvalRefreshes=${state.refreshes} lastRefreshAgeMs=${state.lastRefreshAgeMs ?: "none"} " +
+            "lastRefreshResult=${NavigationListenerApprovalRefresh.lastResult}"
     }
 }
