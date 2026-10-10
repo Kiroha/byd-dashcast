@@ -28,6 +28,7 @@ class SatelliteWebSocketServerTest {
     private val frames = mutableListOf<SatelliteProtocol.Navigation>()
     private val disconnected = mutableListOf<String>()
     private var failures = 0
+    private lateinit var status: SatelliteStatusTracker
 
     private class Socket {
         val messages = mutableListOf<String>()
@@ -53,12 +54,15 @@ class SatelliteWebSocketServerTest {
         NavigationInputRouter.selectRemote(context, true)
         token = SatellitePrefs.token(context)
         val tls = SSLContext.getInstance("TLS").apply { init(null, null, null) }
+        status = SatelliteStatusTracker()
+        val owner = status.begin()
         server = SatelliteWebSocketServer(context, tls, token, object : SatelliteWebSocketServer.Events {
-            override fun connected(session: String) { connected.add(session) }
+            override fun listening() { status.listening(owner) }
+            override fun connected(session: String) { connected.add(session); status.connected(owner, session) }
             override fun navigation(session: String, frame: SatelliteProtocol.Navigation, receivedAtMs: Long) { frames.add(frame) }
             override fun expired(session: String) {}
-            override fun disconnected(session: String) { disconnected.add(session) }
-            override fun failed() { failures++ }
+            override fun disconnected(session: String) { disconnected.add(session); status.disconnected(owner, session) }
+            override fun failed() { failures++; status.failed(owner) }
         })
     }
 
@@ -72,6 +76,27 @@ class SatelliteWebSocketServerTest {
     private fun update(socket: Socket, seq: Any = 1) = server.onMessage(socket.socket,
         JSONObject().put("type", "navigation.update").put("seq", seq).put("ageMs", 0)
             .put("maneuver", "right").put("distanceMeters", 200).toString())
+
+    @Test fun `bound listener and open sockets stay waiting until the real authentication callback`() {
+        server.onStart()
+        assertEquals(SatelliteStatusTracker.Connection.WAITING, status.snapshot(true, true, 0).connection)
+        val rejected = Socket(); open(rejected); hello(rejected, suppliedToken = "wrong-code-profile")
+        assertEquals(SatelliteStatusTracker.Connection.WAITING, status.snapshot(true, true, 0).connection)
+        server.onClose(rejected.socket, 1008, "", true)
+        val accepted = Socket(); open(accepted)
+        assertEquals(SatelliteStatusTracker.Connection.WAITING, status.snapshot(true, true, 0).connection)
+        hello(accepted)
+        assertEquals(SatelliteStatusTracker.Snapshot(SatelliteStatusTracker.Connection.CONNECTED,
+            SatelliteStatusTracker.Guidance.WAITING), status.snapshot(true, true, 0))
+        server.onClose(accepted.socket, 1000, "", true)
+        assertEquals(SatelliteStatusTracker.Connection.WAITING, status.snapshot(true, true, 0).connection)
+    }
+
+    @Test fun `fatal bind error reports unavailable and a stale start callback cannot revive it`() {
+        server.onError(null, IllegalStateException("bind failure"))
+        server.onStart()
+        assertEquals(SatelliteStatusTracker.Connection.UNAVAILABLE, status.snapshot(true, true, 0).connection)
+    }
 
     @Test fun `unauthenticated guidance never reaches the output boundary`() {
         val socket = Socket(); open(socket); update(socket)

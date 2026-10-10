@@ -619,4 +619,18 @@
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>
     <string name="satellite_pair_background">Pairing is open for 2 minutes. Tap to return to the code.</string>
+
+    <!-- Live satellite connection and guidance states; no credentials or route content. -->
+    <string name="satellite_status_connection">Connessione</string>
+    <string name="satellite_connection_disabled">Ricevitore disattivato</string>
+    <string name="satellite_connection_starting">Avvio del ricevitore</string>
+    <string name="satellite_connection_waiting">In attesa di Satellite</string>
+    <string name="satellite_connection_connected">Satellite connesso</string>
+    <string name="satellite_connection_unavailable">Ricevitore non disponibile</string>
+    <string name="satellite_status_guidance">Navigazione</string>
+    <string name="satellite_guidance_disabled">Navigazione Satellite disattivata</string>
+    <string name="satellite_guidance_waiting">In attesa di indicazioni</string>
+    <string name="satellite_guidance_active">Navigazione attiva</string>
+    <string name="satellite_guidance_expired">Indicazioni scadute</string>
+    <string name="satellite_status_accessibility">%1$s: %2$s</string>
 </resources>

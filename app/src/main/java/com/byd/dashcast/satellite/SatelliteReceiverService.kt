@@ -23,7 +23,7 @@ class SatelliteReceiverService : Service() {
         Thread(r, "satellite-transport").apply { isDaemon = true }
     }
     private data class PendingNavigation(val session: String, val frame: SatelliteProtocol.Navigation,
-        val receivedAtMs: Long, val generation: Long, val inputRevision: Long)
+        val receivedAtMs: Long, val generation: Long, val inputRevision: Long, val statusOwner: Long)
     private val navigation = LatestValueDispatcher(Executors.newSingleThreadExecutor { r ->
         Thread(r, "satellite-navigation").apply { isDaemon = true }
     }) { pending: PendingNavigation ->
@@ -33,8 +33,12 @@ class SatelliteReceiverService : Service() {
             val data = pending.frame.data
             if (data != null && SystemClock.elapsedRealtime() - pending.receivedAtMs + pending.frame.ageMs >
                 SatelliteProtocol.MAX_AGE_MS) return@LatestValueDispatcher
-            if (data == null) NavigationInputRouter.closeRemote(applicationContext, pending.session)
-            else NavigationInputRouter.updateRemote(applicationContext, pending.session, pending.inputRevision, data)
+            if (data == null) {
+                SatelliteStatus.stopped(pending.statusOwner, pending.session)
+                NavigationInputRouter.closeRemote(applicationContext, pending.session)
+            } else NavigationInputRouter.updateRemote(applicationContext, pending.session, pending.inputRevision, data) {
+                SatelliteStatus.guidance(pending.statusOwner, pending.session, pending.receivedAtMs, pending.frame.ageMs)
+            }
         }
     }
     private val sessionLock = Any()
@@ -43,17 +47,26 @@ class SatelliteReceiverService : Service() {
     private var ownedSession: String? = null
     @Volatile private var destroyed = false
     @Volatile private var server: SatelliteWebSocketServer? = null
+    @Volatile private var statusOwner = 0L
     private var pairingNotice = false
     private val notificationHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
         running = true
+        statusOwner = SatelliteStatus.begin()
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL,
             getString(R.string.satellite_title), NotificationManager.IMPORTANCE_LOW))
         pairingNotice = SatellitePairingSession.snapshot() != null
-        startForeground(NOTIFICATION, receiverNotification(pairingNotice))
+        try { startForeground(NOTIFICATION, receiverNotification(pairingNotice)) }
+        catch (e: Exception) {
+            SatelliteStatus.failed(statusOwner)
+            destroyed = true
+            AppLogger.w("Satellite", "foreground unavailable: ${e.javaClass.simpleName}")
+            stopSelf()
+            return
+        }
         transportWorker.scheduleWithFixedDelay({
             server?.tick(SystemClock.elapsedRealtime())
             val pairing = SatellitePairingSession.snapshot() != null
@@ -76,49 +89,73 @@ class SatelliteReceiverService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!SatellitePrefs.isEnabled(this)) { stopSelf(); return START_NOT_STICKY }
+        if (destroyed || !SatellitePrefs.isEnabled(this)) { stopSelf(); return START_NOT_STICKY }
         transportWorker.execute {
             if (destroyed) return@execute
             if (intent?.action == RELOAD) {
                 server?.beginShutdown()
-                try { server?.stop(500) } catch (_: Exception) { stopSelf(); return@execute }
+                try { server?.stop(500) } catch (_: Exception) {
+                    SatelliteStatus.failed(statusOwner)
+                    stopSelf()
+                    return@execute
+                }
                 server = null
             }
             if (server == null) {
+                statusOwner = SatelliteStatus.begin()
                 try {
                     val created = SatelliteWebSocketServer(applicationContext, SatelliteTls.context(),
-                        SatellitePrefs.token(this), object : SatelliteWebSocketServer.Events {
-                            override fun connected(session: String) {
-                                synchronized(sessionLock) {
-                                    currentSession = session
-                                    ownedSession = session
-                                    navigationGeneration++
-                                    NavigationInputRouter.acquireRemote(applicationContext, session)
-                                }
-                            }
-                            override fun navigation(session: String, frame: SatelliteProtocol.Navigation,
-                                receivedAtMs: Long) {
-                                synchronized(sessionLock) {
-                                    if (currentSession == session && !destroyed) {
-                                        navigation.submit(PendingNavigation(session, frame, receivedAtMs,
-                                            ++navigationGeneration, NavigationInputRouter.remoteRevision()))
-                                    }
-                                }
-                            }
-                            override fun expired(session: String) { clearGuidance(session, false) }
-                            override fun disconnected(session: String) { clearGuidance(session, true) }
-                            override fun failed() { stopSelf() }
-                        })
+                        SatellitePrefs.token(this), receiverEvents(statusOwner))
                     if (destroyed || !SatellitePrefs.isEnabled(this)) return@execute
                     server = created
                     created.start()
                 } catch (e: Exception) {
+                    SatelliteStatus.failed(statusOwner)
                     AppLogger.w("Satellite", "receiver start failed: ${e.javaClass.simpleName}")
                     stopSelf()
                 }
             }
         }
         return START_STICKY
+    }
+
+    private fun receiverEvents(owner: Long) = object : SatelliteWebSocketServer.Events {
+        override fun listening() {
+            if (!destroyed && owner == statusOwner) SatelliteStatus.listening(owner)
+        }
+        override fun connected(session: String) {
+            synchronized(sessionLock) {
+                if (destroyed || owner != statusOwner) return
+                currentSession = session
+                ownedSession = session
+                navigationGeneration++
+                SatelliteStatus.connected(owner, session)
+                NavigationInputRouter.acquireRemote(applicationContext, session)
+            }
+        }
+        override fun navigation(session: String, frame: SatelliteProtocol.Navigation, receivedAtMs: Long) {
+            synchronized(sessionLock) {
+                if (currentSession == session && !destroyed && owner == statusOwner) {
+                    navigation.submit(PendingNavigation(session, frame, receivedAtMs,
+                        ++navigationGeneration, NavigationInputRouter.remoteRevision(), owner))
+                }
+            }
+        }
+        override fun expired(session: String) {
+            if (destroyed || owner != statusOwner) return
+            SatelliteStatus.expired(owner, session)
+            clearGuidance(session, false)
+        }
+        override fun disconnected(session: String) {
+            if (destroyed || owner != statusOwner) return
+            SatelliteStatus.disconnected(owner, session)
+            clearGuidance(session, true)
+        }
+        override fun failed() {
+            if (destroyed || owner != statusOwner) return
+            SatelliteStatus.failed(owner)
+            stopSelf()
+        }
     }
 
     private fun clearGuidance(session: String, disconnected: Boolean) {
@@ -141,6 +178,7 @@ class SatelliteReceiverService : Service() {
     override fun onDestroy() {
         SatellitePairingSession.close()
         destroyed = true
+        SatelliteStatus.end(statusOwner)
         notificationHandler.removeCallbacksAndMessages(null)
         running = false
         val oldSession = synchronized(sessionLock) { currentSession = null; ownedSession }
@@ -175,6 +213,7 @@ class SatelliteReceiverService : Service() {
                 ctx.startForegroundService(Intent(ctx, SatelliteReceiverService::class.java)
                     .apply { if (reload) action = RELOAD })
             } catch (e: Exception) {
+                SatelliteStatus.startFailed()
                 AppLogger.w("Satellite", "foreground start unavailable: ${e.javaClass.simpleName}")
             }
         }

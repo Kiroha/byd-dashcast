@@ -35,9 +35,13 @@ object NavigationInputRouter {
     }
 
     @Synchronized
-    fun updateRemote(ctx: Context, session: String, expectedRevision: Long, data: HudNavigationData): Boolean =
-        if (remoteSession == session && revision == expectedRevision && SatellitePrefs.usesRemoteGuidance(ctx))
-            HudController.updateNavigation(ctx, data) else false
+    fun updateRemote(ctx: Context, session: String, expectedRevision: Long, data: HudNavigationData,
+        accepted: () -> Unit = {}): Boolean =
+        if (remoteSession == session && revision == expectedRevision && SatellitePrefs.usesRemoteGuidance(ctx)) {
+            // Receipt is distinct from OEM delivery. Publish only inside the source/revision guard.
+            accepted()
+            HudController.updateNavigation(ctx, data)
+        } else false
 
     @Synchronized
     fun closeRemote(ctx: Context, session: String, release: Boolean = false) {
@@ -53,6 +57,7 @@ object NavigationInputRouter {
         }
         SatellitePrefs.setRemoteGuidance(ctx, remote)
         revision++
+        SatelliteStatus.sourceChanged()
     }
 
     @Synchronized
@@ -64,5 +69,6 @@ object NavigationInputRouter {
         }
         SatellitePrefs.setEnabled(ctx, enabled)
         revision++
+        SatelliteStatus.sourceChanged()
     }
 }

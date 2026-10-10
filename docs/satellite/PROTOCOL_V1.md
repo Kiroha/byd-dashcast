@@ -150,6 +150,29 @@ capture or ABRP-specific integration is promised by v1. Application capture and 
 restrictions depend on the companion Android version and app. WebView absence/incompatibility
 causes a controlled viewer failure while local navigation and projection remain available.
 
+## Receiver status in DashCast
+
+The Satellite settings page displays connection and guidance separately, using the
+receiver's actual callbacks and the serial guidance writer. A disabled receiver is
+grey; startup remains grey until the listener is bound. A bound listener is orange
+and waiting, successful WSS authentication is green and connected, and a receiver
+startup failure is red and unavailable. An open unauthenticated socket or a saved
+pairing profile never establishes the connected state.
+
+Guidance is disabled when satellite input is not selected, waiting when no usable
+instruction has been processed, active after a validated fresh instruction passes
+the current session/source-revision guard, and expired at the existing six-second
+deadline including source age. Active input does not assert successful OEM delivery
+or physical rendering. Invalid/replayed messages and discarded queued frames do
+not renew availability. Source changes, stops, disconnections and token revocation
+discard the previous input state; obsolete transport callbacks are fenced.
+
+Each indicator includes a themed icon and a translated accessible label in all 13
+app languages. Its snapshot contains only state enums, without credentials, pairing
+codes, notification content, road names or peer identifiers. The page samples current
+state every 500 milliseconds only while visible and reads it immediately on entry
+and return; leaving the page does not stop the receiver or change protocol behavior.
+
 ## Compatibility and validation
 
 `navigation-fixtures.json` contains portable accepted/rejected messages and is exercised by the
