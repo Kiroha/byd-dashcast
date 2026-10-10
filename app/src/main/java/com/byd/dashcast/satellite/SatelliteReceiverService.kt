@@ -55,6 +55,7 @@ class SatelliteReceiverService : Service() {
         super.onCreate()
         running = true
         statusOwner = SatelliteStatus.begin()
+        watchStartup(statusOwner)
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL,
             getString(R.string.satellite_title), NotificationManager.IMPORTANCE_LOW))
@@ -103,20 +104,50 @@ class SatelliteReceiverService : Service() {
             }
             if (server == null) {
                 statusOwner = SatelliteStatus.begin()
+                val owner = statusOwner
+                watchStartup(owner)
                 try {
-                    val created = SatelliteWebSocketServer(applicationContext, SatelliteTls.context(),
-                        SatellitePrefs.token(this), receiverEvents(statusOwner))
-                    if (destroyed || !SatellitePrefs.isEnabled(this)) return@execute
+                    AppLogger.i("Satellite", "receiver start: preparing TLS")
+                    val tls = SatelliteTls.context()
+                    if (!canStart(owner)) return@execute
+                    val created = SatelliteWebSocketServer(applicationContext, tls,
+                        SatellitePrefs.token(this), receiverEvents(owner))
+                    if (!canStart(owner)) {
+                        created.stop(500)
+                        return@execute
+                    }
                     server = created
+                    AppLogger.i("Satellite", "receiver start: binding control listener")
                     created.start()
                 } catch (e: Exception) {
-                    SatelliteStatus.failed(statusOwner)
-                    AppLogger.w("Satellite", "receiver start failed: ${e.javaClass.simpleName}")
-                    stopSelf()
+                    startFailed(owner, "receiver start failed", e)
+                } catch (e: LinkageError) {
+                    // Scheduled executors retain uncaught Errors in an unobserved Future. A
+                    // missing provider/library method must not leave the UI at Starting forever.
+                    startFailed(owner, "receiver start linkage failed", e)
                 }
             }
         }
         return START_STICKY
+    }
+
+    private fun canStart(owner: Long): Boolean = !destroyed && owner == statusOwner &&
+        SatellitePrefs.isEnabled(this) && SatelliteStatus.isStarting(owner)
+
+    private fun watchStartup(owner: Long) {
+        notificationHandler.postDelayed({
+            if (!destroyed && owner == statusOwner && SatelliteStatus.failIfStarting(owner)) {
+                AppLogger.w("Satellite", "receiver start: readiness timeout")
+                stopSelf()
+            }
+        }, STARTUP_TIMEOUT_MS)
+    }
+
+    private fun startFailed(owner: Long, stage: String, error: Throwable) {
+        if (destroyed || owner != statusOwner) return
+        SatelliteStatus.failed(owner)
+        AppLogger.w("Satellite", "$stage: ${error.javaClass.simpleName}")
+        stopSelf()
     }
 
     private fun receiverEvents(owner: Long) = object : SatelliteWebSocketServer.Events {
@@ -194,6 +225,7 @@ class SatelliteReceiverService : Service() {
         private const val CHANNEL = "dashcast_satellite"
         private const val NOTIFICATION = 7307
         private const val RELOAD = "com.byd.dashcast.satellite.RELOAD"
+        private const val STARTUP_TIMEOUT_MS = 20_000L
         @Volatile private var running = false
         private var lastAttempt = Long.MIN_VALUE
 

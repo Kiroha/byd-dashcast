@@ -1991,8 +1991,11 @@ android {
         // RAM-only code and deadline when the dialog is hidden, including dismissal
         // between onPause and onStop. Continue on Tbox hides the code; Cancel revokes it.
         // Also includes the formatted native-guidance distances from commit 648d153e.)
-        versionCode 651
-        versionName "1.9.12-beta"
+        // 652 = 1.9.13-beta (SATELLITE CONNECTION AND DEVICE IDENTITY. Accept the
+        // ordinary WebSocket upgrade, bound receiver startup, and distinguish the
+        // current authenticated Satellite from its previous connection. Preserve pairing.)
+        versionCode 652
+        versionName "1.9.13-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

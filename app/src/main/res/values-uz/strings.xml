@@ -634,4 +634,13 @@
     <string name="satellite_guidance_active">Yo‘l ko‘rsatish faol</string>
     <string name="satellite_guidance_expired">Yo‘l ko‘rsatish ma’lumotlari eskirgan</string>
     <string name="satellite_status_accessibility">%1$s: %2$s</string>
+    <string name="satellite_identity_loading">DashCast identifikatori: yuklanmoqda…</string>
+    <string name="satellite_identity">DashCast identifikatori: %1$s</string>
+    <string name="satellite_identity_unavailable">DashCast identifikatori mavjud emas</string>
+    <string name="satellite_device_none">Hali autentifikatsiyalangan sun’iy yo‘ldosh yo‘q</string>
+    <string name="satellite_device_connected">Ulangan qurilma: %1$s</string>
+    <string name="satellite_device_last">Oxirgi ulangan qurilma: %1$s\n%2$s</string>
+    <string name="satellite_device_unknown">Noma’lum qurilma (eski Satellite)</string>
+    <string name="satellite_device_id">Satellite identifikatori: %1$s</string>
+    <string name="satellite_device_address">Mahalliy manzil: %1$s</string>
 </resources>

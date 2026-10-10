@@ -634,4 +634,13 @@
     <string name="satellite_guidance_active">Бағыттау белсенді</string>
     <string name="satellite_guidance_expired">Бағыттау деректері ескірді</string>
     <string name="satellite_status_accessibility">%1$s: %2$s</string>
+    <string name="satellite_identity_loading">DashCast идентификаторы: жүктелуде…</string>
+    <string name="satellite_identity">DashCast идентификаторы: %1$s</string>
+    <string name="satellite_identity_unavailable">DashCast идентификаторы қолжетімсіз</string>
+    <string name="satellite_device_none">Әзірге аутентификацияланған спутник жоқ</string>
+    <string name="satellite_device_connected">Қосылған құрылғы: %1$s</string>
+    <string name="satellite_device_last">Соңғы қосылған құрылғы: %1$s\n%2$s</string>
+    <string name="satellite_device_unknown">Белгісіз құрылғы (ескі Satellite)</string>
+    <string name="satellite_device_id">Satellite идентификаторы: %1$s</string>
+    <string name="satellite_device_address">Жергілікті мекенжай: %1$s</string>
 </resources>

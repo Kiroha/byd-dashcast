@@ -35,6 +35,15 @@ internal open class SatelliteStatusTracker {
         if (owns(owner) && authenticationAllowed) listening = true
     }
 
+    @Synchronized fun isStarting(owner: Long): Boolean = owns(owner) && authenticationAllowed && !listening
+
+    /** A deadline and the real listener callback race under the same owner/state monitor. */
+    @Synchronized fun failIfStarting(owner: Long): Boolean {
+        if (!isStarting(owner)) return false
+        failed(owner)
+        return true
+    }
+
     @Synchronized fun connected(owner: Long, session: String) {
         if (!owns(owner) || !authenticationAllowed) return
         // Authentication itself also proves that the transport has bound its listener.

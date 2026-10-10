@@ -634,4 +634,13 @@
     <string name="satellite_guidance_active">Навигация активна</string>
     <string name="satellite_guidance_expired">Данные навигации устарели</string>
     <string name="satellite_status_accessibility">%1$s: %2$s</string>
+    <string name="satellite_identity_loading">Идентификатор DashCast: загрузка…</string>
+    <string name="satellite_identity">Идентификатор DashCast: %1$s</string>
+    <string name="satellite_identity_unavailable">Идентификатор DashCast недоступен</string>
+    <string name="satellite_device_none">Пока нет аутентифицированного спутника</string>
+    <string name="satellite_device_connected">Подключённое устройство: %1$s</string>
+    <string name="satellite_device_last">Последнее подключённое устройство: %1$s\n%2$s</string>
+    <string name="satellite_device_unknown">Неизвестное устройство (старый Satellite)</string>
+    <string name="satellite_device_id">Идентификатор Satellite: %1$s</string>
+    <string name="satellite_device_address">Локальный адрес: %1$s</string>
 </resources>
