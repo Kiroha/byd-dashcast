@@ -614,7 +614,8 @@
     <string name="satellite_cluster_first">Алдымен DashCast ішінде аспаптар панеліне проекцияны қосыңыз.</string>
     <string name="satellite_unavailable">Бұл құрылғыда қабылдау қолжетімсіз.</string>
     <string name="satellite_pair_preparing">Preparing pairing…</string>
-    <string name="satellite_pair_instructions">Remember these 6 digits, then switch to the Tbox and open DashCast Satellite → Pair with DashCast. Keep both devices on the same Wi-Fi. You can leave this screen: the code stays valid for 2 minutes.</string>
+    <string name="satellite_pair_instructions">Осы 6 цифрды есте сақтаңыз. Tbox құрылғысында жалғастыру түймесін басып, Tbox құрылғысына ауысып, DashCast Satellite → Pair with DashCast ашыңыз. Бір жергілікті желіні (көліктің хотспотын) пайдаланыңыз. Жалғастыру, Артқа және қолданбаларды ауыстыру бастапқы 2 минуттық мерзімді өзгертпейді. Бас тарту жұптастыруды тоқтатады.</string>
+    <string name="satellite_pair_continue">Tbox құрылғысында жалғастыру</string>
     <string name="satellite_pair_remaining">Code expires in %1$d seconds.</string>
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>

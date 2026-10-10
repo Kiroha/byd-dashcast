@@ -1,6 +1,13 @@
 package com.byd.dashcast.satellite
 
 import android.app.Application
+import android.content.DialogInterface
+import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import androidx.appcompat.app.AlertDialog
+import com.byd.dashcast.R
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -19,6 +26,7 @@ import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.time.Duration
 
 /** Real loopback sockets exercise framed PAKE transfer and cancellation, without a vehicle. */
 @RunWith(RobolectricTestRunner::class)
@@ -41,6 +49,38 @@ class SatellitePairingServerTest {
     private fun server(clock: () -> Long = { System.nanoTime() / 1_000_000 },
         onClosed: () -> Unit = {}): SatellitePairingServer =
         SatellitePairingServer(profile, code, 0, clock, onClosed).also { servers.add(it) }
+
+    private fun window(clock: () -> Long = { System.nanoTime() / 1_000_000 }):
+        Pair<SatellitePairingSession.Snapshot, SatellitePairingServer> {
+        SatellitePrefs.setEnabled(RuntimeEnvironment.getApplication(), true)
+        val attempt = SatellitePairingSession.begin()
+        val snapshot = requireNotNull(SatellitePairingSession.snapshot())
+        val server = SatellitePairingServer(profile, snapshot.code, 0, clock,
+            onClosed = { SatellitePairingSession.close(attempt) }).also(servers::add)
+        assertTrue(SatellitePairingSession.attach(attempt, server, profile, listOf("192.168.49.1")))
+        assertTrue(server.start())
+        return requireNotNull(SatellitePairingSession.snapshot()) to server
+    }
+
+    private fun idleMain() = org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idle()
+    private fun dialog(): AlertDialog = org.robolectric.shadows.ShadowDialog.getLatestDialog() as AlertDialog
+
+    private fun assertSameWindow(original: SatellitePairingSession.Snapshot): SatellitePairingSession.Snapshot {
+        val current = requireNotNull(SatellitePairingSession.snapshot()) { "Pairing window was cancelled" }
+        assertEquals(original.attempt, current.attempt)
+        assertEquals(original.code, current.code)
+        assertTrue("Returning to settings renewed the deadline", current.remainingMs <= original.remainingMs)
+        return current
+    }
+
+    private fun pairButton(activity: SatelliteSettingsActivity): Button {
+        fun views(view: View): Sequence<View> = sequence {
+            yield(view)
+            if (view is ViewGroup) repeat(view.childCount) { yieldAll(views(view.getChildAt(it))) }
+        }
+        return views(activity.findViewById(android.R.id.content)).filterIsInstance<Button>()
+            .first { it.text == activity.getString(R.string.satellite_pair) }
+    }
 
     private fun send(socket: Socket, frame: String) {
         val bytes = frame.toByteArray(Charsets.UTF_8)
@@ -245,27 +285,129 @@ class SatellitePairingServerTest {
         assertTrue(SatellitePairingSession.isCurrent(attempt))
     }
     @Test fun `switching screens restores the same RAM-only code without extending its deadline`() {
-        SatellitePrefs.setEnabled(RuntimeEnvironment.getApplication(), true)
-        val attempt = SatellitePairingSession.begin()
-        val original = requireNotNull(SatellitePairingSession.snapshot())
-        val server = server()
-        assertTrue(SatellitePairingSession.attach(attempt, server, profile, listOf("192.168.49.1")))
-        assertTrue(server.start())
+        val (original, server) = window()
         val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
         try {
             controller.pause().stop()
-            val background = requireNotNull(SatellitePairingSession.snapshot())
-            assertEquals(original.code, background.code)
-            assertEquals(attempt, background.attempt)
-            assertTrue(background.remainingMs <= original.remainingMs)
+            val background = assertSameWindow(original)
             assertTrue(server.localPort > 0)
             controller.start().resume()
-            val restored = requireNotNull(SatellitePairingSession.snapshot())
-            assertEquals(original.code, restored.code)
-            assertEquals(attempt, restored.attempt)
-            assertTrue(restored.remainingMs <= background.remainingMs)
+            assertSameWindow(background)
+            assertTrue(dialog().isShowing)
             controller.pause().stop()
         } finally { controller.destroy() }
+    }
+
+    @Test fun `CarPlay pause followed by dialog dismissal preserves the open pairing window`() {
+        val (original, server) = window()
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        var stopped = false
+        try {
+            val visibleDialog = dialog()
+            controller.pause()
+            visibleDialog.dismiss()
+            idleMain()
+            controller.stop()
+            stopped = true
+            val background = assertSameWindow(original)
+            assertTrue(server.localPort > 0)
+            val receivedProfile = Socket("127.0.0.1", server.localPort).use { socket ->
+                socket.soTimeout = 5_000
+                SatellitePairingExchange.client(background.code, send = { send(socket, it) },
+                    receive = { receive(socket) })
+            }
+            assertEquals(profile, receivedProfile)
+        } finally {
+            if (!stopped) controller.stop()
+            controller.destroy()
+        }
+    }
+
+    @Test fun `a delayed old dismissal cannot detach the replacement dialog after screen reentry`() {
+        val (original, server) = window()
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        try {
+            val firstDialog = dialog()
+            controller.pause()
+            firstDialog.dismiss()
+            // Keep the old onDismiss callback queued until the new dialog is visible.
+            controller.stop().start().resume()
+            val replacement = dialog()
+            assertNotSame(firstDialog, replacement)
+            assertTrue(replacement.isShowing)
+            idleMain()
+            org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+            assertSame(replacement, dialog())
+            assertTrue("The old dismissal detached the replacement dialog", replacement.isShowing)
+            assertSameWindow(original)
+            assertTrue(server.localPort > 0)
+        } finally { controller.pause().stop().destroy() }
+    }
+
+    @Test fun `Back hides the code without revoking it and Pair device reopens the same window`() {
+        assertDismissPreservesWindow { it.onBackPressed() }
+    }
+
+    @Test fun `outside cancellation hides the code without revoking it or reopening on a tick`() {
+        assertDismissPreservesWindow { it.cancel() }
+    }
+
+    @Test fun `Continue on Tbox hides the code while retaining its original deadline and listener`() {
+        assertDismissPreservesWindow {
+            val button = it.getButton(DialogInterface.BUTTON_POSITIVE)
+            assertNotNull("Pairing needs a Continue on Tbox action", button)
+            assertEquals(View.VISIBLE, button.visibility)
+            button.performClick()
+        }
+    }
+
+    private fun assertDismissPreservesWindow(dismiss: (AlertDialog) -> Unit) {
+        val (original, server) = window()
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        try {
+            val firstDialog = dialog()
+            assertTrue(firstDialog.isShowing)
+            dismiss(firstDialog)
+            idleMain()
+            assertFalse(firstDialog.isShowing)
+            assertSameWindow(original)
+            org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_100))
+            assertFalse("The status ticker reopened the dismissed code", dialog().isShowing)
+            assertSameWindow(original)
+            assertTrue(server.localPort > 0)
+            pairButton(controller.get()).performClick()
+            idleMain()
+            assertTrue("Pair device did not reopen the existing window", dialog().isShowing)
+            assertSameWindow(original)
+        } finally { controller.pause().stop().destroy() }
+    }
+
+    @Test fun `recreating the settings activity preserves the same code and decreasing deadline`() {
+        val (original, server) = window()
+        val first = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        first.pause().stop().destroy()
+        assertSameWindow(original)
+        val replacement = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        try {
+            assertTrue(dialog().isShowing)
+            assertSameWindow(original)
+            assertTrue(server.localPort > 0)
+        } finally { replacement.pause().stop().destroy() }
+    }
+
+    @Test fun `an expired background pairing window is not restored on return to settings`() {
+        val clock = AtomicLong(1_000)
+        val (original, server) = window(clock::get)
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        controller.pause().stop()
+        clock.addAndGet(SatellitePairingCode.TTL_MS)
+        controller.start().resume()
+        try {
+            assertNull(SatellitePairingSession.snapshot())
+            assertFalse(SatellitePairingSession.isCurrent(original.attempt))
+            assertEquals(-1, server.localPort)
+            assertFalse(dialog().isShowing)
+        } finally { controller.pause().stop().destroy() }
     }
 
     @Test fun `foreground receiver destruction cancels background pairing and does not recreate it`() {
@@ -282,7 +424,7 @@ class SatellitePairingServerTest {
         replacement.destroy()
     }
 
-    @Test fun `dismissing the code while the settings screen is visible explicitly cancels pairing`() {
+    @Test fun `the explicit Cancel button revokes pairing and closes its listener`() {
         SatellitePrefs.setEnabled(RuntimeEnvironment.getApplication(), true)
         val attempt = SatellitePairingSession.begin()
         val server = server()
@@ -290,10 +432,10 @@ class SatellitePairingServerTest {
         assertTrue(server.start())
         val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
         try {
-            val dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+            val dialog = dialog()
             assertTrue(dialog.isShowing)
-            dialog.cancel()
-            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            dialog.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+            idleMain()
             assertNull(SatellitePairingSession.snapshot())
             assertEquals(-1, server.localPort)
         } finally { controller.pause().stop().destroy() }

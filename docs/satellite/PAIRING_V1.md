@@ -8,14 +8,18 @@ Both applications must support this extension; legacy JSON profile import remain
 
 Start the vehicle hotspot and connect the companion. In DashCast, enable the satellite receiver
 and select **Pair a device**. It displays a temporary six-digit code and a two-minute countdown.
-Switch to the Tbox interface and select **Pair with DashCast**, enter the code, and pair.
+Choose **Continue on Tbox**, switch to the Tbox interface and select **Pair with DashCast**,
+enter the code, and pair. Continue, Back, outside-tap dismissal and switching applications hide
+the dialog without cancelling pairing or extending its original two-minute deadline. Reopening
+the pairing screen shows the same code and remaining time.
 The receiver's foreground service keeps the pairing window available while the user switches
 between the two interfaces on the same vehicle screen. The companion tries the current LAN gateway;
 a numeric local vehicle address is an optional fallback. The profile is validated and saved in the
 companion's existing Keystore-backed store. Normal guidance still requires notification access
 and explicit source/output selection.
 
-Generate a new code for each window. Explicit cancellation, expiry, receiver disable, token
+Generate a new code for each window. The explicit **Cancel** button, successful advanced profile
+copy, expiry, receiver disable, token
 revocation, receiver service destruction, or authenticated WSS connection closes the endpoint
 and pending sockets. App/process restart does not restore a pairing window. Temporary codes stay
 only in memory; never place them in logs, saved state, screenshots or notification text. Returning
@@ -100,6 +104,18 @@ transfer has its own version and receiver pin; leave the pinned guidance contrac
 Validate the real flow on the Carlinkit Tbox Ultra 1 / Android 15, especially switching between
 DashCast and Tbox on the vehicle screen, TetherFuseNet gateway detection, wrong code followed by
 retry, and code pairing followed by the normal pinned WSS connection and physical guidance.
+
+The driver reported that in DashCast 1.9.11, opening CarPlay hid the code and returning within
+two minutes did not restore it; Satellite could no longer pair. Validate this regression on the
+vehicle; automated lifecycle tests do not establish that the OEM screen transition is fixed:
+
+1. Connect the Tbox to the vehicle hotspot, open **Pair a device**, remember the code and select
+   **Continue on Tbox**. Open CarPlay/Tbox, return before expiry and verify the same code with a
+   lower countdown. Switch back to Satellite and complete pairing without transferring a file.
+2. Repeat using Back and the vehicle's normal app-switch controls. Neither action should create
+   a new code, reset the countdown or close the endpoint.
+3. Verify that **Cancel** immediately invalidates the code, and that an untouched background
+   window expires at its original deadline. A fresh code must require a new pairing action.
 
 References:
 [Bouncy Castle Java](https://www.bouncycastle.org/download/bouncy-castle-java/),
