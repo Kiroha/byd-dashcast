@@ -125,5 +125,6 @@ Vérifications locales du 10 octobre :
   concernent des fichiers déjà présents, extérieurs à ce correctif.
 
 Le rendu des nouvelles manœuvres sur le combiné et le HUD nécessite encore
-un trajet de validation. Cette analyse et ce correctif local ne constituent
-pas une nouvelle prérelease publiée.
+un trajet de validation. Ce correctif est inclus dans le build
+[1.9.11-beta / 650](../releases/1.9.11-beta.md) ; ses notes précisent les
+résultats du contrôle de publication et le SHA-256 de l'APK.

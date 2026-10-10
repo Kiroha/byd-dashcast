@@ -1980,8 +1980,15 @@ android {
         // pairs Satellite 0.2.0-dev through mutually confirmed J-PAKE and an encrypted profile.
         // Preserve protocol-v1 pinned WSS, explicit source/output selection and the existing
         // HUD/listener fixes. Pairing strings cover all 13 languages; vehicle validation is pending.)
-        versionCode 649
-        versionName "1.9.10-beta"
+        // 650 = 1.9.11-beta (MAPS MANEUVER CORPUS AND SATELLITE STATUS. Extend
+        // local notification-image recognition to 38 audited Maps 26.33 forms while
+        // preserving the field-validated left/right matcher. Roundabout images establish
+        // circulation; ordinal exits come only from valid text in the same notification.
+        // Show actual authenticated receiver and fresh-guidance states in all 13 languages.
+        // Preserve six-digit pairing and protocol-v1 compatibility with Satellite 0.2.0-dev.
+        // Offline checks do not replace validation of the new maneuvers in the vehicle.)
+        versionCode 650
+        versionName "1.9.11-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
