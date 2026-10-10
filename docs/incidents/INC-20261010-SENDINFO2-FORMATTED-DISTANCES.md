@@ -75,6 +75,8 @@ les valeurs connues ci-dessus ; terminer le dialogue de résultat pour
 déclencher le nettoyage. Photographier le combiné et conserver un rapport
 pendant un échec.
 
-Le correctif est local à ce stade. L'APK public **1.9.11-beta / 650**
-ne contient pas encore cette modification ; aucun asset publié n'est
-remplacé par la compilation de vérification.
+Le correctif est intégré à la compilation **1.9.12-beta / 651**, accompagnée
+du correctif d'association Satellite lors du passage à CarPlay. Les
+[notes de version](../releases/1.9.12-beta.md) précisent les vérifications
+et les essais dans la voiture. Les assets **1.9.11-beta / 650** restent
+inchangés ; cette ancienne version ne contient pas les champs formatés.
