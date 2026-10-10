@@ -67,6 +67,22 @@ class SatelliteStatusTrackerTest {
         assertEquals(Connection.WAITING, state.snapshot(true, true, 0).connection)
     }
 
+    @Test fun `readiness deadlines cannot fail a listening or replacement transport`() {
+        val state = SatelliteStatusTracker()
+        val old = state.begin()
+        state.listening(old)
+        assertFalse(state.isStarting(old))
+        assertFalse(state.failIfStarting(old))
+        val current = state.begin()
+        assertFalse(state.failIfStarting(old))
+        assertTrue(state.isStarting(current))
+        assertTrue(state.failIfStarting(current))
+        assertFalse(state.isStarting(current))
+        state.listening(current)
+        state.connected(current, "late-peer")
+        assertEquals(Connection.UNAVAILABLE, state.snapshot(true, true, 0).connection)
+    }
+
     @Test fun `late events from an obsolete server or another peer cannot clear the new session`() {
         val state = SatelliteStatusTracker(); val old = state.begin()
         state.connected(old, "old-peer")

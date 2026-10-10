@@ -643,4 +643,13 @@
     <string name="satellite_guidance_active">Nawigacja aktywna</string>
     <string name="satellite_guidance_expired">Wskazówki wygasły</string>
     <string name="satellite_status_accessibility">%1$s: %2$s</string>
+    <string name="satellite_identity_loading">ID DashCast: wczytywanie…</string>
+    <string name="satellite_identity">ID DashCast: %1$s</string>
+    <string name="satellite_identity_unavailable">ID DashCast niedostępne</string>
+    <string name="satellite_device_none">Brak uwierzytelnionego satelity</string>
+    <string name="satellite_device_connected">Połączone urządzenie: %1$s</string>
+    <string name="satellite_device_last">Ostatnio połączone urządzenie: %1$s\n%2$s</string>
+    <string name="satellite_device_unknown">Nieznane urządzenie (starszy Satellite)</string>
+    <string name="satellite_device_id">ID Satellite: %1$s</string>
+    <string name="satellite_device_address">Adres lokalny: %1$s</string>
 </resources>

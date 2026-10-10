@@ -3,6 +3,7 @@ package com.byd.dashcast.satellite
 import android.app.Application
 import com.byd.dashcast.hud.HudController
 import org.java_websocket.WebSocket
+import org.java_websocket.enums.HandshakeState
 import org.java_websocket.handshake.HandshakeImpl1Client
 import org.json.JSONObject
 import org.junit.After
@@ -71,11 +72,23 @@ class SatelliteWebSocketServerTest {
     private fun open(socket: Socket, path: String = SatelliteProtocol.PATH) {
         server.onOpen(socket.socket, HandshakeImpl1Client().apply { resourceDescriptor = path })
     }
-    private fun hello(socket: Socket, version: Int = 1, suppliedToken: String = token) =
-        server.onMessage(socket.socket, JSONObject().put("type", "hello").put("version", version).put("token", suppliedToken).toString())
+    private fun hello(socket: Socket, version: Int = 1, suppliedToken: String = token, device: JSONObject? = null) =
+        server.onMessage(socket.socket, JSONObject().put("type", "hello").put("version", version)
+            .put("token", suppliedToken).put("device", device).toString())
     private fun update(socket: Socket, seq: Any = 1) = server.onMessage(socket.socket,
         JSONObject().put("type", "navigation.update").put("seq", seq).put("ageMs", 0)
             .put("maneuver", "right").put("distanceMeters", 200).toString())
+
+    @Test fun `ordinary protocol v1 clients can complete the HTTP WebSocket upgrade`() {
+        val request = HandshakeImpl1Client().apply {
+            resourceDescriptor = SatelliteProtocol.PATH
+            put("Upgrade", "websocket")
+            put("Connection", "Upgrade")
+            put("Sec-WebSocket-Version", "13")
+            put("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+        }
+        assertEquals(HandshakeState.MATCHED, server.draft.single().copyInstance().acceptHandshakeAsServer(request))
+    }
 
     @Test fun `bound listener and open sockets stay waiting until the real authentication callback`() {
         server.onStart()
@@ -129,6 +142,25 @@ class SatelliteWebSocketServerTest {
             assertFalse(SatellitePairingSession.isCurrent(attempt))
             assertEquals(-1, bootstrap.localPort)
         } finally { bootstrap.close(); SatellitePairingSession.close() }
+    }
+
+    @Test fun `peer metadata is recorded only after authentication and retained as history on disconnect`() {
+        val identity = JSONObject().put("id", "01234567-89ab-4cde-8fab-0123456789ab").put("name", "Tbox test")
+        val rejected = Socket(); open(rejected); hello(rejected, suppliedToken = "wrong", device = identity)
+        assertNull(SatellitePeers.snapshot(context).current)
+        assertNull(SatellitePeers.snapshot(context).last)
+        server.onClose(rejected.socket, 1008, "", true)
+        val accepted = Socket(); open(accepted); hello(accepted, device = identity)
+        assertEquals("Tbox test", SatellitePeers.snapshot(context).current?.identity?.name)
+        server.onClose(accepted.socket, 1000, "", true)
+        assertNull(SatellitePeers.snapshot(context).current)
+        assertEquals("Tbox test", SatellitePeers.snapshot(context).last?.identity?.name)
+        val legacy = Socket(); open(legacy); hello(legacy)
+        assertNotNull(SatellitePeers.snapshot(context).current)
+        assertNull(SatellitePeers.snapshot(context).current?.identity)
+        assertNull(SatellitePeers.snapshot(context).last?.identity)
+        server.beginShutdown()
+        assertNull(SatellitePeers.snapshot(context).current)
     }
 
     @Test fun `a second sender cannot take over or clear the authenticated route`() {

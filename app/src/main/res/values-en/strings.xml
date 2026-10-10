@@ -650,4 +650,13 @@
     <string name="satellite_guidance_active">Guidance active</string>
     <string name="satellite_guidance_expired">Guidance expired</string>
     <string name="satellite_status_accessibility">%1$s: %2$s</string>
+    <string name="satellite_identity_loading">DashCast ID: loading…</string>
+    <string name="satellite_identity">DashCast ID: %1$s</string>
+    <string name="satellite_identity_unavailable">DashCast ID unavailable</string>
+    <string name="satellite_device_none">No authenticated satellite yet</string>
+    <string name="satellite_device_connected">Connected device: %1$s</string>
+    <string name="satellite_device_last">Last connected device: %1$s\n%2$s</string>
+    <string name="satellite_device_unknown">Unknown device (older Satellite)</string>
+    <string name="satellite_device_id">Satellite ID: %1$s</string>
+    <string name="satellite_device_address">Local address: %1$s</string>
 </resources>

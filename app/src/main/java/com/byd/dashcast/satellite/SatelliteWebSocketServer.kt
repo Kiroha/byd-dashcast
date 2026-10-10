@@ -22,7 +22,9 @@ class SatelliteWebSocketServer(
     private val token: String,
     private val events: Events,
 ) : WebSocketServer(InetSocketAddress(SatellitePrefs.PORT), 1,
-    listOf(Draft_6455(emptyList(), emptyList(), SatelliteProtocol.MAX_MESSAGE_BYTES))) {
+    // Keep the standard no-subprotocol handshake. An explicit empty protocol list rejects
+    // every upgrade, so hello never reaches authentication even when TLS succeeds.
+    listOf(Draft_6455(emptyList(), SatelliteProtocol.MAX_MESSAGE_BYTES))) {
 
     interface Events {
         fun listening() {}
@@ -77,6 +79,11 @@ class SatelliteWebSocketServer(
                 }
                 pending.remove(conn)
                 val created = Session(conn, UUID.randomUUID().toString())
+                if (!SatellitePeers.authenticated(context, token, created.id,
+                        SatellitePeers.parse(json.opt("device")), conn.remoteSocketAddress?.address?.hostAddress)) {
+                    conn.close(1008, "disabled or revoked")
+                    return
+                }
                 active = created
                 SatellitePairingSession.close()
                 events.connected(created.id)
@@ -155,6 +162,7 @@ class SatelliteWebSocketServer(
         val session = active ?: return
         if (session.connection !== conn) return
         active = null
+        SatellitePeers.disconnected(session.id)
         SatelliteVideoHub.disconnect(session.id)
         events.disconnected(session.id)
     }
@@ -177,6 +185,7 @@ class SatelliteWebSocketServer(
         shuttingDown = true
         active?.let {
             active = null
+            SatellitePeers.disconnected(it.id)
             SatelliteVideoHub.disconnect(it.id)
             events.disconnected(it.id)
         }

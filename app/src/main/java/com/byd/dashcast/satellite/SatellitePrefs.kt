@@ -18,9 +18,11 @@ object SatellitePrefs {
     fun usesRemoteGuidance(ctx: Context): Boolean =
         isEnabled(ctx) && prefs(ctx).getBoolean("remote_guidance", false)
 
+    @Synchronized
     internal fun setEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit { putBoolean("enabled", enabled) }
         if (!enabled) {
+            SatellitePeers.clear(ctx, history = false)
             SatellitePairingSession.close()
             SatelliteStatus.revoked()
         }
@@ -35,6 +37,7 @@ object SatellitePrefs {
 
     @Synchronized
     fun rotateToken(ctx: Context): String {
+        SatellitePeers.clear(ctx, history = true)
         SatellitePairingSession.close()
         SatelliteStatus.revoked()
         return createToken(ctx)

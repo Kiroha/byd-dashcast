@@ -39,6 +39,8 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     private var changing = false
     private lateinit var connectionStatus: StatusRow
     private lateinit var guidanceStatus: StatusRow
+    private lateinit var receiverIdentity: TextView
+    private lateinit var peerIdentity: TextView
     private var lastStatus: SatelliteStatusTracker.Snapshot? = null
     private val pairingHandler = Handler(Looper.getMainLooper())
     private var pairingDialog: AlertDialog? = null
@@ -82,6 +84,14 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         }
         statuses.addView(connectionStatus)
         statuses.addView(guidanceStatus)
+        receiverIdentity = TextView(this).apply {
+            tag = "satellite_receiver_identity"
+            setPadding(0, dp(12), 0, dp(8))
+            setText(R.string.satellite_identity_loading)
+        }
+        peerIdentity = TextView(this).apply { tag = "satellite_peer_identity" }
+        statuses.addView(receiverIdentity)
+        statuses.addView(peerIdentity)
         column.addView(MaterialCardView(this).apply {
             radius = dp(16).toFloat()
             cardElevation = 0f
@@ -92,6 +102,15 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(12) })
         renderStatus()
+        // AndroidKeyStore can generate the installation certificate on first use.
+        Thread {
+            val identity = runCatching { SatellitePeers.receiverId(SatelliteTls.fingerprint()) }.getOrNull()
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) receiverIdentity.text = identity?.let {
+                    getString(R.string.satellite_identity, it)
+                } ?: getString(R.string.satellite_identity_unavailable)
+            }
+        }.apply { isDaemon = true; name = "satellite-display-identity" }.start()
         remoteSwitch = MaterialSwitch(this).apply {
             setText(R.string.satellite_guidance)
             isChecked = SatellitePrefs.usesRemoteGuidance(context)
@@ -195,6 +214,7 @@ class SatelliteSettingsActivity : AppCompatActivity() {
 
     private fun renderStatus() {
         val state = SatelliteStatus.snapshot(this)
+        renderPeerIdentity(state.connection == SatelliteStatusTracker.Connection.CONNECTED)
         if (lastStatus == state) return
         lastStatus = state
         when (state.connection) {
@@ -218,6 +238,26 @@ class SatelliteSettingsActivity : AppCompatActivity() {
                 R.color.md_status_ok, R.drawable.ic_check)
             SatelliteStatusTracker.Guidance.EXPIRED -> guidanceStatus.show(R.string.satellite_guidance_expired,
                 R.color.md_status_warn, R.drawable.ic_info_outline)
+        }
+    }
+
+    private fun renderPeerIdentity(connected: Boolean) {
+        val snapshot = SatellitePeers.snapshot(this)
+        val current = snapshot.current.takeIf { connected }
+        val peer = current ?: snapshot.last
+        peerIdentity.text = if (peer == null) getString(R.string.satellite_device_none) else {
+            val name = peer.identity?.name ?: getString(R.string.satellite_device_unknown)
+            val title = if (current != null) getString(R.string.satellite_device_connected, name) else {
+                val date = java.util.Date(peer.connectedAtMs)
+                val time = android.text.format.DateFormat.getMediumDateFormat(this).format(date) + " " +
+                    android.text.format.DateFormat.getTimeFormat(this).format(date)
+                getString(R.string.satellite_device_last, name, time)
+            }
+            buildString {
+                append(title)
+                peer.identity?.let { append('\n').append(getString(R.string.satellite_device_id, it.id)) }
+                peer.address?.let { append('\n').append(getString(R.string.satellite_device_address, it)) }
+            }
         }
     }
 

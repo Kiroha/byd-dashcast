@@ -1,12 +1,13 @@
 # DashCast satellite protocol v1
 
-Status: receiver implemented, experimental; no companion Android APK is delivered yet. Vehicle
-rendering, AndroidKeyStore TLS handshakes and WebView codec performance still need device testing.
+Status: experimental receiver and guidance companion APKs are available. Vehicle rendering,
+AndroidKeyStore TLS handshakes and WebView codec performance still need device testing.
 The receiver is disabled by default. This is a local protocol with no cloud relay or discovery.
 
 ## Pairing and transport
 
-Open Settings → Satellite device → Pair a device. Import the resulting JSON in the companion:
+Open Settings → Satellite device → Pair a device. The optional six-digit-code exchange in
+`PAIRING_V1.md` transfers this profile without a file; manual JSON import remains available:
 
 ```json
 {
@@ -37,6 +38,33 @@ First message:
 ```json
 {"type":"hello","version":1,"token":"<paired token>"}
 ```
+
+Satellite may add optional display metadata to `hello`:
+
+```json
+{"type":"hello","version":1,"token":"<paired token>","device":{"id":"12345678-1234-4123-8123-123456789abc","name":"Carlinkit Tbox Ultra"}}
+```
+
+`device.id` is a canonical lowercase random UUID v4 generated once per Satellite installation and
+stored outside Android backup, never a hardware identifier. `device.name` is the sender-reported
+manufacturer/model label: 1–80 UTF-16 code units, at most 160 UTF-8 bytes, trimmed and nonblank,
+without control characters, Unicode format characters or surrogate code units. Whitespace within
+the label is limited to ordinary spaces, so labels cannot insert additional UI lines.
+Absent or malformed metadata is ignored; the connection remains compatible with the original v1
+hello and is shown as an unknown device. Receivers without this extension ignore `device`.
+
+Accept and record this metadata only after token authentication. It is a display aid, not a unique
+device credential: copies of the same profile share one token and can report the same name or ID.
+The receiver distinguishes the current authenticated connection from its last authenticated
+connection, records the numeric peer address only as a network location, and clears that history
+when credentials are revoked. Sending a pairing profile does not itself establish a connected or
+authenticated device. No device names or IDs are added to support logs.
+
+Both applications display a common **DashCast ID**: the first 16 uppercase hexadecimal characters
+of `certificateSha256`, grouped as `ABCD-EF01-2345-6789`. This is a visual installation label;
+certificate verification always uses the complete 64-character fingerprint. Satellite distinguishes
+its saved receiver profile from a connection accepted by that receiver. Token revocation preserves
+the receiver certificate ID, while reinstalling DashCast changes it.
 
 Reply:
 

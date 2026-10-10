@@ -634,4 +634,13 @@
     <string name="satellite_guidance_active">Yol tarifi etkin</string>
     <string name="satellite_guidance_expired">Yol tarifinin süresi doldu</string>
     <string name="satellite_status_accessibility">%1$s: %2$s</string>
+    <string name="satellite_identity_loading">DashCast kimliği: yükleniyor…</string>
+    <string name="satellite_identity">DashCast kimliği: %1$s</string>
+    <string name="satellite_identity_unavailable">DashCast kimliği kullanılamıyor</string>
+    <string name="satellite_device_none">Henüz kimliği doğrulanmış uydu yok</string>
+    <string name="satellite_device_connected">Bağlı cihaz: %1$s</string>
+    <string name="satellite_device_last">Son bağlanan cihaz: %1$s\n%2$s</string>
+    <string name="satellite_device_unknown">Bilinmeyen cihaz (eski Satellite)</string>
+    <string name="satellite_device_id">Satellite kimliği: %1$s</string>
+    <string name="satellite_device_address">Yerel adres: %1$s</string>
 </resources>
