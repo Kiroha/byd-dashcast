@@ -635,4 +635,18 @@
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>
     <string name="satellite_pair_background">Pairing is open for 2 minutes. Tap to return to the code.</string>
+
+    <!-- Live satellite connection and guidance states; no credentials or route content. -->
+    <string name="satellite_status_connection">Connection</string>
+    <string name="satellite_connection_disabled">Receiver disabled</string>
+    <string name="satellite_connection_starting">Starting receiver</string>
+    <string name="satellite_connection_waiting">Waiting for satellite</string>
+    <string name="satellite_connection_connected">Satellite connected</string>
+    <string name="satellite_connection_unavailable">Receiver unavailable</string>
+    <string name="satellite_status_guidance">Guidance</string>
+    <string name="satellite_guidance_disabled">Satellite guidance disabled</string>
+    <string name="satellite_guidance_waiting">Waiting for guidance</string>
+    <string name="satellite_guidance_active">Guidance active</string>
+    <string name="satellite_guidance_expired">Guidance expired</string>
+    <string name="satellite_status_accessibility">%1$s: %2$s</string>
 </resources>

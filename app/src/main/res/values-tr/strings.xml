@@ -619,4 +619,18 @@
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>
     <string name="satellite_pair_background">Pairing is open for 2 minutes. Tap to return to the code.</string>
+
+    <!-- Live satellite connection and guidance states; no credentials or route content. -->
+    <string name="satellite_status_connection">Bağlantı</string>
+    <string name="satellite_connection_disabled">Alıcı devre dışı</string>
+    <string name="satellite_connection_starting">Alıcı başlatılıyor</string>
+    <string name="satellite_connection_waiting">Satellite bekleniyor</string>
+    <string name="satellite_connection_connected">Satellite bağlı</string>
+    <string name="satellite_connection_unavailable">Alıcı kullanılamıyor</string>
+    <string name="satellite_status_guidance">Yol tarifi</string>
+    <string name="satellite_guidance_disabled">Satellite yol tarifi devre dışı</string>
+    <string name="satellite_guidance_waiting">Yol tarifi bekleniyor</string>
+    <string name="satellite_guidance_active">Yol tarifi etkin</string>
+    <string name="satellite_guidance_expired">Yol tarifinin süresi doldu</string>
+    <string name="satellite_status_accessibility">%1$s: %2$s</string>
 </resources>

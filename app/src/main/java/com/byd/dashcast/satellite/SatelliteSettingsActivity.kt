@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ClipDescription
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.Intent
 import android.os.Bundle
 import android.os.Build
@@ -17,6 +18,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ImageView
+import android.view.View
+import androidx.core.content.ContextCompat
+import com.google.android.material.card.MaterialCardView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.byd.dashcast.R
@@ -32,6 +37,9 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     private lateinit var receiverSwitch: MaterialSwitch
     private lateinit var remoteSwitch: MaterialSwitch
     private var changing = false
+    private lateinit var connectionStatus: StatusRow
+    private lateinit var guidanceStatus: StatusRow
+    private var lastStatus: SatelliteStatusTracker.Snapshot? = null
     private val pairingHandler = Handler(Looper.getMainLooper())
     private var pairingDialog: AlertDialog? = null
     private var pairingAttempt: Long? = null
@@ -42,6 +50,7 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     private val pairingTicker = object : Runnable {
         override fun run() {
             if (!pairingVisible) return
+            renderStatus()
             renderPairing(SatellitePairingSession.snapshot())
             pairingHandler.postDelayed(this, 500)
         }
@@ -59,6 +68,29 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         }
         setContentView(ScrollView(this).apply { addView(column) })
         column.addView(TextView(this).apply { setText(R.string.satellite_description) })
+        val statuses = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val padding = dp(16)
+            setPadding(padding, padding, padding, padding)
+        }
+        connectionStatus = StatusRow(R.string.satellite_status_connection).apply {
+            id = R.id.satellite_connection_status
+        }
+        guidanceStatus = StatusRow(R.string.satellite_status_guidance).apply {
+            id = R.id.satellite_guidance_status
+        }
+        statuses.addView(connectionStatus)
+        statuses.addView(guidanceStatus)
+        column.addView(MaterialCardView(this).apply {
+            radius = dp(16).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(ContextCompat.getColor(context, R.color.md_surface_container))
+            strokeColor = ContextCompat.getColor(context, R.color.md_outline_variant)
+            strokeWidth = dp(1)
+            addView(statuses)
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(12) })
+        renderStatus()
         remoteSwitch = MaterialSwitch(this).apply {
             setText(R.string.satellite_guidance)
             isChecked = SatellitePrefs.usesRemoteGuidance(context)
@@ -119,9 +151,73 @@ class SatelliteSettingsActivity : AppCompatActivity() {
                 receiverSwitch.isEnabled = true
                 remoteSwitch.isEnabled = receiverSwitch.isChecked
                 changing = false
+                renderStatus()
                 if (!success) toast(R.string.satellite_unavailable)
             }
         }.apply { isDaemon = true; name = "satellite-settings" }.start()
+    }
+
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    /** Icons are decorative; each accessible row exposes both its category and its current label. */
+    private inner class StatusRow(private val title: Int) : LinearLayout(this@SatelliteSettingsActivity) {
+        private val icon = ImageView(context).apply { importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO }
+        private val label = TextView(context).apply {
+            textSize = 18f
+            setTextColor(ContextCompat.getColor(context, R.color.md_on_surface))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        init {
+            orientation = VERTICAL
+            setPadding(0, dp(8), 0, dp(8))
+            isScreenReaderFocusable = true
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+            addView(TextView(context).apply {
+                setText(title)
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(context, R.color.md_on_surface_variant))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            })
+            addView(LinearLayout(context).apply {
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                addView(icon, LayoutParams(dp(32), dp(32)).apply { marginEnd = dp(12) })
+                addView(label, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+            })
+        }
+        fun show(text: Int, color: Int, glyph: Int) {
+            label.setText(text)
+            icon.setImageResource(glyph)
+            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, color))
+            contentDescription = getString(R.string.satellite_status_accessibility, getString(title), getString(text))
+        }
+    }
+
+    private fun renderStatus() {
+        val state = SatelliteStatus.snapshot(this)
+        if (lastStatus == state) return
+        lastStatus = state
+        when (state.connection) {
+            SatelliteStatusTracker.Connection.DISABLED -> connectionStatus.show(R.string.satellite_connection_disabled,
+                R.color.md_on_surface_variant, R.drawable.ic_stop)
+            SatelliteStatusTracker.Connection.STARTING -> connectionStatus.show(R.string.satellite_connection_starting,
+                R.color.md_on_surface_variant, R.drawable.ic_refresh)
+            SatelliteStatusTracker.Connection.WAITING -> connectionStatus.show(R.string.satellite_connection_waiting,
+                R.color.md_status_warn, R.drawable.ic_autorenew)
+            SatelliteStatusTracker.Connection.CONNECTED -> connectionStatus.show(R.string.satellite_connection_connected,
+                R.color.md_status_ok, R.drawable.ic_check)
+            SatelliteStatusTracker.Connection.UNAVAILABLE -> connectionStatus.show(R.string.satellite_connection_unavailable,
+                R.color.md_status_err, R.drawable.ic_close)
+        }
+        when (state.guidance) {
+            SatelliteStatusTracker.Guidance.DISABLED -> guidanceStatus.show(R.string.satellite_guidance_disabled,
+                R.color.md_on_surface_variant, R.drawable.ic_pause)
+            SatelliteStatusTracker.Guidance.WAITING -> guidanceStatus.show(R.string.satellite_guidance_waiting,
+                R.color.md_status_warn, R.drawable.ic_autorenew)
+            SatelliteStatusTracker.Guidance.ACTIVE -> guidanceStatus.show(R.string.satellite_guidance_active,
+                R.color.md_status_ok, R.drawable.ic_check)
+            SatelliteStatusTracker.Guidance.EXPIRED -> guidanceStatus.show(R.string.satellite_guidance_expired,
+                R.color.md_status_warn, R.drawable.ic_info_outline)
+        }
     }
 
     private fun showPairing() {

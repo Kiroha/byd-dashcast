@@ -619,4 +619,18 @@
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>
     <string name="satellite_pair_background">Pairing is open for 2 minutes. Tap to return to the code.</string>
+
+    <!-- Live satellite connection and guidance states; no credentials or route content. -->
+    <string name="satellite_status_connection">Ulanish</string>
+    <string name="satellite_connection_disabled">Qabul qilgich o‘chirilgan</string>
+    <string name="satellite_connection_starting">Qabul qilgich ishga tushmoqda</string>
+    <string name="satellite_connection_waiting">Satellite kutilmoqda</string>
+    <string name="satellite_connection_connected">Satellite ulangan</string>
+    <string name="satellite_connection_unavailable">Qabul qilgich mavjud emas</string>
+    <string name="satellite_status_guidance">Yo‘l ko‘rsatish</string>
+    <string name="satellite_guidance_disabled">Satellite yo‘l ko‘rsatishi o‘chirilgan</string>
+    <string name="satellite_guidance_waiting">Yo‘l ko‘rsatish kutilmoqda</string>
+    <string name="satellite_guidance_active">Yo‘l ko‘rsatish faol</string>
+    <string name="satellite_guidance_expired">Yo‘l ko‘rsatish ma’lumotlari eskirgan</string>
+    <string name="satellite_status_accessibility">%1$s: %2$s</string>
 </resources>

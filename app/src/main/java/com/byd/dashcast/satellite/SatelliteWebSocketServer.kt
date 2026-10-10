@@ -25,6 +25,7 @@ class SatelliteWebSocketServer(
     listOf(Draft_6455(emptyList(), emptyList(), SatelliteProtocol.MAX_MESSAGE_BYTES))) {
 
     interface Events {
+        fun listening() {}
         fun connected(session: String)
         fun navigation(session: String, frame: SatelliteProtocol.Navigation, receivedAtMs: Long)
         fun expired(session: String)
@@ -164,7 +165,12 @@ class SatelliteWebSocketServer(
         if (conn == null && !shuttingDown) events.failed()
     }
 
-    override fun onStart() { AppLogger.i("Satellite", "encrypted receiver listening") }
+    @Synchronized
+    override fun onStart() {
+        if (!configurationValid()) return
+        AppLogger.i("Satellite", "encrypted receiver listening")
+        events.listening()
+    }
 
     @Synchronized
     fun beginShutdown() {
