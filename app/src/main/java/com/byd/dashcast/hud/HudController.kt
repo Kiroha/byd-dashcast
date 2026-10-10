@@ -13,7 +13,6 @@ import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.system.CanBusController
 import com.byd.dashcast.util.AppLogger
 
-import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -609,15 +608,15 @@ object HudController {
             // keys with value -1, only their absence signals "no secondary info").
             // Google Maps notifications never carry secondary guidance, so we never add them.
             // Human-readable distance strings.
-            intent.putExtra("SEG_REMAIN_DIS_AUTO", formatMeters(d.distanceMeters))
+            intent.putExtra("SEG_REMAIN_DIS_AUTO", NavigationTextFormatter.formatMeters(d.distanceMeters))
             val remainingDistance = d.remainingDistanceMeters
             if (remainingDistance != null) {
-                intent.putExtra("ROUTE_REMAIN_DIS_AUTO", formatMeters(remainingDistance))
+                intent.putExtra("ROUTE_REMAIN_DIS_AUTO", NavigationTextFormatter.formatMeters(remainingDistance))
             }
             val remainingTime = d.remainingTimeSeconds
             if (remainingTime != null) {
-                intent.putExtra("ROUTE_REMAIN_TIME_AUTO", formatSeconds(remainingTime))
-                intent.putExtra("ROUTE_REMAIN_TIME_STRING", formatSeconds(remainingTime))
+                intent.putExtra("ROUTE_REMAIN_TIME_AUTO", NavigationTextFormatter.formatSeconds(remainingTime))
+                intent.putExtra("ROUTE_REMAIN_TIME_STRING", NavigationTextFormatter.formatSeconds(remainingTime))
             }
             ctx.sendBroadcast(intent)
         } catch (e: Exception) {
@@ -661,17 +660,4 @@ object HudController {
      */
     private fun mapToAmapIcon(bydIconId: Int): Int = ClusterNavPusher.toAmapIcon(bydIconId)
 
-    private fun formatMeters(meters: Int): String {
-        if (meters >= 1000) {
-            return String.format(Locale.US, "%.1f km", meters / 1000.0f)
-        }
-        return meters.toString() + " m"
-    }
-
-    private fun formatSeconds(totalSeconds: Int): String {
-        val totalMinutes = totalSeconds / 60
-        val h = totalMinutes / 60
-        val m = totalMinutes % 60
-        return if (h > 0) (h.toString() + "h " + m + "m") else (m.toString() + " min")
-    }
 }

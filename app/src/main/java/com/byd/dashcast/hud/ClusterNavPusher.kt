@@ -58,6 +58,9 @@ object ClusterNavPusher {
      */
     private const val NO_TURN_ICON = -1
 
+    /** The OEM's absent/reset marker for formatted guidance, distinct from a known zero. */
+    private const val NO_GUIDANCE_TEXT = "-1"
+
     /** Last accepted activation, valid only for the proxy that issued it. */
     @Volatile private var enabled = false
     private var enabledProxy: IBinder? = null
@@ -181,6 +184,11 @@ object ClusterNavPusher {
                 nextTurnIcon = toAmapIcon(d.iconId),
                 routeRemainTime = d.remainingTimeSeconds ?: 0,
                 routeRemainDist = d.remainingDistanceMeters ?: 0,
+                // AmapService sends the formatted values alongside the numeric fields.
+                // Do not turn unavailable route totals into plausible "0 m"/"0 min" text.
+                routrRemainDisAuto = distanceText(d.remainingDistanceMeters),
+                routrRemainTimeAuto = durationText(d.remainingTimeSeconds),
+                segRemainDisAuto = distanceText(d.distanceMeters),
                 roungAboutNum = roundaboutExitNum(d.iconId))
             repeat(2) {
                 enable()
@@ -204,6 +212,12 @@ object ClusterNavPusher {
         }
     }
 
+    private fun distanceText(meters: Int?): String =
+        if (meters == null || meters < 0) NO_GUIDANCE_TEXT else NavigationTextFormatter.formatMeters(meters)
+
+    private fun durationText(seconds: Int?): String =
+        if (seconds == null || seconds < 0) NO_GUIDANCE_TEXT else NavigationTextFormatter.formatSeconds(seconds)
+
     /**
      * The end-of-route frame, built apart from [stop] so a test can pin it.
      *
@@ -218,7 +232,11 @@ object ClusterNavPusher {
         curToSegmentDist = -1,
         nextTurnIcon = NO_TURN_ICON,
         routeRemainTime = -1,
-        routeRemainDist = -1)
+        routeRemainDist = -1,
+        // Mirror AmapService.reSetGuideInfo so a previous distance cannot survive route stop.
+        routrRemainDisAuto = NO_GUIDANCE_TEXT,
+        routrRemainTimeAuto = NO_GUIDANCE_TEXT,
+        segRemainDisAuto = NO_GUIDANCE_TEXT)
 
     /** Clears the cluster guidance at the end of a route. Best-effort; never throws. */
     @JvmStatic

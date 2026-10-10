@@ -417,7 +417,11 @@ class HudDiagActivity : AppCompatActivity() {
                         curToSegmentDist = dist,
                         nextTurnIcon = icon,
                         routeRemainTime = 300,
-                        routeRemainDist = 1200)
+                        routeRemainDist = 1200,
+                        // Exercise the same numeric/text contract as live cluster guidance.
+                        routrRemainDisAuto = NavigationTextFormatter.formatMeters(1200),
+                        routrRemainTimeAuto = NavigationTextFormatter.formatSeconds(300),
+                        segRemainDisAuto = NavigationTextFormatter.formatMeters(dist))
                     step("sendInfo2(4, ${payload.size}B, icon=$icon, dist=$dist)") {
                         ProxyClient.autoContainerSendInfo2(4, payload)
                     }
@@ -460,7 +464,10 @@ class HudDiagActivity : AppCompatActivity() {
                     curToSegmentDist = 200,
                     nextTurnIcon = icon,
                     routeRemainTime = 300,
-                    routeRemainDist = 1200)
+                    routeRemainDist = 1200,
+                    routrRemainDisAuto = NavigationTextFormatter.formatMeters(1200),
+                    routrRemainTimeAuto = NavigationTextFormatter.formatSeconds(300),
+                    segRemainDisAuto = NavigationTextFormatter.formatMeters(200))
                 var rc = "?"
                 repeat(3) {
                     rc = try { ProxyClient.autoContainerSendInfo2(4, payload); "ok" } catch (t: Throwable) { "ERR ${t.message}" }

@@ -52,4 +52,11 @@ class ClusterClearFrameTest {
     fun `the road name is emptied`() {
         assertEquals("", clear.nextRouteName())
     }
+
+    @Test
+    fun `formatted distances and time use the OEM reset sentinel`() {
+        assertEquals("-1", clear.SegRemainDisAuto())
+        assertEquals("-1", clear.routrRemainDisAuto())
+        assertEquals("-1", clear.routrRemainTimeAuto())
+    }
 }
