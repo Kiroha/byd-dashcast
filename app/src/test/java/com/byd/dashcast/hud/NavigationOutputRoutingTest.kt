@@ -99,6 +99,94 @@ class NavigationOutputRoutingTest {
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `APK image-only maneuvers traverse listener router and native cluster frames`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val cases = listOf("ic_straight" to 9, "ic_u_turn" to 8, "ic_u_turn_mirrored" to 19,
+            "ic_turn_slight_right_mirrored" to 4, "ic_turn_sharp_right" to 7,
+            "ic_roundabout_left" to 17, "ic_roundabout_right_mirrored" to 11,
+            "ic_roundabout_straight" to 17, "ic_place" to 15)
+        try {
+            for ((name, icon) in cases) {
+                val bitmap = corpusIcon(name)
+                try {
+                    val before = daemon.clusterFrames.size
+                    service.onNotificationPosted(imageNotification(bitmap))
+                    awaitWriter(service)
+                    assertEquals(name, before + 1, daemon.clusterFrames.size)
+                    val frame = decode(daemon.clusterFrames.last())
+                    assertEquals(name, icon, frame.nextTurnIcon())
+                    assertEquals(name, 80, frame.curToSegmentDist())
+                    // An image angle never manufactures an ordinal exit.
+                    assertEquals(name, 0, frame.roungAboutNum())
+                } finally { bitmap.recycle() }
+            }
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+        } finally { service.onDestroy() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `image roundabout uses an explicit exit number from the same notification`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        try {
+            for ((name, nativeIcon) in listOf("ic_roundabout_left" to 17,
+                    "ic_roundabout_left_mirrored" to 11)) {
+                val bitmap = corpusIcon(name)
+                try {
+                    // The existing text parser alone misclassifies this generic exit as a ramp.
+                    assertEquals(CanBusController.ICON_DETOUR_RIGHT,
+                        MapNotificationListenerService.resolveIconFromText("3e sortie"))
+                    service.onNotificationPosted(imageNotification(bitmap, "3e sortie"))
+                    awaitWriter(service)
+                    val frame = decode(daemon.clusterFrames.last())
+                    assertEquals(nativeIcon, frame.nextTurnIcon())
+                    assertEquals(3, frame.roungAboutNum())
+                    assertEquals(80, frame.curToSegmentDist())
+                } finally { bitmap.recycle() }
+            }
+            assertEquals(2, daemon.clusterFrames.size)
+            assertEquals(0, daemon.canCalls)
+        } finally { service.onDestroy() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `known text keeps priority over the new image corpus`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = corpusIcon("ic_u_turn")
+        try {
+            service.onNotificationPosted(imageNotification(bitmap, "Turn right"))
+            awaitWriter(service)
+            assertEquals(1, daemon.clusterFrames.size)
+            assertEquals(3, decode(daemon.clusterFrames.single()).nextTurnIcon())
+        } finally { bitmap.recycle(); service.onDestroy() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `roundabout exit disappears when new text does not provide a valid ordinal`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        val bitmap = corpusIcon("ic_roundabout_straight")
+        try {
+            for ((text, exit) in listOf("3e sortie" to 3, "Test road" to 0, "sortie 11" to 0)) {
+                service.onNotificationPosted(imageNotification(bitmap, text))
+                awaitWriter(service)
+                val frame = decode(daemon.clusterFrames.last())
+                assertEquals(17, frame.nextTurnIcon())
+                assertEquals(exit, frame.roungAboutNum())
+            }
+            assertEquals(3, daemon.clusterFrames.size)
+            assertEquals(0, daemon.canCalls)
+        } finally { bitmap.recycle(); service.onDestroy() }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `image-only direction changes bypass text dedup while identical images keep guidance alive`() {
         select(hud = false, cluster = true)
         val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
@@ -722,13 +810,16 @@ class NavigationOutputRoutingTest {
     private fun capturedLeftIcon(): Bitmap = requireNotNull(BitmapFactory.decodeStream(
         javaClass.getResourceAsStream("/navigation/maps-left-seal-20261009.png")))
 
+    private fun corpusIcon(name: String): Bitmap = requireNotNull(BitmapFactory.decodeStream(
+        javaClass.getResourceAsStream("/navigation/maps-26.33/$name.png")))
+
     @Suppress("DEPRECATION")
-    private fun imageNotification(bitmap: Bitmap): StatusBarNotification {
+    private fun imageNotification(bitmap: Bitmap, text: String = "Test road"): StatusBarNotification {
         val pkg = "app.morphe.android.apps.maps"
         val notification = Notification.Builder(context, "navigation")
             .setSmallIcon(android.R.drawable.ic_dialog_map)
             .setLargeIcon(Icon.createWithBitmap(bitmap))
-            .setContentTitle("80 m").setContentText("Test road")
+            .setContentTitle("80 m").setContentText(text)
             .setCategory(Notification.CATEGORY_NAVIGATION).setOngoing(true).build()
         return StatusBarNotification(pkg, pkg, 1, "navigation", 10_001, 20_001, 0,
             notification, Process.myUserHandle(), 1_000L)

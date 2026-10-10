@@ -9,14 +9,15 @@ import android.graphics.drawable.Icon
 import androidx.core.graphics.createBitmap
 import com.byd.dashcast.system.CanBusController
 
-/** Independent, conservative matching of the driver's captured Maps glyph and its reflection. */
+/** Bounded Maps notification-glyph matching against independently audited, offline references. */
 internal object MapsManeuverImage {
     private const val EDGE = 32
     private const val MAX_INPUT_EDGE = 256
     private const val MAX_ERROR = 0.22
     private const val MIN_MARGIN = 0.15
 
-    data class Result(val iconId: Int, val identity: String)
+    // Direction is known from the image; an exit number is never inferred from its angle.
+    data class Result(val iconId: Int, val identity: String, val roundaboutClockwise: Boolean? = null)
 
     /** Runs only on the navigation writer. Never opens URI icons or recycles a source bitmap. */
     fun read(ctx: Context, icon: Icon?): Result {
@@ -65,6 +66,7 @@ internal object MapsManeuverImage {
             return Result(-1, "nonuniform_background")
         }
         val foreground = BooleanArray(pixels.size)
+        val strongForeground = BooleanArray(pixels.size)
         var minX = width; var minY = height; var maxX = -1; var maxY = -1
         for (y in 0 until height) for (x in 0 until width) {
             val colour = pixels[y * width + x]
@@ -74,6 +76,8 @@ internal object MapsManeuverImage {
             val r = Color.red(colour); val g = Color.green(colour); val b = Color.blue(colour)
             if (maxOf(r, g, b) - minOf(r, g, b) > 20) return Result(-1, "coloured_image")
             foreground[y * width + x] = true
+            strongForeground[y * width + x] = if (transparent) Color.alpha(colour) >= 192
+                else colourDistance(colour, background) >= 192
             minX = minOf(minX, x); maxX = maxOf(maxX, x)
             minY = minOf(minY, y); maxY = maxOf(maxY, y)
         }
@@ -81,23 +85,48 @@ internal object MapsManeuverImage {
         val glyphHeight = maxY - minY + 1
         if (glyphWidth < 8 || glyphHeight < 8) return Result(-1, "empty_image")
         val rows = IntArray(EDGE)
+        val strongRows = IntArray(EDGE)
         for (y in 0 until EDGE) for (x in 0 until EDGE) {
             val sx = minX + minOf(glyphWidth - 1, (2 * x + 1) * glyphWidth / (2 * EDGE))
             val sy = minY + minOf(glyphHeight - 1, (2 * y + 1) * glyphHeight / (2 * EDGE))
             if (foreground[sy * width + sx]) rows[y] = rows[y] or (1 shl x)
+            if (strongForeground[sy * width + sx]) strongRows[y] = strongRows[y] or (1 shl x)
         }
         val aspect = glyphWidth.toDouble() / glyphHeight
-        val identity = "${(aspect * 100).toInt()}:" + rows.joinToString(",") { it.toUInt().toString(16) }
-        // Normalization must not turn a narrow arrow, U-turn, or roundabout into this turn glyph.
-        if (kotlin.math.abs(aspect - 45.0 / 39.0) > 0.08) return Result(-1, identity)
-        val leftError = error(rows, leftRows)
-        val rightError = error(rows, rightRows)
-        val best = minOf(leftError, rightError)
-        if (best > MAX_ERROR || kotlin.math.abs(leftError - rightError) < MIN_MARGIN) {
-            return Result(-1, identity)
+        val identity = "${(aspect * 100).toInt()}:" + rows.joinToString(",") { it.toUInt().toString(16) } +
+            ":" + strongRows.joinToString(",") { it.toUInt().toString(16) }
+        // Preserve the complete field-validated turn matcher. Notification.Builder may resample
+        // its thin boundary, so adding an emphasis plane must not narrow the established path.
+        if (kotlin.math.abs(aspect - 45.0 / 39.0) <= 0.08) {
+            val leftError = error(rows, leftRows)
+            val rightError = error(rows, rightRows)
+            if (minOf(leftError, rightError) <= MAX_ERROR &&
+                    kotlin.math.abs(leftError - rightError) >= MIN_MARGIN) {
+                return Result(if (leftError < rightError) CanBusController.ICON_TURN_LEFT
+                    else CanBusController.ICON_TURN_RIGHT, identity)
+            }
         }
-        return Result(if (leftError < rightError) CanBusController.ICON_TURN_LEFT
-            else CanBusController.ICON_TURN_RIGHT, identity)
+        var best = 1.0
+        var next = 1.0
+        var winner: MapsManeuverReferences.Reference? = null
+        for (reference in MapsManeuverReferences.entries) {
+            // Bounding-box normalization must preserve aspect, especially for narrow straight arrows.
+            if (kotlin.math.abs(aspect - reference.aspect) > 0.08) continue
+            // A single silhouette loses the highlighted path through a dim roundabout ring.
+            // Match both coverage and emphasis, retaining the existing narrow topology halo.
+            val score = maxOf(error(rows, reference.rows), error(strongRows, reference.strongRows))
+            val sameLabel = winner?.let {
+                it.iconId == reference.iconId && it.clockwise == reference.clockwise
+            } == true
+            if (score < best) {
+                if (!sameLabel) next = best
+                best = score
+                winner = reference
+            } else if (!sameLabel) next = minOf(next, score)
+        }
+        val match = winner
+        if (match == null || best > MAX_ERROR || next - best < MIN_MARGIN) return Result(-1, identity)
+        return Result(match.iconId, identity, match.clockwise)
     }
 
     private fun colourDistance(a: Int, b: Int): Int = maxOf(
@@ -128,7 +157,7 @@ internal object MapsManeuverImage {
 
     // Derived from the original non-location PNG in the driver's Oct 9 export (message 105).
     // This is our own capture-based mask, not an OpenBYD signature or asset registry.
-    // The reflected glyph is tested independently; other maneuvers remain unknown until captured.
+    // Keep the field reference alongside the APK corpus to preserve the established turn behavior.
     private val leftRows = arrayOf(
         ".........##.....................", "........###.....................",
         "......######....................", "......#####.....................",
