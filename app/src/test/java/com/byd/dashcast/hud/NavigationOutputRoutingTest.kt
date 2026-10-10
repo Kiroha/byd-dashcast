@@ -36,6 +36,7 @@ import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowNotificationListenerService
 import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -71,6 +72,152 @@ class NavigationOutputRoutingTest {
         setStatic(HudController::class.java, "isDl3Hud", null)
         setStatic(ProxyClient::class.java, "sBinder", null)
         setStatic(ProxyClient::class.java, "sDaemonVer", null)
+    }
+
+    @Test
+    fun `cluster sends formatted maneuver and route values alongside unchanged numbers`() {
+        select(hud = false, cluster = true)
+        val data = HudNavigationData(CanBusController.ICON_TURN_RIGHT, 750, "Test road",
+            8_400, 3_900, null, null)
+
+        assertTrue(HudController.updateNavigation(context, data))
+
+        val guidance = decode(daemon.clusterFrames.single())
+        assertEquals(750, guidance.curToSegmentDist())
+        assertEquals(8_400, guidance.routeRemainDist())
+        assertEquals(3_900, guidance.routeRemainTime())
+        assertEquals("750 m", guidance.SegRemainDisAuto())
+        assertEquals("8.4 km", guidance.routrRemainDisAuto())
+        assertEquals("1h 5m", guidance.routrRemainTimeAuto())
+        assertEquals(3, guidance.nextTurnIcon())
+        assertEquals(0, daemon.canCalls)
+        assertTrue(amapBroadcasts().isEmpty())
+    }
+
+    @Test
+    fun `wire text preserves zero and unit boundaries in French and Arabic locales`() {
+        select(hud = false, cluster = true)
+        val originalLocale = Locale.getDefault()
+        try {
+            for (locale in listOf(Locale.FRANCE, Locale.forLanguageTag("ar"))) {
+                Locale.setDefault(locale)
+                val cases = listOf(
+                    Triple(0, 0, "0 m" to "0 min"),
+                    Triple(999, 59, "999 m" to "0 min"),
+                    Triple(1_000, 60, "1.0 km" to "1 min"),
+                    Triple(1_500, 3_599, "1.5 km" to "59 min"),
+                    Triple(8_400, 3_600, "8.4 km" to "1h 0m"))
+                for ((distance, seconds, expected) in cases) {
+                    val data = HudNavigationData(frame.iconId, distance, frame.roadName,
+                        distance, seconds, null, null)
+                    assertTrue(HudController.updateNavigation(context, data))
+                    val guidance = decode(daemon.clusterFrames.last())
+                    assertEquals(distance, guidance.curToSegmentDist())
+                    assertEquals(distance, guidance.routeRemainDist())
+                    assertEquals(seconds, guidance.routeRemainTime())
+                    assertEquals("$locale / $distance", expected.first, guidance.SegRemainDisAuto())
+                    assertEquals(expected.first, guidance.routrRemainDisAuto())
+                    assertEquals(expected.second, guidance.routrRemainTimeAuto())
+                }
+            }
+        } finally { Locale.setDefault(originalLocale) }
+        assertEquals(10, daemon.clusterFrames.size)
+        assertEquals(0, daemon.canCalls)
+        assertTrue(amapBroadcasts().isEmpty())
+    }
+
+    @Test
+    fun `missing or invalid route totals use OEM absent text without changing numeric defaults`() {
+        select(hud = false, cluster = true)
+        val cases = listOf(
+            (null to null) to ("-1" to "-1"),
+            (-1 to -1) to ("-1" to "-1"),
+            (2_000 to null) to ("2.0 km" to "-1"),
+            (null to 300) to ("-1" to "5 min"))
+        for ((totals, expected) in cases) {
+            assertTrue(HudController.updateNavigation(context,
+                HudNavigationData(frame.iconId, 300, frame.roadName, totals.first, totals.second, null, null)))
+            val guidance = decode(daemon.clusterFrames.last())
+            assertEquals(300, guidance.curToSegmentDist())
+            assertEquals("300 m", guidance.SegRemainDisAuto())
+            assertEquals(totals.first ?: 0, guidance.routeRemainDist())
+            assertEquals(totals.second ?: 0, guidance.routeRemainTime())
+            assertEquals(expected.first, guidance.routrRemainDisAuto())
+            assertEquals(expected.second, guidance.routrRemainTimeAuto())
+        }
+        assertEquals(4, daemon.clusterFrames.size)
+        assertEquals(0, daemon.canCalls)
+    }
+
+    @Test
+    fun `route total updates and loss replace old text and stop clears every formatted value`() {
+        select(hud = false, cluster = true)
+        for ((distance, seconds) in listOf(6_000 to 600, 5_000 to 540, null to null)) {
+            assertTrue(HudController.updateNavigation(context,
+                HudNavigationData(frame.iconId, 450, frame.roadName, distance, seconds, null, null)))
+        }
+        assertEquals(3, daemon.clusterFrames.size)
+        assertEquals(listOf("6.0 km", "5.0 km", "-1"),
+            daemon.clusterFrames.map { decode(it).routrRemainDisAuto() })
+        assertEquals(listOf("10 min", "9 min", "-1"),
+            daemon.clusterFrames.map { decode(it).routrRemainTimeAuto() })
+        assertTrue(daemon.clusterFrames.all { decode(it).SegRemainDisAuto() == "450 m" })
+
+        HudController.closeNavigation(context)
+
+        val stopped = decode(daemon.clusterFrames.last())
+        assertEquals(9, stopped.naviState())
+        assertEquals(-1, stopped.nextTurnIcon())
+        assertEquals(-1, stopped.curToSegmentDist())
+        assertEquals(-1, stopped.routeRemainDist())
+        assertEquals(-1, stopped.routeRemainTime())
+        assertEquals("-1", stopped.SegRemainDisAuto())
+        assertEquals("-1", stopped.routrRemainDisAuto())
+        assertEquals("-1", stopped.routrRemainTimeAuto())
+        assertEquals(0, daemon.canCalls)
+        assertTrue(amapBroadcasts().isEmpty())
+    }
+
+    @Test
+    fun `formatted cluster fields preserve the established OEM broadcast text`() {
+        val originalLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.FRANCE)
+            assertTrue(HudController.updateNavigation(context, frame))
+            val guidance = decode(daemon.clusterFrames.single())
+            val broadcast = amapBroadcasts().single()
+            assertEquals("200 m", guidance.SegRemainDisAuto())
+            assertEquals("2.0 km", guidance.routrRemainDisAuto())
+            assertEquals("5 min", guidance.routrRemainTimeAuto())
+            assertEquals(guidance.SegRemainDisAuto(), broadcast.getStringExtra("SEG_REMAIN_DIS_AUTO"))
+            assertEquals(guidance.routrRemainDisAuto(), broadcast.getStringExtra("ROUTE_REMAIN_DIS_AUTO"))
+            assertEquals(guidance.routrRemainTimeAuto(), broadcast.getStringExtra("ROUTE_REMAIN_TIME_AUTO"))
+            assertEquals("5 min", broadcast.getStringExtra("ROUTE_REMAIN_TIME_STRING"))
+            assertTrue(daemon.canCalls > 0)
+        } finally { Locale.setDefault(originalLocale) }
+    }
+
+    @Test
+    fun `Maps notification totals reach formatted native fields on the navigation writer`() {
+        select(hud = false, cluster = true)
+        val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
+        try {
+            val notification = navigationNotification(pkg = "app.morphe.android.apps.maps",
+                title = "Turn right in 300 m")
+            notification.notification.extras.putCharSequence(Notification.EXTRA_SUB_TEXT, "5 min · 8.4 km")
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+
+            val guidance = decode(daemon.clusterFrames.single())
+            assertEquals(300, guidance.curToSegmentDist())
+            assertEquals(8_400, guidance.routeRemainDist())
+            assertEquals(300, guidance.routeRemainTime())
+            assertEquals("300 m", guidance.SegRemainDisAuto())
+            assertEquals("8.4 km", guidance.routrRemainDisAuto())
+            assertEquals("5 min", guidance.routrRemainTimeAuto())
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+        } finally { service.onDestroy() }
     }
 
     @Test
