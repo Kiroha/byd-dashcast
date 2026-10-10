@@ -1,0 +1,412 @@
+{
+  "apkSha256": "5fa52cfb6f6dfe10efb0b2961a1569d07efaa9615f2de8df1de80a8dd87e05e5",
+  "package": "app.morphe.android.apps.maps",
+  "version": "26.33.02.961351034",
+  "renderer": "CairoSVG 2.8.2",
+  "fixtureEdge": 54,
+  "entries": [
+    {
+      "name": "ic_depart",
+      "source": "ic_depart.svg",
+      "mirrored": false,
+      "iconId": 11,
+      "clockwise": null,
+      "sourceSha256": "56899e7442eb750fbec205fd7e25f2a536ef9a9ed38fd25d15ec826e789720fb",
+      "apkEntry": "res/at_.svg",
+      "pngSha256": "9a8c9222d180b9475d892a92022afbdc06cb886f47812f624c1767cd33f2849f"
+    },
+    {
+      "name": "ic_place",
+      "source": "ic_place.svg",
+      "mirrored": false,
+      "iconId": 48,
+      "clockwise": null,
+      "sourceSha256": "fe5e3f7b6cd630a5e9da8d2780a5995656f1272c6a99d004d26c1c346ac00a14",
+      "apkEntry": "res/xTZ.svg",
+      "pngSha256": "f2b44a00ddb033770b1da1c9bd16668912b8de37ca5aa19b98162b6065044dad"
+    },
+    {
+      "name": "ic_arrive_right",
+      "source": "ic_arrive_right.svg",
+      "mirrored": false,
+      "iconId": 48,
+      "clockwise": null,
+      "sourceSha256": "54a74133e9146850f67c8d0d5c0f8edea6aa657ec28c325e8fd1010819165de2",
+      "apkEntry": "res/GpG.svg",
+      "pngSha256": "97c22fed800041084326d1853f55f1bab7c05705f0c64c080dc3b54d2da2ace7"
+    },
+    {
+      "name": "ic_arrive_right_mirrored",
+      "source": "ic_arrive_right.svg",
+      "mirrored": true,
+      "iconId": 48,
+      "clockwise": null,
+      "sourceSha256": "54a74133e9146850f67c8d0d5c0f8edea6aa657ec28c325e8fd1010819165de2",
+      "apkEntry": "res/GpG.svg",
+      "pngSha256": "612062010a3321e4e1ab49d63c243d6055611fe132cc555d398c0abc6acc1a64"
+    },
+    {
+      "name": "ic_straight",
+      "source": "ic_straight.svg",
+      "mirrored": false,
+      "iconId": 11,
+      "clockwise": null,
+      "sourceSha256": "8352b6ed6801b4c8f73028323d08aa67232ff9ff368dbf7142777081d4273324",
+      "apkEntry": "res/FUq.svg",
+      "pngSha256": "dc34aac8118146663b9ed7984abac77f0daa8e016f5979500a50279371ffd757"
+    },
+    {
+      "name": "ic_turn_right",
+      "source": "ic_turn_right.svg",
+      "mirrored": false,
+      "iconId": 2,
+      "clockwise": null,
+      "sourceSha256": "099777212a8b5dc60bc4c7e056380ab3ea01f6dbd2f7b0d1d8cd86c1345f198a",
+      "apkEntry": "res/e1P.svg",
+      "pngSha256": "d547f6f7e5be729dd6f4b53f88d9b249f17d7e5185717533c974a27f993cd929"
+    },
+    {
+      "name": "ic_turn_right_mirrored",
+      "source": "ic_turn_right.svg",
+      "mirrored": true,
+      "iconId": 1,
+      "clockwise": null,
+      "sourceSha256": "099777212a8b5dc60bc4c7e056380ab3ea01f6dbd2f7b0d1d8cd86c1345f198a",
+      "apkEntry": "res/e1P.svg",
+      "pngSha256": "c7dea0163e8988a4fbad625f4f4bf411cc5c62bd688c7ffcf69c5fb6068b3759"
+    },
+    {
+      "name": "ic_turn_slight_right",
+      "source": "ic_turn_slight_right.svg",
+      "mirrored": false,
+      "iconId": 5,
+      "clockwise": null,
+      "sourceSha256": "1176793a4b00f67dd6b88c96118e5d47bada65e74e9e676b6172ec0d7ea5890e",
+      "apkEntry": "res/8WI.svg",
+      "pngSha256": "46984ab3f72dbc29a84ffc55679626bc050683d580e050f818f82d6f1086dcb9"
+    },
+    {
+      "name": "ic_turn_slight_right_mirrored",
+      "source": "ic_turn_slight_right.svg",
+      "mirrored": true,
+      "iconId": 3,
+      "clockwise": null,
+      "sourceSha256": "1176793a4b00f67dd6b88c96118e5d47bada65e74e9e676b6172ec0d7ea5890e",
+      "apkEntry": "res/8WI.svg",
+      "pngSha256": "5cdc21ece1ce58150cad1115ce7c4d7f1635e634bb325eed9c24e3507911bd82"
+    },
+    {
+      "name": "ic_merge_slight_right",
+      "source": "ic_merge_slight_right.svg",
+      "mirrored": false,
+      "iconId": 5,
+      "clockwise": null,
+      "sourceSha256": "e1be47e8965996114782e23da4fdcb9c5e5f80512c43bb0c1a1277856ea02947",
+      "apkEntry": "res/W1L.svg",
+      "pngSha256": "44180684cd94d4481801213817f26d1283d7a670c891ff47d49a987537829883"
+    },
+    {
+      "name": "ic_merge_slight_right_mirrored",
+      "source": "ic_merge_slight_right.svg",
+      "mirrored": true,
+      "iconId": 3,
+      "clockwise": null,
+      "sourceSha256": "e1be47e8965996114782e23da4fdcb9c5e5f80512c43bb0c1a1277856ea02947",
+      "apkEntry": "res/W1L.svg",
+      "pngSha256": "1c22e9365a7710c5bac754bf64e287b5e405530e94b9589f3cf59d59c6ca4898"
+    },
+    {
+      "name": "ic_turn_sharp_right",
+      "source": "ic_turn_sharp_right.svg",
+      "mirrored": false,
+      "iconId": 8,
+      "clockwise": null,
+      "sourceSha256": "19252bc892f95362350c5ea6c62a2acce4c372017ff3131f733faace713d3528",
+      "apkEntry": "res/Gir.svg",
+      "pngSha256": "e4433c391badede6e42ea0b0521eda22496662ae24d27dc994fa256b2d1b11b0"
+    },
+    {
+      "name": "ic_turn_sharp_right_mirrored",
+      "source": "ic_turn_sharp_right.svg",
+      "mirrored": true,
+      "iconId": 7,
+      "clockwise": null,
+      "sourceSha256": "19252bc892f95362350c5ea6c62a2acce4c372017ff3131f733faace713d3528",
+      "apkEntry": "res/Gir.svg",
+      "pngSha256": "2c6846bb8bfd71ab47c74db992889542fada00d2a6511cc9947c11881d86678f"
+    },
+    {
+      "name": "ic_u_turn",
+      "source": "ic_u_turn.svg",
+      "mirrored": false,
+      "iconId": 9,
+      "clockwise": null,
+      "sourceSha256": "4d05f0790b7f11f0cc767af45990c4508a2ec04149585ad05f95dfd9fc21d539",
+      "apkEntry": "res/Pn5.svg",
+      "pngSha256": "ce622cd2068722fd6df661254be35ac9c3829f0b6c99829aa9c88f43cde993d1"
+    },
+    {
+      "name": "ic_u_turn_mirrored",
+      "source": "ic_u_turn.svg",
+      "mirrored": true,
+      "iconId": 10,
+      "clockwise": null,
+      "sourceSha256": "4d05f0790b7f11f0cc767af45990c4508a2ec04149585ad05f95dfd9fc21d539",
+      "apkEntry": "res/Pn5.svg",
+      "pngSha256": "e1f5887d25e845d4399303ea3e213069b9f81c311a6ef6a620fa802d474083b8"
+    },
+    {
+      "name": "ic_merge_right",
+      "source": "ic_merge_right.svg",
+      "mirrored": false,
+      "iconId": 2,
+      "clockwise": null,
+      "sourceSha256": "7bd5f2b475ba210f66b032ccbf133bbd611db2effabefba153a416f01113b9f7",
+      "apkEntry": "res/ygW.svg",
+      "pngSha256": "158fdced41185f5b06664c2ccc76b24b6ecde1f0186df9eb7fbe43c9e806ecb4"
+    },
+    {
+      "name": "ic_merge_right_mirrored",
+      "source": "ic_merge_right.svg",
+      "mirrored": true,
+      "iconId": 1,
+      "clockwise": null,
+      "sourceSha256": "7bd5f2b475ba210f66b032ccbf133bbd611db2effabefba153a416f01113b9f7",
+      "apkEntry": "res/ygW.svg",
+      "pngSha256": "5c323ba35c0aee9be1f0579bdfc240db2bac5e4fc88d48a125be077e53741805"
+    },
+    {
+      "name": "ic_merge",
+      "source": "ic_merge.svg",
+      "mirrored": false,
+      "iconId": 11,
+      "clockwise": null,
+      "sourceSha256": "650cb5baa6a4ab8a985148efc790752039e1378c1e117dd1f81fd01c851da41b",
+      "apkEntry": "res/F7i.svg",
+      "pngSha256": "b3299d2899e20767782430ae1bb49c77a9da0695aa33e1e360e79570d7a547cb"
+    },
+    {
+      "name": "ic_roundabout",
+      "source": "ic_roundabout.svg",
+      "mirrored": false,
+      "iconId": 15,
+      "clockwise": false,
+      "sourceSha256": "88298fb30a7ac0b960bde268d3e2f1fd36cdbec93479fe9d1ae63520e17b9064",
+      "apkEntry": "res/NPp.svg",
+      "pngSha256": "8fb28a3f7321b4d76c1bc3bfce3a425780574ba66a931d43ee4064e967ff27eb"
+    },
+    {
+      "name": "ic_roundabout_mirrored",
+      "source": "ic_roundabout.svg",
+      "mirrored": true,
+      "iconId": 17,
+      "clockwise": true,
+      "sourceSha256": "88298fb30a7ac0b960bde268d3e2f1fd36cdbec93479fe9d1ae63520e17b9064",
+      "apkEntry": "res/NPp.svg",
+      "pngSha256": "15b66475b7ed3345faed92874cbaef7e7fc6477bd7ded238a95b1dfb0e38a2b7"
+    },
+    {
+      "name": "ic_roundabout_exit",
+      "source": "ic_roundabout_exit.svg",
+      "mirrored": false,
+      "iconId": 15,
+      "clockwise": false,
+      "sourceSha256": "70318110846f8f7fd99c3b1910b38f0c512fdc9600b550e6476250ba5bf8a37f",
+      "apkEntry": "res/Og1.svg",
+      "pngSha256": "cde7550c92c6b41f64f031f13809df112b8653cc35e075844a4b63cebc39388f"
+    },
+    {
+      "name": "ic_roundabout_exit_mirrored",
+      "source": "ic_roundabout_exit.svg",
+      "mirrored": true,
+      "iconId": 17,
+      "clockwise": true,
+      "sourceSha256": "70318110846f8f7fd99c3b1910b38f0c512fdc9600b550e6476250ba5bf8a37f",
+      "apkEntry": "res/Og1.svg",
+      "pngSha256": "cafa78eeb9b927b52afe634e4491cc6ca3098fd922bf3fe15b907d3b4e34b090"
+    },
+    {
+      "name": "ic_roundabout_left",
+      "source": "ic_roundabout_left.svg",
+      "mirrored": false,
+      "iconId": 15,
+      "clockwise": false,
+      "sourceSha256": "56e4377617cbebdc5e8c5cb61ee4f1dd07cdfef50408ae7ee98175c08fdab56b",
+      "apkEntry": "res/aCH.svg",
+      "pngSha256": "011ca34db3beee55576577051180f48629117c4da23d6cf96e539605b14e3658"
+    },
+    {
+      "name": "ic_roundabout_left_mirrored",
+      "source": "ic_roundabout_left.svg",
+      "mirrored": true,
+      "iconId": 17,
+      "clockwise": true,
+      "sourceSha256": "56e4377617cbebdc5e8c5cb61ee4f1dd07cdfef50408ae7ee98175c08fdab56b",
+      "apkEntry": "res/aCH.svg",
+      "pngSha256": "c74d1209878e9e256b26ce3411de6c25e39ab9c8b15fe06a1e191dcb21ab2a20"
+    },
+    {
+      "name": "ic_roundabout_right",
+      "source": "ic_roundabout_right.svg",
+      "mirrored": false,
+      "iconId": 16,
+      "clockwise": false,
+      "sourceSha256": "cfa0072891e9b213cea86a11e096a40a88d5af9760b98a6fcff16975be706bb0",
+      "apkEntry": "res/Kv9.svg",
+      "pngSha256": "a80df70f5f8a6b24daf6d31f19f92f00f5045a933f828e78c569b1bea8c13b09"
+    },
+    {
+      "name": "ic_roundabout_right_mirrored",
+      "source": "ic_roundabout_right.svg",
+      "mirrored": true,
+      "iconId": 18,
+      "clockwise": true,
+      "sourceSha256": "cfa0072891e9b213cea86a11e096a40a88d5af9760b98a6fcff16975be706bb0",
+      "apkEntry": "res/Kv9.svg",
+      "pngSha256": "5f0c4f6d051170205e610a6d0cb1fece7d4076362d2fb69e7f468d1fc5bb6c97"
+    },
+    {
+      "name": "ic_roundabout_sharp_left",
+      "source": "ic_roundabout_sharp_left.svg",
+      "mirrored": false,
+      "iconId": 15,
+      "clockwise": false,
+      "sourceSha256": "3c3a0db18126c65084709d0e23c9a20f3feea92aa873340e7af0b4b2e4e94772",
+      "apkEntry": "res/D-v.svg",
+      "pngSha256": "cecca5c7d2a36c275ccf5b879fea9c40be128abbb69518715b207d86104970f6"
+    },
+    {
+      "name": "ic_roundabout_sharp_left_mirrored",
+      "source": "ic_roundabout_sharp_left.svg",
+      "mirrored": true,
+      "iconId": 17,
+      "clockwise": true,
+      "sourceSha256": "3c3a0db18126c65084709d0e23c9a20f3feea92aa873340e7af0b4b2e4e94772",
+      "apkEntry": "res/D-v.svg",
+      "pngSha256": "53979822129b23619f6adb946f7858897f74eefb322e198a7f4b5e185e2ce8e1"
+    },
+    {
+      "name": "ic_roundabout_sharp_right",
+      "source": "ic_roundabout_sharp_right.svg",
+      "mirrored": false,
+      "iconId": 16,
+      "clockwise": false,
+      "sourceSha256": "5ccba770df8f2918c6aba8375d5cbb60c8016af353c19afe0c8a9a139c78c0f7",
+      "apkEntry": "res/-qJ.svg",
+      "pngSha256": "b10ee5be72df8f7f0f04feb61d93dc0ef1e14a9c75959bab1dffa4aa9a64fbbf"
+    },
+    {
+      "name": "ic_roundabout_sharp_right_mirrored",
+      "source": "ic_roundabout_sharp_right.svg",
+      "mirrored": true,
+      "iconId": 18,
+      "clockwise": true,
+      "sourceSha256": "5ccba770df8f2918c6aba8375d5cbb60c8016af353c19afe0c8a9a139c78c0f7",
+      "apkEntry": "res/-qJ.svg",
+      "pngSha256": "5632e3b1487e866dc7c1ce256d1e7fb34e8fba158e00e3898252bbb4dd8db56e"
+    },
+    {
+      "name": "ic_roundabout_slight_left",
+      "source": "ic_roundabout_slight_left.svg",
+      "mirrored": false,
+      "iconId": 15,
+      "clockwise": false,
+      "sourceSha256": "6ed3d0dc47925460d9aa68d332fd1f5d37bb1b060734237c99dd09cfe3aacebd",
+      "apkEntry": "res/n1w.svg",
+      "pngSha256": "e1e1467b670de4f100f1b81382067059caa356bb62358526102b7c8b29f9e746"
+    },
+    {
+      "name": "ic_roundabout_slight_left_mirrored",
+      "source": "ic_roundabout_slight_left.svg",
+      "mirrored": true,
+      "iconId": 17,
+      "clockwise": true,
+      "sourceSha256": "6ed3d0dc47925460d9aa68d332fd1f5d37bb1b060734237c99dd09cfe3aacebd",
+      "apkEntry": "res/n1w.svg",
+      "pngSha256": "e35f41ac0e0bbcc54cc968066faa0404705e5daec9ec2bc157a2c371780a0f46"
+    },
+    {
+      "name": "ic_roundabout_slight_right",
+      "source": "ic_roundabout_slight_right.svg",
+      "mirrored": false,
+      "iconId": 16,
+      "clockwise": false,
+      "sourceSha256": "7c93368408b3dca265050ec43dbee149e2ac47c7b0b38f6b6629da88bcbe9f92",
+      "apkEntry": "res/bXJ.svg",
+      "pngSha256": "1611bd635498ebe0ee796cdd50697bb47a9594e4ad8140e4746f1c769e850358"
+    },
+    {
+      "name": "ic_roundabout_slight_right_mirrored",
+      "source": "ic_roundabout_slight_right.svg",
+      "mirrored": true,
+      "iconId": 18,
+      "clockwise": true,
+      "sourceSha256": "7c93368408b3dca265050ec43dbee149e2ac47c7b0b38f6b6629da88bcbe9f92",
+      "apkEntry": "res/bXJ.svg",
+      "pngSha256": "3b6a60928353949b0857c0e14315b87cef306507adbb0a9c505df3a2f357c811"
+    },
+    {
+      "name": "ic_roundabout_straight",
+      "source": "ic_roundabout_straight.svg",
+      "mirrored": false,
+      "iconId": 19,
+      "clockwise": false,
+      "sourceSha256": "28858851a38eca2180a0b8c3f22abddbcd23f36edd04be659accb52122fcf8f7",
+      "apkEntry": "res/yfs.svg",
+      "pngSha256": "16cb439a9b63cd7de01360f6b41a8be150734c0e191164ca5f7a5bc58081b53f"
+    },
+    {
+      "name": "ic_roundabout_straight_mirrored",
+      "source": "ic_roundabout_straight.svg",
+      "mirrored": true,
+      "iconId": 20,
+      "clockwise": true,
+      "sourceSha256": "28858851a38eca2180a0b8c3f22abddbcd23f36edd04be659accb52122fcf8f7",
+      "apkEntry": "res/yfs.svg",
+      "pngSha256": "4f24e1b3e866fbfd922af37699e76a7ce7874fbcc009d81f5fa832bfdf963c95"
+    },
+    {
+      "name": "ic_roundabout_u_turn",
+      "source": "ic_roundabout_u_turn.svg",
+      "mirrored": false,
+      "iconId": 15,
+      "clockwise": false,
+      "sourceSha256": "f07729b62233ba52f6d93f12bae3e1a49d69122cdd9f2434fdcec786029079c2",
+      "apkEntry": "res/ilL.svg",
+      "pngSha256": "7576eeb58f1bbd79f1a8f9598f2e82496d8d5f5c710f2e279f7ac07108f774d7"
+    },
+    {
+      "name": "ic_roundabout_u_turn_mirrored",
+      "source": "ic_roundabout_u_turn.svg",
+      "mirrored": true,
+      "iconId": 17,
+      "clockwise": true,
+      "sourceSha256": "f07729b62233ba52f6d93f12bae3e1a49d69122cdd9f2434fdcec786029079c2",
+      "apkEntry": "res/ilL.svg",
+      "pngSha256": "7440a45c6f1ec9a8ffeae7c27950dc7309b0ea2504b57dd25f126c7014363de5"
+    }
+  ],
+  "negative": [
+    {
+      "name": "da_turn_unknown",
+      "iconId": -1,
+      "sourceSha256": "be904b5d1a4c889c023d6e40aaed767aff9daaecc23b2c8662effc56c5093eaf",
+      "apkEntry": "res/jlV.svg",
+      "pngSha256": "46f58aa62de29253e044fae9bf0053fad4b39f69493345c6497ea341ce03d60d"
+    },
+    {
+      "name": "da_turn_ferry",
+      "iconId": -1,
+      "sourceSha256": "923e78a149fb0b8df8e403635d45cfc2c404719cbce141b35639ce27e3d12a1b",
+      "apkEntry": "res/Fz6.svg",
+      "pngSha256": "3c25a9801608565bf06c276be703127ae2ed839c0696d6c94a3b74505902debe"
+    },
+    {
+      "name": "ferry_train",
+      "iconId": -1,
+      "sourceSha256": "bcd831be839aec09b73de3e03b9c593d144a5fc8f5dba592030c4e65a17b0aea",
+      "apkEntry": "res/LLJ.svg",
+      "pngSha256": "74152b56338d2a96cd9d91a377c19b7f92ab1d67416ff40b88b8dc9cd4f3c063"
+    }
+  ]
+}

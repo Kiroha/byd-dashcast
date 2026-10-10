@@ -471,8 +471,19 @@ class MapNotificationListenerService : NotificationListenerService() {
         lastImageIdentity = identity
         lastImageDecoded = false
         lastImageDelivered = false
-        // Preserve resource/text behavior, including the existing U-turn and roundabout parsing.
-        val iconId = pending.data.iconId.takeIf { it > 0 } ?: image.iconId
+        // Preserve concrete resource/text maneuvers. An audited roundabout image can refine the
+        // generic "exit" text and the text parser's default circulation direction.
+        var iconId = pending.data.iconId.takeIf { it > 0 } ?: image.iconId
+        val refineRoundabout = image.roundaboutClockwise != null && (pending.data.iconId <= 0 ||
+            pending.data.iconId == CanBusController.ICON_DETOUR_RIGHT || pending.data.iconId in 15..44)
+        if (refineRoundabout) {
+            // The SVG identifies circulation direction, not an ordinal exit. Only promote the
+            // generic icon when the same notification explicitly names an exit in its text.
+            val lower = normaliseDigits("${identity.title} ${identity.text} ${identity.bigText}")!!
+                .lowercase(Locale.ROOT)
+            val exit = parseRoundaboutExit(lower)
+            iconId = if (exit > 0) (if (image.roundaboutClockwise == true) 34 else 24) + exit else image.iconId
+        }
         val distance = pending.data.distanceMeters
         if (hasGuidanceSignal(iconId, distance)) noteNavActivity(pending.sourcePackage, false)
         if (!isCompleteGuidance(iconId, distance)) {
@@ -495,7 +506,7 @@ class MapNotificationListenerService : NotificationListenerService() {
         if (navKey != lastLoggedNav) {
             lastLoggedNav = navKey
             AppLogger.i(TAG, "NAV PARSE icon=$iconId src=" +
-                (if (pending.data.iconId > 0) "resource_or_text" else "large_icon") +
+                (if (pending.data.iconId > 0 && !refineRoundabout) "resource_or_text" else "large_icon") +
                 " smallIcon='${candidate.resourceName}' titleLen=${identity.title.length}" +
                 " textLen=${identity.text.length} -> dist=$distance road=${data.roadName.isNotEmpty()}")
         }
