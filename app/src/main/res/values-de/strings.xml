@@ -614,7 +614,8 @@
     <string name="satellite_cluster_first">Aktivieren Sie zuerst die Projektion im Kombiinstrument in DashCast.</string>
     <string name="satellite_unavailable">Empfang auf diesem Gerät nicht verfügbar.</string>
     <string name="satellite_pair_preparing">Preparing pairing…</string>
-    <string name="satellite_pair_instructions">Remember these 6 digits, then switch to the Tbox and open DashCast Satellite → Pair with DashCast. Keep both devices on the same Wi-Fi. You can leave this screen: the code stays valid for 2 minutes.</string>
+    <string name="satellite_pair_instructions">Merken Sie sich diese 6 Ziffern. Wählen Sie Auf Tbox fortfahren und wechseln Sie dann zur Tbox, um DashCast Satellite → Pair with DashCast zu öffnen. Verwenden Sie dasselbe lokale Netzwerk (Fahrzeug-Hotspot). Fortfahren, Zurück und ein App-Wechsel lassen den ursprünglichen Countdown von 2 Minuten weiterlaufen. Abbrechen beendet die Kopplung.</string>
+    <string name="satellite_pair_continue">Auf Tbox fortfahren</string>
     <string name="satellite_pair_remaining">Code expires in %1$d seconds.</string>
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>

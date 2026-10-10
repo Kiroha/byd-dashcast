@@ -619,7 +619,8 @@
     <string name="satellite_cluster_first">فعّل أولًا العرض على لوحة العدادات في DashCast.</string>
     <string name="satellite_unavailable">الاستقبال غير متاح على هذا الجهاز.</string>
     <string name="satellite_pair_preparing">Preparing pairing…</string>
-    <string name="satellite_pair_instructions">Remember these 6 digits, then switch to the Tbox and open DashCast Satellite → Pair with DashCast. Keep both devices on the same Wi-Fi. You can leave this screen: the code stays valid for 2 minutes.</string>
+    <string name="satellite_pair_instructions">تذكّر هذه الأرقام الستة. اختر المتابعة على Tbox، ثم انتقل إلى Tbox وافتح DashCast Satellite → Pair with DashCast. استخدم الشبكة المحلية نفسها (نقطة اتصال السيارة). المتابعة والرجوع والتبديل بين التطبيقات لا تغيّر المهلة الأصلية البالغة دقيقتين. إلغاء ينهي الاقتران.</string>
+    <string name="satellite_pair_continue">المتابعة على Tbox</string>
     <string name="satellite_pair_remaining">Code expires in %1$d seconds.</string>
     <string name="satellite_pair_copy_advanced">Copy profile (advanced)</string>
     <string name="satellite_pair_address">Car address (if requested): %1$s</string>

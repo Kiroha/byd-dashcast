@@ -51,7 +51,8 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         override fun run() {
             if (!pairingVisible) return
             renderStatus()
-            renderPairing(SatellitePairingSession.snapshot())
+            // A dismissed code stays hidden until Pair a device or the next screen entry.
+            if (pairingDialog != null) renderPairing(SatellitePairingSession.snapshot())
             pairingHandler.postDelayed(this, 500)
         }
     }
@@ -283,13 +284,14 @@ class SatelliteSettingsActivity : AppCompatActivity() {
                 addView(address)
             }
             val dialog = AlertDialog.Builder(this).setTitle(R.string.satellite_pair).setView(content)
+                .setPositiveButton(R.string.satellite_pair_continue, null)
                 .setNegativeButton(android.R.string.cancel) { _, _ -> SatellitePairingSession.close(state.attempt) }
                 .setNeutralButton(R.string.satellite_pair_copy_advanced, null).create()
             pairingDialog = dialog
             dialog.setOnDismissListener {
-                if (pairingVisible && pairingAttempt == state.attempt) {
-                    SatellitePairingSession.close(state.attempt)
-                }
+                // Back, outside taps and OEM screen transitions only hide the code. A late
+                // dismissal callback must not detach a replacement dialog after re-entry.
+                if (pairingDialog === dialog) detachPairingDialog()
                 codeText.text = ""
             }
             dialog.show()
@@ -335,6 +337,7 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         pairingVisible = true
+        renderPairing(SatellitePairingSession.snapshot())
         pairingTicker.run()
     }
 

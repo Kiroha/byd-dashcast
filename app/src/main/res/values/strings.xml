@@ -670,7 +670,8 @@
     <string name="satellite_cluster_first">Activez d’abord la projection du combiné dans DashCast.</string>
     <string name="satellite_unavailable">Réception indisponible sur cet appareil.</string>
     <string name="satellite_pair_preparing">Préparation de l’association…</string>
-    <string name="satellite_pair_instructions">Mémorisez ces 6 chiffres, puis passez sur la Tbox et ouvrez DashCast Satellite → Pair with DashCast. Les deux appareils doivent être sur le même Wi-Fi. Vous pouvez quitter cet écran : le code reste valable pendant 2 minutes.</string>
+    <string name="satellite_pair_instructions">Mémorisez ces 6 chiffres. Appuyez sur Continuer sur la Tbox, puis passez sur la Tbox et ouvrez DashCast Satellite → Pair with DashCast. Utilisez le même réseau local (hotspot de la voiture). Continuer, Retour et le changement d’application conservent le délai initial de 2 minutes. Annuler met fin à l’association.</string>
+    <string name="satellite_pair_continue">Continuer sur la Tbox</string>
     <string name="satellite_pair_remaining">Le code expire dans %1$d secondes.</string>
     <string name="satellite_pair_copy_advanced">Copier le profil (avancé)</string>
     <string name="satellite_pair_address">Adresse de la voiture (si demandée) : %1$s</string>

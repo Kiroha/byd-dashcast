@@ -1987,8 +1987,12 @@ android {
         // Show actual authenticated receiver and fresh-guidance states in all 13 languages.
         // Preserve six-digit pairing and protocol-v1 compatibility with Satellite 0.2.0-dev.
         // Offline checks do not replace validation of the new maneuvers in the vehicle.)
-        versionCode 650
-        versionName "1.9.11-beta"
+        // 651 = 1.9.12-beta (SATELLITE PAIRING ACROSS CARPLAY. Preserve the original
+        // RAM-only code and deadline when the dialog is hidden, including dismissal
+        // between onPause and onStop. Continue on Tbox hides the code; Cancel revokes it.
+        // Also includes the formatted native-guidance distances from commit 648d153e.)
+        versionCode 651
+        versionName "1.9.12-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
