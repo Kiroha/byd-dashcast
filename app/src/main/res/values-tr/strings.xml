@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Gösterge panelinde müzik</string>
     <string name="settings_media_enabled">Müzik bilgilerini gösterge panelinde göster</string>
-    <string name="settings_media_help">Yalnızca bu tabletteki uygulamalar; bildirim erişimi gerekir. Deneysel: araç park halindeyken test edin. Gösterge paneli navigasyonu önceliklidir; yalnızca HUD navigasyonu müziği gizlemez. Radyo veya Bluetooth etkilenirse kapatın.</string>
+    <string name="settings_media_help">Yalnızca bu tabletteki uygulamalar; bildirim erişimi gerekir. Deneysel: araç park halindeyken test edin. Navigasyondan bağımsızdır. Radyo veya Bluetooth etkilenirse kapatın.</string>
     <string name="media_bench_title">Gösterge müzik testi</string>
     <string name="media_bench_warning">Yalnızca park halindeki araçta. Testten önce otomatik müzik gösterimini kapatın. OEM müzik metninin yerini alabilir. İptal, önceki ses kaynağını geri yüklemeden testi temizlemeyi dener.</string>
     <string name="media_bench_parked">Aracın park halinde olduğunu onaylıyorum</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Müzik çıkışı kullanılamıyor veya komut reddedildi</string>
     <string name="media_bench_cleared">✓ Temizleme komutları kabul edildi; göstergeyi kontrol edin</string>
     <string name="media_bench_clear_failed">⚠ Temizleme doğrulanmadı; göstergeyi ve OEM ses kaynağını kontrol edin</string>
-    <string name="media_bench_busy">⚠ Otomatik müziği kapatın, gösterge paneli navigasyonunu durdurun ve diğer testleri bitirin</string>
+    <string name="media_bench_busy">⚠ Otomatik müziği kapatın ve diğer testleri bitirin</string>
     <string name="media_bench_nothing">Müzik çıkışı alınmadı; temizleme komutları gönderilmedi</string>
     <string name="satellite_tls_repair">Bağlantı sertifikası güncellendi. «Cihaz eşleştir» ile DashSat uygulamasını yeniden eşleştirin. Uygulamaları kaldırmayın.</string>
 </resources>

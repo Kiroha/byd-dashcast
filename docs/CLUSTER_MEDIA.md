@@ -5,9 +5,8 @@
 DashCast can optionally collect the title, artist and play/pause state supplied by local Android
 MediaSessions, then write the separate BYD instrument music properties. This does not identify
 songs from audio, inspect notification text, use accessibility heuristics or alter navigation
-payloads. The option is **off by default**. Collection remains independent of navigation settings and input
-selection. Music presentation yields to accepted cluster guidance because this firmware places
-music and maneuver distance in the same text area. Windshield-HUD-only guidance does not hide music.
+payloads. The option is **off by default** and independent of HUD/cluster guidance destinations,
+local/Satellite navigation selection and the guidance watchdog.
 
 The current application baseline is one native Kotlin/Views/XML app module, minSdk 28, targetSdk
 29 and compileSdk 36. Notification access to DashCast's existing
@@ -34,7 +33,7 @@ and validate it only with the vehicle parked. The card is translated in all 13 s
 and is not disabled by navigation being switched off.
 
 Diagnostics → HUD bench (DL3) → Cluster music test opens a translated, scrollable test
-dialog. Automatic music output and cluster guidance must be stopped. A fresh explicit parked acknowledgement is
+dialog. Automatic music output must be disabled. A fresh explicit parked acknowledgement is
 required for each test; it is user confirmation, not movement detection. The test sends the
 fixed benign `DashCast - DashCast test` title, sets playing and attempts cleanup after six seconds
 from acquisition. Cancel, dismissal or Activity destruction also releases the test. Production
@@ -108,10 +107,9 @@ With the vehicle parked, record model/ROM/API, actual grants/caller UID, return 
    pause, resume, app change, metadata loss, stop and source destruction.
 3. Test notification-access revoke/regrant, disable during the source delay, app/process restart and
    ACC off/on without opening the guidance UI.
-4. Confirm that accepted Maps cluster guidance clears music without masking its arrow/distance,
-   and that route close, source loss, expiry and destination changes permit a fresh media snapshot.
-   HUD-only guidance must keep music visible; media loss must not stop healthy guidance.
-   Track changes during suppression must resume the current track, never the previous cached title.
+4. Confirm simultaneous music + Maps left/right/roundabout arrows and distances, plus navigation off
+   with music still enabled. Navigation expiry must not stop healthy music; media loss must not stop
+   healthy guidance.
 5. Check OEM radio/Bluetooth/CarPlay source priority, recovery after disable and behavior after daemon
    replacement. Confirm OEM alerts and telltales remain visible.
 
@@ -154,30 +152,23 @@ output across successful recovery and cleanup. `outputStage`, `outputResult` and
 describe the most recent writer operation; `cleanupResult` is reported separately.
 
 
-### Shared cluster text area: guidance priority
+### Shared cluster text area: positioning remains unverified
 
-A vehicle report on 2026-10-11 confirmed music text rendering but showed it overlapping the
-maneuver distance. No supported music-position parameter is established in the inspected OEM
-contract. DashCast therefore gives accepted cluster guidance priority over music presentation.
-A setting, opened navigation session, successful CAN/HUD write or failed cluster delivery cannot
-start this priority gate. A later failed cluster update leaves it closed conservatively until
-the existing navigation stop, source-loss, expiry or destination-change path releases it. Same
-fresh guidance receipts continue to use the existing watchdog; no new route timer is introduced.
+A vehicle report on 2026-10-11 confirmed music rendering but showed the title overlapping
+the maneuver distance. DashCast continues to send music independently of cluster/HUD guidance;
+it does not automatically hide music while guiding. The user requested simultaneous display
+with music farther to the right, rather than suppression. No supported music-position command
+has yet been established in the inspected OEM contract. This shared-area overlap remains
+unresolved; do not claim that concurrent rendering or a right-aligned layout is validated.
+Further OEM layout research and parked vehicle validation are required before adding a
+positioning command.
 
-Starting priority cancels pending media suffixes and queues one bounded cleanup through the
-existing serial writer, only for its acquired current Binder. The navigation thread does not
-wait for that SDK cleanup. A transaction already in flight cannot be cancelled, SDK acceptance
-does not prove physical clearing, and the previous OEM audio source is never guessed/restored.
-Music sessions remain observed while presentation is suppressed. Cleanup writes the cluster
-paused-state property; DashCast sends no Android media transport pause/play command.
-
-On release, presentation stays blocked until the MediaSession worker re-reads active sessions and
-current metadata. A revision ticket rejects obsolete resume results and callbacks from disabled,
-disconnected or destroyed collectors. Refresh requests are coalesced; there is no periodic
-media polling and no replay of the cached title. Source loss during suppression stays cleared.
-A diagnostic bench cannot acquire the writer while cluster guidance has priority. Bug reports
-include only the passive `clusterGuidanceSuppressed` boolean, with no route or music content.
-
-Static and JVM checks do not establish rendering/cleanup on every firmware. Validate the first
-frame, track changes while guiding, route end/expiry, HUD-only mode and OEM radio/Bluetooth
-coexistence on the target car before considering the overlap corrected in hardware.
+The inspected `new_apk_extract/Dilink3/x2/native/` archive contains two OEM theme examples:
+`cluster_theme1.rcc` places `MediaInfo.qml` at x=780, y=148, width=386 and
+`Navigation.qml` at x=730, y=138; theme 2 uses x=788, y=92, width=370 for media
+and x=744, y=78 for navigation. The archive identifies BYD DiLink 3 / Android API 29,
+but its firmware is unknown; these are not established SX361 coordinates.
+Both examples use clipped music text and a looping marquee. Leading spaces would shift
+characters only temporarily and cannot reliably relocate the icon or reserve a separate
+area. The inspected music datasource exposes text/icon/play state/language, without a
+position handler. These extracted examples do not prove layout behavior on every vehicle.

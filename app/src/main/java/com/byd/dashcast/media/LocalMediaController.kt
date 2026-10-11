@@ -6,14 +6,13 @@ import android.os.Handler
 import android.os.Looper
 import java.io.Closeable
 
-/** Session collection remains independent; only presentation yields to accepted cluster guidance. */
+/** Testable lifecycle gate independent of all guidance settings, watchdogs, and source selection. */
 internal class MediaListenerLifecycle(
     private val enabled: () -> Boolean,
     private val ownership: MediaOutputOwnership,
     private val dispatchRefresh: (() -> Unit) -> Unit = { it() },
     private val retryScheduler: MediaScheduler? = null,
     private val diagnostics: MediaDiagnosticStore = MediaDiagnosticStore(),
-    private val requestSnapshot: (Closeable, (ClusterMediaData?) -> Unit) -> Unit = { _, _ -> },
     private val observeSessions: ((ClusterMediaData?) -> Unit, () -> Unit) -> Closeable,
 ) : Closeable {
     private val token = Any()
@@ -25,15 +24,6 @@ internal class MediaListenerLifecycle(
     private var retry: MediaCancellation? = null
     private var failures = 0
     private var starting = false
-    private val presentationObserver = ownership.observePresentation { blocked, revision ->
-        if (!blocked) dispatchRefresh {
-            synchronized(this) {
-                if (!destroyed && connected && enabled()) {
-                    if (sessions == null) refresh() else resumeFromFreshSnapshot(revision)
-                }
-            }
-        }
-    }
 
     @Synchronized fun connected() { if (destroyed) return; connected = true; diagnostics.listener(true); refresh() }
     @Synchronized fun disconnected() { connected = false; diagnostics.listener(false); stop(); failures = 0 }
@@ -41,13 +31,13 @@ internal class MediaListenerLifecycle(
     @Synchronized fun refresh() {
         if (destroyed || !connected || !enabled()) { stop(); failures = 0; return }
         if (sessions != null || starting || retry != null) return
-        if (!ownership.acquire(token, observeWhileSuppressed = true)) {
+        if (!ownership.acquire(token)) {
             diagnostics.busy()
             if (waiting == null) waiting = ownership.observeAvailability {
                 dispatchRefresh { refresh() }
             }
             // Close the release-before-subscription race without polling or timed retries.
-            if (!ownership.acquire(token, observeWhileSuppressed = true)) return
+            if (!ownership.acquire(token)) return
         }
         waiting?.close()
         waiting = null
@@ -72,29 +62,7 @@ internal class MediaListenerLifecycle(
                 diagnostics.failure(diagnostics.generation(), error is SecurityException)
                 failed()
             }
-        } finally {
-            starting = false
-            // Also close unblock-during-construction: the queued presentation callback may have
-            // observed starting=true before the session subscription was returned.
-            ownership.resumeRevision(token)?.let { resumeFromFreshSnapshot(it) }
-        }
-    }
-
-    private fun resumeFromFreshSnapshot(revision: Long) {
-        val current = sessions ?: return
-        val generation = observerGeneration
-        try {
-            requestSnapshot(current) { data ->
-                synchronized(this) {
-                    if (!destroyed && connected && enabled() && observerGeneration == generation) {
-                        ownership.resume(token, revision, data)
-                    }
-                }
-            }
-        } catch (error: Exception) {
-            diagnostics.failure(diagnostics.generation(), error is SecurityException)
-            failed()
-        }
+        } finally { starting = false }
     }
 
     private fun failed() {
@@ -126,10 +94,7 @@ internal class MediaListenerLifecycle(
         ownership.release(token)
     }
 
-    @Synchronized override fun close() {
-        destroyed = true; connected = false; diagnostics.listener(false); stop(); failures = 0
-        presentationObserver.close()
-    }
+    @Synchronized override fun close() { destroyed = true; connected = false; diagnostics.listener(false); stop(); failures = 0 }
 }
 
 class LocalMediaController(context: Context, component: ComponentName) : Closeable {
@@ -145,8 +110,7 @@ class LocalMediaController(context: Context, component: ComponentName) : Closeab
     }
     private val lifecycle = MediaListenerLifecycle({ MediaPrefs.isEnabled(app) },
         ClusterMediaCoordinator.ownership, { action -> handler.post { action() } },
-        retryScheduler, MediaDiagnostics.store,
-        { observer, snapshot -> (observer as MediaSessionObserver).refresh(snapshot) }) { changed, failed ->
+        retryScheduler, MediaDiagnostics.store) { changed, failed ->
         val generation = MediaDiagnostics.store.generation()
         MediaSessionObserver(app, component, changed, failed, { count, valid, present, playing ->
             MediaDiagnostics.store.collection(generation, count, valid, present, playing)

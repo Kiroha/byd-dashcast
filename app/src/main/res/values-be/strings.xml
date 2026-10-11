@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Музыка на панэлі прыбораў</string>
     <string name="settings_media_enabled">Паказваць звесткі пра музыку на панэлі</string>
-    <string name="settings_media_help">Толькі праграмы гэтага планшэта; патрэбны доступ да апавяшчэнняў. Эксперыментальна: правярайце на стаянцы. Навігацыя на панэлі прыбораў мае прыярытэт; навігацыя толькі на HUD не хавае музыку. Выключыце пры перашкодах радыё ці Bluetooth.</string>
+    <string name="settings_media_help">Толькі праграмы гэтага планшэта; патрэбны доступ да апавяшчэнняў. Эксперыментальна: правярайце на стаянцы. Незалежна ад навігацыі. Выключыце пры перашкодах радыё ці Bluetooth.</string>
     <string name="media_bench_title">Тэст музыкі на панэлі</string>
     <string name="media_bench_warning">Толькі ў прыпаркаваным аўтамабілі. Выключыце аўтаматычны паказ музыкі перад тэстам. Ён можа замяніць музычны тэкст OEM. Скасаванне спрабуе ачысціць тэст без аднаўлення папярэдняй крыніцы гуку.</string>
     <string name="media_bench_parked">Пацвярджаю, што аўтамабіль прыпаркаваны</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Паказ музыкі недаступны ці каманда адхілена</string>
     <string name="media_bench_cleared">✓ Каманды ачысткі прынятыя; праверце панэль</string>
     <string name="media_bench_clear_failed">⚠ Ачыстка не пацверджана; праверце панэль і крыніцу гуку OEM</string>
-    <string name="media_bench_busy">⚠ Выключыце аўтаматычную музыку, спыніце навігацыю на панэлі прыбораў і завяршыце іншыя тэсты</string>
+    <string name="media_bench_busy">⚠ Выключыце аўтаматычную музыку і завяршыце іншыя тэсты</string>
     <string name="media_bench_nothing">Паказ музыкі не атрыманы; каманды ачысткі не адпраўленыя</string>
     <string name="satellite_tls_repair">Сертыфікат злучэння абноўлены. Паўторна спалучыце DashSat праз «Спалучыць прыладу». Не выдаляйце праграмы.</string>
 </resources>

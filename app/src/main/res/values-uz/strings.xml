@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Asboblar panelida musiqa</string>
     <string name="settings_media_enabled">Panelda musiqa ma’lumotlarini ko‘rsatish</string>
-    <string name="settings_media_help">Faqat ushbu planshetdagi ilovalar; bildirishnomalarga ruxsat kerak. Tajriba funksiyasi: avtomobil park holatida sinang. Asboblar panelidagi navigatsiya ustuvor; faqat HUD navigatsiyasi musiqani yashirmaydi. Radio yoki Bluetooth ishiga xalal bersa, o‘chiring.</string>
+    <string name="settings_media_help">Faqat ushbu planshetdagi ilovalar; bildirishnomalarga ruxsat kerak. Tajriba funksiyasi: avtomobil park holatida sinang. Navigatsiyadan mustaqil. Radio yoki Bluetooth ishiga xalal bersa, o‘chiring.</string>
     <string name="media_bench_title">Paneldagi musiqa sinovi</string>
     <string name="media_bench_warning">Faqat park holatidagi avtomobilda. Sinovdan oldin avtomatik musiqa ko‘rsatishni o‘chiring. OEM musiqa matnini almashtirishi mumkin. Bekor qilish avvalgi audio manbani tiklamasdan sinov matnini tozalashga urinadi.</string>
     <string name="media_bench_parked">Avtomobil park holatida ekanini tasdiqlayman</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Musiqa chiqishi mavjud emas yoki buyruq rad etildi</string>
     <string name="media_bench_cleared">✓ Tozalash buyruqlari qabul qilindi; panelni tekshiring</string>
     <string name="media_bench_clear_failed">⚠ Tozalash tasdiqlanmadi; panel va OEM audio manbani tekshiring</string>
-    <string name="media_bench_busy">⚠ Avtomatik musiqani o‘chiring, asboblar panelidagi navigatsiyani to‘xtating va boshqa sinovlarni tugating</string>
+    <string name="media_bench_busy">⚠ Avtomatik musiqani o‘chiring va boshqa sinovlarni tugating</string>
     <string name="media_bench_nothing">Musiqa chiqishi olinmadi; tozalash buyruqlari yuborilmadi</string>
     <string name="satellite_tls_repair">Ulanish sertifikati yangilandi. «Qurilmani juftlash» orqali DashSat ilovasini qayta juftlang. Ilovalarni oʻchirmang.</string>
 </resources>

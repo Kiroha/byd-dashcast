@@ -678,7 +678,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Muzyka na zestawie wskaźników</string>
     <string name="settings_media_enabled">Pokazuj informacje o muzyce na wskaźnikach</string>
-    <string name="settings_media_help">Tylko aplikacje na tym tablecie; wymagany dostęp do powiadomień. Funkcja eksperymentalna: testuj na postoju. Nawigacja w zestawie wskaźników ma priorytet; nawigacja tylko na HUD nie ukrywa muzyki. Wyłącz, jeśli zakłóca radio lub Bluetooth.</string>
+    <string name="settings_media_help">Tylko aplikacje na tym tablecie; wymagany dostęp do powiadomień. Funkcja eksperymentalna: testuj na postoju. Niezależna od nawigacji. Wyłącz, jeśli zakłóca radio lub Bluetooth.</string>
     <string name="media_bench_title">Test muzyki na wskaźnikach</string>
     <string name="media_bench_warning">Tylko w zaparkowanym pojeździe. Przed testem wyłącz automatyczne wyświetlanie muzyki. Test może zastąpić tekst OEM. Anulowanie próbuje usunąć test bez przywracania poprzedniego źródła dźwięku.</string>
     <string name="media_bench_parked">Potwierdzam, że pojazd jest zaparkowany</string>
@@ -688,7 +688,7 @@
     <string name="media_bench_unavailable">⚠ Wyświetlanie muzyki niedostępne lub polecenie odrzucone</string>
     <string name="media_bench_cleared">✓ Polecenia usunięcia przyjęte; sprawdź wskaźniki</string>
     <string name="media_bench_clear_failed">⚠ Usunięcie niepotwierdzone; sprawdź wskaźniki i źródło audio OEM</string>
-    <string name="media_bench_busy">⚠ Wyłącz automatyczną muzykę, zatrzymaj nawigację w zestawie wskaźników i zakończ inne testy</string>
+    <string name="media_bench_busy">⚠ Wyłącz automatyczną muzykę i zakończ inne testy</string>
     <string name="media_bench_nothing">Nie przejęto wyświetlania muzyki; nie wysłano poleceń usunięcia</string>
     <string name="satellite_tls_repair">Certyfikat połączenia został zaktualizowany. Sparuj ponownie DashSat za pomocą opcji „Sparuj urządzenie”. Nie odinstalowuj żadnej aplikacji.</string>
 </resources>

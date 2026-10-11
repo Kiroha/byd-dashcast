@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Музыка на панели приборов</string>
     <string name="settings_media_enabled">Показывать сведения о музыке на панели</string>
-    <string name="settings_media_help">Только приложения этого планшета; нужен доступ к уведомлениям. Экспериментально: проверяйте на стоянке. Навигация на приборной панели имеет приоритет; навигация только на HUD не скрывает музыку. Отключите при помехах радио или Bluetooth.</string>
+    <string name="settings_media_help">Только приложения этого планшета; нужен доступ к уведомлениям. Экспериментально: проверяйте на стоянке. Независимо от навигации. Отключите при помехах радио или Bluetooth.</string>
     <string name="media_bench_title">Тест музыки на панели</string>
     <string name="media_bench_warning">Только в припаркованном автомобиле. Отключите автоматический вывод музыки перед тестом. Он может заменить музыкальный текст OEM. Отмена пытается очистить тест без восстановления прежнего источника звука.</string>
     <string name="media_bench_parked">Подтверждаю, что автомобиль припаркован</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Вывод музыки недоступен или команда отклонена</string>
     <string name="media_bench_cleared">✓ Команды очистки приняты; проверьте панель</string>
     <string name="media_bench_clear_failed">⚠ Очистка не подтверждена; проверьте панель и источник звука OEM</string>
-    <string name="media_bench_busy">⚠ Отключите автоматическую музыку, остановите навигацию на приборной панели и завершите другие тесты</string>
+    <string name="media_bench_busy">⚠ Отключите автоматическую музыку и завершите другие тесты</string>
     <string name="media_bench_nothing">Вывод музыки не получен; команды очистки не отправлены</string>
     <string name="satellite_tls_repair">Сертификат соединения обновлён. Повторно подключите DashSat через «Сопряжение устройства». Не удаляйте приложения.</string>
 </resources>
