@@ -71,6 +71,7 @@ object ClusterPrefs {
     private const val KEY_NAVIGATION_ENABLED = "navigation_guidance_enabled"
     private const val KEY_NAVIGATION_HUD = "navigation_hud_enabled"
     private const val KEY_NAVIGATION_CLUSTER = "navigation_cluster_enabled"
+    private const val KEY_ROUNDABOUT_TRAFFIC_SIDE = "roundabout_traffic_side"
 
     /** True while cluster/main screenshots may still be on disk. See the accessors below. */
     const val KEY_SHOTS_ON_DISK = "shots_on_disk"
@@ -323,6 +324,13 @@ object ClusterPrefs {
         edit(ctx).putBoolean(KEY_NAVIGATION_CLUSTER, enabled).apply()
     }
 
+    fun getRoundaboutTrafficSide(ctx: Context): RoundaboutTrafficSide =
+        RoundaboutTrafficSide.fromStored(prefs(ctx).getString(KEY_ROUNDABOUT_TRAFFIC_SIDE, null))
+
+    fun setRoundaboutTrafficSide(ctx: Context, side: RoundaboutTrafficSide) {
+        edit(ctx).putString(KEY_ROUNDABOUT_TRAFFIC_SIDE, side.storedValue).apply()
+    }
+
     fun getNavigationOutputs(ctx: Context): NavigationOutputs {
         val p = prefs(ctx)
         val enabled = p.getBoolean(KEY_NAVIGATION_ENABLED, true)
@@ -337,7 +345,7 @@ object ClusterPrefs {
         val p = prefs(ctx)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == null || key == KEY_NAVIGATION_ENABLED || key == KEY_NAVIGATION_HUD ||
-                key == KEY_NAVIGATION_CLUSTER) onChanged()
+                key == KEY_NAVIGATION_CLUSTER || key == KEY_ROUNDABOUT_TRAFFIC_SIDE) onChanged()
         }
         p.registerOnSharedPreferenceChangeListener(listener)
         return Closeable { p.unregisterOnSharedPreferenceChangeListener(listener) }

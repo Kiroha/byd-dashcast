@@ -486,6 +486,52 @@
                             android:paddingEnd="16dp"
                             android:text="@string/settings_navigation_cluster"/>
 
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="16dp"
+                            android:layout_marginTop="16dp"
+                            android:text="@string/settings_roundabout_title"
+                            android:textColor="@color/md_on_surface"
+                            android:accessibilityHeading="true"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="16dp"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/settings_roundabout_help"
+                            android:textColor="@color/md_on_surface_variant"/>
+
+                        <RadioGroup
+                            android:id="@+id/rg_roundabout_traffic"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="16dp">
+                            <com.google.android.material.radiobutton.MaterialRadioButton
+                                android:id="@+id/rb_roundabout_source"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="64dp"
+                                android:paddingVertical="12dp"
+                                android:text="@string/settings_roundabout_source"/>
+                            <com.google.android.material.radiobutton.MaterialRadioButton
+                                android:id="@+id/rb_roundabout_right"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="64dp"
+                                android:paddingVertical="12dp"
+                                android:text="@string/settings_roundabout_right"/>
+                            <com.google.android.material.radiobutton.MaterialRadioButton
+                                android:id="@+id/rb_roundabout_left"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="64dp"
+                                android:paddingVertical="12dp"
+                                android:text="@string/settings_roundabout_left"/>
+                        </RadioGroup>
+
                         <Button
                             android:id="@+id/btn_satellite"
                             android:layout_width="match_parent"

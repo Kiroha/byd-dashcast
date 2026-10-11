@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Juftlash xizmatini ochib bo‘lmadi. Qayta urinib ko‘ring.</string>
     <string name="satellite_pair_receiver_failed">Qabul qilgich mavjud emas. Holatini tekshirib, qayta urinib ko‘ring.</string>
     <string name="satellite_pair_retry">Qayta urinish</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Aylanma chorraha yo‘nalishi</string>
+    <string name="settings_roundabout_source">Navigatsiya bergan yo‘nalish</string>
+    <string name="settings_roundabout_right">O‘ng tomonlama harakat (Fransiya)</string>
+    <string name="settings_roundabout_left">Chap tomonlama harakat (Buyuk Britaniya)</string>
+    <string name="settings_roundabout_help">Rul joylashuvidan qat’i nazar harakat tomonini tanlang. Sozlama mahalliy yoki Satellite navigatsiyasida HUD va asboblar paneliga qo‘llanadi. Chiqish raqami saqlanadi. Keyingi olingan navigatsiya yangilanishida qo‘llanadi.</string>
 </resources>

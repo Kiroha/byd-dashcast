@@ -704,4 +704,11 @@
     <string name="satellite_pair_listener_failed">Impossible d’ouvrir le service d’association. Réessayez.</string>
     <string name="satellite_pair_receiver_failed">Le récepteur est indisponible. Vérifiez son état et réessayez.</string>
     <string name="satellite_pair_retry">Réessayer</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Sens des ronds-points</string>
+    <string name="settings_roundabout_source">Sens fourni par le guidage</string>
+    <string name="settings_roundabout_right">Circulation à droite (France)</string>
+    <string name="settings_roundabout_left">Circulation à gauche (Royaume-Uni)</string>
+    <string name="settings_roundabout_help">Choisissez le côté de circulation, indépendamment de la position du volant. Le réglage concerne le HUD et le combiné, avec le guidage local ou Satellite. Il conserve le numéro de sortie. Appliqué au prochain guidage reçu.</string>
 </resources>

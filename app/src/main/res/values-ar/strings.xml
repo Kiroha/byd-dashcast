@@ -653,4 +653,11 @@
     <string name="satellite_pair_listener_failed">تعذر فتح خدمة الاقتران. حاول مجددًا.</string>
     <string name="satellite_pair_receiver_failed">المستقبل غير متاح. تحقق من حالته وحاول مجددًا.</string>
     <string name="satellite_pair_retry">حاول مجددًا</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">اتجاه الدوارات</string>
+    <string name="settings_roundabout_source">الاتجاه الذي توفره الملاحة</string>
+    <string name="settings_roundabout_right">السير على اليمين (فرنسا)</string>
+    <string name="settings_roundabout_left">السير على اليسار (المملكة المتحدة)</string>
+    <string name="settings_roundabout_help">اختر جهة السير بشكل مستقل عن موضع المقود. ينطبق الإعداد على شاشة HUD ولوحة العدادات مع الملاحة المحلية أو Satellite. يبقى رقم المخرج كما هو. يُطبق عند تلقي تحديث الملاحة التالي.</string>
 </resources>

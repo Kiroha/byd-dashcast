@@ -122,6 +122,12 @@ object ClusterNavPusher {
         else                                   -> 9    // unknown → straight, never a turn
     }
 
+    /** A render-only choice must not rewrite the legacy mapping used by source/automatic mode. */
+    fun toAmapIcon(bydIconId: Int, clockwiseOverride: Boolean?): Int =
+        if (clockwiseOverride != null && (bydIconId in 15..22 || bydIconId in 25..44)) {
+            if (clockwiseOverride) 11 else 17
+        } else toAmapIcon(bydIconId)
+
     /**
      * The roundabout exit index (1..10) encoded in the BYD icon id by [MapNotificationListenerService]
      * (CCW 25-34 / CW 35-44), or 0 when the maneuver is not a numbered roundabout. Emitted into the
@@ -181,7 +187,7 @@ object ClusterNavPusher {
                 naviState = NAVI_STATE_GUIDING,
                 nextRouteName = d.roadName,
                 curToSegmentDist = d.distanceMeters,
-                nextTurnIcon = toAmapIcon(d.iconId),
+                nextTurnIcon = toAmapIcon(d.iconId, d.roundaboutClockwiseOverride),
                 routeRemainTime = d.remainingTimeSeconds ?: 0,
                 routeRemainDist = d.remainingDistanceMeters ?: 0,
                 // AmapService sends the formatted values alongside the numeric fields.

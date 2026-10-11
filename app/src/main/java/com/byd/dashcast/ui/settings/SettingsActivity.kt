@@ -24,6 +24,7 @@ import androidx.core.net.toUri
 import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.MainActivity
 import com.byd.dashcast.R
+import com.byd.dashcast.data.prefs.RoundaboutTrafficSide
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.platform.Platform
@@ -61,6 +62,7 @@ class SettingsActivity : AppCompatActivity() {
 
     // ── Views ────────────────────────────────────────────────────────────────
     private lateinit var rgClusterType: RadioGroup
+    private lateinit var rgRoundaboutTraffic: RadioGroup
     // Note: fields below are typed as CompoundButton so the layout can use either
     // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
     // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
@@ -252,6 +254,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun bindViews() {
         rgClusterType = findViewById(R.id.rg_cluster_type)
+        rgRoundaboutTraffic = findViewById(R.id.rg_roundabout_traffic)
         cbPrerelease = findViewById(R.id.cb_prerelease)
         cbBootAutoStart = findViewById(R.id.cb_boot_auto_start)
         swNavigationEnabled = findViewById(R.id.sw_navigation_enabled)
@@ -278,6 +281,11 @@ class SettingsActivity : AppCompatActivity() {
         swNavigationHud.isChecked = ClusterPrefs.isNavigationHudEnabled(this)
         swNavigationCluster.isChecked = ClusterPrefs.isNavigationClusterEnabled(this)
         updateNavigationSwitches()
+        rgRoundaboutTraffic.check(when (ClusterPrefs.getRoundaboutTrafficSide(this)) {
+            RoundaboutTrafficSide.RIGHT -> R.id.rb_roundabout_right
+            RoundaboutTrafficSide.LEFT -> R.id.rb_roundabout_left
+            RoundaboutTrafficSide.SOURCE -> R.id.rb_roundabout_source
+        })
 
         // Cluster type radio
         when (ClusterPrefs.getClusterType(this)) {
@@ -331,6 +339,15 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun wireListeners() {
+        rgRoundaboutTraffic.setOnCheckedChangeListener { _, checkedId ->
+            val side = when (checkedId) {
+                R.id.rb_roundabout_right -> RoundaboutTrafficSide.RIGHT
+                R.id.rb_roundabout_left -> RoundaboutTrafficSide.LEFT
+                R.id.rb_roundabout_source -> RoundaboutTrafficSide.SOURCE
+                else -> return@setOnCheckedChangeListener
+            }
+            ClusterPrefs.setRoundaboutTrafficSide(this, side)
+        }
         swNavigationEnabled.setOnCheckedChangeListener { _, enabled ->
             ClusterPrefs.setNavigationEnabled(this, enabled)
             updateNavigationSwitches()

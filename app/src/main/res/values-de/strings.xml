@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Der Kopplungsdienst konnte nicht geöffnet werden. Erneut versuchen.</string>
     <string name="satellite_pair_receiver_failed">Der Empfänger ist nicht verfügbar. Status prüfen und erneut versuchen.</string>
     <string name="satellite_pair_retry">Erneut versuchen</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Kreisverkehrsrichtung</string>
+    <string name="settings_roundabout_source">Richtung aus der Navigation</string>
+    <string name="settings_roundabout_right">Rechtsverkehr (Frankreich)</string>
+    <string name="settings_roundabout_left">Linksverkehr (Vereinigtes Königreich)</string>
+    <string name="settings_roundabout_help">Wählen Sie die Verkehrsseite unabhängig von der Lenkradposition. Die Einstellung gilt für HUD und Kombiinstrument bei lokaler oder Satellite-Navigation. Die Ausfahrtnummer bleibt erhalten. Gilt ab der nächsten empfangenen Navigationsmeldung.</string>
 </resources>

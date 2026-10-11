@@ -12,6 +12,8 @@ import android.os.Parcel
 import android.os.Process
 import android.service.notification.StatusBarNotification
 import byd.fbs.naviInfo.NaviInfo
+import com.byd.dashcast.data.prefs.RoundaboutTrafficSide
+import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
@@ -72,6 +74,93 @@ class NavigationOutputRoutingTest {
         setStatic(HudController::class.java, "isDl3Hud", null)
         setStatic(ProxyClient::class.java, "sBinder", null)
         setStatic(ProxyClient::class.java, "sDaemonVer", null)
+    }
+
+    @Test
+    fun `local and satellite share traffic side rendering without rewriting raw guidance`() {
+        select(hud = true, cluster = true)
+        val raw = HudNavigationData(38, 250, "Roundabout", 2_000, 300, 14, 30)
+        for (remote in listOf(false, true)) {
+            NavigationInputRouter.enableReceiver(context, remote)
+            NavigationInputRouter.selectRemote(context, remote)
+            if (remote) NavigationInputRouter.acquireRemote(context, "traffic-test")
+            for ((side, expectedIcon, expectedAmap) in listOf(
+                Triple(RoundaboutTrafficSide.RIGHT, 28, 17),
+                Triple(RoundaboutTrafficSide.LEFT, 38, 11),
+                Triple(RoundaboutTrafficSide.SOURCE, 38, 11))) {
+                ClusterPrefs.setRoundaboutTrafficSide(context, side)
+                val delivered = if (remote) NavigationInputRouter.updateRemote(context, "traffic-test",
+                    NavigationInputRouter.remoteRevision(), raw) else NavigationInputRouter.updateLocal(context, raw)
+                assertTrue(delivered)
+                val nav = decode(daemon.clusterFrames.last())
+                assertEquals(expectedAmap, nav.nextTurnIcon())
+                assertEquals(4, nav.roungAboutNum())
+                assertEquals(250, nav.curToSegmentDist())
+                assertEquals(2_000, nav.routeRemainDist())
+                assertEquals(300, nav.routeRemainTime())
+                assertEquals(expectedAmap, amapBroadcasts().last().getIntExtra("NEW_ICON", -1))
+                assertEquals(expectedIcon, daemon.simpleIcons.last())
+                assertEquals(38, raw.iconId)
+                assertNull(raw.roundaboutClockwiseOverride)
+            }
+            NavigationInputRouter.selectRemote(context, false)
+            NavigationInputRouter.closeRemote(context, "traffic-test", release = true)
+            HudController.closeNavigation(context)
+        }
+    }
+
+    @Test
+    fun `forcing an already matching generic CAN icon still overrides native and broadcast direction`() {
+        select(hud = true, cluster = true)
+        val raw = HudNavigationData(19, 120, "Roundabout", null, null, null, null)
+        ClusterPrefs.setRoundaboutTrafficSide(context, RoundaboutTrafficSide.LEFT)
+        assertTrue(HudController.updateNavigation(context, raw))
+        assertEquals(19, daemon.simpleIcons.last())
+        assertEquals(11, decode(daemon.clusterFrames.last()).nextTurnIcon())
+        assertEquals(0, decode(daemon.clusterFrames.last()).roungAboutNum())
+        assertEquals(11, amapBroadcasts().last().getIntExtra("NEW_ICON", -1))
+        ClusterPrefs.setRoundaboutTrafficSide(context, RoundaboutTrafficSide.SOURCE)
+        assertTrue(HudController.updateNavigation(context, raw))
+        assertEquals(17, decode(daemon.clusterFrames.last()).nextTurnIcon())
+        assertEquals(17, amapBroadcasts().last().getIntExtra("NEW_ICON", -1))
+    }
+
+    @Test
+    fun `traffic choice invalidates identical local notifications without replay or freshness renewal`() {
+        select(hud = false, cluster = true)
+        val serviceController = Robolectric.buildService(MapNotificationListenerService::class.java).create()
+        val service = serviceController.get()
+        try {
+            val notification = navigationNotification("At the roundabout take the 4th exit in 200 m")
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertEquals(11, decode(daemon.clusterFrames.last()).nextTurnIcon())
+            assertEquals(4, decode(daemon.clusterFrames.last()).roungAboutNum())
+            val count = daemon.clusterFrames.size
+            val lastUpdate = HudController::class.java.getDeclaredField("lastUpdateMs").apply { isAccessible = true }
+            val timestamp = lastUpdate.getLong(null)
+            ClusterPrefs.setRoundaboutTrafficSide(context, RoundaboutTrafficSide.RIGHT)
+            shadowOf(Looper.getMainLooper()).idle()
+            awaitWriter(service)
+            assertEquals(count, daemon.clusterFrames.size)
+            assertEquals(timestamp, lastUpdate.getLong(null))
+            service.onNotificationPosted(notification)
+            awaitWriter(service)
+            assertEquals(count + 1, daemon.clusterFrames.size)
+            assertEquals(17, decode(daemon.clusterFrames.last()).nextTurnIcon())
+            assertEquals(4, decode(daemon.clusterFrames.last()).roungAboutNum())
+            HudController.closeNavigation(context)
+            val stoppedCount = daemon.clusterFrames.size
+            ClusterPrefs.setRoundaboutTrafficSide(context, RoundaboutTrafficSide.LEFT)
+            shadowOf(Looper.getMainLooper()).idle()
+            awaitWriter(service)
+            assertEquals(stoppedCount, daemon.clusterFrames.size)
+            assertFalse(HudController.isHudActive)
+        } finally {
+            val executor = writerExecutor(service)
+            serviceController.destroy()
+            assertTrue(executor.awaitTermination(3, TimeUnit.SECONDS))
+        }
     }
 
     @Test
@@ -995,6 +1084,7 @@ class NavigationOutputRoutingTest {
 
     private class RecordingDaemon : Binder() {
         var canCalls = 0
+        val simpleIcons = CopyOnWriteArrayList<Int>()
         var acceptCan = true
         var failNextClusterSend = false
         val containerModes = CopyOnWriteArrayList<Int>()
@@ -1025,9 +1115,10 @@ class NavigationOutputRoutingTest {
                     val count = data.readInt()
                     repeat(count) {
                         data.readInt()
-                        data.readInt()
-                        data.readInt()
+                        val key = data.readInt()
+                        val value = data.readInt()
                         data.createByteArray()
+                        if (key == CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE) simpleIcons.add(value)
                     }
                     response.writeInt(if (acceptCan) count else 0)
                 }

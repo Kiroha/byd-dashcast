@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Жұптастыру қызметін ашу мүмкін болмады. Қайталап көріңіз.</string>
     <string name="satellite_pair_receiver_failed">Қабылдағыш қолжетімсіз. Күйін тексеріп, қайталап көріңіз.</string>
     <string name="satellite_pair_retry">Қайталау</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Айналма жол бағыты</string>
+    <string name="settings_roundabout_source">Навигация берген бағыт</string>
+    <string name="settings_roundabout_right">Оң жақпен жүру (Франция)</string>
+    <string name="settings_roundabout_left">Сол жақпен жүру (Ұлыбритания)</string>
+    <string name="settings_roundabout_help">Рульдің орналасуына тәуелсіз қозғалыс жағын таңдаңыз. Баптау жергілікті немесе Satellite навигациясы үшін HUD пен аспаптар панеліне қолданылады. Шығу нөмірі сақталады. Келесі алынған навигация жаңартуында қолданылады.</string>
 </resources>
