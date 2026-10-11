@@ -1997,8 +1997,13 @@ android {
         // 653 = 1.9.14-beta (SATELLITE IPV4 HOTSPOT AND VISIBLE PAIRING FAILURES.
         // Export only local IPv4 addresses; retain an actionable failure and explicit Retry
         // instead of dismissing Preparing code. Fence receiver teardown by pairing ownership.)
-        versionCode 653
-        versionName "1.9.14-beta"
+        // 654 = 1.9.15-beta (ROUNDABOUT TRAFFIC SIDE. Offer source direction by default,
+        // right-hand traffic (counter-clockwise), or left-hand traffic (clockwise) in all
+        // 13 languages. Apply only to fresh local/Satellite rendering, preserving exits,
+        // distances, source snapshots, protocol-v1 pairing and existing expiry rules.
+        // Unconfirmed variants 23/24 stay unchanged; physical rendering still needs validation.)
+        versionCode 654
+        versionName "1.9.15-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
