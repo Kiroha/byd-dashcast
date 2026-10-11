@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Eşleştirme hizmeti açılamadı. Tekrar deneyin.</string>
     <string name="satellite_pair_receiver_failed">Alıcı kullanılamıyor. Durumunu kontrol edip tekrar deneyin.</string>
     <string name="satellite_pair_retry">Tekrar dene</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Dönel kavşak yönü</string>
+    <string name="settings_roundabout_source">Navigasyonun sağladığı yön</string>
+    <string name="settings_roundabout_right">Sağdan trafik (Fransa)</string>
+    <string name="settings_roundabout_left">Soldan trafik (Birleşik Krallık)</string>
+    <string name="settings_roundabout_help">Direksiyon konumundan bağımsız olarak trafik tarafını seçin. Bu ayar, yerel veya Satellite navigasyonu ile HUD ve gösterge paneline uygulanır. Çıkış numarası korunur. Alınan bir sonraki navigasyon güncellemesinde uygulanır.</string>
 </resources>

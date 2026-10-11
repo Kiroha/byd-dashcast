@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Не удалось открыть службу сопряжения. Повторите попытку.</string>
     <string name="satellite_pair_receiver_failed">Приёмник недоступен. Проверьте его состояние и повторите попытку.</string>
     <string name="satellite_pair_retry">Повторить</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Направление на круговых перекрёстках</string>
+    <string name="settings_roundabout_source">Направление от навигации</string>
+    <string name="settings_roundabout_right">Правостороннее движение (Франция)</string>
+    <string name="settings_roundabout_left">Левостороннее движение (Великобритания)</string>
+    <string name="settings_roundabout_help">Выберите сторону движения независимо от расположения руля. Настройка применяется к HUD и приборной панели при локальной навигации или Satellite. Номер съезда сохраняется. Применяется к следующему полученному обновлению навигации.</string>
 </resources>

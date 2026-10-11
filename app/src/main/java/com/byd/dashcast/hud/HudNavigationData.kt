@@ -18,7 +18,9 @@ class HudNavigationData(
     remainingDistanceMeters: Int?,
     remainingTimeSeconds: Int?,
     etaHour: Int?,
-    etaMinute: Int?
+    etaMinute: Int?,
+    // Local render-only override: never part of the source snapshot or Satellite protocol.
+    val roundaboutClockwiseOverride: Boolean? = null
 ) {
 
     /** BYD turn icon ID (1–49). See `CanBusController.ICON_*` constants. */

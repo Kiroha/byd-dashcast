@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">No se pudo abrir el servicio de emparejamiento. Inténtalo de nuevo.</string>
     <string name="satellite_pair_receiver_failed">El receptor no está disponible. Comprueba su estado e inténtalo de nuevo.</string>
     <string name="satellite_pair_retry">Reintentar</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Sentido de las rotondas</string>
+    <string name="settings_roundabout_source">Sentido indicado por la navegación</string>
+    <string name="settings_roundabout_right">Circulación por la derecha (Francia)</string>
+    <string name="settings_roundabout_left">Circulación por la izquierda (Reino Unido)</string>
+    <string name="settings_roundabout_help">Elija el lado de circulación independientemente de la posición del volante. Se aplica al HUD y al cuadro de instrumentos con navegación local o Satellite. Conserva el número de salida. Se aplica a la siguiente actualización de navegación recibida.</string>
 </resources>

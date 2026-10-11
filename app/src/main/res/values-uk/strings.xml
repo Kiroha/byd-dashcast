@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Не вдалося відкрити службу сполучення. Спробуйте ще раз.</string>
     <string name="satellite_pair_receiver_failed">Приймач недоступний. Перевірте його стан і спробуйте ще раз.</string>
     <string name="satellite_pair_retry">Спробувати ще раз</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Напрямок на кругових перехрестях</string>
+    <string name="settings_roundabout_source">Напрямок від навігації</string>
+    <string name="settings_roundabout_right">Правосторонній рух (Франція)</string>
+    <string name="settings_roundabout_left">Лівосторонній рух (Велика Британія)</string>
+    <string name="settings_roundabout_help">Оберіть бік руху незалежно від розташування керма. Налаштування діє для HUD і панелі приладів із локальною навігацією або Satellite. Номер з’їзду зберігається. Застосовується до наступного отриманого оновлення навігації.</string>
 </resources>

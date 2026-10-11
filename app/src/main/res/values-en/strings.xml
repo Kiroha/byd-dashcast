@@ -664,4 +664,11 @@
     <string name="satellite_pair_listener_failed">Could not open the pairing listener. Try again.</string>
     <string name="satellite_pair_receiver_failed">The receiver is unavailable. Check its status and try again.</string>
     <string name="satellite_pair_retry">Try again</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Roundabout direction</string>
+    <string name="settings_roundabout_source">Direction supplied by navigation</string>
+    <string name="settings_roundabout_right">Right-hand traffic (France)</string>
+    <string name="settings_roundabout_left">Left-hand traffic (United Kingdom)</string>
+    <string name="settings_roundabout_help">Choose the traffic side, independently of steering-wheel position. This setting applies to the HUD and instrument cluster, with local or Satellite navigation. It preserves the exit number. Applied to the next received guidance update.</string>
 </resources>

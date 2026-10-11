@@ -648,4 +648,11 @@
     <string name="satellite_pair_listener_failed">Impossibile aprire il servizio di associazione. Riprova.</string>
     <string name="satellite_pair_receiver_failed">Il ricevitore non è disponibile. Controlla il suo stato e riprova.</string>
     <string name="satellite_pair_retry">Riprova</string>
+
+    <!-- Traffic side affects roundabouts, independently of steering-wheel position. -->
+    <string name="settings_roundabout_title">Senso delle rotatorie</string>
+    <string name="settings_roundabout_source">Senso fornito dalla navigazione</string>
+    <string name="settings_roundabout_right">Circolazione a destra (Francia)</string>
+    <string name="settings_roundabout_left">Circolazione a sinistra (Regno Unito)</string>
+    <string name="settings_roundabout_help">Scegli il lato di circolazione indipendentemente dalla posizione del volante. Vale per HUD e quadro strumenti con navigazione locale o Satellite. Mantiene il numero di uscita. Si applica al prossimo aggiornamento di navigazione ricevuto.</string>
 </resources>

@@ -190,7 +190,8 @@ object HudController {
             armWatchdog()
         }
         output.begin(ctx) // idempotent; also performs the existing rate-limited DL3 retry
-        return output.update(ctx, data).delivered
+        val rendered = RoundaboutDirectionPolicy.apply(data, ClusterPrefs.getRoundaboutTrafficSide(ctx))
+        return output.update(ctx, rendered).delivered
     }
 
     /** Called on the notification writer: disable old destinations without replaying stale data. */
@@ -590,7 +591,7 @@ object HudController {
      */
     private fun sendAmapBroadcast(ctx: Context, d: HudNavigationData) {
         try {
-            val amapIcon = mapToAmapIcon(d.iconId)
+            val amapIcon = ClusterNavPusher.toAmapIcon(d.iconId, d.roundaboutClockwiseOverride)
             val intent = newAmapIntent()
             intent.putExtra("KEY_TYPE", 10001)
             intent.putExtra("TYPE", 8)
