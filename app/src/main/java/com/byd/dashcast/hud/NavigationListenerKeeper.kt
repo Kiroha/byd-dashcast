@@ -45,7 +45,8 @@ object NavigationListenerKeeper {
         val app = ctx.applicationContext
         val now = SystemClock.elapsedRealtime()
         return try {
-            val enabled = ClusterPrefs.getNavigationOutputs(app).enabled
+            val enabled = ClusterPrefs.getNavigationOutputs(app).enabled ||
+                com.byd.dashcast.media.MediaPrefs.isEnabled(app)
             val component = ComponentName(app, MapNotificationListenerService::class.java)
             val manager = app.getSystemService(NotificationManager::class.java)
             // Check this exact component; another listener in the same package is not a grant.
@@ -61,7 +62,8 @@ object NavigationListenerKeeper {
             }
             recovery.maybeRefresh(now) {
                 // Re-check after requestRebind: it may have synchronously confirmed a connection.
-                if (ClusterPrefs.getNavigationOutputs(app).enabled &&
+                if ((ClusterPrefs.getNavigationOutputs(app).enabled ||
+                        com.byd.dashcast.media.MediaPrefs.isEnabled(app)) &&
                     manager?.isNotificationListenerAccessGranted(component) == true) {
                     refreshApprovedListener(component)
                 }

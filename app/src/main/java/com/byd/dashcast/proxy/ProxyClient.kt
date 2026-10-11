@@ -931,6 +931,18 @@ object ProxyClient {
         }
     }
 
+    /** Optional media output must not reconnect or replay against a replacement daemon. */
+    internal fun canInstrumentIntOnCurrentBinder(binder: IBinder, featureId: Int, value: Int): Int {
+        if (sBinder !== binder) throw ProxyException("media connection replaced")
+        return runPinned(binder) { ProxyCanVerbs.canInstrumentInt(featureId, value) }
+    }
+
+    /** Same pinned, one-attempt contract as the optional integer media write. */
+    internal fun canInstrumentBytesOnCurrentBinder(binder: IBinder, featureId: Int, bytes: ByteArray): Int {
+        if (sBinder !== binder) throw ProxyException("media connection replaced")
+        return runPinned(binder) { ProxyCanVerbs.canInstrumentBytes(featureId, bytes) }
+    }
+
     /** Write an integer value to a CAN *setting* feature ID via `BYDAutoSettingDevice`. */
     @JvmStatic
     @Throws(ProxyException::class)

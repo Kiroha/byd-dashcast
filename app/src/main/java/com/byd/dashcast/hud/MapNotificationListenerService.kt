@@ -75,6 +75,7 @@ class MapNotificationListenerService : NotificationListenerService() {
     private var hudDispatcher: LatestValueDispatcher<PendingHudUpdate>? = null
     private var navigationPreferencesObserver: Closeable? = null
     private var satelliteInputObserver: Closeable? = null
+    private var localMediaController: com.byd.dashcast.media.LocalMediaController? = null
 
     @Volatile private var appContext: Context? = null
 
@@ -117,6 +118,11 @@ class MapNotificationListenerService : NotificationListenerService() {
         NavigationListenerKeeper.onCreated(recoveryToken)
         val processContext = applicationContext
         appContext = processContext
+        // Music is independent: a failure here must never prevent the guidance writer/lifecycle.
+        try {
+            localMediaController = com.byd.dashcast.media.LocalMediaController(processContext,
+                android.content.ComponentName(processContext, MapNotificationListenerService::class.java))
+        } catch (_: Throwable) { /* Optional local media remains unavailable. */ }
         val executor = Executors.newSingleThreadExecutor { r ->
             val t = Thread(r, "hud-nav-writer")
             t.isDaemon = true
@@ -142,6 +148,8 @@ class MapNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        try { localMediaController?.close() } catch (_: Throwable) {}
+        localMediaController = null
         if (captureListener.get() === this) captureListener.clear()
         NavigationListenerKeeper.onDestroyed(recoveryToken)
         navigationPreferencesObserver?.close()
@@ -164,6 +172,8 @@ class MapNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        // Run before the navigation rescan's early return; media-only sessions need no nav post.
+        try { localMediaController?.onConnected() } catch (_: Throwable) {}
         captureListener = WeakReference(this)
         NavigationListenerKeeper.onConnected(recoveryToken)
         // The system (re)bound us — possibly mid-route, after a process restart or a rebind.
@@ -185,6 +195,7 @@ class MapNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        try { localMediaController?.onDisconnected() } catch (_: Throwable) {}
         if (captureListener.get() === this) captureListener.clear()
         NavigationListenerKeeper.onDisconnected(recoveryToken)
         // System unbound the listener (e.g. permission revoked, system crash).

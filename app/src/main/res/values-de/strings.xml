@@ -665,4 +665,20 @@
     <string name="satellite_failure_transport">Der Steuerungsserver konnte nicht starten oder wurde unerwartet beendet.</string>
     <string name="satellite_failure_timeout">Der Empfänger war nach 20 Sekunden nicht bereit.</string>
     <string name="satellite_failure_shutdown">Der vorherige Empfänger konnte nicht beendet werden.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">Musik im Kombiinstrument</string>
+    <string name="settings_media_enabled">Musikinfos im Kombiinstrument anzeigen</string>
+    <string name="settings_media_help">Nur Apps auf diesem Tablet; Benachrichtigungszugriff erforderlich. Experimentell: im geparkten Fahrzeug testen. Unabhängig von der Navigation. Bei Störungen von Radio oder Bluetooth deaktivieren.</string>
+    <string name="media_bench_title">Musiktest im Kombiinstrument</string>
+    <string name="media_bench_warning">Nur im geparkten Fahrzeug. Automatische Musikanzeige vor dem Test deaktivieren. Der Test kann den OEM-Musiktext ersetzen. Abbrechen versucht, den Test zu löschen, ohne die vorherige Audioquelle wiederherzustellen.</string>
+    <string name="media_bench_parked">Ich bestätige, dass das Fahrzeug geparkt ist</string>
+    <string name="media_bench_send">Test senden</string>
+    <string name="media_bench_waiting">… Befehle werden gesendet</string>
+    <string name="media_bench_accepted">✓ Befehle akzeptiert. Kombiinstrument prüfen; Löschen in 6 s.</string>
+    <string name="media_bench_unavailable">⚠ Musikausgabe nicht verfügbar oder Befehl abgelehnt</string>
+    <string name="media_bench_cleared">✓ Löschbefehle akzeptiert; Kombiinstrument prüfen</string>
+    <string name="media_bench_clear_failed">⚠ Löschen nicht bestätigt; Kombiinstrument und OEM-Audioquelle prüfen</string>
+    <string name="media_bench_busy">⚠ Automatische Musik deaktivieren und andere Tests beenden</string>
+    <string name="media_bench_nothing">Keine Musikausgabe übernommen; keine Löschbefehle gesendet</string>
 </resources>

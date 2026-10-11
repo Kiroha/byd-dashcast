@@ -665,4 +665,20 @@
     <string name="satellite_failure_transport">Boshqaruv serveri ishga tushmadi yoki kutilmaganda to‘xtadi.</string>
     <string name="satellite_failure_timeout">Qabul qiluvchi 20 soniya ichida tayyor bo‘lmadi.</string>
     <string name="satellite_failure_shutdown">Oldingi qabul qiluvchini to‘xtatib bo‘lmadi.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">Asboblar panelida musiqa</string>
+    <string name="settings_media_enabled">Panelda musiqa ma’lumotlarini ko‘rsatish</string>
+    <string name="settings_media_help">Faqat ushbu planshetdagi ilovalar; bildirishnomalarga ruxsat kerak. Tajriba funksiyasi: avtomobil park holatida sinang. Navigatsiyadan mustaqil. Radio yoki Bluetooth ishiga xalal bersa, o‘chiring.</string>
+    <string name="media_bench_title">Paneldagi musiqa sinovi</string>
+    <string name="media_bench_warning">Faqat park holatidagi avtomobilda. Sinovdan oldin avtomatik musiqa ko‘rsatishni o‘chiring. OEM musiqa matnini almashtirishi mumkin. Bekor qilish avvalgi audio manbani tiklamasdan sinov matnini tozalashga urinadi.</string>
+    <string name="media_bench_parked">Avtomobil park holatida ekanini tasdiqlayman</string>
+    <string name="media_bench_send">Sinovni yuborish</string>
+    <string name="media_bench_waiting">… Buyruqlar yuborilmoqda</string>
+    <string name="media_bench_accepted">✓ Buyruqlar qabul qilindi. Panelni tekshiring; 6 s dan keyin tozalanadi.</string>
+    <string name="media_bench_unavailable">⚠ Musiqa chiqishi mavjud emas yoki buyruq rad etildi</string>
+    <string name="media_bench_cleared">✓ Tozalash buyruqlari qabul qilindi; panelni tekshiring</string>
+    <string name="media_bench_clear_failed">⚠ Tozalash tasdiqlanmadi; panel va OEM audio manbani tekshiring</string>
+    <string name="media_bench_busy">⚠ Avtomatik musiqani o‘chiring va boshqa sinovlarni tugating</string>
+    <string name="media_bench_nothing">Musiqa chiqishi olinmadi; tozalash buyruqlari yuborilmadi</string>
 </resources>

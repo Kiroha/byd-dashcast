@@ -71,6 +71,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var swNavigationEnabled: CompoundButton
     private lateinit var swNavigationHud: CompoundButton
     private lateinit var swNavigationCluster: CompoundButton
+    private lateinit var swClusterMedia: CompoundButton
     private lateinit var cbShowCategoryFilters: CompoundButton
     private lateinit var cbReconnectPopup: CompoundButton
     private lateinit var cbQuickStop: CompoundButton
@@ -260,6 +261,7 @@ class SettingsActivity : AppCompatActivity() {
         swNavigationEnabled = findViewById(R.id.sw_navigation_enabled)
         swNavigationHud = findViewById(R.id.sw_navigation_hud)
         swNavigationCluster = findViewById(R.id.sw_navigation_cluster)
+        swClusterMedia = findViewById(R.id.sw_cluster_media)
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters)
         cbCaptureShots = findViewById(R.id.cb_capture_shots)
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup)
@@ -280,6 +282,7 @@ class SettingsActivity : AppCompatActivity() {
         swNavigationEnabled.isChecked = ClusterPrefs.isNavigationEnabled(this)
         swNavigationHud.isChecked = ClusterPrefs.isNavigationHudEnabled(this)
         swNavigationCluster.isChecked = ClusterPrefs.isNavigationClusterEnabled(this)
+        swClusterMedia.isChecked = com.byd.dashcast.media.MediaPrefs.isEnabled(this)
         updateNavigationSwitches()
         rgRoundaboutTraffic.check(when (ClusterPrefs.getRoundaboutTrafficSide(this)) {
             RoundaboutTrafficSide.RIGHT -> R.id.rb_roundabout_right
@@ -339,6 +342,9 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun wireListeners() {
+        swClusterMedia.setOnCheckedChangeListener { _, enabled ->
+            com.byd.dashcast.media.MediaPrefs.setEnabled(this, enabled)
+        }
         rgRoundaboutTraffic.setOnCheckedChangeListener { _, checkedId ->
             val side = when (checkedId) {
                 R.id.rb_roundabout_right -> RoundaboutTrafficSide.RIGHT

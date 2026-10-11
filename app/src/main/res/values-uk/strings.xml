@@ -665,4 +665,20 @@
     <string name="satellite_failure_transport">Сервер керування не запустився або несподівано зупинився.</string>
     <string name="satellite_failure_timeout">Приймач не був готовий протягом 20 секунд.</string>
     <string name="satellite_failure_shutdown">Не вдалося зупинити попередній приймач.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">Музика на панелі приладів</string>
+    <string name="settings_media_enabled">Показувати відомості про музику на панелі</string>
+    <string name="settings_media_help">Лише застосунки цього планшета; потрібен доступ до сповіщень. Експериментально: перевіряйте на стоянці. Незалежно від навігації. Вимкніть у разі перешкод радіо або Bluetooth.</string>
+    <string name="media_bench_title">Тест музики на панелі</string>
+    <string name="media_bench_warning">Лише в припаркованому автомобілі. Вимкніть автоматичний показ музики перед тестом. Він може замінити музичний текст OEM. Скасування намагається очистити тест без відновлення попереднього джерела звуку.</string>
+    <string name="media_bench_parked">Підтверджую, що автомобіль припаркований</string>
+    <string name="media_bench_send">Надіслати тест</string>
+    <string name="media_bench_waiting">… Надсилання команд</string>
+    <string name="media_bench_accepted">✓ Команди прийнято. Перевірте панель; очищення за 6 с.</string>
+    <string name="media_bench_unavailable">⚠ Показ музики недоступний або команду відхилено</string>
+    <string name="media_bench_cleared">✓ Команди очищення прийнято; перевірте панель</string>
+    <string name="media_bench_clear_failed">⚠ Очищення не підтверджено; перевірте панель і джерело звуку OEM</string>
+    <string name="media_bench_busy">⚠ Вимкніть автоматичну музику та завершіть інші тести</string>
+    <string name="media_bench_nothing">Показ музики не отримано; команди очищення не надіслано</string>
 </resources>

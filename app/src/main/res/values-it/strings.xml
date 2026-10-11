@@ -665,4 +665,20 @@
     <string name="satellite_failure_transport">Il server di controllo non si è avviato o si è arrestato inaspettatamente.</string>
     <string name="satellite_failure_timeout">Il ricevitore non è diventato pronto entro 20 secondi.</string>
     <string name="satellite_failure_shutdown">Impossibile arrestare il ricevitore precedente.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">Musica sul quadro strumenti</string>
+    <string name="settings_media_enabled">Mostra informazioni musicali sul quadro</string>
+    <string name="settings_media_help">Solo app di questo tablet; serve accesso alle notifiche. Sperimentale: provare a veicolo parcheggiato. Indipendente dalla navigazione. Disattivare se interferisce con radio o Bluetooth.</string>
+    <string name="media_bench_title">Test musica sul quadro</string>
+    <string name="media_bench_warning">Solo a veicolo parcheggiato. Disattivare la musica automatica prima del test. Può sostituire il testo musicale OEM. Annullare tenta di cancellare il test senza ripristinare la sorgente audio precedente.</string>
+    <string name="media_bench_parked">Confermo che il veicolo è parcheggiato</string>
+    <string name="media_bench_send">Invia test</string>
+    <string name="media_bench_waiting">… Invio comandi</string>
+    <string name="media_bench_accepted">✓ Comandi accettati. Verificare il quadro; cancellazione tra 6 s.</string>
+    <string name="media_bench_unavailable">⚠ Uscita musicale non disponibile o comando rifiutato</string>
+    <string name="media_bench_cleared">✓ Comandi di cancellazione accettati; verificare il quadro</string>
+    <string name="media_bench_clear_failed">⚠ Cancellazione non confermata; verificare quadro e sorgente audio OEM</string>
+    <string name="media_bench_busy">⚠ Disattivare la musica automatica e terminare gli altri test</string>
+    <string name="media_bench_nothing">Nessuna uscita musicale acquisita; nessun comando di cancellazione inviato</string>
 </resources>
