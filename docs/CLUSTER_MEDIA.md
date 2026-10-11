@@ -117,3 +117,18 @@ arbitration, bounded scheduling, rejection/cleanup, Binder replacement and one-a
 transactions. Full repository tests, lint and builds are required; none substitutes for these physical
 checks. A release build under the existing published version must exclude `copyMappingRelease` so the
 published version's archived mapping is preserved.
+
+## Publication candidate
+
+The media feature is committed separately from release preparation. The candidate is now
+**1.9.16-beta / versionCode 655**, documented in `docs/releases/1.9.16-beta.md`, together with
+the previously committed Android 10 Satellite ART startup correction. Independent versioned
+checks pass 1054 JVM tests in 192 suites, release lint with zero issues, debug/signed release
+assembly, 10 JavaScript receiver scenarios and 35 scanner tests. The trusted default-branch
+scanner accepts the non-debuggable, normally signed build. The stock Android 29 ART check
+also passes on the exact minified APK and matching R8 mapping, verifying class loading,
+construction, the owned control listener and selector shutdown. It does not validate the
+vehicle's AndroidKeyStore, pairing, TLS, hotspot routing or OEM music display.
+The new version uses its own mapping archive; published version archives remain unchanged.
+No GitHub release has been published for this candidate yet, and physical OEM music rendering,
+radio/Bluetooth/CarPlay source priority and recovery remain unverified.

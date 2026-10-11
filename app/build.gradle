@@ -2002,8 +2002,13 @@ android {
         // 13 languages. Apply only to fresh local/Satellite rendering, preserving exits,
         // distances, source snapshots, protocol-v1 pairing and existing expiry rules.
         // Unconfirmed variants 23/24 stay unchanged; physical rendering still needs validation.)
-        versionCode 654
-        versionName "1.9.15-beta"
+        // 655 = 1.9.16-beta (LOCAL CLUSTER MUSIC AND ANDROID 10 SATELLITE STARTUP.
+        // Add default-off local MediaSession title/artist/playback output with independent
+        // ownership, bounded text and a parked bench in all 13 languages. Carlinkit media
+        // is not yet supported. Preserve the WebSocket timer optimization boundary for
+        // Android 29 ART and expose finite startup failure reasons. OEM rendering needs retests.)
+        versionCode 655
+        versionName "1.9.16-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
