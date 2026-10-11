@@ -23,7 +23,9 @@ def main():
     parser.add_argument("--sdk", type=Path, default=os.environ.get("ANDROID_HOME") or
                         os.environ.get("ANDROID_SDK_ROOT"))
     parser.add_argument("--build-tools", default="36.0.0")
-    parser.add_argument("--load-only", action="store_true")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--load-only", action="store_true")
+    modes.add_argument("--tls", action="store_true", help="Full real AndroidKeyStore pinned WSS regression")
     args = parser.parse_args()
     if not args.sdk or not args.serial.startswith("emulator-"):
         parser.error("An Android SDK and an explicit emulator serial are required")
@@ -34,6 +36,27 @@ def main():
     if not match:
         parser.error("Mapping does not contain the satellite server")
     server_class = match.group(1)
+    def mapped_tls_member(signature):
+        owner = None
+        original = None
+        for line in mapping.splitlines():
+            header = re.match(r"^([^ ]+) -> ([^:]+):$", line)
+            if header:
+                original, owner = header.groups()
+            if "com.byd.dashcast.satellite.SatelliteTls." + signature in line:
+                return owner, line.rsplit(" -> ", 1)[1]
+            if original == "com.byd.dashcast.satellite.SatelliteTls" and signature in line and " -> " in line:
+                return owner, line.rsplit(" -> ", 1)[1]
+        parser.error("Mapping lacks a callable TLS member: " + signature)
+
+    tls_args = []
+    if args.tls:
+        context_class, context_method = mapped_tls_member("context()")
+        fingerprint_class, fingerprint_method = mapped_tls_member("fingerprint()")
+        singleton_class, singleton_field = mapped_tls_member("INSTANCE")
+        if context_class != fingerprint_class:
+            parser.error("TLS context and fingerprint were moved to separate classes")
+        tls_args = [context_class, context_method, fingerprint_method, singleton_class, singleton_field]
     adb = [str(args.sdk / "platform-tools/adb"), "-s", args.serial]
     sdk = run(adb + ["shell", "getprop", "ro.build.version.sdk"], capture_output=True).stdout.strip()
     qemu = run(adb + ["shell", "getprop", "ro.kernel.qemu"], capture_output=True).stdout.strip()
@@ -58,7 +81,8 @@ def main():
             run(adb + ["push", str(apk), remote + "/release.apk"])
             command = "CLASSPATH=" + shlex.quote(remote + "/probe.jar") + " " + shlex.join([
                 "app_process", "/system/bin", "ReleaseSatelliteArtProbe", remote + "/release.apk",
-                server_class, remote, "load" if args.load_only else "bind", "47832"])
+                server_class, remote, "load" if args.load_only else "tls" if args.tls else "bind", "47832",
+                *tls_args])
             run(adb + ["shell", command])
         finally:
             run(adb + ["shell", "rm", "-rf", remote])

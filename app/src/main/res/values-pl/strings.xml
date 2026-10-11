@@ -690,4 +690,5 @@
     <string name="media_bench_clear_failed">⚠ Usunięcie niepotwierdzone; sprawdź wskaźniki i źródło audio OEM</string>
     <string name="media_bench_busy">⚠ Wyłącz automatyczną muzykę i zakończ inne testy</string>
     <string name="media_bench_nothing">Nie przejęto wyświetlania muzyki; nie wysłano poleceń usunięcia</string>
+    <string name="satellite_tls_repair">Certyfikat połączenia został zaktualizowany. Sparuj ponownie DashSat za pomocą opcji „Sparuj urządzenie”. Nie odinstalowuj żadnej aplikacji.</string>
 </resources>

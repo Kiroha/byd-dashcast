@@ -686,4 +686,5 @@
     <string name="media_bench_clear_failed">⚠ لم يتأكد المسح؛ تحقق من لوحة العدادات ومصدر الصوت الأصلي</string>
     <string name="media_bench_busy">⚠ عطّل الموسيقى التلقائية وأنهِ أي اختبار آخر</string>
     <string name="media_bench_nothing">لم يتم الحصول على عرض الموسيقى؛ لم تُرسل أوامر مسح</string>
+    <string name="satellite_tls_repair">تم تحديث شهادة الاتصال. أعد إقران DashSat باستخدام «إقران جهاز». لا تُزل أيًا من التطبيقين.</string>
 </resources>

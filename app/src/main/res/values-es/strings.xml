@@ -681,4 +681,5 @@
     <string name="media_bench_clear_failed">⚠ Borrado sin confirmar; compruebe el cuadro y la fuente de audio OEM</string>
     <string name="media_bench_busy">⚠ Desactive la música automática y termine cualquier otra prueba</string>
     <string name="media_bench_nothing">No se adquirió la salida musical; no se enviaron comandos de borrado</string>
+    <string name="satellite_tls_repair">Se ha actualizado el certificado de conexión. Vuelve a vincular DashSat con «Vincular un dispositivo». No desinstales ninguna de las aplicaciones.</string>
 </resources>

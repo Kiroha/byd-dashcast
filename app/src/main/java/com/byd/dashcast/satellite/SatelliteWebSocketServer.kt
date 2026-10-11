@@ -86,6 +86,7 @@ class SatelliteWebSocketServer(
                     return
                 }
                 active = created
+                SatellitePrefs.confirmTlsIdentity(context)
                 SatellitePairingSession.close()
                 events.connected(created.id)
                 sendBounded(conn, JSONObject().put("type", "welcome").put("version", SatelliteProtocol.VERSION)

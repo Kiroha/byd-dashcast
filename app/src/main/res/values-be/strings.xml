@@ -681,4 +681,5 @@
     <string name="media_bench_clear_failed">⚠ Ачыстка не пацверджана; праверце панэль і крыніцу гуку OEM</string>
     <string name="media_bench_busy">⚠ Выключыце аўтаматычную музыку і завяршыце іншыя тэсты</string>
     <string name="media_bench_nothing">Паказ музыкі не атрыманы; каманды ачысткі не адпраўленыя</string>
+    <string name="satellite_tls_repair">Сертыфікат злучэння абноўлены. Паўторна спалучыце DashSat праз «Спалучыць прыладу». Не выдаляйце праграмы.</string>
 </resources>

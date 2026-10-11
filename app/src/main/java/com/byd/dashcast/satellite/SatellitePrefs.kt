@@ -18,6 +18,13 @@ object SatellitePrefs {
     fun usesRemoteGuidance(ctx: Context): Boolean =
         isEnabled(ctx) && prefs(ctx).getBoolean("remote_guidance", false)
 
+    internal fun requiresTlsRePair(ctx: Context): Boolean = SatelliteTls.migratedFromLegacy &&
+        !prefs(ctx).getBoolean("tls_v2_authenticated", false)
+
+    internal fun confirmTlsIdentity(ctx: Context) {
+        prefs(ctx).edit { putBoolean("tls_v2_authenticated", true) }
+    }
+
     @Synchronized
     internal fun setEnabled(ctx: Context, enabled: Boolean) {
         prefs(ctx).edit { putBoolean("enabled", enabled) }
