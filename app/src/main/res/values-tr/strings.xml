@@ -681,4 +681,5 @@
     <string name="media_bench_clear_failed">⚠ Temizleme doğrulanmadı; göstergeyi ve OEM ses kaynağını kontrol edin</string>
     <string name="media_bench_busy">⚠ Otomatik müziği kapatın ve diğer testleri bitirin</string>
     <string name="media_bench_nothing">Müzik çıkışı alınmadı; temizleme komutları gönderilmedi</string>
+    <string name="satellite_tls_repair">Bağlantı sertifikası güncellendi. «Cihaz eşleştir» ile DashSat uygulamasını yeniden eşleştirin. Uygulamaları kaldırmayın.</string>
 </resources>

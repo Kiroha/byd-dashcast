@@ -681,4 +681,5 @@
     <string name="media_bench_clear_failed">⚠ Очищення не підтверджено; перевірте панель і джерело звуку OEM</string>
     <string name="media_bench_busy">⚠ Вимкніть автоматичну музику та завершіть інші тести</string>
     <string name="media_bench_nothing">Показ музики не отримано; команди очищення не надіслано</string>
+    <string name="satellite_tls_repair">Сертифікат з’єднання оновлено. Повторно підключіть DashSat через «Сполучити пристрій». Не видаляйте застосунки.</string>
 </resources>

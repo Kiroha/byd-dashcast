@@ -739,4 +739,5 @@
     <string name="media_bench_clear_failed">⚠ Effacement non confirmé ; vérifiez le combiné et la source audio OEM</string>
     <string name="media_bench_busy">⚠ Désactivez la musique automatique et terminez tout autre test</string>
     <string name="media_bench_nothing">Aucune sortie musicale acquise ; aucun effacement envoyé</string>
+    <string name="satellite_tls_repair">Le certificat de connexion a été mis à jour. Associez à nouveau DashSat avec « Associer un appareil ». Ne désinstallez aucune application.</string>
 </resources>

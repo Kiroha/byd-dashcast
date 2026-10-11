@@ -40,6 +40,7 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     private lateinit var guidanceStatus: StatusRow
     private lateinit var receiverIdentity: TextView
     private lateinit var peerIdentity: TextView
+    private lateinit var tlsRePairNotice: TextView
     private var lastStatus: SatelliteStatusTracker.Snapshot? = null
     private val pairingHandler = Handler(Looper.getMainLooper())
     private var pairingDialog: AlertDialog? = null
@@ -91,6 +92,13 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         peerIdentity = TextView(this).apply { tag = "satellite_peer_identity" }
         statuses.addView(receiverIdentity)
         statuses.addView(peerIdentity)
+        tlsRePairNotice = TextView(this).apply {
+            tag = "satellite_tls_repair_notice"
+            setText(R.string.satellite_tls_repair)
+            setPadding(0, dp(8), 0, 0)
+            visibility = View.GONE
+        }
+        statuses.addView(tlsRePairNotice)
         column.addView(MaterialCardView(this).apply {
             radius = dp(16).toFloat()
             cardElevation = 0f
@@ -215,6 +223,7 @@ class SatelliteSettingsActivity : AppCompatActivity() {
     private fun renderStatus() {
         val state = SatelliteStatus.snapshot(this)
         renderPeerIdentity(state.connection == SatelliteStatusTracker.Connection.CONNECTED)
+        tlsRePairNotice.visibility = if (SatellitePrefs.requiresTlsRePair(this)) View.VISIBLE else View.GONE
         if (lastStatus == state) return
         lastStatus = state
         when (state.connection) {

@@ -681,4 +681,5 @@
     <string name="media_bench_clear_failed">⚠ Тазалау расталмады; панельді және OEM аудио көзін тексеріңіз</string>
     <string name="media_bench_busy">⚠ Автоматты музыканы өшіріп, басқа сынақтарды аяқтаңыз</string>
     <string name="media_bench_nothing">Музыка шығысы алынбады; тазалау пәрмендері жіберілмеді</string>
+    <string name="satellite_tls_repair">Қосылым сертификаты жаңартылды. «Құрылғыны жұптау» арқылы DashSat қолданбасын қайта жұптаңыз. Екі қолданбаны да жоймаңыз.</string>
 </resources>
