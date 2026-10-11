@@ -643,4 +643,9 @@
     <string name="satellite_device_unknown">Неизвестное устройство (старый Satellite)</string>
     <string name="satellite_device_id">Идентификатор Satellite: %1$s</string>
     <string name="satellite_device_address">Локальный адрес: %1$s</string>
+    <string name="satellite_pair_no_ipv4">Нет локального адреса IPv4. Проверьте точку доступа автомобиля.</string>
+    <string name="satellite_pair_credentials_failed">Не удалось подготовить сертификат или профиль. Повторите попытку.</string>
+    <string name="satellite_pair_listener_failed">Не удалось открыть службу сопряжения. Повторите попытку.</string>
+    <string name="satellite_pair_receiver_failed">Приёмник недоступен. Проверьте его состояние и повторите попытку.</string>
+    <string name="satellite_pair_retry">Повторить</string>
 </resources>

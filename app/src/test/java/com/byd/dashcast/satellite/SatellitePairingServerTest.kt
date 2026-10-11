@@ -2,6 +2,8 @@ package com.byd.dashcast.satellite
 
 import android.app.Application
 import android.content.DialogInterface
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +29,8 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.time.Duration
+import java.security.Provider
+import java.security.Security
 
 /** Real loopback sockets exercise framed PAKE transfer and cancellation, without a vehicle. */
 @RunWith(RobolectricTestRunner::class)
@@ -284,6 +288,45 @@ class SatellitePairingServerTest {
         assertTrue(SatellitePrefs.token(RuntimeEnvironment.getApplication()).isNotEmpty())
         assertTrue(SatellitePairingSession.isCurrent(attempt))
     }
+
+    @Test fun `real Pair device click keeps a preparation failure visible instead of disappearing`() {
+        val provider = object : Provider("PairingFailureTest", 1.0, "Test-only absent certificate") {
+            init { put("KeyStore.AndroidKeyStore", SatelliteReceiverStartupTest.TestKeyStore::class.java.name) }
+        }
+        Security.insertProviderAt(provider, 1)
+        SatellitePrefs.setEnabled(RuntimeEnvironment.getApplication(), true)
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
+        try {
+            pairButton(controller.get()).performClick()
+            val preparing = dialog()
+            assertTrue(preparing.isShowing)
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+            while (SatellitePairingSession.snapshot()?.failure == null && System.nanoTime() < deadline) Thread.sleep(10)
+            assertEquals(SatellitePairingSession.Failure.CREDENTIALS, SatellitePairingSession.snapshot()?.failure)
+            org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            assertTrue("Preparation failure silently dismissed the pairing dialog", preparing.isShowing)
+        } finally { controller.pause().stop().destroy(); Security.removeProvider(provider.name) }
+    }
+
+    @Test @Config(application = DeniedForegroundApplication::class)
+    fun `foreground start denial keeps an actionable failure and never prepares a code`() {
+        SatellitePrefs.setEnabled(RuntimeEnvironment.getApplication(), true)
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).setup()
+        try {
+            pairButton(controller.get()).performClick()
+            val failed = requireNotNull(SatellitePairingSession.snapshot())
+            assertEquals(SatellitePairingSession.Failure.RECEIVER, failed.failure)
+            assertFalse(failed.ready)
+            assertTrue(dialog().isShowing)
+            assertTrue(dialog().getButton(DialogInterface.BUTTON_NEUTRAL).isEnabled)
+            assertFalse(dialog().getButton(DialogInterface.BUTTON_POSITIVE).isEnabled)
+        } finally { controller.pause().stop().destroy() }
+    }
+
+    class DeniedForegroundApplication : Application() {
+        override fun startForegroundService(service: Intent): ComponentName? =
+            throw IllegalStateException("synthetic-private-foreground-error")
+    }
     @Test fun `switching screens restores the same RAM-only code without extending its deadline`() {
         val (original, server) = window()
         val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).create().start().resume()
@@ -413,6 +456,7 @@ class SatellitePairingServerTest {
     @Test fun `foreground receiver destruction cancels background pairing and does not recreate it`() {
         val controller = Robolectric.buildService(SatelliteReceiverService::class.java).create()
         val attempt = SatellitePairingSession.begin()
+        SatellitePairingSession.claimReceiver(org.robolectric.util.ReflectionHelpers.getField(controller.get(), "statusOwner"))
         val server = server()
         assertTrue(SatellitePairingSession.attach(attempt, server))
         assertTrue(server.start())

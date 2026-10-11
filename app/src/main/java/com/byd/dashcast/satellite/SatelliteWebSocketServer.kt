@@ -11,6 +11,7 @@ import org.java_websocket.server.DefaultSSLWebSocketServerFactory
 import org.java_websocket.server.WebSocketServer
 import org.json.JSONObject
 import java.net.InetSocketAddress
+import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.util.UUID
 import javax.net.ssl.SSLContext
@@ -21,7 +22,7 @@ class SatelliteWebSocketServer(
     tls: SSLContext,
     private val token: String,
     private val events: Events,
-) : WebSocketServer(InetSocketAddress(SatellitePrefs.PORT), 1,
+) : WebSocketServer(InetSocketAddress(InetAddress.getByName("0.0.0.0"), SatellitePrefs.PORT), 1,
     // Keep the standard no-subprotocol handshake. An explicit empty protocol list rejects
     // every upgrade, so hello never reaches authentication even when TLS succeeds.
     listOf(Draft_6455(emptyList(), SatelliteProtocol.MAX_MESSAGE_BYTES))) {

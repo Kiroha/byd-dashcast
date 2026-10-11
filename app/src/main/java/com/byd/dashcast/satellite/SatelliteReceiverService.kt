@@ -55,6 +55,7 @@ class SatelliteReceiverService : Service() {
         super.onCreate()
         running = true
         statusOwner = SatelliteStatus.begin()
+        SatellitePairingSession.claimReceiver(statusOwner)
         watchStartup(statusOwner)
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL,
@@ -91,6 +92,7 @@ class SatelliteReceiverService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (destroyed || !SatellitePrefs.isEnabled(this)) { stopSelf(); return START_NOT_STICKY }
+        SatellitePairingSession.claimReceiver(statusOwner)
         transportWorker.execute {
             if (destroyed) return@execute
             if (intent?.action == RELOAD) {
@@ -105,6 +107,7 @@ class SatelliteReceiverService : Service() {
             if (server == null) {
                 statusOwner = SatelliteStatus.begin()
                 val owner = statusOwner
+                SatellitePairingSession.claimReceiver(owner)
                 watchStartup(owner)
                 try {
                     AppLogger.i("Satellite", "receiver start: preparing TLS")
@@ -207,7 +210,8 @@ class SatelliteReceiverService : Service() {
     }
 
     override fun onDestroy() {
-        SatellitePairingSession.close()
+        SatellitePairingSession.receiverStopped(statusOwner,
+            SatelliteStatus.snapshot(this).connection == SatelliteStatusTracker.Connection.UNAVAILABLE)
         destroyed = true
         SatelliteStatus.end(statusOwner)
         notificationHandler.removeCallbacksAndMessages(null)
@@ -238,15 +242,17 @@ class SatelliteReceiverService : Service() {
         }
 
         @Synchronized
-        fun start(ctx: Context, reload: Boolean = false) {
-            if (!SatellitePrefs.isEnabled(ctx)) return
+        fun start(ctx: Context, reload: Boolean = false): Boolean {
+            if (!SatellitePrefs.isEnabled(ctx)) return false
             lastAttempt = SystemClock.elapsedRealtime()
             try {
                 ctx.startForegroundService(Intent(ctx, SatelliteReceiverService::class.java)
                     .apply { if (reload) action = RELOAD })
+                return true
             } catch (e: Exception) {
                 SatelliteStatus.startFailed()
                 AppLogger.w("Satellite", "foreground start unavailable: ${e.javaClass.simpleName}")
+                return false
             }
         }
 

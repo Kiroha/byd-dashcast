@@ -643,4 +643,9 @@
     <string name="satellite_device_unknown">Noma’lum qurilma (eski Satellite)</string>
     <string name="satellite_device_id">Satellite identifikatori: %1$s</string>
     <string name="satellite_device_address">Mahalliy manzil: %1$s</string>
+    <string name="satellite_pair_no_ipv4">Mahalliy IPv4 manzili yo‘q. Avtomobil hotspotini tekshiring.</string>
+    <string name="satellite_pair_credentials_failed">Sertifikat yoki profilni tayyorlab bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="satellite_pair_listener_failed">Juftlash xizmatini ochib bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="satellite_pair_receiver_failed">Qabul qilgich mavjud emas. Holatini tekshirib, qayta urinib ko‘ring.</string>
+    <string name="satellite_pair_retry">Qayta urinish</string>
 </resources>
