@@ -2007,8 +2007,14 @@ android {
         // ownership, bounded text and a parked bench in all 13 languages. Carlinkit media
         // is not yet supported. Preserve the WebSocket timer optimization boundary for
         // Android 29 ART and expose finite startup failure reasons. OEM rendering needs retests.)
-        versionCode 655
-        versionName "1.9.16-beta"
+        // 656 = 1.9.17-beta (SATELLITE TLS AND LOCAL MEDIA RECOVERY.
+        // Migrate the immutable AndroidKeyStore TLS identity without deleting v1 or
+        // rotating the token; require a fresh pairing when the old certificate changes.
+        // Select only the advertised server key and validate provider signing before
+        // profile publication. Recover failed media observation with bounded backoff
+        // and passive redacted report diagnostics. Actual vehicle validation is pending.)
+        versionCode 656
+        versionName "1.9.17-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
