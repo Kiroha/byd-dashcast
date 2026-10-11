@@ -15,7 +15,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.RenderProcessGoneDetail
 import android.widget.Toast
+import androidx.core.content.edit
 import com.byd.dashcast.R
+import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.util.LocaleHelper
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
@@ -29,14 +31,30 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
     private var visible = false
     private var session: String? = null
     private val main = Handler(Looper.getMainLooper())
+    private var showMetrics = false
+    private val projectionGuard = object : Runnable {
+        override fun run() {
+            if (!visible || isFinishing || isDestroyed) return
+            if (!validDestination()) { finish(); return }
+            main.postDelayed(this, 500)
+        }
+    }
+    @Suppress("DEPRECATION")
+    private fun validDestination(): Boolean {
+        if (!SatellitePrefs.isEnabled(this)) return false
+        if (!intent.hasExtra(EXPECTED_DISPLAY)) return true // Main display preview is independent.
+        val expected = intent.getIntExtra(EXPECTED_DISPLAY, -1)
+        val cluster = ClusterService.getInstance()
+        return SatelliteVideoDestination.allowed(expected, windowManager.defaultDisplay.displayId,
+            cluster?.displayId ?: -1, cluster?.isProjectionActive() == true)
+    }
 
     override fun attachBaseContext(base: Context) = super.attachBaseContext(LocaleHelper.applyLocale(base))
 
     @SuppressLint("SetJavaScriptEnabled") // Only bundled HTML; network/file navigation is blocked.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!SatellitePrefs.isEnabled(this) ||
-            (intent.hasExtra(EXPECTED_DISPLAY) && windowManager.defaultDisplay.displayId != intent.getIntExtra(EXPECTED_DISPLAY, -1))) {
+        if (!validDestination()) {
             finish(); return
         }
         // A second preview must release the old decoder rather than retain two WebViews.
@@ -52,6 +70,14 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
                 allowFileAccess = false
                 allowContentAccess = false
                 setSupportMultipleWindows(false)
+            }
+            showMetrics = getPreferences(Context.MODE_PRIVATE).getBoolean("video_metrics", false)
+            // Opt-in diagnostic overlay. Configure on the main display before opening the cluster.
+            if (!intent.hasExtra(EXPECTED_DISPLAY)) view.setOnLongClickListener {
+                showMetrics = !showMetrics
+                getPreferences(Context.MODE_PRIVATE).edit { putBoolean("video_metrics", showMetrics) }
+                view.evaluateJavascript("window.setMetricsVisible($showMetrics)", null)
+                true
             }
             view.addJavascriptInterface(Bridge(), "DashCastVideo")
             view.webViewClient = object : WebViewClient() {
@@ -77,6 +103,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
                 if (isFinishing || isDestroyed) return@post
                 if (!supported) { unavailable(); return@post }
                 ready = true
+                webView?.evaluateJavascript("window.setMetricsVisible($showMetrics)", null)
                 if (visible) SatelliteVideoHub.attach(this@SatelliteVideoActivity)
             }
         }
@@ -107,11 +134,13 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
     override fun onStart() {
         super.onStart()
         visible = true
-        if (ready) SatelliteVideoHub.attach(this)
+        projectionGuard.run()
+        if (ready && !isFinishing) SatelliteVideoHub.attach(this)
     }
 
     override fun onStop() {
         visible = false
+        main.removeCallbacks(projectionGuard)
         SatelliteVideoHub.detach(this)
         reset()
         super.onStop()
