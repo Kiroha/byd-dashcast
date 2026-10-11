@@ -7,12 +7,13 @@ import android.os.SystemClock
 internal open class SatelliteStatusTracker {
     enum class Connection { DISABLED, STARTING, WAITING, CONNECTED, UNAVAILABLE }
     enum class Guidance { DISABLED, WAITING, ACTIVE, EXPIRED }
-    data class Snapshot(val connection: Connection, val guidance: Guidance)
+    data class Snapshot(val connection: Connection, val guidance: Guidance, val failure: SatelliteReceiverFailure? = null)
 
     private var owner = 0L
     private var running = false
     private var listening = false
     private var failed = false
+    private var failure: SatelliteReceiverFailure? = null
     private var authenticationAllowed = true
     private var session: String? = null
     private var receivedAt: Long? = null
@@ -25,6 +26,7 @@ internal open class SatelliteStatusTracker {
         running = true
         listening = false
         failed = false
+        failure = null
         authenticationAllowed = true
         session = null
         clearGuidance()
@@ -40,7 +42,7 @@ internal open class SatelliteStatusTracker {
     /** A deadline and the real listener callback race under the same owner/state monitor. */
     @Synchronized fun failIfStarting(owner: Long): Boolean {
         if (!isStarting(owner)) return false
-        failed(owner)
+        failed(owner, SatelliteReceiverFailure.STARTUP_TIMEOUT)
         return true
     }
 
@@ -74,9 +76,10 @@ internal open class SatelliteStatusTracker {
         clearGuidance()
     }
 
-    @Synchronized fun failed(owner: Long) {
+    @Synchronized fun failed(owner: Long, reason: SatelliteReceiverFailure = SatelliteReceiverFailure.CONTROL_TRANSPORT) {
         if (!owns(owner)) return
         failed = true
+        failure = reason
         listening = false
         session = null
         clearGuidance()
@@ -85,8 +88,11 @@ internal open class SatelliteStatusTracker {
     @Synchronized fun startFailed() {
         // A redundant request cannot judge a service already starting or listening. Its own
         // generation-scoped failure callback reports real foreground, TLS and bind failures.
-        if (!running || !authenticationAllowed) { failed = true; listening = false; session = null; clearGuidance() }
+        if (!running || !authenticationAllowed) { failure = SatelliteReceiverFailure.FOREGROUND; failed = true; listening = false; session = null; clearGuidance() }
     }
+
+    @Synchronized fun failureFor(owner: Long): SatelliteReceiverFailure? =
+        failure.takeIf { this.owner == owner && failed }
 
     @Synchronized fun end(owner: Long) {
         if (this.owner != owner) return
@@ -120,7 +126,7 @@ internal open class SatelliteStatusTracker {
             expired || nowMs - received + sourceAgeMs >= SatelliteProtocol.NAV_TIMEOUT_MS -> Guidance.EXPIRED
             else -> Guidance.ACTIVE
         }
-        return Snapshot(connection, guidance)
+        return Snapshot(connection, guidance, failure.takeIf { connection == Connection.UNAVAILABLE })
     }
 
     private fun owns(owner: Long) = this.owner == owner && running && !failed

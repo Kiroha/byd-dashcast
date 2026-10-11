@@ -92,7 +92,7 @@ class SatelliteReceiverStatusTest {
     }
 
     @Test fun `receiver start failure remains unavailable after its destruction`() {
-        events.failed()
+        events.failed(SatelliteReceiverFailure.CONTROL_TRANSPORT)
         controller.destroy()
         assertEquals(SatelliteStatusTracker.Connection.UNAVAILABLE, SatelliteStatus.snapshot(context).connection)
         NavigationInputRouter.enableReceiver(context, false)

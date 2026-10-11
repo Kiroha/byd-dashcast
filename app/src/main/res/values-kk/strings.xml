@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">Оң жақпен жүру (Франция)</string>
     <string name="settings_roundabout_left">Сол жақпен жүру (Ұлыбритания)</string>
     <string name="settings_roundabout_help">Рульдің орналасуына тәуелсіз қозғалыс жағын таңдаңыз. Баптау жергілікті немесе Satellite навигациясы үшін HUD пен аспаптар панеліне қолданылады. Шығу нөмірі сақталады. Келесі алынған навигация жаңартуында қолданылады.</string>
+    <string name="satellite_failure_foreground">Android қабылдағышты алдыңғы планда іске қоса алмады.</string>
+    <string name="satellite_failure_keystore">Android сертификаттар қоймасын ашу мүмкін болмады.</string>
+    <string name="satellite_failure_key_generation">Қабылдағыш сертификатын жасау мүмкін болмады.</string>
+    <string name="satellite_failure_key_manager">Қабылдағыш сертификатын TLS үшін жүктеу мүмкін болмады.</string>
+    <string name="satellite_failure_tls_context">Шифрланған қабылдағышты инициализациялау мүмкін болмады.</string>
+    <string name="satellite_failure_listener_busy">Басқару сервері жергілікті портты аша алмады.</string>
+    <string name="satellite_failure_listener_permission">Android қабылдағыш серверіне қолжетімділікті бұғаттады.</string>
+    <string name="satellite_failure_transport">Басқару сервері іске қосылмады немесе күтпеген жерден тоқтады.</string>
+    <string name="satellite_failure_timeout">Қабылдағыш 20 секунд ішінде дайын болмады.</string>
+    <string name="satellite_failure_shutdown">Алдыңғы қабылдағышты тоқтату мүмкін болмады.</string>
 </resources>

@@ -60,10 +60,13 @@ class SatelliteStatusTrackerTest {
 
     @Test fun `failure survives teardown and a real retry can recover`() {
         val state = SatelliteStatusTracker(); val owner = state.begin()
-        state.failed(owner); state.listening(owner); state.connected(owner, "late-peer"); state.end(owner)
+        state.failed(owner, SatelliteReceiverFailure.KEY_MANAGER); state.listening(owner); state.connected(owner, "late-peer"); state.end(owner)
         assertEquals(Connection.UNAVAILABLE, state.snapshot(true, true, 0).connection)
         assertEquals(Connection.DISABLED, state.snapshot(false, true, 0).connection)
+        assertEquals(SatelliteReceiverFailure.KEY_MANAGER, state.snapshot(true, true, 0).failure)
         val retry = state.begin(); state.listening(retry)
+        state.failed(owner, SatelliteReceiverFailure.KEYSTORE)
+        assertNull(state.snapshot(true, true, 0).failure)
         assertEquals(Connection.WAITING, state.snapshot(true, true, 0).connection)
     }
 
@@ -110,6 +113,6 @@ class SatelliteStatusTrackerTest {
         state.connected(owner, "private-peer-marker"); state.guidance(owner, "private-peer-marker", 0, 0)
         val snapshot = state.snapshot(true, true, 0)
         assertFalse(snapshot.toString().contains("private-peer-marker"))
-        assertEquals(setOf("connection", "guidance"), snapshot.javaClass.declaredFields.map { it.name }.toSet())
+        assertEquals(setOf("connection", "guidance", "failure"), snapshot.javaClass.declaredFields.map { it.name }.toSet())
     }
 }

@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">Правосторонній рух (Франція)</string>
     <string name="settings_roundabout_left">Лівосторонній рух (Велика Британія)</string>
     <string name="settings_roundabout_help">Оберіть бік руху незалежно від розташування керма. Налаштування діє для HUD і панелі приладів із локальною навігацією або Satellite. Номер з’їзду зберігається. Застосовується до наступного отриманого оновлення навігації.</string>
+    <string name="satellite_failure_foreground">Android не вдалося запустити приймач на передньому плані.</string>
+    <string name="satellite_failure_keystore">Не вдалося відкрити сховище сертифікатів Android.</string>
+    <string name="satellite_failure_key_generation">Не вдалося створити сертифікат приймача.</string>
+    <string name="satellite_failure_key_manager">Не вдалося завантажити сертифікат приймача для TLS.</string>
+    <string name="satellite_failure_tls_context">Не вдалося ініціалізувати зашифрований приймач.</string>
+    <string name="satellite_failure_listener_busy">Сервер керування не зміг відкрити локальний порт.</string>
+    <string name="satellite_failure_listener_permission">Android заборонив доступ до сервера приймача.</string>
+    <string name="satellite_failure_transport">Сервер керування не запустився або несподівано зупинився.</string>
+    <string name="satellite_failure_timeout">Приймач не був готовий протягом 20 секунд.</string>
+    <string name="satellite_failure_shutdown">Не вдалося зупинити попередній приймач.</string>
 </resources>

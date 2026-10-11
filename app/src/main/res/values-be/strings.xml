@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">Правабаковы рух (Францыя)</string>
     <string name="settings_roundabout_left">Левабаковы рух (Вялікабрытанія)</string>
     <string name="settings_roundabout_help">Выберыце бок руху незалежна ад размяшчэння руля. Налада дзейнічае для HUD і панэлі прыбораў пры лакальнай навігацыі або Satellite. Нумар з’езду захоўваецца. Ужываецца да наступнага атрыманага абнаўлення навігацыі.</string>
+    <string name="satellite_failure_foreground">Android не ўдалося запусціць прыёмнік на пярэднім плане.</string>
+    <string name="satellite_failure_keystore">Не ўдалося адкрыць сховішча сертыфікатаў Android.</string>
+    <string name="satellite_failure_key_generation">Не ўдалося стварыць сертыфікат прыёмніка.</string>
+    <string name="satellite_failure_key_manager">Не ўдалося загрузіць сертыфікат прыёмніка для TLS.</string>
+    <string name="satellite_failure_tls_context">Не ўдалося ініцыялізаваць зашыфраваны прыёмнік.</string>
+    <string name="satellite_failure_listener_busy">Сервер кіравання не змог адкрыць лакальны порт.</string>
+    <string name="satellite_failure_listener_permission">Android забараніў доступ да сервера прыёмніка.</string>
+    <string name="satellite_failure_transport">Сервер кіравання не запусціўся або нечакана спыніўся.</string>
+    <string name="satellite_failure_timeout">Прыёмнік не быў гатовы на працягу 20 секунд.</string>
+    <string name="satellite_failure_shutdown">Не ўдалося спыніць папярэдні прыёмнік.</string>
 </resources>

@@ -664,4 +664,14 @@
     <string name="settings_roundabout_right">Ruch prawostronny (Francja)</string>
     <string name="settings_roundabout_left">Ruch lewostronny (Wielka Brytania)</string>
     <string name="settings_roundabout_help">Wybierz stronę ruchu niezależnie od położenia kierownicy. Ustawienie dotyczy HUD i zestawu wskaźników przy nawigacji lokalnej lub Satellite. Zachowuje numer zjazdu. Obowiązuje od następnej odebranej aktualizacji nawigacji.</string>
+    <string name="satellite_failure_foreground">Android nie mógł uruchomić odbiornika na pierwszym planie.</string>
+    <string name="satellite_failure_keystore">Nie można otworzyć magazynu certyfikatów Androida.</string>
+    <string name="satellite_failure_key_generation">Nie można utworzyć certyfikatu odbiornika.</string>
+    <string name="satellite_failure_key_manager">Nie można załadować certyfikatu odbiornika dla TLS.</string>
+    <string name="satellite_failure_tls_context">Nie można zainicjować szyfrowanego odbiornika.</string>
+    <string name="satellite_failure_listener_busy">Serwer sterowania nie mógł otworzyć portu lokalnego.</string>
+    <string name="satellite_failure_listener_permission">Android odmówił dostępu do serwera odbiornika.</string>
+    <string name="satellite_failure_transport">Serwer sterowania nie uruchomił się lub niespodziewanie się zatrzymał.</string>
+    <string name="satellite_failure_timeout">Odbiornik nie był gotowy w ciągu 20 sekund.</string>
+    <string name="satellite_failure_shutdown">Nie można zatrzymać poprzedniego odbiornika.</string>
 </resources>

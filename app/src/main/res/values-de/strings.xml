@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">Rechtsverkehr (Frankreich)</string>
     <string name="settings_roundabout_left">Linksverkehr (Vereinigtes Königreich)</string>
     <string name="settings_roundabout_help">Wählen Sie die Verkehrsseite unabhängig von der Lenkradposition. Die Einstellung gilt für HUD und Kombiinstrument bei lokaler oder Satellite-Navigation. Die Ausfahrtnummer bleibt erhalten. Gilt ab der nächsten empfangenen Navigationsmeldung.</string>
+    <string name="satellite_failure_foreground">Android konnte den Empfänger nicht im Vordergrund starten.</string>
+    <string name="satellite_failure_keystore">Der Android-Zertifikatspeicher konnte nicht geöffnet werden.</string>
+    <string name="satellite_failure_key_generation">Das Empfängerzertifikat konnte nicht erstellt werden.</string>
+    <string name="satellite_failure_key_manager">Das Empfängerzertifikat konnte nicht für TLS geladen werden.</string>
+    <string name="satellite_failure_tls_context">Der verschlüsselte Empfänger konnte nicht initialisiert werden.</string>
+    <string name="satellite_failure_listener_busy">Der Steuerungsserver konnte seinen lokalen Port nicht öffnen.</string>
+    <string name="satellite_failure_listener_permission">Android verweigerte den Zugriff auf den Empfängerserver.</string>
+    <string name="satellite_failure_transport">Der Steuerungsserver konnte nicht starten oder wurde unerwartet beendet.</string>
+    <string name="satellite_failure_timeout">Der Empfänger war nach 20 Sekunden nicht bereit.</string>
+    <string name="satellite_failure_shutdown">Der vorherige Empfänger konnte nicht beendet werden.</string>
 </resources>
