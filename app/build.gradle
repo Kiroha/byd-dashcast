@@ -1994,8 +1994,11 @@ android {
         // 652 = 1.9.13-beta (SATELLITE CONNECTION AND DEVICE IDENTITY. Accept the
         // ordinary WebSocket upgrade, bound receiver startup, and distinguish the
         // current authenticated Satellite from its previous connection. Preserve pairing.)
-        versionCode 652
-        versionName "1.9.13-beta"
+        // 653 = 1.9.14-beta (SATELLITE IPV4 HOTSPOT AND VISIBLE PAIRING FAILURES.
+        // Export only local IPv4 addresses; retain an actionable failure and explicit Retry
+        // instead of dismissing Preparing code. Fence receiver teardown by pairing ownership.)
+        versionCode 653
+        versionName "1.9.14-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

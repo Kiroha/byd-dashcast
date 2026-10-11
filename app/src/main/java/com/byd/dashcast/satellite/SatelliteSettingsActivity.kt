@@ -30,7 +30,6 @@ import com.byd.dashcast.util.LocaleHelper
 import com.google.android.material.materialswitch.MaterialSwitch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.NetworkInterface
 
 /** Explicit opt-in, source selection and local pairing. Credentials never enter diagnostics. */
 class SatelliteSettingsActivity : AppCompatActivity() {
@@ -265,36 +264,22 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         if (!SatellitePrefs.isEnabled(this)) { toast(R.string.satellite_enable_first); return }
         SatellitePairingSession.snapshot()?.let { renderPairing(it); return }
         val app = applicationContext
-        SatelliteReceiverService.start(app)
         val attempt = SatellitePairingSession.begin()
+        if (!SatelliteReceiverService.start(app)) SatellitePairingSession.fail(attempt, SatellitePairingSession.Failure.RECEIVER)
         val state = SatellitePairingSession.snapshot() ?: return
         renderPairing(state)
         // Capture the application and attempt only. The receiver owns the window after leaving this screen.
         Thread {
-            val hosts = try {
-                NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
-                    .filter { it.isUp }.flatMap { it.inetAddresses.toList() }
-                    .filter { !it.isLoopbackAddress && SatelliteProtocol.isLocalAddress(it) }
-                    .mapNotNull { it.hostAddress?.substringBefore('%') }.distinct()
-            } catch (_: Exception) { emptyList() }
-            val profile = try {
-                check(hosts.isNotEmpty())
+            SatellitePairingPreparation.prepare(attempt, SatelliteLanAddresses::current, profile = { hosts ->
+                check(SatellitePrefs.isEnabled(app))
                 JSONObject().put("version", SatelliteProtocol.VERSION).put("hosts", JSONArray(hosts))
                     .put("port", SatellitePrefs.PORT).put("path", SatelliteProtocol.PATH)
                     .put("certificateSha256", SatelliteTls.fingerprint())
                     .put("token", SatellitePrefs.token(app)).toString(2)
-            } catch (_: Exception) { null }
-            val current = SatellitePairingSession.snapshot()?.takeIf { it.attempt == attempt }
-            if (profile == null || current == null || !SatellitePrefs.isEnabled(app)) {
-                SatellitePairingSession.close(attempt)
-                return@Thread
-            }
-            val server = SatellitePairingServer(profile, state.code,
-                lifetimeMs = current.remainingMs, onClosed = { SatellitePairingSession.close(attempt) })
-            if (!SatellitePairingSession.attach(attempt, server, profile, hosts) || !server.start()) {
-                server.close()
-                SatellitePairingSession.close(attempt)
-            }
+            }, createServer = { profile, current ->
+                SatellitePairingServer(profile, current.code, lifetimeMs = current.remainingMs,
+                    onClosed = { SatellitePairingSession.listenerClosed(attempt) })
+            })
         }.apply { isDaemon = true; name = "satellite-pair-prepare" }.start()
     }
 
@@ -337,19 +322,35 @@ class SatelliteSettingsActivity : AppCompatActivity() {
             dialog.show()
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                SatellitePairingSession.snapshot()?.takeIf { it.attempt == state.attempt }?.profile?.let {
-                    copyProfile(it)
+                SatellitePairingSession.snapshot()?.takeIf { it.attempt == state.attempt }?.let { current ->
+                    if (current.failure != null) {
+                        SatellitePairingSession.close(state.attempt)
+                        detachPairingDialog()
+                        showPairing()
+                        return@setOnClickListener
+                    }
+                    current.profile?.let(::copyProfile) ?: return@setOnClickListener
                     SatellitePairingSession.close(state.attempt)
                     detachPairingDialog()
                 }
             }
         }
-        pairingCode?.text = if (state.ready) SatellitePairingCode.format(state.code)
-            else getString(R.string.satellite_pair_preparing)
+        pairingCode?.text = when (state.failure) {
+            SatellitePairingSession.Failure.NO_IPV4 -> getString(R.string.satellite_pair_no_ipv4)
+            SatellitePairingSession.Failure.CREDENTIALS -> getString(R.string.satellite_pair_credentials_failed)
+            SatellitePairingSession.Failure.LISTENER -> getString(R.string.satellite_pair_listener_failed)
+            SatellitePairingSession.Failure.RECEIVER -> getString(R.string.satellite_pair_receiver_failed)
+            null -> if (state.ready) SatellitePairingCode.format(state.code) else getString(R.string.satellite_pair_preparing)
+        }
+        pairingCode?.textSize = if (state.failure == null) 32f else 18f
         pairingCountdown?.text = getString(R.string.satellite_pair_remaining, (state.remainingMs + 999) / 1_000)
         pairingAddress?.text = if (state.addresses.isEmpty()) "" else
             getString(R.string.satellite_pair_address, state.addresses.joinToString(", "))
-        pairingDialog?.getButton(AlertDialog.BUTTON_NEUTRAL)?.isEnabled = state.ready && state.profile != null
+        pairingDialog?.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = state.ready
+        pairingDialog?.getButton(AlertDialog.BUTTON_NEUTRAL)?.apply {
+            setText(if (state.failure != null) R.string.satellite_pair_retry else R.string.satellite_pair_copy_advanced)
+            isEnabled = state.failure != null || (state.ready && state.profile != null)
+        }
     }
 
     private fun copyProfile(profile: String) {

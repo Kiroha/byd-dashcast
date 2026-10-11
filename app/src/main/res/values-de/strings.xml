@@ -643,4 +643,9 @@
     <string name="satellite_device_unknown">Unbekanntes Gerät (älteres Satellite)</string>
     <string name="satellite_device_id">Satellite-ID: %1$s</string>
     <string name="satellite_device_address">Lokale Adresse: %1$s</string>
+    <string name="satellite_pair_no_ipv4">Keine lokale IPv4-Adresse. Prüfen Sie den Fahrzeug-Hotspot.</string>
+    <string name="satellite_pair_credentials_failed">Zertifikat oder Profil konnten nicht vorbereitet werden. Erneut versuchen.</string>
+    <string name="satellite_pair_listener_failed">Der Kopplungsdienst konnte nicht geöffnet werden. Erneut versuchen.</string>
+    <string name="satellite_pair_receiver_failed">Der Empfänger ist nicht verfügbar. Status prüfen und erneut versuchen.</string>
+    <string name="satellite_pair_retry">Erneut versuchen</string>
 </resources>

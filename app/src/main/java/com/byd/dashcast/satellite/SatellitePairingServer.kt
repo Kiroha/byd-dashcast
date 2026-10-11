@@ -4,6 +4,7 @@ import java.io.Closeable
 import java.io.DataOutputStream
 import java.io.EOFException
 import java.net.InetSocketAddress
+import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
@@ -41,7 +42,8 @@ internal class SatellitePairingServer(
     }
 
     internal val localPort: Int get() = synchronized(lock) { listener?.localPort ?: -1 }
-    internal val remainingMs: Long get() = if (closed.get()) 0 else (expiresAt - clock()).coerceAtLeast(0)
+    internal val expiresInMs: Long get() = (expiresAt - clock()).coerceAtLeast(0)
+    internal val remainingMs: Long get() = if (closed.get()) 0 else expiresInMs
 
     /** May run off the UI thread. close() before or during start() permanently cancels this instance. */
     fun start(): Boolean {
@@ -53,7 +55,7 @@ internal class SatellitePairingServer(
         }
         try {
             socket.reuseAddress = true
-            socket.bind(InetSocketAddress(port))
+            socket.bind(InetSocketAddress(InetAddress.getByName("0.0.0.0"), port))
             synchronized(lock) {
                 if (!isLive()) { close(); return false }
                 expiry.schedule({ close() }, remainingMs, TimeUnit.MILLISECONDS)
@@ -171,6 +173,7 @@ internal class SatellitePairingServer(
 
 /** RAM-only pairing window owned by the receiver service, independent of the settings screen. */
 internal object SatellitePairingSession {
+    enum class Failure { NO_IPV4, CREDENTIALS, LISTENER, RECEIVER }
     private val lock = Any()
     private var generation = 0L
     private var active: Window? = null
@@ -180,11 +183,14 @@ internal object SatellitePairingSession {
         var server: SatellitePairingServer? = null
         var profile: String? = null
         var addresses: List<String> = emptyList()
+        var failure: Failure? = null
+        var receiverOwner: Long? = null
     }
 
     /** No generated toString: the code and profile must never appear in diagnostics. */
     class Snapshot(val attempt: Long, val code: String, val profile: String?,
-        val addresses: List<String>, val remainingMs: Long, val ready: Boolean)
+        val addresses: List<String>, val remainingMs: Long, val ready: Boolean,
+        val failure: Failure? = null)
 
     private fun now() = System.nanoTime() / 1_000_000
 
@@ -204,10 +210,13 @@ internal object SatellitePairingSession {
         val (initial, server) = synchronized(lock) {
             val window = active ?: return null
             Snapshot(window.attempt, window.code, window.profile, window.addresses,
-                window.expiresAt - now(), false) to window.server
+                window.expiresAt - now(), false, window.failure) to window.server
         }
         val state = Snapshot(initial.attempt, initial.code, initial.profile, initial.addresses,
-            minOf(initial.remainingMs, server?.remainingMs ?: Long.MAX_VALUE), (server?.localPort ?: -1) > 0)
+            // Closing a listener is a failure, not expiry. Its callback may still be queued;
+            // sampling during close must not silently erase the window before that callback.
+            minOf(initial.remainingMs, server?.expiresInMs ?: Long.MAX_VALUE),
+            initial.failure == null && (server?.localPort ?: -1) > 0, initial.failure)
         if (!isCurrent(state.attempt)) return null
         if (state.remainingMs <= 0) { close(state.attempt); return null }
         return state
@@ -218,7 +227,8 @@ internal object SatellitePairingSession {
     fun attach(attempt: Long, server: SatellitePairingServer, profile: String? = null,
         addresses: List<String> = emptyList()): Boolean = synchronized(lock) {
         val window = active
-        if (window == null || window.attempt != attempt || window.server != null || now() >= window.expiresAt) false
+        if (window == null || window.attempt != attempt || window.server != null || window.failure != null ||
+            now() >= window.expiresAt || server.remainingMs <= 0) false
         else {
             window.server = server
             window.profile = profile
@@ -227,9 +237,38 @@ internal object SatellitePairingSession {
         }
     }
 
-    fun close(attempt: Long? = null) {
+    /** Receiver generations claim only the current window. Old teardown cannot cancel a fresh unclaimed retry. */
+    fun claimReceiver(owner: Long) = synchronized(lock) {
+        active?.let { if (it.receiverOwner == null || owner >= it.receiverOwner!!) it.receiverOwner = owner }
+    }
+
+    fun receiverStopped(owner: Long, failed: Boolean) {
+        val attempt = synchronized(lock) {
+            active?.takeIf { it.receiverOwner == owner }?.attempt
+        } ?: return
+        if (failed) fail(attempt, Failure.RECEIVER, owner) else close(attempt, owner)
+    }
+
+    fun listenerClosed(attempt: Long) {
+        val current = synchronized(lock) { active?.takeIf { it.attempt == attempt && it.server != null } } ?: return
+        if (now() >= current.expiresAt) close(attempt) else fail(attempt, Failure.LISTENER)
+    }
+
+    fun fail(attempt: Long, failure: Failure, receiverOwner: Long? = null) {
+        val server = synchronized(lock) {
+            val current = active?.takeIf { it.attempt == attempt && it.failure == null &&
+                (receiverOwner == null || it.receiverOwner == receiverOwner) } ?: return
+            current.failure = failure
+            current.profile = null
+            current.server.also { current.server = null }
+        }
+        server?.close()
+    }
+
+    fun close(attempt: Long? = null, receiverOwner: Long? = null) {
         val previous = synchronized(lock) {
             if (attempt != null && active?.attempt != attempt) return
+            if (receiverOwner != null && active?.receiverOwner != receiverOwner) return
             generation++
             active.also { active = null }
         }

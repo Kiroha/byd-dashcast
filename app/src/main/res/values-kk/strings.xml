@@ -643,4 +643,9 @@
     <string name="satellite_device_unknown">Белгісіз құрылғы (ескі Satellite)</string>
     <string name="satellite_device_id">Satellite идентификаторы: %1$s</string>
     <string name="satellite_device_address">Жергілікті мекенжай: %1$s</string>
+    <string name="satellite_pair_no_ipv4">Жергілікті IPv4 мекенжайы жоқ. Көліктің хотспотын тексеріңіз.</string>
+    <string name="satellite_pair_credentials_failed">Сертификатты немесе профильді дайындау мүмкін болмады. Қайталап көріңіз.</string>
+    <string name="satellite_pair_listener_failed">Жұптастыру қызметін ашу мүмкін болмады. Қайталап көріңіз.</string>
+    <string name="satellite_pair_receiver_failed">Қабылдағыш қолжетімсіз. Күйін тексеріп, қайталап көріңіз.</string>
+    <string name="satellite_pair_retry">Қайталау</string>
 </resources>

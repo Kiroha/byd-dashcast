@@ -659,4 +659,9 @@
     <string name="satellite_device_unknown">Unknown device (older Satellite)</string>
     <string name="satellite_device_id">Satellite ID: %1$s</string>
     <string name="satellite_device_address">Local address: %1$s</string>
+    <string name="satellite_pair_no_ipv4">No local IPv4 address. Check the car hotspot.</string>
+    <string name="satellite_pair_credentials_failed">Could not prepare the certificate or profile. Try again.</string>
+    <string name="satellite_pair_listener_failed">Could not open the pairing listener. Try again.</string>
+    <string name="satellite_pair_receiver_failed">The receiver is unavailable. Check its status and try again.</string>
+    <string name="satellite_pair_retry">Try again</string>
 </resources>
