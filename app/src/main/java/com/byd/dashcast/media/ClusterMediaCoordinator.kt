@@ -44,11 +44,12 @@ internal class MediaOutputOwnership(private val writer: () -> ClusterMediaWriter
 internal object ClusterMediaCoordinator {
     private val writer by lazy {
         ClusterMediaWriter(ProxyClusterMediaTransport(), ExecutorMediaScheduler(), report = { result ->
+            MediaDiagnostics.store.result(result)
             if (result == MediaWriteResult.UNAVAILABLE || result == MediaWriteResult.CLEAR_FAILED) {
                 // Enum only: never metadata, session identity, package names, or exception messages.
                 com.byd.dashcast.util.AppLogger.w("ClusterMedia", "output=$result")
             }
-        })
+        }, diagnostic = { stage, rc -> MediaDiagnostics.store.output(stage, rc) })
     }
     val ownership = MediaOutputOwnership { writer }
 }

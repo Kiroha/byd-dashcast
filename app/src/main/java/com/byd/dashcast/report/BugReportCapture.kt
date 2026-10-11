@@ -509,6 +509,8 @@ object BugReportCapture {
                 .append(com.byd.dashcast.hud.MapNotificationListenerService.diagnosticsSummary(app)).append('\n')
             if (shellError != null)
                 sb.append("[shell dump unavailable: ").append(shellError).append("]\n")
+            sb.append("\n════════ CLUSTER MEDIA (local scalars; acceptance is not render) ════════\n")
+                .append(com.byd.dashcast.media.MediaDiagnostics.summary(app)).append('\n')
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody)
             sb.append("\n════════ DASHCAST JOURNAL ════════\n").append(AppLogger.get())
             content = sb.toString()

@@ -132,3 +132,21 @@ vehicle's AndroidKeyStore, pairing, TLS, hotspot routing or OEM music display.
 The new version uses its own mapping archive; published version archives remain unchanged.
 No GitHub release has been published for this candidate yet, and physical OEM music rendering,
 radio/Bluetooth/CarPlay source priority and recovery remain unverified.
+
+### Recovery and report diagnostics
+
+An observer failure releases its music ownership and clears acquired output before retrying
+collection at 1, 2, 5, 15 and then 30 second intervals while enabled and listener-connected.
+Successful collection, including an empty session list, resets this backoff. Disable,
+disconnect and destruction cancel retries. This does not restart the navigation listener,
+reconnect the daemon, retry SDK commands, or replay cached metadata.
+
+Bug reports include a passive scalar snapshot: opt-in and listener status, observer and
+authorization classification, bounded session/usable-session counts, selected-data presence,
+retry status, last output stage/result and integer SDK return. Reading this snapshot performs
+no session query, Binder transaction or restart. It contains no title, artist, package,
+session identity or exception message. SDK acceptance remains distinct from vehicle rendering.
+
+Fields prefixed `last` are historical: they preserve the last observer failure or rejected
+output across successful recovery and cleanup. `outputStage`, `outputResult` and `sdkReturn`
+describe the most recent writer operation; `cleanupResult` is reported separately.

@@ -122,7 +122,9 @@ class MapNotificationListenerService : NotificationListenerService() {
         try {
             localMediaController = com.byd.dashcast.media.LocalMediaController(processContext,
                 android.content.ComponentName(processContext, MapNotificationListenerService::class.java))
-        } catch (_: Throwable) { /* Optional local media remains unavailable. */ }
+        } catch (_: Throwable) {
+            com.byd.dashcast.media.MediaDiagnostics.initializationFailed()
+        }
         val executor = Executors.newSingleThreadExecutor { r ->
             val t = Thread(r, "hud-nav-writer")
             t.isDaemon = true

@@ -18,6 +18,8 @@ internal class MediaSessionObserver(
     private val component: ComponentName,
     private val changed: (ClusterMediaData?) -> Unit,
     private val failed: () -> Unit,
+    private val collected: (Int, Int, Boolean, Int) -> Unit = { _, _, _, _ -> },
+    private val failure: (Boolean) -> Unit = {},
 ) : Closeable {
     private val manager = context.getSystemService(MediaSessionManager::class.java)
     private val thread = HandlerThread("cluster-media-sessions").apply { start() }
@@ -86,12 +88,17 @@ internal class MediaSessionObserver(
         }
         val data = MediaSourceSelector.select(candidates, selected)
         selected = data?.source
-        if (!closed.get()) changed(data)
+        if (!closed.get()) {
+            collected(candidates.size, candidates.count { ClusterMediaEncoding.sanitize(it.title).isNotEmpty() && it.playback != MediaPlayback.OTHER }, data != null,
+                candidates.count { it.playback == MediaPlayback.PLAYING })
+            changed(data)
+        }
     }
 
     private fun guarded(action: () -> Unit) {
         if (closed.get()) return
-        try { action() } catch (_: Exception) {
+        try { action() } catch (error: Exception) {
+            failure(error is SecurityException)
             close()
             failed() // Never log the exception message: a media app can embed metadata in it.
         }

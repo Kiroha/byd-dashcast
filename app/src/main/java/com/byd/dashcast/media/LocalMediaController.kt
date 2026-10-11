@@ -11,6 +11,8 @@ internal class MediaListenerLifecycle(
     private val enabled: () -> Boolean,
     private val ownership: MediaOutputOwnership,
     private val dispatchRefresh: (() -> Unit) -> Unit = { it() },
+    private val retryScheduler: MediaScheduler? = null,
+    private val diagnostics: MediaDiagnosticStore = MediaDiagnosticStore(),
     private val observeSessions: ((ClusterMediaData?) -> Unit, () -> Unit) -> Closeable,
 ) : Closeable {
     private val token = Any()
@@ -19,14 +21,18 @@ internal class MediaListenerLifecycle(
     private var sessions: Closeable? = null
     private var observerGeneration = 0L
     private var waiting: Closeable? = null
+    private var retry: MediaCancellation? = null
+    private var failures = 0
+    private var starting = false
 
-    @Synchronized fun connected() { connected = true; refresh() }
-    @Synchronized fun disconnected() { connected = false; stop() }
+    @Synchronized fun connected() { if (destroyed) return; connected = true; diagnostics.listener(true); refresh() }
+    @Synchronized fun disconnected() { connected = false; diagnostics.listener(false); stop(); failures = 0 }
 
     @Synchronized fun refresh() {
-        if (destroyed || !connected || !enabled()) { stop(); return }
-        if (sessions != null) return
+        if (destroyed || !connected || !enabled()) { stop(); failures = 0; return }
+        if (sessions != null || starting || retry != null) return
         if (!ownership.acquire(token)) {
+            diagnostics.busy()
             if (waiting == null) waiting = ownership.observeAvailability {
                 dispatchRefresh { refresh() }
             }
@@ -36,22 +42,49 @@ internal class MediaListenerLifecycle(
         waiting?.close()
         waiting = null
         val generation = ++observerGeneration
+        diagnostics.begin()
+        starting = true
         try {
             val observed = observeSessions({ data ->
                 synchronized(this) {
                     if (!destroyed && connected && enabled() && observerGeneration == generation) {
+                        failures = 0 // Even an empty successful collection proves the observer is healthy.
                         if (data == null) ownership.sourceLost(token) else ownership.publish(token, data)
                     }
                 }
             }, {
-                synchronized(this) { if (observerGeneration == generation) stop() }
+                synchronized(this) { if (observerGeneration == generation) failed() }
             })
             // A synchronous authorization failure can invalidate the start before it returns.
             if (observerGeneration == generation && !destroyed) sessions = observed else observed.close()
-        } catch (_: Exception) { stop() }
+        } catch (error: Exception) {
+            if (observerGeneration == generation) {
+                diagnostics.failure(diagnostics.generation(), error is SecurityException)
+                failed()
+            }
+        } finally { starting = false }
+    }
+
+    private fun failed() {
+        stop()
+        if (destroyed || !connected || !enabled()) return
+        failures = (failures + 1).coerceAtMost(5)
+        val delay = longArrayOf(1000, 2000, 5000, 15000, 30000)[failures - 1]
+        diagnostics.waiting(delay, failures)
+        val generation = observerGeneration
+        retry = retryScheduler?.schedule(delay) {
+            synchronized(this) {
+                if (generation != observerGeneration) return@synchronized
+                retry = null
+                refresh()
+            }
+        }
     }
 
     private fun stop() {
+        retry?.cancel()
+        retry = null
+        diagnostics.stop()
         ++observerGeneration // Reject callbacks already in flight before unregistering.
         waiting?.close()
         waiting = null
@@ -61,15 +94,27 @@ internal class MediaListenerLifecycle(
         ownership.release(token)
     }
 
-    @Synchronized override fun close() { destroyed = true; connected = false; stop() }
+    @Synchronized override fun close() { destroyed = true; connected = false; diagnostics.listener(false); stop(); failures = 0 }
 }
 
 class LocalMediaController(context: Context, component: ComponentName) : Closeable {
     private val app = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
+    private val retryScheduler = object : MediaScheduler {
+        override fun schedule(delayMs: Long, action: () -> Unit): MediaCancellation {
+            val task = Runnable { action() }
+            handler.postDelayed(task, delayMs)
+            return MediaCancellation { handler.removeCallbacks(task) }
+        }
+        override fun close() = Unit
+    }
     private val lifecycle = MediaListenerLifecycle({ MediaPrefs.isEnabled(app) },
-        ClusterMediaCoordinator.ownership, { action -> handler.post { action() } }) { changed, failed ->
-        MediaSessionObserver(app, component, changed, failed)
+        ClusterMediaCoordinator.ownership, { action -> handler.post { action() } },
+        retryScheduler, MediaDiagnostics.store) { changed, failed ->
+        val generation = MediaDiagnostics.store.generation()
+        MediaSessionObserver(app, component, changed, failed, { count, valid, present, playing ->
+            MediaDiagnostics.store.collection(generation, count, valid, present, playing)
+        }, { denied -> MediaDiagnostics.store.failure(generation, denied) })
     }
     // A lightweight preference observer is necessary for opt-in. MediaSession observers/writes are
     // never acquired while the default-off setting is disabled.

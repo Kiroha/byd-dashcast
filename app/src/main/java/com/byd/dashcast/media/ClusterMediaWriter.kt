@@ -54,6 +54,7 @@ class ClusterMediaWriter(
     private val scheduler: MediaScheduler,
     private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
     private val report: (MediaWriteResult) -> Unit = {},
+    private val diagnostic: (String, Int?) -> Unit = { _, _ -> },
 ) {
     private val lock = Any()
     private var generation = 0L
@@ -87,10 +88,18 @@ class ClusterMediaWriter(
     private fun current(epoch: Long): Boolean = synchronized(lock) { generation == epoch }
     private fun valid(epoch: Long, connection: Any): Boolean = current(epoch) && transport.isCurrent(connection)
 
+    private inline fun sdk(stage: String, action: () -> Int): Int {
+        diagnostic(stage, null)
+        val rc = action()
+        diagnostic(stage, rc)
+        return rc
+    }
+
     private fun start(epoch: Long, data: ClusterMediaData, result: ((MediaWriteResult) -> Unit)?) {
         if (!current(epoch)) return
         synchronized(lock) { lastAttemptMs = nowMs() }
         try {
+            diagnostic("CONNECTION", null)
             val connection = transport.connection()
             if (connection == null || !valid(epoch, connection)) {
                 ownedConnection = null
@@ -100,7 +109,7 @@ class ClusterMediaWriter(
             }
             if (ownedConnection !== connection) lastDelivered = null
             if (lastDelivered == data) { notify(epoch, result, MediaWriteResult.ACCEPTED); return }
-            if (transport.integer(connection, ClusterMediaProperties.SOURCE, ClusterMediaProperties.ONLINE) != 0) {
+            if (sdk("SOURCE") { transport.integer(connection, ClusterMediaProperties.SOURCE, ClusterMediaProperties.ONLINE) } != 0) {
                 fail(epoch, result)
                 return
             }
@@ -116,6 +125,7 @@ class ClusterMediaWriter(
                 pending = scheduler.schedule(50) { finish(epoch, connection, data, result) }
             }
         } catch (_: Exception) {
+            diagnostic("EXCEPTION", null)
             fail(epoch, result)
         }
     }
@@ -126,7 +136,7 @@ class ClusterMediaWriter(
         try {
             val text = ClusterMediaEncoding.text(data.title, data.artist)
             if (!valid(epoch, connection)) { notify(epoch, result, MediaWriteResult.UNAVAILABLE); return }
-            if (transport.bytes(connection, ClusterMediaProperties.TEXT, text) != 0) {
+            if (sdk("TEXT") { transport.bytes(connection, ClusterMediaProperties.TEXT, text) } != 0) {
                 fail(epoch, result)
                 return
             }
@@ -134,13 +144,14 @@ class ClusterMediaWriter(
             lastDelivered = null
             if (!valid(epoch, connection)) { notify(epoch, result, MediaWriteResult.UNAVAILABLE); return }
             val state = if (data.playing) ClusterMediaProperties.PLAYING else ClusterMediaProperties.PAUSED
-            if (transport.integer(connection, ClusterMediaProperties.STATE, state) != 0) {
+            if (sdk("STATE") { transport.integer(connection, ClusterMediaProperties.STATE, state) } != 0) {
                 fail(epoch, result)
                 return
             }
             lastDelivered = data
             notify(epoch, result, MediaWriteResult.ACCEPTED)
         } catch (_: Exception) {
+            diagnostic("EXCEPTION", null)
             fail(epoch, result)
         }
     }
@@ -164,7 +175,7 @@ class ClusterMediaWriter(
         try {
             // Clear only the acquired music channel. Do not select ONLINE again or restore a
             // guessed source; successful SOURCE alone also counts as partial acquisition.
-            if (transport.bytes(connection, ClusterMediaProperties.TEXT, ClusterMediaEncoding.text("", "")) != 0) {
+            if (sdk("CLEAR_TEXT") { transport.bytes(connection, ClusterMediaProperties.TEXT, ClusterMediaEncoding.text("", "")) } != 0) {
                 notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
                 return
             }
@@ -172,7 +183,7 @@ class ClusterMediaWriter(
                 notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
                 return
             }
-            val rc = transport.integer(connection, ClusterMediaProperties.STATE, ClusterMediaProperties.PAUSED)
+            val rc = sdk("CLEAR_STATE") { transport.integer(connection, ClusterMediaProperties.STATE, ClusterMediaProperties.PAUSED) }
             notify(epoch, result, if (rc == 0) MediaWriteResult.CLEARED else MediaWriteResult.CLEAR_FAILED)
         } catch (_: Exception) {
             notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
