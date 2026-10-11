@@ -2013,8 +2013,12 @@ android {
         // Select only the advertised server key and validate provider signing before
         // profile publication. Recover failed media observation with bounded backoff
         // and passive redacted report diagnostics. Actual vehicle validation is pending.)
-        versionCode 656
-        versionName "1.9.17-beta"
+        // 657 = 1.9.18-beta (COMPACT CLUSTER MUSIC COMPARISON.
+        // Compare reference, short-title and minimal text in the parked diagnostic bench.
+        // Keep production music visible during guidance and correct OEM roundabout
+        // circulation families. Physical positioning and overlap remain unverified.)
+        versionCode 657
+        versionName "1.9.18-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
