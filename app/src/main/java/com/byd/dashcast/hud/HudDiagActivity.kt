@@ -68,6 +68,7 @@ class HudDiagActivity : AppCompatActivity() {
     private lateinit var bar: ProgressBar
     private var benchKind = "canbench"   // "canbench" | "sendinfo2" | "iconsweep" — drives the zip prefix
     private val lifecycleGate = LifecycleGate()
+    private var mediaBench: com.byd.dashcast.media.MediaBenchDialog? = null
 
     private val stamp = SimpleDateFormat("HH:mm:ss", Locale.US)
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
@@ -148,6 +149,17 @@ class HudDiagActivity : AppCompatActivity() {
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setPadding(dp(12), dp(12), dp(12), dp(12))
             setBackgroundColor(android.graphics.Color.argb(40, 33, 150, 243))
+        })
+
+        // Keep this entry near the top so it remains reachable on short/landscape displays.
+        root.addView(Button(this).apply {
+            setText(R.string.media_bench_title)
+            isAllCaps = false
+            minHeight = dp(64)
+            setOnClickListener {
+                mediaBench?.close()
+                mediaBench = com.byd.dashcast.media.MediaBenchDialog(this@HudDiagActivity).also { it.show() }
+            }
         })
 
         root.addView(TextView(this).apply {
@@ -650,6 +662,8 @@ class HudDiagActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        mediaBench?.close()
+        mediaBench = null
         lifecycleGate.invalidate()
         super.onDestroy()
     }

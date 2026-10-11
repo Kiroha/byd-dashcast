@@ -542,6 +542,38 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Music is opt-in and independent of navigation destinations and Satellite. -->
+                <TextView
+                    style="@style/Widget.DashCast.SectionHead"
+                    android:accessibilityHeading="true"
+                    android:text="@string/settings_media_title"/>
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.DashCast.Card.Filled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:contentPadding="8dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/sw_cluster_media"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="64dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:text="@string/settings_media_enabled"/>
+                        <TextView
+                            style="@style/Widget.DashCast.ListItem.Support"
+                            android:layout_margin="16dp"
+                            android:text="@string/settings_media_help"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
             <!-- ═══════════════════════════════════════════════════════════ -->

@@ -665,4 +665,20 @@
     <string name="satellite_failure_transport">El servidor de control no pudo iniciarse o se detuvo inesperadamente.</string>
     <string name="satellite_failure_timeout">El receptor no estuvo listo en 20 segundos.</string>
     <string name="satellite_failure_shutdown">No se pudo detener el receptor anterior.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">Música en el cuadro</string>
+    <string name="settings_media_enabled">Mostrar información musical en el cuadro</string>
+    <string name="settings_media_help">Solo aplicaciones de esta tableta; requiere acceso a notificaciones. Experimental: probar con el vehículo estacionado. Independiente del guiado. Desactivar si interfiere con la radio o Bluetooth.</string>
+    <string name="media_bench_title">Prueba de música en el cuadro</string>
+    <string name="media_bench_warning">Solo con el vehículo estacionado. Desactive la música automática antes de la prueba. Puede sustituir el texto musical OEM. Cancelar intenta borrar la prueba sin restaurar la fuente de audio anterior.</string>
+    <string name="media_bench_parked">Confirmo que el vehículo está estacionado</string>
+    <string name="media_bench_send">Enviar prueba</string>
+    <string name="media_bench_waiting">… Enviando comandos</string>
+    <string name="media_bench_accepted">✓ Comandos aceptados. Compruebe el cuadro; borrado en 6 s.</string>
+    <string name="media_bench_unavailable">⚠ Salida musical no disponible o comando rechazado</string>
+    <string name="media_bench_cleared">✓ Comandos de borrado aceptados; compruebe el cuadro</string>
+    <string name="media_bench_clear_failed">⚠ Borrado sin confirmar; compruebe el cuadro y la fuente de audio OEM</string>
+    <string name="media_bench_busy">⚠ Desactive la música automática y termine cualquier otra prueba</string>
+    <string name="media_bench_nothing">No se adquirió la salida musical; no se enviaron comandos de borrado</string>
 </resources>

@@ -670,4 +670,20 @@
     <string name="satellite_failure_transport">تعذر بدء خادم التحكم أو توقف بشكل غير متوقع.</string>
     <string name="satellite_failure_timeout">لم يصبح المستقبل جاهزًا خلال 20 ثانية.</string>
     <string name="satellite_failure_shutdown">تعذر إيقاف المستقبل السابق.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">الموسيقى في لوحة العدادات</string>
+    <string name="settings_media_enabled">عرض معلومات الموسيقى في لوحة العدادات</string>
+    <string name="settings_media_help">لتطبيقات هذا الجهاز اللوحي فقط؛ يلزم الوصول إلى الإشعارات. ميزة تجريبية: اختبرها والسيارة مركونة. مستقلة عن الملاحة. عطّلها إذا أثرت على الراديو أو Bluetooth.</string>
+    <string name="media_bench_title">اختبار الموسيقى في لوحة العدادات</string>
+    <string name="media_bench_warning">للسيارة المركونة فقط. عطّل عرض الموسيقى التلقائي قبل الاختبار. قد يستبدل نص الموسيقى الأصلي. يحاول الإلغاء مسح الاختبار دون استعادة مصدر الصوت السابق.</string>
+    <string name="media_bench_parked">أؤكد أن السيارة مركونة</string>
+    <string name="media_bench_send">إرسال الاختبار</string>
+    <string name="media_bench_waiting">… جارٍ إرسال الأوامر</string>
+    <string name="media_bench_accepted">✓ تم قبول الأوامر. تحقق من لوحة العدادات؛ المسح بعد 6 ثوانٍ.</string>
+    <string name="media_bench_unavailable">⚠ عرض الموسيقى غير متاح أو تم رفض الأمر</string>
+    <string name="media_bench_cleared">✓ تم قبول أوامر المسح؛ تحقق من لوحة العدادات</string>
+    <string name="media_bench_clear_failed">⚠ لم يتأكد المسح؛ تحقق من لوحة العدادات ومصدر الصوت الأصلي</string>
+    <string name="media_bench_busy">⚠ عطّل الموسيقى التلقائية وأنهِ أي اختبار آخر</string>
+    <string name="media_bench_nothing">لم يتم الحصول على عرض الموسيقى؛ لم تُرسل أوامر مسح</string>
 </resources>

@@ -681,4 +681,20 @@
     <string name="satellite_failure_transport">The control listener could not start or stopped unexpectedly.</string>
     <string name="satellite_failure_timeout">The receiver did not become ready within 20 seconds.</string>
     <string name="satellite_failure_shutdown">The previous receiver could not be stopped.</string>
+
+    <!-- Local cluster media: independent opt-in and parked diagnostic. -->
+    <string name="settings_media_title">Cluster music</string>
+    <string name="settings_media_enabled">Show music information on the cluster</string>
+    <string name="settings_media_help">Apps on this tablet only; notification access required. Experimental: test while parked. Independent of guidance. Disable if it interferes with radio or Bluetooth.</string>
+    <string name="media_bench_title">Cluster music test</string>
+    <string name="media_bench_warning">Parked vehicle only. Disable automatic music output before this test. It may replace OEM music text. Cancel attempts to clear the test without restoring the previous audio source.</string>
+    <string name="media_bench_parked">I confirm the vehicle is parked</string>
+    <string name="media_bench_send">Send test</string>
+    <string name="media_bench_waiting">… Sending commands</string>
+    <string name="media_bench_accepted">✓ Commands accepted. Check the cluster; clearing in 6 s.</string>
+    <string name="media_bench_unavailable">⚠ Music output unavailable or command rejected</string>
+    <string name="media_bench_cleared">✓ Clear commands accepted; check the cluster</string>
+    <string name="media_bench_clear_failed">⚠ Clearing not confirmed; check the cluster and OEM audio source</string>
+    <string name="media_bench_busy">⚠ Disable automatic music and finish any other test</string>
+    <string name="media_bench_nothing">No music output acquired; no clear commands sent</string>
 </resources>
