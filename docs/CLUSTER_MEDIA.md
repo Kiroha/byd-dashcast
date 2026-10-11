@@ -76,8 +76,9 @@ The independent writer uses one scheduled executor with at most one pending late
 cancelled tasks are removed. It neither blocks the navigation executor nor sleeps on the UI/listener
 thread. Its idle worker can retire after 30 seconds. Duplicate data is suppressed. After an output
 failure, a **new** matching session callback can retry after a five-second cooldown; there is no
-periodic replay or daemon recovery loop. Session observer failures wait for a new listener connection
-or an explicit preference change rather than restarting the guidance listener.
+periodic replay or daemon recovery loop. Session observer failures use the cancellable collection
+backoff described below while the feature is enabled and listener-connected, without restarting
+the guidance listener.
 
 After a previously successful write, identical metadata stays deduplicated even if the daemon restarts
 without a listener/source event. It then waits for changed metadata/playback or a new media lifecycle;
@@ -120,18 +121,17 @@ published version's archived mapping is preserved.
 
 ## Publication candidate
 
-The media feature is committed separately from release preparation. The candidate is now
-**1.9.16-beta / versionCode 655**, documented in `docs/releases/1.9.16-beta.md`, together with
-the previously committed Android 10 Satellite ART startup correction. Independent versioned
-checks pass 1054 JVM tests in 192 suites, release lint with zero issues, debug/signed release
-assembly, 10 JavaScript receiver scenarios and 35 scanner tests. The trusted default-branch
-scanner accepts the non-debuggable, normally signed build. The stock Android 29 ART check
-also passes on the exact minified APK and matching R8 mapping, verifying class loading,
-construction, the owned control listener and selector shutdown. It does not validate the
-vehicle's AndroidKeyStore, pairing, TLS, hotspot routing or OEM music display.
+The media feature and its recovery changes are committed separately from release preparation.
+The candidate is now **1.9.17-beta / versionCode 656**, documented in
+`docs/releases/1.9.17-beta.md`, together with the Android 10 Satellite ART startup and
+AndroidKeyStore TLS corrections. The release checks cover the full JVM suite, release lint,
+signed R8 assembly, relay/scanner tests and the trusted release-asset scanner. The stock
+Android 29 check uses the exact minified APK and matching mapping to verify real
+AndroidKeyStore migration, pinned TLS/WSS authentication and reconnection. It does not
+validate the vehicle's hardware-backed provider, hotspot routing or OEM music display.
 The new version uses its own mapping archive; published version archives remain unchanged.
-No GitHub release has been published for this candidate yet, and physical OEM music rendering,
-radio/Bluetooth/CarPlay source priority and recovery remain unverified.
+Physical OEM music rendering, radio/Bluetooth/CarPlay source priority and recovery remain
+unverified.
 
 ### Recovery and report diagnostics
 

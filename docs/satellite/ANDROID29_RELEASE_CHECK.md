@@ -9,7 +9,7 @@ physical devices and other Android API levels.
 ```sh
 python3 .github/scripts/check_satellite_release_art.py \
   --sdk "$ANDROID_HOME" --serial emulator-5554 \
-  --apk app/build/outputs/apk/release/DashCast-v1.9.16-beta-release.apk \
+  --apk app/build/outputs/apk/release/DashCast-v1.9.17-beta-release.apk \
   --mapping app/build/outputs/mapping/release/mapping.txt --tls
 ```
 
