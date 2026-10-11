@@ -203,11 +203,12 @@ class SatelliteSettingsActivity : AppCompatActivity() {
                 addView(label, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
             })
         }
-        fun show(text: Int, color: Int, glyph: Int) {
-            label.setText(text)
+        fun show(text: Int, color: Int, glyph: Int, detail: String? = null) {
+            label.text = if (detail == null) getString(text) else
+                getString(R.string.satellite_status_detail, getString(text), detail)
             icon.setImageResource(glyph)
             icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, color))
-            contentDescription = getString(R.string.satellite_status_accessibility, getString(title), getString(text))
+            contentDescription = getString(R.string.satellite_status_accessibility, getString(title), label.text)
         }
     }
 
@@ -226,7 +227,7 @@ class SatelliteSettingsActivity : AppCompatActivity() {
             SatelliteStatusTracker.Connection.CONNECTED -> connectionStatus.show(R.string.satellite_connection_connected,
                 R.color.md_status_ok, R.drawable.ic_check)
             SatelliteStatusTracker.Connection.UNAVAILABLE -> connectionStatus.show(R.string.satellite_connection_unavailable,
-                R.color.md_status_err, R.drawable.ic_close)
+                R.color.md_status_err, R.drawable.ic_close, state.failure?.let(::failureDetail))
         }
         when (state.guidance) {
             SatelliteStatusTracker.Guidance.DISABLED -> guidanceStatus.show(R.string.satellite_guidance_disabled,
@@ -239,6 +240,20 @@ class SatelliteSettingsActivity : AppCompatActivity() {
                 R.color.md_status_warn, R.drawable.ic_info_outline)
         }
     }
+
+    private fun failureDetail(reason: SatelliteReceiverFailure): String = getString(
+        R.string.satellite_failure_code, getString(when (reason) {
+        SatelliteReceiverFailure.FOREGROUND -> R.string.satellite_failure_foreground
+        SatelliteReceiverFailure.KEYSTORE -> R.string.satellite_failure_keystore
+        SatelliteReceiverFailure.KEY_GENERATION -> R.string.satellite_failure_key_generation
+        SatelliteReceiverFailure.KEY_MANAGER -> R.string.satellite_failure_key_manager
+        SatelliteReceiverFailure.TLS_CONTEXT -> R.string.satellite_failure_tls_context
+        SatelliteReceiverFailure.LISTENER_BIND -> R.string.satellite_failure_listener_busy
+        SatelliteReceiverFailure.LISTENER_PERMISSION -> R.string.satellite_failure_listener_permission
+        SatelliteReceiverFailure.CONTROL_TRANSPORT -> R.string.satellite_failure_transport
+        SatelliteReceiverFailure.STARTUP_TIMEOUT -> R.string.satellite_failure_timeout
+        SatelliteReceiverFailure.SHUTDOWN -> R.string.satellite_failure_shutdown
+    }), reason.name)
 
     private fun renderPeerIdentity(connected: Boolean) {
         val snapshot = SatellitePeers.snapshot(this)
@@ -265,7 +280,8 @@ class SatelliteSettingsActivity : AppCompatActivity() {
         SatellitePairingSession.snapshot()?.let { renderPairing(it); return }
         val app = applicationContext
         val attempt = SatellitePairingSession.begin()
-        if (!SatelliteReceiverService.start(app)) SatellitePairingSession.fail(attempt, SatellitePairingSession.Failure.RECEIVER)
+        if (!SatelliteReceiverService.start(app)) SatellitePairingSession.fail(attempt, SatellitePairingSession.Failure.RECEIVER,
+            receiverFailure = SatelliteReceiverFailure.FOREGROUND)
         val state = SatellitePairingSession.snapshot() ?: return
         renderPairing(state)
         // Capture the application and attempt only. The receiver owns the window after leaving this screen.
@@ -339,7 +355,8 @@ class SatelliteSettingsActivity : AppCompatActivity() {
             SatellitePairingSession.Failure.NO_IPV4 -> getString(R.string.satellite_pair_no_ipv4)
             SatellitePairingSession.Failure.CREDENTIALS -> getString(R.string.satellite_pair_credentials_failed)
             SatellitePairingSession.Failure.LISTENER -> getString(R.string.satellite_pair_listener_failed)
-            SatellitePairingSession.Failure.RECEIVER -> getString(R.string.satellite_pair_receiver_failed)
+            SatellitePairingSession.Failure.RECEIVER -> getString(R.string.satellite_pair_receiver_failed) +
+                (state.receiverFailure?.let { "\n${failureDetail(it)}" } ?: "")
             null -> if (state.ready) SatellitePairingCode.format(state.code) else getString(R.string.satellite_pair_preparing)
         }
         pairingCode?.textSize = if (state.failure == null) 32f else 18f

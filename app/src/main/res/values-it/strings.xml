@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">Circolazione a destra (Francia)</string>
     <string name="settings_roundabout_left">Circolazione a sinistra (Regno Unito)</string>
     <string name="settings_roundabout_help">Scegli il lato di circolazione indipendentemente dalla posizione del volante. Vale per HUD e quadro strumenti con navigazione locale o Satellite. Mantiene il numero di uscita. Si applica al prossimo aggiornamento di navigazione ricevuto.</string>
+    <string name="satellite_failure_foreground">Android non ha potuto avviare il ricevitore in primo piano.</string>
+    <string name="satellite_failure_keystore">Impossibile aprire l’archivio dei certificati Android.</string>
+    <string name="satellite_failure_key_generation">Impossibile creare il certificato del ricevitore.</string>
+    <string name="satellite_failure_key_manager">Impossibile caricare il certificato del ricevitore per TLS.</string>
+    <string name="satellite_failure_tls_context">Impossibile inizializzare il ricevitore cifrato.</string>
+    <string name="satellite_failure_listener_busy">Il server di controllo non ha potuto aprire la porta locale.</string>
+    <string name="satellite_failure_listener_permission">Android ha negato l’accesso al server del ricevitore.</string>
+    <string name="satellite_failure_transport">Il server di controllo non si è avviato o si è arrestato inaspettatamente.</string>
+    <string name="satellite_failure_timeout">Il ricevitore non è diventato pronto entro 20 secondi.</string>
+    <string name="satellite_failure_shutdown">Impossibile arrestare il ricevitore precedente.</string>
 </resources>

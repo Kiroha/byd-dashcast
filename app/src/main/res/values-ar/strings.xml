@@ -660,4 +660,14 @@
     <string name="settings_roundabout_right">السير على اليمين (فرنسا)</string>
     <string name="settings_roundabout_left">السير على اليسار (المملكة المتحدة)</string>
     <string name="settings_roundabout_help">اختر جهة السير بشكل مستقل عن موضع المقود. ينطبق الإعداد على شاشة HUD ولوحة العدادات مع الملاحة المحلية أو Satellite. يبقى رقم المخرج كما هو. يُطبق عند تلقي تحديث الملاحة التالي.</string>
+    <string name="satellite_failure_foreground">تعذر على Android تشغيل المستقبل في المقدمة.</string>
+    <string name="satellite_failure_keystore">تعذر فتح مخزن شهادات Android.</string>
+    <string name="satellite_failure_key_generation">تعذر إنشاء شهادة المستقبل.</string>
+    <string name="satellite_failure_key_manager">تعذر تحميل شهادة المستقبل لاستخدام TLS.</string>
+    <string name="satellite_failure_tls_context">تعذر تهيئة المستقبل المشفر.</string>
+    <string name="satellite_failure_listener_busy">تعذر على خادم التحكم فتح المنفذ المحلي.</string>
+    <string name="satellite_failure_listener_permission">رفض Android الوصول إلى خادم المستقبل.</string>
+    <string name="satellite_failure_transport">تعذر بدء خادم التحكم أو توقف بشكل غير متوقع.</string>
+    <string name="satellite_failure_timeout">لم يصبح المستقبل جاهزًا خلال 20 ثانية.</string>
+    <string name="satellite_failure_shutdown">تعذر إيقاف المستقبل السابق.</string>
 </resources>

@@ -33,7 +33,7 @@ class SatelliteWebSocketServer(
         fun navigation(session: String, frame: SatelliteProtocol.Navigation, receivedAtMs: Long)
         fun expired(session: String)
         fun disconnected(session: String)
-        fun failed()
+        fun failed(reason: SatelliteReceiverFailure)
     }
 
     private data class Session(val connection: WebSocket, val id: String,
@@ -171,7 +171,11 @@ class SatelliteWebSocketServer(
     override fun onError(conn: WebSocket?, ex: Exception) {
         AppLogger.w("Satellite", "control transport: ${ex.javaClass.simpleName}")
         // A late TLS error from the previous transport must not stop a replacement service.
-        if (conn == null && !shuttingDown) events.failed()
+        if (conn == null && !shuttingDown) events.failed(when (ex) {
+            is java.net.BindException -> SatelliteReceiverFailure.LISTENER_BIND
+            is SecurityException -> SatelliteReceiverFailure.LISTENER_PERMISSION
+            else -> SatelliteReceiverFailure.CONTROL_TRANSPORT
+        })
     }
 
     @Synchronized

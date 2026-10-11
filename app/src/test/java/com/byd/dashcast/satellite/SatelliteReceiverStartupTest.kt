@@ -68,6 +68,18 @@ class SatelliteReceiverStartupTest {
             SatelliteStatus.snapshot(RuntimeEnvironment.getApplication()).connection)
     }
 
+    @Test fun `keystore exception yields a finite diagnostic and survives service teardown`() {
+        loadAction = { throw SecurityException("private test marker") }
+        controller.get().onStartCommand(null, 0, 1)
+        awaitWorker()
+        controller.destroy()
+        val snapshot = SatelliteStatus.snapshot(RuntimeEnvironment.getApplication())
+        assertEquals(SatelliteReceiverFailure.KEYSTORE, snapshot.failure)
+        assertFalse(snapshot.toString().contains("private test marker"))
+        // A destroyed controller must not be destroyed again by tearDown.
+        controller = Robolectric.buildService(SatelliteReceiverService::class.java).create()
+    }
+
     @Test fun `stalled TLS preparation expires and its late completion cannot bind a listener`() {
         val entered = CountDownLatch(1)
         unblock = CountDownLatch(1)
@@ -77,6 +89,8 @@ class SatelliteReceiverStartupTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(21))
         assertEquals(SatelliteStatusTracker.Connection.UNAVAILABLE,
             SatelliteStatus.snapshot(RuntimeEnvironment.getApplication()).connection)
+        assertEquals(SatelliteReceiverFailure.STARTUP_TIMEOUT,
+            SatelliteStatus.snapshot(RuntimeEnvironment.getApplication()).failure)
         unblock.countDown()
         awaitWorker()
         assertNull("A late startup retained a listener", ReflectionHelpers.getField<Any?>(controller.get(), "server"))

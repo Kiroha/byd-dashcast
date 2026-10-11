@@ -115,6 +115,31 @@ class SatellitePairingPreparationTest {
         assertEquals(SatellitePairingSession.Failure.RECEIVER, SatellitePairingSession.snapshot()?.failure)
     }
 
+    @Test fun `failed pairing preserves its own diagnostic after a replacement receiver starts`() {
+        val owner = SatelliteStatus.begin()
+        SatellitePairingSession.begin()
+        SatellitePairingSession.claimReceiver(owner)
+        SatelliteStatus.failed(owner, SatelliteReceiverFailure.KEY_MANAGER)
+        SatellitePairingSession.receiverStopped(owner, true, SatelliteStatus.failureFor(owner))
+        val replacement = SatelliteStatus.begin()
+        SatellitePairingSession.claimReceiver(replacement)
+        SatelliteStatus.failed(replacement, SatelliteReceiverFailure.LISTENER_BIND)
+        SatellitePairingSession.receiverStopped(replacement, true, SatelliteStatus.failureFor(replacement))
+        assertEquals(SatelliteReceiverFailure.KEY_MANAGER, SatellitePairingSession.snapshot()?.receiverFailure)
+        val controller = Robolectric.buildActivity(SatelliteSettingsActivity::class.java).setup()
+        try {
+            val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+            fun text(view: android.view.View): String = when (view) {
+                is android.widget.TextView -> view.text.toString()
+                is android.view.ViewGroup -> (0 until view.childCount).joinToString(" ") { text(view.getChildAt(it)) }
+                else -> ""
+            }
+            val description = text(dialog.window!!.decorView)
+            assertTrue(description.contains("[KEY_MANAGER]"))
+            assertFalse(description.contains("[LISTENER_BIND]"))
+        } finally { controller.pause().stop().destroy() }
+    }
+
     @Test fun `sampling during listener close does not mistake queued failure for expiry`() {
         val attempt = SatellitePairingSession.begin()
         val callbackEntered = CountDownLatch(1)

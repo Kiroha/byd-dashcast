@@ -671,4 +671,14 @@
     <string name="settings_roundabout_right">Right-hand traffic (France)</string>
     <string name="settings_roundabout_left">Left-hand traffic (United Kingdom)</string>
     <string name="settings_roundabout_help">Choose the traffic side, independently of steering-wheel position. This setting applies to the HUD and instrument cluster, with local or Satellite navigation. It preserves the exit number. Applied to the next received guidance update.</string>
+    <string name="satellite_failure_foreground">Android could not start the foreground receiver.</string>
+    <string name="satellite_failure_keystore">The Android certificate store could not be opened.</string>
+    <string name="satellite_failure_key_generation">The receiver certificate could not be created.</string>
+    <string name="satellite_failure_key_manager">The receiver certificate could not be loaded for TLS.</string>
+    <string name="satellite_failure_tls_context">The encrypted receiver could not be initialized.</string>
+    <string name="satellite_failure_listener_busy">The control listener could not bind its local port.</string>
+    <string name="satellite_failure_listener_permission">Android denied access to the receiver listener.</string>
+    <string name="satellite_failure_transport">The control listener could not start or stopped unexpectedly.</string>
+    <string name="satellite_failure_timeout">The receiver did not become ready within 20 seconds.</string>
+    <string name="satellite_failure_shutdown">The previous receiver could not be stopped.</string>
 </resources>

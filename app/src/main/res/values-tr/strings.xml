@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">Sağdan trafik (Fransa)</string>
     <string name="settings_roundabout_left">Soldan trafik (Birleşik Krallık)</string>
     <string name="settings_roundabout_help">Direksiyon konumundan bağımsız olarak trafik tarafını seçin. Bu ayar, yerel veya Satellite navigasyonu ile HUD ve gösterge paneline uygulanır. Çıkış numarası korunur. Alınan bir sonraki navigasyon güncellemesinde uygulanır.</string>
+    <string name="satellite_failure_foreground">Android alıcıyı ön planda başlatamadı.</string>
+    <string name="satellite_failure_keystore">Android sertifika deposu açılamadı.</string>
+    <string name="satellite_failure_key_generation">Alıcı sertifikası oluşturulamadı.</string>
+    <string name="satellite_failure_key_manager">Alıcı sertifikası TLS için yüklenemedi.</string>
+    <string name="satellite_failure_tls_context">Şifreli alıcı başlatılamadı.</string>
+    <string name="satellite_failure_listener_busy">Kontrol sunucusu yerel bağlantı noktasını açamadı.</string>
+    <string name="satellite_failure_listener_permission">Android alıcı sunucusuna erişimi reddetti.</string>
+    <string name="satellite_failure_transport">Kontrol sunucusu başlatılamadı veya beklenmedik şekilde durdu.</string>
+    <string name="satellite_failure_timeout">Alıcı 20 saniye içinde hazır olmadı.</string>
+    <string name="satellite_failure_shutdown">Önceki alıcı durdurulamadı.</string>
 </resources>

@@ -655,4 +655,14 @@
     <string name="settings_roundabout_right">O‘ng tomonlama harakat (Fransiya)</string>
     <string name="settings_roundabout_left">Chap tomonlama harakat (Buyuk Britaniya)</string>
     <string name="settings_roundabout_help">Rul joylashuvidan qat’i nazar harakat tomonini tanlang. Sozlama mahalliy yoki Satellite navigatsiyasida HUD va asboblar paneliga qo‘llanadi. Chiqish raqami saqlanadi. Keyingi olingan navigatsiya yangilanishida qo‘llanadi.</string>
+    <string name="satellite_failure_foreground">Android qabul qiluvchini oldingi rejimda ishga tushira olmadi.</string>
+    <string name="satellite_failure_keystore">Android sertifikatlar omborini ochib bo‘lmadi.</string>
+    <string name="satellite_failure_key_generation">Qabul qiluvchi sertifikatini yaratib bo‘lmadi.</string>
+    <string name="satellite_failure_key_manager">Qabul qiluvchi sertifikatini TLS uchun yuklab bo‘lmadi.</string>
+    <string name="satellite_failure_tls_context">Shifrlangan qabul qiluvchini ishga tushirib bo‘lmadi.</string>
+    <string name="satellite_failure_listener_busy">Boshqaruv serveri mahalliy portni ocha olmadi.</string>
+    <string name="satellite_failure_listener_permission">Android qabul qiluvchi serveriga kirishni rad etdi.</string>
+    <string name="satellite_failure_transport">Boshqaruv serveri ishga tushmadi yoki kutilmaganda to‘xtadi.</string>
+    <string name="satellite_failure_timeout">Qabul qiluvchi 20 soniya ichida tayyor bo‘lmadi.</string>
+    <string name="satellite_failure_shutdown">Oldingi qabul qiluvchini to‘xtatib bo‘lmadi.</string>
 </resources>

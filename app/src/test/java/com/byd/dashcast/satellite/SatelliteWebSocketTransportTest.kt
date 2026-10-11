@@ -83,7 +83,7 @@ class SatelliteWebSocketTransportTest {
                 }
                 override fun expired(session: String) = Unit
                 override fun disconnected(session: String) { status.disconnected(owner, session) }
-                override fun failed() { status.failed(owner) }
+                override fun failed(reason: SatelliteReceiverFailure) { status.failed(owner, reason) }
             })
         server = receiver
         receiver.isDaemon = true

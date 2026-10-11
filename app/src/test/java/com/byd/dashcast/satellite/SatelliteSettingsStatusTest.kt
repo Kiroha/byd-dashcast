@@ -102,6 +102,23 @@ class SatelliteSettingsStatusTest {
             R.string.satellite_guidance_expired)
     }
 
+    @Test fun `unavailable status exposes a finite reason and clears it after a real retry`() {
+        SatellitePrefs.setEnabled(context, true)
+        val owner = SatelliteStatus.begin()
+        val activity = open()
+        SatelliteStatus.failed(owner, SatelliteReceiverFailure.KEY_MANAGER)
+        SatelliteStatus.end(owner)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        val description = row(activity, R.id.satellite_connection_status).contentDescription.toString()
+        assertTrue(description.contains(activity.getString(R.string.satellite_failure_key_manager)))
+        assertTrue(description.contains("[KEY_MANAGER]"))
+        val retry = SatelliteStatus.begin()
+        SatelliteStatus.listening(retry)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertLabel(activity, R.id.satellite_connection_status, R.string.satellite_status_connection,
+            R.string.satellite_connection_waiting)
+    }
+
     @Test @Config(qualifiers = "night") fun `status icons use the night theme semantic palette`() {
         NavigationInputRouter.enableReceiver(context, true)
         val owner = SatelliteStatus.begin(); SatelliteStatus.connected(owner, "peer")

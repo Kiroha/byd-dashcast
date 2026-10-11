@@ -87,3 +87,12 @@
 -keepclassmembers class com.byd.dashcast.satellite.SatelliteVideoActivity$Bridge {
     @android.webkit.JavascriptInterface <methods>;
 }
+
+# Android 29 ART rejects the optimized server run() when R8 inlines this
+# synchronized timer startup and moves a field read outside its catch-all while
+# the monitor is held. Preserve this method's monitor/exception boundaries;
+# the rest of Java-WebSocket and the app remain eligible for optimization.
+# Validate the minified release on ART, since JVM/Robolectric cannot detect it.
+-keepclassmembers,allowobfuscation class org.java_websocket.AbstractWebSocket {
+    protected void startConnectionLostTimer();
+}

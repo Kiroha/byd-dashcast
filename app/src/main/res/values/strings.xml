@@ -711,4 +711,16 @@
     <string name="settings_roundabout_right">Circulation à droite (France)</string>
     <string name="settings_roundabout_left">Circulation à gauche (Royaume-Uni)</string>
     <string name="settings_roundabout_help">Choisissez le côté de circulation, indépendamment de la position du volant. Le réglage concerne le HUD et le combiné, avec le guidage local ou Satellite. Il conserve le numéro de sortie. Appliqué au prochain guidage reçu.</string>
+    <string name="satellite_failure_foreground">Android ne peut pas démarrer le récepteur au premier plan.</string>
+    <string name="satellite_failure_keystore">Le magasin de certificats Android ne peut pas être ouvert.</string>
+    <string name="satellite_failure_key_generation">Le certificat du récepteur ne peut pas être créé.</string>
+    <string name="satellite_failure_key_manager">Le certificat du récepteur ne peut pas être chargé pour TLS.</string>
+    <string name="satellite_failure_tls_context">Le récepteur chiffré ne peut pas être initialisé.</string>
+    <string name="satellite_failure_listener_busy">Le serveur de contrôle ne peut pas ouvrir son port local.</string>
+    <string name="satellite_failure_listener_permission">Android refuse l’accès au serveur du récepteur.</string>
+    <string name="satellite_failure_transport">Le serveur de contrôle ne démarre pas ou s’arrête de manière inattendue.</string>
+    <string name="satellite_failure_timeout">Le récepteur ne devient pas prêt sous 20 secondes.</string>
+    <string name="satellite_failure_shutdown">Le récepteur précédent ne peut pas être arrêté.</string>
+    <string name="satellite_status_detail" translatable="false">%1$s\n%2$s</string>
+    <string name="satellite_failure_code" translatable="false">%1$s [%2$s]</string>
 </resources>

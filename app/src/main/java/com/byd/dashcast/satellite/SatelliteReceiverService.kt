@@ -63,7 +63,7 @@ class SatelliteReceiverService : Service() {
         pairingNotice = SatellitePairingSession.snapshot() != null
         try { startForeground(NOTIFICATION, receiverNotification(pairingNotice)) }
         catch (e: Exception) {
-            SatelliteStatus.failed(statusOwner)
+            SatelliteStatus.failed(statusOwner, SatelliteReceiverFailure.FOREGROUND)
             destroyed = true
             AppLogger.w("Satellite", "foreground unavailable: ${e.javaClass.simpleName}")
             stopSelf()
@@ -98,7 +98,7 @@ class SatelliteReceiverService : Service() {
             if (intent?.action == RELOAD) {
                 server?.beginShutdown()
                 try { server?.stop(500) } catch (_: Exception) {
-                    SatelliteStatus.failed(statusOwner)
+                    SatelliteStatus.failed(statusOwner, SatelliteReceiverFailure.SHUTDOWN)
                     stopSelf()
                     return@execute
                 }
@@ -148,8 +148,11 @@ class SatelliteReceiverService : Service() {
 
     private fun startFailed(owner: Long, stage: String, error: Throwable) {
         if (destroyed || owner != statusOwner) return
-        SatelliteStatus.failed(owner)
-        AppLogger.w("Satellite", "$stage: ${error.javaClass.simpleName}")
+        val reason = (error as? SatelliteTls.StartupFailure)?.reason
+            ?: SatelliteReceiverFailure.CONTROL_TRANSPORT
+        SatelliteStatus.failed(owner, reason)
+        val cause = if (error is SatelliteTls.StartupFailure) error.cause ?: error else error
+        AppLogger.w("Satellite", "$stage: ${reason.name} (${cause.javaClass.simpleName})")
         stopSelf()
     }
 
@@ -185,9 +188,9 @@ class SatelliteReceiverService : Service() {
             SatelliteStatus.disconnected(owner, session)
             clearGuidance(session, true)
         }
-        override fun failed() {
+        override fun failed(reason: SatelliteReceiverFailure) {
             if (destroyed || owner != statusOwner) return
-            SatelliteStatus.failed(owner)
+            SatelliteStatus.failed(owner, reason)
             stopSelf()
         }
     }
@@ -210,8 +213,8 @@ class SatelliteReceiverService : Service() {
     }
 
     override fun onDestroy() {
-        SatellitePairingSession.receiverStopped(statusOwner,
-            SatelliteStatus.snapshot(this).connection == SatelliteStatusTracker.Connection.UNAVAILABLE)
+        val reason = SatelliteStatus.failureFor(statusOwner)
+        SatellitePairingSession.receiverStopped(statusOwner, failed = reason != null, reason = reason)
         destroyed = true
         SatelliteStatus.end(statusOwner)
         notificationHandler.removeCallbacksAndMessages(null)

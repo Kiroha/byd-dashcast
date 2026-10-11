@@ -63,7 +63,7 @@ class SatelliteWebSocketServerTest {
             override fun navigation(session: String, frame: SatelliteProtocol.Navigation, receivedAtMs: Long) { frames.add(frame) }
             override fun expired(session: String) {}
             override fun disconnected(session: String) { disconnected.add(session); status.disconnected(owner, session) }
-            override fun failed() { failures++; status.failed(owner) }
+            override fun failed(reason: SatelliteReceiverFailure) { failures++; status.failed(owner, reason) }
         })
     }
 
@@ -191,6 +191,20 @@ class SatelliteWebSocketServerTest {
         val socket = Socket(); open(socket); hello(socket)
         server.beginShutdown(); update(socket)
         assertTrue(socket.closed); assertTrue(frames.isEmpty()); assertEquals(1, disconnected.size)
+    }
+
+    @Test fun `bind failure reports a finite local listener diagnostic`() {
+        server.onError(null, java.net.BindException("private transport detail"))
+        assertEquals(SatelliteReceiverFailure.LISTENER_BIND, status.snapshot(true, true, 0).failure)
+        assertFalse(status.snapshot(true, true, 0).toString().contains("private transport detail"))
+    }
+
+    @Test fun `listener permission failure is distinct from a connection TLS failure`() {
+        server.onError(Socket().socket, javax.net.ssl.SSLException("private client detail"))
+        assertEquals(0, failures)
+        assertNull(status.snapshot(true, true, 0).failure)
+        server.onError(null, SecurityException("private permission detail"))
+        assertEquals(SatelliteReceiverFailure.LISTENER_PERMISSION, status.snapshot(true, true, 0).failure)
     }
 
     @Test fun `a late failure from a stopped transport cannot terminate its replacement`() {
