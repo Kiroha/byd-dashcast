@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Musik im Kombiinstrument</string>
     <string name="settings_media_enabled">Musikinfos im Kombiinstrument anzeigen</string>
-    <string name="settings_media_help">Nur Apps auf diesem Tablet; Benachrichtigungszugriff erforderlich. Experimentell: im geparkten Fahrzeug testen. Unabhängig von der Navigation. Bei Störungen von Radio oder Bluetooth deaktivieren.</string>
+    <string name="settings_media_help">Nur Apps auf diesem Tablet; Benachrichtigungszugriff erforderlich. Experimentell: im geparkten Fahrzeug testen. Navigation im Kombiinstrument hat Vorrang; reine HUD-Navigation blendet Musik nicht aus. Bei Störungen von Radio oder Bluetooth deaktivieren.</string>
     <string name="media_bench_title">Musiktest im Kombiinstrument</string>
     <string name="media_bench_warning">Nur im geparkten Fahrzeug. Automatische Musikanzeige vor dem Test deaktivieren. Der Test kann den OEM-Musiktext ersetzen. Abbrechen versucht, den Test zu löschen, ohne die vorherige Audioquelle wiederherzustellen.</string>
     <string name="media_bench_parked">Ich bestätige, dass das Fahrzeug geparkt ist</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Musikausgabe nicht verfügbar oder Befehl abgelehnt</string>
     <string name="media_bench_cleared">✓ Löschbefehle akzeptiert; Kombiinstrument prüfen</string>
     <string name="media_bench_clear_failed">⚠ Löschen nicht bestätigt; Kombiinstrument und OEM-Audioquelle prüfen</string>
-    <string name="media_bench_busy">⚠ Automatische Musik deaktivieren und andere Tests beenden</string>
+    <string name="media_bench_busy">⚠ Automatische Musik deaktivieren, Navigation im Kombiinstrument stoppen und andere Tests beenden</string>
     <string name="media_bench_nothing">Keine Musikausgabe übernommen; keine Löschbefehle gesendet</string>
     <string name="satellite_tls_repair">Das Verbindungszertifikat wurde aktualisiert. Koppeln Sie DashSat erneut über „Gerät koppeln“. Deinstallieren Sie keine der Apps.</string>
 </resources>

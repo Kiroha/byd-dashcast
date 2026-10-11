@@ -5,8 +5,9 @@
 DashCast can optionally collect the title, artist and play/pause state supplied by local Android
 MediaSessions, then write the separate BYD instrument music properties. This does not identify
 songs from audio, inspect notification text, use accessibility heuristics or alter navigation
-payloads. The option is **off by default** and independent of HUD/cluster guidance destinations,
-local/Satellite navigation selection and the guidance watchdog.
+payloads. The option is **off by default**. Collection remains independent of navigation settings and input
+selection. Music presentation yields to accepted cluster guidance because this firmware places
+music and maneuver distance in the same text area. Windshield-HUD-only guidance does not hide music.
 
 The current application baseline is one native Kotlin/Views/XML app module, minSdk 28, targetSdk
 29 and compileSdk 36. Notification access to DashCast's existing
@@ -33,7 +34,7 @@ and validate it only with the vehicle parked. The card is translated in all 13 s
 and is not disabled by navigation being switched off.
 
 Diagnostics → HUD bench (DL3) → Cluster music test opens a translated, scrollable test
-dialog. Automatic music output must be disabled. A fresh explicit parked acknowledgement is
+dialog. Automatic music output and cluster guidance must be stopped. A fresh explicit parked acknowledgement is
 required for each test; it is user confirmation, not movement detection. The test sends the
 fixed benign `DashCast - DashCast test` title, sets playing and attempts cleanup after six seconds
 from acquisition. Cancel, dismissal or Activity destruction also releases the test. Production
@@ -107,9 +108,10 @@ With the vehicle parked, record model/ROM/API, actual grants/caller UID, return 
    pause, resume, app change, metadata loss, stop and source destruction.
 3. Test notification-access revoke/regrant, disable during the source delay, app/process restart and
    ACC off/on without opening the guidance UI.
-4. Confirm simultaneous music + Maps left/right/roundabout arrows and distances, plus navigation off
-   with music still enabled. Navigation expiry must not stop healthy music; media loss must not stop
-   healthy guidance.
+4. Confirm that accepted Maps cluster guidance clears music without masking its arrow/distance,
+   and that route close, source loss, expiry and destination changes permit a fresh media snapshot.
+   HUD-only guidance must keep music visible; media loss must not stop healthy guidance.
+   Track changes during suppression must resume the current track, never the previous cached title.
 5. Check OEM radio/Bluetooth/CarPlay source priority, recovery after disable and behavior after daemon
    replacement. Confirm OEM alerts and telltales remain visible.
 
@@ -150,3 +152,32 @@ session identity or exception message. SDK acceptance remains distinct from vehi
 Fields prefixed `last` are historical: they preserve the last observer failure or rejected
 output across successful recovery and cleanup. `outputStage`, `outputResult` and `sdkReturn`
 describe the most recent writer operation; `cleanupResult` is reported separately.
+
+
+### Shared cluster text area: guidance priority
+
+A vehicle report on 2026-10-11 confirmed music text rendering but showed it overlapping the
+maneuver distance. No supported music-position parameter is established in the inspected OEM
+contract. DashCast therefore gives accepted cluster guidance priority over music presentation.
+A setting, opened navigation session, successful CAN/HUD write or failed cluster delivery cannot
+start this priority gate. A later failed cluster update leaves it closed conservatively until
+the existing navigation stop, source-loss, expiry or destination-change path releases it. Same
+fresh guidance receipts continue to use the existing watchdog; no new route timer is introduced.
+
+Starting priority cancels pending media suffixes and queues one bounded cleanup through the
+existing serial writer, only for its acquired current Binder. The navigation thread does not
+wait for that SDK cleanup. A transaction already in flight cannot be cancelled, SDK acceptance
+does not prove physical clearing, and the previous OEM audio source is never guessed/restored.
+Music sessions remain observed while presentation is suppressed. Cleanup writes the cluster
+paused-state property; DashCast sends no Android media transport pause/play command.
+
+On release, presentation stays blocked until the MediaSession worker re-reads active sessions and
+current metadata. A revision ticket rejects obsolete resume results and callbacks from disabled,
+disconnected or destroyed collectors. Refresh requests are coalesced; there is no periodic
+media polling and no replay of the cached title. Source loss during suppression stays cleared.
+A diagnostic bench cannot acquire the writer while cluster guidance has priority. Bug reports
+include only the passive `clusterGuidanceSuppressed` boolean, with no route or music content.
+
+Static and JVM checks do not establish rendering/cleanup on every firmware. Validate the first
+frame, track changes while guiding, route end/expiry, HUD-only mode and OEM radio/Bluetooth
+coexistence on the target car before considering the overlap corrected in hardware.

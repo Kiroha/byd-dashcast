@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Música en el cuadro</string>
     <string name="settings_media_enabled">Mostrar información musical en el cuadro</string>
-    <string name="settings_media_help">Solo aplicaciones de esta tableta; requiere acceso a notificaciones. Experimental: probar con el vehículo estacionado. Independiente del guiado. Desactivar si interfiere con la radio o Bluetooth.</string>
+    <string name="settings_media_help">Solo aplicaciones de esta tableta; requiere acceso a notificaciones. Experimental: probar con el vehículo estacionado. El guiado en el cuadro tiene prioridad; el guiado solo en el HUD mantiene la música visible. Desactivar si interfiere con la radio o Bluetooth.</string>
     <string name="media_bench_title">Prueba de música en el cuadro</string>
     <string name="media_bench_warning">Solo con el vehículo estacionado. Desactive la música automática antes de la prueba. Puede sustituir el texto musical OEM. Cancelar intenta borrar la prueba sin restaurar la fuente de audio anterior.</string>
     <string name="media_bench_parked">Confirmo que el vehículo está estacionado</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Salida musical no disponible o comando rechazado</string>
     <string name="media_bench_cleared">✓ Comandos de borrado aceptados; compruebe el cuadro</string>
     <string name="media_bench_clear_failed">⚠ Borrado sin confirmar; compruebe el cuadro y la fuente de audio OEM</string>
-    <string name="media_bench_busy">⚠ Desactive la música automática y termine cualquier otra prueba</string>
+    <string name="media_bench_busy">⚠ Desactive la música automática, detenga el guiado del cuadro y termine cualquier otra prueba</string>
     <string name="media_bench_nothing">No se adquirió la salida musical; no se enviaron comandos de borrado</string>
     <string name="satellite_tls_repair">Se ha actualizado el certificado de conexión. Vuelve a vincular DashSat con «Vincular un dispositivo». No desinstales ninguna de las aplicaciones.</string>
 </resources>

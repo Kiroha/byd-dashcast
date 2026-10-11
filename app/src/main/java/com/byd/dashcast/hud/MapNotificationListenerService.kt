@@ -510,7 +510,10 @@ class MapNotificationListenerService : NotificationListenerService() {
             return null
         }
         val data = pending.data.let { HudNavigationData(iconId, distance, it.roadName,
-            it.remainingDistanceMeters, it.remainingTimeSeconds, it.etaHour, it.etaMinute) }
+            it.remainingDistanceMeters, it.remainingTimeSeconds, it.etaHour, it.etaMinute,
+            // Generic legacy CAN ids can disagree with the image's proven circulation.
+            // Preserve that evidence for native/AMap rendering; a forced traffic choice wins later.
+            if (refineRoundabout) image.roundaboutClockwise else it.roundaboutClockwiseOverride) }
         lastImageDecoded = true
         noteNavActivity(pending.sourcePackage, true)
         diagnostics.parsed()

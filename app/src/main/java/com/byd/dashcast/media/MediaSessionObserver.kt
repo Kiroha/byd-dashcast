@@ -28,6 +28,9 @@ internal class MediaSessionObserver(
     private val registered = LinkedHashMap<MediaSession.Token, Pair<MediaController, MediaController.Callback>>()
     private var selected: Any? = null
     private var activeListenerRegistered = false
+    private val snapshotLock = Any()
+    private var snapshotQueued = false
+    private var pendingSnapshot: ((ClusterMediaData?) -> Unit)? = null
     private val activeListener = MediaSessionManager.OnActiveSessionsChangedListener { sessions ->
         guarded { replace(sessions.orEmpty()) }
     }
@@ -43,7 +46,27 @@ internal class MediaSessionObserver(
         }
     }
 
-    private fun replace(controllers: List<MediaController>) {
+    /** Coalesced worker rescan: resume never replays an earlier metadata snapshot. */
+    fun refresh(snapshot: (ClusterMediaData?) -> Unit) {
+        synchronized(snapshotLock) {
+            if (closed.get()) return
+            pendingSnapshot = snapshot
+            if (snapshotQueued) return
+            snapshotQueued = true
+        }
+        handler.post {
+            val completion = synchronized(snapshotLock) {
+                snapshotQueued = false
+                pendingSnapshot.also { pendingSnapshot = null }
+            }
+            guarded {
+                val data = replace(checkNotNull(manager).getActiveSessions(component))
+                if (!closed.get()) completion?.invoke(data)
+            }
+        }
+    }
+
+    private fun replace(controllers: List<MediaController>): ClusterMediaData? {
         val bounded = controllers.take(32) // System/app input must not create an unbounded observer set.
         val tokens = bounded.map { it.sessionToken }.toSet()
         val iterator = registered.iterator()
@@ -70,11 +93,11 @@ internal class MediaSessionObserver(
             controller.registerCallback(callback, handler)
             registered[token] = controller to callback
         }
-        emit()
+        return emit()
     }
 
-    private fun emit() {
-        if (closed.get()) return
+    private fun emit(): ClusterMediaData? {
+        if (closed.get()) return null
         val candidates = registered.map { (token, pair) ->
             val controller = pair.first
             val metadata = controller.metadata
@@ -93,6 +116,7 @@ internal class MediaSessionObserver(
                 candidates.count { it.playback == MediaPlayback.PLAYING })
             changed(data)
         }
+        return data
     }
 
     private fun guarded(action: () -> Unit) {
@@ -106,6 +130,7 @@ internal class MediaSessionObserver(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        synchronized(snapshotLock) { pendingSnapshot = null }
         handler.post {
             if (activeListenerRegistered) try {
                 manager?.removeOnActiveSessionsChangedListener(activeListener)

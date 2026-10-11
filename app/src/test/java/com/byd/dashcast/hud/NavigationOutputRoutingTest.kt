@@ -15,6 +15,7 @@ import byd.fbs.naviInfo.NaviInfo
 import com.byd.dashcast.data.prefs.RoundaboutTrafficSide
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.data.prefs.ClusterPrefs
+import com.byd.dashcast.media.ClusterMediaCoordinator
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import com.byd.dashcast.system.CanBusController
@@ -85,9 +86,9 @@ class NavigationOutputRoutingTest {
             NavigationInputRouter.selectRemote(context, remote)
             if (remote) NavigationInputRouter.acquireRemote(context, "traffic-test")
             for ((side, expectedIcon, expectedAmap) in listOf(
-                Triple(RoundaboutTrafficSide.RIGHT, 28, 17),
-                Triple(RoundaboutTrafficSide.LEFT, 38, 11),
-                Triple(RoundaboutTrafficSide.SOURCE, 38, 11))) {
+                Triple(RoundaboutTrafficSide.RIGHT, 28, 11),
+                Triple(RoundaboutTrafficSide.LEFT, 38, 17),
+                Triple(RoundaboutTrafficSide.SOURCE, 38, 17))) {
                 ClusterPrefs.setRoundaboutTrafficSide(context, side)
                 val delivered = if (remote) NavigationInputRouter.updateRemote(context, "traffic-test",
                     NavigationInputRouter.remoteRevision(), raw) else NavigationInputRouter.updateLocal(context, raw)
@@ -116,9 +117,9 @@ class NavigationOutputRoutingTest {
         ClusterPrefs.setRoundaboutTrafficSide(context, RoundaboutTrafficSide.LEFT)
         assertTrue(HudController.updateNavigation(context, raw))
         assertEquals(19, daemon.simpleIcons.last())
-        assertEquals(11, decode(daemon.clusterFrames.last()).nextTurnIcon())
+        assertEquals(17, decode(daemon.clusterFrames.last()).nextTurnIcon())
         assertEquals(0, decode(daemon.clusterFrames.last()).roungAboutNum())
-        assertEquals(11, amapBroadcasts().last().getIntExtra("NEW_ICON", -1))
+        assertEquals(17, amapBroadcasts().last().getIntExtra("NEW_ICON", -1))
         ClusterPrefs.setRoundaboutTrafficSide(context, RoundaboutTrafficSide.SOURCE)
         assertTrue(HudController.updateNavigation(context, raw))
         assertEquals(17, decode(daemon.clusterFrames.last()).nextTurnIcon())
@@ -134,7 +135,7 @@ class NavigationOutputRoutingTest {
             val notification = navigationNotification("At the roundabout take the 4th exit in 200 m")
             service.onNotificationPosted(notification)
             awaitWriter(service)
-            assertEquals(11, decode(daemon.clusterFrames.last()).nextTurnIcon())
+            assertEquals(17, decode(daemon.clusterFrames.last()).nextTurnIcon())
             assertEquals(4, decode(daemon.clusterFrames.last()).roungAboutNum())
             val count = daemon.clusterFrames.size
             val lastUpdate = HudController::class.java.getDeclaredField("lastUpdateMs").apply { isAccessible = true }
@@ -147,7 +148,7 @@ class NavigationOutputRoutingTest {
             service.onNotificationPosted(notification)
             awaitWriter(service)
             assertEquals(count + 1, daemon.clusterFrames.size)
-            assertEquals(17, decode(daemon.clusterFrames.last()).nextTurnIcon())
+            assertEquals(11, decode(daemon.clusterFrames.last()).nextTurnIcon())
             assertEquals(4, decode(daemon.clusterFrames.last()).roungAboutNum())
             HudController.closeNavigation(context)
             val stoppedCount = daemon.clusterFrames.size
@@ -340,8 +341,10 @@ class NavigationOutputRoutingTest {
         val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
         val cases = listOf("ic_straight" to 9, "ic_u_turn" to 8, "ic_u_turn_mirrored" to 19,
             "ic_turn_slight_right_mirrored" to 4, "ic_turn_sharp_right" to 7,
-            "ic_roundabout_left" to 17, "ic_roundabout_right_mirrored" to 11,
-            "ic_roundabout_straight" to 17, "ic_place" to 15)
+            "ic_roundabout_left" to 11, "ic_roundabout_left_mirrored" to 17,
+            "ic_roundabout_right" to 11, "ic_roundabout_right_mirrored" to 17,
+            "ic_roundabout_straight" to 11, "ic_roundabout_straight_mirrored" to 17,
+            "ic_place" to 15)
         try {
             for ((name, icon) in cases) {
                 val bitmap = corpusIcon(name)
@@ -368,8 +371,8 @@ class NavigationOutputRoutingTest {
         select(hud = false, cluster = true)
         val service = Robolectric.buildService(MapNotificationListenerService::class.java).create().get()
         try {
-            for ((name, nativeIcon) in listOf("ic_roundabout_left" to 17,
-                    "ic_roundabout_left_mirrored" to 11)) {
+            for ((name, nativeIcon) in listOf("ic_roundabout_left" to 11,
+                    "ic_roundabout_left_mirrored" to 17)) {
                 val bitmap = corpusIcon(name)
                 try {
                     // The existing text parser alone misclassifies this generic exit as a ramp.
@@ -413,7 +416,7 @@ class NavigationOutputRoutingTest {
                 service.onNotificationPosted(imageNotification(bitmap, text))
                 awaitWriter(service)
                 val frame = decode(daemon.clusterFrames.last())
-                assertEquals(17, frame.nextTurnIcon())
+                assertEquals(11, frame.nextTurnIcon())
                 assertEquals(exit, frame.roungAboutNum())
             }
             assertEquals(3, daemon.clusterFrames.size)
@@ -445,6 +448,7 @@ class NavigationOutputRoutingTest {
             HudController::class.java.getDeclaredMethod("closeIfStale")
                 .apply { isAccessible = true }.invoke(HudController)
             assertTrue(HudController.isHudActive)
+            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             assertEquals(0, daemon.canCalls)
         } finally { service.onDestroy(); left.recycle(); right.recycle() }
     }
@@ -507,9 +511,11 @@ class NavigationOutputRoutingTest {
             HudController::class.java.getDeclaredMethod("closeIfStale")
                 .apply { isAccessible = true }.invoke(HudController)
             assertFalse(HudController.isHudActive)
+            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             service.onNotificationPosted(notification)
             awaitWriter(service)
             assertTrue(HudController.isHudActive)
+            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             assertEquals(listOf(1, 9, 1), daemon.clusterFrames.map { decode(it).naviState() })
         } finally { service.onDestroy(); bitmap.recycle() }
     }
@@ -582,10 +588,12 @@ class NavigationOutputRoutingTest {
 
         NavigationInputRouter.enableReceiver(context, false)
         assertFalse(HudController.isHudActive)
+            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         assertEquals(9, decode(daemon.clusterFrames.last()).naviState())
         assertTrue(NavigationInputRouter.updateLocal(context, frameAtDistance(100)))
         NavigationInputRouter.closeRemote(context, "new", true)
         assertTrue(HudController.isHudActive)
+            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         assertEquals(100, decode(daemon.clusterFrames.last()).curToSegmentDist())
     }
 
@@ -676,6 +684,30 @@ class NavigationOutputRoutingTest {
         assertEquals(160, decode(daemon.clusterFrames.last()).curToSegmentDist())
         assertEquals(0, daemon.canCalls)
         assertTrue(amapBroadcasts().isEmpty())
+    }
+
+    @Test
+    fun `only accepted cluster delivery takes music priority until existing close`() {
+        val music = ClusterMediaCoordinator.ownership
+        assertFalse(music.isGuidanceSuppressed())
+        select(hud = true, cluster = false)
+        assertTrue(HudController.updateNavigation(context, frame))
+        assertFalse("CAN acceptance is not cluster delivery", music.isGuidanceSuppressed())
+        select(hud = true, cluster = true)
+        daemon.failNextClusterSend = true
+        assertTrue("CAN still succeeds", HudController.updateNavigation(context, frame))
+        assertTrue(HudController.isHudActive)
+        assertFalse("An opened session is not cluster delivery", music.isGuidanceSuppressed())
+        assertTrue(HudController.updateNavigation(context, frameAtDistance(180)))
+        assertTrue(music.isGuidanceSuppressed())
+        daemon.failNextClusterSend = true
+        assertTrue(HudController.updateNavigation(context, frameAtDistance(160)))
+        assertTrue("Failed replacement cannot prove the old arrow disappeared", music.isGuidanceSuppressed())
+        select(hud = true, cluster = false)
+        HudController.refreshOutputPreferences(context)
+        assertFalse(music.isGuidanceSuppressed())
+        assertTrue(HudController.updateNavigation(context, frame))
+        assertFalse(music.isGuidanceSuppressed())
     }
 
     @Test
@@ -795,6 +827,7 @@ class NavigationOutputRoutingTest {
     fun `watchdog clears stale cluster-only guidance without touching HUD`() {
         select(hud = false, cluster = true)
         assertTrue(HudController.updateNavigation(context, frame))
+        assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         ShadowSystemClock.advanceBy(Duration.ofSeconds(13))
 
         HudController::class.java.getDeclaredMethod("closeIfStale").apply {
@@ -802,6 +835,7 @@ class NavigationOutputRoutingTest {
         }.invoke(HudController)
 
         assertFalse(HudController.isHudActive)
+            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         assertEquals(listOf(1, 9), daemon.clusterFrames.map { decode(it).naviState() })
         assertEquals(0, daemon.canCalls)
         assertTrue(amapBroadcasts().isEmpty())
@@ -843,10 +877,12 @@ class NavigationOutputRoutingTest {
             assertEquals(MapNotificationListenerService.NAV_NONE,
                 MapNotificationListenerService.recentNavStatus("waze"))
 
+            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             service.onNotificationRemoved(notification)
             awaitWriter(service)
             assertEquals(listOf(1, 9), daemon.clusterFrames.map { decode(it).naviState() })
             assertFalse(HudController.isHudActive)
+            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             assertEquals(0, daemon.canCalls)
             assertTrue(amapBroadcasts().isEmpty())
         } finally {

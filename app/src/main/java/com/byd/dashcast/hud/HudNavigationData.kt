@@ -19,7 +19,7 @@ class HudNavigationData(
     remainingTimeSeconds: Int?,
     etaHour: Int?,
     etaMinute: Int?,
-    // Local render-only override: never part of the source snapshot or Satellite protocol.
+    // Audited local image circulation or a render-only traffic choice; never a Satellite field.
     val roundaboutClockwiseOverride: Boolean? = null
 ) {
 

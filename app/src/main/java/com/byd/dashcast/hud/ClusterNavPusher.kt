@@ -65,10 +65,10 @@ object ClusterNavPusher {
     @Volatile private var enabled = false
     private var enabledProxy: IBinder? = null
 
-    /** CCW (counter-clockwise, "left") roundabout with a known exit index, 1..10 → cluster round_left_N. */
+    /** Logical CCW circulation, with an independently encoded exit index (1..10). */
     private val ROUNDABOUT_CCW =
         CanBusController.ICON_ROUNDABOUT_CCW_1_LAP..CanBusController.ICON_ROUNDABOUT_CCW_10_LAPS
-    /** CW (clockwise, "right") roundabout with a known exit index, 1..10 → cluster round_right_N. */
+    /** Logical CW circulation, with an independently encoded exit index (1..10). */
     private val ROUNDABOUT_CW =
         CanBusController.ICON_ROUNDABOUT_CW_1_LAP..CanBusController.ICON_ROUNDABOUT_CW_10_LAPS
 
@@ -83,8 +83,9 @@ object ClusterNavPusher {
      *  * 2 = turn_left · 3 = turn_right · 9 = straight (go-straight maneuver) · 20 = direct (stay on road)
      *  * 4/5 = bear left/right · 6/7 = sharp/rear left/right · 8 = U-turn LEFT · **19 = U-turn RIGHT**
      *  * 13 service_area · 14 toll_station · 15 destination · 16 tunnel
-     *  * 11 = enter_right_roundabout (CW) · 17 = enter_left_roundabout (CCW); when the exit index is
-     *    known (1..10) the firmware renders round_{right,left}_N from the separate `roungAboutNum`
+     *  * 11 = right-hand traffic / CCW · 17 = left-hand traffic / CW. The OEM resource names
+     *    `enter_right_roundabout` / `enter_left_roundabout` describe traffic side, not circulation.
+     *    When the exit index is known (1..10), the firmware selects its numbered glyph from `roungAboutNum`
      *    field — see [roundaboutExitNum], emitted alongside in [push].
      *
      * Two firmware-verified corrections vs. the old table: **id 0 is a NO-OP** (Navigation.qml keeps
@@ -111,21 +112,27 @@ object ClusterNavPusher {
         CanBusController.ICON_TOLLBOOTH        -> 14   // booth / gate
         CanBusController.ICON_DESTINATION      -> 15   // checkered finish flag
         CanBusController.ICON_TUNNEL           -> 16   // arch / portal
-        // Roundabout direction: left/CCW → 17 (enter_left), right/CW → 11 (enter_right). Exit index
-        // (round_{left,right}_N) goes through roungAboutNum, not the icon id.
+        // AmapService TURN_STRING 21..24 are right-hand traffic / CCW (CAN 15,18,20,22);
+        // 25..28 are left-hand traffic / CW (CAN 16,17,19,21). Do not infer circulation
+        // from legacy constant suffixes or the firmware's traffic-side resource names.
         CanBusController.ICON_ROUNDABOUT_3_4_LEFT,
+        CanBusController.ICON_ROUNDABOUT_1_4_RIGHT,
+        CanBusController.ICON_ROUNDABOUT_STRAIGHT_R,
+        CanBusController.ICON_ROUNDABOUT_R_TO_L  -> 11
         CanBusController.ICON_ROUNDABOUT_1_4_LEFT,
-        CanBusController.ICON_ROUNDABOUT_STRAIGHT_L -> 17
-        in ROUNDABOUT_CCW                      -> 17
-        in ROUNDABOUT_CW                       -> 11
-        in 15..44                              -> 11   // remaining roundabout entry variants → generic right
+        CanBusController.ICON_ROUNDABOUT_3_4_RIGHT,
+        CanBusController.ICON_ROUNDABOUT_STRAIGHT_L,
+        CanBusController.ICON_ROUNDABOUT_L_TO_R  -> 17
+        in ROUNDABOUT_CCW                      -> 11
+        in ROUNDABOUT_CW                       -> 17
+        in 23..24                             -> 11   // retain unconfirmed legacy variants
         else                                   -> 9    // unknown → straight, never a turn
     }
 
-    /** A render-only choice must not rewrite the legacy mapping used by source/automatic mode. */
+    /** An audited source image or explicit traffic choice supplies logical circulation. */
     fun toAmapIcon(bydIconId: Int, clockwiseOverride: Boolean?): Int =
         if (clockwiseOverride != null && (bydIconId in 15..22 || bydIconId in 25..44)) {
-            if (clockwiseOverride) 11 else 17
+            if (clockwiseOverride) 17 else 11
         } else toAmapIcon(bydIconId)
 
     /**

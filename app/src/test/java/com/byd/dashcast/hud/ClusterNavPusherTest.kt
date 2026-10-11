@@ -41,13 +41,27 @@ class ClusterNavPusherTest {
     }
 
     @Test
-    fun `roundabout direction — CCW is left(17), CW is right(11)`() {
-        assertEquals(17, ClusterNavPusher.toAmapIcon(CanBusController.ICON_ROUNDABOUT_CCW_1_LAP))
-        assertEquals(17, ClusterNavPusher.toAmapIcon(CanBusController.ICON_ROUNDABOUT_CCW_10_LAPS))
-        assertEquals(11, ClusterNavPusher.toAmapIcon(CanBusController.ICON_ROUNDABOUT_CW_1_LAP))
-        assertEquals(11, ClusterNavPusher.toAmapIcon(CanBusController.ICON_ROUNDABOUT_CW_10_LAPS))
-        assertEquals(17, ClusterNavPusher.toAmapIcon(CanBusController.ICON_ROUNDABOUT_1_4_LEFT))
-        assertEquals(11, ClusterNavPusher.toAmapIcon(CanBusController.ICON_ROUNDABOUT_1_4_RIGHT))
+    fun `numbered roundabouts match OEM traffic side and preserve every exit`() {
+        // Independent OEM evidence: AmapService TURN_STRING[11] = right-hand traffic,
+        // TURN_STRING[17] = left-hand traffic. Resource suffixes describe traffic side.
+        for (exit in 1..10) {
+            val ccw = 24 + exit
+            val cw = 34 + exit
+            assertEquals(11, ClusterNavPusher.toAmapIcon(ccw))
+            assertEquals(17, ClusterNavPusher.toAmapIcon(cw))
+            assertEquals(exit, ClusterNavPusher.roundaboutExitNum(ccw))
+            assertEquals(exit, ClusterNavPusher.roundaboutExitNum(cw))
+        }
+    }
+
+    @Test
+    fun `generic roundabouts follow OEM CAN pairs rather than legacy names`() {
+        // AmapService TURN_STRING 21..24 / 25..28 and TurnIdMapToCAN.
+        for (id in listOf(15, 18, 20, 22)) assertEquals(11, ClusterNavPusher.toAmapIcon(id))
+        for (id in listOf(16, 17, 19, 21)) assertEquals(17, ClusterNavPusher.toAmapIcon(id))
+        // These existing detour ids are not circulation-bearing roundabouts.
+        assertEquals(5, ClusterNavPusher.toAmapIcon(13))
+        assertEquals(4, ClusterNavPusher.toAmapIcon(14))
     }
 
     @Test
