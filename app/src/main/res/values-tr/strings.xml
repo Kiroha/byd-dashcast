@@ -672,6 +672,10 @@
     <string name="settings_media_help">Yalnızca bu tabletteki uygulamalar; bildirim erişimi gerekir. Deneysel: araç park halindeyken test edin. Navigasyondan bağımsızdır. Radyo veya Bluetooth etkilenirse kapatın.</string>
     <string name="media_bench_title">Gösterge müzik testi</string>
     <string name="media_bench_warning">Yalnızca park halindeki araçta. Testten önce otomatik müzik gösterimini kapatın. OEM müzik metninin yerini alabilir. İptal, önceki ses kaynağını geri yüklemeden testi temizlemeyi dener.</string>
+    <string name="media_bench_mode_reference">Sanatçı + başlık (referans)</string>
+    <string name="media_bench_mode_short">Kısa başlık: DashCast</string>
+    <string name="media_bench_mode_minimal">En kısa metin: DC</string>
+    <string name="media_bench_layout_help">Araç park halindeyken aynı yönlendirmeyle üç metni karşılaştırın. Daha kısa metin, temaya bağlı olarak müzik bloğunu sağa kaydırabilir; bu garanti edilmez. Bu test yönlendirmeyi değiştirmez.</string>
     <string name="media_bench_parked">Aracın park halinde olduğunu onaylıyorum</string>
     <string name="media_bench_send">Testi gönder</string>
     <string name="media_bench_waiting">… Komutlar gönderiliyor</string>

@@ -688,6 +688,10 @@
     <string name="settings_media_help">Apps on this tablet only; notification access required. Experimental: test while parked. Independent of guidance. Disable if it interferes with radio or Bluetooth.</string>
     <string name="media_bench_title">Cluster music test</string>
     <string name="media_bench_warning">Parked vehicle only. Disable automatic music output before this test. It may replace OEM music text. Cancel attempts to clear the test without restoring the previous audio source.</string>
+    <string name="media_bench_mode_reference">Artist + title (reference)</string>
+    <string name="media_bench_mode_short">Short title: DashCast</string>
+    <string name="media_bench_mode_minimal">Minimal text: DC</string>
+    <string name="media_bench_layout_help">Compare all three texts while parked, with the same guidance. Shorter text may move the music block to the right depending on the theme; this is not guaranteed. This test does not change guidance.</string>
     <string name="media_bench_parked">I confirm the vehicle is parked</string>
     <string name="media_bench_send">Send test</string>
     <string name="media_bench_waiting">… Sending commands</string>

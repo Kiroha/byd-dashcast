@@ -3,6 +3,8 @@ package com.byd.dashcast.media
 import android.app.Application
 import android.os.Looper
 import android.widget.CheckBox
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -102,11 +104,78 @@ class MediaBenchDialogTest {
         assertTrue(transport.writes.isEmpty())
     }
 
+    @Test fun `reference comparison preserves the existing artist and title payload`() {
+        start(); scheduler.advance(50); idle()
+        assertEquals(listOf("source:11", "text:  DashCast - DashCast test  ", "state:1"), transport.writes)
+    }
+
+    @Test fun `short comparison sends title only through the unchanged music properties`() {
+        select(1)
+        start(); scheduler.advance(50); idle()
+        assertEquals(listOf("source:11", "text:  DashCast  ", "state:1"), transport.writes)
+    }
+
+    @Test fun `minimal comparison sends two letters through the unchanged music properties`() {
+        select(2)
+        start(); scheduler.advance(50); idle()
+        assertEquals(listOf("source:11", "text:  DC  ", "state:1"), transport.writes)
+    }
+
+    @Test fun `running comparison locks its choices and captures its payload before async output`() {
+        select(1)
+        start()
+        assertTrue(buttons().all { !it.isEnabled })
+        // Even an internal/programmatic selection change cannot rewrite this pending run.
+        select(2)
+        scheduler.advance(50); idle()
+        assertEquals("text:  DashCast  ", transport.writes[1])
+    }
+
+    @Test fun `cleanup acknowledgement unlocks choices and requires parked consent for each comparison`() {
+        select(1)
+        start(); scheduler.advance(50); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6))
+        assertTrue(buttons().all { !it.isEnabled })
+        assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+        scheduler.advance(); idle()
+        assertTrue(buttons().all { it.isEnabled })
+        assertFalse((field("parked") as CheckBox).isChecked)
+        assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+        select(2)
+        start(); scheduler.advance(50); idle()
+        assertEquals("text:  DC  ", transport.writes[transport.writes.lastIndex - 1])
+    }
+
+    @Test fun `closing a selected comparison before output invalidates every queued write`() {
+        select(2)
+        start()
+        bench.close()
+        scheduler.advance(1000); idle()
+        assertTrue(transport.writes.isEmpty())
+        assertTrue(ownership.acquire(Any()))
+    }
+
+    @Test fun `missing cleanup acknowledgement keeps comparison controls disabled`() {
+        select(2)
+        start(); scheduler.advance(50); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6))
+        // The release is queued but the writer/cleanup callback does not run.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        assertTrue(buttons().all { !it.isEnabled })
+        assertFalse((field("parked") as CheckBox).isEnabled)
+        assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+    }
+
     private fun start() {
         (field("parked") as CheckBox).isChecked = true
         assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
     }
     private fun field(name: String): Any = bench.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(bench)!!
+    private fun buttons(): List<RadioButton> {
+        val modes = field("modes") as RadioGroup
+        return (0 until modes.childCount).map { modes.getChildAt(it) as RadioButton }
+    }
+    private fun select(index: Int) { (field("modes") as RadioGroup).check(buttons()[index].id) }
     private fun idle() { shadowOf(Looper.getMainLooper()).idle() }
 }

@@ -5,6 +5,8 @@ import android.os.Looper
 import android.view.View
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -36,10 +38,30 @@ class MediaBenchDialog internal constructor(
         setText(R.string.media_bench_parked)
         minHeight = dp(64)
     }
+    private val modeButtons = listOf(
+        R.string.media_bench_mode_reference,
+        R.string.media_bench_mode_short,
+        R.string.media_bench_mode_minimal,
+    ).map { label ->
+        RadioButton(activity).apply {
+            id = View.generateViewId()
+            setText(label)
+            minHeight = dp(48)
+            layoutParams = RadioGroup.LayoutParams(
+                RadioGroup.LayoutParams.MATCH_PARENT, RadioGroup.LayoutParams.WRAP_CONTENT)
+        }
+    }
+    private val modes = RadioGroup(activity).apply {
+        orientation = RadioGroup.VERTICAL
+        modeButtons.forEach { addView(it) }
+        check(modeButtons.first().id)
+    }
     private val body = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(24), dp(8), dp(24), dp(8))
         addView(TextView(activity).apply { setText(R.string.media_bench_warning) })
+        addView(TextView(activity).apply { setText(R.string.media_bench_layout_help) })
+        addView(modes)
         addView(parked)
         addView(status)
         addView(cleanupStatus)
@@ -67,8 +89,16 @@ class MediaBenchDialog internal constructor(
                 }
                 acquired = true
                 val generation = ++runGeneration
+                // Capture the choice once. The OEM centers the combined icon/text group in
+                // some themes; shorter text may move it right, but this is a comparison only.
+                val (title, artist) = when (modes.checkedRadioButtonId) {
+                    modeButtons[1].id -> "DashCast" to ""
+                    modeButtons[2].id -> "DC" to ""
+                    else -> "DashCast test" to "DashCast"
+                }
                 send.isEnabled = false
                 parked.isEnabled = false
+                modeButtons.forEach { it.isEnabled = false }
                 status.setText(R.string.media_bench_waiting)
                 cleanupStatus.text = ""
                 // Independent wall-clock bound: a missing callback or blocked Binder must not
@@ -76,7 +106,7 @@ class MediaBenchDialog internal constructor(
                 // cancelled, but release invalidates every queued/delayed suffix immediately.
                 handler.postDelayed(deadline, 6000)
                 ownership.publish(token,
-                    ClusterMediaData(token, "DashCast test", "DashCast", true)) { result ->
+                    ClusterMediaData(token, title, artist, true)) { result ->
                     handler.post {
                         if (closed || !acquired || runGeneration != generation) return@post
                         status.setText(if (result == MediaWriteResult.ACCEPTED)
@@ -104,6 +134,7 @@ class MediaBenchDialog internal constructor(
                 if (!closed && runGeneration == generation) {
                     parked.isEnabled = true
                     parked.isChecked = false // Every new run requires a fresh parked acknowledgement.
+                    modeButtons.forEach { it.isEnabled = true }
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
                 }
             }

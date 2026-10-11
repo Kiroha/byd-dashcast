@@ -672,6 +672,10 @@
     <string name="settings_media_help">Solo app di questo tablet; serve accesso alle notifiche. Sperimentale: provare a veicolo parcheggiato. Indipendente dalla navigazione. Disattivare se interferisce con radio o Bluetooth.</string>
     <string name="media_bench_title">Test musica sul quadro</string>
     <string name="media_bench_warning">Solo a veicolo parcheggiato. Disattivare la musica automatica prima del test. Può sostituire il testo musicale OEM. Annullare tenta di cancellare il test senza ripristinare la sorgente audio precedente.</string>
+    <string name="media_bench_mode_reference">Artista + titolo (riferimento)</string>
+    <string name="media_bench_mode_short">Titolo breve: DashCast</string>
+    <string name="media_bench_mode_minimal">Testo minimo: DC</string>
+    <string name="media_bench_layout_help">Confronta i tre testi a veicolo parcheggiato, con le stesse indicazioni. Un testo più breve può spostare il blocco musicale a destra a seconda del tema; non è garantito. Questo test non modifica le indicazioni.</string>
     <string name="media_bench_parked">Confermo che il veicolo è parcheggiato</string>
     <string name="media_bench_send">Invia test</string>
     <string name="media_bench_waiting">… Invio comandi</string>

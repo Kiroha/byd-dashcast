@@ -172,3 +172,75 @@ Both examples use clipped music text and a looping marquee. Leading spaces would
 characters only temporarily and cannot reliably relocate the icon or reserve a separate
 area. The inspected music datasource exposes text/icon/play state/language, without a
 position handler. These extracted examples do not prove layout behavior on every vehicle.
+
+### Parked layout comparison: a shorter centered group
+
+Further inspection found a useful distinction: `MediaInfo.qml` centers the *combined icon
+and text group*, rather than giving the icon a fixed x coordinate. Reducing the measured
+text width can move the entire group, including its icon, to the right. This is an indirect
+layout effect, not a new OEM positioning command or a validated overlap fix.
+
+For the two extracted themes, the icon is 44 pixels wide with a 5-pixel gap. If the
+measured text width `C` fits below the clipping limit, both layouts yield:
+
+```text
+music icon left = 948.5 - C / 2
+music text left = 997.5 - C / 2
+```
+
+| Measured text width C, pixels | Icon left, pixels | Text left, pixels |
+| ---: | ---: | ---: |
+| 300 | 798.5 | 847.5 |
+| 150 | 873.5 | 922.5 |
+| 80 | 908.5 | 957.5 |
+| 40 | 928.5 | 977.5 |
+
+These values are QML coordinates, not coordinates measured in the user's photograph.
+The navigation arrow is 72 pixels wide; the distance starts at x=813 or x=827 depending
+on the theme. Consequently even a very short music title may still collide with a wide
+distance. For example, an 80-pixel distance starting at x=827 and a 12-pixel margin would
+require `C <= 59`; a 120-pixel distance leaves no positive text-width solution. Character
+counts cannot substitute for measured Qt font widths, and long-text marquee behavior is
+outside this unclipped-width formula.
+
+**Diagnostics → HUD Bench → Test music on cluster** now offers three benign comparisons:
+
+| Comparison | Title | Artist | Text sent by the existing encoder |
+| --- | --- | --- | --- |
+| Artist + title, reference | DashCast test | DashCast | `  DashCast - DashCast test  ` |
+| Short title | DashCast | Empty | `  DashCast  ` |
+| Minimal text | DC | Empty | `  DC  ` |
+
+Compare them while parked with the same existing guidance. Disable automatic music output
+before running this bench; the bench does not pause, replace or reconfigure navigation.
+Each run requires fresh parked acknowledgement, uses the unchanged three allowlisted music
+properties and encoder, and releases its ownership after at most six seconds. The choices
+are locked until cleanup acknowledgement. Closing the dialog invalidates queued output.
+SDK acceptance and cleanup acceptance still do not prove physical rendering or restoration
+of the preceding OEM source. Production session selection, metadata formatting and guidance
+remain unchanged; no automatic short-title mode or padding workaround is enabled.
+
+A second, conditional avenue is to reduce the width of the distance itself without changing
+its numeric value or unit: for example, `500 m` versus `500m`, or `2.0 km` versus `2.0km`.
+The inspected theme 1 `Navigation.qml` Latin branch (lines 53–59) displays the supplied
+distance text directly at a 48-pixel font size. Removing the space could reduce the required
+distance width and complement the shorter centered music group. This is only a future
+presentation hypothesis: this bench changes no navigation formatting, and any such experiment
+needs separate legibility and vehicle validation. The existing road-name field must continue
+to carry actual guidance rather than repurposed music metadata.
+
+Research provenance: `new_apk_extract/Dilink3/x2/00_header.txt` identifies BYD DiLink 3 /
+Android API 29 and the exporting DashCast build, but no exact model or firmware. The RCC
+archives are `cluster_theme1.rcc` (SHA-256
+`1096a4404e0f6f9ea7d62e07935a9b1eb9e4428eb805260f8bb88a370a62f7bb`) and
+`cluster_theme2.rcc` (SHA-256
+`42940e7c72530d45c0525556e440d640f5f08241e3b2bbd8cd6ff72c6e1451b4`). The relevant
+relations are in `MediaInfo.qml` lines 29–30 and 39–59 and `Navigation.qml` lines 192–196
+of the extracted themes. This is not positive identification of the user's SX361 layout.
+
+The current DL3 `com.byd.clusterdebug.apk`, also present in the 2026-10-06 and 2026-10-07
+exports (SHA-256 `27f1892efeda90358bb8653cd03b42ea4a23a46198fa8687dd5c6e283376b7d1`),
+was separately decompiled for `MainActivity` and `SecondActivity`. Their button dispatches
+send `sendInfo(1000, commandId, "")`; the inspected command lists contain no music x/y or
+position command. No factory/debug command, CAN frame, theme replacement or additional
+instrument property is sent by this comparison bench.

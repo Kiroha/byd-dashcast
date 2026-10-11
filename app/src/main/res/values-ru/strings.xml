@@ -672,6 +672,10 @@
     <string name="settings_media_help">Только приложения этого планшета; нужен доступ к уведомлениям. Экспериментально: проверяйте на стоянке. Независимо от навигации. Отключите при помехах радио или Bluetooth.</string>
     <string name="media_bench_title">Тест музыки на панели</string>
     <string name="media_bench_warning">Только в припаркованном автомобиле. Отключите автоматический вывод музыки перед тестом. Он может заменить музыкальный текст OEM. Отмена пытается очистить тест без восстановления прежнего источника звука.</string>
+    <string name="media_bench_mode_reference">Исполнитель + название (образец)</string>
+    <string name="media_bench_mode_short">Короткое название: DashCast</string>
+    <string name="media_bench_mode_minimal">Минимальный текст: DC</string>
+    <string name="media_bench_layout_help">Сравните три текста на стоянке при одинаковых указаниях навигации. Более короткий текст может сдвинуть музыкальный блок вправо в зависимости от темы; это не гарантируется. Тест не меняет указания навигации.</string>
     <string name="media_bench_parked">Подтверждаю, что автомобиль припаркован</string>
     <string name="media_bench_send">Отправить тест</string>
     <string name="media_bench_waiting">… Отправка команд</string>

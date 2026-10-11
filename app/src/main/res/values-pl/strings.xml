@@ -681,6 +681,10 @@
     <string name="settings_media_help">Tylko aplikacje na tym tablecie; wymagany dostęp do powiadomień. Funkcja eksperymentalna: testuj na postoju. Niezależna od nawigacji. Wyłącz, jeśli zakłóca radio lub Bluetooth.</string>
     <string name="media_bench_title">Test muzyki na wskaźnikach</string>
     <string name="media_bench_warning">Tylko w zaparkowanym pojeździe. Przed testem wyłącz automatyczne wyświetlanie muzyki. Test może zastąpić tekst OEM. Anulowanie próbuje usunąć test bez przywracania poprzedniego źródła dźwięku.</string>
+    <string name="media_bench_mode_reference">Wykonawca + tytuł (odniesienie)</string>
+    <string name="media_bench_mode_short">Krótki tytuł: DashCast</string>
+    <string name="media_bench_mode_minimal">Minimalny tekst: DC</string>
+    <string name="media_bench_layout_help">Porównaj trzy teksty na postoju, przy tych samych wskazówkach nawigacji. Krótszy tekst może przesunąć blok muzyki w prawo zależnie od motywu; nie jest to gwarantowane. Ten test nie zmienia wskazówek nawigacji.</string>
     <string name="media_bench_parked">Potwierdzam, że pojazd jest zaparkowany</string>
     <string name="media_bench_send">Wyślij test</string>
     <string name="media_bench_waiting">… Wysyłanie poleceń</string>

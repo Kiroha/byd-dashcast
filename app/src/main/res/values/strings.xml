@@ -730,6 +730,10 @@
     <string name="settings_media_help">Applications de cette tablette uniquement ; accès aux notifications requis. Expérimental : testez uniquement véhicule stationné. Indépendant du guidage. Désactivez si cela gêne la radio ou le Bluetooth.</string>
     <string name="media_bench_title">Test musique au combiné</string>
     <string name="media_bench_warning">Véhicule stationné uniquement. Désactivez l’affichage musical automatique avant ce test. Il peut remplacer le texte musical OEM. L’annulation tente d’effacer le test sans restaurer la source audio précédente.</string>
+    <string name="media_bench_mode_reference">Artiste + titre (référence)</string>
+    <string name="media_bench_mode_short">Titre court : DashCast</string>
+    <string name="media_bench_mode_minimal">Texte minimal : DC</string>
+    <string name="media_bench_layout_help">Comparez les trois textes une fois le véhicule stationné, avec le même guidage. Un texte plus court peut décaler le bloc musical vers la droite selon le thème ; ce n’est pas garanti. Ce test ne modifie pas le guidage.</string>
     <string name="media_bench_parked">Je confirme que le véhicule est stationné</string>
     <string name="media_bench_send">Envoyer le test</string>
     <string name="media_bench_waiting">… Envoi en cours</string>

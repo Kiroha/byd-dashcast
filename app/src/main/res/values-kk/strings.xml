@@ -672,6 +672,10 @@
     <string name="settings_media_help">Тек осы планшеттегі қолданбалар; хабарландыруларға рұқсат қажет. Тәжірибелік: көлік тұрақта тұрғанда тексеріңіз. Навигациядан тәуелсіз. Радио не Bluetooth жұмысына кедергі болса, өшіріңіз.</string>
     <string name="media_bench_title">Панельдегі музыка сынағы</string>
     <string name="media_bench_warning">Тек тұрақтағы көлікте. Сынақ алдында автоматты музыка көрсетуді өшіріңіз. Ол OEM музыка мәтінін алмастыруы мүмкін. Бас тарту бұрынғы аудио көзін қалпына келтірмей, сынақ мәтінін тазалауға тырысады.</string>
+    <string name="media_bench_mode_reference">Орындаушы + атау (үлгі)</string>
+    <string name="media_bench_mode_short">Қысқа атау: DashCast</string>
+    <string name="media_bench_mode_minimal">Ең қысқа мәтін: DC</string>
+    <string name="media_bench_layout_help">Көлік тұрақта тұрғанда, бірдей бағыттау нұсқауларымен үш мәтінді салыстырыңыз. Қысқа мәтін тақырыпқа қарай музыка блогын оңға жылжытуы мүмкін; бұған кепілдік жоқ. Бұл сынақ бағыттау нұсқауларын өзгертпейді.</string>
     <string name="media_bench_parked">Көліктің тұрақта тұрғанын растаймын</string>
     <string name="media_bench_send">Сынақты жіберу</string>
     <string name="media_bench_waiting">… Пәрмендер жіберілуде</string>
