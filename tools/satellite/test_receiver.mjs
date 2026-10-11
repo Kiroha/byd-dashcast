@@ -7,13 +7,14 @@ import vm from 'node:vm';
 const html = readFileSync(new URL('../../app/src/main/assets/satellite_receiver.html', import.meta.url), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
-function harness({supported = true, holdFirstOffer = false} = {}) {
+function harness({supported = true, holdFirstOffer = false, holdStats = false, omitFrames = false} = {}) {
   const peers = [], replies = [], intervals = new Map(), timeouts = new Map();
-  let timer = 0, now = 0, releaseFirst;
+  let timer = 0, now = 0, releaseFirst, releaseStats;
   const video = {srcObject: null, play: () => Promise.resolve()};
   const status = {style: {display: 'flex'}};
+  const metrics = {style: {display:'none'}, textContent:''};
   class Peer {
-    constructor(config) { this.config = config; this.ice = []; this.closed = false; this.frames = 0; peers.push(this); }
+    constructor(config) { this.config = config; this.ice = []; this.closed = false; this.frames = 0; this.statsCalls = 0; peers.push(this); }
     async setRemoteDescription(description) {
       if (holdFirstOffer && peers[0] === this) await new Promise(resolve => { releaseFirst = resolve; });
       this.remoteDescription = description;
@@ -21,11 +22,16 @@ function harness({supported = true, holdFirstOffer = false} = {}) {
     async createAnswer() { return {type: 'answer', sdp: 'test-answer'}; }
     async setLocalDescription(description) { this.localDescription = description; }
     async addIceCandidate(candidate) { this.ice.push(candidate); }
-    async getStats() { return new Map([['inbound', {type: 'inbound-rtp', kind: 'video', framesDecoded: this.frames}]]); }
+    async getStats() {
+      this.statsCalls++;
+      if (holdStats) await new Promise(resolve => { releaseStats = resolve; });
+      return new Map([['inbound', {type:'inbound-rtp', kind:'video', bytesReceived:now * 100,
+        timestamp:now, ...(omitFrames ? {} : {framesDecoded:this.frames})}]]);
+    }
     close() { this.closed = true; }
   }
   const context = vm.createContext({
-    window: {}, document: {getElementById: id => id === 'video' ? video : status},
+    window: {}, document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : status},
     MediaStream: class {constructor(tracks) { this.tracks = tracks; }},
     DashCastVideo: {ready: value => replies.push({ready: value}), send: (session, raw) => replies.push({session, ...JSON.parse(raw)})},
     performance: {now: () => now},
@@ -36,13 +42,14 @@ function harness({supported = true, holdFirstOffer = false} = {}) {
     ...(supported ? {RTCPeerConnection: Peer} : {}),
   });
   vm.runInContext(script, context);
-  return {context, peers, replies, video, status, intervals, timeouts,
+  return {context, peers, replies, video, status, metrics, intervals, timeouts,
     offer: (session = 'session', negotiation = 'first') => context.window.receiveSignal(session,
       JSON.stringify({type: 'video.offer', negotiation, sdp: 'test-offer'})),
     signal: (message, session = 'session') => context.window.receiveSignal(session, JSON.stringify(message)),
     reset: () => context.window.resetReceiver(),
     releaseFirst: () => releaseFirst(),
-    advance: async millis => { now = millis; for (const callback of [...intervals.values()]) await callback(); },
+    releaseStats: () => releaseStats(),
+    advance: async millis => { now = millis; for (const callback of [...intervals.values()]) callback(); await flush(); },
   };
 }
 async function flush() { for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve)); }
@@ -132,4 +139,58 @@ test('negotiation promises have a deadline and reset the viewer on timeout', asy
   await flush();
   assert.equal(h.peers[0].closed, true);
   assert.equal(h.replies.at(-1).code, 'negotiation_failed');
+});
+
+
+test('packet progress without decoded-frame evidence never preserves a frozen map', async () => {
+  const h = harness({omitFrames:true}); h.offer(); await flush();
+  await h.advance(1000); await h.advance(5000);
+  assert.equal(h.status.style.display, 'flex');
+  await h.advance(6001);
+  assert.equal(h.peers[0].closed, true);
+  assert.equal(h.replies.at(-1).code, 'video_timeout');
+});
+
+test('a hung getStats has one in-flight request and cannot postpone the six-second clear', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  await h.advance(1000); await h.advance(2000); await h.advance(5000);
+  assert.equal(h.peers[0].statsCalls, 1);
+  await h.advance(6001);
+  assert.equal(h.peers[0].closed, true);
+  assert.equal(h.video.srcObject, null);
+  h.offer('new', 'new'); await flush();
+  h.releaseStats(); await flush();
+  assert.equal(h.peers[1].closed, false);
+  assert.equal(h.status.style.display, 'flex');
+});
+
+test('actual video decoded counter can establish progress on older WebViews', async () => {
+  const h = harness({omitFrames:true}); h.offer(); await flush();
+  h.video.webkitDecodedFrameCount = 3;
+  await h.advance(1000);
+  assert.equal(h.status.style.display, 'none');
+  await h.advance(7001);
+  assert.equal(h.peers[0].closed, true);
+});
+
+test('metrics are opt-in and do not infer hardware decoding from codec or packets', async () => {
+  const h = harness(); h.offer(); await flush();
+  h.peers[0].frames = 3; await h.advance(1000);
+  assert.equal(h.metrics.style.display, 'none');
+  h.context.window.setMetricsVisible(true);
+  assert.equal(h.metrics.style.display, 'block');
+  assert.match(h.metrics.textContent, /efficient decoder unknown/);
+});
+
+
+test('frames dropped before decoding do not refresh presented-frame liveness', async () => {
+  const h = harness({omitFrames:true}); h.offer(); await flush();
+  h.video.getVideoPlaybackQuality = () => ({totalVideoFrames:10, droppedVideoFrames:10});
+  await h.advance(1000);
+  h.video.getVideoPlaybackQuality = () => ({totalVideoFrames:100, droppedVideoFrames:100});
+  await h.advance(5000);
+  assert.equal(h.status.style.display, 'flex');
+  await h.advance(6001);
+  assert.equal(h.peers[0].closed, true);
+  assert.equal(h.replies.at(-1).code, 'video_timeout');
 });
