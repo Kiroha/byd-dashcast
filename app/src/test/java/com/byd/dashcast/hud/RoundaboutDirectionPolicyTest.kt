@@ -22,7 +22,7 @@ class RoundaboutDirectionPolicyTest {
                 val exit = (input - 25) % 10 + 1
                 assertEquals((if (side == RoundaboutTrafficSide.LEFT) 34 else 24) + exit, rendered.iconId)
                 assertEquals(exit, ClusterNavPusher.roundaboutExitNum(rendered.iconId))
-                assertEquals(if (side == RoundaboutTrafficSide.LEFT) 11 else 17,
+                assertEquals(if (side == RoundaboutTrafficSide.LEFT) 17 else 11,
                     ClusterNavPusher.toAmapIcon(rendered.iconId, rendered.roundaboutClockwiseOverride))
                 assertEquals(input, data.iconId)
                 assertValues(data, rendered)
@@ -40,12 +40,12 @@ class RoundaboutDirectionPolicyTest {
             assertEquals(cw, left.iconId)
             assertEquals(0, ClusterNavPusher.roundaboutExitNum(right.iconId))
             assertEquals(0, ClusterNavPusher.roundaboutExitNum(left.iconId))
-            assertEquals(17, ClusterNavPusher.toAmapIcon(right.iconId, right.roundaboutClockwiseOverride))
-            assertEquals(11, ClusterNavPusher.toAmapIcon(left.iconId, left.roundaboutClockwiseOverride))
+            assertEquals(11, ClusterNavPusher.toAmapIcon(right.iconId, right.roundaboutClockwiseOverride))
+            assertEquals(17, ClusterNavPusher.toAmapIcon(left.iconId, left.roundaboutClockwiseOverride))
             assertValues(data, right)
             assertValues(data, left)
         }
-        // The old automatic table is unchanged even where its legacy suffixes disagree.
+        // Automatic mode follows audited circulation, regardless of legacy suffixes.
         assertEquals(17, ClusterNavPusher.toAmapIcon(16))
         assertEquals(17, ClusterNavPusher.toAmapIcon(19))
     }
@@ -56,6 +56,25 @@ class RoundaboutDirectionPolicyTest {
             for (side in RoundaboutTrafficSide.entries) assertSame(data, RoundaboutDirectionPolicy.apply(data, side))
             assertEquals(ClusterNavPusher.toAmapIcon(id), ClusterNavPusher.toAmapIcon(id, true))
             assertEquals(ClusterNavPusher.toAmapIcon(id), ClusterNavPusher.toAmapIcon(id, false))
+        }
+    }
+
+    @Test fun `source image circulation survives generic CAN names and explicit traffic wins`() {
+        for (icon in listOf(15, 16, 18, 19, 20)) for (clockwise in listOf(false, true)) {
+            val source = HudNavigationData(icon, 123, "Road", 456, 789, 12, 34, clockwise)
+            val automatic = RoundaboutDirectionPolicy.apply(source, RoundaboutTrafficSide.SOURCE)
+            assertSame(source, automatic)
+            assertEquals(if (clockwise) 17 else 11,
+                ClusterNavPusher.toAmapIcon(automatic.iconId, automatic.roundaboutClockwiseOverride))
+            for (side in listOf(RoundaboutTrafficSide.RIGHT, RoundaboutTrafficSide.LEFT)) {
+                val forced = RoundaboutDirectionPolicy.apply(source, side)
+                assertEquals(side == RoundaboutTrafficSide.LEFT, forced.roundaboutClockwiseOverride)
+                assertEquals(if (side == RoundaboutTrafficSide.RIGHT) 11 else 17,
+                    ClusterNavPusher.toAmapIcon(forced.iconId, forced.roundaboutClockwiseOverride))
+                assertEquals(0, ClusterNavPusher.roundaboutExitNum(forced.iconId))
+                assertEquals(clockwise, source.roundaboutClockwiseOverride)
+                assertEquals(icon, source.iconId)
+            }
         }
     }
 

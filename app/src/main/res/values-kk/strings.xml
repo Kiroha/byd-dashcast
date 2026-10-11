@@ -669,7 +669,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Аспаптар панеліндегі музыка</string>
     <string name="settings_media_enabled">Панельде музыка туралы ақпаратты көрсету</string>
-    <string name="settings_media_help">Тек осы планшеттегі қолданбалар; хабарландыруларға рұқсат қажет. Тәжірибелік: көлік тұрақта тұрғанда тексеріңіз. Навигациядан тәуелсіз. Радио не Bluetooth жұмысына кедергі болса, өшіріңіз.</string>
+    <string name="settings_media_help">Тек осы планшеттегі қолданбалар; хабарландыруларға рұқсат қажет. Тәжірибелік: көлік тұрақта тұрғанда тексеріңіз. Аспаптар панеліндегі навигация басымдыққа ие; тек HUD навигациясы музыканы жасырмайды. Радио не Bluetooth жұмысына кедергі болса, өшіріңіз.</string>
     <string name="media_bench_title">Панельдегі музыка сынағы</string>
     <string name="media_bench_warning">Тек тұрақтағы көлікте. Сынақ алдында автоматты музыка көрсетуді өшіріңіз. Ол OEM музыка мәтінін алмастыруы мүмкін. Бас тарту бұрынғы аудио көзін қалпына келтірмей, сынақ мәтінін тазалауға тырысады.</string>
     <string name="media_bench_parked">Көліктің тұрақта тұрғанын растаймын</string>
@@ -679,7 +679,7 @@
     <string name="media_bench_unavailable">⚠ Музыка шығысы қолжетімсіз немесе пәрмен қабылданбады</string>
     <string name="media_bench_cleared">✓ Тазалау пәрмендері қабылданды; панельді тексеріңіз</string>
     <string name="media_bench_clear_failed">⚠ Тазалау расталмады; панельді және OEM аудио көзін тексеріңіз</string>
-    <string name="media_bench_busy">⚠ Автоматты музыканы өшіріп, басқа сынақтарды аяқтаңыз</string>
+    <string name="media_bench_busy">⚠ Автоматты музыканы өшіріп, аспаптар панеліндегі навигацияны тоқтатыңыз және басқа сынақтарды аяқтаңыз</string>
     <string name="media_bench_nothing">Музыка шығысы алынбады; тазалау пәрмендері жіберілмеді</string>
     <string name="satellite_tls_repair">Қосылым сертификаты жаңартылды. «Құрылғыны жұптау» арқылы DashSat қолданбасын қайта жұптаңыз. Екі қолданбаны да жоймаңыз.</string>
 </resources>

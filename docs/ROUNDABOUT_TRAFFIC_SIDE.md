@@ -2,7 +2,7 @@
 
 DashCast Settings → Navigation guidance now includes three choices:
 
-- **Direction supplied by navigation**: default for existing installations; retains the source icon and every existing output mapping unchanged. This does not detect the country, traffic side or vehicle steering-wheel position.
+- **Direction supplied by navigation**: default for existing installations; retains the source icon and audited image circulation. This does not detect the country, traffic side or vehicle steering-wheel position.
 - **Right-hand traffic (France)**: counter-clockwise roundabout circulation.
 - **Left-hand traffic (United Kingdom)**: clockwise roundabout circulation.
 
@@ -14,13 +14,27 @@ Traffic side and steering-wheel position are independent. Configure the setting 
 
 The numbered CAN families 25–34 (CCW) and 35–44 (CW) change by ±10, preserving exit ordinals 1–10. The audited generic pairs 15/16 (left geometry), 18/17 (right geometry), 20/19 (straight), and 22/21 (U-turn) retain their geometry when a traffic side is forced. Generic icons retain exit ordinal zero.
 
-CAN names containing LEFT/RIGHT do not reliably identify circulation. The existing `ClusterNavPusher.toAmapIcon(Int)` mapping intentionally remains unchanged in source mode, including legacy IDs 16/19. The rendering copy carries an optional direction override used by the native NaviInfo and AMap broadcast mapping, so an already matching generic CAN icon still receives the explicitly selected output direction. That field never becomes a Satellite protocol field.
+CAN names containing LEFT/RIGHT do not reliably identify circulation. The native/AMap adapter
+uses **11 for right-hand traffic / counter-clockwise** and **17 for left-hand traffic / clockwise**.
+The firmware resource names `enter_right_roundabout` / `enter_left_roundabout` describe traffic
+side, not the direction around the circle. Their earlier interpretation was inverted.
+
+Source mode now maps audited generic CAN 15/18/20/22 to 11 and 16/17/19/21 to 17, and numbered
+CCW/CW families to 11/17. A decoded Maps image can supply explicit circulation even when its
+legacy generic CAN id has a misleading suffix. That evidence is carried in the existing optional
+local direction field; an explicit traffic choice overrides it. CAN geometry, numbered exit and
+Satellite wire values remain unchanged. The field never becomes a Satellite protocol field.
 
 IDs 23/24 have no confirmed circulation pair and are not emitted by the current parsers; they remain untouched. Other turns, arrivals, unknown IDs, distance values, route time, ETA and optional values remain unchanged. Source/session revisions, authentication, input selection, expiry, watchdog and stop semantics are unchanged. The preference observer invalidates notification identities and cancels queued frames without rescanning old notifications.
 
 ## Evidence and validation limits
 
-The pair table follows `docs/openbyd-2.5/OPENBYD_2_5_HUD_INTEROP.md:308–314`. Native cluster direction and ordinal mappings are already recorded in `ClusterNavPusher`. The CAN and native/AMap namespaces are distinct, and static/JVM tests do not prove identical physical HUD behavior on every firmware.
+The pair table follows `docs/openbyd-2.5/OPENBYD_2_5_HUD_INTEROP.md:308–314`. The corrected native direction table follows the locally extracted OEM
+`amap-smali/com/example/amapservice/AmapService.smali`: `TURN_STRING` entries 11 and 17 (lines
+130/136) explicitly distinguish right-side CCW and left-side CW traffic; entries 21–28 and
+`TurnIdMapToCAN` (lines 140–147/183–190) establish the generic CAN pairs. The source is retained
+under `new_apk_extract/telegram_20261006/` outside this application repository. Resource names
+alone were insufficient evidence for the earlier direction assumption. The CAN and native/AMap namespaces are distinct, and static/JVM tests do not prove identical physical HUD behavior on every firmware.
 
 Available earlier OEM evidence concerns a SEAL on DiLink 3 / Android 10 / API 29, SX361 firmware `6125f_1for2_USER_SIGN_SX361_202606100404_Q2700`, without a physical HUD. The new traffic-side choice still requires visual validation on the target vehicle, recording model, ROM/firmware, enabled destinations and chosen setting. No new OEM transport, permission or vehicle-control command is introduced.
 

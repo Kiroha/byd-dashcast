@@ -20,6 +20,8 @@ internal class MediaDiagnosticStore {
     private var rejectedSdk: Int? = null
     private var outputFailure = "NONE"
     private var cleanupResult = "NONE"
+    private var guidanceSuppressed = false
+    @Synchronized fun guidance(value: Boolean) { guidanceSuppressed = value }
     @Synchronized fun begin(): Long { epoch++; observer = "STARTING"; sessions = 0; usable = 0; playing = 0; selected = false; return epoch }
     @Synchronized fun generation() = epoch
     @Synchronized fun listener(value: Boolean) { listener = value }
@@ -55,7 +57,7 @@ internal class MediaDiagnosticStore {
     }
     @Synchronized fun summary(enabled: Boolean): String =
         "enabled=$enabled listenerConnected=$listener observer=$observer authorization=$authorization lastObserverFailure=$observerFailure " +
-        "sessions=$sessions usableSessions=$usable playingSessions=$playing selected=$selected failures=$failures retryDelayMs=$retryMs " +
+        "sessions=$sessions usableSessions=$usable playingSessions=$playing selected=$selected failures=$failures retryDelayMs=$retryMs clusterGuidanceSuppressed=$guidanceSuppressed " +
         "outputStage=$stage outputResult=$result cleanupResult=$cleanupResult sdkReturn=${sdk ?: "UNKNOWN"} lastOutputFailure=$outputFailure lastRejectedStage=$rejectedStage lastRejectedSdkReturn=${rejectedSdk ?: "UNKNOWN"} (acceptance is not render)"
 }
 
