@@ -20,7 +20,6 @@ class MediaReportTest {
         MediaDiagnostics.store.listener(true)
         MediaDiagnostics.store.collection(epoch, 2, 1, true)
         MediaDiagnostics.store.output("TEXT", -7)
-        MediaDiagnostics.store.guidance(true)
         val output = File(app.cacheDir, "media-report-test.txt")
         var produced: File? = null
         BugReportCapture.finish(app, output, null, object : BugReportCapture.Callback {
@@ -34,10 +33,8 @@ class MediaReportTest {
         assertTrue(section.contains("sessions=2 usableSessions=1 playingSessions=0 selected=true"))
         assertTrue(section.contains("outputStage=TEXT"))
         assertTrue(section.contains("sdkReturn=-7"))
-        assertTrue(section.contains("clusterGuidanceSuppressed=true"))
         MediaPrefs.setEnabled(app, false)
         MediaDiagnostics.store.stop()
-        MediaDiagnostics.store.guidance(false)
         output.delete()
     }
 }

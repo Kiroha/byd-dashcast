@@ -16,6 +16,9 @@ import com.byd.dashcast.data.prefs.RoundaboutTrafficSide
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.media.ClusterMediaCoordinator
+import com.byd.dashcast.media.ClusterMediaData
+import com.byd.dashcast.media.ClusterMediaProperties
+import com.byd.dashcast.media.MediaWriteResult
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import com.byd.dashcast.system.CanBusController
@@ -448,7 +451,6 @@ class NavigationOutputRoutingTest {
             HudController::class.java.getDeclaredMethod("closeIfStale")
                 .apply { isAccessible = true }.invoke(HudController)
             assertTrue(HudController.isHudActive)
-            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             assertEquals(0, daemon.canCalls)
         } finally { service.onDestroy(); left.recycle(); right.recycle() }
     }
@@ -511,11 +513,9 @@ class NavigationOutputRoutingTest {
             HudController::class.java.getDeclaredMethod("closeIfStale")
                 .apply { isAccessible = true }.invoke(HudController)
             assertFalse(HudController.isHudActive)
-            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             service.onNotificationPosted(notification)
             awaitWriter(service)
             assertTrue(HudController.isHudActive)
-            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             assertEquals(listOf(1, 9, 1), daemon.clusterFrames.map { decode(it).naviState() })
         } finally { service.onDestroy(); bitmap.recycle() }
     }
@@ -588,12 +588,10 @@ class NavigationOutputRoutingTest {
 
         NavigationInputRouter.enableReceiver(context, false)
         assertFalse(HudController.isHudActive)
-            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         assertEquals(9, decode(daemon.clusterFrames.last()).naviState())
         assertTrue(NavigationInputRouter.updateLocal(context, frameAtDistance(100)))
         NavigationInputRouter.closeRemote(context, "new", true)
         assertTrue(HudController.isHudActive)
-            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         assertEquals(100, decode(daemon.clusterFrames.last()).curToSegmentDist())
     }
 
@@ -687,27 +685,33 @@ class NavigationOutputRoutingTest {
     }
 
     @Test
-    fun `only accepted cluster delivery takes music priority until existing close`() {
-        val music = ClusterMediaCoordinator.ownership
-        assertFalse(music.isGuidanceSuppressed())
-        select(hud = true, cluster = false)
-        assertTrue(HudController.updateNavigation(context, frame))
-        assertFalse("CAN acceptance is not cluster delivery", music.isGuidanceSuppressed())
-        select(hud = true, cluster = true)
-        daemon.failNextClusterSend = true
-        assertTrue("CAN still succeeds", HudController.updateNavigation(context, frame))
-        assertTrue(HudController.isHudActive)
-        assertFalse("An opened session is not cluster delivery", music.isGuidanceSuppressed())
-        assertTrue(HudController.updateNavigation(context, frameAtDistance(180)))
-        assertTrue(music.isGuidanceSuppressed())
-        daemon.failNextClusterSend = true
-        assertTrue(HudController.updateNavigation(context, frameAtDistance(160)))
-        assertTrue("Failed replacement cannot prove the old arrow disappeared", music.isGuidanceSuppressed())
-        select(hud = true, cluster = false)
-        HudController.refreshOutputPreferences(context)
-        assertFalse(music.isGuidanceSuppressed())
-        assertTrue(HudController.updateNavigation(context, frame))
-        assertFalse(music.isGuidanceSuppressed())
+    fun `accepted cluster and HUD only guidance keep music output independent`() {
+        val ownership = ClusterMediaCoordinator.ownership
+        val token = Any()
+        assertTrue(ownership.acquire(token))
+        try {
+            for (cluster in listOf(true, false)) {
+                select(hud = true, cluster = cluster)
+                HudController.refreshOutputPreferences(context)
+                assertTrue(HudController.updateNavigation(context, frame))
+                val received = CountDownLatch(1)
+                var result: MediaWriteResult? = null
+                ownership.publish(token, ClusterMediaData("test", "Track $cluster", "", true)) {
+                    result = it
+                    received.countDown()
+                }
+                assertTrue("Music must complete while guidance is active", received.await(3, TimeUnit.SECONDS))
+                assertEquals(MediaWriteResult.ACCEPTED, result)
+                assertTrue(HudController.isHudActive)
+                assertEquals("text:  Track $cluster  ", daemon.mediaWrites[daemon.mediaWrites.lastIndex - 1])
+                assertEquals("state:1", daemon.mediaWrites.last())
+                if (cluster) assertEquals(1, decode(daemon.clusterFrames.last()).naviState())
+            }
+        } finally {
+            val cleared = CountDownLatch(1)
+            ownership.release(token) { cleared.countDown() }
+            assertTrue("Owned music cleanup must finish before removing Binder", cleared.await(3, TimeUnit.SECONDS))
+        }
     }
 
     @Test
@@ -827,7 +831,6 @@ class NavigationOutputRoutingTest {
     fun `watchdog clears stale cluster-only guidance without touching HUD`() {
         select(hud = false, cluster = true)
         assertTrue(HudController.updateNavigation(context, frame))
-        assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         ShadowSystemClock.advanceBy(Duration.ofSeconds(13))
 
         HudController::class.java.getDeclaredMethod("closeIfStale").apply {
@@ -835,7 +838,6 @@ class NavigationOutputRoutingTest {
         }.invoke(HudController)
 
         assertFalse(HudController.isHudActive)
-            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
         assertEquals(listOf(1, 9), daemon.clusterFrames.map { decode(it).naviState() })
         assertEquals(0, daemon.canCalls)
         assertTrue(amapBroadcasts().isEmpty())
@@ -877,12 +879,10 @@ class NavigationOutputRoutingTest {
             assertEquals(MapNotificationListenerService.NAV_NONE,
                 MapNotificationListenerService.recentNavStatus("waze"))
 
-            assertTrue(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             service.onNotificationRemoved(notification)
             awaitWriter(service)
             assertEquals(listOf(1, 9), daemon.clusterFrames.map { decode(it).naviState() })
             assertFalse(HudController.isHudActive)
-            assertFalse(ClusterMediaCoordinator.ownership.isGuidanceSuppressed())
             assertEquals(0, daemon.canCalls)
             assertTrue(amapBroadcasts().isEmpty())
         } finally {
@@ -1126,6 +1126,7 @@ class NavigationOutputRoutingTest {
         val containerModes = CopyOnWriteArrayList<Int>()
         val clusterFrames = CopyOnWriteArrayList<ByteArray>()
         val navigationCalls = CopyOnWriteArrayList<String>()
+        val mediaWrites = CopyOnWriteArrayList<String>()
         val callThreads = CopyOnWriteArrayList<String>()
         var onClusterFrame: (() -> Unit)? = null
 
@@ -1140,6 +1141,22 @@ class NavigationOutputRoutingTest {
             }
             response.writeNoException()
             when (code) {
+                ProxyDaemonContract.TXN_CAN_INSTRUMENT_INT -> {
+                    val property = data.readInt()
+                    val value = data.readInt()
+                    val name = when (property) {
+                        ClusterMediaProperties.SOURCE -> "source"
+                        ClusterMediaProperties.STATE -> "state"
+                        else -> error("Unexpected music integer property $property")
+                    }
+                    mediaWrites.add("$name:$value")
+                    response.writeInt(0)
+                }
+                ProxyDaemonContract.TXN_CAN_INSTRUMENT_BYTES -> {
+                    assertEquals(ClusterMediaProperties.TEXT, data.readInt())
+                    mediaWrites.add("text:" + requireNotNull(data.createByteArray()).toString(Charsets.UTF_16LE))
+                    response.writeInt(0)
+                }
                 ProxyDaemonContract.TXN_CAN_SETTING_INT -> {
                     canCalls++
                     data.readInt()

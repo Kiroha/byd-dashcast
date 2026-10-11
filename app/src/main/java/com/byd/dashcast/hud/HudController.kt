@@ -7,7 +7,6 @@ import android.util.Log
 
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.data.prefs.NavigationOutputs
-import com.byd.dashcast.media.ClusterMediaCoordinator
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
@@ -218,10 +217,6 @@ object HudController {
         val canFrameDelivered = activeDestinations.hud && updateCanNavigation(data)
         // push() owns cluster activation; neither CAN acceptance nor physical HUD presence gates it.
         val clusterGuidanceDelivered = activeDestinations.cluster && ClusterNavPusher.push(data)
-        // Music and distance share an OEM text area on the reported DL3 firmware. Only actual
-        // accepted cluster delivery claims priority; a HUD session, setting or CAN write does not.
-        // A failed subsequent frame cannot establish that the previous cluster arrow disappeared.
-        if (clusterGuidanceDelivered) ClusterMediaCoordinator.ownership.clusterGuidance(true)
         if (activeDestinations.useAmapBridge) sendAmapBroadcast(ctx, data)
         val delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered)
         if (delivered) lastUpdateMs = SystemClock.elapsedRealtime()
@@ -345,8 +340,6 @@ object HudController {
             isHudActive = false
             stopWatchdog()
             resetState()
-            // This is logical release after the existing stop attempt, not proof of physical clear.
-            ClusterMediaCoordinator.ownership.clusterGuidance(false)
         }
     }
 

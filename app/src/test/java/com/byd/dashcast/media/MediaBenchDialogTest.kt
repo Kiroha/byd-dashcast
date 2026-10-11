@@ -102,16 +102,6 @@ class MediaBenchDialogTest {
         assertTrue(transport.writes.isEmpty())
     }
 
-    @Test fun `cluster guidance rejects bench with a busy label and no SDK calls`() {
-        ownership.clusterGuidance(true)
-        start(); scheduler.advance(1000)
-        assertEquals(activity.getString(R.string.media_bench_busy), (field("status") as TextView).text.toString())
-        assertTrue(transport.writes.isEmpty())
-        assertFalse(ownership.acquire(Any()))
-        ownership.clusterGuidance(false)
-        assertTrue(ownership.acquire(Any()))
-    }
-
     private fun start() {
         (field("parked") as CheckBox).isChecked = true
         assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)

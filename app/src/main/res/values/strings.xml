@@ -727,7 +727,7 @@
     <!-- Local cluster media: independent opt-in and parked diagnostic. -->
     <string name="settings_media_title">Musique au combiné</string>
     <string name="settings_media_enabled">Afficher les infos musique au combiné</string>
-    <string name="settings_media_help">Applications de cette tablette uniquement ; accès aux notifications requis. Expérimental : testez uniquement véhicule stationné. Priorité au guidage du combiné ; le HUD seul ne masque pas la musique. Désactivez si cela gêne la radio ou le Bluetooth.</string>
+    <string name="settings_media_help">Applications de cette tablette uniquement ; accès aux notifications requis. Expérimental : testez uniquement véhicule stationné. Indépendant du guidage. Désactivez si cela gêne la radio ou le Bluetooth.</string>
     <string name="media_bench_title">Test musique au combiné</string>
     <string name="media_bench_warning">Véhicule stationné uniquement. Désactivez l’affichage musical automatique avant ce test. Il peut remplacer le texte musical OEM. L’annulation tente d’effacer le test sans restaurer la source audio précédente.</string>
     <string name="media_bench_parked">Je confirme que le véhicule est stationné</string>
@@ -737,7 +737,7 @@
     <string name="media_bench_unavailable">⚠ Récepteur musical indisponible ou commande refusée</string>
     <string name="media_bench_cleared">✓ Commandes d’effacement acceptées ; vérifiez le combiné</string>
     <string name="media_bench_clear_failed">⚠ Effacement non confirmé ; vérifiez le combiné et la source audio OEM</string>
-    <string name="media_bench_busy">⚠ Désactivez la musique automatique, arrêtez le guidage du combiné et terminez tout autre test</string>
+    <string name="media_bench_busy">⚠ Désactivez la musique automatique et terminez tout autre test</string>
     <string name="media_bench_nothing">Aucune sortie musicale acquise ; aucun effacement envoyé</string>
     <string name="satellite_tls_repair">Le certificat de connexion a été mis à jour. Associez à nouveau DashSat avec « Associer un appareil ». Ne désinstallez aucune application.</string>
 </resources>
