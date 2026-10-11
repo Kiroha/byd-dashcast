@@ -122,16 +122,16 @@ published version's archived mapping is preserved.
 ## Publication candidate
 
 The media feature and its recovery changes are committed separately from release preparation.
-The candidate is now **1.9.17-beta / versionCode 656**, documented in
-`docs/releases/1.9.17-beta.md`, together with the Android 10 Satellite ART startup and
-AndroidKeyStore TLS corrections. The release checks cover the full JVM suite, release lint,
-signed R8 assembly, relay/scanner tests and the trusted release-asset scanner. The stock
-Android 29 check uses the exact minified APK and matching mapping to verify real
-AndroidKeyStore migration, pinned TLS/WSS authentication and reconnection. It does not
-validate the vehicle's hardware-backed provider, hotspot routing or OEM music display.
-The new version uses its own mapping archive; published version archives remain unchanged.
-Physical OEM music rendering, radio/Bluetooth/CarPlay source priority and recovery remain
-unverified.
+The current dedicated comparison candidate is **1.9.18-beta / versionCode 657**,
+documented in `docs/releases/1.9.18-beta.md`. It retains the Android 10 Satellite
+ART/TLS and local media recovery changes from 1.9.17-beta and adds the three-format
+parked music comparison bench and corrected OEM roundabout circulation mapping.
+The release checks use the full JVM suite, release lint, signed R8 assembly,
+relay/scanner tests, the trusted release-asset scanner and the exact minified APK
+with matching mapping for the stock Android 29 TLS/WSS regression. These checks
+do not prove physical positioning, concurrent music/guidance rendering or vehicle
+hardware-backed provider compatibility. The new version has its own mapping archive;
+published archives remain unchanged. Shared-area overlap remains unresolved.
 
 ### Recovery and report diagnostics
 
