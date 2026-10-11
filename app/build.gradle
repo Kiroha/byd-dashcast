@@ -2017,8 +2017,8 @@ android {
         // Compare reference, short-title and minimal text in the parked diagnostic bench.
         // Keep production music visible during guidance and correct OEM roundabout
         // circulation families. Physical positioning and overlap remain unverified.)
-        versionCode 657
-        versionName "1.9.18-beta"
+        versionCode 658
+        versionName "1.9.19-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
