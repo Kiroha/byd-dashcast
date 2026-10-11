@@ -677,6 +677,10 @@
     <string name="settings_media_help">لتطبيقات هذا الجهاز اللوحي فقط؛ يلزم الوصول إلى الإشعارات. ميزة تجريبية: اختبرها والسيارة مركونة. مستقلة عن الملاحة. عطّلها إذا أثرت على الراديو أو Bluetooth.</string>
     <string name="media_bench_title">اختبار الموسيقى في لوحة العدادات</string>
     <string name="media_bench_warning">للسيارة المركونة فقط. عطّل عرض الموسيقى التلقائي قبل الاختبار. قد يستبدل نص الموسيقى الأصلي. يحاول الإلغاء مسح الاختبار دون استعادة مصدر الصوت السابق.</string>
+    <string name="media_bench_mode_reference">الفنان + العنوان (مرجع)</string>
+    <string name="media_bench_mode_short">عنوان قصير: DashCast</string>
+    <string name="media_bench_mode_minimal">نص مختصر: DC</string>
+    <string name="media_bench_layout_help">قارن النصوص الثلاثة والسيارة متوقفة مع إرشادات الملاحة نفسها. قد ينقل النص الأقصر كتلة الموسيقى إلى اليمين بحسب المظهر؛ هذا غير مضمون. لا يغيّر هذا الاختبار إرشادات الملاحة.</string>
     <string name="media_bench_parked">أؤكد أن السيارة مركونة</string>
     <string name="media_bench_send">إرسال الاختبار</string>
     <string name="media_bench_waiting">… جارٍ إرسال الأوامر</string>

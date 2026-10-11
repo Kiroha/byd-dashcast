@@ -672,6 +672,10 @@
     <string name="settings_media_help">Nur Apps auf diesem Tablet; Benachrichtigungszugriff erforderlich. Experimentell: im geparkten Fahrzeug testen. Unabhängig von der Navigation. Bei Störungen von Radio oder Bluetooth deaktivieren.</string>
     <string name="media_bench_title">Musiktest im Kombiinstrument</string>
     <string name="media_bench_warning">Nur im geparkten Fahrzeug. Automatische Musikanzeige vor dem Test deaktivieren. Der Test kann den OEM-Musiktext ersetzen. Abbrechen versucht, den Test zu löschen, ohne die vorherige Audioquelle wiederherzustellen.</string>
+    <string name="media_bench_mode_reference">Interpret + Titel (Referenz)</string>
+    <string name="media_bench_mode_short">Kurzer Titel: DashCast</string>
+    <string name="media_bench_mode_minimal">Minimaler Text: DC</string>
+    <string name="media_bench_layout_help">Vergleichen Sie die drei Texte im geparkten Fahrzeug bei gleicher Navigation. Kürzerer Text kann den Musikblock je nach Design nach rechts verschieben; das ist nicht garantiert. Dieser Test ändert die Navigation nicht.</string>
     <string name="media_bench_parked">Ich bestätige, dass das Fahrzeug geparkt ist</string>
     <string name="media_bench_send">Test senden</string>
     <string name="media_bench_waiting">… Befehle werden gesendet</string>
