@@ -686,4 +686,7 @@
     <string name="media_bench_busy">⚠ Otomatik müziği kapatın ve diğer testleri bitirin</string>
     <string name="media_bench_nothing">Müzik çıkışı alınmadı; temizleme komutları gönderilmedi</string>
     <string name="satellite_tls_repair">Bağlantı sertifikası güncellendi. «Cihaz eşleştir» ile DashSat uygulamasını yeniden eşleştirin. Uygulamaları kaldırmayın.</string>
+    <string name="satellite_video_loading">Video alıcısı hazırlanıyor…</string>
+    <string name="satellite_video_waiting">DashSat video paylaşımı bekleniyor…</string>
+    <string name="satellite_video_unavailable">Video alıcısı başlatılamadı. Yeniden deneyin veya bu görünümü kapatın.</string>
 </resources>

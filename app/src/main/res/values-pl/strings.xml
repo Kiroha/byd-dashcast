@@ -695,4 +695,7 @@
     <string name="media_bench_busy">⚠ Wyłącz automatyczną muzykę i zakończ inne testy</string>
     <string name="media_bench_nothing">Nie przejęto wyświetlania muzyki; nie wysłano poleceń usunięcia</string>
     <string name="satellite_tls_repair">Certyfikat połączenia został zaktualizowany. Sparuj ponownie DashSat za pomocą opcji „Sparuj urządzenie”. Nie odinstalowuj żadnej aplikacji.</string>
+    <string name="satellite_video_loading">Przygotowywanie odbiornika wideo…</string>
+    <string name="satellite_video_waiting">Oczekiwanie na transmisję wideo z DashSat…</string>
+    <string name="satellite_video_unavailable">Nie udało się uruchomić odbiornika wideo. Spróbuj ponownie lub zamknij ten widok.</string>
 </resources>

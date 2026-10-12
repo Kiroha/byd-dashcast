@@ -686,4 +686,7 @@
     <string name="media_bench_busy">⚠ Avtomatik musiqani o‘chiring va boshqa sinovlarni tugating</string>
     <string name="media_bench_nothing">Musiqa chiqishi olinmadi; tozalash buyruqlari yuborilmadi</string>
     <string name="satellite_tls_repair">Ulanish sertifikati yangilandi. «Qurilmani juftlash» orqali DashSat ilovasini qayta juftlang. Ilovalarni oʻchirmang.</string>
+    <string name="satellite_video_loading">Video qabul qilgich tayyorlanmoqda…</string>
+    <string name="satellite_video_waiting">DashSat video ulashishi kutilmoqda…</string>
+    <string name="satellite_video_unavailable">Video qabul qilgich ishga tushmadi. Qayta urinib ko‘ring yoki ushbu oynani yoping.</string>
 </resources>
