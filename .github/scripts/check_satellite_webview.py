@@ -9,8 +9,8 @@ import time
 import zipfile
 
 
-def run(argv, **kwargs):
-    return subprocess.run([str(item) for item in argv], check=True, text=True, timeout=90, **kwargs)
+def run(argv, check=True, timeout=90, **kwargs):
+    return subprocess.run([str(item) for item in argv], check=check, text=True, timeout=timeout, **kwargs)
 
 
 def main():
@@ -67,17 +67,32 @@ def main():
         try:
             run(adb + ["install", apk], capture_output=True)
             installed = True
-            run(adb + ["shell", "am", "start", "-n", package + "/.SatelliteWebViewProbeActivity"],
+            run(adb + ["shell", "am", "start", "-W", "-n", package + "/.SatelliteWebViewProbeActivity"],
                 capture_output=True)
             deadline = time.monotonic() + 45
+            pid_deadline = time.monotonic() + 5
             output = ""
             pid = ""
             while time.monotonic() < deadline:
                 if not pid:
-                    pid = run(adb + ["shell", "pidof", package], capture_output=True).stdout.strip()
+                    remaining = pid_deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise SystemExit("Fixture process startup deadline expired")
+                    try:
+                        result = run(adb + ["shell", "pidof", package], check=False,
+                            timeout=min(1, remaining), capture_output=True)
+                    except subprocess.TimeoutExpired:
+                        continue
+                    if result.returncode not in (0, 1):
+                        raise SystemExit("Unable to locate the fixture process")
+                    pid = result.stdout.strip() if result.returncode == 0 else ""
                     if not pid:
+                        if time.monotonic() >= pid_deadline:
+                            raise SystemExit("Fixture process startup deadline expired")
                         time.sleep(0.5)
                         continue
+                    if not pid.isascii() or not pid.isdigit():
+                        raise SystemExit("Invalid fixture process identifier")
                 # Read only this fixture process/tag. Do not clear or collect the application's logs.
                 output = run(adb + ["logcat", "-d", "-v", "brief", "--pid=" + pid, "SatelliteWebViewProbe:I", "*:S"],
                     capture_output=True).stdout
