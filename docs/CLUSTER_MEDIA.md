@@ -35,13 +35,15 @@ and is not disabled by navigation being switched off.
 Diagnostics → HUD bench (DL3) → Cluster music test opens a translated, scrollable test
 dialog. Automatic music output must be disabled. A fresh explicit parked acknowledgement is
 required for each test; it is user confirmation, not movement detection. The test sends the
-fixed benign `DashCast - DashCast test` title, sets playing and attempts cleanup after six seconds
+selected benign reference, short or minimal title, sets playing and attempts cleanup after six seconds
 from acquisition. Cancel, dismissal or Activity destruction also releases the test. Production
 and diagnostics share one output ownership gate and serial writer. If automatic output is enabled
 while the bench owns the channel, production waits for its release and then starts automatically.
 
 The dialog reports sending and cleanup separately. SDK acceptance does not establish visible
-rendering. No output acquired means no cleanup is sent. A missing or blocked write callback cannot
+rendering. The bench now probes the documented music STOP state to investigate the remaining icon;
+automatic output retains its existing paused cleanup pending vehicle validation. No output acquired
+means no cleanup is sent. A missing or blocked write callback cannot
 extend the ownership deadline, but an already executing Binder transaction cannot be cancelled.
 
 ## OEM contract and failure isolation
@@ -50,7 +52,7 @@ extend the ownership deadline, but an already executing Binder transaction canno
 | --- | --- | --- | --- |
 | Source | 1007 | `871366704` / `0x33F00030` | `11` (ONLINE) |
 | Text | 1007 | `1140527112` / `0x43FB1008` | Two spaces + artist/title + two spaces, UTF-16LE |
-| State | 1007 | `1138753546` / `0x43E0000A` | `1` playing; `2` paused |
+| State | 1007 | `1138753546` / `0x43E0000A` | `1` playing; `2` paused; `3` STOP, parked cleanup probe only |
 
 The media transport permits only these properties and values. It reuses the existing instrument
 int/byte daemon transactions with one captured, current Binder and **no retry or reconnect**.
@@ -90,6 +92,7 @@ left indefinitely. Source loss/disable clears four spaces and paused state only 
 still-current acquired Binder. The writer never reconnects just to clear, restores a guessed OEM
 source, or writes navigation/HUD enable/display-mode properties. A replaced/dead daemon or rejected
 cleanup is reported as unconfirmed; this cannot be fixed by pretending to know current OEM ownership.
+The separate parked STOP probe is described below; production pause/cleanup semantics remain unchanged.
 
 ## Remaining vehicle checks
 
@@ -173,12 +176,14 @@ characters only temporarily and cannot reliably relocate the icon or reserve a s
 area. The inspected music datasource exposes text/icon/play state/language, without a
 position handler. These extracted examples do not prove layout behavior on every vehicle.
 
-### Parked layout comparison: a shorter centered group
+### Parked layout comparison: a narrower centered group
 
 Further inspection found a useful distinction: `MediaInfo.qml` centers the *combined icon
 and text group*, rather than giving the icon a fixed x coordinate. Reducing the measured
-text width can move the entire group, including its icon, to the right. This is an indirect
-layout effect, not a new OEM positioning command or a validated overlap fix.
+text width narrows that group around the same center: its left edge moves right and its
+right edge moves left. It does **not** translate the group center. The vehicle comparison
+photographs supplied on 2026-10-12 show that all three formats remain centered. Shorter
+text has not established a right-aligned layout or resolved the shared-area overlap.
 
 For the two extracted themes, the icon is 44 pixels wide with a 5-pixel gap. If the
 measured text width `C` fits below the clipping limit, both layouts yield:
@@ -186,6 +191,8 @@ measured text width `C` fits below the clipping limit, both layouts yield:
 ```text
 music icon left = 948.5 - C / 2
 music text left = 997.5 - C / 2
+music text right = 997.5 + C / 2
+combined group center = 973
 ```
 
 | Measured text width C, pixels | Icon left, pixels | Text left, pixels |
@@ -214,10 +221,12 @@ outside this unclipped-width formula.
 Compare them while parked with the same existing guidance. Disable automatic music output
 before running this bench; the bench does not pause, replace or reconfigure navigation.
 Each run requires fresh parked acknowledgement, uses the unchanged three allowlisted music
-properties and encoder, and releases its ownership after at most six seconds. The choices
+properties and encoder, and releases its ownership after at most six seconds. Its experimental
+cleanup now sends the documented STOP value rather than PAUSED; this is a parked diagnostic
+probe, not an automatic production change or a verified positioning fix. The choices
 are locked until cleanup acknowledgement. Closing the dialog invalidates queued output.
 SDK acceptance and cleanup acceptance still do not prove physical rendering or restoration
-of the preceding OEM source. Production session selection, metadata formatting and guidance
+of the preceding OEM source. Production session selection, metadata formatting, paused cleanup and guidance
 remain unchanged; no automatic short-title mode or padding workaround is enabled.
 
 A second, conditional avenue is to reduce the width of the distance itself without changing
@@ -244,3 +253,47 @@ was separately decompiled for `MainActivity` and `SecondActivity`. Their button 
 send `sendInfo(1000, commandId, "")`; the inspected command lists contain no music x/y or
 position command. No factory/debug command, CAN frame, theme replacement or additional
 instrument property is sent by this comparison bench.
+
+### Parked stop probe: remaining music icon
+
+The 2026-10-12 photographs show the test text disappearing while its music icon remains.
+The existing cleanup sends four UTF-16LE spaces and `PAUSED=2`, which is a pause rather
+than a stop. The inspected OEM `BYDAutoInstrumentDevice.java` defines `MUSIC_STOP=3`
+(line 576); `sendMusicState` accepts states 0–3 (lines 1424–1430). State 3 therefore has
+a documented music meaning, without selecting a guessed radio/audio source.
+
+In the separate x2 `libBydDataSource.so`, `BusinessUi1::updateMediaInfoDisplay` at
+`0x11f490` reads the state and source properties above. States 1/2 enter its display
+branch at `0x11f660`; 0/3 bypass that branch and set data items `0x2b`/`0x2c` to zero
+at `0x11f968`–`0x11f988`. Their exact names are **not confirmed**: the extracted
+datasource item table has an index discrepancy. The native archive identifies DiLink 3 /
+API 29 but not the exact firmware. This supports a bounded diagnostic candidate,
+not a claim that STOP hides the icon on SX361 or the user's instrument firmware.
+
+Only the explicitly acknowledged parked bench acquires the STOP-probe cleanup mode.
+Automatic MediaSession output keeps its established PAUSED cleanup and fail-fast text
+clear behavior. Normal music pause remains state 2 and playback remains state 1.
+The bench mode is captured when SOURCE is accepted; a later release caller cannot
+change it. A new production acquisition replaces it with the production mode. Late or
+superseded cleanup suffixes cannot stop new automatic output.
+
+After timeout, cancellation, dismissal or a failed acquired bench write, the probe
+tries its existing blank text once, then STOP once while the captured Binder and
+generation are current. A text rejection or exception does not prevent that independent
+STOP attempt. Both commands must return zero for cleanup acceptance; either failure
+reports `CLEAR_FAILED`. There is no retry, reconnect, guessed SOURCE restoration,
+extra property, navigation write or Android player control. A failed cleanup remains
+reported on subsequent release without reissuing commands; a new accepted SOURCE
+resets that uncertainty.
+
+Reports retain `cleanupMode`, separate `clearTextResult`/`clearStateResult` classifications
+and their SDK return codes for the last acquired cleanup attempt. An accepted STOP
+does not conceal a rejected text clear or the original delivery failure. These scalar
+fields contain no title, artist, source identity or exception text. The translated dialog
+asks the tester to verify the physical disappearance of **both title and icon**.
+
+Required parked vehicle checks: compare timeout and cancellation; repeat the three
+formats after cleanup; confirm the next local music title still appears; check OEM
+radio/Bluetooth/phone coexistence and that navigation, alerts and telltales are unaffected.
+Only after confirming this rendering on the relevant firmware should STOP be considered
+for automatic cleanup. Music positioning remains unresolved.

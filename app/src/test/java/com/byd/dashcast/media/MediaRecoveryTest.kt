@@ -124,4 +124,54 @@ class MediaRecoveryTest {
         assertTrue(diagnostics.summary(true).contains("listenerConnected=false"))
     }
 
+    @Test fun `accepted probe stop does not conceal a rejected clear text in diagnostics`() {
+        val writer = ClusterMediaWriter(transport, scheduler, report = diagnostics::result,
+            diagnostic = diagnostics::output)
+        writer.publish(ClusterMediaData(Any(), "private title", "private artist", true), MediaCleanupMode.STOP_PROBE)
+        scheduler.advance(50); transport.rejectNextText = true
+        writer.publish(null, MediaCleanupMode.STOP_PROBE); scheduler.advance()
+        val summary = diagnostics.summary(false)
+        assertTrue(summary.contains("cleanupResult=CLEAR_FAILED cleanupMode=STOP_PROBE"))
+        assertTrue(summary.contains("clearTextResult=SDK_REJECTED clearTextSdkReturn=-1"))
+        assertTrue(summary.contains("clearStateResult=ACCEPTED clearStateSdkReturn=0"))
+        assertFalse(summary.contains("private"))
+    }
+
+    @Test fun `probe exception outcome contains no exception text and resets at the next acquired cleanup`() {
+        val writer = ClusterMediaWriter(transport, scheduler, report = diagnostics::result,
+            diagnostic = diagnostics::output)
+        writer.publish(ClusterMediaData(Any(), "title", "", true), MediaCleanupMode.STOP_PROBE)
+        scheduler.advance(50); transport.throwNextText = true
+        writer.publish(null, MediaCleanupMode.STOP_PROBE); scheduler.advance()
+        assertTrue(diagnostics.summary(false).contains("clearTextResult=TRANSPORT_EXCEPTION clearTextSdkReturn=UNKNOWN"))
+        writer.publish(ClusterMediaData(Any(), "next", "", true)); scheduler.advance(50)
+        writer.publish(null); scheduler.advance()
+        val summary = diagnostics.summary(false)
+        assertTrue(summary.contains("cleanupResult=CLEARED cleanupMode=PAUSE"))
+        assertTrue(summary.contains("clearTextResult=ACCEPTED clearTextSdkReturn=0"))
+        assertTrue(summary.contains("clearStateResult=ACCEPTED clearStateSdkReturn=0"))
+    }
+
+    @Test fun `probe failure diagnostics survive the subsequent owner release without reattempting`() {
+        val writer = ClusterMediaWriter(transport, scheduler, report = diagnostics::result,
+            diagnostic = diagnostics::output)
+        transport.rejectNextText = true
+        transport.afterWrite = {
+            if (transport.writes.last().startsWith("text:")) {
+                transport.afterWrite = null; transport.rejectNextState = true
+            }
+        }
+        writer.publish(ClusterMediaData(Any(), "private title", "", true), MediaCleanupMode.STOP_PROBE)
+        scheduler.advance(50)
+        var releaseResult: MediaWriteResult? = null
+        writer.publish(null, MediaCleanupMode.STOP_PROBE) { releaseResult = it }; scheduler.advance(10000)
+        assertEquals(MediaWriteResult.CLEAR_FAILED, releaseResult)
+        assertEquals(4, transport.writes.size)
+        val summary = diagnostics.summary(false)
+        assertTrue(summary.contains("cleanupResult=CLEAR_FAILED cleanupMode=STOP_PROBE"))
+        assertTrue(summary.contains("clearStateResult=SDK_REJECTED clearStateSdkReturn=-1"))
+        assertTrue(summary.contains("lastRejectedStage=TEXT lastRejectedSdkReturn=-1"))
+        assertFalse(summary.contains("private"))
+    }
+
 }

@@ -11,7 +11,7 @@ internal class ProxyClusterMediaTransport : ClusterMediaTransport {
 
     override fun integer(connection: Any, property: Int, value: Int): Int {
         require((property == ClusterMediaProperties.SOURCE && value == ClusterMediaProperties.ONLINE) ||
-            (property == ClusterMediaProperties.STATE && value in 1..2))
+            (property == ClusterMediaProperties.STATE && value in 1..3))
         return ProxyClient.canInstrumentIntOnCurrentBinder(connection as IBinder, property, value)
     }
 

@@ -5,28 +5,30 @@ import java.io.Closeable
 /** One process-wide owner and writer, shared by production and the explicitly acknowledged bench. */
 internal class MediaOutputOwnership(private val writer: () -> ClusterMediaWriter) {
     private var owner: Any? = null
+    private var cleanup = MediaCleanupMode.PAUSE
     private val availability = LinkedHashMap<Any, () -> Unit>()
 
-    @Synchronized fun acquire(token: Any): Boolean {
-        if (owner != null && owner !== token) return false
+    @Synchronized fun acquire(token: Any, mode: MediaCleanupMode = MediaCleanupMode.PAUSE): Boolean {
+        if (owner != null) return owner === token && cleanup == mode
         owner = token
+        cleanup = mode
         return true
     }
 
     @Synchronized fun publish(token: Any, data: ClusterMediaData,
                               result: ((MediaWriteResult) -> Unit)? = null) {
-        if (owner === token) writer().publish(data, result)
+        if (owner === token) writer().publish(data, cleanup, result)
     }
 
     @Synchronized fun sourceLost(token: Any) {
-        if (owner === token) writer().publish(null)
+        if (owner === token) writer().publish(null, cleanup)
     }
 
     fun release(token: Any, result: ((MediaWriteResult) -> Unit)? = null) {
         val callbacks = synchronized(this) {
             if (owner !== token) return
             owner = null
-            writer().publish(null, result)
+            writer().publish(null, cleanup, result)
             availability.values.toList()
         }
         // Production dispatches refresh to its main Handler: never hold this ownership lock while

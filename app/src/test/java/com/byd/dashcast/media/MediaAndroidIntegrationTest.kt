@@ -83,12 +83,24 @@ class MediaAndroidIntegrationTest {
         for (action in listOf<() -> Unit>(
             { transport.integer(binder, 0x43E0003A, 1) },
             { transport.integer(binder, ClusterMediaProperties.SOURCE, 12) },
+            { transport.integer(binder, ClusterMediaProperties.STATE, 0) },
+            { transport.integer(binder, ClusterMediaProperties.STATE, 4) },
+            { transport.bytes(binder, ClusterMediaProperties.TEXT, ByteArray(0)) },
             { transport.bytes(binder, ClusterMediaProperties.TEXT, ByteArray(255)) },
             { transport.bytes(binder, ClusterMediaProperties.TEXT, ByteArray(256)) },
             { transport.bytes(binder, 0x43F01030, ByteArray(8)) })) {
             try { action(); fail("Out-of-scope command") } catch (_: IllegalArgumentException) {}
         }
         assertTrue(binder.codes.isEmpty())
+    }
+
+    @Test fun `documented bench stop uses the existing state property and pinned integer verb`() {
+        val binder = RecordingBinder(); binderField.set(null, binder)
+        val transport = ProxyClusterMediaTransport()
+        assertEquals(0, transport.integer(binder, ClusterMediaProperties.STATE, ClusterMediaProperties.STOPPED))
+        assertEquals(listOf(ProxyDaemonContract.TXN_CAN_INSTRUMENT_INT), binder.codes)
+        assertEquals(listOf(ClusterMediaProperties.STATE), binder.properties)
+        assertEquals(listOf(3), binder.integers)
     }
 
     @Test fun `old binder cannot be replayed against its replacement`() {
@@ -115,10 +127,12 @@ class MediaAndroidIntegrationTest {
     private class RecordingBinder(private val throwRemote: Boolean = false) : Binder() {
         val codes = mutableListOf<Int>()
         val properties = mutableListOf<Int>()
+        val integers = mutableListOf<Int>()
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             codes += code
             data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
             properties += data.readInt()
+            if (code == ProxyDaemonContract.TXN_CAN_INSTRUMENT_INT) integers += data.readInt()
             if (throwRemote) throw RemoteException()
             reply!!.writeNoException()
             reply.writeInt(0)
