@@ -7,6 +7,27 @@ import org.junit.Test
 class RoundaboutDirectionPolicyTest {
     private fun frame(icon: Int) = HudNavigationData(icon, 123, "Road", 456, 789, 12, 34)
 
+    @Test fun `explicit generic circulation follows source or forced traffic without an invented exit`() {
+        for (direction in GenericRoundaboutDirection.entries) {
+            val data = HudNavigationData(-1, 123, "Road", 456, 789, 12, 34,
+                genericRoundaboutDirection = direction)
+            assertSame(data, RoundaboutDirectionPolicy.apply(data, RoundaboutTrafficSide.SOURCE))
+            for (side in RoundaboutTrafficSide.entries) {
+                val result = RoundaboutDirectionPolicy.apply(data, side)
+                val clockwise = when (side) {
+                    RoundaboutTrafficSide.LEFT -> true
+                    RoundaboutTrafficSide.RIGHT -> false
+                    RoundaboutTrafficSide.SOURCE -> direction == GenericRoundaboutDirection.CLOCKWISE
+                }
+                assertEquals(-1, result.iconId)
+                assertEquals(if (clockwise) 17 else 11, ClusterNavPusher.navigationIcon(result))
+                assertEquals(0, ClusterNavPusher.navigationExit(result))
+                assertValues(data, result)
+                assertEquals(direction, data.genericRoundaboutDirection)
+            }
+        }
+    }
+
     @Test fun `source mode preserves every raw snapshot by identity`() {
         for (icon in -1..50) {
             val data = frame(icon)

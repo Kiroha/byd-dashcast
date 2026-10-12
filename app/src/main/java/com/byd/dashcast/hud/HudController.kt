@@ -109,6 +109,8 @@ object HudController {
 
     /** Whether the DL3 adapter has issued its once-per-session start sequence. */
     private var legacyDl3SessionStarted = false
+    private var genericHudCleanupAttemptMs: Long? = null
+    private var amapBridgeStarted = false
 
     /** DL3 adapter with independently selectable CAN/HUD and AutoContainer/cluster destinations. */
     private val legacyDl3Output: HudOutput = object : HudOutput {
@@ -206,7 +208,8 @@ object HudController {
         // Preserve the previous behaviour of refreshing the retained process context on every
         // update; this is the context the shared watchdog uses for an eventual asynchronous stop.
         appContext = ctx.applicationContext
-        if (activeDestinations.hud) ensureLegacyDl3Active()
+        // CAN activation needs the maneuver semantics: an exit-less generic roundabout has
+        // no verified physical HUD representation. The supported update path starts CAN.
         return if (naviActiveAcked) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
     }
 
@@ -214,13 +217,47 @@ object HudController {
         ctx: Context,
         data: HudNavigationData
     ): HudOutputResult {
-        val canFrameDelivered = activeDestinations.hud && updateCanNavigation(data)
+        val genericRoundabout = data.genericRoundaboutDirection != null
+        val canFrameDelivered = if (activeDestinations.hud && !genericRoundabout) {
+            // A partial clear may have stopped the status before another register failed.
+            // The first supported frame re-arms activation once rather than trusting old state.
+            if (genericHudCleanupAttemptMs != null) lastActivationAttemptMs = NEVER_ATTEMPTED
+            genericHudCleanupAttemptMs = null
+            ensureLegacyDl3Active()
+            updateCanNavigation(data)
+        } else {
+            // Clear a previously owned physical maneuver before sending the current native
+            // cluster frame. Never stop AutoContainer/AMap here: they share the cluster output.
+            if (genericRoundabout) clearUnsupportedHudManeuver()
+            false
+        }
         // push() owns cluster activation; neither CAN acceptance nor physical HUD presence gates it.
         val clusterGuidanceDelivered = activeDestinations.cluster && ClusterNavPusher.push(data)
-        if (activeDestinations.useAmapBridge) sendAmapBroadcast(ctx, data)
+        // The OEM AMap bridge translates generic 11/17 to CAN detour icons. Native-only
+        // generic semantics must not reach that bridge or become guessed exit geometry.
+        if (activeDestinations.useAmapBridge && !genericRoundabout) sendAmapBroadcast(ctx, data)
         val delivered = frameDelivered(canFrameDelivered, clusterGuidanceDelivered)
         if (delivered) lastUpdateMs = SystemClock.elapsedRealtime()
         return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
+    }
+
+    private fun clearUnsupportedHudManeuver() {
+        if (!legacyDl3SessionStarted) return
+        val now = SystemClock.elapsedRealtime()
+        val previousAttempt = genericHudCleanupAttemptMs
+        if (previousAttempt != null && now - previousAttempt < ACTIVATION_RETRY_MS) return
+        genericHudCleanupAttemptMs = now
+        naviActiveAcked = false
+        resetState()
+        try {
+            CanBusController.setNaviActive(false)
+            legacyDl3SessionStarted = false
+            AppLogger.i(TAG, "unsupported generic HUD maneuver: prior CAN guidance clear accepted")
+        } catch (e: ProxyClient.ProxyException) {
+            // Retain attempted ownership and retry on fresh generic frames at a bounded rate.
+            // SDK failure leaves physical clear uncertain; never report it as successful.
+            AppLogger.w(TAG, "unsupported generic HUD maneuver: CAN clear uncertain (${e.javaClass.simpleName})")
+        }
     }
 
     private fun updateCanNavigation(data: HudNavigationData): Boolean {
@@ -337,6 +374,8 @@ object HudController {
         } finally {
             activeOutput = null
             activeDestinations = NavigationOutputs.NONE
+            genericHudCleanupAttemptMs = null
+            amapBridgeStarted = false
             isHudActive = false
             stopWatchdog()
             resetState()
@@ -357,7 +396,7 @@ object HudController {
             }
         }
         if (activeDestinations.cluster) ClusterNavPusher.stop()
-        if (activeDestinations.useAmapBridge) sendAmapStopBroadcast(ctx)
+        if (amapBridgeStarted) sendAmapStopBroadcast(ctx)
         return if (delivered) HudOutputResult.DELIVERED else HudOutputResult.NOT_DELIVERED
     }
 
@@ -620,6 +659,7 @@ object HudController {
                 intent.putExtra("ROUTE_REMAIN_TIME_STRING", NavigationTextFormatter.formatSeconds(remainingTime))
             }
             ctx.sendBroadcast(intent)
+            amapBridgeStarted = true
         } catch (e: Exception) {
             Log.e(TAG, "AMap broadcast failed", e)
         }

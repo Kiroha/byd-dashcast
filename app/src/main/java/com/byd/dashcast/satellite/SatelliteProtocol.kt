@@ -1,6 +1,7 @@
 package com.byd.dashcast.satellite
 
 import com.byd.dashcast.hud.HudNavigationData
+import com.byd.dashcast.hud.GenericRoundaboutDirection
 import com.byd.dashcast.system.CanBusController
 import org.json.JSONObject
 import java.net.InetAddress
@@ -27,6 +28,13 @@ object SatelliteProtocol {
         if (json.getString("type") == "navigation.stop") return Navigation(seq, age, null)
         require(json.getString("type") == "navigation.update")
         val maneuver = json.getString("maneuver")
+        val genericRoundabout = when (maneuver) {
+            "roundabout_generic_cw" -> GenericRoundaboutDirection.CLOCKWISE
+            "roundabout_generic_ccw" -> GenericRoundaboutDirection.COUNTERCLOCKWISE
+            else -> null
+        }
+        // Even explicit null is forbidden: generic means exit unknown, never zero/first exit.
+        if (genericRoundabout != null) require(!json.has("exit"))
         val icon = when (maneuver) {
             "left" -> CanBusController.ICON_TURN_LEFT
             "right" -> CanBusController.ICON_TURN_RIGHT
@@ -38,6 +46,7 @@ object SatelliteProtocol {
             "uturn_right" -> CanBusController.ICON_U_TURN_RIGHT
             "straight" -> CanBusController.ICON_STRAIGHT_SOLID
             "destination" -> CanBusController.ICON_DESTINATION
+            "roundabout_generic_cw", "roundabout_generic_ccw" -> -1
             "roundabout_cw", "roundabout_ccw" -> {
                 val exit = integer(json, "exit", 1, 10).toInt()
                 (if (maneuver == "roundabout_cw") CanBusController.ICON_ROUNDABOUT_CW_1_LAP
@@ -53,7 +62,8 @@ object SatelliteProtocol {
         return Navigation(seq, age, HudNavigationData(icon,
             integer(json, "distanceMeters", 0, 1_000_000).toInt(), road,
             optionalInteger(json, "remainingDistanceMeters", 0, 10_000_000),
-            optionalInteger(json, "remainingTimeSeconds", 0, 604_800), hour, minute))
+            optionalInteger(json, "remainingTimeSeconds", 0, 604_800), hour, minute,
+            genericRoundaboutDirection = genericRoundabout))
     }
 
     private fun optionalInteger(json: JSONObject, key: String, min: Long, max: Long): Int? =

@@ -127,6 +127,7 @@ class SatelliteWebSocketServerTest {
     @Test fun `authenticated guidance is validated and replayed sequences are refused`() {
         val socket = Socket(); open(socket); hello(socket)
         assertEquals("welcome", JSONObject(socket.messages.first()).getString("type"))
+        assertEquals(true, JSONObject(socket.messages.first()).get("genericRoundabouts"))
         update(socket, 1.5); update(socket, 1); update(socket, 1); update(socket, 2)
         assertEquals(listOf(1L, 2L), frames.map { it.sequence })
     }

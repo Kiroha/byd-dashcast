@@ -92,6 +92,7 @@ class SatelliteWebSocketServer(
                 sendBounded(conn, JSONObject().put("type", "welcome").put("version", SatelliteProtocol.VERSION)
                     .put("session", created.id).put("navigationTimeoutMs", SatelliteProtocol.NAV_TIMEOUT_MS)
                     .put("remoteGuidance", SatellitePrefs.usesRemoteGuidance(context))
+                    .put("genericRoundabouts", true)
                     .put("videoTransport", "webrtc").toString())
                 SatelliteVideoHub.connect(created.id) { sendBounded(conn, it) }
                 return

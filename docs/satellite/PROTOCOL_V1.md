@@ -69,12 +69,17 @@ the receiver certificate ID, while reinstalling DashCast changes it.
 Reply:
 
 ```json
-{"type":"welcome","version":1,"session":"<opaque id>","navigationTimeoutMs":6000,"remoteGuidance":false,"videoTransport":"webrtc"}
+{"type":"welcome","version":1,"session":"<opaque id>","navigationTimeoutMs":6000,"remoteGuidance":false,"genericRoundabouts":true,"videoTransport":"webrtc"}
 ```
 
 A busy receiver refuses another sender. Reconnect with backoff and a new WebSocket after failure.
 Version mismatch is refused. Unknown message types produce an error; unknown fields are ignored.
 Control heartbeat: `{"type":"ping"}` → `{"type":"pong"}`. Pings do **not** keep guidance alive.
+
+`genericRoundabouts` is an additive optional capability, scoped to this authenticated welcome.
+Only the literal Boolean `true` enables it. Missing, null, false, strings and numbers mean no
+support. Forget the capability on disconnect and every new connection attempt; never copy it
+from a saved profile or another session. Existing companions ignore this additional field.
 
 ## Guidance
 
@@ -107,6 +112,14 @@ Required fields: `type`, `seq`, `ageMs`, `maneuver`, `distanceMeters`.
   `uturn_right`, `straight`, `destination`, `roundabout_cw`, `roundabout_ccw`. The last two require
   integer `exit` 1–10. Directions mean circulation direction; the receiver maps portable values to
   its existing OEM codes. Never send CAN/SendInfo2 icon numbers.
+* When circulation is recognized but no exit is available, a receiver advertising
+  `genericRoundabouts:true` also accepts `roundabout_generic_cw` and `roundabout_generic_ccw`.
+  The `exit` field is **forbidden**, including null or zero. These represent circulation only:
+  never guess exit 1, exit geometry, handedness from a road name, or an OEM icon. An explicit
+  invalid, out-of-range or contradictory exit remains unsupported instead of becoming generic.
+  Senders talking to older receivers send `navigation.stop` with the observation's same sequence
+  and real source age, clearing the previous arrow until the next supported maneuver. Numbered
+  `roundabout_cw`/`roundabout_ccw` still require integer exit 1–10 with unchanged meaning.
 * `distanceMeters`: integer 0–1,000,000. Optional remaining distance: 0–10,000,000 m; remaining time:
   0–604,800 s. Numeric strings, fractions and booleans are rejected.
 * `roadName`: optional string, at most 160 UTF-16 units, no control characters.
@@ -117,6 +130,22 @@ seconds. If the source is unavailable or the maneuver cannot be recognized, do n
 The receiver clears after six seconds including source age, and on disconnect/source change. A
 queued snapshot must still meet the 1500 ms source-age budget when dispatched. Native output
 acceptance does not prove physical rendering; diagnostics and vehicle observation remain necessary.
+
+The DL3 native cluster path renders generic circulation as native 11/17 with exit 0; it preserves
+the actual maneuver distance. No verified generic physical CAN HUD icon exists. A generic frame
+does not start CAN, write a guessed physical icon, or enter the OEM AMap bridge (which translates
+11/17 to detour CAN icons). If DashCast previously opened CAN guidance, it attempts its existing
+narrow CAN clear **before** updating the native cluster. A failed clear stays uncertain and retries
+on fresh frames at the existing bounded cadence. This leaves the authenticated session, source
+freshness, cluster guidance and later supported turns intact. The AMap stop broadcast is not used
+for this transition because it also stops the cluster. Physical coexistence still needs parked
+validation on the owner's SEAL, Android 10 / DiLink 3, SX361 firmware; it is not inferred from tests.
+
+Bug reports include a passive `SATELLITE GUIDANCE` summary: current connection/guidance state,
+last accepted maneuver category, distance, exit-known flag, aggregate output acceptance and a
+fixed local clear reason. The last accepted input is historical after a stop/expiry; acceptance
+means at least one selected output accepted the frame, never proof of visible rendering. No
+session ID, credential, peer identity, notification or route text is included in this summary.
 
 Stop explicitly:
 

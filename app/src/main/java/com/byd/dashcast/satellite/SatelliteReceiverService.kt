@@ -36,8 +36,13 @@ class SatelliteReceiverService : Service() {
             if (data == null) {
                 SatelliteStatus.stopped(pending.statusOwner, pending.session)
                 NavigationInputRouter.closeRemote(applicationContext, pending.session)
-            } else NavigationInputRouter.updateRemote(applicationContext, pending.session, pending.inputRevision, data) {
-                SatelliteStatus.guidance(pending.statusOwner, pending.session, pending.receivedAtMs, pending.frame.ageMs)
+            } else {
+                var acceptedInput = false
+                val delivered = NavigationInputRouter.updateRemote(applicationContext, pending.session, pending.inputRevision, data) {
+                    acceptedInput = true
+                    SatelliteStatus.guidance(pending.statusOwner, pending.session, pending.receivedAtMs, pending.frame.ageMs, data)
+                }
+                if (acceptedInput) SatelliteStatus.outputAccepted(pending.statusOwner, pending.session, delivered)
             }
         }
     }

@@ -3,6 +3,8 @@ package com.byd.dashcast.satellite
 import android.app.Application
 import android.os.SystemClock
 import com.byd.dashcast.hud.HudNavigationData
+import com.byd.dashcast.data.prefs.ClusterPrefs
+import org.json.JSONObject
 import com.byd.dashcast.system.CanBusController
 import com.byd.dashcast.util.concurrent.LatestValueDispatcher
 import org.junit.After
@@ -64,6 +66,33 @@ class SatelliteReceiverStatusTest {
         assertEquals(SatelliteStatusTracker.Guidance.WAITING, SatelliteStatus.snapshot(context).guidance)
         events.disconnected("peer"); awaitWriter()
         assertEquals(SatelliteStatusTracker.Connection.WAITING, SatelliteStatus.snapshot(context).connection)
+    }
+
+    @Test fun `generic input traverses the real serial writer with passive privacy safe diagnostics`() {
+        ClusterPrefs.setNavigationHudEnabled(context, true)
+        ClusterPrefs.setNavigationClusterEnabled(context, false)
+        events.connected("private-peer-marker")
+        val generic = SatelliteProtocol.navigation(JSONObject().put("type", "navigation.update")
+            .put("seq", 1).put("ageMs", 0).put("maneuver", "roundabout_generic_ccw")
+            .put("distanceMeters", 40).put("roadName", "private-road-marker"))
+        events.navigation("private-peer-marker", generic, SystemClock.elapsedRealtime())
+        awaitWriter()
+        val summary = SatelliteStatus.summary(context)
+        assertTrue(summary.contains("guidance=ACTIVE"))
+        assertTrue(summary.contains("lastAcceptedKind=GENERIC_ROUNDABOUT"))
+        assertTrue(summary.contains("lastDistanceMeters=40"))
+        assertTrue(summary.contains("lastExitKnown=false"))
+        assertTrue(summary.contains("lastAnyOutputAccepted=false"))
+        assertFalse(summary.contains("private-road-marker"))
+        assertFalse(summary.contains("private-peer-marker"))
+        events.navigation("private-peer-marker", frame(2),
+            SystemClock.elapsedRealtime() - SatelliteProtocol.MAX_AGE_MS - 1)
+        awaitWriter()
+        assertEquals(summary, SatelliteStatus.summary(context))
+        events.navigation("private-peer-marker", generic.copy(sequence = 3, data = null), SystemClock.elapsedRealtime())
+        awaitWriter()
+        assertTrue(SatelliteStatus.summary(context).contains("clearReason=SOURCE_STOP"))
+        assertEquals(SatelliteStatusTracker.Guidance.WAITING, SatelliteStatus.snapshot(context).guidance)
     }
 
     @Test fun `obsolete queued guidance never becomes active and deselected source rejects current data`() {

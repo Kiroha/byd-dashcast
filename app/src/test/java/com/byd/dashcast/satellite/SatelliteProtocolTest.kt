@@ -2,6 +2,7 @@ package com.byd.dashcast.satellite
 
 import android.app.Application
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.hud.GenericRoundaboutDirection
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -40,6 +41,32 @@ class SatelliteProtocolTest {
         for (exit in listOf(0, 11)) rejects {
             SatelliteProtocol.navigation(frame().put("maneuver", "roundabout_cw").put("exit", exit))
         }
+    }
+
+    @Test fun `generic roundabouts carry circulation without a numbered or geometry CAN icon`() {
+        for ((maneuver, expected) in listOf("roundabout_generic_cw" to GenericRoundaboutDirection.CLOCKWISE,
+            "roundabout_generic_ccw" to GenericRoundaboutDirection.COUNTERCLOCKWISE)) {
+            val json = frame().put("maneuver", maneuver)
+            val data = SatelliteProtocol.navigation(json).data!!
+            assertEquals(-1, data.iconId)
+            assertEquals(expected, data.genericRoundaboutDirection)
+            assertEquals(200, data.distanceMeters)
+            for (exit in listOf(JSONObject.NULL, 0, 1, 10, 11, "1", true)) rejects {
+                SatelliteProtocol.navigation(json.put("exit", exit))
+            }
+        }
+    }
+
+    @Test fun `generic updates obey the same replay source age expiry and stop gates`() {
+        val gate = SatelliteNavigationGate()
+        val generic = SatelliteProtocol.navigation(frame().put("maneuver", "roundabout_generic_ccw").put("ageMs", 1500))
+        assertTrue(gate.accept(generic, 1000))
+        assertFalse(gate.accept(generic, 5000))
+        assertFalse(gate.expire(5499))
+        assertTrue(gate.expire(5500))
+        assertTrue(gate.accept(generic.copy(sequence = 2, data = null), 6000))
+        assertFalse(gate.expire(20_000))
+        assertTrue(gate.accept(SatelliteProtocol.navigation(frame().put("seq", 3)), 20_001))
     }
 
     @Test fun `numeric strings fractions and booleans are rejected instead of coerced`() {

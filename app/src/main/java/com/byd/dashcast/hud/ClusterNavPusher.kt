@@ -135,6 +135,16 @@ object ClusterNavPusher {
             if (clockwiseOverride) 17 else 11
         } else toAmapIcon(bydIconId)
 
+    /** Generic circulation is explicit and never falls through the unknown-CAN straight fallback. */
+    internal fun navigationIcon(data: HudNavigationData): Int = when (data.genericRoundaboutDirection) {
+        GenericRoundaboutDirection.CLOCKWISE -> 17
+        GenericRoundaboutDirection.COUNTERCLOCKWISE -> 11
+        null -> toAmapIcon(data.iconId, data.roundaboutClockwiseOverride)
+    }
+
+    internal fun navigationExit(data: HudNavigationData): Int =
+        if (data.genericRoundaboutDirection != null) 0 else roundaboutExitNum(data.iconId)
+
     /**
      * The roundabout exit index (1..10) encoded in the BYD icon id by [MapNotificationListenerService]
      * (CCW 25-34 / CW 35-44), or 0 when the maneuver is not a numbered roundabout. Emitted into the
@@ -194,7 +204,7 @@ object ClusterNavPusher {
                 naviState = NAVI_STATE_GUIDING,
                 nextRouteName = d.roadName,
                 curToSegmentDist = d.distanceMeters,
-                nextTurnIcon = toAmapIcon(d.iconId, d.roundaboutClockwiseOverride),
+                nextTurnIcon = navigationIcon(d),
                 routeRemainTime = d.remainingTimeSeconds ?: 0,
                 routeRemainDist = d.remainingDistanceMeters ?: 0,
                 // AmapService sends the formatted values alongside the numeric fields.
@@ -202,7 +212,7 @@ object ClusterNavPusher {
                 routrRemainDisAuto = distanceText(d.remainingDistanceMeters),
                 routrRemainTimeAuto = durationText(d.remainingTimeSeconds),
                 segRemainDisAuto = distanceText(d.distanceMeters),
-                roungAboutNum = roundaboutExitNum(d.iconId))
+                roungAboutNum = navigationExit(d))
             repeat(2) {
                 enable()
                 val sendingProxy = ProxyClient.getProxyDaemonBinder()

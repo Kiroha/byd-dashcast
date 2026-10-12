@@ -7,6 +7,12 @@ object RoundaboutDirectionPolicy {
     fun apply(data: HudNavigationData, side: RoundaboutTrafficSide): HudNavigationData {
         if (side == RoundaboutTrafficSide.SOURCE) return data
         val clockwise = side == RoundaboutTrafficSide.LEFT
+        if (data.genericRoundaboutDirection != null) {
+            return HudNavigationData(-1, data.distanceMeters, data.roadName,
+                data.remainingDistanceMeters, data.remainingTimeSeconds, data.etaHour, data.etaMinute,
+                genericRoundaboutDirection = if (clockwise) GenericRoundaboutDirection.CLOCKWISE
+                    else GenericRoundaboutDirection.COUNTERCLOCKWISE)
+        }
         val id = data.iconId
         val icon = when (id) {
             in 25..34 -> if (clockwise) id + 10 else id
