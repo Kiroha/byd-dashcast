@@ -79,6 +79,15 @@ or vehicle output. Use `--expect-broken` with the archived 1.9.19-beta APK to re
 original failures. Separately verify the actual optimized viewer's `video.ready`/`video.closed`
 with a synthetic local control client, including background/resume and reconnect.
 
+The corrected optimized viewer passed that separate stock-API-29 check: the client compared the
+peer certificate hash with the certificate read locally from the receiver's AndroidKeyStore
+before sending `hello`, then observed `welcome`, `video.ready`, background `video.closed`, resume
+`video.ready`, and a fresh reconnect. Disabling only the emulator's WebView provider produced a
+readable native error/retry screen; restoring it and pressing Try again recovered readiness.
+The software GPU fixture reported a Chromium font-raster error and did not paint HTML glyphs
+reliably in screenshots. Real DOM geometry and control readiness are established; rendered map
+pixels, hardware decoding and vehicle performance remain unverified by this bootstrap check.
+
 Test static scenes longer than a minute, changing frames, source Stop/revoke/lock, viewer closure,
 cluster projection loss, Wi-Fi loss, fresh consent sessions and guidance alongside video. Physical
 video/performance acceptance remains pending; software/emulator tests must not be reported as an
