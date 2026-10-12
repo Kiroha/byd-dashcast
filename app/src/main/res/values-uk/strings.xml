@@ -686,4 +686,7 @@
     <string name="media_bench_busy">⚠ Вимкніть автоматичну музику та завершіть інші тести</string>
     <string name="media_bench_nothing">Показ музики не отримано; команди очищення не надіслано</string>
     <string name="satellite_tls_repair">Сертифікат з’єднання оновлено. Повторно підключіть DashSat через «Сполучити пристрій». Не видаляйте застосунки.</string>
+    <string name="satellite_video_loading">Підготовка приймача відео…</string>
+    <string name="satellite_video_waiting">Очікування трансляції відео з DashSat…</string>
+    <string name="satellite_video_unavailable">Не вдалося запустити приймач відео. Спробуйте ще раз або закрийте перегляд.</string>
 </resources>

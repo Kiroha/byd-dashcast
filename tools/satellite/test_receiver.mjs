@@ -5,10 +5,10 @@ import {test} from 'node:test';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../../app/src/main/assets/satellite_receiver.html', import.meta.url), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
 
 function harness({supported = true, holdFirstOffer = false, holdStats = false, omitFrames = false} = {}) {
-  const peers = [], replies = [], intervals = new Map(), timeouts = new Map();
+  const peers = [], replies = [], intervals = new Map(), timeouts = new Map(), events = new Map();
   let timer = 0, now = 0, releaseFirst, releaseStats;
   const video = {srcObject: null, play: () => Promise.resolve()};
   const status = {style: {display: 'flex'}};
@@ -31,9 +31,11 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     close() { this.closed = true; }
   }
   const context = vm.createContext({
-    window: {}, document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : status},
+    window: {addEventListener: (type, listener) => events.set(type, listener)},
+    document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : status},
     MediaStream: class {constructor(tracks) { this.tracks = tracks; }},
-    DashCastVideo: {ready: value => replies.push({ready: value}), send: (session, raw) => replies.push({session, ...JSON.parse(raw)})},
+    DashCastVideo: {ready: value => replies.push({ready: value}), failed: code => replies.push({failed: code}),
+      send: (session, raw) => replies.push({session, ...JSON.parse(raw)})},
     performance: {now: () => now},
     setInterval: callback => { intervals.set(++timer, callback); return timer; },
     clearInterval: id => intervals.delete(id),
@@ -41,8 +43,8 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     clearTimeout: id => timeouts.delete(id),
     ...(supported ? {RTCPeerConnection: Peer} : {}),
   });
-  vm.runInContext(script, context);
-  return {context, peers, replies, video, status, metrics, intervals, timeouts,
+  for (const script of scripts) vm.runInContext(script, context);
+  return {context, peers, replies, video, status, metrics, intervals, timeouts, events,
     offer: (session = 'session', negotiation = 'first') => context.window.receiveSignal(session,
       JSON.stringify({type: 'video.offer', negotiation, sdp: 'test-offer'})),
     signal: (message, session = 'session') => context.window.receiveSignal(session, JSON.stringify(message)),
@@ -56,6 +58,12 @@ async function flush() { for (let i = 0; i < 3; i++) await new Promise(resolve =
 
 test('missing WebRTC is reported before a viewer is advertised', () => {
   assert.deepEqual(harness({supported: false}).replies, [{ready: false}]);
+});
+
+test('independent bootstrap reports only a fixed script failure code', () => {
+  const h = harness();
+  h.events.get('error')({message:'private notification text', filename:'private-url', error:new Error('private-sdp')});
+  assert.deepEqual(h.replies.at(-1), {failed:'script_error'});
 });
 
 test('offer and immediately queued ICE preserve order across awaits', async () => {

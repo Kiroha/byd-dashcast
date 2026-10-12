@@ -686,4 +686,7 @@
     <string name="media_bench_busy">⚠ Автоматты музыканы өшіріп, басқа сынақтарды аяқтаңыз</string>
     <string name="media_bench_nothing">Музыка шығысы алынбады; тазалау пәрмендері жіберілмеді</string>
     <string name="satellite_tls_repair">Қосылым сертификаты жаңартылды. «Құрылғыны жұптау» арқылы DashSat қолданбасын қайта жұптаңыз. Екі қолданбаны да жоймаңыз.</string>
+    <string name="satellite_video_loading">Бейне қабылдағыш дайындалуда…</string>
+    <string name="satellite_video_waiting">DashSat бейне бөлісуін күту…</string>
+    <string name="satellite_video_unavailable">Бейне қабылдағыш іске қосылмады. Қайталап көріңіз немесе осы терезені жабыңыз.</string>
 </resources>

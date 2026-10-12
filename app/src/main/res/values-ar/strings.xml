@@ -691,4 +691,7 @@
     <string name="media_bench_busy">⚠ عطّل الموسيقى التلقائية وأنهِ أي اختبار آخر</string>
     <string name="media_bench_nothing">لم يتم الحصول على عرض الموسيقى؛ لم تُرسل أوامر مسح</string>
     <string name="satellite_tls_repair">تم تحديث شهادة الاتصال. أعد إقران DashSat باستخدام «إقران جهاز». لا تُزل أيًا من التطبيقين.</string>
+    <string name="satellite_video_loading">جارٍ تجهيز مستقبل الفيديو…</string>
+    <string name="satellite_video_waiting">بانتظار مشاركة الفيديو من DashSat…</string>
+    <string name="satellite_video_unavailable">تعذر بدء مستقبل الفيديو. حاول مرة أخرى أو أغلق هذا العارض.</string>
 </resources>

@@ -686,4 +686,7 @@
     <string name="media_bench_busy">⚠ Выключыце аўтаматычную музыку і завяршыце іншыя тэсты</string>
     <string name="media_bench_nothing">Паказ музыкі не атрыманы; каманды ачысткі не адпраўленыя</string>
     <string name="satellite_tls_repair">Сертыфікат злучэння абноўлены. Паўторна спалучыце DashSat праз «Спалучыць прыладу». Не выдаляйце праграмы.</string>
+    <string name="satellite_video_loading">Падрыхтоўка прыёмніка відэа…</string>
+    <string name="satellite_video_waiting">Чаканне трансляцыі відэа з DashSat…</string>
+    <string name="satellite_video_unavailable">Не ўдалося запусціць прыёмнік відэа. Паўтарыце спробу або закрыйце прагляд.</string>
 </resources>

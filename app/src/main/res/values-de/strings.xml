@@ -686,4 +686,7 @@
     <string name="media_bench_busy">⚠ Automatische Musik deaktivieren und andere Tests beenden</string>
     <string name="media_bench_nothing">Keine Musikausgabe übernommen; keine Löschbefehle gesendet</string>
     <string name="satellite_tls_repair">Das Verbindungszertifikat wurde aktualisiert. Koppeln Sie DashSat erneut über „Gerät koppeln“. Deinstallieren Sie keine der Apps.</string>
+    <string name="satellite_video_loading">Videoempfänger wird vorbereitet…</string>
+    <string name="satellite_video_waiting">Warten auf die Videoübertragung von DashSat…</string>
+    <string name="satellite_video_unavailable">Der Videoempfänger konnte nicht starten. Versuchen Sie es erneut oder schließen Sie diese Ansicht.</string>
 </resources>

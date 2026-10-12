@@ -702,4 +702,7 @@
     <string name="media_bench_busy">⚠ Disable automatic music and finish any other test</string>
     <string name="media_bench_nothing">No music output acquired; no clear commands sent</string>
     <string name="satellite_tls_repair">The connection certificate was updated. Pair DashSat again using “Pair a device”. Do not uninstall either app.</string>
+    <string name="satellite_video_loading">Preparing video receiver…</string>
+    <string name="satellite_video_waiting">Waiting for video sharing from DashSat…</string>
+    <string name="satellite_video_unavailable">The video receiver could not start. Try again or close this viewer.</string>
 </resources>

@@ -744,4 +744,8 @@
     <string name="media_bench_busy">⚠ Désactivez la musique automatique et terminez tout autre test</string>
     <string name="media_bench_nothing">Aucune sortie musicale acquise ; aucun effacement envoyé</string>
     <string name="satellite_tls_repair">Le certificat de connexion a été mis à jour. Associez à nouveau DashSat avec « Associer un appareil ». Ne désinstallez aucune application.</string>
+    <string name="satellite_video_provider" translatable="false">WebView: %1$s</string>
+    <string name="satellite_video_loading">Préparation du récepteur vidéo…</string>
+    <string name="satellite_video_waiting">En attente du partage vidéo depuis DashSat…</string>
+    <string name="satellite_video_unavailable">Le récepteur vidéo ne peut pas démarrer. Réessayez ou fermez cette vue.</string>
 </resources>

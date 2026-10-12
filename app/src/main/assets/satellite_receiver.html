@@ -2,8 +2,13 @@
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:">
-<style>html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:sans-serif}video{width:100%;height:100%;object-fit:contain}#status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}#metrics{position:absolute;bottom:8px;left:8px;padding:4px 8px;background:#000b;color:#fff;font-size:12px;pointer-events:none;display:none}</style>
+<style>html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:sans-serif}video{width:100%;height:100%;object-fit:contain}#status{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center}#metrics{position:absolute;bottom:8px;left:8px;padding:4px 8px;background:#000b;color:#fff;font-size:12px;pointer-events:none;display:none}</style>
 </head><body><video id="video" autoplay playsinline muted></video><div id="status">__WAITING__</div><div id="metrics"></div>
+<script>
+'use strict';
+// Keep this independent bootstrap ES5-compatible: it also catches a later script parse error.
+window.addEventListener('error', function () { DashCastVideo.failed('script_error'); });
+</script>
 <script>
 'use strict';
 // Signalling crosses a local Android bridge; this page has no HTTP or WebSocket access.
@@ -55,7 +60,8 @@ function updateMetrics(stats, report, frames) {
   // Use only explicit platform evidence; codec name or low decode time does not prove hardware.
   const hardware = typeof report.powerEfficientDecoder === 'boolean' ? (report.powerEfficientDecoder ? 'yes' : 'no') : 'unknown';
   const format = value => value === null ? '?' : value.toFixed(1);
-  metrics.textContent = `${name} · ${width === null ? '?' : width}×${height === null ? '?' : height} · ${format(fps)} fps · ${format(kbps)} kbps · decode ${format(decodeMs)} ms · dropped ${clamp(report.framesDropped, 1000000000) ?? '?'} · efficient decoder ${hardware}`;
+  const dropped = clamp(report.framesDropped, 1000000000);
+  metrics.textContent = `${name} · ${width === null ? '?' : width}×${height === null ? '?' : height} · ${format(fps)} fps · ${format(kbps)} kbps · decode ${format(decodeMs)} ms · dropped ${dropped === null ? '?' : dropped} · efficient decoder ${hardware}`;
 }
 
 async function receive(id, raw) {
