@@ -1,5 +1,8 @@
 package com.byd.dashcast.hud
 
+/** Known circulation without a known exit or exit geometry. Never a physical CAN icon. */
+enum class GenericRoundaboutDirection { CLOCKWISE, COUNTERCLOCKWISE }
+
 /**
  * HudNavigationData — immutable snapshot of one navigation step.
  *
@@ -20,10 +23,12 @@ class HudNavigationData(
     etaHour: Int?,
     etaMinute: Int?,
     // Audited local image circulation or a render-only traffic choice; never a Satellite field.
-    val roundaboutClockwiseOverride: Boolean? = null
+    val roundaboutClockwiseOverride: Boolean? = null,
+    // A portable generic roundabout has no numbered CAN equivalent. iconId stays absent (-1).
+    val genericRoundaboutDirection: GenericRoundaboutDirection? = null
 ) {
 
-    /** BYD turn icon ID (1–49). See `CanBusController.ICON_*` constants. */
+    /** BYD turn icon ID (1–49), or -1 for an explicit generic roundabout semantic. */
     @JvmField
     val iconId: Int = iconId
 

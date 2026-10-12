@@ -4,8 +4,37 @@ import org.junit.Assert.*
 import org.junit.Test
 import com.byd.dashcast.satellite.SatelliteStatusTracker.Connection
 import com.byd.dashcast.satellite.SatelliteStatusTracker.Guidance
+import com.byd.dashcast.hud.HudNavigationData
+import com.byd.dashcast.hud.GenericRoundaboutDirection
 
 class SatelliteStatusTrackerTest {
+    @Test fun `passive guidance diagnostics retain only historical scalars and fence obsolete owners`() {
+        val state = SatelliteStatusTracker()
+        val owner = state.begin()
+        state.connected(owner, "private-peer-marker")
+        val data = HudNavigationData(-1, 40, "private-road-marker", null, null, null, null,
+            genericRoundaboutDirection = GenericRoundaboutDirection.CLOCKWISE)
+        state.guidance(owner, "private-peer-marker", 100, 0, data)
+        state.outputAccepted(owner, "private-peer-marker", true)
+        val active = state.summary(true, true, 100)
+        assertTrue(active.contains("guidance=ACTIVE"))
+        assertTrue(active.contains("lastAcceptedKind=GENERIC_ROUNDABOUT"))
+        assertTrue(active.contains("lastDistanceMeters=40"))
+        assertTrue(active.contains("lastExitKnown=false"))
+        assertTrue(active.contains("lastAnyOutputAccepted=true"))
+        assertFalse(active.contains("private-peer-marker"))
+        assertFalse(active.contains("private-road-marker"))
+        state.stopped(owner, "private-peer-marker")
+        state.outputAccepted(owner, "private-peer-marker", false)
+        val stopped = state.summary(true, true, 200)
+        assertTrue(stopped.contains("guidance=WAITING"))
+        assertTrue(stopped.contains("clearReason=SOURCE_STOP"))
+        assertTrue(stopped.contains("lastAnyOutputAccepted=true"))
+        val replacement = state.begin()
+        state.connected(replacement, "replacement-peer")
+        state.guidance(owner, "private-peer-marker", 300, 0, data)
+        assertTrue(state.summary(true, true, 300).contains("lastAcceptedKind=NONE"))
+    }
     @Test fun `enabled preference alone is never a listening or authenticated connection`() {
         val state = SatelliteStatusTracker()
         assertEquals(Connection.DISABLED, state.snapshot(false, false, 0).connection)

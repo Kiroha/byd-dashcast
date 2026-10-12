@@ -511,6 +511,8 @@ object BugReportCapture {
                 sb.append("[shell dump unavailable: ").append(shellError).append("]\n")
             sb.append("\n════════ CLUSTER MEDIA (local scalars; acceptance is not render) ════════\n")
                 .append(com.byd.dashcast.media.MediaDiagnostics.summary(app)).append('\n')
+            sb.append("\n════════ SATELLITE GUIDANCE (accepted scalars; last input may be historical) ════════\n")
+                .append(com.byd.dashcast.satellite.SatelliteStatus.summary(app)).append('\n')
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody)
             sb.append("\n════════ DASHCAST JOURNAL ════════\n").append(AppLogger.get())
             content = sb.toString()

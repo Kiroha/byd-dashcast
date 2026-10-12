@@ -22,6 +22,7 @@ import com.byd.dashcast.media.MediaWriteResult
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.system.CanBatchOperation
 import com.byd.dashcast.satellite.NavigationInputRouter
 import com.byd.dashcast.satellite.SatellitePrefs
 import com.byd.dashcast.util.AppLogger
@@ -78,6 +79,90 @@ class NavigationOutputRoutingTest {
         setStatic(HudController::class.java, "isDl3Hud", null)
         setStatic(ProxyClient::class.java, "sBinder", null)
         setStatic(ProxyClient::class.java, "sDaemonVer", null)
+    }
+
+    @Test
+    fun `first explicit generic roundabout never opens CAN or AMap for any destination`() {
+        val generic = HudNavigationData(-1, 80, "Test road", null, null, null, null,
+            genericRoundaboutDirection = GenericRoundaboutDirection.COUNTERCLOCKWISE)
+        for ((hud, cluster) in listOf(true to true, true to false, false to true)) {
+            select(hud, cluster)
+            val before = daemon.clusterFrames.size
+            repeat(3) { assertEquals(cluster, HudController.updateNavigation(context, generic)) }
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+            assertEquals(if (cluster) before + 3 else before, daemon.clusterFrames.size)
+            if (cluster) {
+                val rendered = decode(daemon.clusterFrames.last())
+                assertEquals(11, rendered.nextTurnIcon())
+                assertEquals(0, rendered.roungAboutNum())
+                assertEquals(80, rendered.curToSegmentDist())
+            }
+            HudController.closeNavigation(context)
+            assertEquals(0, daemon.canCalls)
+            assertTrue(amapBroadcasts().isEmpty())
+        }
+    }
+
+    @Test
+    fun `generic transition clears only owned CAN before native cluster and same turn resumes`() {
+        for ((hud, cluster) in listOf(true to true, true to false, false to true)) {
+            select(hud, cluster)
+            assertTrue(HudController.updateNavigation(context, frame))
+            val iconCount = daemon.simpleIcons.size
+            val broadcasts = amapBroadcasts().size
+            val batches = daemon.canBatches.size
+            val traceStart = daemon.navigationCalls.size
+            val generic = HudNavigationData(-1, 40, "Test road", null, null, null, null,
+                genericRoundaboutDirection = GenericRoundaboutDirection.CLOCKWISE)
+            assertEquals(cluster, HudController.updateNavigation(context, generic))
+            assertEquals(broadcasts, amapBroadcasts().size)
+            assertEquals(batches + if (hud) 1 else 0, daemon.canBatches.size)
+            if (hud) {
+                assertEquals(CanBatchOperation.TYPE_NAVI_STATUS to CanWriteVerbs.NAVI_STATUS_STOPPED,
+                    daemon.canBatches.last().first())
+                assertEquals("can:stopped", daemon.navigationCalls[traceStart])
+            }
+            if (cluster) {
+                val rendered = decode(daemon.clusterFrames.last())
+                assertEquals(1, rendered.naviState())
+                assertEquals(17, rendered.nextTurnIcon())
+                assertEquals(0, rendered.roungAboutNum())
+                assertTrue(HudController.isHudActive)
+            }
+            val afterClearBatches = daemon.canBatches.size
+            HudController.updateNavigation(context, generic)
+            assertEquals(afterClearBatches, daemon.canBatches.size)
+            assertTrue(HudController.updateNavigation(context, frame))
+            // The clear invalidated the physical dedup cache even though the next turn is identical.
+            assertEquals(iconCount + if (hud) 2 else 0, daemon.simpleIcons.size)
+            if (hud) assertEquals(frame.iconId, daemon.simpleIcons.last())
+            if (cluster) assertEquals(3, decode(daemon.clusterFrames.last()).nextTurnIcon())
+            HudController.closeNavigation(context)
+        }
+    }
+
+    @Test
+    fun `uncertain generic HUD cleanup retains ownership with bounded retries while cluster continues`() {
+        select(hud = true, cluster = true)
+        assertTrue(HudController.updateNavigation(context, frame))
+        daemon.acceptCan = false
+        val generic = HudNavigationData(-1, 40, "Test road", null, null, null, null,
+            genericRoundaboutDirection = GenericRoundaboutDirection.COUNTERCLOCKWISE)
+        val batches = daemon.canBatches.size
+        assertTrue(HudController.updateNavigation(context, generic))
+        assertEquals(batches + 1, daemon.canBatches.size)
+        repeat(20) { assertTrue(HudController.updateNavigation(context, generic)) }
+        assertEquals(batches + 1, daemon.canBatches.size)
+        daemon.acceptCan = true
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(5))
+        assertTrue(HudController.updateNavigation(context, generic))
+        assertEquals(batches + 2, daemon.canBatches.size)
+        assertTrue(AppLogger.get().contains("CAN clear uncertain"))
+        assertEquals(11, decode(daemon.clusterFrames.last()).nextTurnIcon())
+        assertEquals(1, decode(daemon.clusterFrames.last()).naviState())
+        assertTrue(HudController.updateNavigation(context, frame))
+        assertEquals(frame.iconId, daemon.simpleIcons.last())
     }
 
     @Test
@@ -1121,6 +1206,7 @@ class NavigationOutputRoutingTest {
     private class RecordingDaemon : Binder() {
         var canCalls = 0
         val simpleIcons = CopyOnWriteArrayList<Int>()
+        val canBatches = CopyOnWriteArrayList<List<Pair<Int, Int>>>()
         var acceptCan = true
         var failNextClusterSend = false
         val containerModes = CopyOnWriteArrayList<Int>()
@@ -1166,12 +1252,18 @@ class NavigationOutputRoutingTest {
                 ProxyDaemonContract.TXN_CAN_BATCH -> {
                     canCalls++
                     val count = data.readInt()
+                    val operations = mutableListOf<Pair<Int, Int>>()
                     repeat(count) {
-                        data.readInt()
+                        val type = data.readInt()
                         val key = data.readInt()
                         val value = data.readInt()
                         data.createByteArray()
+                        operations.add(type to value)
                         if (key == CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE) simpleIcons.add(value)
+                    }
+                    canBatches.add(operations)
+                    if (operations.firstOrNull() == CanBatchOperation.TYPE_NAVI_STATUS to CanWriteVerbs.NAVI_STATUS_STOPPED) {
+                        navigationCalls.add("can:stopped")
                     }
                     response.writeInt(if (acceptCan) count else 0)
                 }

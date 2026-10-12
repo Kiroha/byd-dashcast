@@ -3,7 +3,9 @@
   "accepted": [
     {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":200},
     {"type":"navigation.update","seq":2,"ageMs":1500,"maneuver":"roundabout_ccw","exit":3,"distanceMeters":80,"roadName":"Example road","etaHour":14,"etaMinute":30},
-    {"type":"navigation.stop","seq":3,"ageMs":0}
+    {"type":"navigation.stop","seq":3,"ageMs":0},
+    {"type":"navigation.update","seq":4,"ageMs":0,"maneuver":"roundabout_generic_ccw","distanceMeters":40},
+    {"type":"navigation.update","seq":5,"ageMs":1500,"maneuver":"roundabout_generic_cw","distanceMeters":80}
   ],
   "rejected": [
     {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"unknown","distanceMeters":200},
@@ -11,6 +13,12 @@
     {"type":"navigation.update","seq":"1","ageMs":0,"maneuver":"right","distanceMeters":200},
     {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":1.5},
     {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_cw","exit":11,"distanceMeters":200},
-    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":200,"etaHour":14}
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"right","distanceMeters":200,"etaHour":14},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_cw","distanceMeters":200},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_generic_cw","exit":null,"distanceMeters":40},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_generic_ccw","exit":0,"distanceMeters":40},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_generic_cw","exit":1,"distanceMeters":40},
+    {"type":"navigation.update","seq":1,"ageMs":1501,"maneuver":"roundabout_generic_ccw","distanceMeters":40},
+    {"type":"navigation.update","seq":1,"ageMs":0,"maneuver":"roundabout_generic","distanceMeters":40}
   ]
 }

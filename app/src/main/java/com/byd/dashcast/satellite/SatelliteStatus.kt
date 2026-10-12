@@ -2,6 +2,7 @@ package com.byd.dashcast.satellite
 
 import android.content.Context
 import android.os.SystemClock
+import com.byd.dashcast.hud.HudNavigationData
 
 /** RAM-only facts from the receiver and accepted guidance. Snapshots contain no peer or payload data. */
 internal open class SatelliteStatusTracker {
@@ -19,6 +20,10 @@ internal open class SatelliteStatusTracker {
     private var receivedAt: Long? = null
     private var sourceAgeMs = 0L
     private var expired = false
+    private data class InputDetails(val kind: String, val distanceMeters: Int, val exitKnown: Boolean,
+                                    val outputAccepted: Boolean? = null)
+    private var lastAcceptedInput: InputDetails? = null
+    private var lastClear = "NONE"
 
     /** Every replacement transport owns a new generation; late callbacks cannot change its state. */
     @Synchronized fun begin(): Long {
@@ -29,6 +34,8 @@ internal open class SatelliteStatusTracker {
         failure = null
         authenticationAllowed = true
         session = null
+        lastAcceptedInput = null
+        lastClear = "RECEIVER_START"
         clearGuidance()
         return owner
     }
@@ -51,28 +58,44 @@ internal open class SatelliteStatusTracker {
         // Authentication itself also proves that the transport has bound its listener.
         listening = true
         this.session = session
+        lastClear = "NEW_SESSION"
         clearGuidance()
     }
 
-    @Synchronized fun guidance(owner: Long, session: String, receivedAtMs: Long, ageMs: Long) {
+    @Synchronized fun guidance(owner: Long, session: String, receivedAtMs: Long, ageMs: Long,
+                               data: HudNavigationData? = null) {
         if (!owns(owner) || !authenticationAllowed || this.session != session) return
         require(ageMs in 0..SatelliteProtocol.MAX_AGE_MS)
         receivedAt = receivedAtMs
         sourceAgeMs = ageMs
         expired = false
+        lastClear = "NONE"
+        data?.let {
+            lastAcceptedInput = InputDetails(when {
+                it.genericRoundaboutDirection != null -> "GENERIC_ROUNDABOUT"
+                it.iconId in 25..44 -> "NUMBERED_ROUNDABOUT"
+                else -> "OTHER_SUPPORTED_MANEUVER"
+            }, it.distanceMeters, it.genericRoundaboutDirection == null && it.iconId in 25..44)
+        }
+    }
+
+    @Synchronized fun outputAccepted(owner: Long, session: String, accepted: Boolean) {
+        if (!owns(owner) || !authenticationAllowed || this.session != session || receivedAt == null) return
+        lastAcceptedInput = lastAcceptedInput?.copy(outputAccepted = accepted)
     }
 
     @Synchronized fun stopped(owner: Long, session: String) {
-        if (owns(owner) && this.session == session) clearGuidance()
+        if (owns(owner) && this.session == session) { lastClear = "SOURCE_STOP"; clearGuidance() }
     }
 
     @Synchronized fun expired(owner: Long, session: String) {
-        if (owns(owner) && this.session == session && receivedAt != null) expired = true
+        if (owns(owner) && this.session == session && receivedAt != null) { expired = true; lastClear = "EXPIRED" }
     }
 
     @Synchronized fun disconnected(owner: Long, session: String) {
         if (!owns(owner) || this.session != session) return
         this.session = null
+        lastClear = "DISCONNECTED"
         clearGuidance()
     }
 
@@ -82,6 +105,7 @@ internal open class SatelliteStatusTracker {
         failure = reason
         listening = false
         session = null
+        lastClear = "RECEIVER_FAILED"
         clearGuidance()
     }
 
@@ -99,6 +123,7 @@ internal open class SatelliteStatusTracker {
         running = false
         listening = false
         session = null
+        lastClear = "RECEIVER_STOPPED"
         clearGuidance()
         // Keep a real start failure visible after the foreground service tears itself down.
     }
@@ -106,10 +131,22 @@ internal open class SatelliteStatusTracker {
     @Synchronized fun revoked() {
         authenticationAllowed = false
         session = null
+        lastClear = "REVOKED"
         clearGuidance()
     }
 
-    @Synchronized fun sourceChanged() = clearGuidance()
+    @Synchronized fun sourceChanged() { lastClear = "SOURCE_CHANGED"; clearGuidance() }
+
+    /** Passive scalar report; the last accepted input is explicitly historical after a clear. */
+    @Synchronized fun summary(enabled: Boolean, selected: Boolean, nowMs: Long): String {
+        val state = snapshot(enabled, selected, nowMs)
+        val last = lastAcceptedInput
+        return "connection=${state.connection} guidance=${state.guidance} " +
+            "lastAcceptedKind=${last?.kind ?: "NONE"} lastDistanceMeters=${last?.distanceMeters ?: "UNKNOWN"} " +
+            "lastExitKnown=${last?.exitKnown ?: "UNKNOWN"} lastAnyOutputAccepted=${last?.outputAccepted ?: "UNKNOWN"} " +
+            "clearReason=${if (state.guidance == Guidance.EXPIRED) "EXPIRED" else lastClear} " +
+            "(input receipt and OEM acceptance do not prove physical rendering)"
+    }
 
     @Synchronized fun snapshot(enabled: Boolean, selected: Boolean, nowMs: Long): Snapshot {
         val connection = when {
@@ -136,5 +173,7 @@ internal open class SatelliteStatusTracker {
 /** The page samples current facts only while visible; receiver work continues independently. */
 internal object SatelliteStatus : SatelliteStatusTracker() {
     fun snapshot(ctx: Context): Snapshot = snapshot(SatellitePrefs.isEnabled(ctx),
+        SatellitePrefs.usesRemoteGuidance(ctx), SystemClock.elapsedRealtime())
+    fun summary(ctx: Context): String = summary(SatellitePrefs.isEnabled(ctx),
         SatellitePrefs.usesRemoteGuidance(ctx), SystemClock.elapsedRealtime())
 }
