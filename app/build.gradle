@@ -2020,8 +2020,12 @@ android {
         // 659 = 1.9.20-beta (LEGACY WEBVIEW VIDEO BOOTSTRAP.
         // Use compatible script syntax and waiting-overlay positioning. Bound native
         // video preparation with visible failure/retry and stale-callback fencing.)
-        versionCode 659
-        versionName "1.9.20-beta"
+        // 660 = 1.9.21-beta (SATELLITE GENERIC ROUNDABOUTS AND PARKED MUSIC STOP PROBE.
+        // Preserve observed roundabout circulation when the exit is absent, without
+        // guessing an ordinal. Keep experimental STOP cleanup in the parked bench;
+        // automatic music output retains its established paused cleanup.)
+        versionCode 660
+        versionName "1.9.21-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
