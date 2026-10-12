@@ -15,6 +15,23 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.21-beta (versionCode 660)
+
+**Receive generic Satellite roundabouts without inventing an exit.** Update DashSat to
+**0.9.0-dev** and DashCast to this release for the negotiated capability. Preserve observed
+circulation, traffic-side preferences, numbered-exit validation, source freshness and pairing.
+Generic output uses the native cluster path; physical rendering and HUD cleanup still need
+vehicle validation.
+
+**Add a bounded parked STOP cleanup probe to the music bench.** Compare the remaining waveform
+icon after text clear and documented instrument STOP, while automatic music retains its existing
+PAUSED cleanup. Preserve failures through later no-op releases and expose only command outcomes.
+All 13 languages describe this as a visual test. Shorter titles reduce width but stay centered;
+music placement and overlap with navigation remain unresolved.
+
+Install the release APK manually over the existing application without uninstalling.
+1.9.0 remains stable. [Release notes](docs/releases/1.9.21-beta.md).
+
 ### 1.9.10-beta (versionCode 649)
 
 **Pair DashCast Satellite with a temporary six-digit code.** Integrate
