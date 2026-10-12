@@ -20,6 +20,11 @@ internal class MediaDiagnosticStore {
     private var rejectedSdk: Int? = null
     private var outputFailure = "NONE"
     private var cleanupResult = "NONE"
+    private var cleanupMode = "NONE"
+    private var clearTextResult = "NOT_ATTEMPTED"
+    private var clearStateResult = "NOT_ATTEMPTED"
+    private var clearTextSdk: Int? = null
+    private var clearStateSdk: Int? = null
     @Synchronized fun begin(): Long { epoch++; observer = "STARTING"; sessions = 0; usable = 0; playing = 0; selected = false; return epoch }
     @Synchronized fun generation() = epoch
     @Synchronized fun listener(value: Boolean) { listener = value }
@@ -38,6 +43,16 @@ internal class MediaDiagnosticStore {
         }
     }
     @Synchronized fun output(at: String, rc: Int?) {
+        if (at.startsWith("CLEAR_BEGIN_")) {
+            cleanupMode = at.removePrefix("CLEAR_BEGIN_")
+            clearTextResult = "NOT_ATTEMPTED"; clearStateResult = "NOT_ATTEMPTED"
+            clearTextSdk = null; clearStateSdk = null
+        } else if (at == "CLEAR_TEXT" || at == "CLEAR_TEXT_EXCEPTION") {
+            clearTextResult = cleanupOutcome(at, rc); clearTextSdk = rc
+        } else if (at == "CLEAR_STATE" || at == "CLEAR_STOP" ||
+            at == "CLEAR_STATE_EXCEPTION" || at == "CLEAR_STOP_EXCEPTION") {
+            clearStateResult = cleanupOutcome(at, rc); clearStateSdk = rc
+        }
         if (at == "EXCEPTION") {
             rejectedStage = stage; rejectedSdk = null; outputFailure = "TRANSPORT_EXCEPTION"
             sdk = null
@@ -48,6 +63,12 @@ internal class MediaDiagnosticStore {
             rejectedStage = at; rejectedSdk = rc; outputFailure = "SDK_REJECTED"
         }
     }
+    private fun cleanupOutcome(at: String, rc: Int?): String = when {
+        at.endsWith("_EXCEPTION") -> "TRANSPORT_EXCEPTION"
+        rc == null -> "PENDING"
+        rc == 0 -> "ACCEPTED"
+        else -> "SDK_REJECTED"
+    }
     @Synchronized fun result(value: MediaWriteResult) {
         result = value.name
         if (value == MediaWriteResult.CLEARED || value == MediaWriteResult.CLEAR_FAILED ||
@@ -56,7 +77,10 @@ internal class MediaDiagnosticStore {
     @Synchronized fun summary(enabled: Boolean): String =
         "enabled=$enabled listenerConnected=$listener observer=$observer authorization=$authorization lastObserverFailure=$observerFailure " +
         "sessions=$sessions usableSessions=$usable playingSessions=$playing selected=$selected failures=$failures retryDelayMs=$retryMs " +
-        "outputStage=$stage outputResult=$result cleanupResult=$cleanupResult sdkReturn=${sdk ?: "UNKNOWN"} lastOutputFailure=$outputFailure lastRejectedStage=$rejectedStage lastRejectedSdkReturn=${rejectedSdk ?: "UNKNOWN"} (acceptance is not render)"
+        "outputStage=$stage outputResult=$result cleanupResult=$cleanupResult cleanupMode=$cleanupMode " +
+        "clearTextResult=$clearTextResult clearTextSdkReturn=${clearTextSdk ?: "UNKNOWN"} " +
+        "clearStateResult=$clearStateResult clearStateSdkReturn=${clearStateSdk ?: "UNKNOWN"} " +
+        "sdkReturn=${sdk ?: "UNKNOWN"} lastOutputFailure=$outputFailure lastRejectedStage=$rejectedStage lastRejectedSdkReturn=${rejectedSdk ?: "UNKNOWN"} (acceptance is not render)"
 }
 
 object MediaDiagnostics {

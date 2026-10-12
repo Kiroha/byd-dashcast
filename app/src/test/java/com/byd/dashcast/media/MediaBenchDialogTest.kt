@@ -93,7 +93,7 @@ class MediaBenchDialogTest {
         dialog.cancel()
         idle()
         scheduler.advance(1000)
-        assertEquals(listOf("source:11", "text:    ", "state:2"), transport.writes)
+        assertEquals(listOf("source:11", "text:    ", "state:3"), transport.writes)
         assertTrue(ownership.acquire(Any()))
     }
 
@@ -164,6 +164,62 @@ class MediaBenchDialogTest {
         assertTrue(buttons().all { !it.isEnabled })
         assertFalse((field("parked") as CheckBox).isEnabled)
         assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+    }
+
+    @Test fun `six second bench cleanup probes stop and reports acceptance without claiming rendering`() {
+        start(); scheduler.advance(50); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6))
+        scheduler.advance(1000); idle()
+        assertEquals(listOf("source:11", "text:  DashCast - DashCast test  ", "state:1",
+            "text:    ", "state:3"), transport.writes)
+        assertEquals(activity.getString(R.string.media_bench_cleared),
+            (field("cleanupStatus") as TextView).text.toString())
+    }
+
+    @Test fun `bench reports failed text clear even when the stop probe is accepted`() {
+        start(); scheduler.advance(50); idle()
+        transport.rejectNextText = true
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6))
+        scheduler.advance(1000); idle()
+        assertEquals(listOf("text:    ", "state:3"), transport.writes.takeLast(2))
+        assertEquals(activity.getString(R.string.media_bench_clear_failed),
+            (field("cleanupStatus") as TextView).text.toString())
+    }
+
+    @Test fun `production acquiring after queued bench release cannot inherit a stop probe`() {
+        start(); scheduler.advance(50); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6))
+        val automaticOwner = Any()
+        assertTrue(ownership.acquire(automaticOwner))
+        ownership.publish(automaticOwner, ClusterMediaData(automaticOwner, "Fresh", "", true))
+        scheduler.advance(50); idle()
+        ownership.release(automaticOwner); scheduler.advance(1000)
+        assertFalse(transport.writes.contains("state:3"))
+        assertEquals(listOf("text:    ", "state:2"), transport.writes.takeLast(2))
+    }
+
+    @Test fun `an acquired owner cannot silently change cleanup mode`() {
+        val owner = Any()
+        assertTrue(ownership.acquire(owner, MediaCleanupMode.STOP_PROBE))
+        assertTrue(ownership.acquire(owner, MediaCleanupMode.STOP_PROBE))
+        assertFalse(ownership.acquire(owner))
+        ownership.release(owner); scheduler.advance()
+    }
+
+    @Test fun `failed send and failed internal cleanup stay visible after bench owner release`() {
+        transport.rejectNextText = true
+        transport.afterWrite = {
+            if (transport.writes.last().startsWith("text:")) {
+                transport.afterWrite = null; transport.rejectNextState = true
+            }
+        }
+        start(); scheduler.advance(50); idle()
+        scheduler.advance(10000); idle()
+        assertEquals(activity.getString(R.string.media_bench_unavailable),
+            (field("status") as TextView).text.toString())
+        assertEquals(activity.getString(R.string.media_bench_clear_failed),
+            (field("cleanupStatus") as TextView).text.toString())
+        assertEquals(listOf("source:11", "text:  DashCast - DashCast test  ", "text:    ", "state:3"), transport.writes)
     }
 
     private fun start() {

@@ -12,7 +12,11 @@ object ClusterMediaProperties {
     const val ONLINE = 11
     const val PLAYING = 1
     const val PAUSED = 2
+    const val STOPPED = 3 // OEM MUSIC_STOP; the parked bench probes its visible effect.
 }
+
+/** Production keeps its established cleanup until the parked stop probe is vehicle-validated. */
+internal enum class MediaCleanupMode { PAUSE, STOP_PROBE }
 
 interface ClusterMediaTransport {
     fun connection(): Any?
@@ -59,28 +63,39 @@ class ClusterMediaWriter(
     private val lock = Any()
     private var generation = 0L
     private var desired: ClusterMediaData? = null
+    private var desiredCleanup = MediaCleanupMode.PAUSE
     private var pending: MediaCancellation? = null
     private var failedDelivery = false
     private var lastAttemptMs: Long? = null
     // Only the serialized worker reads/writes ownership. It is not proof of current OEM ownership:
     // another radio/media app can take over these shared properties; hardware coexistence is pending.
     private var ownedConnection: Any? = null
+    private var ownedCleanup = MediaCleanupMode.PAUSE
+    // A subsequent release must not turn an unsuccessful acquired cleanup into "nothing sent".
+    // This is a status only: it never authorizes another command or an ownership restoration.
+    private var unconfirmedCleanup = false
     private var lastDelivered: ClusterMediaData? = null
 
     fun publish(data: ClusterMediaData?, result: ((MediaWriteResult) -> Unit)? = null) {
+        publish(data, MediaCleanupMode.PAUSE, result)
+    }
+
+    internal fun publish(data: ClusterMediaData?, cleanup: MediaCleanupMode,
+                         result: ((MediaWriteResult) -> Unit)? = null) {
         synchronized(lock) {
-            if (data == desired && result == null) {
+            if (data == desired && cleanup == desiredCleanup && result == null) {
                 // A new session callback may retry a failed value after a bounded cooldown. There
                 // is no timer/replay loop, daemon reconnect, or retry of an in-flight transaction.
                 if (data == null || !failedDelivery ||
                     lastAttemptMs?.let { nowMs() - it < 5000 } == true) return
             }
             desired = data
+            desiredCleanup = cleanup
             failedDelivery = false
             val epoch = ++generation
             pending?.cancel()
             pending = scheduler.schedule(0) {
-                if (data == null) clear(epoch, result) else start(epoch, data, result)
+                if (data == null) clear(epoch, result) else start(epoch, data, cleanup, result)
             }
         }
     }
@@ -95,7 +110,8 @@ class ClusterMediaWriter(
         return rc
     }
 
-    private fun start(epoch: Long, data: ClusterMediaData, result: ((MediaWriteResult) -> Unit)?) {
+    private fun start(epoch: Long, data: ClusterMediaData, cleanup: MediaCleanupMode,
+                      result: ((MediaWriteResult) -> Unit)?) {
         if (!current(epoch)) return
         synchronized(lock) { lastAttemptMs = nowMs() }
         try {
@@ -108,7 +124,7 @@ class ClusterMediaWriter(
                 return
             }
             if (ownedConnection !== connection) lastDelivered = null
-            if (lastDelivered == data) { notify(epoch, result, MediaWriteResult.ACCEPTED); return }
+            if (lastDelivered == data && ownedCleanup == cleanup) { notify(epoch, result, MediaWriteResult.ACCEPTED); return }
             if (sdk("SOURCE") { transport.integer(connection, ClusterMediaProperties.SOURCE, ClusterMediaProperties.ONLINE) } != 0) {
                 fail(epoch, result)
                 return
@@ -116,6 +132,8 @@ class ClusterMediaWriter(
             // Selecting ONLINE is already a partial acquisition, even if cancellation or text
             // rejection follows. Cleanup clears that acquisition without guessing an OEM source.
             ownedConnection = connection
+            ownedCleanup = cleanup
+            unconfirmedCleanup = false
             lastDelivered = null
             synchronized(lock) {
                 if (!valid(epoch, connection)) {
@@ -166,28 +184,47 @@ class ClusterMediaWriter(
     private fun clear(epoch: Long, result: ((MediaWriteResult) -> Unit)?) {
         if (!current(epoch)) return
         val connection = ownedConnection
+        val cleanup = ownedCleanup
+        // Consuming an acquisition makes its cleanup uncertain until completion, including a
+        // stop that is superseded before its first SDK operation. This never retains ownership.
+        if (connection != null) unconfirmedCleanup = true
         ownedConnection = null
         lastDelivered = null
         if (connection == null || !valid(epoch, connection)) {
-            notify(epoch, result, if (connection == null) MediaWriteResult.NOTHING_TO_CLEAR else MediaWriteResult.CLEAR_FAILED)
+            notify(epoch, result, if (connection == null && !unconfirmedCleanup)
+                MediaWriteResult.NOTHING_TO_CLEAR else MediaWriteResult.CLEAR_FAILED)
             return
         }
-        try {
-            // Clear only the acquired music channel. Do not select ONLINE again or restore a
-            // guessed source; successful SOURCE alone also counts as partial acquisition.
-            if (sdk("CLEAR_TEXT") { transport.bytes(connection, ClusterMediaProperties.TEXT, ClusterMediaEncoding.text("", "")) } != 0) {
-                notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
-                return
-            }
-            if (!valid(epoch, connection)) {
-                notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
-                return
-            }
-            val rc = sdk("CLEAR_STATE") { transport.integer(connection, ClusterMediaProperties.STATE, ClusterMediaProperties.PAUSED) }
-            notify(epoch, result, if (rc == 0) MediaWriteResult.CLEARED else MediaWriteResult.CLEAR_FAILED)
+        // Clear only the acquired music channel. Do not select ONLINE again or restore a guessed
+        // source. The mode belongs to the accepted acquisition, never a later owner or stop caller.
+        diagnostic("CLEAR_BEGIN_${cleanup.name}", null)
+        val textAccepted = try {
+            sdk("CLEAR_TEXT") {
+                transport.bytes(connection, ClusterMediaProperties.TEXT, ClusterMediaEncoding.text("", ""))
+            } == 0
         } catch (_: Exception) {
-            notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
+            diagnostic("CLEAR_TEXT_EXCEPTION", null)
+            false
         }
+        // Production retains its established fail-fast paused cleanup. The parked probe may still
+        // try the documented STOP once after a rejected/failed text clear, against this Binder only.
+        if ((!textAccepted && cleanup == MediaCleanupMode.PAUSE) || !valid(epoch, connection)) {
+            if (current(epoch)) unconfirmedCleanup = true
+            notify(epoch, result, MediaWriteResult.CLEAR_FAILED)
+            return
+        }
+        val stage = if (cleanup == MediaCleanupMode.STOP_PROBE) "CLEAR_STOP" else "CLEAR_STATE"
+        val stateAccepted = try {
+            sdk(stage) { transport.integer(connection, ClusterMediaProperties.STATE,
+                if (cleanup == MediaCleanupMode.STOP_PROBE) ClusterMediaProperties.STOPPED
+                else ClusterMediaProperties.PAUSED) } == 0
+        } catch (_: Exception) {
+            diagnostic("${stage}_EXCEPTION", null)
+            false
+        }
+        val cleared = textAccepted && stateAccepted
+        if (current(epoch)) unconfirmedCleanup = !cleared
+        notify(epoch, result, if (cleared) MediaWriteResult.CLEARED else MediaWriteResult.CLEAR_FAILED)
     }
 
     private fun notify(epoch: Long, callback: ((MediaWriteResult) -> Unit)?, result: MediaWriteResult) {

@@ -83,14 +83,14 @@ class MediaBenchDialog internal constructor(
             parked.setOnCheckedChangeListener { _, checked -> send.isEnabled = checked && !acquired }
             send.setOnClickListener {
                 if (!parked.isChecked || closed) return@setOnClickListener
-                if (automaticEnabled() || !ownership.acquire(token)) {
+                if (automaticEnabled() || !ownership.acquire(token, MediaCleanupMode.STOP_PROBE)) {
                     status.setText(R.string.media_bench_busy)
                     return@setOnClickListener
                 }
                 acquired = true
                 val generation = ++runGeneration
-                // Capture the choice once. The OEM centers the combined icon/text group in
-                // some themes; shorter text may move it right, but this is a comparison only.
+                // Capture the choice once. Shorter text narrows a centered icon/text group; it
+                // does not move its center. This compares width without promising positioning.
                 val (title, artist) = when (modes.checkedRadioButtonId) {
                     modeButtons[1].id -> "DashCast" to ""
                     modeButtons[2].id -> "DC" to ""
