@@ -2017,8 +2017,11 @@ android {
         // Compare reference, short-title and minimal text in the parked diagnostic bench.
         // Keep production music visible during guidance and correct OEM roundabout
         // circulation families. Physical positioning and overlap remain unverified.)
-        versionCode 658
-        versionName "1.9.19-beta"
+        // 659 = 1.9.20-beta (LEGACY WEBVIEW VIDEO BOOTSTRAP.
+        // Use compatible script syntax and waiting-overlay positioning. Bound native
+        // video preparation with visible failure/retry and stale-callback fencing.)
+        versionCode 659
+        versionName "1.9.20-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
