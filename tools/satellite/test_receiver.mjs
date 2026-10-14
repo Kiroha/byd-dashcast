@@ -8,7 +8,7 @@ const html = readFileSync(new URL('../../app/src/main/assets/satellite_receiver.
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
 
 function harness({supported = true, holdFirstOffer = false, holdStats = false, omitFrames = false} = {}) {
-  const peers = [], replies = [], intervals = new Map(), timeouts = new Map(), events = new Map();
+  const peers = [], replies = [], progress = [], intervals = new Map(), timeouts = new Map(), events = new Map();
   let timer = 0, now = 0, releaseFirst, releaseStats;
   const video = {srcObject: null, play: () => Promise.resolve()};
   const status = {style: {display: 'flex'}};
@@ -35,6 +35,7 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : status},
     MediaStream: class {constructor(tracks) { this.tracks = tracks; }},
     DashCastVideo: {ready: value => replies.push({ready: value}), failed: code => replies.push({failed: code}),
+      progress: code => progress.push(code),
       send: (session, raw) => replies.push({session, ...JSON.parse(raw)})},
     performance: {now: () => now},
     setInterval: callback => { intervals.set(++timer, callback); return timer; },
@@ -44,7 +45,7 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     ...(supported ? {RTCPeerConnection: Peer} : {}),
   });
   for (const script of scripts) vm.runInContext(script, context);
-  return {context, peers, replies, video, status, metrics, intervals, timeouts, events,
+  return {context, peers, replies, progress, video, status, metrics, intervals, timeouts, events,
     offer: (session = 'session', negotiation = 'first') => context.window.receiveSignal(session,
       JSON.stringify({type: 'video.offer', negotiation, sdp: 'test-offer'})),
     signal: (message, session = 'session') => context.window.receiveSignal(session, JSON.stringify(message)),
@@ -129,6 +130,25 @@ test('a previously decoded map is cleared when decoder progress stops', async ()
   assert.equal(h.status.style.display, 'none');
   await h.advance(7001);
   assert.equal(h.peers[0].closed, true); assert.equal(h.video.srcObject, null);
+});
+
+test('decode diagnostic requires real frame progress and reports once per peer', async () => {
+  const h = harness(); h.offer(); await flush();
+  await h.advance(1000); assert.deepEqual(h.progress, []);
+  h.peers[0].frames = 2; await h.advance(2000);
+  h.peers[0].frames = 3; await h.advance(3000);
+  assert.deepEqual(h.progress, ['frames_decoded']);
+  h.reset(); h.offer('session', 'second'); await flush();
+  h.peers[1].frames = 1; await h.advance(4000);
+  assert.deepEqual(h.progress, ['frames_decoded', 'frames_decoded']);
+});
+
+test('a stale stats completion cannot report decoding for a replacement peer', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  h.peers[0].frames = 2; await h.advance(1000);
+  h.reset(); h.offer('session', 'second'); await flush();
+  h.releaseStats(); await flush();
+  assert.deepEqual(h.progress, []);
 });
 
 test('async signalling overflow clears the old peer without an unbounded queue', async () => {

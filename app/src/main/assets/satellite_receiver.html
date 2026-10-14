@@ -19,6 +19,8 @@ let peer = null, owner = null, negotiation = null, chain = Promise.resolve(), wa
 let lastFrames = -1, lastProgress = 0;
 let epoch = 0, queued = 0, statsInFlight = false, metricsVisible = false;
 let previousStats = null;
+let decodedReported = false, connectedReported = false;
+function progress(code) { if (typeof DashCastVideo.progress === 'function') DashCastVideo.progress(code); }
 window.setMetricsVisible = value => { metricsVisible = value === true; metrics.style.display = metricsVisible ? 'block' : 'none'; };
 function send(type, values) {
   if (owner && negotiation) DashCastVideo.send(owner, JSON.stringify(Object.assign({type, negotiation}, values)));
@@ -31,6 +33,7 @@ function resetReceiver(invalidate = true) {
   peer = null; owner = null; negotiation = null;
   video.srcObject = null; status.style.display = 'flex';
   lastFrames = -1; lastProgress = 0; statsInFlight = false; previousStats = null;
+  decodedReported = false; connectedReported = false;
   metrics.textContent = '';
 }
 function bounded(promise) {
@@ -75,12 +78,16 @@ async function receive(id, raw) {
     };
     connection.ontrack = event => {
       if (peer !== connection || event.track.kind !== 'video') return;
+      progress('track_received');
       video.srcObject = new MediaStream([event.track]);
       video.play().catch(() => {
         if (peer === connection) { send('video.error', {code:'playback_failed'}); resetReceiver(); }
       });
     };
     connection.onconnectionstatechange = () => {
+      if (peer === connection && connection.connectionState === 'connected' && !connectedReported) {
+        connectedReported = true; progress('media_connected');
+      }
       if (peer === connection && ['failed', 'closed', 'disconnected'].includes(connection.connectionState)) {
         send('video.error', {code:'connection_lost'}); resetReceiver();
       }
@@ -118,6 +125,7 @@ async function receive(id, raw) {
         if (frames < 0 && Number.isFinite(video.webkitDecodedFrameCount)) frames = video.webkitDecodedFrameCount;
         // Packet counters and control heartbeats never prove successful decoding.
         if (frames > 0 && frames > lastFrames) {
+          if (!decodedReported) { decodedReported = true; progress('frames_decoded'); }
           lastFrames = frames; lastProgress = performance.now(); status.style.display = 'none';
         }
         if (inbound) updateMetrics(stats, inbound, frames);
