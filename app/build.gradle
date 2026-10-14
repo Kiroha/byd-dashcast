@@ -2024,8 +2024,11 @@ android {
         // Preserve observed roundabout circulation when the exit is absent, without
         // guessing an ordinal. Keep experimental STOP cleanup in the parked bench;
         // automatic music output retains its established paused cleanup.)
-        versionCode 660
-        versionName "1.9.21-beta"
+        // 661 = 1.9.22-beta (ORDERED SATELLITE VIEWER READINESS AND SAFE VIDEO EVIDENCE.
+        // Queue an unavailable-viewer rejection before a concurrent ready event.
+        // Retain bounded scalar stages across main-display/CarPlay transitions.)
+        versionCode 661
+        versionName "1.9.22-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

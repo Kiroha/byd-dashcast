@@ -23,17 +23,41 @@ OEM restore, CAN/AAOS action, driver restriction bypass or input forwarding is i
 
 ## Setup when the Tbox uses the car's main display
 
-Set up while parked. Start the DashSat control connection, make the existing DashCast cluster
-projection ready, and choose **Show on cluster**. Then switch the main display to CarPlay/Tbox,
-select the source application in DashSat, and choose **Start video sharing**. Grant Android's
-capture consent and choose the same application. The native video viewer must remain visible
-on the cluster throughout this sequence.
+Set up while parked. Start the DashSat control connection, select the source application in
+DashSat, and choose **Start video sharing**. Grant Android's capture consent and choose the same
+application. A visible DashCast viewer is not required to authorize that continuous sharing
+session. Leave CarPlay, return to DashCast and open **Preview received map**. Video negotiation
+starts when the viewer is ready. **Show on cluster** remains available after the existing cluster
+projection is ready; it does not activate a new OEM projection.
 
-**Preview received map** is a main-display test viewer. Switching that same display to CarPlay
-hides it and intentionally closes its WebRTC connection. DashSat then disables Start because
-the viewer is no longer available. Test preview using a separate accessible source-device screen,
-or use the cluster workflow above. Opening ABRP alone does not grant capture permission or
-start video transmission; guidance and video remain separate.
+Switching the same main display back to CarPlay hides the preview and intentionally releases
+its WebRTC connection and decoder. DashSat suspends sending and retains the same valid authorized
+capture session, so **Screen sharing active · waiting for DashCast** is expected after returning
+to CarPlay. Reopen the viewer to negotiate a new peer within that session. Stop, revocation, lock,
+source capture pause/hiding, control loss or fatal failure ends sharing and requires new consent;
+there is no unattended recapture. Opening ABRP alone does not grant capture permission or start
+video transmission. Guidance and video remain separate.
+
+## Retained video stages and readiness ordering
+
+DashSat 0.9.1-dev and DashCast 1.9.22-beta add bounded process-local stage histories that survive
+display switching. In DashSat, read **Recent video activity** or choose **Copy video diagnostics**
+after returning to CarPlay. The newest stage appears first, local session numbers separate sharing
+attempts, and the copy includes up to 32 retained entries with saturating scalar totals. Receiver
+bug reports include a separate **Satellite video** history with readiness, received offers,
+queued answers, track/media connection and actual decoded-frame progress.
+
+These fixed labels, elapsed ages and counts never include payloads, tokens, SDP, routes,
+notifications, candidate/device/network identities or arbitrary errors. ICE uses counters only.
+Queued receiver replies do not establish transmission, sender encoded frames do not establish
+receiver decoding, and prior decoded frames do not establish a currently visible image.
+
+The receiver queues an unavailable-viewer rejection while holding the same hub monitor used
+by viewer attachment. A later attachment therefore queues `video.ready` after that rejection.
+DashSat also ignores an unscoped legacy `viewer_unavailable` for readiness, retaining it only as
+diagnostic evidence. Explicit ready/closed events and the existing negotiation deadlines remain
+authoritative. This fixes a real ordering race without claiming it explains every reported
+blank map; no wire contract, pinned identity or capture-consent policy changes.
 
 ## Viewer bootstrap and old WebView compatibility
 

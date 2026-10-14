@@ -159,4 +159,24 @@ class SatelliteVideoBootstrapTest {
         assertFailure()
         assertTrue(messages.isEmpty())
     }
+
+    @Test fun `hidden and obsolete bridges cannot report decoded progress`() {
+        val old = bridge()
+        old.ready(true); idle()
+        val before = SatelliteVideoDiagnostics.summary()
+        controller.pause().stop()
+        old.progress("frames_decoded"); idle()
+        val hidden = SatelliteVideoDiagnostics.summary()
+        assertEquals(Regex("frames_decoded=([0-9]+)").find(before)?.value,
+            Regex("frames_decoded=([0-9]+)").find(hidden)?.value)
+        controller.start().resume()
+        old.failed("script_error"); idle()
+        retry().performClick()
+        bridge().ready(true); idle()
+        val current = SatelliteVideoDiagnostics.summary()
+        old.progress("frames_decoded"); old.progress("private SDP"); idle()
+        assertEquals(Regex("frames_decoded=([0-9]+)").find(current)?.value,
+            Regex("frames_decoded=([0-9]+)").find(SatelliteVideoDiagnostics.summary())?.value)
+        assertFalse(SatelliteVideoDiagnostics.summary().contains("private SDP"))
+    }
 }

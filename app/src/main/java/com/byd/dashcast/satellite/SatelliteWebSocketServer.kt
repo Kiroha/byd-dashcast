@@ -130,7 +130,7 @@ class SatelliteWebSocketServer(
                         }
                         else -> require(session.negotiation == negotiation)
                     }
-                    if (!SatelliteVideoHub.signal(session.id, json)) error(conn, "viewer_unavailable")
+                    SatelliteVideoHub.signal(session.id, json) { error(conn, "viewer_unavailable") }
                     if (type == "video.stop") session.negotiation = null
                 }
                 else -> error(conn, "unsupported_message")

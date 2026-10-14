@@ -118,6 +118,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         if (isFinishing || isDestroyed || !validDestination()) return
         releaseWebView()
         bootstrap = Bootstrap.STARTING
+        SatelliteVideoDiagnostics.record(SatelliteVideoDiagnostics.Event.VIEWER_STARTING)
         ready = false
         stateLabel.setText(R.string.satellite_video_loading)
         retryButton.visibility = View.GONE
@@ -195,6 +196,14 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
             // Do not accept arbitrary console/error text, SDP or URLs into support logs.
             if (code == "script_error") main.post { failed(attempt, "script_error") }
         }
+
+        @JavascriptInterface
+        fun progress(code: String) {
+            main.post {
+                if (attempt == generation && ready && visible && !isFinishing && !isDestroyed)
+                    SatelliteVideoDiagnostics.progress(code)
+            }
+        }
     }
 
     override fun signal(session: String, message: JSONObject) {
@@ -250,6 +259,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
     private fun failed(attempt: Long, code: String) {
         if (attempt != generation || bootstrap == Bootstrap.FAILED || isFinishing || isDestroyed) return
         bootstrap = Bootstrap.FAILED
+        SatelliteVideoDiagnostics.failure(code)
         ready = false
         releaseWebView()
         stateLabel.setText(R.string.satellite_video_unavailable)
