@@ -69,6 +69,7 @@ class SatelliteWebSocketTransportTest {
         val accepted = CountDownLatch(1)
         val welcomed = CountDownLatch(1)
         val navigated = CountDownLatch(1)
+        val diagnosticAcks = java.util.concurrent.LinkedBlockingQueue<String>()
         val failure = AtomicReference<Exception?>()
         val received = AtomicReference<SatelliteProtocol.Navigation?>()
         val status = SatelliteStatusTracker()
@@ -101,9 +102,16 @@ class SatelliteWebSocketTransportTest {
             }
             override fun onMessage(message: String) {
                 if (JSONObject(message).optString("type") == "welcome") {
+                    assertEquals(1, JSONObject(message).get("videoDiagnostics"))
                     welcomed.countDown()
+                    val snapshot = JSONObject(java.io.File("../docs/satellite/diagnostics-video-fixtures.json").readText())
+                        .getJSONArray("accepted").getJSONObject(0)
+                    send(JSONObject(snapshot.toString()).put("sdp", "forbidden_free_text").toString())
+                    send(snapshot.toString())
                     send(JSONObject().put("type", "navigation.update").put("seq", 1).put("ageMs", 0)
                         .put("maneuver", "right").put("distanceMeters", 150).toString())
+                } else if (JSONObject(message).optString("type") == "diagnostics.video.ack") {
+                    diagnosticAcks.offer(JSONObject(message).getString("status"))
                 }
             }
             override fun onClose(code: Int, reason: String, remote: Boolean) = Unit
@@ -116,6 +124,9 @@ class SatelliteWebSocketTransportTest {
         assertTrue("Receiver did not authenticate hello", accepted.await(5, TimeUnit.SECONDS))
         assertTrue("Receiver did not send welcome", welcomed.await(5, TimeUnit.SECONDS))
         assertTrue("Receiver did not accept guidance", navigated.await(5, TimeUnit.SECONDS))
+        assertEquals("rejected", diagnosticAcks.poll(5, TimeUnit.SECONDS))
+        assertEquals("accepted", diagnosticAcks.poll(5, TimeUnit.SECONDS))
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().contains("state=waiting_viewer"))
         assertEquals(1L, received.get()?.sequence)
         assertEquals(SatelliteStatusTracker.Connection.CONNECTED, status.snapshot(true, true, 0).connection)
         assertNull(failure.get())

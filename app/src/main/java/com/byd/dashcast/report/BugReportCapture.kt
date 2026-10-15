@@ -515,6 +515,8 @@ object BugReportCapture {
                 .append(com.byd.dashcast.satellite.SatelliteStatus.summary(app)).append('\n')
             sb.append("\n════════ SATELLITE VIDEO (bounded process history; no media or signalling) ════════\n")
                 .append(com.byd.dashcast.satellite.SatelliteVideoDiagnostics.summary()).append('\n')
+            sb.append("\n════════ DASHSAT VIDEO (manual sender snapshot; historical evidence) ════════\n")
+                .append(com.byd.dashcast.satellite.SatelliteRemoteVideoDiagnostics.summary()).append('\n')
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody)
             sb.append("\n════════ DASHCAST JOURNAL ════════\n").append(AppLogger.get())
             content = sb.toString()

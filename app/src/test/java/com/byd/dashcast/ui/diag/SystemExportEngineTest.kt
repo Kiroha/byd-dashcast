@@ -56,7 +56,9 @@ class SystemExportEngineTest {
     @Test fun `final context exception is retained while finished volumes remain usable`() {
         val baseline = device()
         val broken = object : FullApkExport.Device by baseline {
-            override fun finish(): FullApkExport.ContextCheck = throw IllegalStateException("transport lost")
+            // Override the overload the engine invokes; delegation would otherwise forward it
+            // straight to baseline and bypass an override of finish() on this wrapper.
+            override fun finish(cancelled: Boolean): FullApkExport.ContextCheck = throw IllegalStateException("transport lost")
         }
         val directory = temporary.newFolder()
         val result = FullApkExport(broken, directory, { false }, {}, freeBytes = ample, kind = ExportKind.SYSTEM).run()

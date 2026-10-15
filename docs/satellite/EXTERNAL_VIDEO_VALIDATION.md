@@ -116,3 +116,19 @@ Test static scenes longer than a minute, changing frames, source Stop/revoke/loc
 cluster projection loss, Wi-Fi loss, fresh consent sessions and guidance alongside video. Physical
 video/performance acceptance remains pending; software/emulator tests must not be reported as an
 on-vehicle result. The user separately confirmed official Google Maps guidance on October 11, 2026.
+
+## Manual companion diagnostics without box internet
+
+After a video attempt, switch back to DashSat and select **Send diagnostics to DashCast** while
+control remains connected. The hidden receiver service accepts the bounded snapshot; a visible
+viewer is not required. Wait for received confirmation, return to DashCast and send its usual bug
+report. The `DASHSAT VIDEO` section must identify sender-reported manual historical evidence and
+its receipt/capture ages. No Telegram/WhatsApp connection from the box is needed. The snapshot
+contains no SDP, tokens, network/peer identity, notifications, route text or arbitrary messages.
+
+The cache holds one immutable snapshot in RAM for up to 24 hours after receipt. Ordinary disconnect
+retains it; disable, revoke, restart and different/unknown-peer authentication clear it. The sender's
+last ACK is historical, not proof the current receiver cache/image is present. Test malformed and
+16–64 KiB snapshots: reject only diagnostics, preserving ping/guidance. The existing global message
+limit still applies above 64 KiB. Test unsupported receivers, late/wrong-generation ACKs and LAN
+loss without automatic replay. JVM/TLS fixtures establish these boundaries, not real vehicle video.
