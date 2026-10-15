@@ -64,3 +64,8 @@ These files are retained until manually removed or app storage is cleared. Nothi
 the configured bug-report channel. JVM tests and Android compilation cover archive/error handling;
 actual file visibility, shell utility support, storage capacity and transfer latency still require
 validation on the specific vehicle/ROM.
+
+A separate **Export system files — framework, libraries & configs** button now collects a fixed
+firmware subset into `system-exports`, with its own SYSTEM profile and provenance checks. See
+[SYSTEM_EXPORT.md](SYSTEM_EXPORT.md). The shared progress/recovery panel labels the active profile
+and recovers the latest timestamp across both export roots.

@@ -8,7 +8,7 @@ import java.util.concurrent.CancellationException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/** Device-independent streaming exporter. Source APKs are never copied to a staging directory. */
+/** Device-independent streaming exporter. Source files are never copied to a staging directory. */
 internal class FullApkExport(
     private val device: Device,
     private val directory: File,
@@ -16,14 +16,19 @@ internal class FullApkExport(
     private val progress: (Progress) -> Unit,
     private val volumeBytes: Long = 1024L * 1024 * 1024,
     private val freeBytes: (File) -> Long = { it.usableSpace },
+    private val kind: ExportKind = ExportKind.APK,
 ) {
-    data class Source(val path: String, var size: Long?, val origins: MutableSet<String> = linkedSetOf())
+    data class Source(val path: String, var size: Long?, val origins: MutableSet<String> = linkedSetOf(),
+                      val canonicalPath: String? = null)
     data class Inventory(val sources: List<Source>, val coverage: List<String>, val firmware: Map<String, String>,
                          val discoveryIssues: List<String> = emptyList())
     interface Device {
         fun discover(checkCancelled: () -> Unit, update: (String, Int) -> Unit): Inventory
         fun open(source: Source): InputStream
+        fun finish(): ContextCheck = ContextCheck()
+        fun finish(cancelled: Boolean): ContextCheck = finish()
     }
+    data class ContextCheck(val firmware: Map<String, String> = emptyMap(), val issues: List<String> = emptyList())
     data class Progress(
         val stage: String, val current: String = "", val discovered: Int = 0,
         val completed: Int = 0, val failed: Int = 0, val bytes: Long = 0,
@@ -32,10 +37,11 @@ internal class FullApkExport(
         val startedMs: Long = monotonicMs(), val lastProgressMs: Long = startedMs,
         val directory: File? = null,
         val countsKnown: Boolean = true,
+        val kind: ExportKind = ExportKind.APK,
     )
     private data class Record(val source: Source, var status: String = "pending", var archive: String = "",
                               var entry: String = "", var bytes: Long = 0, var hash: String = "", var error: String = "")
-    private var state = Progress("Preparing export", directory = directory)
+    private var state = Progress("Preparing ${kind.label} export", directory = directory, kind = kind)
     private val archives = mutableListOf<File>()
     private val records = mutableListOf<Record>()
     private var inventory = Inventory(emptyList(), emptyList(), emptyMap())
@@ -45,6 +51,8 @@ internal class FullApkExport(
     private var partNumber = 0
     private val volumeRecords = mutableListOf<Record>()
     private var lastPublish = 0L
+    private var finalContext = ContextCheck()
+    private var contextChecked = false
 
     fun run(): Progress {
         var outcome = "failed"
@@ -52,7 +60,7 @@ internal class FullApkExport(
         try {
             check(directory.mkdirs() || directory.isDirectory) { "Cannot create export directory" }
             inventory = device.discover(::checkCancelled) { label, count ->
-                publish(state.copy(stage = "Discovering APKs (total unknown)", current = label,
+                publish(state.copy(stage = "Discovering ${kind.noun} (total unknown)", current = label,
                     discovered = count, lastProgressMs = monotonicMs()))
             }
             records.addAll(inventory.sources.map { Record(it) })
@@ -70,7 +78,7 @@ internal class FullApkExport(
                             (source.size == null || volumePayload + source.size!! > volumeBytes)) finishVolume()
                         ensureSpace(source.size ?: BUFFER_BYTES.toLong())
                         if (zip == null) startVolume()
-                        record.entry = "apks/${index.toString().padStart(6, '0')}/${safeName(source.path.substringAfterLast('/'))}"
+                        record.entry = "${kind.entryRoot}/${index.toString().padStart(6, '0')}/${safeName(source.path.substringAfterLast('/'))}"
                         record.archive = part!!.name.removeSuffix(".part")
                         volumeRecords.add(record)
                         zip!!.putNextEntry(ZipEntry(record.entry))
@@ -110,7 +118,7 @@ internal class FullApkExport(
                     // in this volume and explicitly describe the truncated entry as failed.
                     zip!!.closeEntry()
                     record.status = "failed"
-                    record.error = e.message.orEmpty() + "; entry is incomplete, do not use as an APK"
+                    record.error = e.message.orEmpty() + if (kind == ExportKind.APK) "; entry is incomplete, do not use as an APK" else "; entry is incomplete, do not use as a system file"
                 } catch (e: IOException) {
                     record.status = "failed"
                     record.error = e.message.orEmpty()
@@ -123,9 +131,10 @@ internal class FullApkExport(
                 if (volumePayload >= volumeBytes) finishVolume()
             }
             finishVolume()
-            outcome = if (records.any { it.status != "exported" } || inventory.discoveryIssues.isNotEmpty() || records.isEmpty()) "partial" else "finished"
-            message = if (outcome == "finished") "All discovered readable APKs exported; whole-vehicle coverage remains unverified."
-                      else "Discovery gaps or APK export failures recorded. See manifest.json."
+            checkFinalContext()
+            outcome = if (finalContext.issues.isNotEmpty() || records.any { it.status != "exported" } || inventory.discoveryIssues.isNotEmpty() || records.isEmpty()) "partial" else "finished"
+            message = if (outcome == "finished") "All selected readable ${kind.noun} exported; whole-vehicle coverage remains unverified."
+                      else "Discovery/context gaps or ${kind.label} export failures recorded. See manifest.json."
         } catch (e: CancellationException) {
             outcome = "cancelled"
             message = "Cancelled. Finished ZIP volumes retained; .part files are incomplete."
@@ -133,8 +142,12 @@ internal class FullApkExport(
             message = "${e.javaClass.simpleName}: ${e.message}"
         } finally {
             if (zip != null) abandonVolume(message.ifEmpty { outcome })
+            checkFinalContext()
             records.filter { it.status == "pending" }.forEach { it.status = "not_attempted" }
-            try { writeManifest(outcome, message) } catch (e: Exception) { message += " Manifest write failed: ${e.message}" }
+            try { writeManifest(outcome, message) } catch (e: Exception) {
+                message += " Manifest write failed: ${e.message}"
+                if (outcome != "cancelled") outcome = "failed"
+            }
             publishCounts()
             publish(state.copy(stage = message, running = false, outcome = outcome, current = "",
                 archives = archives.toList(), lastProgressMs = monotonicMs()))
@@ -142,6 +155,14 @@ internal class FullApkExport(
         return state
     }
 
+    private fun checkFinalContext() {
+        if (contextChecked) return
+        contextChecked = true
+        if (kind == ExportKind.SYSTEM) publish(state.copy(stage = if (cancelled()) "Finalizing cancelled SYSTEM export" else "Checking final SYSTEM build context", current = "Selected build properties", lastProgressMs = monotonicMs()))
+        finalContext = try { device.finish(cancelled()) } catch (e: Exception) {
+            ContextCheck(issues = listOf("Final build context unavailable: ${e.message}"))
+        }
+    }
     private fun checkCancelled() { if (cancelled()) throw CancellationException("Export cancelled") }
     private class SpaceException(message: String) : IOException(message)
     private class SourceException(message: String, cause: Throwable? = null) : IOException(message, cause)
@@ -153,7 +174,7 @@ internal class FullApkExport(
     private fun startVolume() {
         checkCancelled()
         partNumber++
-        part = File(directory, "apks-${partNumber.toString().padStart(3, '0')}.zip.part")
+        part = File(directory, "${kind.archivePrefix}-${partNumber.toString().padStart(3, '0')}.zip.part")
         zip = ZipOutputStream(part!!.outputStream().buffered(BUFFER_BYTES)).apply { setLevel(0) }
         volumePayload = 0
         volumeRecords.clear()
@@ -202,16 +223,22 @@ internal class FullApkExport(
     }
     private fun manifest(outcome: String, message: String, rows: List<Record>): String = buildString {
         append("{\n\"schema\":1,\"outcome\":").append(json(outcome))
+        append(",\"kind\":").append(json(kind.name))
+        append(",\"contextCheckComplete\":").append(contextChecked)
         append(",\"message\":").append(json(message))
         append(",\"wholeVehicleCoverage\":\"unverified\",\"firmware\":{")
         append(inventory.firmware.entries.joinToString(",") { json(it.key) + ":" + json(it.value) })
-        append("},\"coverage\":[").append(inventory.coverage.joinToString(",") { json(it) }).append("]")
+        append("},\"firmwareAfter\":{")
+        append(finalContext.firmware.entries.joinToString(",") { json(it.key) + ":" + json(it.value) })
+        append("},\"contextIssues\":[").append(finalContext.issues.joinToString(",") { json(it) }).append("]")
+        append(",\"coverage\":[").append(inventory.coverage.joinToString(",") { json(it) }).append("]")
         append(",\"discoveryIssues\":[").append(inventory.discoveryIssues.joinToString(",") { json(it) }).append("]")
-        append(",\"entryUseRule\":\"Only entries whose status is exported contain a complete APK; failed entries may contain truncated bytes.\"")
+        append(",\"entryUseRule\":").append(json("Only entries whose status is exported contain a complete " +
+            (if (kind == ExportKind.APK) "APK" else "system file") + "; failed entries may contain truncated bytes."))
         append(",\"finishedArchives\":[").append(archives.joinToString(",") { json(it.name) }).append("]")
         append(",\"files\":[\n")
         append(rows.joinToString(",\n") { r ->
-            "{\"path\":${json(r.source.path)},\"expectedBytes\":${r.source.size}," +
+            "{\"path\":${json(r.source.path)},\"canonicalPath\":${r.source.canonicalPath?.let { json(it) } ?: "null"},\"expectedBytes\":${r.source.size}," +
                 "\"origins\":[${r.source.origins.joinToString(",") { json(it) }}]," +
                 "\"status\":${json(r.status)},\"archive\":${json(r.archive)},\"entry\":${json(r.entry)}," +
                 "\"bytes\":${r.bytes},\"sha256\":${json(r.hash)},\"error\":${json(r.error)}}"
