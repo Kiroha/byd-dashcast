@@ -2027,8 +2027,12 @@ android {
         // 661 = 1.9.22-beta (ORDERED SATELLITE VIEWER READINESS AND SAFE VIDEO EVIDENCE.
         // Queue an unavailable-viewer rejection before a concurrent ready event.
         // Retain bounded scalar stages across main-display/CarPlay transitions.)
-        versionCode 661
-        versionName "1.9.22-beta"
+        // 662 = 1.9.23-beta (FULL LOCAL APK EXPORT WITH VISIBLE PROGRESS.
+        // Discover accessible system, installed and split APKs without a selection quota;
+        // stream independent ZIP volumes with manifests, hashes and explicit coverage gaps.
+        // Preserve completed volumes on cancellation/failure. Vehicle/ROM validation pending.)
+        versionCode 662
+        versionName "1.9.23-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
