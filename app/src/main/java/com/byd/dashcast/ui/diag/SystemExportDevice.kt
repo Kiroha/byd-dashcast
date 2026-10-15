@@ -16,64 +16,102 @@ import java.util.concurrent.CancellationException
 
 /** Shell script builders are independently exercised on local fixtures, never on a vehicle. */
 internal object SystemInventoryCommands {
+    private fun aliases(roots: List<String>) = roots + roots.filter {
+        it.startsWith("/product/") || it.startsWith("/system_ext/") || it.startsWith("/vendor/")
+    }.map { "/system$it" }
+    private fun moduleRoots(directory: String, modules: Set<String>) = modules.flatMap {
+        listOf("/apex/$it/$directory", "/apex/$it@*/$directory")
+    }
+    private fun apexVersionGuard(pathVariable: String, failure: String): String =
+        "dc_module=\${$pathVariable#/apex/}; dc_module=\${dc_module%%/*}; " +
+            "case \"\$dc_module\" in *@*) dc_version=\${dc_module#*@}; case \"\$dc_version\" in ''|*[!0-9]*) $failure ;; esac ;; esac; "
+
     fun scan(root: String, mode: String, apexNames: List<String> = emptyList()): String {
         val qroot = ApkInventoryShell.quote(root)
-        val predicate = when (mode) {
-            "framework" -> "\\( -name '*.jar' -o -name '*.art' -o -name '*.oat' -o -name '*.odex' -o -name '*.vdex' \\)"
-            "xml" -> "-name '*.xml'"
-            "init" -> "-name '*.rc'"
-            "native" -> SystemExportPolicy.nativeNames.joinToString(" -o ", "\\( ", " \\)") { "-name ${ApkInventoryShell.quote(it)}" }
-            "apex" -> apexNames.joinToString(" -o ", "\\( ", " \\)") { "-name ${ApkInventoryShell.quote(it)}" }
-            "exact" -> ""
+        val inspect = inspectFiles(mode)
+        // Fixed files are checked canonically before their type or content is inspected.
+        if (mode == "exact") return "sh -c ${ApkInventoryShell.quote(inspect)} _ $qroot"
+        val roots = when (mode) {
+            "framework" -> aliases(SystemExportPolicy.frameworkRoots)
+            "xml" -> aliases(SystemExportPolicy.xmlRoots)
+            "init" -> aliases(SystemExportPolicy.initRoots)
+            "native" -> aliases(SystemExportPolicy.nativeRoots)
+            "hal" -> aliases(SystemExportPolicy.halRoots)
+            "bionic" -> listOf("lib/bionic", "lib64/bionic").flatMap { moduleRoots(it, setOf("com.android.runtime")) }
+            "apex" -> moduleRoots("javalib", SystemExportPolicy.apexModules)
             else -> error("Unknown fixed inventory mode")
         }
-        val inspect = inspectFiles(mode)
-        if (mode == "exact") return "if [ -f $qroot ]; then sh -c ${ApkInventoryShell.quote(inspect)} _ $qroot; " +
-            "else printf 'ROOT_UNAVAILABLE|%s\\n' $qroot; fi"
-        val roots = when (mode) {
-            "framework" -> SystemExportPolicy.frameworkRoots
-            "xml" -> SystemExportPolicy.xmlRoots
-            "init" -> SystemExportPolicy.initRoots
-            "native" -> SystemExportPolicy.nativeRoots
-            "apex" -> listOf("runtime", "art", "conscrypt", "i18n").flatMap {
-                listOf("/apex/com.android.$it/javalib", "/apex/com.android.$it@*/javalib") }
-            else -> error("Unknown root mode")
-        }
-        val rootPatterns = (roots + roots.filter { it.startsWith("/product/") || it.startsWith("/system_ext/") || it.startsWith("/vendor/") }.map { "/system$it" }).joinToString("|")
-        val rootGuard = "dc_root=\$(readlink -f $qroot); case \"\$dc_root\" in $rootPatterns) ;; " +
+        val rootGuard = "dc_root=\$(readlink -f $qroot); case \"\$dc_root\" in ${roots.joinToString("|")}) ;; " +
             "*) printf 'ROOT_POLICY_DENIED|%s\\n' $qroot; exit 0 ;; esac; " +
-            (if (mode == "apex") "dc_module=\${dc_root#/apex/}; dc_module=\${dc_module%%/*}; " +
-                "case \"\$dc_module\" in *@*) dc_version=\${dc_module#*@}; case \"\$dc_version\" in ''|*[!0-9]*) " +
-                "printf 'ROOT_POLICY_DENIED|%s\\n' $qroot; exit 0 ;; esac ;; esac; " else "")
+            (if (mode in setOf("apex", "bionic")) apexVersionGuard("dc_root",
+                "printf 'ROOT_POLICY_DENIED|%s\\n' $qroot; exit 0") +
+                (if (mode == "apex") "[ \"\$dc_root\" = \"/apex/\$dc_module/javalib\" ] || { printf 'ROOT_POLICY_DENIED|%s\\n' $qroot; exit 0; }; "
+                else "case \"\$dc_root\" in /apex/\$dc_module/lib/bionic|/apex/\$dc_module/lib64/bionic) ;; *) printf 'ROOT_POLICY_DENIED|%s\\n' $qroot; exit 0 ;; esac; ") else "")
+        val enumerate = if (mode in setOf("native", "bionic")) {
+            val names = if (mode == "native") SystemExportPolicy.nativeNames else SystemExportPolicy.bionicNames
+            // Do not enumerate or stat unrelated neighbors. One grouped exact-name probe per root.
+            "sh -c ${ApkInventoryShell.quote(inspect)} _ " +
+                names.joinToString(" ") { "\"\$dc_root/$it\"" }
+        } else {
+            val predicate = when (mode) {
+                "framework" -> "\\( -name '*.jar' -o -name '*.art' -o -name '*.oat' -o -name '*.odex' -o -name '*.vdex' \\)"
+                "xml" -> "-name '*.xml'"
+                "init" -> "-name '*.rc'"
+                "hal" -> "\\( -name 'auto.*.so' -o -name 'auto.so' \\)"
+                "apex" -> apexNames.joinToString(" -o ", "\\( ", " \\)") { "-name ${ApkInventoryShell.quote(it)}" }
+                else -> error("Unknown enumerated mode")
+            }
+            // Names are tested before -type; HAL discovery never descends into neighbors.
+            "find -H \"\$dc_root\" ${if (mode == "hal") "-maxdepth 1 " else ""}" +
+                "$predicate \\( -type f -o -type l \\) -exec sh -c ${ApkInventoryShell.quote(inspect)} _ {} +"
+        }
+        val deniedAccess = if (mode in setOf("native", "bionic")) "[ ! -x $qroot ]"
+            else "[ ! -r $qroot ] || [ ! -x $qroot ]"
         return "if [ ! -d $qroot ]; then printf 'ROOT_UNAVAILABLE|%s\\n' $qroot; " +
-            "elif [ ! -r $qroot ] || [ ! -x $qroot ]; then printf 'ROOT_DENIED|%s\\n' $qroot; " +
-            "else $rootGuard find -H \"\$dc_root\" ${if (mode == "native") "-maxdepth 1 " else ""}" +
-            "\\( -type f -o -type l \\) $predicate -exec sh -c ${ApkInventoryShell.quote(inspect)} _ {} +; fi"
-
+            "elif $deniedAccess; then printf 'ROOT_DENIED|%s\\n' $qroot; " +
+            "else $rootGuard $enumerate; fi"
     }
+
     fun inspectFiles(mode: String): String {
-        fun aliases(roots: List<String>) = roots + roots.filterNot { it.startsWith("/system/") }.map { "/system$it" }
-        val canonicalPatterns = when (mode) {
+        val patterns = when (mode) {
             "framework" -> aliases(SystemExportPolicy.frameworkRoots).flatMap { rootPath ->
                 listOf("jar", "art", "oat", "odex", "vdex").map { "$rootPath/*.$it" } }
             "xml" -> aliases(SystemExportPolicy.xmlRoots).map { "$it/*.xml" }
             "init" -> aliases(SystemExportPolicy.initRoots).map { "$it/*.rc" }
-            "native" -> aliases(SystemExportPolicy.nativeRoots).flatMap { rootPath -> SystemExportPolicy.nativeNames.map { "$rootPath/$it" } }
-            "apex" -> listOf("runtime", "art", "conscrypt", "i18n").flatMap { module ->
-                listOf("jar", "art", "oat", "odex", "vdex").flatMap { listOf("/apex/com.android.$module/javalib/*.$it", "/apex/com.android.$module@*/javalib/*.$it") } }
-            else -> listOf(SystemExportPolicy.CONTAINER_CONFIG)
+            "native" -> aliases(SystemExportPolicy.nativeRoots).flatMap { rootPath -> SystemExportPolicy.nativeNames.map { "$rootPath/$it" } } +
+                listOf("lib/bionic", "lib64/bionic").flatMap { directory ->
+                    moduleRoots(directory, setOf("com.android.runtime")).flatMap { rootPath -> SystemExportPolicy.bionicNames.map { "$rootPath/$it" } } }
+            "bionic" -> listOf("lib/bionic", "lib64/bionic").flatMap { directory ->
+                moduleRoots(directory, setOf("com.android.runtime")).flatMap { rootPath -> SystemExportPolicy.bionicNames.map { "$rootPath/$it" } } }
+            "hal" -> aliases(SystemExportPolicy.halRoots).flatMap { listOf("$it/auto.*.so", "$it/auto.so") }
+            "apex" -> moduleRoots("javalib", SystemExportPolicy.apexModules).flatMap { rootPath ->
+                listOf("jar", "art", "oat", "odex", "vdex").map { "$rootPath/*.$it" } }
+            "exact" -> SystemExportPolicy.exactPaths
+            else -> error("Unknown inspection mode")
         }.joinToString("|")
         return "for dc_file do " +
             "dc_real=\$(readlink -f \"\$dc_file\") || { printf 'ISSUE|canonical resolution failed|%s\\n' \"\$dc_file\"; continue; }; " +
-            "case \"\$dc_real\" in $canonicalPatterns) ;; *) printf 'ISSUE|canonical path outside firmware policy|%s\\n' \"\$dc_file\"; continue ;; esac; " +
-            (if (mode == "apex") "dc_module=\${dc_real#/apex/}; dc_module=\${dc_module%%/*}; " +
-                "case \"\$dc_module\" in *@*) dc_version=\${dc_module#*@}; case \"\$dc_version\" in ''|*[!0-9]*) " +
-                "printf 'ISSUE|unsupported APEX version|%s\\n' \"\$dc_file\"; continue ;; esac ;; esac; " else "") +
-            (if (mode == "init") "grep -Eiq ${ApkInventoryShell.quote(SystemExportPolicy.INIT_PATTERN)} \"\$dc_real\"; dc_grep=\$?; " +
-                "if [ \"\$dc_grep\" = 1 ]; then continue; fi; if [ \"\$dc_grep\" != 0 ]; then printf 'ISSUE|init read denied/tool failure|%s\\n' \"\$dc_file\"; continue; fi; " else "") +
-            "dc_size=\$(stat -c %s \"\$dc_real\") && " +
-            "[ -f \"\$dc_real\" ] && printf 'SYS|%s|%s|%s\\n' \"\$dc_size\" \"\$dc_real\" \"\$dc_file\" || " +
-            "printf 'ISSUE|canonical/stat unavailable|%s\\n' \"\$dc_file\"; done"
+            "case \"\$dc_real\" in $patterns) ;; *) printf 'ISSUE|canonical path outside firmware policy|%s\\n' \"\$dc_file\"; continue ;; esac; " +
+            // A system native alias may resolve into a versioned Bionic mount too.
+            "case \"\$dc_real\" in /apex/*) " + apexVersionGuard("dc_real",
+                "printf 'ISSUE|unsupported APEX version|%s\\n' \"\$dc_file\"; continue") +
+                (if (mode in setOf("native", "bionic")) "dc_parent=\${dc_real%/*}; case \"\$dc_parent\" in /apex/\$dc_module/lib/bionic|/apex/\$dc_module/lib64/bionic) ;; " +
+                    "*) printf 'ISSUE|canonical path outside Bionic scope|%s\\n' \"\$dc_file\"; continue ;; esac; " else "") + ";; esac; " +
+            (if (mode == "hal") "dc_parent=\${dc_real%/*}; dc_base=\${dc_real##*/}; " +
+                "case \"\$dc_parent\" in ${aliases(SystemExportPolicy.halRoots).joinToString("|")}) ;; " +
+                "*) printf 'ISSUE|canonical HAL parent outside policy|%s\\n' \"\$dc_file\"; continue ;; esac; " +
+                "case \"\$dc_base\" in auto.so) ;; auto.*.so) dc_variant=\${dc_base#auto.}; dc_variant=\${dc_variant%.so}; " +
+                "case \"\$dc_variant\" in ''|[!A-Za-z0-9_+@=-]*|*[!A-Za-z0-9_.+@=-]*) printf 'ISSUE|invalid HAL candidate name|%s\\n' \"\$dc_file\"; continue ;; esac ;; " +
+                "*) printf 'ISSUE|invalid HAL candidate name|%s\\n' \"\$dc_file\"; continue ;; esac; " else "") +
+            "dc_size=\$(stat -c %s \"\$dc_real\") || { printf 'ISSUE|canonical/stat unavailable|%s\\n' \"\$dc_file\"; continue; }; " +
+            "case \"\$dc_size\" in ''|*[!0-9]*) printf 'ISSUE|invalid file size|%s\\n' \"\$dc_file\"; continue ;; esac; " +
+            "[ -f \"\$dc_real\" ] || { printf 'ISSUE|canonical target not a regular file|%s\\n' \"\$dc_file\"; continue; }; " +
+            (if (mode == "init") "if [ \"\$dc_size\" -gt 65536 ]; then printf 'ISSUE|init inspection truncated at 65536 bytes|%s\\n' \"\$dc_file\"; fi; " +
+                "dc_text=\$(head -c 65536 \"\$dc_real\"); dc_read=\$?; " +
+                "if [ \"\$dc_read\" != 0 ]; then printf 'ISSUE|init read denied/tool failure|%s\\n' \"\$dc_file\"; continue; fi; " +
+                "printf '%s\\n' \"\$dc_text\" | grep -Eiq ${ApkInventoryShell.quote(SystemExportPolicy.INIT_PATTERN)}; dc_grep=\$?; " +
+                "if [ \"\$dc_grep\" = 1 ]; then continue; fi; if [ \"\$dc_grep\" != 0 ]; then printf 'ISSUE|init matcher tool failure|%s\\n' \"\$dc_file\"; continue; fi; " else "") +
+            "printf 'SYS|%s|%s|%s\\n' \"\$dc_size\" \"\$dc_real\" \"\$dc_file\"; done"
     }
 
     fun snapshot(command: String, temporary: String): String = "umask 077; ( ulimit -f 8192 || exit 125; $command ) > " +
@@ -89,7 +127,8 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         "Original system files are read only. ZIPs/metadata, small inventory snapshots and normal existing daemon bootstrap/PID files are written.",
         "Live non-atomic collection: equal before/after fingerprints do not prove unchanged individual files or hardware compatibility.",
         "Existing app and ProxyDaemon identities only; no root, permission change, SurfaceDaemon or OEM-service invocation.",
-        "Native dependencies are limited to five named JNI/service libraries in both ABIs; DT_NEEDED closure requires subsequent offline analysis and targeted collection.",
+        "Native candidates: five original JNI/service libraries, 22 P4 DT_NEEDED names in both ABIs, fixed Fission/Qt paths and auto HAL filename candidates only. Collected files do not prove loaded paths or HAL selection.",
+        "Init imports outside selected etc/init roots are not followed. Linker namespaces and additional dependencies require offline resolution; no native code is loaded or executed.",
         "Boot/classpath companions are selected where exposed. Protected ART/OAT/VDEX or absent code remains unavailable; APK export is a separate action."
     )
     private var shellReady = false
@@ -115,10 +154,12 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         shellReady = try { ProxyClient.connect(context) } catch (e: Exception) { issue("ProxyDaemon connection failed: ${e.message}"); false }
         checkCancelled()
         before = captureContext(runtime = true)
+        checkCancelled()
         coverage.add("Context captured using ${if (shellReady) "daemon shell" else "app Build fields (fallback)"}; no positive model/ROM identification claimed.")
         val roots = SystemExportPolicy.frameworkRoots.map { it to "framework" } +
             SystemExportPolicy.xmlRoots.map { it to "xml" } + SystemExportPolicy.initRoots.map { it to "init" } +
-            SystemExportPolicy.nativeRoots.map { it to "native" } + listOf(SystemExportPolicy.CONTAINER_CONFIG to "exact")
+            SystemExportPolicy.nativeRoots.map { it to "native" } + SystemExportPolicy.halRoots.map { it to "hal" } +
+            SystemExportPolicy.bionicRoots.map { it to "bionic" } + SystemExportPolicy.exactPaths.map { it to "exact" }
         if (!shellReady) {
             issue("ProxyDaemon unavailable: shell context/classpaths/libraries not captured; app filesystem access only.")
             roots.forEach { (root, mode) -> scanApp(root, mode, checkCancelled, update) }
@@ -150,6 +191,7 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
                     val stem = entry.substringAfterLast('/').substringBeforeLast('.')
                     val names = listOf("jar", "art", "oat", "odex", "vdex").flatMap { listOf("$stem.$it", "boot-$stem.$it") }
                     scanShell(entry.substringBefore("/javalib/") + "/javalib", "apex", "$tempDir/apex-$index.txt", names, checkCancelled, update)
+                    checkCancelled()
                     if (!discoveredClasspath(entry)) issue("Runtime classpath file unavailable: $entry")
                 }
             } finally {
@@ -212,44 +254,78 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
     private fun scanApp(root: String, mode: String, checkCancelled: () -> Unit, update: (String, Int) -> Unit) {
         checkCancelled()
         update("SYSTEM app-only inventory: $root", sources.size)
-        if (!File(root).exists()) { issue("Missing or inaccessible root (app identity): $root"); return }
         val canonicalRoot = runCatching { File(root).canonicalPath }.getOrNull()
-        val allowedRoots = SystemExportPolicy.frameworkRoots + SystemExportPolicy.xmlRoots + SystemExportPolicy.initRoots + SystemExportPolicy.nativeRoots
+        val allowedRoots = when (mode) {
+            "framework" -> SystemExportPolicy.frameworkRoots
+            "xml" -> SystemExportPolicy.xmlRoots
+            "init" -> SystemExportPolicy.initRoots
+            "native" -> SystemExportPolicy.nativeRoots
+            "hal" -> SystemExportPolicy.halRoots
+            else -> emptyList()
+        }
         val rootsAndAliases = allowedRoots + allowedRoots.filterNot { it.startsWith("/system/") }.map { "/system$it" }
-        if (canonicalRoot == null || (mode != "exact" && canonicalRoot !in rootsAndAliases) ||
+        val bionicRootAllowed = mode == "bionic" && canonicalRoot != null &&
+            SystemExportPolicy.isBionic("$canonicalRoot/libc.so")
+        if (canonicalRoot == null || (mode != "exact" && canonicalRoot !in rootsAndAliases && !bionicRootAllowed) ||
             (mode == "exact" && !SystemExportPolicy.accepted(root, canonicalRoot))) {
             issue("Canonical root outside selected firmware policy: $root -> $canonicalRoot"); return
         }
-        var visited = 0
+        if (!File(root).exists()) { issue("Missing or inaccessible root (app identity): $root"); return }
+        fun candidate(file: File) {
+            checkCancelled()
+            val path = file.path
+            // Filename selection precedes canonical/type/size queries, including fallback mode.
+            if (!SystemExportPolicy.allowed(path)) return
+            try {
+                val canonical = file.canonicalPath
+                if (!SystemExportPolicy.accepted(path, canonical)) {
+                    issue("Skipped escaping alias: $path -> $canonical"); return
+                }
+                if (!file.isFile || !file.canRead()) { issue("Selected candidate unreadable/non-file: $path"); return }
+                if (mode == "init") {
+                    val (text, truncated) = file.bufferedReader().use { ExportText.read(it, 65536) }
+                    if (truncated) issue("Init inspection truncated: $path")
+                    if (!text.contains(Regex(SystemExportPolicy.INIT_PATTERN, RegexOption.IGNORE_CASE))) return
+                }
+                add(path, canonical, file.length(), "app:$mode:$root")
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) { issue("Selected candidate unavailable: $path: ${e.message}") }
+        }
         try {
-            Files.walkFileTree(File(root).toPath(), object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    checkCancelled()
-                    return if (mode == "native" && dir.toString() != root) FileVisitResult.SKIP_SUBTREE else FileVisitResult.CONTINUE
-                }
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    checkCancelled()
-                    if (++visited % 64 == 0) update("SYSTEM app-only inventory: $root", sources.size)
-                    val path = file.toString()
-                    if (SystemExportPolicy.allowed(path)) {
-                        val f = file.toFile()
-                        val canonical = f.canonicalPath
-                        if (SystemExportPolicy.accepted(path, canonical) && f.isFile) {
-                            if (mode != "init" || f.bufferedReader().use { reader ->
-                                    // Only matching service fragments are retained; bound inspection.
-                                    val (text, truncated) = ExportText.read(reader, 65536)
-                                    if (truncated) issue("Init inspection truncated: $path")
-                                    text.contains(Regex(SystemExportPolicy.INIT_PATTERN, RegexOption.IGNORE_CASE)) }) {
-                                add(path, canonical, f.length(), "app:$mode:$root")
-                            }
-                        } else issue("Skipped unreadable/non-file/escaping alias: $path -> $canonical")
+            when (mode) {
+                "exact" -> candidate(File(root))
+                "native", "bionic" -> {
+                    // Exact probes never traverse neighboring libraries, even when access is denied.
+                    if (!File(root).canExecute()) { issue("App cannot traverse root: $root"); return }
+                    val names = if (mode == "native") SystemExportPolicy.nativeNames else SystemExportPolicy.bionicNames
+                    names.forEach { name ->
+                        checkCancelled()
+                        val file = File(root, name)
+                        candidate(file)
                     }
-                    return FileVisitResult.CONTINUE
                 }
-                override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
-                    issue("App cannot enumerate $file: ${exc.message}"); return FileVisitResult.CONTINUE
+                "hal" -> Files.newDirectoryStream(File(root).toPath()).use { entries ->
+                    for (entry in entries) {
+                        checkCancelled()
+                        if (SystemExportPolicy.isAutoHalName(entry.fileName.toString())) candidate(entry.toFile())
+                    }
                 }
-            })
+                else -> {
+                    var visited = 0
+                    Files.walkFileTree(File(root).toPath(), object : SimpleFileVisitor<Path>() {
+                        override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                            checkCancelled(); return FileVisitResult.CONTINUE
+                        }
+                        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                            if (++visited % 64 == 0) update("SYSTEM app-only inventory: $root", sources.size)
+                            candidate(file.toFile()); return FileVisitResult.CONTINUE
+                        }
+                        override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
+                            issue("App cannot enumerate $file: ${exc.message}"); return FileVisitResult.CONTINUE
+                        }
+                    })
+                }
+            }
         } catch (e: CancellationException) { throw e
         } catch (e: Exception) { issue("App inventory failed $root: ${e.message}") }
     }

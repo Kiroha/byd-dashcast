@@ -183,7 +183,7 @@ internal class FullApkExport(
         val output = zip ?: return
         publish(state.copy(stage = "Closing ZIP volume", lastProgressMs = monotonicMs()))
         val manifest = manifest("volume_complete", "This manifest describes this volume; consult the session manifest for final coverage.", volumeRecords)
-        output.putNextEntry(ZipEntry("manifest.json"))
+        output.putNextEntry(ZipEntry(if (kind == ExportKind.SYSTEM) "manifest-volume.json" else "manifest.json"))
         output.write(manifest.toByteArray(Charsets.UTF_8))
         output.closeEntry()
         output.close()
