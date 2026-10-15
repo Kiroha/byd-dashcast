@@ -32,7 +32,8 @@ class SystemExportEngineTest {
         assertEquals("system-001.zip", result.archives.single().name)
         ZipFile(result.archives.single()).use { zip ->
             assertNotNull(zip.getEntry("system/000000/services.jar"))
-            val manifest = zip.getInputStream(zip.getEntry("manifest.json")).reader().readText()
+            assertNull("Only the final session manifest uses manifest.json", zip.getEntry("manifest.json"))
+            val manifest = zip.getInputStream(zip.getEntry("manifest-volume.json")).reader().readText()
             assertTrue(manifest.contains("\"kind\":\"SYSTEM\""))
             assertTrue(manifest.contains("\"contextCheckComplete\":false"))
             assertFalse(manifest.contains("complete APK"))
@@ -64,7 +65,7 @@ class SystemExportEngineTest {
         val result = FullApkExport(broken, directory, { false }, {}, freeBytes = ample, kind = ExportKind.SYSTEM).run()
         assertEquals("partial", result.outcome)
         assertTrue(File(directory, "manifest.json").readText().contains("transport lost"))
-        ZipFile(result.archives.single()).use { assertNotNull(it.getEntry("manifest.json")) }
+        ZipFile(result.archives.single()).use { assertNotNull(it.getEntry("manifest-volume.json")) }
     }
     @Test fun `final manifest destination failure does not claim finished export`() {
         val directory = temporary.newFolder()
@@ -81,5 +82,9 @@ class SystemExportEngineTest {
         val result = FullApkExport(device(), temporary.newFolder(), { false }, {}, freeBytes = ample).run()
         assertEquals(ExportKind.APK, result.kind)
         assertEquals("apks-001.zip", result.archives.single().name)
+        ZipFile(result.archives.single()).use { zip ->
+            assertNotNull(zip.getEntry("manifest.json"))
+            assertNull(zip.getEntry("manifest-volume.json"))
+        }
     }
 }
