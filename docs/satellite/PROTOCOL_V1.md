@@ -207,6 +207,64 @@ capture or ABRP-specific integration is promised by v1. Application capture and 
 restrictions depend on the companion Android version and app. WebView absence/incompatibility
 causes a controlled viewer failure while local navigation and projection remain available.
 
+## Optional manual video diagnostics
+
+A receiver supporting schema 1 adds the exact integer `"videoDiagnostics":1` to its authenticated
+`welcome`. Missing, null, Boolean, string, fractional or other version values disable this feature.
+Companions send **nothing** to unsupported receivers and reset the capability on every connection.
+It is never inferred from a saved profile, app version, video readiness or a previous socket.
+
+The user can choose **Send diagnostics to DashCast** in DashSat after a video attempt. This sends
+one bounded sender-reported snapshot over the existing pinned, authenticated local WSS connection;
+no Telegram/internet access, additional listener, file server or visible video viewer is required.
+Guidance, heartbeat, source age and media negotiation remain independent. There is one replaceable
+pending snapshot, no automatic export and no retry across a disconnected control generation.
+
+```json
+{"type":"diagnostics.video","schema":1,"request":1,"snapshotAgeMs":200,"appVersionCode":12,"state":"waiting_viewer","captureBusy":true,"share":2,"counts":{"offer_sent":1},"recent":[{"event":"offer_sent","cause":"none","share":1,"ageMs":8000}]}
+```
+
+`diagnostics-video-schema.json` defines the strict allowlist and `diagnostics-video-fixtures.json`
+contains accepted/rejected compatibility cases. The complete UTF-8 message is at most 16,384 bytes.
+All fields are required and unknown fields are rejected, including inside history rows and counts.
+Integers must be actual JSON integers, never strings, fractions or Booleans. `request` is a local
+per-control-connection ordinal from 1 to 1,000,000, strictly increasing across accepted requests;
+it is not a device/session/negotiation identifier. `appVersionCode` is an integer from 1 to 1,000,000.
+`share` is a process-local sharing-attempt ordinal from 0 to 1,000,000 (0 before the first attempt).
+Counts contain up to 32 fixed event keys with positive integer totals up to 1,000,000. If more
+than 32 event types occurred, prefer types present in recent history, then enum declaration order.
+Recent history has at most 32 rows, newest first, with a fixed event, fixed exception category,
+local share ordinal no greater than the snapshot's share, and nondecreasing age in milliseconds.
+`snapshotAgeMs` includes local queue delay. `ageMs` is the event age when the snapshot was captured;
+report receipt age is tracked independently by the receiver. Ages saturate at 86,400,000 ms and mean
+**at least 24 hours** at that limit. Counts, app version and sharing ordinals saturate at 1,000,000;
+capped sharing ordinals may merge attempts. No SDP, candidates, tokens, IDs, addresses, exception
+messages, notification/route/app content or arbitrary strings are permitted.
+
+After committing the reconstructed typed snapshot to its RAM cache, the receiver sends:
+
+```json
+{"type":"diagnostics.video.ack","schema":1,"request":1,"status":"accepted"}
+```
+
+`accepted` confirms receipt only, never an image or successful video. Rejections use the same
+message with `status:"rejected"`; an unsupported integer schema uses `status:"unsupported"`.
+If the request ordinal itself is malformed, rejection uses request 0 and cannot acknowledge a
+valid request. Diagnostic rejections do not emit generic `invalid_message` or disturb control,
+guidance or video. Payloads between 16 KiB and the global 64 KiB protocol limit are rejected this
+way; exceeding the global limit remains a transport failure. Senders accept only a matching ACK
+on the same authenticated generation, after actual dispatch and within five seconds of the manual
+request. A local queued/sent event without ACK is never displayed as received.
+
+The receiver keeps only one immutable typed snapshot in process RAM, at most 24 hours from receipt.
+An ordinary disconnect keeps historical evidence for the next DashCast bug report. Reconnection
+with the same authenticated installation metadata retains history; a different/unknown peer,
+disabling the receiver, token revocation or process restart clears it. Installation metadata is
+sender-reported and is not a separate credential. Cache commits are fenced against replacement,
+disable and token rotation. Bug reports label the data sender-reported/manual/historical, give
+receipt and capture ages, and distinguish a disconnected/replaced receipt connection. A retained
+ACK in DashSat is explicitly the **last transfer**, not a claim about the current cache or image.
+
 ## Receiver status in DashCast
 
 The Satellite settings page displays connection and guidance separately, using the

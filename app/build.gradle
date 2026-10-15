@@ -2032,8 +2032,8 @@ android {
         // stream independent ZIP volumes with manifests, hashes and explicit coverage gaps.
         // Preserve completed volumes on cancellation/failure. Vehicle/ROM validation pending.)
         // Targeted local SYSTEM firmware export, separate from APK collection.
-        versionCode 663
-        versionName "1.9.24-beta"
+        versionCode 664
+        versionName "1.9.25-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

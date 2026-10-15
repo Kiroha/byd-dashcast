@@ -1,0 +1,1060 @@
+{
+  "schema": 1,
+  "accepted": [
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "type": "diagnostics.video",
+      "schema": true,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": "1",
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1.5,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 0,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 2,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": true,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": "1",
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1.5,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": -1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 0,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1000001,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": -1,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 86400001,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": "1",
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": true,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 1000001,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": "2",
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": 1,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": "true",
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "free_text",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": null,
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "sdp": "forbidden_free_text"
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "token": "forbidden_free_text"
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "not_an_event": 1
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1.5
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "free_text",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 10000
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 3,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        }
+      ]
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ]
+    }
+  ]
+}

@@ -92,7 +92,7 @@ class SatelliteWebSocketServer(
                 sendBounded(conn, JSONObject().put("type", "welcome").put("version", SatelliteProtocol.VERSION)
                     .put("session", created.id).put("navigationTimeoutMs", SatelliteProtocol.NAV_TIMEOUT_MS)
                     .put("remoteGuidance", SatellitePrefs.usesRemoteGuidance(context))
-                    .put("genericRoundabouts", true)
+                    .put("genericRoundabouts", true).put("videoDiagnostics", 1)
                     .put("videoTransport", "webrtc").toString())
                 SatelliteVideoHub.connect(created.id) { sendBounded(conn, it) }
                 return
@@ -107,6 +107,20 @@ class SatelliteWebSocketServer(
                     val frame = SatelliteProtocol.navigation(json)
                     if (!session.navigation.accept(frame, now)) { error(conn, "stale_sequence"); return }
                     events.navigation(session.id, frame, now)
+                }
+                "diagnostics.video" -> {
+                    // Optional diagnostics have their own rejection. Never turn malformed evidence
+                    // into a navigation protocol error or mutate viewer/guidance state.
+                    val request = try { SatelliteProtocol.integer(json, "request", 1, SatelliteRemoteVideoDiagnostics.MAX_ORDINAL) }
+                        catch (_: Exception) { 0L }
+                    val result = try {
+                        if (json.opt("schema").let { (it is Int || it is Long) && (it as Number).toLong() != 1L }) "unsupported"
+                        else if (message.toByteArray(Charsets.UTF_8).size <= SatelliteRemoteVideoDiagnostics.MAX_BYTES &&
+                            SatelliteRemoteVideoDiagnostics.receive(context, token, session.id, json)) "accepted" else "rejected"
+                    } catch (_: Exception) { "rejected" }
+                    // Accepted means the typed RAM cache has committed, never successful video.
+                    sendBounded(conn, JSONObject().put("type", "diagnostics.video.ack").put("schema", 1)
+                        .put("request", request).put("status", result).toString())
                 }
                 "video.offer", "video.ice", "video.stop" -> {
                     val negotiation = json.get("negotiation")

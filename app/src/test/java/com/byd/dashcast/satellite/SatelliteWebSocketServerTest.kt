@@ -132,6 +132,49 @@ class SatelliteWebSocketServerTest {
         assertEquals(listOf(1L, 2L), frames.map { it.sequence })
     }
 
+    private fun diagnostics(request: Int = 1) = JSONObject(java.io.File("../docs/satellite/diagnostics-video-fixtures.json").readText())
+        .getJSONArray("accepted").getJSONObject(0).put("request", request)
+
+    @Test fun `diagnostics acknowledgement follows authenticated typed commit and malformed snapshots preserve navigation`() {
+        val socket = Socket(); open(socket); hello(socket)
+        assertEquals(1, JSONObject(socket.messages.first()).get("videoDiagnostics"))
+        val invalid = diagnostics().put("state", "untrusted free text")
+        server.onMessage(socket.socket, invalid.toString())
+        assertEquals("rejected", JSONObject(socket.messages.last()).getString("status"))
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().startsWith("No manually received"))
+        val oversized = diagnostics().put("padding", "x".repeat(17_000))
+        server.onMessage(socket.socket, oversized.toString())
+        assertEquals("rejected", JSONObject(socket.messages.last()).getString("status"))
+        server.onMessage(socket.socket, diagnostics().put("schema", 2).toString())
+        assertEquals("unsupported", JSONObject(socket.messages.last()).getString("status"))
+        server.onMessage(socket.socket, diagnostics().toString())
+        assertEquals("accepted", JSONObject(socket.messages.last()).getString("status"))
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().contains("state=waiting_viewer"))
+        server.onMessage(socket.socket, """{"type":"ping"}""")
+        assertEquals("pong", JSONObject(socket.messages.last()).getString("type"))
+        update(socket)
+        assertFalse(socket.closed); assertEquals(1, frames.size)
+        assertFalse(socket.messages.any { JSONObject(it).optString("type") == "error" })
+        server.onClose(socket.socket, 1000, "", true)
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().contains("receiptConnection=disconnected_or_replaced"))
+    }
+
+    @Test fun `revocation disabling and late old socket writes clear and cannot repopulate diagnostics`() {
+        val socket = Socket(); open(socket); hello(socket)
+        server.onMessage(socket.socket, diagnostics().toString())
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().contains("state=waiting_viewer"))
+        SatellitePrefs.rotateToken(context)
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().startsWith("No manually received"))
+        server.onMessage(socket.socket, diagnostics(2).toString())
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().startsWith("No manually received"))
+        server.onClose(socket.socket, 1008, "", true)
+        server.beginShutdown()
+        // The isolated ledger tests cover same-peer versus different-peer reconnects.
+        assertFalse(SatelliteRemoteVideoDiagnostics.receive(context, token, "old", diagnostics(2)))
+        SatellitePrefs.setEnabled(context, false)
+        assertTrue(SatelliteRemoteVideoDiagnostics.summary().startsWith("No manually received"))
+    }
+
     @Test fun `successful WSS authentication closes the temporary pairing listener`() {
         val attempt = SatellitePairingSession.begin()
         val bootstrap = SatellitePairingServer("{}", SatellitePairingCode.newCode(), 0)

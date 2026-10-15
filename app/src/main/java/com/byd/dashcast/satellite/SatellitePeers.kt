@@ -45,16 +45,19 @@ internal object SatellitePeers {
         safeAddress?.let { json.put("address", it) }
         context.getSharedPreferences(SatellitePrefs.FILE, Context.MODE_PRIVATE).edit { putString(LAST, json.toString()) }
         current = peer
+        SatelliteRemoteVideoDiagnostics.connected(session, identity?.id)
         true
     }
 
     fun disconnected(session: String) = synchronized(SatellitePrefs) {
         if (current?.session == session) current = null
+        SatelliteRemoteVideoDiagnostics.disconnected(session)
     }
 
     /** Called with the shared preference monitor held. Disabling keeps history; revocation clears it. */
     fun clear(context: Context, history: Boolean) = synchronized(SatellitePrefs) {
         current = null
+        SatelliteRemoteVideoDiagnostics.clear()
         if (history) context.getSharedPreferences(SatellitePrefs.FILE, Context.MODE_PRIVATE).edit { remove(LAST) }
     }
 

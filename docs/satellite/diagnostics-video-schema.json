@@ -1,0 +1,360 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DashCast optional manual video diagnostics schema 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schema",
+    "request",
+    "snapshotAgeMs",
+    "appVersionCode",
+    "state",
+    "captureBusy",
+    "share",
+    "counts",
+    "recent"
+  ],
+  "properties": {
+    "type": {
+      "const": "diagnostics.video"
+    },
+    "schema": {
+      "const": 1
+    },
+    "request": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "snapshotAgeMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 86400000
+    },
+    "appVersionCode": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "state": {
+      "enum": [
+        "stopped",
+        "starting",
+        "waiting_viewer",
+        "negotiating",
+        "connected_waiting_frames",
+        "streaming",
+        "control_unavailable",
+        "receiver_address_unsupported",
+        "capture_unavailable",
+        "consent_required",
+        "native_unavailable",
+        "capture_revoked",
+        "capture_locked",
+        "capture_paused",
+        "capture_hidden",
+        "media_connection_lost",
+        "signalling_overflow",
+        "negotiation_failed",
+        "video_protocol_failed",
+        "receiver_video_failed",
+        "ice_failed",
+        "media_connection_timeout",
+        "encoder_stalled",
+        "stats_timeout",
+        "other_failure"
+      ]
+    },
+    "captureBusy": {
+      "type": "boolean"
+    },
+    "share": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "counts": {
+      "type": "object",
+      "maxProperties": 32,
+      "additionalProperties": false,
+      "properties": {
+        "control_connected": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "control_closed": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "viewer_ready": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "viewer_closed": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "legacy_viewer_error": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "consent_requested": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "consent_cancelled": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "share_started": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "projection_created": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "waiting_viewer": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "native_initializing": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "encoder_check": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "hardware_unavailable": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "texture_initializing": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "display_initializing": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "capture_initialized": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "negotiating": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "offer_sent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "answer_received": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "answer_applied": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "ice_sent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "ice_received": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "media_connected": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "frames_encoded": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "receiver_error": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "negotiation_failed": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "capture_unavailable": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "native_unavailable": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "capture_revoked": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "capture_locked": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "capture_hidden": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "control_unavailable": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "media_lost": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "signalling_overflow": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "connection_timeout": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "encoder_stalled": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "stats_timeout": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "stopped": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "other_failure": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      }
+    },
+    "recent": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "cause",
+          "share",
+          "ageMs"
+        ],
+        "properties": {
+          "event": {
+            "enum": [
+              "control_connected",
+              "control_closed",
+              "viewer_ready",
+              "viewer_closed",
+              "legacy_viewer_error",
+              "consent_requested",
+              "consent_cancelled",
+              "share_started",
+              "projection_created",
+              "waiting_viewer",
+              "native_initializing",
+              "encoder_check",
+              "hardware_unavailable",
+              "texture_initializing",
+              "display_initializing",
+              "capture_initialized",
+              "negotiating",
+              "offer_sent",
+              "answer_received",
+              "answer_applied",
+              "ice_sent",
+              "ice_received",
+              "media_connected",
+              "frames_encoded",
+              "receiver_error",
+              "negotiation_failed",
+              "capture_unavailable",
+              "native_unavailable",
+              "capture_revoked",
+              "capture_locked",
+              "capture_hidden",
+              "control_unavailable",
+              "media_lost",
+              "signalling_overflow",
+              "connection_timeout",
+              "encoder_stalled",
+              "stats_timeout",
+              "stopped",
+              "other_failure"
+            ]
+          },
+          "cause": {
+            "enum": [
+              "none",
+              "security",
+              "state",
+              "argument",
+              "linkage",
+              "other"
+            ]
+          },
+          "share": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "ageMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 86400000
+          }
+        }
+      }
+    }
+  },
+  "$comment": "Implementations additionally enforce <=16384 UTF-8 bytes, exact Int/Long numeric types, newest-first nondecreasing ages and row.share <= snapshot.share. Ages and counts saturate; see PROTOCOL_V1.md."
+}
