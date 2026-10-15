@@ -63,13 +63,22 @@ internal object SystemInventoryCommands {
             }
             // Names are tested before -type; HAL discovery never descends into neighbors.
             "find -H \"\$dc_root\" ${if (mode == "hal") "-maxdepth 1 " else ""}" +
-                "$predicate \\( -type f -o -type l \\) -exec sh -c ${ApkInventoryShell.quote(inspect)} _ {} +"
+                "$predicate " + (if (mode == "hal") SystemExportPolicy.halProbeNames.joinToString(" -o ", "! \\( ", " \\) ") {
+                    "-name ${ApkInventoryShell.quote(it)}" } else "") +
+                "\\( -type f -o -type l \\) -exec sh -c ${ApkInventoryShell.quote(inspect)} _ {} +"
         }
-        val deniedAccess = if (mode in setOf("native", "bionic")) "[ ! -x $qroot ]"
+        val deniedAccess = if (mode in setOf("native", "bionic", "hal")) "[ ! -x $qroot ]"
             else "[ ! -r $qroot ] || [ ! -x $qroot ]"
+        val inventory = if (mode == "hal") {
+            // Known candidates remain discoverable in searchable, unlistable directories. Only
+            // unknown variants require enumeration; excluding fixed names avoids duplicate probes.
+            "sh -c ${ApkInventoryShell.quote(inspect)} _ " +
+                SystemExportPolicy.halProbeNames.joinToString(" ") { "\"\$dc_root/$it\"" } +
+                "; if [ ! -r $qroot ]; then printf 'ROOT_ENUMERATION_DENIED|%s\\n' $qroot; else $enumerate; fi"
+        } else enumerate
         return "if [ ! -d $qroot ]; then printf 'ROOT_UNAVAILABLE|%s\\n' $qroot; " +
             "elif $deniedAccess; then printf 'ROOT_DENIED|%s\\n' $qroot; " +
-            "else $rootGuard $enumerate; fi"
+            "else $rootGuard $inventory; fi"
     }
 
     fun inspectFiles(mode: String): String {
@@ -127,7 +136,7 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         "Original system files are read only. ZIPs/metadata, small inventory snapshots and normal existing daemon bootstrap/PID files are written.",
         "Live non-atomic collection: equal before/after fingerprints do not prove unchanged individual files or hardware compatibility.",
         "Existing app and ProxyDaemon identities only; no root, permission change, SurfaceDaemon or OEM-service invocation.",
-        "Native candidates: five original JNI/service libraries, 22 P4 DT_NEEDED names in both ABIs, fixed Fission/Qt paths and auto HAL filename candidates only. Collected files do not prove loaded paths or HAL selection.",
+        "Native candidates: five original JNI/service libraries, 22 P4 DT_NEEDED names in both ABIs, fixed Fission/Qt/diagnostics/RCC paths and direct-child auto HAL candidates including ODM. Fixed variants are corpus hypotheses; collected files do not prove loaded paths or HAL selection.",
         "Init imports outside selected etc/init roots are not followed. Linker namespaces and additional dependencies require offline resolution; no native code is loaded or executed.",
         "Boot/classpath companions are selected where exposed. Protected ART/OAT/VDEX or absent code remains unavailable; APK export is a separate action."
     )
@@ -263,7 +272,9 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
             "hal" -> SystemExportPolicy.halRoots
             else -> emptyList()
         }
-        val rootsAndAliases = allowedRoots + allowedRoots.filterNot { it.startsWith("/system/") }.map { "/system$it" }
+        val rootsAndAliases = allowedRoots + allowedRoots.filter {
+            it.startsWith("/product/") || it.startsWith("/system_ext/") || it.startsWith("/vendor/")
+        }.map { "/system$it" }
         val bionicRootAllowed = mode == "bionic" && canonicalRoot != null &&
             SystemExportPolicy.isBionic("$canonicalRoot/libc.so")
         if (canonicalRoot == null || (mode != "exact" && canonicalRoot !in rootsAndAliases && !bionicRootAllowed) ||
@@ -278,7 +289,8 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
             if (!SystemExportPolicy.allowed(path)) return
             try {
                 val canonical = file.canonicalPath
-                if (!SystemExportPolicy.accepted(path, canonical)) {
+                if (!SystemExportPolicy.accepted(path, canonical) ||
+                    (mode == "hal" && !SystemExportPolicy.isAutoHal(canonical))) {
                     issue("Skipped escaping alias: $path -> $canonical"); return
                 }
                 if (!file.isFile || !file.canRead()) { issue("Selected candidate unreadable/non-file: $path"); return }
@@ -304,10 +316,16 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
                         candidate(file)
                     }
                 }
-                "hal" -> Files.newDirectoryStream(File(root).toPath()).use { entries ->
-                    for (entry in entries) {
-                        checkCancelled()
-                        if (SystemExportPolicy.isAutoHalName(entry.fileName.toString())) candidate(entry.toFile())
+                "hal" -> {
+                    if (!File(root).canExecute()) { issue("App cannot traverse root: $root"); return }
+                    SystemExportPolicy.halProbeNames.forEach { name -> candidate(File(root, name)) }
+                    if (!File(root).canRead()) { issue("App cannot enumerate HAL root: $root; fixed candidates probed"); return }
+                    Files.newDirectoryStream(File(root).toPath()).use { entries ->
+                        for (entry in entries) {
+                            checkCancelled()
+                            val name = entry.fileName.toString()
+                            if (name !in SystemExportPolicy.halProbeNames && SystemExportPolicy.isAutoHalName(name)) candidate(entry.toFile())
+                        }
                     }
                 }
                 else -> {

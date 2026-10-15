@@ -14,11 +14,15 @@ internal object SystemExportPolicy {
         "libcrypto.so", "libcutils.so", "libdl.so", "libfission_cutils.so", "libgui.so", "libhardware.so",
         "libhardware_legacy.so", "liblog.so", "libm.so", "libnativeloader.so", "libnetutils.so",
         "libselinux.so", "libsync.so", "libui.so", "libutils.so", "libzmq.so")
-    val halRoots = nativeRoots.map { "$it/hw" }
+    // P6 loader evidence adds ODM only for auto HAL candidates, not general firmware scans.
+    val halRoots = nativeRoots.map { "$it/hw" } + listOf("/odm/lib/hw", "/odm/lib64/hw")
+    // Fixed hypotheses for the collected ROM; these names do not identify a platform or loaded HAL.
+    val halProbeNames = listOf("auto.so", "auto.qcom.so", "auto.QCM6125.so", "auto.trinket.so", "auto.default.so")
     val bionicRoots = listOf("/apex/com.android.runtime/lib/bionic", "/apex/com.android.runtime/lib64/bionic")
     val bionicNames = setOf("libc.so", "libm.so", "libdl.so")
     val exactPaths = listOf(CONTAINER_CONFIG, "/system/bin/fission_service",
-        "/system/bin/fissiond", "/system/bin/qtandroidnative", "/system/lib64/libBydCluster.so", "/system/lib64/libAdas.so")
+        "/system/bin/fissiond", "/system/bin/qtandroidnative", "/system/lib64/libBydCluster.so", "/system/lib64/libAdas.so",
+        "/system/bin/diagmgrsrv", "/system/lib64/cluster_theme1.rcc", "/system/lib64/cluster_theme2.rcc")
     val apexModules = setOf("com.android.runtime", "com.android.art", "com.android.conscrypt", "com.android.i18n", "com.android.media")
     const val CONTAINER_CONFIG = "/system/etc/container_comm_cfg.json"
     const val INIT_PATTERN = "AutoContainerNative|container|fission|autoservice|diagnosticsrv|diagmgr|strategyservice"
@@ -55,6 +59,8 @@ internal object SystemExportPolicy {
     private fun validApexModule(module: String): Boolean = module in apexModules ||
         (module.substringBefore('@') in apexModules && module.substringAfter('@', "").matches(Regex("[0-9]+")))
     fun isAutoHalName(name: String): Boolean = name == "auto.so" || name.matches(Regex("auto\\.[A-Za-z0-9_+@=-][A-Za-z0-9_.+@=-]*\\.so"))
+    fun isAutoHal(path: String): Boolean = clean(path) &&
+        partitionAlias(path).substringBeforeLast('/') in halRoots && isAutoHalName(path.substringAfterLast('/'))
     fun isBionic(path: String): Boolean {
         if (!clean(path)) return false
         val fields = path.split('/')
@@ -70,7 +76,7 @@ internal object SystemExportPolicy {
             (xmlRoots.any { normalized.startsWith("$it/") } && path.endsWith(".xml")) ||
             (initRoots.any { normalized.startsWith("$it/") } && path.endsWith(".rc")) ||
             (nativeRoots.any { normalized.substringBeforeLast('/') == it } && path.substringAfterLast('/') in nativeNames) ||
-            (halRoots.any { normalized.substringBeforeLast('/') == it } && isAutoHalName(path.substringAfterLast('/')))
+            isAutoHal(path)
     }
     fun accepted(path: String, canonical: String): Boolean = allowed(path) && allowed(canonical)
     fun classpath(value: String): Pair<List<String>, List<String>> {

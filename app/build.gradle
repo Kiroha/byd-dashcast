@@ -2033,8 +2033,9 @@ android {
         // Preserve completed volumes on cancellation/failure. Vehicle/ROM validation pending.)
         // Targeted local SYSTEM firmware export, separate from APK collection.
         // 665 = 1.9.26-beta: targeted P4 native dependency/HAL candidates; distinct SYSTEM volume manifest.
-        versionCode 665
-        versionName "1.9.26-beta"
+        // 666 = 1.9.27-beta: P6 diagnostics/RCC files and bounded ODM auto HAL candidates.
+        versionCode 666
+        versionName "1.9.27-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
