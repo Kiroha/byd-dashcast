@@ -178,17 +178,61 @@ class SystemExportPolicyTest {
         for (root in SystemExportPolicy.nativeRoots) for (name in expected) assertTrue("$root/$name", SystemExportPolicy.allowed("$root/$name"))
         for (path in listOf("/system/bin/fission_service", "/system/bin/fissiond", "/system/bin/qtandroidnative",
             "/system/lib64/libBydCluster.so", "/system/lib64/libAdas.so")) assertTrue(path, SystemExportPolicy.allowed(path))
-        for (path in listOf("/vendor/bin/fissiond", "/system/bin/diagmgrsrv", "/system/lib/libBydCluster.so",
+        for (path in listOf("/vendor/bin/fissiond", "/system/lib/libBydCluster.so",
             "/system/lib64/libbydcluster.so", "/system/lib64/subdir/libbinder.so")) assertFalse(path, SystemExportPolicy.allowed(path))
     }
+    @Test fun `P6 diagnostics and RCC candidates are exact paths with no neighboring scope`() {
+        for (path in listOf("/system/bin/diagmgrsrv", "/system/lib64/cluster_theme1.rcc", "/system/lib64/cluster_theme2.rcc")) {
+            assertTrue(path, SystemExportPolicy.allowed(path))
+            assertTrue(path, SystemExportPolicy.accepted(path, path))
+            assertFalse(path, SystemExportPolicy.accepted(path, "/data/private/${path.substringAfterLast('/')}"))
+        }
+        for (path in listOf("/vendor/bin/diagmgrsrv", "/system/bin/DiagMgrSrv", "/system/bin/diagmgrsrv.old",
+            "/system/lib/cluster_theme1.rcc", "/vendor/lib64/cluster_theme1.rcc", "/system/lib64/cluster_theme3.rcc",
+            "/system/lib64/Cluster_theme1.rcc", "/system/lib64/nested/cluster_theme1.rcc",
+            "/system/lib64/cluster_theme1.rcc/embedded.rcc")) assertFalse(path, SystemExportPolicy.allowed(path))
+    }
+    @Test fun `exact candidates reject canonical escapes before querying metadata`() {
+        val bin = temporary.newFolder("exact-canonical-tools")
+        val stats = File(temporary.root, "exact-canonical-stat")
+        tool(bin, "stat", "printf forbidden >> ${ApkInventoryShell.quote(stats.path)}; exit 1")
+        for (canonical in listOf("/data/private/diagmgrsrv", "/vendor/bin/diagmgrsrv", "/system/bin/DiagMgrSrv",
+            "/system/lib64/cluster_theme3.rcc", "/system/lib64/cluster_theme1.rcc/embedded.rcc")) {
+            tool(bin, "readlink", "printf '%s\\n' ${ApkInventoryShell.quote(canonical)}")
+            val reply = shell("set -- /system/bin/diagmgrsrv; " + SystemInventoryCommands.inspectFiles("exact"), bin)
+            assertTrue(reply, reply.contains("canonical path outside firmware policy"))
+            assertFalse(canonical, stats.exists())
+        }
+    }
+    @Test fun `three P6 exact candidates reach inventory without inspecting neighbors`() {
+        val bin = temporary.newFolder("p6-exact-tools")
+        val stats = File(temporary.root, "p6-exact-stat")
+        tool(bin, "readlink", "printf '%s\\n' \"\$2\"")
+        tool(bin, "stat", "printf '%s\\n' \"\$3\" >> ${ApkInventoryShell.quote(stats.path)}; printf '7\\n'")
+        val prefix = "[() { if builtin test \"\$1\" = -f; then return 0; else builtin [ \"\$@\"; fi; }; "
+        val paths = listOf("/system/bin/diagmgrsrv", "/system/lib64/cluster_theme1.rcc", "/system/lib64/cluster_theme2.rcc")
+        for (path in paths) {
+            val reply = shell(prefix + "set -- ${ApkInventoryShell.quote(path)}; " + SystemInventoryCommands.inspectFiles("exact"), bin, bash = true)
+            assertEquals("SYS|7|$path|$path", reply.trim())
+        }
+        assertEquals(paths, stats.readLines())
+    }
     @Test fun `auto HAL candidate names are direct children only and never establish HAL selection`() {
+        assertEquals(setOf("/odm/lib/hw", "/odm/lib64/hw"), SystemExportPolicy.halRoots.filter { it.startsWith("/odm/") }.toSet())
+        assertEquals(10, SystemExportPolicy.halRoots.size)
+        assertFalse(SystemExportPolicy.nativeRoots.any { it.startsWith("/odm/") })
+        assertFalse(SystemExportPolicy.frameworkRoots.any { it.startsWith("/odm/") })
         for (root in SystemExportPolicy.halRoots) for (name in listOf("auto.so", "auto.default.so", "auto.vendor.board.so")) {
             assertTrue("$root/$name", SystemExportPolicy.allowed("$root/$name"))
+            assertTrue("$root/$name", SystemExportPolicy.isAutoHal("$root/$name"))
         }
         for (path in listOf("/system/lib64/hw/audio.default.so", "/system/lib64/auto.default.so",
-            "/system/lib64/hw/nested/auto.default.so", "/system/lib64/hw/auto..so", "/system/lib64/hw/auto.default.so.bak")) {
+            "/system/lib64/hw/nested/auto.default.so", "/system/lib64/hw/auto..so", "/system/lib64/hw/auto.default.so.bak",
+            "/odm/lib64/libbydauto.so", "/odm/framework/unknown.jar", "/odm/etc/init/diag.rc", "/system/odm/lib64/hw/auto.default.so")) {
             assertFalse(path, SystemExportPolicy.allowed(path))
+            assertFalse(path, SystemExportPolicy.isAutoHal(path))
         }
+        assertFalse(SystemExportPolicy.isAutoHal("/system/lib64/libbydauto.so"))
     }
     @Test fun `media classpath and Bionic aliases accept only explicitly selected module layout`() {
         assertTrue(SystemExportPolicy.isApexClasspath("/apex/com.android.media@123/javalib/updatable-media.jar"))
@@ -221,6 +265,7 @@ class SystemExportPolicyTest {
     @Test fun `HAL scan filters before stat avoids recursion and rejects escaping selected aliases`() {
         val root = temporary.newFolder("hal-root")
         File(root, "auto.default.so").writeText("hal")
+        File(root, "auto.other.so").writeText("other variant")
         File(root, "audio.default.so").writeText("unrelated")
         val nested = File(root, "nested").apply { mkdir() }
         File(nested, "auto.hidden.so").writeText("nested")
@@ -229,12 +274,13 @@ class SystemExportPolicyTest {
         val bin = temporary.newFolder("hal-tools")
         val stats = File(temporary.root, "hal-stat.log")
         val args = File(temporary.root, "hal-find.log")
-        tool(bin, "readlink", "dc_real=\$(/usr/bin/readlink -f \"\$2\"); case \"\$dc_real\" in ${ApkInventoryShell.quote(root.path)}) printf '/system/lib64/hw\\n' ;; " +
+        tool(bin, "readlink", "case \"\$2\" in /system/lib64/hw/*) printf '%s\\n' \"\$2\"; exit 0 ;; esac; " +
+            "dc_real=\$(/usr/bin/readlink -f \"\$2\"); case \"\$dc_real\" in ${ApkInventoryShell.quote(root.path)}) printf '/system/lib64/hw\\n' ;; " +
             "${ApkInventoryShell.quote(root.path)}/*) printf '/system/lib64/hw/%s\\n' \"\${dc_real##*/}\" ;; *) printf '/data/user/0/private/auto.escape.so\\n' ;; esac")
         tool(bin, "find", "printf '%s\\n' \"\$@\" > ${ApkInventoryShell.quote(args.path)}; shift; shift; exec /usr/bin/find -H ${ApkInventoryShell.quote(root.path)} \"\$@\"")
         tool(bin, "stat", "printf '%s\\n' \"\$3\" >> ${ApkInventoryShell.quote(stats.path)}; exit 1")
         val reply = shell(SystemInventoryCommands.scan(root.path, "hal"), bin)
-        assertEquals(listOf("/system/lib64/hw/auto.default.so"), stats.readLines())
+        assertEquals(SystemExportPolicy.halProbeNames.map { "/system/lib64/hw/$it" } + "/system/lib64/hw/auto.other.so", stats.readLines())
         assertTrue(reply, reply.contains("canonical path outside firmware policy"))
         val tokens = args.readLines()
         assertEquals("1", tokens[tokens.indexOf("-maxdepth") + 1])
@@ -247,7 +293,7 @@ class SystemExportPolicyTest {
         assertTrue(shell(SystemInventoryCommands.scan(absent.path, "hal")).contains("ROOT_UNAVAILABLE"))
         val root = temporary.newFolder("denied-root")
         // Shell fixture models denied search rights even when host tests run as a privileged user.
-        val prefix = "[() { if builtin test \"\$1\" = '!' && builtin test \"\$2\" = -r; then return 0; else builtin [ \"\$@\"; fi; }; "
+        val prefix = "[() { if builtin test \"\$1\" = '!' && builtin test \"\$2\" = -x; then return 0; else builtin [ \"\$@\"; fi; }; "
         val reply = shell(prefix + SystemInventoryCommands.scan(root.path, "hal"), bash = true)
         assertTrue(reply, reply.contains("ROOT_DENIED"))
         assertFalse(reply.contains("SYS|"))
@@ -308,6 +354,32 @@ class SystemExportPolicyTest {
             val reply = shell(prefix + SystemInventoryCommands.scan(root.path, mode), bin, bash = true)
             assertFalse(reply, reply.contains("ROOT_DENIED"))
             assertEquals(names.map { "$canonical/$it" }.toSet(), stats.readLines().toSet())
+        }
+    }
+    @Test fun `HAL fixed probes survive denied enumeration and exclude arbitrary neighbors`() {
+        val prefix = "[() { if builtin test \"\$1\" = -f; then builtin test \"\${2##*/}\" = auto.default.so; " +
+            "elif builtin test \"\$1\" = '!' && builtin test \"\$2\" = -r; then return 0; else builtin [ \"\$@\"; fi; }; "
+        for (canonical in listOf("/system/lib64/hw", "/odm/lib/hw", "/odm/lib64/hw")) {
+            val root = temporary.newFolder("hal-x-only-${canonical.replace('/', '_')}")
+            val bin = temporary.newFolder("hal-x-tools-${canonical.replace('/', '_')}")
+            val stats = File(root, "stat.log")
+            val finds = File(root, "find.log")
+            // The inspection runs in a child shell; model its regular-file result there too.
+            File(bin, "sh").apply {
+                writeText("#!/bin/bash\n${prefix}dc_command=\$2; shift 3; eval \"\$dc_command\"\n")
+                assertTrue(setExecutable(true))
+            }
+            tool(bin, "readlink", "if [ \"\$2\" = ${ApkInventoryShell.quote(root.path)} ]; then printf '%s\\n' ${ApkInventoryShell.quote(canonical)}; else printf '%s\\n' \"\$2\"; fi")
+            tool(bin, "stat", "printf '%s\\n' \"\$3\" >> ${ApkInventoryShell.quote(stats.path)}; " +
+                "case \"\$3\" in */auto.default.so) printf '7\\n' ;; *) exit 1 ;; esac")
+            tool(bin, "find", "printf forbidden > ${ApkInventoryShell.quote(finds.path)}; exit 1")
+            val reply = shell(prefix + SystemInventoryCommands.scan(root.path, "hal"), bin, bash = true)
+            assertEquals(listOf("auto.so", "auto.qcom.so", "auto.QCM6125.so", "auto.trinket.so", "auto.default.so")
+                .map { "$canonical/$it" }, stats.readLines())
+            assertTrue(reply, reply.contains("ROOT_ENUMERATION_DENIED"))
+            assertTrue(reply, reply.contains("SYS|7|$canonical/auto.default.so|$canonical/auto.default.so"))
+            assertFalse(reply, reply.contains("ROOT_DENIED|"))
+            assertFalse(finds.exists())
         }
     }
     private fun tool(directory: File, name: String, body: String) = File(directory, name).apply {

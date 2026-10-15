@@ -34,12 +34,21 @@ Scope is fixed in `SystemExportPolicy`; runtime text is treated as data, never e
   probes per root; unrelated neighboring libraries are neither traversed nor queried for metadata.
   Exact native/Bionic probes require directory traversal rights, not directory-listing rights; each
   selected file still requires its existing read permissions.
-- Those partitions' `/lib/hw` and `/lib64/hw`: direct-child `auto.*.so` and `auto.so` candidates only,
-  with name filtering before type/size queries. Collecting a candidate does not identify the HAL
-  selected on this ROM, and no HAL or shared library is loaded or invoked.
-- The three exact init-referenced executable paths `/system/bin/fission_service`,
-  `/system/bin/fissiond`, `/system/bin/qtandroidnative`, and two exact shared-library paths
-  `/system/lib64/libBydCluster.so`, `/system/lib64/libAdas.so`. Their contents are read, never executed.
+- Those partitions' `/lib/hw` and `/lib64/hw`, plus `/odm/lib/hw` and `/odm/lib64/hw`: direct-child
+  `auto.*.so` and `auto.so` candidates only, with name filtering before type/size queries and canonical
+  parent/name checks. The five fixed names `auto.so`, `auto.qcom.so`, `auto.QCM6125.so`,
+  `auto.trinket.so`, `auto.default.so` are probed even when directory traversal is permitted but
+  listing is denied; denied enumeration is recorded. These are hypotheses from this corpus, not
+  platform identification. Other variants use depth-one enumeration when listing is permitted;
+  fixed names are excluded from enumeration to avoid duplicate probes. ODM is not added to general
+  framework, configuration or native-library scans. Collecting a candidate does not identify the
+  HAL selected on this ROM, and no HAL or shared library is loaded or invoked.
+- The four exact init-referenced executable paths `/system/bin/fission_service`,
+  `/system/bin/fissiond`, `/system/bin/qtandroidnative`, `/system/bin/diagmgrsrv`, and two exact
+  shared-library paths `/system/lib64/libBydCluster.so`, `/system/lib64/libAdas.so`.
+  Their contents are read, never executed.
+- The two exact Qt resource paths `/system/lib64/cluster_theme1.rcc` and
+  `/system/lib64/cluster_theme2.rcc`. Other RCC files and resource directories are not scanned.
 - `libc.so`, `libm.so`, `libdl.so` only under `/apex/com.android.runtime/lib/bionic` and
   `/apex/com.android.runtime/lib64/bionic`, including canonical numeric-version module aliases.
   This also permits the selected system-library symlinks to resolve to these exact Bionic files;
@@ -113,6 +122,10 @@ Scope comes from the P2 targeted system collection manifest and corpus provenanc
 corpus reports Android 10/API 29, build dated 2026-06-10; the prior framework corpus is dated
 2026-02-04. They are not assumed identical. This export collects current provenance for comparison.
 P4 supplied the 22 DT_NEEDED names and five exact init-referenced paths for the 1.9.26-beta extension.
+P6 established the diagnostics executable path from an init fragment, the two RCC paths from the
+cluster library, and the ODM HAL search roots/variant selectors from `libhardware.so`. The
+1.9.27-beta extension collects these candidates with existing filesystem rights only; prior read
+denials remain coverage gaps and are not bypassed.
 A candidate's location does not establish linker namespace resolution, ABI compatibility, an effective
 permission grant or a runtime-selected HAL. Recursive dependency closure and the diagnostic service
 implementation still require offline analysis of the additional files. This is not a full firmware image
