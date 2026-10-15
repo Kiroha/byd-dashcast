@@ -4,15 +4,21 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.ClipData
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.TextUtils
 import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.FileProvider
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.hud.HudDiagActivity
 import com.byd.dashcast.hud.HudCaptureSupport
@@ -64,12 +70,25 @@ class DiagActivity : Activity() {
     private lateinit var armCallbackBtn: Button
     private lateinit var traceBtn: Button
     private lateinit var navIconCaptureBtn: Button
+    private lateinit var fullExportBtn: Button
+    private lateinit var fullExportStatus: TextView
+    private lateinit var fullExportCurrent: TextView
+    private lateinit var cancelFullExportBtn: Button
+    private lateinit var shareFullExportBtn: Button
+    private val exportUiHandler = Handler(Looper.getMainLooper())
+    private var lastExportDirectory: File? = null
+    private val exportUiTick = object : Runnable {
+        override fun run() {
+            renderFullExport()
+            exportUiHandler.postDelayed(this, 1000)
+        }
+    }
 
     /** Shared across every probe on this screen — they all write into the same [logView], and
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -100,14 +119,49 @@ class DiagActivity : Activity() {
             setPadding(32, 32, 32, 32)
         }
         root.addView(TextView(this).apply { text = "Diagnostics"; textSize = 20f })
+        root.addView(TextView(this).apply {
+            text = "Full APK export: use while parked. Keep DashCast open until it finishes."
+            textSize = 14f
+        })
+        fullExportStatus = TextView(this).apply { textSize = 16f }
+        root.addView(fullExportStatus)
+        fullExportCurrent = TextView(this).apply {
+            textSize = 16f
+            setSingleLine(true)
+            ellipsize = TextUtils.TruncateAt.MIDDLE
+        }
+        root.addView(fullExportCurrent)
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            cancelFullExportBtn = Button(this@DiagActivity).apply {
+                text = "Cancel APK export"
+                setOnClickListener { FullApkExportSession.cancel(); renderFullExport() }
+            }
+            shareFullExportBtn = Button(this@DiagActivity).apply {
+                text = "Local export files"
+                setOnClickListener { showFullExportFiles() }
+            }
+            addView(cancelFullExportBtn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(shareFullExportBtn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        })
+        // Controls scroll independently; the progress/stall indicator above stays visible even
+        // on a short landscape display, instead of being pushed below the diagnostic buttons.
+        val controls = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(ScrollView(this).apply { addView(controls) },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        fullExportBtn = Button(this).apply {
+            text = "Export ALL accessible APKs — local ZIP volumes"
+            setOnClickListener { startFullApkExport() }
+        }
+        controls.addView(fullExportBtn)
         runBtn = Button(this).apply {
             text = "BYD APK Extraction"
             // Projection may already be mined, but HUD receiver evidence is still needed.
             setOnClickListener { if (reComplete) showReCompleteMessage() else start() }
         }
-        root.addView(runBtn)
+        controls.addView(runBtn)
 
-        root.addView(Button(this).apply {
+        controls.addView(Button(this).apply {
             text = "HUD bench (DL3) — sendInfo2 NaviInfo test"
             setOnClickListener { startActivity(Intent(this@DiagActivity, HudDiagActivity::class.java)) }
         })
@@ -123,37 +177,37 @@ class DiagActivity : Activity() {
                     .show()
             }
         }
-        root.addView(navIconCaptureBtn)
+        controls.addView(navIconCaptureBtn)
 
         probeBtn = Button(this).apply {
             text = "OEM cluster probes (read-only)"
             setOnClickListener { runOemProbes() }
         }
-        root.addView(probeBtn)
+        controls.addView(probeBtn)
 
         fissionRegistryBtn = Button(this).apply {
             text = "OEM display registry (read-only) — DL3"
             setOnClickListener { runFissionRegistryProbe() }
         }
-        root.addView(fissionRegistryBtn)
+        controls.addView(fissionRegistryBtn)
 
         armCallbackBtn = Button(this).apply {
             text = "Arm container callback (diagnostic)"
             setOnClickListener { runArmContainerCallback() }
         }
-        root.addView(armCallbackBtn)
+        controls.addView(armCallbackBtn)
 
         traceBtn = Button(this).apply {
             text = "Trace projection state (60s) — DL3"
             setOnClickListener { runProjectionTrace() }
         }
-        root.addView(traceBtn)
+        controls.addView(traceBtn)
 
         // Opt-in raw nav-notification capture (to calibrate the Waze/Maps text parser). OFF by
         // default: it logs the ACTUAL notification text — destination / current road / ETA, i.e.
         // location PII — into the journal that bug reports carry. Turn ON, drive a route, send a
         // bug report, then turn OFF.
-        root.addView(CheckBox(this).apply {
+        controls.addView(CheckBox(this).apply {
             text = "Capture raw nav-notification text (Waze diagnostic)"
             isChecked = ClusterPrefs.isNavRawCaptureEnabled(this@DiagActivity)
             setOnCheckedChangeListener { _, checked ->
@@ -170,7 +224,7 @@ class DiagActivity : Activity() {
         // tree under SF's global lock while the projected app is still cold-starting. Same
         // placement rationale as the capture toggle above: a technical action on the English-only
         // screen, so it costs no translated string.
-        root.addView(CheckBox(this).apply {
+        controls.addView(CheckBox(this).apply {
             text = "Dump cluster state after each launch (placement diagnostic)"
             isChecked = ClusterPrefs.isLaunchDiagnosticsEnabled(this@DiagActivity)
             setOnCheckedChangeListener { _, checked ->
@@ -187,7 +241,7 @@ class DiagActivity : Activity() {
         // technical action, and DiagActivity is the screen app/lint.xml documents as the
         // English-only exception, so it costs no translated string. A new Settings row would have
         // cost 13.
-        root.addView(Button(this).apply {
+        controls.addView(Button(this).apply {
             text = "Pair reporting channel — put ${ReportChannel.IMPORT_NAME} in Download"
             setOnClickListener {
                 val pairingButton = this
@@ -245,6 +299,91 @@ class DiagActivity : Activity() {
         } else {
             log("Ready. Extracts OEM cluster and HUD APKs from this vehicle and sends them for analysis.")
         }
+        FullApkExportSession.inspectPrevious(applicationContext)
+        renderFullExport()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        exportUiHandler.post(exportUiTick)
+    }
+
+    override fun onStop() {
+        exportUiHandler.removeCallbacks(exportUiTick)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        super.onStop()
+    }
+
+    private fun startFullApkExport() {
+        if (!claimBusyOrWarn()) return
+        allDiagButtons().forEach { it.isEnabled = false }
+        log("Full local APK export started. No automatic upload. Finished ZIPs are kept outside report cleanup.")
+        // Static completion releases the shared gate even if this Activity has been destroyed.
+        FullApkExportSession.start(applicationContext) { sBusy.set(false) }
+        renderFullExport()
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun renderFullExport() {
+        if (!::fullExportStatus.isInitialized) return
+        val state = FullApkExportSession.snapshot
+        if (state?.running == true) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        allDiagButtons().forEach { it.isEnabled = !sBusy.get() }
+        cancelFullExportBtn.isEnabled = state?.running == true && !FullApkExportSession.isCancelling()
+        shareFullExportBtn.isEnabled = state?.directory != null
+        if (state == null) {
+            fullExportStatus.text = "Local APK export ready — whole-vehicle coverage depends on read access."
+            fullExportCurrent.text = "Base APKs, splits and firmware APK files; no selection/size budget."
+            return
+        }
+        val now = FullApkExport.monotonicMs()
+        val elapsed = ((now - state.startedMs) / 1000).coerceAtLeast(0)
+        val idle = ((now - state.lastProgressMs) / 1000).coerceAtLeast(0)
+        val total = state.totalBytes?.let { " / ${it / 1048576} MiB known" } ?: " (total unknown)"
+        if (state.running) {
+            fullExportStatus.text = (if (FullApkExportSession.isCancelling()) "Cancelling after the current read/command returns…" else state.stage) +
+                "\n${state.discovered} found · ${state.completed} copied · ${state.failed} failed · ${state.bytes / 1048576} MiB$total" +
+                "\nElapsed ${elapsed}s · no byte/stage progress ${idle}s" +
+                (if (idle >= 15) " — waiting; possible stall" else "")
+            fullExportCurrent.text = state.current
+        } else {
+            fullExportStatus.text = "Local APK export: ${state.outcome} · ${state.archives.size} finished ZIP(s)" +
+                (if (state.countsKnown) "\n${state.completed} exported · ${state.failed} incomplete/failed · whole-vehicle coverage unverified."
+                 else "\nPrevious counts unavailable — see manifest.json. Whole-vehicle coverage unverified.") +
+                "\n${state.stage.take(190)}"
+            fullExportCurrent.text = state.directory?.absolutePath ?: "No export directory available"
+        }
+        if (!state.running && state.directory != null && lastExportDirectory != state.directory) {
+            lastExportDirectory = state.directory
+            log("Local APK export ${state.outcome}: ${state.directory.absolutePath}\n${state.stage}\n" +
+                "Use Local export files to view paths/share individual ZIPs. .part files are incomplete. See manifest.json for coverage and failures.")
+        }
+    }
+
+    private fun showFullExportFiles() {
+        val state = FullApkExportSession.snapshot ?: return
+        val directory = state.directory ?: return
+        val files = state.archives + listOf(File(directory, "manifest.json")).filter { it.isFile }
+        val labels = files.map { "${it.name} (${it.length() / 1048576} MiB)" }.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Local APK export files")
+            .setMessage("${directory.absolutePath}\n\nOnly .zip files are finished volumes. Each is independently readable. " +
+                "manifest.json records source paths, SHA-256 and coverage gaps. Use adb pull on this directory if sharing large ZIPs is unavailable.")
+            .setPositiveButton("List / share files") { _, _ ->
+                AlertDialog.Builder(this).setTitle("Choose a file to share manually")
+                    .setItems(labels) { _, index ->
+                        try {
+                            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", files[index])
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = if (files[index].extension == "zip") "application/zip" else "application/json"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                clipData = ClipData.newRawUri("APK export", uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            startActivity(Intent.createChooser(intent, "Share local APK export"))
+                        } catch (e: Exception) { log("Share unavailable: ${e.message}. Local file: ${files[index].absolutePath}") }
+                    }.setNegativeButton(android.R.string.cancel, null).show()
+            }.setNegativeButton(android.R.string.cancel, null).show()
     }
 
     /** Collect the HUD receiver even when this platform's projection has already been mined. */
@@ -263,9 +402,9 @@ class DiagActivity : Activity() {
 
     private fun showReCompleteMessage() {
         runOnUiThread { logView.text = "" }
-        log("Reverse engineering complete for this platform (DiLink 3 / DiLink 5.0).")
-        log("The maximum OEM firmware has already been extracted and analysed — nothing to")
-        log("collect or send. Extraction stays available on the platforms still under study.")
+        log("Targeted projection APK analysis is complete for this platform (DiLink 3 / DiLink 5.0).")
+        log("The older targeted extraction is unavailable here. The full local APK export")
+        log("remains available above, including APKs outside the targeted analysis.")
     }
 
     private fun start() {
