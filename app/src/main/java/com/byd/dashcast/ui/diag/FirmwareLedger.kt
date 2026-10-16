@@ -26,7 +26,7 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
         val pageBytes=db.rawQuery("PRAGMA page_size",null).use {it.moveToFirst();it.getLong(0)}
         db.rawQuery("PRAGMA max_page_count=${maxOf(16,(inventoryLimit*7/8)/pageBytes)}",null).use {it.moveToFirst()}
         db.execSQL("CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY,v TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS sources(id INTEGER PRIMARY KEY, canonical TEXT UNIQUE NOT NULL, app_path TEXT, app_size INTEGER, app_stamp TEXT, shell_path TEXT, shell_size INTEGER, shell_stamp TEXT, package_origin TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT '')")
+        db.execSQL("CREATE TABLE IF NOT EXISTS sources(id INTEGER PRIMARY KEY, canonical TEXT NOT NULL, app_path TEXT, app_size INTEGER, app_stamp TEXT, shell_path TEXT, shell_size INTEGER, shell_stamp TEXT, package_origin TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT '')")
         db.execSQL("CREATE TABLE IF NOT EXISTS dirs(id INTEGER PRIMARY KEY, identity TEXT, path TEXT, offset INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0, UNIQUE(identity,path))")
         db.execSQL("CREATE INDEX IF NOT EXISTS dirs_done ON dirs(done,id)")
         db.execSQL("CREATE TABLE IF NOT EXISTS incidents(id INTEGER PRIMARY KEY, message TEXT NOT NULL)")
@@ -35,6 +35,11 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
         db.execSQL("CREATE TABLE IF NOT EXISTS copies(id INTEGER PRIMARY KEY, source INTEGER, volume INTEGER, entry TEXT, bytes INTEGER, sha256 TEXT, success INTEGER, error TEXT, identity TEXT, observed_ms INTEGER)")
         db.execSQL("CREATE TABLE IF NOT EXISTS origins(source INTEGER,identity TEXT,path TEXT,package_origin TEXT, UNIQUE(source,identity,path,package_origin))")
         db.execSQL("CREATE INDEX IF NOT EXISTS origin_source ON origins(source)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS observations(source INTEGER,identity TEXT,path TEXT,canonical TEXT,bytes INTEGER,stamp TEXT,node TEXT,UNIQUE(source,identity,path,canonical,stamp))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS observation_source ON observations(source)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS nodes(node TEXT PRIMARY KEY,source INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS preferred_paths(source INTEGER,identity TEXT,canonical TEXT NOT NULL,PRIMARY KEY(source,identity))")
+        db.execSQL("CREATE TABLE IF NOT EXISTS directory_nodes(identity TEXT,node TEXT,topology TEXT,path TEXT,PRIMARY KEY(identity,node,topology))")
         db.execSQL("CREATE INDEX IF NOT EXISTS copy_source ON copies(source)")
         db.execSQL("CREATE INDEX IF NOT EXISTS copy_volume ON copies(volume)")
         sources = count("sources").toInt(); storedIncidents = count("incidents"); directoryCount = count("dirs"); incidents = meta("incident_count")?.toLongOrNull() ?: storedIncidents
@@ -71,24 +76,27 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
     fun add(identity: String, value: FirmwareObserved, packageOrigin: String = "") { write {
         require(identity == "APP" || identity == "SHELL")
         require(value.size >= 0 && FirmwarePolicy.accepted(value.path,value.canonical,packageOrigin.isNotEmpty()))
-        val old = byCanonical(value.canonical)
+        val old = if(value.node.isNotEmpty())byNode(value.node) else byCanonical(value.canonical)
         if (old == null && sources >= sourceLimit) throw FirmwareBudget("Source cap ${FirmwarePolicy.MAX_SOURCES} reached")
         val key = if (identity == "APP") "app" else "shell"
         val values = ContentValues().apply {
-            put("canonical",value.canonical);
+            if(old==null)put("canonical",value.canonical);
             if(old == null || (identity == "APP" && old.appPath == null) || (identity == "SHELL" && old.shellPath == null))put("${key}_path",value.path)
             put("${key}_size",value.size); put("${key}_stamp",value.stamp)
             if (packageOrigin.isNotEmpty()) put("package_origin",packageOrigin)
         }
-        if (old == null) { db.insertOrThrow("sources",null,values); sources++ }
-        else {
+        val inserted = if (old == null) { sources++;db.insertOrThrow("sources",null,values) } else -1L
+        if (old != null) {
             val priorSize = if(identity == "APP") old.appSize else old.shellSize
             val priorStamp = if(identity == "APP") old.appStamp else old.shellStamp
             if (priorSize != null && (priorSize != value.size || priorStamp != value.stamp)) issue("$identity live metadata changed during inventory: ${value.path}")
             db.update("sources",values,"id=?",arrayOf(old.id.toString()))
         }
-        val id=old?.id ?: byCanonical(value.canonical)!!.id
+        val id=old?.id ?: inserted
+        if(value.node.isNotEmpty())db.insertWithOnConflict("nodes",null,ContentValues().apply {put("node",value.node);put("source",id)},SQLiteDatabase.CONFLICT_IGNORE)
+        db.insertWithOnConflict("preferred_paths",null,ContentValues().apply {put("source",id);put("identity",identity);put("canonical",value.canonical)},SQLiteDatabase.CONFLICT_IGNORE)
         db.insertWithOnConflict("origins",null,ContentValues().apply {put("source",id);put("identity",identity);put("path",value.path);put("package_origin",packageOrigin)},SQLiteDatabase.CONFLICT_IGNORE)
+        db.insertWithOnConflict("observations",null,ContentValues().apply {put("source",id);put("identity",identity);put("path",value.path);put("canonical",value.canonical);put("bytes",value.size);put("stamp",value.stamp);put("node",value.node)},SQLiteDatabase.CONFLICT_IGNORE)
     } }
     fun enqueue(identity: String, path: String) { write {
         require(FirmwarePolicy.firmware(path))
@@ -98,9 +106,16 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
     fun nextDirectory(): FirmwareDirectory? = db.rawQuery("SELECT id,identity,path,offset FROM dirs WHERE done=0 ORDER BY id LIMIT 1",null).use {
         if (!it.moveToFirst()) null else FirmwareDirectory(it.getLong(0),it.getString(1),it.getString(2),it.getInt(3)) }
     fun advance(dir: FirmwareDirectory, offset: Int, done: Boolean) { write { db.execSQL("UPDATE dirs SET offset=?,done=? WHERE id=?",arrayOf<Any>(offset,if(done)1 else 0,dir.id)) } }
-    fun byCanonical(path: String): FirmwareSource? = db.rawQuery("SELECT * FROM sources WHERE canonical=?",arrayOf(path)).use { if(it.moveToFirst()) source(it) else null }
+    fun byCanonical(path: String): FirmwareSource? = db.rawQuery("SELECT * FROM sources WHERE canonical=? OR id IN (SELECT source FROM preferred_paths WHERE canonical=?) LIMIT 1",arrayOf(path,path)).use { if(it.moveToFirst()) source(it) else null }
+    private fun byNode(node:String):FirmwareSource?=db.rawQuery("SELECT s.* FROM sources s JOIN nodes n ON n.source=s.id WHERE n.node=? LIMIT 1",arrayOf(node)).use {if(it.moveToFirst())source(it) else null}
+    private fun preferred(id:Long,identity:String):String?=db.rawQuery("SELECT canonical FROM preferred_paths WHERE source=? AND identity=?",arrayOf(id.toString(),identity)).use {if(it.moveToFirst())it.getString(0) else null}
+    fun directoryOwner(identity:String,node:String,topology:String,path:String):String =
+        db.rawQuery("SELECT path FROM directory_nodes WHERE identity=? AND node=? AND topology=?",arrayOf(identity,node,topology)).use {if(it.moveToFirst())it.getString(0) else path}
+    fun completeDirectory(identity:String,node:String,topology:String,path:String) {write {
+        db.insertWithOnConflict("directory_nodes",null,ContentValues().apply {put("identity",identity);put("node",node);put("topology",topology);put("path",path)},SQLiteDatabase.CONFLICT_IGNORE)
+    }}
     fun forEachSource(action: (FirmwareSource) -> Unit) { db.rawQuery("SELECT * FROM sources ORDER BY id",null).use { while(it.moveToNext()) action(source(it)) } }
-    private fun source(c: Cursor) = FirmwareSource(c.getLong(0),c.getString(1),c.getString(2),if(c.isNull(3))null else c.getLong(3),c.getString(4),c.getString(5),if(c.isNull(6))null else c.getLong(6),c.getString(7),c.getString(8),c.getString(9))
+    private fun source(c: Cursor) = FirmwareSource(c.getLong(0),c.getString(1),c.getString(2),if(c.isNull(3))null else c.getLong(3),c.getString(4),c.getString(5),if(c.isNull(6))null else c.getLong(6),c.getString(7),c.getString(8),c.getString(9),preferred(c.getLong(0),"APP"),preferred(c.getLong(0),"SHELL"))
     fun sourceError(id: Long,error: String) { write { db.execSQL("UPDATE sources SET error=? WHERE id=?",arrayOf<Any>(error.take(3000),id)) } }
     data class Volume(val id: Long,val name: String,val state: String,val bytes: Long)
     data class Copy(val source: Long,val volume: Long,val entry: String,val bytes: Long,val sha: String,val success: Boolean,val error: String,val identity: String,val observedMs: Long)
@@ -125,17 +140,17 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
     fun totalBytes(): Long = db.rawQuery("SELECT COALESCE(SUM(c.bytes),0) FROM copies c JOIN volumes v ON v.id=c.volume WHERE c.success=1 AND v.state='verified'",null).use {it.moveToFirst();it.getLong(0)}
     fun manifest(writer: Writer,outcome: String,message: String) {
         fun q(s:String)=FirmwarePolicy.json(s)
-        writer.append("{\"schema\":1,\"kind\":\"FIRMWARE_LARGE\",\"profile\":${q(FirmwarePolicy.PROFILE)},\"outcome\":${q(outcome)},\"message\":${q(message)},\"wholeVehicleCoverage\":\"unverified\",\"scope\":\"Regular accessible firmware files under six fixed roots and mounted APEX; positive installed base/split APK paths only. No private-data recursion, devices, partitions or target execution. Live non-atomic reads.\",\"startedAt\":${q(meta("started_at").orEmpty())},\"contextBefore\":${meta("context").orEmpty().ifEmpty { "{}" }},\"contextAfter\":${meta("context_after").orEmpty().ifEmpty { "{}" }},\"discoveryComplete\":${meta("discovery_complete")=="1"},\"sourceCount\":$sources,\"incidentCount\":$incidents,\"incidentsOmitted\":${(incidents-storedIncidents).coerceAtLeast(0)},\"incidents\":[")
+        writer.append("{\"schema\":${FirmwarePolicy.SCHEMA},\"kind\":\"FIRMWARE_LARGE\",\"profile\":${q(FirmwarePolicy.PROFILE)},\"outcome\":${q(outcome)},\"message\":${q(message)},\"wholeVehicleCoverage\":\"unverified\",\"scope\":\"All ordinary accessible files in the admitted SHELL daemon namespace only (UID2000), including readable data and user storage; no APP source scan/fallback. Explicit pseudo-filesystem, device, collector output/cache/bootstrap exclusions. No partition image or target execution; live non-atomic, potentially personal data.\",\"startedAt\":${q(meta("started_at").orEmpty())},\"contextBefore\":${meta("context").orEmpty().ifEmpty { "{}" }},\"contextAfter\":${meta("context_after").orEmpty().ifEmpty { "{}" }},\"discoveryComplete\":${meta("discovery_complete")=="1"},\"sourceCount\":$sources,\"incidentCount\":$incidents,\"incidentsOmitted\":${(incidents-storedIncidents).coerceAtLeast(0)},\"incidents\":[")
         var comma=false
         db.rawQuery("SELECT message FROM incidents ORDER BY id",null).use { while(it.moveToNext()){if(comma)writer.append(',');comma=true;writer.append(q(it.getString(0))) } }
         writer.append("],\"coverage\":[");comma=false
         db.rawQuery("SELECT identity,path,state,detail FROM coverage ORDER BY id",null).use {while(it.moveToNext()){if(comma)writer.append(',');comma=true;writer.append("{\"identity\":${q(it.getString(0))},\"path\":${q(it.getString(1))},\"state\":${q(it.getString(2))},\"detail\":${q(it.getString(3))}}")}}
-        writer.append("],\"volumes\":[");comma=false
+        writer.append("],\"mountsApp\":${meta("mounts_APP")?:"[]"},\"mountsShell\":${meta("mounts_SHELL")?:"[]"},\"exclusions\":${meta("exclusions")?:"[]"},\"volumes\":[");comma=false
         for(v in volumes()){if(comma)writer.append(',');comma=true;writer.append("{\"archive\":${q(v.name)},\"state\":${q(v.state)},\"bytes\":${v.bytes}}")}
         writer.append("],\"files\":[");comma=false
         forEachSource { s ->
             if(comma)writer.append(',');comma=true
-            writer.append("{\"id\":${s.id},\"path\":${q(s.path)},\"canonicalPath\":${q(s.canonical)},\"size\":${s.size},\"packageOrigin\":${q(s.packageOrigin)},\"appPath\":${s.appPath?.let(::q)?:"null"},\"appSize\":${s.appSize?:"null"},\"appStamp\":${s.appStamp?.let(::q)?:"null"},\"shellPath\":${s.shellPath?.let(::q)?:"null"},\"shellSize\":${s.shellSize?:"null"},\"shellStamp\":${s.shellStamp?.let(::q)?:"null"},\"error\":${q(s.error)},\"origins\":[")
+            writer.append("{\"id\":${s.id},\"path\":${q(s.path)},\"canonicalPath\":${q(s.canonical)},\"appCanonicalPath\":${s.appCanonical?.let(::q)?:"null"},\"shellCanonicalPath\":${s.shellCanonical?.let(::q)?:"null"},\"size\":${s.size},\"packageOrigin\":${q(s.packageOrigin)},\"appPath\":${s.appPath?.let(::q)?:"null"},\"appSize\":${s.appSize?:"null"},\"appStamp\":${s.appStamp?.let(::q)?:"null"},\"shellPath\":${s.shellPath?.let(::q)?:"null"},\"shellSize\":${s.shellSize?:"null"},\"shellStamp\":${s.shellStamp?.let(::q)?:"null"},\"error\":${q(s.error)},\"origins\":[")
             // The preferred APP/SHELL path above is only the latest observation. Every alias
             // and positive package origin is retained separately and streamed here.
             var originComma=false
@@ -143,6 +158,12 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
                 if(originComma)writer.append(',');originComma=true
                 writer.append("{\"identity\":${q(c.getString(0))},\"path\":${q(c.getString(1))},\"package\":${q(c.getString(2))}}")
             } }
+            writer.append("],\"observations\":[")
+            var observationComma=false
+            db.rawQuery("SELECT identity,path,canonical,bytes,stamp,node FROM observations WHERE source=? ORDER BY identity,path,canonical,stamp",arrayOf(s.id.toString())).use { c->while(c.moveToNext()) {
+                if(observationComma)writer.append(',');observationComma=true
+                writer.append("{\"identity\":${q(c.getString(0))},\"path\":${q(c.getString(1))},\"canonical\":${q(c.getString(2))},\"bytes\":${c.getLong(3)},\"stamp\":${q(c.getString(4))},\"attestedNode\":${q(c.getString(5))}}")
+            }}
             writer.append("],\"copies\":[")
             var cp=false
             db.rawQuery("SELECT c.source,c.volume,c.entry,c.bytes,c.sha256,c.success,c.error,c.identity,c.observed_ms,v.name,v.state FROM copies c JOIN volumes v ON c.volume=v.id WHERE c.source=? ORDER BY c.id",arrayOf(s.id.toString())).use { c -> while(c.moveToNext()) {

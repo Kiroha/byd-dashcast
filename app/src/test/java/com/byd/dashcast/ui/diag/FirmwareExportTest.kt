@@ -32,7 +32,7 @@ class FirmwareExportTest {
         override fun discover(ledger:FirmwareLedger,check:()->Unit,update:(String)->Unit) {
             discovered++
             if(discovery!=null){discovery!!(ledger);return}
-            files.forEach { (path,bytes) -> check();ledger.add("APP",FirmwareObserved(path,path,bytes.size.toLong(),"app-stamp"));ledger.add("SHELL",FirmwareObserved(path,path,bytes.size.toLong(),"shell-stamp")) }
+            files.forEach { (path,bytes) -> check();ledger.add("SHELL",FirmwareObserved(path,path,bytes.size.toLong(),"shell-stamp")) }
         }
         override fun open(source:FirmwareSource,identity:String):InputStream {opens++;return reader?.invoke(source,identity)?:ByteArrayInputStream(files.getValue(source.canonical))}
     }
@@ -45,9 +45,9 @@ class FirmwareExportTest {
         assertEquals("finished",result.outcome);assertEquals(2,result.completed);assertEquals(2,result.discovered)
         FirmwareLedger(d).use {ledger ->
             val zero=ledger.byCanonical("/system/zero")!!
-            assertEquals(0L,zero.appSize);assertEquals(0L,zero.shellSize);assertEquals("app-stamp",zero.appStamp);assertEquals("shell-stamp",zero.shellStamp)
-            ledger.add("APP",FirmwareObserved("/vendor/alias","/system/zero",0,"app-stamp"))
-            assertEquals(2,ledger.sources);assertEquals("/system/zero",ledger.byCanonical("/system/zero")!!.appPath)
+            assertNull(zero.appSize);assertEquals(0L,zero.shellSize);assertNull(zero.appStamp);assertEquals("shell-stamp",zero.shellStamp)
+            ledger.add("SHELL",FirmwareObserved("/vendor/alias","/system/zero",0,"shell-stamp"))
+            assertEquals(2,ledger.sources);assertEquals("/system/zero",ledger.byCanonical("/system/zero")!!.shellPath)
         }
         ZipFile(result.archives.single()).use { z -> assertEquals(0,z.getEntry("firmware/000001/zero").size) }
         assertTrue(File(d,"manifest.json").readText().contains("a b|c\\n.apk"))
@@ -117,10 +117,10 @@ class FirmwareExportTest {
             assertEquals("failed",result.outcome);assertEquals(0,device.opens);assertEquals(0,device.discovered);assertArrayEquals(manifest,File(d,"manifest.json").readBytes())
         }
     }
-    @Test fun `source denial remains visible when alternate identity succeeds`() {
-        val d=temp.newFolder();val device=Device(files(2));device.reader={s,identity->if(identity=="APP")throw IOException("denied") else ByteArrayInputStream(device.files.getValue(s.canonical))}
-        val result=run(d,device);assertEquals("partial",result.outcome);assertEquals(2,result.completed);assertEquals(4,device.opens)
-        assertTrue(File(d,"manifest.json").readText().contains("APP: denied"))
+    @Test fun `daemon denial never falls back to a readable APP source`() {
+        val d=temp.newFolder();val device=Device(files(2));device.reader={s,identity->if(identity=="SHELL")throw IOException("denied") else ByteArrayInputStream(device.files.getValue(s.canonical))}
+        val result=run(d,device);assertEquals("partial",result.outcome);assertEquals(0,result.completed);assertEquals(2,device.opens)
+        assertTrue(File(d,"manifest.json").readText().contains("SHELL: denied"))
     }
     @Test fun `source cap keeps partial inventory with omitted incident counter`() {
         val d=temp.newFolder();val device=Device(files(5))
@@ -195,7 +195,7 @@ class FirmwareExportTest {
             val activity=controller.get();val labels=ArrayList<android.widget.Button>()
             fun visit(view:android.view.View){if(view is android.widget.Button)labels.add(view);if(view is android.view.ViewGroup)for(i in 0 until view.childCount)visit(view.getChildAt(i))}
             visit(activity.window.decorView)
-            val action=labels.single{it.text.toString()=="Export complet accessible — firmware + APK"}
+            val action=labels.single{it.text.toString()=="Export complet accessible"}
             assertFalse(labels.any{it.text.toString().contains("BYD APK Extraction")||it.text.toString().contains("P15")||it.text.toString().contains("Export système")||it.text.toString().contains("Relevé DiLink")})
             action.performClick()
             val dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
@@ -209,13 +209,48 @@ class FirmwareExportTest {
         val d=temp.newFolder();val data=files(1);val first=run(d,Device(data));val file=first.archives.single()
         val rows=ZipFile(file).use{z->z.entries().asSequence().map{it.name to z.getInputStream(it).readBytes()}.toList()}
         val mutated=rows.map{(name,bytes)->if(name=="manifest-volume.json"){
-            val changed=String(bytes,Charsets.UTF_8).replaceFirst("\"schema\":1","\"schema\":9").toByteArray(Charsets.UTF_8)
+            val changed=String(bytes,Charsets.UTF_8).replaceFirst("\"schema\":2","\"schema\":9").toByteArray(Charsets.UTF_8)
             assertEquals(bytes.size,changed.size);assertFalse(bytes.contentEquals(changed));name to changed
         }else name to bytes}
         rewrite(file,mutated)
         val corrupt=file.readBytes();val device=Device(data);val result=run(d,device)
         assertEquals(1,device.opens);assertEquals(1,result.completed);assertEquals(1,result.archives.size);assertNotEquals(file,result.archives.single())
         assertArrayEquals(corrupt,file.readBytes());assertTrue(File(d,"manifest.json").readText().contains("SHA-256 des métadonnées"))
+    }
+
+    @Test fun `hardlinks and bind aliases share payload only when inode and full metadata attest equivalence`() {
+        FirmwareLedger(temp.newFolder()).use {ledger ->
+            ledger.add("SHELL",FirmwareObserved("/data/a","/data/a",3,"81a4:3:100:101:10:2049","2049:10:33188:3:100:101"))
+            ledger.add("SHELL",FirmwareObserved("/mnt/bind/a","/mnt/bind/a",3,"81a4:3:100:101:10:2049","2049:10:33188:3:100:101"))
+            assertEquals(1,ledger.sources)
+            ledger.add("SHELL",FirmwareObserved("/data/a","/data/a",3,"81a4:3:100:102:10:2049","2049:10:33188:3:100:102"))
+            assertEquals(2,ledger.sources)
+            val out=java.io.StringWriter();ledger.manifest(out,"partial","")
+            val files=org.json.JSONObject(out.toString()).getJSONArray("files")
+            assertEquals(2,files.length());assertEquals(2,files.getJSONObject(0).getJSONArray("observations").length())
+        }
+    }
+    @Test fun `directory dedup keeps distinct submount topologies and records equivalent alias owner`() {
+        FirmwareLedger(temp.newFolder()).use {ledger ->
+            assertEquals("/data/a",ledger.directoryOwner("SHELL","2049:10","topology-a","/data/a"))
+            assertEquals("/mnt/alias",ledger.directoryOwner("SHELL","2049:10","topology-a","/mnt/alias"))
+            ledger.completeDirectory("SHELL","2049:10","topology-a","/data/a")
+            assertEquals("/data/a",ledger.directoryOwner("SHELL","2049:10","topology-a","/mnt/alias"))
+            assertEquals("/mnt/distinct",ledger.directoryOwner("SHELL","2049:10","topology-b","/mnt/distinct"))
+        }
+    }
+    @Test fun `daemon failure still writes a failed manifest and never substitutes an APP scan`() {
+        val device=Device(files(1));device.contextValue="unused"
+        val broken=object:FirmwareExport.Device {
+            override fun context():String=throw IOException("daemon unavailable")
+            override fun discover(ledger:FirmwareLedger,check:()->Unit,update:(String)->Unit)=fail("no fallback inventory")
+            override fun open(source:FirmwareSource,identity:String):InputStream=throw AssertionError("no fallback read")
+        }
+        val dir=temp.newFolder();FirmwareLedger(dir).use {ledger->
+            val result=FirmwareExport(broken,dir,ledger,{false},{},freeBytes={4L*1024*1024*1024}).run()
+            assertEquals("failed",result.outcome);assertEquals(0,result.completed)
+            assertEquals("failed",org.json.JSONObject(File(dir,"manifest.json").readText()).getString("outcome"))
+        }
     }
 
 }

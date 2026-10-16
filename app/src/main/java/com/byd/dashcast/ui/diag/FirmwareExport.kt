@@ -23,6 +23,7 @@ internal class FirmwareExport(
         fun context(): String
         fun discover(ledger: FirmwareLedger,check: () -> Unit,update: (String) -> Unit)
         fun open(source: FirmwareSource,identity: String): InputStream
+        fun close() {}
     }
     private var state = FullApkExport.Progress("Préparation collecte large",kind=ExportKind.FIRMWARE_LARGE,directory=directory)
     private var zip: ZipOutputStream? = null
@@ -63,7 +64,7 @@ internal class FirmwareExport(
             val context=device.context()
             val schema=ledger.meta("schema")
             if(schema!=null) {
-                check(schema==FirmwarePolicy.SCHEMA.toString() && ledger.meta("profile")==FirmwarePolicy.PROFILE) { "Reprise refusée : schéma/profil différent ; créer une nouvelle session" }
+                check(schema==FirmwarePolicy.SCHEMA.toString() && ledger.meta("profile")==FirmwarePolicy.PROFILE) { "Reprise refusée : ancienne collecte conservée, schéma/profil différent ; démarrer une nouvelle collecte globale" }
                 check(ledger.meta("context")==context) { "Reprise refusée : contexte ROM/identité différent ; créer une nouvelle session" }
             } else {
                 ledger.initialize(context)
@@ -72,9 +73,9 @@ internal class FirmwareExport(
             verifyVolumes()
             completed=ledger.successful();copiedBytes=ledger.totalBytes()
             if(ledger.meta("discovery_complete")!="1") {
-                update("Inventaire sur disque — APP et SHELL")
+                update("Inventaire sur disque — daemon SHELL")
                 try {
-                    device.discover(ledger,::check) { update("Inventaire sur disque — APP et SHELL",it,false) }
+                    device.discover(ledger,::check) { update("Inventaire sur disque — daemon SHELL",it,false) }
                     ledger.meta("discovery_complete","1")
                 } catch(e: FirmwareBudget) { ledger.issue(e.message.orEmpty());ledger.meta("discovery_complete","limited") }
             }
@@ -104,8 +105,9 @@ internal class FirmwareExport(
                 }
             }
             if(broken){runCatching {zip?.close()};zip=null;runCatching {raw?.close()};raw=null;volume?.let {runCatching {ledger.volumeState(it.id,"incomplete")}}}
+            runCatching {device.close()}.onFailure {message+="; nettoyage temporaire : ${it.message}";outcome="partial"}
             completed=ledger.successful()
-            if(compatible)runCatching {writeManifest(outcome,message)}.onFailure {message+="; manifeste indisponible : ${it.message}";outcome="failed"}
+            if(compatible || ledger.meta("schema")==null)runCatching {writeManifest(outcome,message)}.onFailure {message+="; manifeste indisponible : ${it.message}";outcome="failed"}
             runCatching {File(directory,"RESULT.txt").writeText("FIRMWARE_LARGE $outcome\n$message\nReprendre la même session vérifie les ZIP avant de sauter les fichiers. Les .part sont incomplets.\n")}
             state=state.copy(stage=message,current="",running=false,outcome=outcome,discovered=ledger.sources,completed=completed,failed=failed,
                 bytes=copiedBytes,archives=archives.toList(),lastProgressMs=FullApkExport.monotonicMs());progress(state)
@@ -168,7 +170,7 @@ internal class FirmwareExport(
     private fun copy(source: FirmwareSource) {
         update("Copie des fichiers accessibles — ZIP indépendants",source.path)
         var input: InputStream?=null;var identity="";val errors=ArrayList<String>()
-        for(candidate in listOf("APP","SHELL")) {
+        for(candidate in listOf("SHELL")) {
             if((candidate=="APP" && source.appPath==null)||(candidate=="SHELL" && source.shellPath==null))continue
             check()
             try {input=device.open(source,candidate);identity=candidate;break}
@@ -240,7 +242,7 @@ internal class FirmwareExport(
      * its metadata on resume. No whole JSON string/byte array or new journal schema is needed. */
     private fun writeVolumeManifest(output:OutputStream,records:List<FirmwareLedger.Copy>) {
         val writer=output.writer(Charsets.UTF_8)
-        writer.append("{\"schema\":1,\"profile\":${FirmwarePolicy.json(FirmwarePolicy.PROFILE)},\"sessionManifest\":\"manifest.json outside ZIP contains final coverage\",\"files\":[")
+        writer.append("{\"schema\":${FirmwarePolicy.SCHEMA},\"profile\":${FirmwarePolicy.json(FirmwarePolicy.PROFILE)},\"sessionManifest\":\"manifest.json outside ZIP contains final coverage\",\"files\":[")
         records.forEachIndexed { i,c ->
             if(i>0)writer.append(',')
             writer.append("{\"sourceId\":${c.source},\"entry\":${FirmwarePolicy.json(c.entry)},\"bytes\":${c.bytes},\"sha256\":${FirmwarePolicy.json(c.sha)},\"status\":${FirmwarePolicy.json(if(c.success)"exported" else "failed")}}")

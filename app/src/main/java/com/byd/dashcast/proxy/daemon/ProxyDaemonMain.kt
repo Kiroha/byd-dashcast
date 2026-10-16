@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "25"
+    private const val PROTOCOL_VERSION = "26"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -1299,6 +1299,22 @@ object ProxyDaemonMain {
                     } catch (ex: Throwable) {
                         reply?.writeException(wrapThrowable(ex))
                     }
+                    return true
+                }
+                ProxyDaemonContract.TXN_FILE_READ_CAPABILITIES -> {
+                    data.enforceInterface(DESCRIPTOR)
+                    reply?.writeNoException()
+                    reply?.writeInt(ProxyDaemonContract.STRICT_FILE_SCHEMA)
+                    reply?.writeInt(ProxyDaemonContract.CAP_STRICT_FILE_READ)
+                    return true
+                }
+                ProxyDaemonContract.TXN_READ_FILE_CHUNK_STRICT -> {
+                    data.enforceInterface(DESCRIPTOR)
+                    try {
+                        val request=StrictFileRead.request(data)
+                        val bytes=StrictFileRead.read(request.path,request.offset,request.length,request.expected)
+                        reply?.writeNoException();reply?.writeByteArray(bytes)
+                    }catch(ex:Throwable){reply?.writeException(wrapThrowable(ex))}
                     return true
                 }
                 IBinder.INTERFACE_TRANSACTION -> {
