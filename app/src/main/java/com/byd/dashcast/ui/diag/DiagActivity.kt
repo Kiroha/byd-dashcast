@@ -399,9 +399,9 @@ class DiagActivity : Activity() {
             fullExportStatus.text = "Local ${state.kind.label} export: ${state.outcome} · ${state.archives.size} finished ZIP(s)" +
                 (if (state.countsKnown) "\n${state.completed} exported · ${state.failed} incomplete/failed · whole-vehicle coverage unverified."
                  else "\nPrevious counts unavailable — see manifest.json. Whole-vehicle coverage unverified.") +
-                "\n${state.stage.take(190)}" +
+                "\n${if(state.kind==ExportKind.FIRMWARE_LARGE)FirmwareDiagnostics.failureSummary()?:state.stage.take(190) else state.stage.take(190)}" +
                 (if(state.kind==ExportKind.FIRMWARE_LARGE && state.outcome=="partial")"\nConsulter manifest.json pour les refus et limites." else "")
-            fullExportCurrent.text = state.directory?.absolutePath ?: "No export directory available"
+            fullExportCurrent.text = state.directory?.absolutePath ?: (if(state.kind==ExportKind.FIRMWARE_LARGE)FirmwareDiagnostics.failurePath() else null) ?: "No export directory available"
         }
         if (!state.running && state.directory != null && lastExportDirectory != state.directory) {
             lastExportDirectory = state.directory

@@ -34,4 +34,24 @@ class MetadataProcessTest {
         try{MetadataProcess.run(listOf("/bin/sh","-c","printf null; exit 1"),128,2000,host);fail()}catch(_:IOException){}
         try{MetadataProcess.run(listOf("/bin/true"),128,2000,listOf("/missing/setsid","/bin/sh"));fail()}catch(_:IOException){}
     }
+    @Test fun `nonzero getter preserves captured stdout stderr reason and bounded Unicode without accepting metadata`() {
+        try {
+            MetadataProcess.run(listOf("/bin/sh","-c","printf 'getter unavailable'; printf ' permission denied' >&2; exit 7"),4096,2000,host)
+            fail()
+        }catch(e:IOException) {
+            assertTrue(e.message.orEmpty().contains("exit 7"))
+            assertTrue(e.message.orEmpty().contains("getter unavailable permission denied"))
+        }
+        val detail=MetadataProcess.failureDetail("é🚘".repeat(1000).toByteArray(Charsets.UTF_8))
+        assertTrue(detail.toByteArray(Charsets.UTF_8).size<=1024)
+        assertTrue(detail.endsWith("[truncated]"));assertFalse(detail.contains('\ufffd'))
+        try {
+            MetadataProcess.run(listOf("/bin/sh","-c","printf '"+"é🚘".repeat(1000)+"'; exit 9"),8192,2000,host)
+            fail()
+        }catch(e:IOException) {
+            assertTrue(e.message.orEmpty().toByteArray(Charsets.UTF_8).size<=1024)
+            assertTrue(e.message.orEmpty().contains("exit 9"));assertTrue(e.message.orEmpty().endsWith("[truncated]"))
+            assertFalse(e.message.orEmpty().contains('\ufffd'))
+        }
+    }
 }

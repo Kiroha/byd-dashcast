@@ -517,6 +517,8 @@ object BugReportCapture {
                 .append(com.byd.dashcast.satellite.SatelliteVideoDiagnostics.summary()).append('\n')
             sb.append("\n════════ DASHSAT VIDEO (manual sender snapshot; historical evidence) ════════\n")
                 .append(com.byd.dashcast.satellite.SatelliteRemoteVideoDiagnostics.summary()).append('\n')
+            sb.append("\n════════ INTERNAL STORAGE EXPORT (recent in-memory metadata; no payload) ════════\n")
+                .append(com.byd.dashcast.ui.diag.FirmwareDiagnostics.snapshot())
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody)
             sb.append("\n════════ DASHCAST JOURNAL ════════\n").append(AppLogger.get())
             content = sb.toString()
@@ -526,6 +528,8 @@ object BugReportCapture {
                     "\n\nDevice: " + deviceLine() +
                     "\nVersion: " + versionLine() +
                     "\n[report body build failed: " + t + "]\n" +
+                    "\n════════ INTERNAL STORAGE EXPORT (recent in-memory metadata; no payload) ════════\n" +
+                    com.byd.dashcast.ui.diag.FirmwareDiagnostics.snapshot() +
                     "\n════════ DASHCAST JOURNAL ════════\n" + AppLogger.get()
         }
         // AUD-004 — the single choke point. By this line `content` holds everything a report will

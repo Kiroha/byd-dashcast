@@ -19,6 +19,7 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
         private val pseudo = setOf("proc", "sysfs", "devtmpfs", "devpts", "debugfs", "tracefs", "configfs",
             "securityfs", "selinuxfs", "cgroup", "cgroup2", "bpf", "pstore", "fusectl", "binder", "binderfs",
             "efivarfs", "mqueue", "hugetlbfs", "autofs", "binfmt_misc", "rpc_pipefs")
+        fun pseudoInterface(mount:FirmwareMount)=mount.type in pseudo || listOf("/dev","/proc","/sys").any{within(mount.point,it)}
         fun within(path: String, root: String) = path == root || (root == "/" && path.startsWith('/')) || path.startsWith("$root/")
         private fun unescape(value: String): String = buildString {
             var i=0
@@ -58,14 +59,14 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
     private val points=java.util.TreeMap<String,FirmwareMount>().apply {this@FirmwareMounts.entries.forEach {put(it.point,it)}}
     private val topologyCache=object:LinkedHashMap<String,String>(32,0.75f,true){override fun removeEldestEntry(eldest:MutableMap.MutableEntry<String,String>?)=size>32}
     private val ambiguous=entries.groupBy{it.point}.filterValues{it.size>1}.keys
-    private val sensitiveDevices=entries.filter { it.type in pseudo || listOf("/dev","/proc","/sys").any { root->within(it.point,root) } }.map{it.device}.toSet()
+    private val sensitiveDevices=entries.filter(::pseudoInterface).map{it.device}.toSet()
     private fun backing(path: String, mount: FirmwareMount) = (mount.root.trimEnd('/') + "/" + path.removePrefix(mount.point).trimStart('/')).trimEnd('/').ifEmpty{"/"}
     private val excludedBacking=exclusions.mapNotNull { path->mount(path)?.let{it.device to backing(path,it)} }
     fun mount(path: String): FirmwareMount? {
         var candidate=path
         while(true){points[candidate]?.let{return it};if(candidate=="/")return null;candidate=candidate.substringBeforeLast('/',"").ifEmpty{"/"}}
     }
-    private val proofs=entries.associateWith {storageProof.classify(it,::mount)}
+    private val proofs=entries.associateWith {storageProof.classify(it,::mount,sensitiveDevices)}
     private val externalDevices=proofs.filterValues{it.kind=="external"}.keys.map{it.device}.toSet()
     private val internalDevices=proofs.filterValues{it.internal}.keys.map{it.device}.toSet()
     fun withStorage(storage:FirmwareStorage)=FirmwareMounts(entries,exclusions,storage)

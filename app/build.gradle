@@ -2041,8 +2041,9 @@ android {
         // 671 = 1.9.32-beta: broad firmware/APK file collection with disk inventory and verified durable resume.
         // 673 = 1.9.34-beta: discovered mount namespaces and strict attested file reads.
         // 674 = 1.9.35-beta: internal storage provenance; exclude SD/USB/adopted aliases.
-        versionCode 674
-        versionName "1.9.35-beta"
+        // 675 = 1.9.36-beta: bounded preflight metadata diagnostics in consented bug reports.
+        versionCode 675
+        versionName "1.9.36-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

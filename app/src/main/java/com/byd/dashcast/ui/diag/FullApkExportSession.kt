@@ -44,6 +44,8 @@ internal object FullApkExportSession {
                     val directory = resumeDirectory ?: File(base, "${kind.prefix}$id")
                     require(resumeDirectory == null || (kind == ExportKind.FIRMWARE_LARGE && directory.parentFile?.canonicalFile == base.canonicalFile && directory.name.startsWith(kind.prefix))) { "Invalid resume directory" }
                     if(kind==ExportKind.FIRMWARE_LARGE) {
+                        FirmwareDiagnostics.begin()
+                        FirmwareDiagnostics.phase("Compatibilité de session",directory.path)
                         if(resumeDirectory!=null)FirmwareLedger.requireCompatibleResume(resumeDirectory)
                         firmwareDevice=firmwareFactory(app,cancellation::get)
                         firmwareWrites=firmwareDevice!!.outputGuard ?: FirmwareWriteGuard(firmwareDevice!!::validateDestination)
@@ -78,7 +80,11 @@ internal object FullApkExportSession {
                     marker!!.delete()
                 } catch (e: Exception) {
                     val previous = snapshot ?: FullApkExport.Progress("${kind.label} export failed", kind = kind)
-                    snapshot = previous.copy(stage = "Export failed: ${e.message}", outcome = "failed", running = false)
+                    if(kind==ExportKind.FIRMWARE_LARGE) {
+                        FirmwareDiagnostics.failure(e)
+                        com.byd.dashcast.util.AppLogger.e("FirmwareExport",FirmwareDiagnostics.failureSummary().orEmpty())
+                    }
+                    snapshot = previous.copy(stage = if(kind==ExportKind.FIRMWARE_LARGE)FirmwareDiagnostics.failureSummary().orEmpty() else "Export failed: ${e.message}", outcome = "failed", running = false)
                 } finally {
                     runCatching {firmwareDevice?.close()}
                     DiLinkContextDevice.whenTransportIdle(finished)

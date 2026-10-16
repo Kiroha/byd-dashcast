@@ -16,8 +16,11 @@ internal object FirmwareOutput {
         return validate(path,real,stat.st_dev,appTable)
     }
     fun validate(path:String,canonicalAncestor:String,actualDevice:Long,table:FirmwareMounts):String {
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.CANONICAL,canonicalAncestor)
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.ACTUAL_DEVICE,actualDevice.toString())
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.APP_OUTPUT_MOUNTS,FirmwareDiagnostics.mounts(table,listOf(path,canonicalAncestor)))
         val reason=table.storageDecision(path)?:table.storageDecision(canonicalAncestor)
-        if(reason!=null || !table.deviceMatches(canonicalAncestor,actualDevice))throw IOException("Sortie APP non attestée interne : $reason")
+        if(reason!=null || !table.deviceMatches(canonicalAncestor,actualDevice))throw IOException("Sortie APP non attestée interne : ${reason?:"périphérique observé différent du montage"}")
         return listOf(path,table.mount(path),table.mount(canonicalAncestor)).joinToString("|") { value->
             if(value is FirmwareMount)listOf(value.device,value.root,value.point,value.type,value.source).joinToString(",","[","]",transform=FirmwarePolicy::json)
             else FirmwarePolicy.json(value.toString())

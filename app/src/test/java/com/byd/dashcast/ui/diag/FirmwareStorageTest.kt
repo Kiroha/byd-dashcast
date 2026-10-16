@@ -53,6 +53,27 @@ class FirmwareStorageTest {
         val external=mounts(row("8:1","/data/media",source="/dev/block/sda")+row("0:60","/storage/emulated","sdcardfs","/data/media"),listOf(usb))
         assertNotNull(external.decision("/storage/emulated/0/file"))
     }
+    @Test fun `sdcardfs esdfs and loop cannot establish backing through pseudo or device interfaces`() {
+        for(path in listOf("/dev/fuse","/proc/self/fd/3","/sys/devices/storage")) {
+            val pseudo=row("0:2","/"+path.split('/')[1],"tmpfs","tmpfs")
+            for(type in listOf("sdcardfs","esdfs")) {
+                val value=mounts(row("0:60","/storage/emulated",type,path)+pseudo)
+                assertTrue(value.decision("/storage/emulated/0/file").orEmpty().startsWith("unknown storage"))
+            }
+            val loop=FirmwareStorage.Block("7:0","/sys/devices/virtual/block/loop0","0","",backing=path)
+            assertNotNull(mounts(row("7:0","/apex/module",source="/dev/block/loop0"),listOf(loop)).decision("/apex/module/file"))
+        }
+    }
+    @Test fun `pseudo mount device aliases cannot attest emulated or loop backing under an ordinary path`() {
+        for(type in listOf("tmpfs","proc","sysfs")) {
+            val interfaceMount=row("0:70","/dev/special",type,"interface")
+            val alias=row("0:70","/alias",type,"interface")
+            val emulated=row("0:60","/storage/emulated","sdcardfs","/alias/media")
+            assertTrue(mounts(interfaceMount+alias+emulated).decision("/storage/emulated/0/file").orEmpty().startsWith("unknown storage"))
+            val loop=FirmwareStorage.Block("7:0","/sys/devices/virtual/block/loop0","0","",backing="/alias/image")
+            assertNotNull(mounts(interfaceMount+alias+row("7:0","/apex/module",source="/dev/block/loop0"),listOf(loop)).decision("/apex/module/file"))
+        }
+    }
     @Test fun `loop and dm dependency graphs retain internal firmware and reject external backing cycles or missing leaves`() {
         val loop=FirmwareStorage.Block("7:0","/sys/devices/virtual/block/loop0","0","",backing="/data/apex/module.apex")
         val dm=FirmwareStorage.Block("253:0","/sys/devices/virtual/block/dm-0","0","",listOf("179:1"))
