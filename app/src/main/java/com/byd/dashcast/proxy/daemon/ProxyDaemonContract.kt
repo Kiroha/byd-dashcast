@@ -23,6 +23,7 @@ object ProxyDaemonContract {
     const val STRICT_FILE_SCHEMA = 1
     const val CAP_STRICT_FILE_READ = 1
     const val CAP_STORAGE_METADATA = 2
+    const val CAP_BOOT_USERDATA_METADATA = 4
 
     // ─── Binder identity ─────────────────────────────────────────────────
 

@@ -21,6 +21,7 @@ internal object StorageMetadata {
     const val BLOCK=5
     const val OUTPUT=6
     const val PROPERTY=7
+    const val BOOT_USERDATA=8
     const val MAX_BYTES=196608
     data class Request(val operation:Int,val argument:String)
     fun request(data:Parcel):Request {
@@ -30,9 +31,10 @@ internal object StorageMetadata {
         data.setDataPosition(position);val bytes=data.createByteArray()?:throw IOException("Null metadata argument")
         val arg=Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes)).toString()
         if(data.dataAvail()!=0 || '\u0000' in arg || arg.length>4096)throw IOException("Invalid metadata framing")
-        if(op !in MOUNTINFO..PROPERTY)throw IOException("Unknown metadata operation")
+        if(op !in MOUNTINFO..BOOT_USERDATA)throw IOException("Unknown metadata operation")
         when(op) {
             BLOCK->if(!arg.matches(Regex("[0-9]{1,10}:[0-9]{1,10}")))throw IOException("Invalid numeric block device")
+            BOOT_USERDATA->if(!numericDevice(arg))throw IOException("Invalid observed boot block device")
             PROPERTY->if(arg !in setOf("ro.build.fingerprint","ro.build.version.incremental","ro.build.region","sys.byd.countrycode"))throw IOException("Unexpected metadata property")
             OUTPUT->if(!ownOutput(arg))throw IOException("Metadata path outside collector outputs")
             else->if(arg.isNotEmpty())throw IOException("Unexpected metadata argument")
@@ -54,26 +56,71 @@ internal object StorageMetadata {
         BOOT_DEVICE->MetadataProcess.run(listOf("/system/bin/getprop","ro.boot.bootdevice"),4096)
         PROPERTY->MetadataProcess.run(listOf("/system/bin/getprop",request.argument),4096)
         BLOCK->block(request.argument)
+        BOOT_USERDATA->bootUserdata(request.argument)
         OUTPUT->output(request.argument)
         else->throw IOException("Unknown metadata operation")
     }
     internal fun optionalPresent(file:File,probe:(String)->Unit = {Os.lstat(it);Unit}):Boolean = try {probe(file.path);true}catch(e:ErrnoException){
         if(e.errno==OsConstants.ENOENT || e.errno==OsConstants.ENOTDIR)false else throw e
     }
+    internal fun numericDevice(value:String):Boolean {
+        val fields=value.split(':')
+        if(fields.size!=2 || fields.any{!it.matches(Regex("[0-9]{1,10}"))})return false
+        val major=fields[0].toLongOrNull()?:return false;val minor=fields[1].toLongOrNull()?:return false
+        return major in 1..0xffffffffL && minor in 0..0xffffffffL && "$major:$minor"==value
+    }
+    internal data class NodeStat(val mode:Int,val rdev:Long)
+    internal interface MetadataFiles {
+        fun canonical(path:String):String
+        fun stat(path:String):NodeStat
+    }
+    private val nativeFiles=object:MetadataFiles {
+        override fun canonical(path:String)=File(path).canonicalPath
+        override fun stat(path:String)=Os.stat(path).let{NodeStat(it.st_mode,it.st_rdev)}
+    }
     private fun block(device:String):String {
+      var stage="canonical /sys/dev/block/$device"
+      try {
         val directory=File("/sys/dev/block/$device").canonicalFile
+        stage="directory ${directory.path}"
         if(!directory.path.startsWith("/sys/devices/") || !directory.isDirectory)throw IOException("Unresolved block metadata")
-        fun optional(path:String,limit:Int)=File(directory,path).let {if(optionalPresent(it))read(it,limit).trimEnd('\n') else ""}
+        fun present(file:File):Boolean {stage="lstat ${file.path}";return optionalPresent(file)}
+        fun readAt(file:File,limit:Int):String {stage="read ${file.path}";return read(file,limit)}
+        fun optional(path:String,limit:Int)=File(directory,path).let {if(present(it))readAt(it,limit).trimEnd('\n') else ""}
         val dependencies=ArrayList<String>()
-        if(optionalPresent(File(directory,"slaves")))java.nio.file.Files.newDirectoryStream(File(directory,"slaves").toPath()).use {stream->for(slave in stream){
+        if(present(File(directory,"slaves"))) {stage="list ${directory.path}/slaves";java.nio.file.Files.newDirectoryStream(File(directory,"slaves").toPath()).use {stream->for(slave in stream){
             if(dependencies.size>=16)throw IOException("Too many block dependencies")
-            dependencies.add(read(slave.resolve("dev").toFile(),128).trimEnd('\n'))
-        }}
-        if(optionalPresent(File(directory,"partition")))dependencies.add(read(File(directory.parentFile,"dev"),128).trimEnd('\n'))
+            dependencies.add(readAt(slave.resolve("dev").toFile(),128).trimEnd('\n'))
+        }}}
+        if(present(File(directory,"partition")))dependencies.add(readAt(File(directory.parentFile,"dev"),128).trimEnd('\n'))
         if(dependencies.any{!it.matches(Regex("[0-9]{1,10}:[0-9]{1,10}"))})throw IOException("Invalid block dependency metadata")
-        val backing=File(directory,"loop/backing_file").let {if(optionalPresent(it))read(it,4097) else ""}
+        val backing=File(directory,"loop/backing_file").let {if(present(it))readAt(it,4097) else ""}
         fun b64(value:String)=Base64.getEncoder().encodeToString(value.toByteArray(Charsets.UTF_8))
         return "BLOCK|$device|${b64(directory.path)}|${optional("removable",16)}|${optional("device/type",32)}|${dependencies.joinToString(",")}|${b64(backing)}\n"
+      }catch(e:Exception){throw IOException("Block metadata $device $stage: ${e.javaClass.simpleName}: ${e.message}",e)}
+    }
+    /** Fixed metadata paths only. stat/readlink do not open or read a block-device payload. */
+    internal fun bootUserdata(device:String,files:MetadataFiles=nativeFiles):String {
+        if(!numericDevice(device))throw IOException("Invalid observed boot block device")
+        val root="/dev/block/bootdevice"
+        var stage="canonical $root"
+        try {
+            val controller=files.canonical(root)
+            stage="stat controller $controller";val controllerStat=files.stat(controller)
+            if(!OsConstants.S_ISDIR(controllerStat.mode))throw IOException("Boot controller is not a directory")
+            val path="$root/by-name/userdata"
+            stage="canonical $path";val target=files.canonical(path)
+            stage="stat fixed userdata $path";val observed=files.stat(path)
+            stage="stat canonical userdata $target";val canonical=files.stat(target)
+            if(!OsConstants.S_ISBLK(observed.mode) || !OsConstants.S_ISBLK(canonical.mode) || observed.rdev!=canonical.rdev || deviceId(observed.rdev)!=device)throw IOException("Boot userdata block type/device mismatch")
+            fun b64(value:String)=Base64.getEncoder().encodeToString(value.toByteArray(Charsets.UTF_8))
+            return "BOOT_USERDATA|1|$device|${b64(controller)}|${controllerStat.mode}|${b64(target)}|${observed.mode}|${observed.rdev}\n"
+        }catch(e:Exception){throw IOException("Boot userdata metadata $device $stage: ${e.javaClass.simpleName}: ${e.message}",e)}
+    }
+    private fun deviceId(device:Long):String {
+        val major=((device ushr 8) and 0xfffL) or ((device ushr 32) and 0xfffff000L)
+        val minor=(device and 0xffL) or ((device ushr 12) and 0xffffff00L)
+        return "$major:$minor"
     }
     private fun output(path:String):String {
         var ancestor=File(path);var depth=0

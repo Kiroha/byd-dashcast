@@ -1305,7 +1305,7 @@ object ProxyDaemonMain {
                     data.enforceInterface(DESCRIPTOR)
                     reply?.writeNoException()
                     reply?.writeInt(ProxyDaemonContract.STRICT_FILE_SCHEMA)
-                    reply?.writeInt(ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA)
+                    reply?.writeInt(ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA or ProxyDaemonContract.CAP_BOOT_USERDATA_METADATA)
                     return true
                 }
                 ProxyDaemonContract.TXN_READ_FILE_CHUNK_STRICT -> {

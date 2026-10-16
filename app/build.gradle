@@ -2042,8 +2042,9 @@ android {
         // 673 = 1.9.34-beta: discovered mount namespaces and strict attested file reads.
         // 674 = 1.9.35-beta: internal storage provenance; exclude SD/USB/adopted aliases.
         // 675 = 1.9.36-beta: bounded preflight metadata diagnostics in consented bug reports.
-        versionCode 675
-        versionName "1.9.36-beta"
+        // 676 = 1.9.37-beta: equivalent mounts, scoped storage aliases and attested boot userdata fallback.
+        versionCode 676
+        versionName "1.9.37-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
