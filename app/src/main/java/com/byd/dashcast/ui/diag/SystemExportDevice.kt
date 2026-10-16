@@ -130,23 +130,20 @@ internal object SystemInventoryCommands {
 /** Reads original firmware files through existing app/shell rights; no service/vehicle calls. */
 internal class SystemExportDevice(private val context: Context) : FullApkExport.Device {
     private val sources = linkedMapOf<String, FullApkExport.Source>()
-    private val issues = mutableListOf<String>()
+    private val issues = SystemDiscoveryIssues()
     private val coverage = mutableListOf(
         "SYSTEM targeted firmware collection; not a whole-vehicle dump. No APK or private application-data scan.",
         "Original system files are read only. ZIPs/metadata, small inventory snapshots and normal existing daemon bootstrap/PID files are written.",
         "Live non-atomic collection: equal before/after fingerprints do not prove unchanged individual files or hardware compatibility.",
         "Existing app and ProxyDaemon identities only; no root, permission change, SurfaceDaemon or OEM-service invocation.",
-        "Native candidates: five original JNI/service libraries, 22 P4 DT_NEEDED names in both ABIs, fixed Fission/Qt/diagnostics/RCC paths and direct-child auto HAL candidates including ODM. Fixed variants are corpus hypotheses; collected files do not prove loaded paths or HAL selection.",
+        "Native candidates: 79 exact library basenames (five original, 22 P4 DT_NEEDED, 52 P10 acquisition/diagnostic dependency candidates) in both ABIs, fixed Fission/Qt/diagnostics/RCC paths and direct-child auto HAL candidates including ODM. Fixed variants are corpus hypotheses; collected files do not prove loaded paths or HAL selection.",
         "Init imports outside selected etc/init roots are not followed. Linker namespaces and additional dependencies require offline resolution; no native code is loaded or executed.",
         "Boot/classpath companions are selected where exposed. Protected ART/OAT/VDEX or absent code remains unavailable; APK export is a separate action."
     )
     private var shellReady = false
     private var before = emptyMap<String, String>()
     private val inventoryBudget = SystemInventoryBudget()
-    private var issueOverflow = false
-    private fun issue(value: String) {
-        if (issues.size < SystemExportPolicy.MAX_ISSUES) issues.add(value.take(800)) else issueOverflow = true
-    }
+    private fun issue(value: String) { issues.add(value) }
     private fun add(path: String, canonical: String, size: Long?, origin: String) {
         if (!SystemExportPolicy.accepted(path, canonical)) { issue("Rejected path or symlink escaping firmware allowlist: $path -> $canonical"); return }
         if (size == null || size < 0) { issue("Unknown/invalid size: $path"); return }
@@ -211,10 +208,9 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         for (name in SystemExportPolicy.nativeNames + listOf("framework.jar", "services.jar", "ext.jar")) {
             if (sources.values.none { it.path.substringAfterLast('/') == name }) issue("Expected firmware candidate missing/inaccessible in selected roots: $name")
         }
-        if (issueOverflow) issues.add("Additional discovery issues omitted after ${SystemExportPolicy.MAX_ISSUES} entries; collection partial.")
         coverage.add("Inventory bounded per root (${SystemExportPolicy.MAX_SNAPSHOT_BYTES} bytes), aggregate (${SystemExportPolicy.MAX_TOTAL_INVENTORY_BYTES} bytes), sources (${SystemExportPolicy.MAX_SOURCES}) and issue count; no payload staging.")
         update("SYSTEM: ${sources.size} selected firmware files; missing/protected locations recorded", sources.size)
-        return FullApkExport.Inventory(sources.values.toList(), coverage, before, issues.distinct())
+        return FullApkExport.Inventory(sources.values.toList(), coverage, before, issues.snapshot())
     }
 
     private fun discoveredClasspath(path: String): Boolean {

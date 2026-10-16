@@ -174,12 +174,80 @@ class SystemExportPolicyTest {
             "libcrypto.so", "libcutils.so", "libdl.so", "libfission_cutils.so", "libgui.so", "libhardware.so",
             "libhardware_legacy.so", "liblog.so", "libm.so", "libnativeloader.so", "libnetutils.so", "libselinux.so",
             "libsync.so", "libui.so", "libutils.so", "libzmq.so")
-        assertEquals(27, SystemExportPolicy.nativeNames.size)
+        assertEquals(79, SystemExportPolicy.nativeNames.size)
         for (root in SystemExportPolicy.nativeRoots) for (name in expected) assertTrue("$root/$name", SystemExportPolicy.allowed("$root/$name"))
         for (path in listOf("/system/bin/fission_service", "/system/bin/fissiond", "/system/bin/qtandroidnative",
             "/system/lib64/libBydCluster.so", "/system/lib64/libAdas.so")) assertTrue(path, SystemExportPolicy.allowed(path))
         for (path in listOf("/vendor/bin/fissiond", "/system/lib/libBydCluster.so",
             "/system/lib64/libbydcluster.so", "/system/lib64/subdir/libbinder.so")) assertFalse(path, SystemExportPolicy.allowed(path))
+    }
+    @Test fun `P10 missing dependencies extend only exact native basenames in existing roots`() {
+        val additions = setOf(
+            "libETC1.so", "libGLESv1_CM.so", "libGLESv3.so", "libacquisition.so",
+            "libandroidfw.so", "libandroidicu.so", "libappfuse.so", "libaudioclient.so",
+            "libaudiopolicy.so", "libbase.so", "libbpf_android.so", "libcamera_client.so",
+            "libcamera_metadata.so", "libdebuggerd_client.so", "libdiagnostic.so", "libdl_android.so",
+            "libfission_utils.so", "libgraphicsenv.so", "libharfbuzz_ng.so", "libhidlbase.so",
+            "libhidltransport.so", "libhwbinder.so", "libhwui.so", "libimg_utils.so",
+            "libinput.so", "libjpeg.so", "libmedia.so", "libmedia_helper.so",
+            "libmediametrics.so", "libmeminfo.so", "libmemtrack.so", "libmemunreachable.so",
+            "libminikin.so", "libnativebridge_lazy.so", "libnativehelper.so", "libnativeloader_lazy.so",
+            "libnativewindow.so", "libnetd_client.so", "libnetdbpf.so", "libnetdutils.so",
+            "libpdfium.so", "libprocessgroup.so", "libsensor.so", "libsoundtrigger.so",
+            "libsqlite.so", "libstatslog.so", "libusbhost.so", "libvintf.so",
+            "libvulkan.so", "libz.so", "libziparchive.so", "server_configurable_flags.so")
+        val previous = setOf(
+            "libxdjacontainerservice_jni.so", "libfission_services.so", "libfission_event.so", "libbydauto.so",
+            "libbydautoservice.so", "libEGL.so", "libGLESv2.so", "libandroid_runtime.so",
+            "libbinder.so", "libc++.so", "libc.so", "libcrypto.so",
+            "libcutils.so", "libdl.so", "libfission_cutils.so", "libgui.so",
+            "libhardware.so", "libhardware_legacy.so", "liblog.so", "libm.so",
+            "libnativeloader.so", "libnetutils.so", "libselinux.so", "libsync.so",
+            "libui.so", "libutils.so", "libzmq.so")
+        assertEquals(52, additions.size)
+        assertEquals(previous + additions, SystemExportPolicy.nativeNames)
+        assertEquals(listOf("libacquisition.so", "libdiagnostic.so", "libfission_utils.so"),
+            SystemExportPolicy.nativeNames.take(3))
+        assertEquals(listOf("/system", "/system_ext", "/product", "/vendor").flatMap {
+            listOf("$it/lib", "$it/lib64") }, SystemExportPolicy.nativeRoots)
+        for (root in SystemExportPolicy.nativeRoots) for (name in additions) {
+            assertTrue("$root/$name", SystemExportPolicy.accepted("$root/$name", "$root/$name"))
+            for (outside in listOf("/odm/lib64/$name", "$root/nested/$name", "/data/private/$name")) {
+                assertFalse(outside, SystemExportPolicy.accepted("$root/$name", outside))
+            }
+            assertFalse(SystemExportPolicy.allowed("$root/${name.uppercase()}"))
+        }
+    }
+    @Test fun `additional context properties remain selected values with empty meaning unknown`() {
+        assertEquals(17, SystemExportPolicy.propertyKeys.size)
+        assertEquals(17, SystemExportPolicy.propertyKeys.toSet().size)
+        assertEquals(listOf("apps.setting.product.inswver", "ro.build.region", "sys.which.rse"),
+            SystemExportPolicy.propertyKeys.takeLast(3))
+        val captured = SystemExportPolicy.propertyKeys.associateWith { "" }
+        var captures = 0
+        val result = SystemExportPolicy.finalContext(captured, false) { captures++; captured }
+        assertEquals(1, captures)
+        assertEquals(captured, result.firmware)
+        assertTrue(result.issues.single().contains("unknown"))
+    }
+    @Test fun `discovery retains expanded candidate failures and marks overflow explicitly`() {
+        assertEquals(2048, SystemExportPolicy.MAX_ISSUES)
+        val issues = SystemDiscoveryIssues()
+        repeat(1500) { issues.add("Candidate $it unavailable") }
+        assertEquals(1500, issues.snapshot().size)
+        assertFalse(issues.snapshot().any { it.contains("omitted") })
+        repeat(548) { issues.add("Later candidate $it unavailable") }
+        assertEquals(2048, issues.snapshot().size)
+        issues.add("Beyond budget")
+        val bounded = issues.snapshot()
+        assertEquals(2049, bounded.size)
+        assertEquals("Additional discovery issues omitted after 2048 entries; collection partial.", bounded.last())
+        assertFalse(bounded.contains("Beyond budget"))
+        assertEquals(bounded, issues.snapshot())
+        val truncated = SystemDiscoveryIssues(1)
+        truncated.add("x".repeat(1200)); truncated.add("overflow")
+        assertEquals(800, truncated.snapshot().first().length)
+        assertTrue(truncated.snapshot().last().contains("after 1 entries"))
     }
     @Test fun `P6 diagnostics and RCC candidates are exact paths with no neighboring scope`() {
         for (path in listOf("/system/bin/diagmgrsrv", "/system/lib64/cluster_theme1.rcc", "/system/lib64/cluster_theme2.rcc")) {
