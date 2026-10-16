@@ -9,7 +9,11 @@ internal enum class ExportKind(val label: String, val noun: String, val rootName
                                val entryRoot: String, val archivePrefix: String) {
     APK("APK", "APKs", "apk-exports", "apk-export-", "apks", "apks"),
     SYSTEM("SYSTEM", "system files", "system-exports", "system-export-", "system", "system"),
+    SYSTEM_P15("SYSTEM P15", "targeted system files", "system-p15-exports", "system-p15-export-", "system", "system"),
     CONTEXT("CONTEXTE", "context reads", "context-exports", "context-export-", "context", "context");
+
+    val isSystem: Boolean get() = this == SYSTEM || this == SYSTEM_P15
+    val systemProfile: SystemExportProfile get() = if (this == SYSTEM_P15) SystemExportProfile.DILINK_P15 else SystemExportProfile.FULL
 
     companion object {
         /** Timestamp names are comparable across profiles; directory prefixes are not. */

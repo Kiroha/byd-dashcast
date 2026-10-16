@@ -21,7 +21,8 @@ internal class FullApkExport(
     data class Source(val path: String, var size: Long?, val origins: MutableSet<String> = linkedSetOf(),
                       val canonicalPath: String? = null)
     data class Inventory(val sources: List<Source>, val coverage: List<String>, val firmware: Map<String, String>,
-                         val discoveryIssues: List<String> = emptyList())
+                         val discoveryIssues: List<String> = emptyList(), val scope: String = "",
+                         val requestedPaths: List<String> = emptyList())
     interface Device {
         fun discover(checkCancelled: () -> Unit, update: (String, Int) -> Unit): Inventory
         fun open(source: Source): InputStream
@@ -44,7 +45,10 @@ internal class FullApkExport(
     private var state = Progress("Preparing ${kind.label} export", directory = directory, kind = kind)
     private val archives = mutableListOf<File>()
     private val records = mutableListOf<Record>()
-    private var inventory = Inventory(emptyList(), emptyList(), emptyMap())
+    // Preserve the requested scope even if discovery is cancelled before it can return.
+    private var inventory = Inventory(emptyList(), emptyList(), emptyMap(),
+        scope = if (kind.isSystem) kind.systemProfile.id else "",
+        requestedPaths = if (kind.isSystem) kind.systemProfile.requestedPaths else emptyList())
     private var zip: ZipOutputStream? = null
     private var part: File? = null
     private var volumePayload = 0L
@@ -158,7 +162,7 @@ internal class FullApkExport(
     private fun checkFinalContext() {
         if (contextChecked) return
         contextChecked = true
-        if (kind == ExportKind.SYSTEM) publish(state.copy(stage = if (cancelled()) "Finalizing cancelled SYSTEM export" else "Checking final SYSTEM build context", current = "Selected build properties", lastProgressMs = monotonicMs()))
+        if (kind.isSystem) publish(state.copy(stage = if (cancelled()) "Finalizing cancelled SYSTEM export" else "Checking final SYSTEM build context", current = "Selected build properties", lastProgressMs = monotonicMs()))
         finalContext = try { device.finish(cancelled()) } catch (e: Exception) {
             ContextCheck(issues = listOf("Final build context unavailable: ${e.message}"))
         }
@@ -183,7 +187,7 @@ internal class FullApkExport(
         val output = zip ?: return
         publish(state.copy(stage = "Closing ZIP volume", lastProgressMs = monotonicMs()))
         val manifest = manifest("volume_complete", "This manifest describes this volume; consult the session manifest for final coverage.", volumeRecords)
-        output.putNextEntry(ZipEntry(if (kind == ExportKind.SYSTEM) "manifest-volume.json" else "manifest.json"))
+        output.putNextEntry(ZipEntry(if (kind.isSystem) "manifest-volume.json" else "manifest.json"))
         output.write(manifest.toByteArray(Charsets.UTF_8))
         output.closeEntry()
         output.close()
@@ -224,6 +228,8 @@ internal class FullApkExport(
     private fun manifest(outcome: String, message: String, rows: List<Record>): String = buildString {
         append("{\n\"schema\":1,\"outcome\":").append(json(outcome))
         append(",\"kind\":").append(json(kind.name))
+        append(",\"scope\":").append(json(inventory.scope))
+        append(",\"requestedPaths\":[").append(inventory.requestedPaths.joinToString(",") { json(it) }).append("]")
         append(",\"contextCheckComplete\":").append(contextChecked)
         append(",\"message\":").append(json(message))
         append(",\"wholeVehicleCoverage\":\"unverified\",\"firmware\":{")

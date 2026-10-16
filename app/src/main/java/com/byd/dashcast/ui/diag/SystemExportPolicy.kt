@@ -124,6 +124,17 @@ internal object SystemExportPolicy {
         reply.trim() != "$marker:0" -> "Missing/failed completion marker (timeout, denied access or unsupported tool): ${reply.take(300)}"
         else -> null
     }
+
+    /** Before/after phase is independent from whether classpath/library reads were requested. */
+    fun recordContextIssue(reply: String, beforeCopy: Boolean, values: MutableMap<String, String>,
+                           initialIssue: (String) -> Unit) {
+        if (reply.length > 65536 || reply.contains("[output truncated]") ||
+            reply.lineSequence().lastOrNull() != "__DC_SYSTEM_CONTEXT__:0") {
+            val message = "${if (beforeCopy) "Before" else "After"} context incomplete/timeout/truncated/unsupported: ${reply.takeLast(400)}"
+            values["contextCaptureIssue"] = message
+            if (beforeCopy) initialIssue(message)
+        }
+    }
 }
 
 /** A rejected/unknown generated size stops later snapshots instead of evading aggregate limits. */
