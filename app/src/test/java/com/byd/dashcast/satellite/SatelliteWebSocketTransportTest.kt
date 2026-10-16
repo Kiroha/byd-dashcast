@@ -103,9 +103,10 @@ class SatelliteWebSocketTransportTest {
             override fun onMessage(message: String) {
                 if (JSONObject(message).optString("type") == "welcome") {
                     assertEquals(1, JSONObject(message).get("videoDiagnostics"))
+                    assertEquals(1, JSONObject(message).get("videoDiagnosticsDetails"))
                     welcomed.countDown()
                     val snapshot = JSONObject(java.io.File("../docs/satellite/diagnostics-video-fixtures.json").readText())
-                        .getJSONArray("accepted").getJSONObject(0)
+                        .getJSONArray("accepted").getJSONObject(1)
                     send(JSONObject(snapshot.toString()).put("sdp", "forbidden_free_text").toString())
                     send(snapshot.toString())
                     send(JSONObject().put("type", "navigation.update").put("seq", 1).put("ageMs", 0)

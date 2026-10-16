@@ -40,6 +40,7 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     DashCastVideo: {ready: value => replies.push({ready: value}), failed: code => replies.push({failed: code}),
       progress: (attempt, code) => progress.push(code),
       observe: (attempt, raw) => observations.push({attempt, ...JSON.parse(raw)}),
+      observeFinal: (attempt, raw) => observations.push({attempt, terminal:true, ...JSON.parse(raw)}),
       send: (attempt, session, raw) => replies.push({session, ...JSON.parse(raw)})},
     performance: {now: () => now},
     setInterval: callback => { intervals.set(++timer, callback); return timer; },
@@ -415,4 +416,59 @@ test('raw quality counter decreases rebaseline even if the derived successful co
   total = 20; dropped = 0; await h.advance(5000);
   await h.advance(7001);
   assert.equal(h.peers[0].closed, true);
+});
+
+
+test('selected H264 codec parameters and receiver feedback are scalar observations only', async () => {
+  const h = harness(); h.offer(); await flush();
+  h.peers[0].report = () => new Map([
+    ['inbound', {type:'inbound-rtp',kind:'video',codecId:'selected',framesDecoded:0,pliCount:2,nackCount:0,firCount:1,totalDecodeTime:0.125}],
+    ['unselected', {mimeType:'video/H264',sdpFmtpLine:'profile-level-id=640032;packetization-mode=0'}],
+    ['selected', {mimeType:'video/H264',sdpFmtpLine:'profile-level-id=42e01f;packetization-mode=1'}]
+  ]);
+  await h.advance(1000); await h.advance(2000);
+  const row = h.observations.at(-1);
+  assert.equal(row.h264ProfileIdc,66); assert.equal(row.h264ProfileIop,224); assert.equal(row.h264LevelIdc,31);
+  assert.equal(row.packetizationMode,1); assert.equal(row.pliCount,2); assert.equal(row.nackCount,0); assert.equal(row.decodeTimeMs,125);
+  assert.equal(row.decoded,false); await h.advance(17000); assert.equal(h.peers[0].closed,true);
+});
+
+test('missing duplicate malformed or ambiguous selected fmtp stays unknown without defaults', async () => {
+  const h=harness(); h.offer(); await flush();
+  h.peers[0].localDescription.sdp='a=fmtp:96 profile-level-id=640032\r\na=fmtp:97 profile-level-id=42e01f;packetization-mode=1';
+  assert.equal(h.context.h264Parameters({mimeType:'video/H264',payloadType:97},h.peers[0]).h264ProfileIdc,66);
+  assert.equal(h.context.h264Parameters({mimeType:'video/H264',payloadType:98},h.peers[0]).packetizationMode,null);
+  const malformed=h.context.h264Parameters({mimeType:'video/H264',sdpFmtpLine:'profile-level-id=42e01f;profile-level-id=640032;packetization-mode=2'},h.peers[0]);
+  assert.equal(malformed.h264ProfileIdc,null);assert.equal(malformed.packetizationMode,null);
+  h.peers[0].localDescription.sdp+='\r\na=fmtp:97 profile-level-id=640032';
+  assert.equal(h.context.h264Parameters({mimeType:'video/H264',payloadType:97},h.peers[0]).h264ProfileIdc,null);
+});
+
+test('vendor evidence getters throwing cannot interrupt receiver supervision', async () => {
+  const h=harness();h.offer();await flush();
+  const track={kind:'video'};
+  for(const key of ['readyState','muted']) Object.defineProperty(track,key,{get(){throw new Error('private');}});
+  for(const key of ['error','readyState','networkState','paused','videoWidth','videoHeight','webkitDecodedFrameCount']) Object.defineProperty(h.video,key,{get(){throw new Error('private');}});
+  h.peers[0].ontrack({track});await flush();await h.advance(1000);
+  const row=h.observations.at(-1);
+  for(const key of ['mediaError','videoReadyState','videoNetworkState','videoPaused','videoWidth','trackMuted','trackState'])assert.equal(row[key],null);
+  assert.equal(h.peers[0].closed,false);await h.advance(17000);assert.equal(h.peers[0].closed,true);
+});
+
+test('terminal playback rejection survives subsecond closure and obsolete track callback is ignored', async () => {
+  const h=harness();h.offer();await flush();let rejectFirst,rejectSecond;
+  h.video.play=()=>new Promise((_,reject)=>{rejectFirst=reject;});
+  const old={kind:'video',readyState:'live',muted:false};h.peers[0].ontrack({track:old});const ended=old.onended;
+  h.video.play=()=>new Promise((_,reject)=>{rejectSecond=reject;});
+  h.peers[0].ontrack({track:{kind:'video',readyState:'live',muted:false}});
+  rejectFirst(new Error('private first'));ended();await flush();assert.equal(h.peers[0].closed,false);
+  rejectSecond(new Error('private second'));await flush();
+  assert.equal(h.observations.at(-1).playState,'rejected');assert.equal(h.observations.at(-1).terminal,true);
+  assert.equal(h.peers[0].closed,true);assert.equal(h.intervals.size,0);
+});
+
+test('maximum receiver observation remains within native input bound', async () => {
+  const h=harness();h.offer();await flush();
+  h.peers[0].report=()=>new Map([['inbound',{type:'inbound-rtp',kind:'video',codecId:'c',...Object.fromEntries(['bytesReceived','packetsReceived','packetsLost','framesReceived','framesDecoded','keyFramesDecoded','framesDropped','pliCount','nackCount','firCount'].map(k=>[k,9000000000000])),totalDecodeTime:86400}],['c',{mimeType:'video/H264',sdpFmtpLine:'profile-level-id=42e01f;packetization-mode=1'}]]);
+  await h.advance(1000);await h.advance(2000);assert.ok(JSON.stringify(h.observations.at(-1)).length<=2048);
 });

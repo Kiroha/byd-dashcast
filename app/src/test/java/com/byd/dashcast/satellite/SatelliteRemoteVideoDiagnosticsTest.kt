@@ -102,4 +102,17 @@ class SatelliteRemoteVideoDiagnosticsTest {
         ledger.disconnected("one"); ledger.connected("two", null)
         assertTrue(ledger.summary().startsWith("No manually received"))
     }
+    @Test fun `sender detail history is copied typed and retained after peer disconnect without identity`() {
+        var now=0L;val ledger=SatelliteRemoteVideoDiagnostics.Ledger { now }
+        val json=fixtures().getJSONArray("accepted").getJSONObject(1)
+        val snapshot=SatelliteRemoteVideoDiagnostics.parse(json)
+        ledger.connected("privateSession","privatePeer");assertTrue(ledger.accept("privateSession",snapshot))
+        json.getJSONObject("details").getJSONArray("attempts").getJSONObject(0).put("keyFramesEncoded",999)
+        ledger.disconnected("privateSession");now=1000
+        val summary=ledger.summary()
+        assertTrue(summary.contains("keyFramesEncoded=1"));assertTrue(summary.contains("sampleAgeAtCaptureMs=2000"))
+        assertFalse(summary.contains("999"));assertFalse(summary.contains("private"))
+        assertTrue(summary.contains("historical evidence"))
+    }
+
 }

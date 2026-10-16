@@ -261,4 +261,18 @@ class SatelliteVideoBootstrapTest {
         assertTrue(attemptLine(number).contains("bytesReceived=123"))
     }
 
+    @Test fun `forced terminal snapshot has priority over coalesced normal sample before error closes attempt`() {
+        val current=bridge();current.ready(true);idle()
+        val number=offer("terminal")
+        current.observe(number,observation(1));idle()
+        val terminal=JSONObject(observation(2)).put("playState","rejected").put("mediaError",3).toString()
+        current.observeFinal(number,terminal)
+        current.observe(number,observation(999))
+        current.send(number,"bootstrap-test",JSONObject().put("type","video.error").put("code","playback_failed").toString())
+        idle()
+        assertTrue(attemptLine(number).contains("bytesReceived=2"))
+        assertTrue(attemptLine(number).contains("playState=rejected"))
+        assertTrue(attemptLine(number).contains("end=playback_failed"))
+    }
+
 }

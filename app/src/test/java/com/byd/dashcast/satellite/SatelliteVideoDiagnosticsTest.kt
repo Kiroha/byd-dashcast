@@ -123,4 +123,29 @@ class SatelliteVideoDiagnosticsTest {
         assertTrue(text.length < 10000)
     }
 
+    @Test fun `terminal scalar evidence bypasses throttle exactly once and remains historical`() {
+        var now=0L
+        val history=SatelliteVideoDiagnostics.Attempts { now }
+        val first=history.begin()
+        history.observe(first, SatelliteVideoDiagnostics.Observation.parse(observation().put("playState","pending").toString())!!)
+        now=100
+        history.observe(first, SatelliteVideoDiagnostics.Observation.parse(observation().put("playState","rejected").put("mediaError",3).toString())!!, true)
+        history.observe(first, SatelliteVideoDiagnostics.Observation.parse(observation().put("playState","resolved").toString())!!, true)
+        history.end(first, SatelliteVideoDiagnostics.End.PLAYBACK_FAILED)
+        assertTrue(history.summary().contains("playState=rejected"))
+        assertTrue(history.summary().contains("mediaError=3"))
+        assertFalse(history.summary().contains("playState=resolved"))
+    }
+    @Test fun `new evidence is nullable typed and strictly bounded without arbitrary strings`() {
+        val parsed=SatelliteVideoDiagnostics.Observation.parse(observation().put("videoPaused","true")
+            .put("trackState","private").put("playState","rejected").put("h264ProfileIdc",65)
+            .put("h264ProfileIop",224).put("h264LevelIdc",31).put("packetizationMode",2)
+            .put("decodeTimeMs",125).put("pliCount",0).put("mediaError",0).toString())!!
+        assertNull(parsed.playback["videoPaused"]); assertNull(parsed.playback["trackState"])
+        assertNull(parsed.playback["h264ProfileIdc"]); assertNull(parsed.playback["packetizationMode"])
+        assertNull(parsed.playback["mediaError"]); assertEquals(224L,parsed.playback["h264ProfileIop"])
+        assertEquals(125L,parsed.playback["decodeTimeMs"]); assertEquals(0L,parsed.counters["pliCount"])
+        assertFalse(parsed.summary().contains("private"))
+    }
+
 }

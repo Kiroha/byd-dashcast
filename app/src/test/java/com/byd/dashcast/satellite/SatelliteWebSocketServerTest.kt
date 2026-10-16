@@ -138,6 +138,7 @@ class SatelliteWebSocketServerTest {
     @Test fun `diagnostics acknowledgement follows authenticated typed commit and malformed snapshots preserve navigation`() {
         val socket = Socket(); open(socket); hello(socket)
         assertEquals(1, JSONObject(socket.messages.first()).get("videoDiagnostics"))
+        assertEquals(1, JSONObject(socket.messages.first()).get("videoDiagnosticsDetails"))
         val invalid = diagnostics().put("state", "untrusted free text")
         server.onMessage(socket.socket, invalid.toString())
         assertEquals("rejected", JSONObject(socket.messages.last()).getString("status"))
@@ -256,4 +257,19 @@ class SatelliteWebSocketServerTest {
         server.onError(null, IllegalStateException("old transport"))
         assertEquals(0, failures)
     }
+    @Test fun `malformed optional details reject only diagnostics while legacy detail and guidance remain usable`() {
+        val socket=Socket();open(socket);hello(socket)
+        val detailed=JSONObject(java.io.File("../docs/satellite/diagnostics-video-fixtures.json").readText())
+            .getJSONArray("accepted").getJSONObject(1)
+        val invalid=JSONObject(detailed.toString())
+        invalid.getJSONObject("details").getJSONArray("attempts").getJSONObject(0).put("pliCount",true)
+        server.onMessage(socket.socket,invalid.toString())
+        assertEquals("rejected",JSONObject(socket.messages.last()).getString("status"))
+        server.onMessage(socket.socket,detailed.toString())
+        assertEquals("accepted",JSONObject(socket.messages.last()).getString("status"))
+        server.onMessage(socket.socket,diagnostics(2).toString())
+        assertEquals("accepted",JSONObject(socket.messages.last()).getString("status"))
+        update(socket);assertEquals(1,frames.size);assertFalse(socket.closed)
+    }
+
 }

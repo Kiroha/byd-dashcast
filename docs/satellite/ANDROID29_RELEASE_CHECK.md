@@ -81,3 +81,10 @@ The stock API 29 check exercises actual AndroidKeyStore keys and the minified re
 through pinned TLS, the WebSocket upgrade and authenticated control frames. It does
 not establish compatibility with the BYD ROM's hardware provider or prove guidance
 delivery on the vehicle; retest those on the parked vehicle with DashSat 0.6.0-dev.
+
+First-frame diagnostics must also be checked on the actual installed WebView. Older WebView fields
+may be absent and must remain unknown. The selected H.264 profile/level/packetization values come
+only from the selected codec report (or its exact answer payload), never the first advertised codec.
+Receiver inbound PLI/NACK/FIR are sent feedback, and totalDecodeTime is exported as bounded
+integer milliseconds. Element/track/playback observations do not prove physical display, hardware
+decoding or guidance freshness. Terminal samples remain bounded and do not request more stats.
