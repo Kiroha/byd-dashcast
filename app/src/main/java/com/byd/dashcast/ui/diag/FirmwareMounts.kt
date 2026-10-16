@@ -21,6 +21,12 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
             "efivarfs", "mqueue", "hugetlbfs", "autofs", "binfmt_misc", "rpc_pipefs")
         fun pseudoInterface(mount:FirmwareMount)=mount.type in pseudo || listOf("/dev","/proc","/sys").any{within(mount.point,it)}
         fun within(path: String, root: String) = path == root || (root == "/" && path.startsWith('/')) || path.startsWith("$root/")
+        fun deviceId(device:Long):String {
+            val major=((device ushr 8) and 0xfffL) or ((device ushr 32) and 0xfffff000L)
+            val minor=(device and 0xffL) or ((device ushr 12) and 0xffffff00L)
+            return "$major:$minor"
+        }
+        private fun physical(mount:FirmwareMount)=listOf(mount.device,mount.root,mount.point,mount.type,mount.source)
         private fun unescape(value: String): String = buildString {
             var i=0
             while(i<value.length) {
@@ -58,16 +64,32 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
     }
     private val points=java.util.TreeMap<String,FirmwareMount>().apply {this@FirmwareMounts.entries.forEach {put(it.point,it)}}
     private val topologyCache=object:LinkedHashMap<String,String>(32,0.75f,true){override fun removeEldestEntry(eldest:MutableMap.MutableEntry<String,String>?)=size>32}
-    private val ambiguous=entries.groupBy{it.point}.filterValues{it.size>1}.keys
+    private val ambiguous=entries.groupBy{it.point}.filterValues{group->group.map(::physical).distinct().size>1}.keys
     private val sensitiveDevices=entries.filter(::pseudoInterface).map{it.device}.toSet()
     private fun backing(path: String, mount: FirmwareMount) = (mount.root.trimEnd('/') + "/" + path.removePrefix(mount.point).trimStart('/')).trimEnd('/').ifEmpty{"/"}
     private val excludedBacking=exclusions.mapNotNull { path->mount(path)?.let{it.device to backing(path,it)} }
+    private fun regions(mounts:Collection<FirmwareMount>)=mounts.groupBy{it.device}.mapValues{(_,values)->values.map{it.root}.toSet()}
+    private val lexicalExternalBacking=regions(entries.filter{storageProof.externalMount(it)})
+    private fun inRegion(regions:Map<String,Set<String>>,mount:FirmwareMount,path:String):Boolean {
+        val roots=regions[mount.device]?:return false
+        var candidate=backing(path,mount)
+        while(true){if(candidate in roots)return true;if(candidate=="/")return false;candidate=candidate.substringBeforeLast('/',"").ifEmpty{"/"}}
+    }
     fun mount(path: String): FirmwareMount? {
         var candidate=path
         while(true){points[candidate]?.let{return it};if(candidate=="/")return null;candidate=candidate.substringBeforeLast('/',"").ifEmpty{"/"}}
     }
-    private val proofs=entries.associateWith {storageProof.classify(it,::mount,sensitiveDevices)}
-    private val externalDevices=proofs.filterValues{it.kind=="external"}.keys.map{it.device}.toSet()
+    private fun backingMount(path:String)=mount(path)?.takeUnless{it.point in ambiguous}
+    /** This negative-only lookup does not call the classifier or depend on its results. */
+    private fun denyBacking(path:String,mount:FirmwareMount):FirmwareStorage.Result? {
+        if(mount.point in ambiguous || mount.device in sensitiveDevices || pseudoInterface(mount))return FirmwareStorage.Result("unknown","ambiguous or pseudo backing mount")
+        if(mount.device in storageProof.externalVolumeDevices || mount.source.startsWith("/dev/block/vold/"))return FirmwareStorage.Result("external","public/adopted backing device",true)
+        if(inRegion(lexicalExternalBacking,mount,path))return FirmwareStorage.Result("external","excluded backing region or alias")
+        return null
+    }
+    private val proofs=entries.associateWith {storageProof.classify(it,::backingMount,sensitiveDevices,::denyBacking)}
+    private val externalDevices=storageProof.externalVolumeDevices+proofs.filterValues{it.kind=="external" && it.deviceWide}.keys.map{it.device}
+    private val externalBacking=regions(proofs.filterValues{it.kind=="external" && !it.deviceWide}.keys)
     private val internalDevices=proofs.filterValues{it.internal}.keys.map{it.device}.toSet()
     fun withStorage(storage:FirmwareStorage)=FirmwareMounts(entries,exclusions,storage)
     /** Destination attestation omits collector-output exclusions, but never storage provenance. */
@@ -77,6 +99,7 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
         val mount=mount(path)?:return "unknown storage: unobserved mount"
         if(mount.point in ambiguous || mount.device in sensitiveDevices || mount.type !in storage)return "unknown storage: ambiguous or non-ordinary mount"
         if(mount.device in externalDevices || storageProof.externalMount(mount))return "external storage: volume/device/backing excluded"
+        if(inRegion(externalBacking,mount,path))return "external storage: excluded backing subtree or alias"
         val proof=proofs[mount]?:return "unknown storage: missing provenance"
         return if(proof.internal || mount.device in internalDevices)null else proof.reason()
     }
@@ -94,6 +117,7 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
         if(exclusions.any{within(path,it)})return "collector private/cache/export tree"
         val mount=mount(path)?:return "unobserved mount"
         reason(mount)?.let{return it}
+        storageDecision(path)?.let{return it}
         val backed=backing(path,mount)
         if(FirmwareStorage.externalPath(backed))return "external storage: removable/adopted backing subtree"
         if(!FirmwarePolicy.firmware(backed) || backed.startsWith("/local/tmp/dashcast") || ownUserBacking.matches(backed))return "collector/interface backing subtree"
@@ -101,9 +125,7 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
         return null
     }
     fun deviceMatches(path:String,device:Long):Boolean {
-        val major=((device ushr 8) and 0xfffL) or ((device ushr 32) and 0xfffff000L)
-        val minor=(device and 0xffL) or ((device ushr 12) and 0xffffff00L)
-        return mount(path)?.device=="$major:$minor"
+        return mount(path)?.device==deviceId(device)
     }
     fun json():String=entries.joinToString(",","[","]") { m->
         "{\"device\":${FirmwarePolicy.json(m.device)},\"root\":${FirmwarePolicy.json(m.root)},\"point\":${FirmwarePolicy.json(m.point)},\"type\":${FirmwarePolicy.json(m.type)},\"source\":${FirmwarePolicy.json(m.source)},\"decision\":${FirmwarePolicy.json(decision(m.point)?:"admitted")},\"rawMountinfo\":${FirmwarePolicy.json(m.raw)}}"
@@ -123,8 +145,8 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
         topologyCache[path]=result;return result
     }
     fun fingerprint(): String = FirmwareExport.hex(MessageDigest.getInstance("SHA-256").digest(
-        (entries.sortedWith(compareBy({it.point},{it.device},{it.root},{it.type})).joinToString(",","[","]") {
-            listOf(it.point,it.device,it.root,it.type,decision(it.point).orEmpty()).joinToString(",","[","]",transform=FirmwarePolicy::json)
+        (entries.distinctBy(::physical).sortedWith(compareBy({it.point},{it.device},{it.root},{it.type},{it.source})).joinToString(",","[","]") {
+            listOf(it.point,it.device,it.root,it.type,it.source,decision(it.point).orEmpty()).joinToString(",","[","]",transform=FirmwarePolicy::json)
         }+exclusions.sorted().joinToString(",","[","]",transform=FirmwarePolicy::json)+storageProof.json()).toByteArray(Charsets.UTF_8)))
 
 }

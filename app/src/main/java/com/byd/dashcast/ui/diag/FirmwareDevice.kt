@@ -33,6 +33,8 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     private val gate=FirmwareSerialGate()
     private var initialized=false
     private var binder: IBinder?=null
+    private var capabilityBinder:IBinder?=null
+    private var capabilities=0
     private var shellProblem=""
     private var shellMounts:FirmwareMounts?=null
     private var protocol="unavailable"
@@ -178,7 +180,21 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 dependencies.forEach{pending.add(it to depth+1)}
             }catch(e:CancellationException){throw e}catch(e:Exception){nodes[device]=FirmwareStorage.Block(device,"","","");issues.add("Provenance bloc inconnue $device : ${FirmwareDiagnostics.bounded("${e.javaClass.simpleName}: ${e.message}",1024)}")}
         }
-        val storage=FirmwareStorage(nodes,primary,volumes,boot,issues)
+        val draft=FirmwareStorage(nodes,primary,volumes,boot,issues)
+        val data=mounts.entries.filter{it.point=="/data"}.distinctBy{listOf(it.device,it.root,it.point,it.type,it.source)}.singleOrNull()
+        var bootUserdata:FirmwareStorage.BootUserdata?=null
+        if(data!=null && data.source=="/dev/block/bootdevice/by-name/userdata" && draft.internalPrimary && data.device !in draft.externalVolumeDevices && nodes[data.device]?.path.isNullOrEmpty()) {
+            FirmwareDiagnostics.phase("Identité fixe du userdata de démarrage SHELL")
+            try {
+                bootUserdata=FirmwareStorage.BootUserdata.parse(metadata(StorageMetadata.BOOT_USERDATA,data.device),data.device)
+                FirmwareDiagnostics.record(FirmwareDiagnostics.Field.BOOT_USERDATA,bootUserdata.toString())
+            }catch(e:CancellationException){throw e}catch(e:Exception) {
+                val detail=FirmwareDiagnostics.bounded("${e.javaClass.simpleName}: ${e.message}",1024)
+                issues.add("Identité userdata de démarrage indisponible : $detail")
+                FirmwareDiagnostics.record(FirmwareDiagnostics.Field.BOOT_USERDATA,"unavailable: $detail")
+            }
+        }
+        val storage=FirmwareStorage(nodes,primary,volumes,boot,issues,bootUserdata)
         FirmwareDiagnostics.record(FirmwareDiagnostics.Field.BLOCKS,nodes.values.joinToString("\n"))
         FirmwareDiagnostics.record(FirmwareDiagnostics.Field.METADATA_ISSUES,issues.joinToString("\n"))
         return storage
@@ -258,6 +274,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     }
     private fun metadata(operation:Int,argument:String="",cleanup:Boolean=false):String {
         outputGuard.check()
+        if(operation==StorageMetadata.BOOT_USERDATA && (binder!==capabilityBinder || capabilities and ProxyDaemonContract.CAP_BOOT_USERDATA_METADATA==0))throw IOException("Boot userdata metadata capability not negotiated on this daemon")
         if(!cleanup && cancelled())throw CancellationException("Annulation avant métadonnées")
         return gate.call {
             val b=binder?:throw IOException("Daemon metadata absent")
@@ -290,6 +307,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
         }
     }
     private fun negotiate() {
+        capabilityBinder=null;capabilities=0
         gate.call {
             val b=binder?:throw IOException("Binder indisponible")
             val data=Parcel.obtain();val reply=Parcel.obtain()
@@ -311,6 +329,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 reply.readException();if(reply.dataAvail()!=8)throw IOException("Réponse capacités mal cadrée");val schema=reply.readInt();val flags=reply.readInt()
                 FirmwareDiagnostics.record(FirmwareDiagnostics.Field.DAEMON,"WHOAMI uid=2000; protocol=$protocol; capabilitySchema=$schema; capabilityFlags=$flags; instance nonce omitted")
                 if(schema!=ProxyDaemonContract.STRICT_FILE_SCHEMA || flags and (ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA)!=(ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA))throw IOException("Schéma/capacité stricte incompatible")
+                capabilityBinder=binder;capabilities=flags
             }finally{reply.recycle();data.recycle()}
         }
     }
