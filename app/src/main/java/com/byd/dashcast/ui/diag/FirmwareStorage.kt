@@ -49,38 +49,40 @@ internal class FirmwareStorage(
     } && volumeRows.any {it[0].matches(Regex("emulated(?:;[0-9]+)?")) && it[1] in setOf("mounted","mounted_ro") && it[2]=="null"}
     fun externalMount(mount:FirmwareMount)=externalPath(mount.point) || externalSource(mount.source) ||
         ((mount.type=="fuse" || mount.type=="fuseblk") && internalEmulatedPath(mount.point) && primary!=null && primary!="null")
-    fun classify(mount:FirmwareMount,mountOf:(String)->FirmwareMount?):Result {
+    fun classify(mount:FirmwareMount,mountOf:(String)->FirmwareMount?,interfaces:Set<String> = emptySet()):Result {
         if(externalMount(mount))return Result("external","removable/adopted volume point, source or primary UUID")
-        return classifyMount(mount,mountOf,emptySet(),0)
+        return classifyMount(mount,mountOf,emptySet(),0,interfaces)
     }
-    private fun classifyMount(mount:FirmwareMount,mountOf:(String)->FirmwareMount?,visited:Set<String>,depth:Int):Result {
+    private fun classifyMount(mount:FirmwareMount,mountOf:(String)->FirmwareMount?,visited:Set<String>,depth:Int,interfaces:Set<String>):Result {
         if(depth>MAX_DEPTH)return Result("unknown","backing dependency depth limit")
         if(externalMount(mount))return Result("external","removable/adopted volume point or source")
         if(mount.type in setOf("rootfs","tmpfs","ramfs"))return Result("internal","ordinary boot/memory filesystem; volatile")
-        if(mount.type in setOf("sdcardfs","esdfs") && mount.source.startsWith('/'))return backing(mount.source,mountOf,visited,depth+1)
+        if(mount.type in setOf("sdcardfs","esdfs") && mount.source.startsWith('/'))return backing(mount.source,mountOf,visited,depth+1,interfaces)
         if(mount.type=="fuse" && primaryAnchor(mount) && mount.source=="/dev/fuse") {
             if(!internalPrimary)return Result("unknown","internal emulated backing not established by StorageManager metadata")
-            val data=backing("/data/media",mountOf,visited,depth+1)
+            val data=backing("/data/media",mountOf,visited,depth+1,interfaces)
             return if(data.internal)Result("internal","successful AOSP primary UUID null, internal private/emulated volumes and attested userdata backing") else data
         }
-        if(mount.device.substringBefore(':').toLongOrNull()?.let{it>0}==true)return device(mount.device,mountOf,visited,depth+1)
+        if(mount.device.substringBefore(':').toLongOrNull()?.let{it>0}==true)return device(mount.device,mountOf,visited,depth+1,interfaces)
         return Result("unknown","no attested internal block or emulated backing")
     }
-    private fun backing(path:String,mountOf:(String)->FirmwareMount?,visited:Set<String>,depth:Int):Result {
+    private fun backing(path:String,mountOf:(String)->FirmwareMount?,visited:Set<String>,depth:Int,interfaces:Set<String>):Result {
         if(!FirmwarePolicy.sane(path))return Result("unknown","invalid backing path")
+        if(listOf("/dev","/proc","/sys").any{FirmwareMounts.within(path,it)})return Result("unknown","pseudo/device interface cannot establish storage backing")
         if(externalPath(path))return Result("external","external backing path")
         val mount=mountOf(path)?:return Result("unknown","backing mount not observed")
-        return classifyMount(mount,mountOf,visited,depth)
+        if(mount.device in interfaces || FirmwareMounts.pseudoInterface(mount))return Result("unknown","pseudo/device backing mount or alias")
+        return classifyMount(mount,mountOf,visited,depth,interfaces)
     }
-    private fun device(id:String,mountOf:(String)->FirmwareMount?,visited:Set<String>,depth:Int):Result {
+    private fun device(id:String,mountOf:(String)->FirmwareMount?,visited:Set<String>,depth:Int,interfaces:Set<String>):Result {
         if(depth>MAX_DEPTH || id in visited)return Result("unknown","block dependency cycle/depth limit")
         val node=blocks[id]?:return Result("unknown","block provenance unavailable for $id")
         if(!node.path.startsWith("/sys/devices/"))return Result("unknown","unresolved kernel block path")
         if(usb.containsMatchIn(node.path+"/") || node.removable=="1" || node.type=="SD")return Result("external","USB/SD/removable physical block dependency")
         val next=visited+id
-        if(node.backing.isNotEmpty())return backing(node.backing,mountOf,next,depth+1)
+        if(node.backing.isNotEmpty())return backing(node.backing,mountOf,next,depth+1,interfaces)
         if(node.dependencies.isNotEmpty()) {
-            val dependencies=node.dependencies.map{device(it,mountOf,next,depth+1)}
+            val dependencies=node.dependencies.map{device(it,mountOf,next,depth+1,interfaces)}
             return dependencies.firstOrNull{it.kind=="external"} ?: dependencies.firstOrNull{!it.internal}
                 ?: Result("internal","all partition/dm block dependencies attested internal")
         }

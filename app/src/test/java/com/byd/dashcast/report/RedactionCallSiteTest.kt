@@ -164,6 +164,10 @@ class RedactionCallSiteTest {
     @Test
     fun `the report file handed to the caller is redacted and says so`() {
         AppLogger.i("RedactionCallSiteTest", canaryText())
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.begin()
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.phase("preflight before directory creation","/storage/emulated/0")
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.record(com.byd.dashcast.ui.diag.FirmwareDiagnostics.Field.METADATA_ISSUES,canaryText())
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.failure(java.io.IOException("synthetic unknown internal storage"))
 
         val out = File(ctx.cacheDir, "byd_bugreport_test.txt")
         val latch = CountDownLatch(1)
@@ -186,7 +190,11 @@ class RedactionCallSiteTest {
         val body = file!!.readText()
 
         assertTrue("the canary must have reached the body at all", body.contains("Title: canary"))
+        assertTrue(body.contains("INTERNAL STORAGE EXPORT"))
+        assertTrue(body.contains("preflight before directory creation"))
+        assertTrue(body.contains("synthetic unknown internal storage"))
         assertClean("the finished report", body)
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.begin()
         // The footer is what a triager reads to know whether filtering ran. A refactor that drops
         // the redaction block would take this with it — which is the point.
         assertTrue("the report must state its own redaction status",
@@ -196,6 +204,28 @@ class RedactionCallSiteTest {
         assertTrue("the footer must state its scope", body.contains("scope: text only"))
         assertFalse("and it must not be the fail-open message",
             body.contains("was NOT filtered"))
+    }
+
+    @Test fun `report body fallback retains and redacts preflight evidence without a collector directory`() {
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.begin()
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.phase("first preflight phase","/storage/emulated/0")
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.record(com.byd.dashcast.ui.diag.FirmwareDiagnostics.Field.METADATA_ISSUES,canaryText())
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.failure(java.io.IOException("first storage refusal"))
+        // Reading a directory as the shell body fails before the normal report body is built;
+        // writing it also fails, exercising the existing internal report-file fallback.
+        val directory=File(ctx.cacheDir,"byd_bugreport_directory_fixture").apply{mkdirs()}
+        var produced:File?=null
+        BugReportCapture.finish(ctx,directory,"Title: fallback",object:BugReportCapture.Callback {
+            override fun onReady(file:File){produced=file}
+            override fun onError(message:String,partial:File?){produced=partial}
+        },"synthetic shell error",null)
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertNotNull(produced)
+        val body=produced!!.readText()
+        assertTrue(body.contains("report body build failed"))
+        assertTrue(body.contains("first preflight phase"));assertTrue(body.contains("first storage refusal"))
+        assertClean("the report fallback",body)
+        com.byd.dashcast.ui.diag.FirmwareDiagnostics.begin()
     }
 
     // ── the emitter count ───────────────────────────────────────────────────────────────────

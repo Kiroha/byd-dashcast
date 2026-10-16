@@ -130,20 +130,32 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     }
     private fun readMounts():FirmwareMounts {
         // Bootstrap is direct metadata only: do not create a snapshot on an unproven medium.
+        FirmwareDiagnostics.phase("Montages SHELL")
         val bytes=metadata(StorageMetadata.MOUNTINFO).toByteArray(Charsets.UTF_8)
         if(bytes.size>196608)throw IOException("Mountinfo absent/excessif ; aucun temporaire créé")
         val raw=FirmwareMounts.parse(bytes.inputStream(),exclusions)
-        return raw.withStorage(readStorage(raw))
+        return raw.withStorage(readStorage(raw)).also {
+            FirmwareDiagnostics.record(FirmwareDiagnostics.Field.PROVENANCE,it.json())
+        }
     }
     private fun readStorage(mounts:FirmwareMounts):FirmwareStorage {
         val issues=ArrayList<String>()
         fun field(operation:Int,label:String,maxBytes:Int):String? {
+            FirmwareDiagnostics.phase("Métadonnées SHELL : $label")
             return try {val value=metadata(operation);if(value.toByteArray(Charsets.UTF_8).size>maxBytes)throw IOException("excessif");value.trimEnd('\n','\r')}
-            catch(e:CancellationException){throw e}catch(e:Exception){issues.add("Métadonnées $label indisponibles/excessives ; provenance inconnue");null}
+            catch(e:CancellationException){throw e}catch(e:Exception){
+                issues.add("Métadonnées $label indisponibles/excessives : ${FirmwareDiagnostics.bounded("${e.javaClass.simpleName}: ${e.message}",1024)} ; provenance inconnue")
+                FirmwareDiagnostics.record(FirmwareDiagnostics.Field.METADATA_ISSUES,issues.joinToString("\n"));null
+            }
         }
-        val primary=field(StorageMetadata.PRIMARY_UUID,"primary storage UUID",4096)?.takeIf {it=="null" || it.matches(Regex("[A-Za-z0-9_-]+"))}
+        val rawPrimary=field(StorageMetadata.PRIMARY_UUID,"primary storage UUID",4096)
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.PRIMARY_UUID,if(rawPrimary==null)"getter unavailable; see metadata issues" else "getter succeeded; value=$rawPrimary")
+        val primary=rawPrimary?.takeIf {it=="null" || it.matches(Regex("[A-Za-z0-9_-]+"))}
         val volumes=field(StorageMetadata.VOLUMES,"storage volumes",64*1024)
-        val boot=field(StorageMetadata.BOOT_DEVICE,"boot controller",4096).orEmpty()
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.VOLUMES,if(volumes==null)"getter unavailable; see metadata issues" else "getter succeeded:\n$volumes")
+        val rawBoot=field(StorageMetadata.BOOT_DEVICE,"boot controller",4096)
+        val boot=rawBoot.orEmpty()
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.BOOT_DEVICE,if(rawBoot==null)"getter unavailable; see metadata issues" else "getter succeeded; value=$rawBoot")
         val nodes=LinkedHashMap<String,FirmwareStorage.Block>()
         val pending=java.util.ArrayDeque<Pair<String,Int>>()
         mounts.entries.filter {it.device.substringBefore(':').toLongOrNull()?.let {major->major>0}==true &&
@@ -155,6 +167,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
             if(nodes.size>=FirmwareStorage.MAX_BLOCKS){issues.add("Limite ${FirmwareStorage.MAX_BLOCKS} métadonnées blocs ; supports restants inconnus");break}
             if(depth>FirmwareStorage.MAX_DEPTH){issues.add("Profondeur blocs limitée : $device");continue}
             try {
+                FirmwareDiagnostics.phase("Provenance bloc SHELL $device")
                 val f=FirmwarePolicy.boundedLines(metadata(StorageMetadata.BLOCK,device)).single().split('|')
                 if(f.size!=7 || f[0]!="BLOCK" || f[1]!=device)throw IOException("Champs blocs invalides")
                 val path=FirmwarePolicy.decoded(f[2]);val rawBacking=FirmwarePolicy.decoded(f[6])
@@ -163,47 +176,63 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 if(!path.startsWith("/sys/devices/") || path.length>4096 || dependencies.size>16 || dependencies.any{!it.matches(Regex("[0-9]+:[0-9]+"))} || f[3] !in setOf("","0","1") || f[4].length>32 || backing.length>4096)throw IOException("Provenance blocs invalide")
                 nodes[device]=FirmwareStorage.Block(device,path,f[3],f[4],dependencies,backing)
                 dependencies.forEach{pending.add(it to depth+1)}
-            }catch(e:CancellationException){throw e}catch(e:Exception){nodes[device]=FirmwareStorage.Block(device,"","","");issues.add("Provenance bloc inconnue $device : ${e.message}")}
+            }catch(e:CancellationException){throw e}catch(e:Exception){nodes[device]=FirmwareStorage.Block(device,"","","");issues.add("Provenance bloc inconnue $device : ${FirmwareDiagnostics.bounded("${e.javaClass.simpleName}: ${e.message}",1024)}")}
         }
-        return FirmwareStorage(nodes,primary,volumes,boot,issues)
+        val storage=FirmwareStorage(nodes,primary,volumes,boot,issues)
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.BLOCKS,nodes.values.joinToString("\n"))
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.METADATA_ISSUES,issues.joinToString("\n"))
+        return storage
     }
     /** Own output path metadata only. Resolve the nearest existing ancestor without creating it. */
     private fun attestInternalPath(path:String):String {
+        FirmwareDiagnostics.phase("Vérification sortie/temporaire SHELL",path)
         if(!FirmwarePolicy.sane(path))throw IOException("Chemin destination invalide")
         val f=metadata(StorageMetadata.OUTPUT,path,cleanup=true).trimEnd('\n').split('|')
         if(f.size!=2)throw IOException("Métadonnées destination invalides")
         val real=FirmwarePolicy.decoded(f[0]);val device=f[1].toLongOrNull()?:throw IOException("Périphérique destination inconnu")
         val table=table("SHELL")
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.CANONICAL,real)
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.ACTUAL_DEVICE,device.toString())
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.SHELL_OUTPUT_MOUNTS,FirmwareDiagnostics.mounts(table,listOf(path,real,"/data/local/tmp","/data/media","/data")))
         val reason=table.storageDecision(path)?:table.storageDecision(real)
-        if(reason!=null || !table.deviceMatches(real,device))throw IOException("Destination/temporaire refusé : stockage interne non établi ($reason)")
+        if(reason!=null || !table.deviceMatches(real,device))throw IOException("Stockage interne non établi : ${reason?:"périphérique observé différent du montage"}")
         return real
     }
     override fun prepareDestination(path:String) = outputGuard.attest {
-        val context=context()
-        attestInternalPath(path);attestAppOutput(path)
-        // All later writes, including the NUL inventory snapshots, require an internal temp FS.
-        temporaryParent=attestInternalPath("/data/local/tmp")
-        preparedContext=context;destination=path;pinnedOutputMounts=table("SHELL")
+        FirmwareDiagnostics.phase("Préparation de la destination",path)
+        try {
+            val context=context()
+            attestInternalPath(path);attestAppOutput(path)
+            // All later writes, including the NUL inventory snapshots, require an internal temp FS.
+            temporaryParent=attestInternalPath("/data/local/tmp")
+            preparedContext=context;destination=path;pinnedOutputMounts=table("SHELL")
+            FirmwareDiagnostics.ready()
+        } catch(e:Exception) {if(e !is CancellationException)FirmwareDiagnostics.failure(e);throw e}
     }
     private fun attestAppOutput(path:String) {
+        FirmwareDiagnostics.phase("Vérification de la sortie APP",path)
         val view=observeOutput(path,exclusions,table("SHELL").storageProof)
         if(appOutputView!=null && view!=appOutputView)throw IOException("Vue sortie APP changée pendant finalisation ; aucune nouvelle provenance admise")
         appOutputView=view
     }
     override fun validateDestination() = outputGuard.validate()
     private fun validateDestinationState(extra:String?=null) {
+      try {
         val path=destination?:throw IOException("Destination non préparée")
+        FirmwareDiagnostics.phase("Revalidation des montages de sortie",extra?:path)
         // Retain the initial physical proofs in both namespaces. Volatile mount IDs may
         // change; a covering device/root/point/type/source tuple may never be replaced.
         val previous=pinnedOutputMounts?:throw IOException("Preuve sortie absente")
         val bytes=metadata(StorageMetadata.MOUNTINFO,cleanup=true).toByteArray(Charsets.UTF_8)
         val fresh=FirmwareMounts.parse(bytes.inputStream(),exclusions,previous.storageProof)
+        FirmwareDiagnostics.record(FirmwareDiagnostics.Field.SHELL_OUTPUT_MOUNTS,FirmwareDiagnostics.mounts(fresh,listOfNotNull(path,"/data/local/tmp",extra)))
         for(target in listOfNotNull(path,"/data/local/tmp",extra)) {
             val before=previous.mount(target);val after=fresh.mount(target)
             if(before==null || after==null || listOf(before.device,before.root,before.point,before.type,before.source)!=listOf(after.device,after.root,after.point,after.type,after.source))throw IOException("Vue destination changée pendant finalisation ; provenance nouvelle refusée")
         }
         shellMounts=fresh
         attestInternalPath(path);attestAppOutput(path);attestInternalPath("/data/local/tmp")
+      } catch(e:Exception) {if(e !is CancellationException)FirmwareDiagnostics.failure(e);throw e}
     }
     /** Exact generated temp path, fresh covering view, canonical path and actual device.
      * A missing target is not removed. Cancellation permits only these bounded checks and
@@ -269,6 +298,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 if(!b.transact(ProxyDaemonContract.TXN_WHOAMI,data,reply,0))throw IOException("WHOAMI non traité")
                 reply.readException();val uid=reply.readInt();val pid=reply.readInt();protocol=reply.readString().orEmpty()
                 val instance=reply.readString().orEmpty()
+                FirmwareDiagnostics.record(FirmwareDiagnostics.Field.DAEMON,"WHOAMI uid=$uid; pid=$pid; protocol=$protocol; capabilities not yet observed")
                 if(uid!=2000 || pid<=0 || !instance.matches(Regex("[0-9a-f]{32}")) || reply.dataAvail()!=0 || (protocol.toIntOrNull()?:0)<26)throw IOException("Identité/protocole daemon incompatible : $uid/$protocol")
             }finally{reply.recycle();data.recycle()}
         }
@@ -279,6 +309,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
                 if(!binder!!.transact(ProxyDaemonContract.TXN_FILE_READ_CAPABILITIES,data,reply,0))throw IOException("Lecture stricte non annoncée")
                 reply.readException();if(reply.dataAvail()!=8)throw IOException("Réponse capacités mal cadrée");val schema=reply.readInt();val flags=reply.readInt()
+                FirmwareDiagnostics.record(FirmwareDiagnostics.Field.DAEMON,"WHOAMI uid=2000; protocol=$protocol; capabilitySchema=$schema; capabilityFlags=$flags; instance nonce omitted")
                 if(schema!=ProxyDaemonContract.STRICT_FILE_SCHEMA || flags and (ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA)!=(ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA))throw IOException("Schéma/capacité stricte incompatible")
             }finally{reply.recycle();data.recycle()}
         }

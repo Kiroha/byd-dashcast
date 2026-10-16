@@ -104,7 +104,10 @@ internal object MetadataProcess {
             reader.join(remaining());control.join(remaining())
             if(reader.isAlive || control.isAlive || System.nanoTime()>deadline)throw IOException("Metadata drain deadline")
             failure.get()?.let{throw IOException("Metadata capture failed",it)}
-            if(process.exitValue()!=0)throw IOException("Metadata command exit ${process.exitValue()}")
+            if(process.exitValue()!=0) {
+                val prefix="Metadata command exit ${process.exitValue()}: "
+                throw IOException(prefix+failureDetail(output.toByteArray(),1024-prefix.toByteArray(Charsets.UTF_8).size))
+            }
             return Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(output.toByteArray())).toString()
         }finally{
             // The direct child can leave descendants holding stdout; kill its dedicated group.
@@ -116,5 +119,16 @@ internal object MetadataProcess {
             runCatching {process.inputStream.close()};runCatching {process.errorStream.close()};runCatching {process.outputStream.close()}
             runCatching {reader.join(500)};runCatching {control.join(500)}
         }
+    }
+    /** Already-captured stdout/stderr only. Diagnostic truncation never becomes a success reply. */
+    internal fun failureDetail(bytes:ByteArray,limit:Int=1024):String {
+        val suffix="\n[truncated]"
+        require(limit>suffix.length)
+        if(bytes.size<=limit)return Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+            .decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+        var end=limit-suffix.length
+        while(end>0 && (bytes[end].toInt() and 0xc0)==0x80)end--
+        return Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+            .decode(java.nio.ByteBuffer.wrap(bytes,0,end)).toString()+suffix
     }
 }
