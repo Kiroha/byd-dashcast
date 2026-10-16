@@ -8,7 +8,8 @@ import java.io.IOException
 internal enum class ExportKind(val label: String, val noun: String, val rootName: String, val prefix: String,
                                val entryRoot: String, val archivePrefix: String) {
     APK("APK", "APKs", "apk-exports", "apk-export-", "apks", "apks"),
-    SYSTEM("SYSTEM", "system files", "system-exports", "system-export-", "system", "system");
+    SYSTEM("SYSTEM", "system files", "system-exports", "system-export-", "system", "system"),
+    CONTEXT("CONTEXTE", "context reads", "context-exports", "context-export-", "context", "context");
 
     companion object {
         /** Timestamp names are comparable across profiles; directory prefixes are not. */

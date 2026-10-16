@@ -2036,8 +2036,9 @@ android {
         // 666 = 1.9.27-beta: P6 diagnostics/RCC files and bounded ODM auto HAL candidates.
         // 667 = 1.9.28-beta: 52 P10 native dependency candidates, selected product/region context, expanded issue budget.
         // 668 = 1.9.29-beta: independent decoded-frame watchdog and bounded receiver observations.
-        versionCode 668
-        versionName "1.9.29-beta"
+        // 669 = 1.9.30-beta: fixed read-only DiLink context collection with progress and local ZIP sharing.
+        versionCode 669
+        versionName "1.9.30-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
