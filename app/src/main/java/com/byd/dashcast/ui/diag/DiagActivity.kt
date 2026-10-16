@@ -71,6 +71,7 @@ class DiagActivity : Activity() {
     private lateinit var traceBtn: Button
     private lateinit var navIconCaptureBtn: Button
     private lateinit var systemExportBtn: Button
+    private lateinit var contextExportBtn: Button
     private lateinit var hudBenchBtn: Button
     private lateinit var reportingPairBtn: Button
     private var reportingPairInFlight = false
@@ -92,7 +93,7 @@ class DiagActivity : Activity() {
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, systemExportBtn, hudBenchBtn, reportingPairBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, systemExportBtn, contextExportBtn, hudBenchBtn, reportingPairBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -164,6 +165,15 @@ class DiagActivity : Activity() {
             setOnClickListener { startFullApkExport(ExportKind.SYSTEM) }
         }
         controls.addView(systemExportBtn)
+        contextExportBtn = Button(this).apply {
+            text = "Relevé DiLink — contexte système (lecture seule)"
+            setOnClickListener { startFullApkExport(ExportKind.CONTEXT) }
+        }
+        controls.addView(contextExportBtn)
+        controls.addView(TextView(this).apply {
+            text = "Relevé DiLink : véhicule stationné. 14 lectures, ZIP local, aucun réglage véhicule modifié. Connexion DashCast existante requise."
+            textSize = 14f
+        })
         runBtn = Button(this).apply {
             text = "BYD APK Extraction"
             // Projection may already be mined, but HUD receiver evidence is still needed.
@@ -330,7 +340,9 @@ class DiagActivity : Activity() {
     private fun startFullApkExport(kind: ExportKind = ExportKind.APK) {
         if (!claimBusyOrWarn()) return
         allDiagButtons().forEach { it.isEnabled = false }
-        log("Local ${kind.label} export started. No automatic upload. Finished ZIPs are kept outside report cleanup.")
+        log(if (kind == ExportKind.CONTEXT)
+            "Relevé DiLink lancé : 14 lectures fixes via la connexion existante. Aucun envoi automatique ; résultats et ZIP conservés localement."
+            else "Local ${kind.label} export started. No automatic upload. Finished ZIPs are kept outside report cleanup.")
         // Static completion releases the shared gate even if this Activity has been destroyed.
         FullApkExportSession.start(applicationContext, kind) { sBusy.set(false) }
         renderFullExport()
@@ -349,13 +361,36 @@ class DiagActivity : Activity() {
         cancelFullExportBtn.text = "Cancel ${state?.kind?.label ?: "local"} export"
         shareFullExportBtn.text = "${state?.kind?.label ?: "Local"} export files"
         if (state == null) {
-            fullExportStatus.text = "Local APK / SYSTEM exports ready — coverage depends on read access."
-            fullExportCurrent.text = "Choose all APKs or targeted framework, libraries and configurations."
+            fullExportStatus.text = "Local APK / SYSTEM / CONTEXTE exports ready — coverage depends on read access."
+            fullExportCurrent.text = "Choose APKs, system files or the fixed DiLink context reads."
             return
         }
         val now = FullApkExport.monotonicMs()
         val elapsed = ((now - state.startedMs) / 1000).coerceAtLeast(0)
         val idle = ((now - state.lastProgressMs) / 1000).coerceAtLeast(0)
+        if (state.kind == ExportKind.CONTEXT) {
+            cancelFullExportBtn.text = if (FullApkExportSession.isCancelling()) "Annulation en attente…" else "Annuler le relevé"
+            shareFullExportBtn.text = "Fichiers du relevé"
+            shareFullExportBtn.isEnabled = state.directory != null && !state.running
+            val pending = !state.running && DiLinkContextDevice.isTransportPending()
+            fullExportStatus.text = if (state.running) {
+                (if (FullApkExportSession.isCancelling()) "Annulation après la commande en cours…" else state.stage) +
+                    "\n${state.completed + state.failed}/14 lectures traitées · ${state.completed} reconnues · ${state.failed} incomplètes" +
+                    "\nDurée ${elapsed}s · commande/stade ${idle}s · limite commande 30s, transport 35s"
+            } else {
+                "Relevé DiLink : ${contextOutcomeLabel(state.outcome)} · ${state.archives.size} ZIP finalisé(s)" +
+                    (if (state.countsKnown) "\n${state.completed + state.failed}/14 lectures traitées · ${state.failed} incomplètes"
+                     else "\nRelevé précédent : consulter resultats.json") +
+                    (if (pending) "\nCommande toujours en attente : diagnostics bloqués jusqu’au retour du transport." else "\n${state.stage.take(190)}")
+            }
+            fullExportCurrent.text = if (state.running) state.current else state.directory?.absolutePath ?: "Aucun dossier disponible"
+            if (!state.running && state.directory != null && lastExportDirectory != state.directory) {
+                lastExportDirectory = state.directory
+                log("Relevé DiLink ${state.outcome} : ${state.directory.absolutePath}\n${state.stage}\n" +
+                    "Ouvrir Fichiers du relevé pour partager le ZIP manuellement. Les refus/absences sont conservés dans resultats.json.")
+            }
+            return
+        }
         val total = state.totalBytes?.let { " / ${it / 1048576} MiB known" } ?: " (total unknown)"
         if (state.running) {
             fullExportStatus.text = "${state.kind.label} · " + (if (FullApkExportSession.isCancelling()) "Cancelling after the current read/command returns…" else state.stage) +
@@ -377,21 +412,36 @@ class DiagActivity : Activity() {
         }
     }
 
+    private fun contextOutcomeLabel(outcome: String): String = when (outcome) {
+        "finished" -> "terminé"
+        "partial" -> "partiel"
+        "cancelled" -> "annulé"
+        "failed" -> "échec"
+        "interrupted/partial" -> "interrompu / partiel"
+        "previous" -> "précédent"
+        else -> outcome
+    }
+
     private fun showFullExportFiles() {
         val state = FullApkExportSession.snapshot ?: return
         val directory = state.directory ?: return
-        val files = state.archives + listOf(File(directory, "manifest.json")).filter { it.isFile }
+        val metadata = if (state.kind == ExportKind.CONTEXT) listOf("manifest.json", "resultats.json", "integrite.json", "RESULT.txt", "ERREUR_LIVRAISON.txt")
+            else listOf("manifest.json")
+        val files = state.archives + metadata.map { File(directory, it) }.filter { it.isFile }
         val labels = files.map { "${it.name} (${it.length() / 1048576} MiB)" }.toTypedArray()
-        AlertDialog.Builder(this).setTitle("Local ${state.kind.label} export files")
-            .setMessage("${directory.absolutePath}\n\nOnly .zip files are finished volumes. Each is independently readable. " +
-                "manifest.json records source paths, SHA-256 and coverage gaps. Use adb pull on this directory if sharing large ZIPs is unavailable.")
-            .setPositiveButton("List / share files") { _, _ ->
-                AlertDialog.Builder(this).setTitle("Share ${state.kind.label} export file manually")
+        val context = state.kind == ExportKind.CONTEXT
+        AlertDialog.Builder(this).setTitle(if (context) "Fichiers du relevé DiLink" else "Local ${state.kind.label} export files")
+            .setMessage(if (context) "${directory.absolutePath}\n\nLe ZIP contient les résultats reçus et les statuts des 14 lectures. " +
+                "Un relevé partiel ou annulé reste lisible. resultats.json décrit les limites ; integrite.json contient le SHA-256 du ZIP. Partage manuel uniquement."
+                else "${directory.absolutePath}\n\nOnly .zip files are finished volumes. Each is independently readable. " +
+                    "manifest.json records source paths, SHA-256 and coverage gaps. Use adb pull on this directory if sharing large ZIPs is unavailable.")
+            .setPositiveButton(if (context) "Lister / partager" else "List / share files") { _, _ ->
+                AlertDialog.Builder(this).setTitle(if (context) "Partager un fichier du relevé" else "Share ${state.kind.label} export file manually")
                     .setItems(labels) { _, index ->
                         try {
                             val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", files[index])
                             val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = if (files[index].extension == "zip") "application/zip" else "application/json"
+                                type = when (files[index].extension) { "zip" -> "application/zip"; "txt" -> "text/plain"; else -> "application/json" }
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 clipData = ClipData.newRawUri("${state.kind.label} export", uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
