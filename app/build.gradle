@@ -2035,8 +2035,9 @@ android {
         // 665 = 1.9.26-beta: targeted P4 native dependency/HAL candidates; distinct SYSTEM volume manifest.
         // 666 = 1.9.27-beta: P6 diagnostics/RCC files and bounded ODM auto HAL candidates.
         // 667 = 1.9.28-beta: 52 P10 native dependency candidates, selected product/region context, expanded issue budget.
-        versionCode 667
-        versionName "1.9.28-beta"
+        // 668 = 1.9.29-beta: independent decoded-frame watchdog and bounded receiver observations.
+        versionCode 668
+        versionName "1.9.29-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

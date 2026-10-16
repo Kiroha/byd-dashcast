@@ -165,7 +165,7 @@ class SatelliteVideoBootstrapTest {
         old.ready(true); idle()
         val before = SatelliteVideoDiagnostics.summary()
         controller.pause().stop()
-        old.progress("frames_decoded"); idle()
+        old.progress(0, "frames_decoded"); idle()
         val hidden = SatelliteVideoDiagnostics.summary()
         assertEquals(Regex("frames_decoded=([0-9]+)").find(before)?.value,
             Regex("frames_decoded=([0-9]+)").find(hidden)?.value)
@@ -174,9 +174,91 @@ class SatelliteVideoBootstrapTest {
         retry().performClick()
         bridge().ready(true); idle()
         val current = SatelliteVideoDiagnostics.summary()
-        old.progress("frames_decoded"); old.progress("private SDP"); idle()
+        old.progress(0, "frames_decoded"); old.progress(0, "private SDP"); idle()
         assertEquals(Regex("frames_decoded=([0-9]+)").find(current)?.value,
             Regex("frames_decoded=([0-9]+)").find(SatelliteVideoDiagnostics.summary())?.value)
         assertFalse(SatelliteVideoDiagnostics.summary().contains("private SDP"))
     }
+
+    private fun offer(negotiation: String): Long {
+        activity.signal("bootstrap-test", JSONObject().put("type", "video.offer").put("negotiation", negotiation))
+        idle()
+        return shadowOf(webView()).lastEvaluatedJavascript!!.substringAfterLast(',').removeSuffix(")").toLong()
+    }
+    private fun observation(bytes: Long = 7) = JSONObject()
+        .put("statsState", "completed").put("bytesReceived", bytes)
+        .put("trackReceived", true).put("mediaConnected", true).put("decoded", false).toString()
+    private fun attemptLine(number: Long) = SatelliteVideoDiagnostics.summary().lines().single { it.startsWith("attempt=$number ") }
+
+    @Test fun `same activity replacement peers fence old progress and queued observations`() {
+        val current = bridge()
+        current.ready(true); idle()
+        val old = offer("old")
+        val replacement = offer("new")
+        current.observe(replacement, observation(100))
+        current.observe(old, observation(999)) // Cannot replace the newer queued delivery.
+        current.progress(old, "frames_decoded")
+        current.send(old, "bootstrap-test", JSONObject().put("type", "video.error").put("code", "video_timeout").toString())
+        idle()
+        assertTrue(attemptLine(old).contains("end=replaced"))
+        assertTrue(attemptLine(replacement).contains("bytesReceived=100"))
+        assertTrue(attemptLine(replacement).contains("end=active"))
+        assertFalse(messages.contains("video.error"))
+    }
+
+    @Test fun `current decoded stage and final timeout preserve typed receiver evidence`() {
+        val current = bridge(); current.ready(true); idle()
+        val number = offer("current")
+        current.observe(number, observation(200)); idle()
+        val before = Regex("frames_decoded=([0-9]+)").find(SatelliteVideoDiagnostics.summary())?.groupValues?.get(1)?.toInt() ?: 0
+        current.progress(number, "frames_decoded"); idle()
+        val after = Regex("frames_decoded=([0-9]+)").find(SatelliteVideoDiagnostics.summary())!!.groupValues[1].toInt()
+        assertEquals(before + 1, after)
+        current.send(number, "bootstrap-test", JSONObject().put("type", "video.error").put("code", "video_timeout").toString()); idle()
+        assertTrue(messages.contains("video.error"))
+        assertTrue(attemptLine(number).contains("end=video_timeout"))
+        assertTrue(attemptLine(number).contains("bytesReceived=200"))
+    }
+
+    @Test fun `matching stop preserves last observation but old stop cannot retire the replacement`() {
+        val current = bridge(); current.ready(true); idle()
+        offer("old")
+        val replacement = offer("new")
+        activity.signal("bootstrap-test", JSONObject().put("type", "video.stop").put("negotiation", "old")); idle()
+        current.observe(replacement, observation(77)); idle()
+        assertTrue(attemptLine(replacement).contains("end=active"))
+        assertTrue(attemptLine(replacement).contains("bytesReceived=77"))
+        activity.signal("bootstrap-test", JSONObject().put("type", "video.stop").put("negotiation", "new")); idle()
+        assertTrue(attemptLine(replacement).contains("end=sender_stopped"))
+        assertTrue(attemptLine(replacement).contains("bytesReceived=77"))
+    }
+
+    @Test fun `observation bursts coalesce and hidden viewer cannot modify historical scalar evidence`() {
+        val current = bridge(); current.ready(true); idle()
+        val number = offer("current")
+        repeat(100) { current.observe(number, observation(it.toLong())) }
+        idle()
+        assertTrue(attemptLine(number).contains("bytesReceived=99"))
+        controller.pause().stop(); idle()
+        current.observe(number, observation(999)); idle(2000)
+        assertTrue(attemptLine(number).contains("end=viewer_hidden"))
+        assertTrue(attemptLine(number).contains("bytesReceived=99"))
+        assertFalse(attemptLine(number).contains("bytesReceived=999"))
+    }
+
+    @Test fun `obsolete webview bridges cannot replace current peer evidence or end its attempt`() {
+        val old = bridge(); old.ready(true); idle()
+        val oldNumber = offer("old")
+        old.failed("script_error"); idle()
+        retry().performClick()
+        val current = bridge(); current.ready(true); idle()
+        val number = offer("new")
+        current.observe(number, observation(123))
+        old.observe(oldNumber, observation(999))
+        old.send(number, "bootstrap-test", JSONObject().put("type", "video.error").put("code", "video_timeout").toString())
+        idle()
+        assertTrue(attemptLine(number).contains("end=active"))
+        assertTrue(attemptLine(number).contains("bytesReceived=123"))
+    }
+
 }
