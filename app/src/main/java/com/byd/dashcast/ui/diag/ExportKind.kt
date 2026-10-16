@@ -10,6 +10,7 @@ internal enum class ExportKind(val label: String, val noun: String, val rootName
     APK("APK", "APKs", "apk-exports", "apk-export-", "apks", "apks"),
     SYSTEM("SYSTEM", "system files", "system-exports", "system-export-", "system", "system"),
     SYSTEM_P15("SYSTEM P15", "targeted system files", "system-p15-exports", "system-p15-export-", "system", "system"),
+    FIRMWARE_LARGE("FIRMWARE LARGE", "firmware files", "firmware-exports", "firmware-export-", "firmware", "firmware"),
     CONTEXT("CONTEXTE", "context reads", "context-exports", "context-export-", "context", "context");
 
     val isSystem: Boolean get() = this == SYSTEM || this == SYSTEM_P15

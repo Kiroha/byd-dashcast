@@ -40,14 +40,9 @@ import java.lang.ref.WeakReference
  * Diagnostics host — rebuilt in Kotlin, English-only by project rule (SetTextI18n exempt).
  *
  * Hosts several tools, including:
- *  1. **BYD APK Extraction** — interoperability analysis of the OEM cluster, specifically why the
- *     `AutoContainer` activation call returns -1 on DiLink 5.1 while returning 0/1 on the models
- *     where projection works (9/9 trinket captures). The answer is in the OEM's own
- *     `com.xdja.containerservice`, running on the tester's own vehicle. One button, one flow:
- *     Also collects the SOME/IP HUD receiver and its native navigation resources. One flow:
- *     inventory + runtime context, select the OEM cluster/HUD APKs ([ApkExtractionPolicy]: firmware
- *     partitions, named targets first, budgeted under Telegram's 50 MB ceiling), zip, and upload
- *     via the already-configured report channel. Runs off the UI thread with a visible progress log.
+ *  1. **Export complet accessible** — one visible export action for broad firmware files and
+ *     positively identified installed APKs. APP/SHELL discovery, standalone ZIPs, disk-backed
+ *     inventory and verified resume run on a worker; sharing is manual and no payload executes.
  *  2. **HUD bench (DL3)** — opens [HudDiagActivity], which now includes the `sendInfo2(4, NaviInfo)`
  *     bench: the RE finding that the uid-2000 daemon can reach the same native channel BYD's own
  *     nav app uses to drive the HUD, tested independently of CAN and of notification parsing.
@@ -70,8 +65,6 @@ class DiagActivity : Activity() {
     private lateinit var armCallbackBtn: Button
     private lateinit var traceBtn: Button
     private lateinit var navIconCaptureBtn: Button
-    private lateinit var systemExportBtn: Button
-    private lateinit var contextExportBtn: Button
     private lateinit var hudBenchBtn: Button
     private lateinit var reportingPairBtn: Button
     private var reportingPairInFlight = false
@@ -93,7 +86,7 @@ class DiagActivity : Activity() {
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, systemExportBtn, contextExportBtn, hudBenchBtn, reportingPairBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, hudBenchBtn, reportingPairBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -156,22 +149,12 @@ class DiagActivity : Activity() {
         root.addView(ScrollView(this).apply { addView(controls) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         fullExportBtn = Button(this).apply {
-            text = "Export ALL accessible APKs — local ZIP volumes"
-            setOnClickListener { startFullApkExport() }
-        }
-        controls.addView(fullExportBtn)
-        systemExportBtn = Button(this).apply {
-            text = "Export système — complet ou complément DiLink P15"
+            text = "Export complet accessible — firmware + APK"
             setOnClickListener { chooseSystemExport() }
         }
-        controls.addView(systemExportBtn)
-        contextExportBtn = Button(this).apply {
-            text = "Relevé DiLink — contexte système (lecture seule)"
-            setOnClickListener { startFullApkExport(ExportKind.CONTEXT) }
-        }
-        controls.addView(contextExportBtn)
+        controls.addView(fullExportBtn)
         controls.addView(TextView(this).apply {
-            text = "Relevé DiLink : véhicule stationné. 14 lectures, ZIP local, aucun réglage véhicule modifié. Connexion DashCast existante requise."
+            text = "Véhicule stationné. Garder DIAG visible. ZIP locaux, partage manuel ; fichiers protégés et données privées exclus."
             textSize = 14f
         })
         runBtn = Button(this).apply {
@@ -179,7 +162,6 @@ class DiagActivity : Activity() {
             // Projection may already be mined, but HUD receiver evidence is still needed.
             setOnClickListener { if (reComplete) showReCompleteMessage() else start() }
         }
-        controls.addView(runBtn)
 
         hudBenchBtn = Button(this).apply {
             text = "HUD bench (DL3) — sendInfo2 NaviInfo test"
@@ -316,12 +298,7 @@ class DiagActivity : Activity() {
         })
 
         setContentView(root)
-        if (reComplete) {
-            runBtn.text = "BYD APK Extraction — complete on this platform"
-            showReCompleteMessage()
-        } else {
-            log("Ready. Choose a diagnostic or a local export.")
-        }
+        log("Ready. Choose a diagnostic or Export complet accessible.")
         FullApkExportSession.inspectPrevious(applicationContext)
         renderFullExport()
     }
@@ -339,22 +316,28 @@ class DiagActivity : Activity() {
 
     private fun chooseSystemExport() {
         if (sBusy.get()) { log("Un diagnostic est déjà en cours. Attendre sa fin."); return }
-        AlertDialog.Builder(this).setTitle("Export système — véhicule stationné")
-            .setItems(arrayOf("Complément DiLink P15 — ${SystemExportProfile.DILINK_P15.requestedPaths.size} chemins fixes", "Complet — framework, bibliothèques et configurations")) { _, index ->
-                startFullApkExport(if (index == 0) ExportKind.SYSTEM_P15 else ExportKind.SYSTEM)
+        AlertDialog.Builder(this).setTitle("Export complet accessible — véhicule stationné")
+            .setItems(buildList {
+                add("Nouvelle collecte complète accessible")
+                if (FullApkExportSession.snapshot?.kind == ExportKind.FIRMWARE_LARGE && FullApkExportSession.snapshot?.directory != null)
+                    add("Reprendre la collecte précédente — vérifier les ZIP et continuer")
+            }.toTypedArray()) { _, index ->
+                startFullApkExport(ExportKind.FIRMWARE_LARGE, if(index == 1) FullApkExportSession.snapshot?.directory else null)
             }.setNegativeButton("Annuler", null).show()
     }
 
-    private fun startFullApkExport(kind: ExportKind = ExportKind.APK) {
+    private fun startFullApkExport(kind: ExportKind = ExportKind.APK, resumeDirectory: File? = null) {
         if (!claimBusyOrWarn()) return
         allDiagButtons().forEach { it.isEnabled = false }
         log(if (kind == ExportKind.CONTEXT)
             "Relevé DiLink lancé : 14 lectures fixes via la connexion existante. Aucun envoi automatique ; résultats et ZIP conservés localement."
+            else if (kind == ExportKind.FIRMWARE_LARGE)
+                "Collecte large : fichiers réguliers accessibles des partitions firmware et APEX montés, plus APK installés positivement identifiés. APP et SHELL inventoriés séparément ; pas de données privées ni image physique complète. Garder DIAG visible. Reprise dans la même session après vérification des ZIP. Aucun contenu collecté exécuté."
             else if (kind == ExportKind.SYSTEM_P15)
                 "Complément DiLink P15 : copie de ${SystemExportProfile.DILINK_P15.requestedPaths.size} chemins fixes sous les droits existants. Aucun binaire collecté exécuté. Les fichiers refusés restent signalés ; récupération non garantie. ZIP et manifest.json conservés localement."
             else "Local ${kind.label} export started. No automatic upload. Finished ZIPs are kept outside report cleanup.")
         // Static completion releases the shared gate even if this Activity has been destroyed.
-        FullApkExportSession.start(applicationContext, kind) { sBusy.set(false) }
+        FullApkExportSession.start(applicationContext, kind, resumeDirectory = resumeDirectory) { sBusy.set(false) }
         renderFullExport()
     }
 
@@ -367,12 +350,12 @@ class DiagActivity : Activity() {
         allDiagButtons().forEach { it.isEnabled = !sBusy.get() }
         reportingPairBtn.isEnabled = !sBusy.get() && !reportingPairInFlight
         cancelFullExportBtn.isEnabled = state?.running == true && !FullApkExportSession.isCancelling()
-        shareFullExportBtn.isEnabled = state?.directory != null
+        shareFullExportBtn.isEnabled = state?.directory != null && (state.kind != ExportKind.FIRMWARE_LARGE || !state.running)
         cancelFullExportBtn.text = "Cancel ${state?.kind?.label ?: "local"} export"
         shareFullExportBtn.text = "${state?.kind?.label ?: "Local"} export files"
         if (state == null) {
-            fullExportStatus.text = "Local APK / SYSTEM / CONTEXTE exports ready — coverage depends on read access."
-            fullExportCurrent.text = "Choose APKs, system files or the fixed DiLink context reads."
+            fullExportStatus.text = "Export complet accessible prêt — firmware et APK visibles."
+            fullExportCurrent.text = "Nouvelle session ou reprise via Export complet accessible."
             return
         }
         val now = FullApkExport.monotonicMs()
@@ -405,8 +388,8 @@ class DiagActivity : Activity() {
         if (state.running) {
             fullExportStatus.text = "${state.kind.label} · " + (if (FullApkExportSession.isCancelling()) "Cancelling after the current read/command returns…" else state.stage) +
                 "\n${state.discovered} found · ${state.completed} copied · ${state.failed} failed · ${state.bytes / 1048576} MiB$total" +
-                "\nElapsed ${elapsed}s · no byte/stage progress ${idle}s" +
-                (if (idle >= 15) " — waiting; possible stall" else "")
+                "\nDurée ${elapsed}s · aucun progrès publié depuis ${idle}s" +
+                (if (state.kind == ExportKind.FIRMWARE_LARGE && idle >= 35) " — lecture en attente ; annulation après retour de la commande" else if (idle >= 15) " — waiting; possible stall" else "")
             fullExportCurrent.text = state.current
         } else {
             fullExportStatus.text = "Local ${state.kind.label} export: ${state.outcome} · ${state.archives.size} finished ZIP(s)" +
@@ -438,13 +421,13 @@ class DiagActivity : Activity() {
         val metadata = if (state.kind == ExportKind.CONTEXT) listOf("manifest.json", "resultats.json", "integrite.json", "RESULT.txt", "ERREUR_LIVRAISON.txt")
             else listOf("manifest.json")
         val files = state.archives + metadata.map { File(directory, it) }.filter { it.isFile }
-        val labels = files.map { "${it.name} (${it.length() / 1048576} MiB)" }.toTypedArray()
+        val labels = files.map { "${it.name} (${if(it.length()<1048576) "${it.length()/1024} KiB" else "${it.length()/1048576} MiB"})" }.toTypedArray()
         val context = state.kind == ExportKind.CONTEXT
         AlertDialog.Builder(this).setTitle(if (context) "Fichiers du relevé DiLink" else "Local ${state.kind.label} export files")
             .setMessage(if (context) "${directory.absolutePath}\n\nLe ZIP contient les résultats reçus et les statuts des 14 lectures. " +
                 "Un relevé partiel ou annulé reste lisible. resultats.json décrit les limites ; integrite.json contient le SHA-256 du ZIP. Partage manuel uniquement."
-                else "${directory.absolutePath}\n\nOnly .zip files are finished volumes. Each is independently readable. " +
-                    "manifest.json records source paths, SHA-256 and coverage gaps. Use adb pull on this directory if sharing large ZIPs is unavailable.")
+                else "${directory.absolutePath}\n\nTransférer TOUS les ZIP finalisés et manifest.json du même dossier. Chaque ZIP est indépendant. " +
+                    "Les .part sont incomplets. Le manifeste extérieur décrit chemins, SHA-256 et limites de couverture. Aucun envoi automatique.")
             .setPositiveButton(if (context) "Lister / partager" else "List / share files") { _, _ ->
                 AlertDialog.Builder(this).setTitle(if (context) "Partager un fichier du relevé" else "Share ${state.kind.label} export file manually")
                     .setItems(labels) { _, index ->
