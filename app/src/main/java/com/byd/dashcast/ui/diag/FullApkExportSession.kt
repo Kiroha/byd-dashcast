@@ -20,7 +20,7 @@ internal object FullApkExportSession {
 
     fun start(context: Context, kind: ExportKind = ExportKind.APK,
               launch: (Runnable, String) -> Unit = { task, name -> Thread(task, name).start() },
-              finished: () -> Unit) {
+              resumeDirectory: File? = null, finished: () -> Unit) {
         try {
             val app = context.applicationContext
             if (DiLinkContextDevice.isTransportPending()) {
@@ -36,12 +36,15 @@ internal object FullApkExportSession {
                 try {
                     val base = exportRoot(app, kind)
                     val id = SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US).format(Date())
-                    val directory = File(base, "${kind.prefix}$id")
-                    check(directory.mkdirs()) { "Cannot create ${directory.absolutePath}" }
+                    val directory = resumeDirectory ?: File(base, "${kind.prefix}$id")
+                    require(resumeDirectory == null || (kind == ExportKind.FIRMWARE_LARGE && directory.parentFile?.canonicalFile == base.canonicalFile && directory.name.startsWith(kind.prefix))) { "Invalid resume directory" }
+                    check(directory.mkdirs() || (resumeDirectory != null && directory.isDirectory)) { "Cannot create ${directory.absolutePath}" }
                     marker = File(directory, "RUNNING.txt")
                     marker!!.writeText("${kind.label} export started. If this file remains after DashCast restarts, the export was interrupted. " +
                         "Only .zip volumes are finished; .part files are incomplete.\n")
-                    val result = if (kind == ExportKind.CONTEXT) {
+                    val result = if (kind == ExportKind.FIRMWARE_LARGE) {
+                        FirmwareLedger(directory).use { ledger -> FirmwareExport(FirmwareDevice(app,cancellation::get),directory,ledger,cancellation::get,{ snapshot = it }).run() }
+                    } else if (kind == ExportKind.CONTEXT) {
                         DiLinkContextExport(DiLinkContextDevice(), directory, cancellation::get,
                             { snapshot = it }, appRuntime = mapOf("package" to app.packageName,
                                 "app_uid" to Process.myUid(), "android_api" to Build.VERSION.SDK_INT,
@@ -54,7 +57,7 @@ internal object FullApkExportSession {
                             { snapshot = it }, kind = kind).run()
                     }
                     // Keep a concise outcome even if the JSON manifest could not be saved (disk full).
-                    if (kind != ExportKind.CONTEXT) runCatching { File(directory, "RESULT.txt").writeText(
+                    if (kind != ExportKind.CONTEXT && kind != ExportKind.FIRMWARE_LARGE) runCatching { File(directory, "RESULT.txt").writeText(
                         "${kind.label} export: ${result.outcome}\n${result.stage}\nCoverage of the whole vehicle is unverified.\n" +
                             "Finished ZIP volumes: ${result.archives.size}\nIncomplete .part volumes must not be used as successful exports.\n") }
                     marker!!.delete()
@@ -104,6 +107,7 @@ internal object FullApkExportSession {
             ExportText.read(reader, 1600).first } }.getOrNull() }
         return FullApkExport.Progress(
             stage = if (integrityFailure) "Échec d’intégrité du relevé précédent. ZIP finalisé conservé ; consulter ERREUR_LIVRAISON.txt."
+                    else if (kind == ExportKind.FIRMWARE_LARGE) "Collecte large précédente. Reprendre via Export complet accessible pour vérifier les ZIP et continuer cette session ; aucune intégrité présumée à ce stade."
                     else if (interrupted) "Previous ${kind.label} export interrupted or incomplete. Finished ZIP volumes retained; inspect manifest.json."
                     else result ?: "Previous local ${kind.label} export found. Inspect manifest.json for results and coverage.",
             running = false, outcome = if (integrityFailure) "failed" else if (interrupted) "interrupted/partial" else "previous",

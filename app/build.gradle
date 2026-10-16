@@ -2038,8 +2038,9 @@ android {
         // 668 = 1.9.29-beta: independent decoded-frame watchdog and bounded receiver observations.
         // 669 = 1.9.30-beta: fixed read-only DiLink context collection with progress and local ZIP sharing.
         // 670 = 1.9.31-beta: fixed P15 SYSTEM complement with independent app/shell metadata probes.
-        versionCode 670
-        versionName "1.9.31-beta"
+        // 671 = 1.9.32-beta: broad firmware/APK file collection with disk inventory and verified durable resume.
+        versionCode 671
+        versionName "1.9.32-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
