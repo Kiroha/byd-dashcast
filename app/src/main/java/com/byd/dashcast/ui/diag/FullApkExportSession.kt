@@ -49,7 +49,7 @@ internal object FullApkExportSession {
                                 "build_fingerprint" to Build.FINGERPRINT,
                                 "scope" to "App-local runtime values; distinct from the transport UID observed by id.")).run()
                     } else {
-                        val device = if (kind == ExportKind.APK) FullApkExportDevice(app) else SystemExportDevice(app)
+                        val device = if (kind == ExportKind.APK) FullApkExportDevice(app) else SystemExportDevice(app, kind.systemProfile)
                         FullApkExport(device, directory, cancellation::get,
                             { snapshot = it }, kind = kind).run()
                     }

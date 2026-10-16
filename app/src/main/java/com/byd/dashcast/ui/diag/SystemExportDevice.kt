@@ -26,9 +26,10 @@ internal object SystemInventoryCommands {
         "dc_module=\${$pathVariable#/apex/}; dc_module=\${dc_module%%/*}; " +
             "case \"\$dc_module\" in *@*) dc_version=\${dc_module#*@}; case \"\$dc_version\" in ''|*[!0-9]*) $failure ;; esac ;; esac; "
 
-    fun scan(root: String, mode: String, apexNames: List<String> = emptyList()): String {
+    fun scan(root: String, mode: String, apexNames: List<String> = emptyList(),
+             profile: SystemExportProfile = SystemExportProfile.FULL): String {
         val qroot = ApkInventoryShell.quote(root)
-        val inspect = inspectFiles(mode)
+        val inspect = inspectFiles(mode, profile)
         // Fixed files are checked canonically before their type or content is inspected.
         if (mode == "exact") return "sh -c ${ApkInventoryShell.quote(inspect)} _ $qroot"
         val roots = when (mode) {
@@ -81,7 +82,7 @@ internal object SystemInventoryCommands {
             "else $rootGuard $inventory; fi"
     }
 
-    fun inspectFiles(mode: String): String {
+    fun inspectFiles(mode: String, profile: SystemExportProfile = SystemExportProfile.FULL): String {
         val patterns = when (mode) {
             "framework" -> aliases(SystemExportPolicy.frameworkRoots).flatMap { rootPath ->
                 listOf("jar", "art", "oat", "odex", "vdex").map { "$rootPath/*.$it" } }
@@ -95,7 +96,7 @@ internal object SystemInventoryCommands {
             "hal" -> aliases(SystemExportPolicy.halRoots).flatMap { listOf("$it/auto.*.so", "$it/auto.so") }
             "apex" -> moduleRoots("javalib", SystemExportPolicy.apexModules).flatMap { rootPath ->
                 listOf("jar", "art", "oat", "odex", "vdex").map { "$rootPath/*.$it" } }
-            "exact" -> SystemExportPolicy.exactPaths
+            "exact" -> if (profile == SystemExportProfile.FULL) SystemExportPolicy.exactPaths else profile.requestedPaths
             else -> error("Unknown inspection mode")
         }.joinToString("|")
         return "for dc_file do " +
@@ -115,6 +116,7 @@ internal object SystemInventoryCommands {
             "dc_size=\$(stat -c %s \"\$dc_real\") || { printf 'ISSUE|canonical/stat unavailable|%s\\n' \"\$dc_file\"; continue; }; " +
             "case \"\$dc_size\" in ''|*[!0-9]*) printf 'ISSUE|invalid file size|%s\\n' \"\$dc_file\"; continue ;; esac; " +
             "[ -f \"\$dc_real\" ] || { printf 'ISSUE|canonical target not a regular file|%s\\n' \"\$dc_file\"; continue; }; " +
+            "[ \"\$dc_size\" -gt 0 ] || { printf 'ISSUE|regular file is empty|%s\\n' \"\$dc_file\"; continue; }; " +
             (if (mode == "init") "if [ \"\$dc_size\" -gt 65536 ]; then printf 'ISSUE|init inspection truncated at 65536 bytes|%s\\n' \"\$dc_file\"; fi; " +
                 "dc_text=\$(head -c 65536 \"\$dc_real\"); dc_read=\$?; " +
                 "if [ \"\$dc_read\" != 0 ]; then printf 'ISSUE|init read denied/tool failure|%s\\n' \"\$dc_file\"; continue; fi; " +
@@ -125,10 +127,21 @@ internal object SystemInventoryCommands {
 
     fun snapshot(command: String, temporary: String): String = "umask 077; ( ulimit -f 8192 || exit 125; $command ) > " +
         ApkInventoryShell.quote(temporary) + " 2>&1; dc_rc=\$?; printf '__DC_SYSTEM_SCAN__:%s\\n' \"\$dc_rc\""
+
+    fun recheck(source: FullApkExport.Source, profile: SystemExportProfile): String {
+        val canonical = requireNotNull(source.canonicalPath)
+        require(profile.accepted(source.path, canonical) && source.size != null && source.size!! > 0)
+        return "dc_real=\$(readlink -f ${ApkInventoryShell.quote(source.path)}) || exit 1; " +
+            "[ \"\$dc_real\" = ${ApkInventoryShell.quote(canonical)} ] && [ -f \"\$dc_real\" ] || exit 1; " +
+            "dc_size=\$(stat -c %s \"\$dc_real\") || exit 1; " +
+            "[ \"\$dc_size\" = ${ApkInventoryShell.quote(source.size.toString())} ] || exit 1; " +
+            "printf 'SYS|%s|%s|%s\\n' \"\$dc_size\" \"\$dc_real\" ${ApkInventoryShell.quote(source.path)}"
+    }
 }
 
 /** Reads original firmware files through existing app/shell rights; no service/vehicle calls. */
-internal class SystemExportDevice(private val context: Context) : FullApkExport.Device {
+internal class SystemExportDevice(private val context: Context,
+                                  private val profile: SystemExportProfile = SystemExportProfile.FULL) : FullApkExport.Device {
     private val sources = linkedMapOf<String, FullApkExport.Source>()
     private val issues = SystemDiscoveryIssues()
     private val coverage = mutableListOf(
@@ -145,8 +158,8 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
     private val inventoryBudget = SystemInventoryBudget()
     private fun issue(value: String) { issues.add(value) }
     private fun add(path: String, canonical: String, size: Long?, origin: String) {
-        if (!SystemExportPolicy.accepted(path, canonical)) { issue("Rejected path or symlink escaping firmware allowlist: $path -> $canonical"); return }
-        if (size == null || size < 0) { issue("Unknown/invalid size: $path"); return }
+        if (!profile.accepted(path, canonical)) { issue("Rejected path or symlink escaping firmware allowlist: $path -> $canonical"); return }
+        if (size == null || size <= 0) { issue("Unknown/invalid/empty file size: $path"); return }
         if (sources.size >= SystemExportPolicy.MAX_SOURCES && canonical !in sources) {
             issue("Inventory source cap ${SystemExportPolicy.MAX_SOURCES} reached; remaining entries omitted"); return
         }
@@ -159,9 +172,10 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         update("SYSTEM: connecting existing diagnostic ProxyDaemon", 0)
         shellReady = try { ProxyClient.connect(context) } catch (e: Exception) { issue("ProxyDaemon connection failed: ${e.message}"); false }
         checkCancelled()
-        before = captureContext(runtime = true)
+        before = captureContext(runtime = profile == SystemExportProfile.FULL, beforeCopy = true)
         checkCancelled()
         coverage.add("Context captured using ${if (shellReady) "daemon shell" else "app Build fields (fallback)"}; no positive model/ROM identification claimed.")
+        if (profile != SystemExportProfile.FULL) return discoverTargeted(checkCancelled, update)
         val roots = SystemExportPolicy.frameworkRoots.map { it to "framework" } +
             SystemExportPolicy.xmlRoots.map { it to "xml" } + SystemExportPolicy.initRoots.map { it to "init" } +
             SystemExportPolicy.nativeRoots.map { it to "native" } + SystemExportPolicy.halRoots.map { it to "hal" } +
@@ -210,7 +224,37 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         }
         coverage.add("Inventory bounded per root (${SystemExportPolicy.MAX_SNAPSHOT_BYTES} bytes), aggregate (${SystemExportPolicy.MAX_TOTAL_INVENTORY_BYTES} bytes), sources (${SystemExportPolicy.MAX_SOURCES}) and issue count; no payload staging.")
         update("SYSTEM: ${sources.size} selected firmware files; missing/protected locations recorded", sources.size)
-        return FullApkExport.Inventory(sources.values.toList(), coverage, before, issues.snapshot())
+        return inventory()
+    }
+
+    private fun inventory() = FullApkExport.Inventory(sources.values.toList(), coverage.toList(), before,
+        issues.snapshot(), profile.id, profile.requestedPaths)
+
+    private fun discoverTargeted(checkCancelled: () -> Unit, update: (String, Int) -> Unit): FullApkExport.Inventory {
+        // This branch never scans framework/XML/native directories or runtime classpaths.
+        coverage.clear()
+        coverage.add("Fixed DiLink P15 complement: ${profile.requestedPaths.size} exact paths, regular positive-size files only; not a whole-vehicle dump.")
+        coverage.add("Shell and app metadata probes are independent under existing identities. A shell denial is retained even if app access succeeds; no permission or SELinux change.")
+        coverage.add("Read-only firmware payloads; local ZIP/metadata and bounded inventory snapshots plus existing daemon bootstrap/PID files may be written. No collected binary or OEM Binder method is executed.")
+        coverage.add("Live non-atomic collection. Missing/inaccessible paths and before/after fingerprint checks do not prove car-wide coverage, source authenticity or hardware compatibility.")
+        coverage.add("App UID=${android.os.Process.myUid()}; ProxyDaemon UID=${ProxyClient.getCallerUid()}; shell connected=$shellReady. Runtime availability of these fixed corpus hypotheses is unknown.")
+        val tempDir = "/data/local/tmp/dashcast-system-inventory-${UUID.randomUUID()}"
+        val snapshotsReady = shellReady && runCatching {
+            ProxyClient.runShell("umask 077; mkdir ${ApkInventoryShell.quote(tempDir)} && printf '__DC_SYSTEM_READY__'").trim() == "__DC_SYSTEM_READY__"
+        }.getOrDefault(false)
+        if (!snapshotsReady) issue("Shell metadata probes unavailable; independent app probes still attempted under the app identity.")
+        try {
+            profile.discoverTargets(snapshotsReady, checkCancelled,
+                shell = { path, index -> scanShell(path, "exact", "$tempDir/$index.txt", emptyList(), checkCancelled, update) },
+                app = { path -> scanApp(path, "exact", checkCancelled, update) })
+        } finally {
+            if (snapshotsReady) runCatching { ProxyClient.runShell("rm -rf ${ApkInventoryShell.quote(tempDir)}") }
+        }
+        profile.requestedPaths.filter { requested -> sources.values.none { it.path == requested || it.canonicalPath == requested } }
+            .forEach { issue("Target missing/inaccessible under the attempted existing identities: $it") }
+        coverage.add("Same inventory, source-count, issue-count, storage, cancellation and standalone ZIP limits as the full SYSTEM export; no payload staging or automatic upload.")
+        update("SYSTEM P15: ${sources.size}/${profile.requestedPaths.size} fixed paths discovered; see manifest for identity-specific gaps", sources.size)
+        return inventory()
     }
 
     private fun discoveredClasspath(path: String): Boolean {
@@ -225,7 +269,7 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         if (inventoryBudget.stopped || inventoryBudget.bytes >= SystemExportPolicy.MAX_TOTAL_INVENTORY_BYTES) { issue("Aggregate inventory limit reached; root not scanned: $root"); return }
         update("SYSTEM inventory: $root", sources.size)
         try {
-            val reply = runCatching { ProxyClient.runShell(SystemInventoryCommands.snapshot(SystemInventoryCommands.scan(root, mode, names), temporary)) }
+            val reply = runCatching { ProxyClient.runShell(SystemInventoryCommands.snapshot(SystemInventoryCommands.scan(root, mode, names, profile), temporary)) }
                 .getOrElse { "Transport error: ${it.message}" }
             SystemExportPolicy.completionIssue(reply, "__DC_SYSTEM_SCAN__")?.let { issue("$root: $it") }
             checkCancelled()
@@ -242,9 +286,9 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
                         if (line.length > 8192) { issue("Overlong inventory row omitted: $root"); continue }
                         if (line.startsWith("SYS|")) {
                             val fields = line.split('|', limit = 4)
-                            if (fields.size == 4) add(fields[3], fields[2], fields[1].toLongOrNull(), "$mode:$root")
+                            if (fields.size == 4) add(fields[3], fields[2], fields[1].toLongOrNull(), "shell:uid=${ProxyClient.getCallerUid()}:$mode:$root")
                             else issue("Malformed inventory row: $line")
-                        } else if (line.isNotBlank()) issue("$root: $line")
+                        } else if (line.isNotBlank()) issue("shell:uid=${ProxyClient.getCallerUid()}:$root: $line")
                         if (++rows % 64 == 0) update("SYSTEM inventory: $root ($rows rows)", sources.size)
                     }
                 }
@@ -273,31 +317,29 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         }.map { "/system$it" }
         val bionicRootAllowed = mode == "bionic" && canonicalRoot != null &&
             SystemExportPolicy.isBionic("$canonicalRoot/libc.so")
-        if (canonicalRoot == null || (mode != "exact" && canonicalRoot !in rootsAndAliases && !bionicRootAllowed) ||
-            (mode == "exact" && !SystemExportPolicy.accepted(root, canonicalRoot))) {
+        if (mode != "exact" && (canonicalRoot == null || (canonicalRoot !in rootsAndAliases && !bionicRootAllowed))) {
             issue("Canonical root outside selected firmware policy: $root -> $canonicalRoot"); return
         }
-        if (!File(root).exists()) { issue("Missing or inaccessible root (app identity): $root"); return }
+        if (mode != "exact" && !File(root).exists()) { issue("Missing or inaccessible root (app identity): $root"); return }
         fun candidate(file: File) {
             checkCancelled()
             val path = file.path
             // Filename selection precedes canonical/type/size queries, including fallback mode.
-            if (!SystemExportPolicy.allowed(path)) return
+            if (!profile.allowed(path)) return
             try {
-                val canonical = file.canonicalPath
-                if (!SystemExportPolicy.accepted(path, canonical) ||
-                    (mode == "hal" && !SystemExportPolicy.isAutoHal(canonical))) {
-                    issue("Skipped escaping alias: $path -> $canonical"); return
+                val metadata = SystemAppFileProbe.inspect(path, profile)
+                val canonical = metadata.canonical
+                if (mode == "hal" && !SystemExportPolicy.isAutoHal(canonical)) {
+                    issue("app:uid=${android.os.Process.myUid()}:skipped escaping HAL alias: $path -> $canonical"); return
                 }
-                if (!file.isFile || !file.canRead()) { issue("Selected candidate unreadable/non-file: $path"); return }
                 if (mode == "init") {
                     val (text, truncated) = file.bufferedReader().use { ExportText.read(it, 65536) }
                     if (truncated) issue("Init inspection truncated: $path")
                     if (!text.contains(Regex(SystemExportPolicy.INIT_PATTERN, RegexOption.IGNORE_CASE))) return
                 }
-                add(path, canonical, file.length(), "app:$mode:$root")
+                add(path, canonical, metadata.size, "app:uid=${android.os.Process.myUid()}:$mode:$root")
             } catch (e: CancellationException) { throw e
-            } catch (e: Exception) { issue("Selected candidate unavailable: $path: ${e.message}") }
+            } catch (e: Exception) { issue("app:uid=${android.os.Process.myUid()}:selected candidate unavailable: $path: ${e.javaClass.simpleName}: ${e.message}") }
         }
         try {
             when (mode) {
@@ -344,7 +386,7 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
         } catch (e: Exception) { issue("App inventory failed $root: ${e.message}") }
     }
 
-    private fun captureContext(runtime: Boolean): Map<String, String> {
+    private fun captureContext(runtime: Boolean, beforeCopy: Boolean): Map<String, String> {
         val result = linkedMapOf("manufacturer" to Build.MANUFACTURER, "model" to Build.MODEL,
             "device" to Build.DEVICE, "product" to Build.PRODUCT, "display" to Build.DISPLAY,
             "appVersion" to runCatching { @Suppress("DEPRECATION") context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty() }.getOrDefault("unknown"),
@@ -365,10 +407,7 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
             append("printf '__DC_SYSTEM_CONTEXT__:%s\\n' \"\$dc_failed\"")
         }
         val reply = runCatching { ProxyClient.runShell(cmd) }.getOrElse { "Transport error: ${it.message}" }
-        if (reply.length > 65536 || reply.contains("[output truncated]") || reply.lineSequence().lastOrNull() != "__DC_SYSTEM_CONTEXT__:0") {
-            result["contextCaptureIssue"] = "${if (runtime) "Before" else "After"} context incomplete/timeout/truncated/unsupported: ${reply.takeLast(400)}"
-            if (runtime) issue(result.getValue("contextCaptureIssue"))
-        }
+        SystemExportPolicy.recordContextIssue(reply, beforeCopy, result, ::issue)
         val libraries = mutableListOf<String>()
         reply.take(65536).lineSequence().forEach { line ->
             if (line.startsWith("PROP|")) {
@@ -387,22 +426,33 @@ internal class SystemExportDevice(private val context: Context) : FullApkExport.
     }
 
     override fun finish(cancelled: Boolean): FullApkExport.ContextCheck =
-        SystemExportPolicy.finalContext(before, cancelled) { captureContext(runtime = false) }
+        SystemExportPolicy.finalContext(before, cancelled) { captureContext(runtime = false, beforeCopy = false) }
 
     override fun open(source: FullApkExport.Source): InputStream {
         val canonical = source.canonicalPath ?: throw IOException("Canonical source path unavailable")
-        if (!SystemExportPolicy.accepted(source.path, canonical)) throw IOException("Source outside firmware allowlist")
-        // Recheck aliases before each open. Live collection remains explicitly non-atomic.
-        val actual = if (shellReady) runCatching { ProxyClient.runShell("readlink -f ${ApkInventoryShell.quote(source.path)}").trim() }.getOrNull()
-            else runCatching { File(source.path).canonicalPath }.getOrNull()
-        if (actual != canonical || !SystemExportPolicy.allowed(actual)) throw IOException("Source canonical path changed or cannot be validated")
-        return try { File(canonical).inputStream() } catch (e: IOException) {
-            if (!shellReady) throw e
-            proxyInput(canonical, source.size)
-        } catch (e: SecurityException) {
-            if (!shellReady) throw IOException("Source access denied", e)
-            proxyInput(canonical, source.size)
-        }
+        if (!profile.accepted(source.path, canonical) || source.size == null || source.size!! <= 0)
+            throw IOException("Source outside firmware allowlist or positive size unavailable")
+        // Revalidate each identity independently. A shell readlink denial must not suppress a
+        // valid app read (and an app denial must not suppress a valid existing-shell read).
+        val appFailure = try {
+            val actual = File(source.path).canonicalPath
+            if (actual != canonical || !profile.allowed(actual)) throw IOException("App canonical path changed or cannot be validated")
+            val attributes = Files.readAttributes(File(actual).toPath(), BasicFileAttributes::class.java)
+            if (!attributes.isRegularFile || attributes.size() != source.size)
+                throw IOException("App source type or size changed")
+            val input = File(actual).inputStream()
+            source.origins.add("copy:app:uid=${android.os.Process.myUid()}")
+            return input
+        } catch (e: IOException) { e
+        } catch (e: SecurityException) { IOException("App source access denied", e) }
+        if (!shellReady) throw appFailure
+        // Metadata only; neither a collected binary nor init configuration is executed.
+        val reply = runCatching { ProxyClient.runShell(SystemInventoryCommands.recheck(source, profile)) }
+            .getOrElse { throw IOException("Shell source recheck failed after app access failure", it) }
+        val expected = "SYS|${source.size}|$canonical|${source.path}"
+        if (reply.trim() != expected) throw IOException("Shell source canonical/type/size recheck failed after app access failure: ${reply.take(300)}", appFailure)
+        source.origins.add("copy:shell:uid=${ProxyClient.getCallerUid()}")
+        return proxyInput(canonical, source.size)
     }
 
     private fun proxyInput(path: String, expectedSize: Long?): InputStream = object : InputStream() {

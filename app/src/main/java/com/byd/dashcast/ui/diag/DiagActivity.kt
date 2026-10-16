@@ -161,8 +161,8 @@ class DiagActivity : Activity() {
         }
         controls.addView(fullExportBtn)
         systemExportBtn = Button(this).apply {
-            text = "Export system files — framework, libraries & configs"
-            setOnClickListener { startFullApkExport(ExportKind.SYSTEM) }
+            text = "Export système — complet ou complément DiLink P15"
+            setOnClickListener { chooseSystemExport() }
         }
         controls.addView(systemExportBtn)
         contextExportBtn = Button(this).apply {
@@ -337,11 +337,21 @@ class DiagActivity : Activity() {
         super.onStop()
     }
 
+    private fun chooseSystemExport() {
+        if (sBusy.get()) { log("Un diagnostic est déjà en cours. Attendre sa fin."); return }
+        AlertDialog.Builder(this).setTitle("Export système — véhicule stationné")
+            .setItems(arrayOf("Complément DiLink P15 — ${SystemExportProfile.DILINK_P15.requestedPaths.size} chemins fixes", "Complet — framework, bibliothèques et configurations")) { _, index ->
+                startFullApkExport(if (index == 0) ExportKind.SYSTEM_P15 else ExportKind.SYSTEM)
+            }.setNegativeButton("Annuler", null).show()
+    }
+
     private fun startFullApkExport(kind: ExportKind = ExportKind.APK) {
         if (!claimBusyOrWarn()) return
         allDiagButtons().forEach { it.isEnabled = false }
         log(if (kind == ExportKind.CONTEXT)
             "Relevé DiLink lancé : 14 lectures fixes via la connexion existante. Aucun envoi automatique ; résultats et ZIP conservés localement."
+            else if (kind == ExportKind.SYSTEM_P15)
+                "Complément DiLink P15 : copie de ${SystemExportProfile.DILINK_P15.requestedPaths.size} chemins fixes sous les droits existants. Aucun binaire collecté exécuté. Les fichiers refusés restent signalés ; récupération non garantie. ZIP et manifest.json conservés localement."
             else "Local ${kind.label} export started. No automatic upload. Finished ZIPs are kept outside report cleanup.")
         // Static completion releases the shared gate even if this Activity has been destroyed.
         FullApkExportSession.start(applicationContext, kind) { sBusy.set(false) }
