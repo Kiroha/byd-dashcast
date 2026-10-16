@@ -30,8 +30,12 @@ Scope is fixed in `SystemExportPolicy`; runtime text is treated as data, never e
   DT_NEEDED names missing from P4: `libEGL.so`, `libGLESv2.so`, `libandroid_runtime.so`, `libbinder.so`,
   `libc++.so`, `libc.so`, `libcrypto.so`, `libcutils.so`, `libdl.so`, `libfission_cutils.so`, `libgui.so`,
   `libhardware.so`, `libhardware_legacy.so`, `liblog.so`, `libm.so`, `libnativeloader.so`, `libnetutils.so`,
-  `libselinux.so`, `libsync.so`, `libui.so`, `libutils.so`, `libzmq.so`. These are grouped exact-name
-  probes per root; unrelated neighboring libraries are neither traversed nor queried for metadata.
+  `libselinux.so`, `libsync.so`, `libui.so`, `libutils.so`, `libzmq.so`.
+  Version 1.9.28-beta adds the 52 `libandroid_runtime.so` DT_NEEDED basenames absent from the P7
+  manifest across both ABIs (79 selected native basenames in total):
+  `libETC1.so`, `libGLESv1_CM.so`, `libGLESv3.so`, `libacquisition.so`, `libandroidfw.so`, `libandroidicu.so`, `libappfuse.so`, `libaudioclient.so`, `libaudiopolicy.so`, `libbase.so`, `libbpf_android.so`, `libcamera_client.so`, `libcamera_metadata.so`, `libdebuggerd_client.so`, `libdiagnostic.so`, `libdl_android.so`, `libfission_utils.so`, `libgraphicsenv.so`, `libharfbuzz_ng.so`, `libhidlbase.so`, `libhidltransport.so`, `libhwbinder.so`, `libhwui.so`, `libimg_utils.so`, `libinput.so`, `libjpeg.so`, `libmedia.so`, `libmedia_helper.so`, `libmediametrics.so`, `libmeminfo.so`, `libmemtrack.so`, `libmemunreachable.so`, `libminikin.so`, `libnativebridge_lazy.so`, `libnativehelper.so`, `libnativeloader_lazy.so`, `libnativewindow.so`, `libnetd_client.so`, `libnetdbpf.so`, `libnetdutils.so`, `libpdfium.so`, `libprocessgroup.so`, `libsensor.so`, `libsoundtrigger.so`, `libsqlite.so`, `libstatslog.so`, `libusbhost.so`, `libvintf.so`, `libvulkan.so`, `libz.so`, `libziparchive.so`, `server_configurable_flags.so`.
+  `libacquisition.so`, `libdiagnostic.so`, and `libfission_utils.so` are probed first within each
+  native root. These are grouped exact-name probes per root; unrelated neighboring libraries are neither traversed nor queried for metadata.
   Exact native/Bionic probes require directory traversal rights, not directory-listing rights; each
   selected file still requires its existing read permissions.
 - Those partitions' `/lib/hw` and `/lib64/hw`, plus `/odm/lib/hw` and `/odm/lib64/hw`: direct-child
@@ -77,7 +81,8 @@ limit, at most 8 MiB accepted per snapshot, 32 MiB accepted in aggregate). Inven
 under the existing 256 KiB daemon reply cap, with explicit completion markers. Missing/denied
 roots, unsupported tools, truncated replies, timeouts, unknown snapshot lengths and malformed
 rows are recorded. Each root snapshot is deleted in its own cleanup block, including rejected
-snapshots; an unknown/over-budget size stops further snapshots. Source and diagnostic counts are bounded. App-only fallback retains strict
+snapshots; an unknown/over-budget size stops further snapshots. Source and diagnostic counts are bounded. Up to 2,048 discovery issues of at most 800 characters
+are retained; exceeding that budget adds an explicit omission marker and keeps collection partial. App-only fallback retains strict
 scope and reports that shell context/classpath discovery is unavailable. Init content inspection
 in that fallback is bounded at 65,536 characters and reports truncation.
 
@@ -85,7 +90,9 @@ Selected shell `getprop` values are captured before discovery and after payload 
 `ro.build.fingerprint`, `ro.build.version.release`, `ro.build.version.sdk`, `ro.product.cpu.abi`,
 `ro.build.display.id`, `ro.build.system.fission_single_os`, `sys.car.protocol`,
 `persist.sys.protocol.record`, `sys.byd.countrycode`, `ro.hardware.auto`, `ro.hardware`,
-`ro.product.board`, `ro.board.platform`, `ro.arch`. These are build/protocol/HAL selectors; VIN,
+`ro.product.board`, `ro.board.platform`, `ro.arch`, `apps.setting.product.inswver`,
+`ro.build.region`, `sys.which.rse`. These are build/protocol/HAL/product-region selectors; empty
+values remain empty and mean unknown, with no inferred default or platform identification. VIN,
 serial and arbitrary property dumps are not requested. The initial context also records
 BOOTCLASSPATH, SYSTEMSERVERCLASSPATH, bounded `pm list libraries`, app/daemon UIDs and daemon
 protocol. Shell classpath environment can differ from the running system-server environment.
@@ -125,7 +132,12 @@ P4 supplied the 22 DT_NEEDED names and five exact init-referenced paths for the 
 P6 established the diagnostics executable path from an init fragment, the two RCC paths from the
 cluster library, and the ODM HAL search roots/variant selectors from `libhardware.so`. The
 1.9.27-beta extension collects these candidates with existing filesystem rights only; prior read
-denials remain coverage gaps and are not bypassed.
+denials remain coverage gaps and are not bypassed. P10 acquisition JNI analysis identified imports
+whose implementations were absent from the P7 corpus. The 1.9.28-beta extension derives its 52 new
+native basenames from the 71 DT_NEEDED entries of the collected `libandroid_runtime.so`, excluding
+all exported P7 basenames across both ABIs. It adds no scan roots, dependency recursion or APEX
+native scope. The three additional property values are captured before and after copying through
+the same selected `getprop` path.
 A candidate's location does not establish linker namespace resolution, ABI compatibility, an effective
 permission grant or a runtime-selected HAL. Recursive dependency closure and the diagnostic service
 implementation still require offline analysis of the additional files. This is not a full firmware image

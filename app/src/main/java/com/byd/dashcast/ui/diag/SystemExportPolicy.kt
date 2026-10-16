@@ -7,13 +7,31 @@ internal object SystemExportPolicy {
     val xmlRoots = partitions.flatMap { listOf("$it/etc/permissions", "$it/etc/sysconfig") }
     val initRoots = partitions.map { "$it/etc/init" }
     val nativeRoots = partitions.flatMap { listOf("$it/lib", "$it/lib64") }
-    val nativeNames = setOf("libxdjacontainerservice_jni.so", "libfission_services.so", "libfission_event.so",
-        "libbydauto.so", "libbydautoservice.so",
-        // P4 DT_NEEDED names: candidate probes, not assertions about linker resolution.
-        "libEGL.so", "libGLESv2.so", "libandroid_runtime.so", "libbinder.so", "libc++.so", "libc.so",
-        "libcrypto.so", "libcutils.so", "libdl.so", "libfission_cutils.so", "libgui.so", "libhardware.so",
-        "libhardware_legacy.so", "liblog.so", "libm.so", "libnativeloader.so", "libnetutils.so",
-        "libselinux.so", "libsync.so", "libui.so", "libutils.so", "libzmq.so")
+    val nativeNames = setOf(
+        // P10 acquisition/diagnostic imports: prioritize the three platform candidates.
+        "libacquisition.so", "libdiagnostic.so", "libfission_utils.so",
+        // Original five libraries and 22 P4 DT_NEEDED names.
+        "libxdjacontainerservice_jni.so", "libfission_services.so", "libfission_event.so", "libbydauto.so",
+        "libbydautoservice.so", "libEGL.so", "libGLESv2.so", "libandroid_runtime.so",
+        "libbinder.so", "libc++.so", "libc.so", "libcrypto.so",
+        "libcutils.so", "libdl.so", "libfission_cutils.so", "libgui.so",
+        "libhardware.so", "libhardware_legacy.so", "liblog.so", "libm.so",
+        "libnativeloader.so", "libnetutils.so", "libselinux.so", "libsync.so",
+        "libui.so", "libutils.so", "libzmq.so",
+        // Remaining P10 DT_NEEDED basenames absent from the P7 collection (both ABIs).
+        "libETC1.so", "libGLESv1_CM.so", "libGLESv3.so", "libandroidfw.so",
+        "libandroidicu.so", "libappfuse.so", "libaudioclient.so", "libaudiopolicy.so",
+        "libbase.so", "libbpf_android.so", "libcamera_client.so", "libcamera_metadata.so",
+        "libdebuggerd_client.so", "libdl_android.so", "libgraphicsenv.so", "libharfbuzz_ng.so",
+        "libhidlbase.so", "libhidltransport.so", "libhwbinder.so", "libhwui.so",
+        "libimg_utils.so", "libinput.so", "libjpeg.so", "libmedia.so",
+        "libmedia_helper.so", "libmediametrics.so", "libmeminfo.so", "libmemtrack.so",
+        "libmemunreachable.so", "libminikin.so", "libnativebridge_lazy.so", "libnativehelper.so",
+        "libnativeloader_lazy.so", "libnativewindow.so", "libnetd_client.so", "libnetdbpf.so",
+        "libnetdutils.so", "libpdfium.so", "libprocessgroup.so", "libsensor.so",
+        "libsoundtrigger.so", "libsqlite.so", "libstatslog.so", "libusbhost.so",
+        "libvintf.so", "libvulkan.so", "libz.so", "libziparchive.so",
+        "server_configurable_flags.so")
     // P6 loader evidence adds ODM only for auto HAL candidates, not general firmware scans.
     val halRoots = nativeRoots.map { "$it/hw" } + listOf("/odm/lib/hw", "/odm/lib64/hw")
     // Fixed hypotheses for the collected ROM; these names do not identify a platform or loaded HAL.
@@ -29,11 +47,12 @@ internal object SystemExportPolicy {
     const val MAX_SNAPSHOT_BYTES = 8L * 1024 * 1024
     const val MAX_TOTAL_INVENTORY_BYTES = 32L * 1024 * 1024
     const val MAX_SOURCES = 20000
-    const val MAX_ISSUES = 512
+    const val MAX_ISSUES = 2048
     val propertyKeys = listOf("ro.build.fingerprint", "ro.build.version.release", "ro.build.version.sdk",
         "ro.product.cpu.abi", "ro.build.display.id", "ro.build.system.fission_single_os", "sys.car.protocol",
         "persist.sys.protocol.record", "sys.byd.countrycode", "ro.hardware.auto", "ro.hardware",
-        "ro.product.board", "ro.board.platform", "ro.arch")
+        "ro.product.board", "ro.board.platform", "ro.arch", "apps.setting.product.inswver",
+        "ro.build.region", "sys.which.rse")
     private val artifacts = setOf("jar", "art", "oat", "odex", "vdex")
     private val safePath = Regex("/[A-Za-z0-9_./+@=-]+")
     private fun clean(path: String): Boolean = path.matches(safePath) &&
@@ -123,4 +142,16 @@ internal class SystemInventoryBudget(
         bytes += size
         return true
     }
+}
+
+/** Keep bounded diagnostics and an explicit marker when additional discovery gaps are omitted. */
+internal class SystemDiscoveryIssues(private val limit: Int = SystemExportPolicy.MAX_ISSUES) {
+    private val entries = mutableListOf<String>()
+    private var overflow = false
+    fun add(value: String) {
+        if (entries.size < limit) entries.add(value.take(800)) else overflow = true
+    }
+    fun snapshot(): List<String> = (entries + if (overflow) listOf(
+        "Additional discovery issues omitted after $limit entries; collection partial."
+    ) else emptyList()).distinct()
 }
