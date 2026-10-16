@@ -1305,7 +1305,7 @@ object ProxyDaemonMain {
                     data.enforceInterface(DESCRIPTOR)
                     reply?.writeNoException()
                     reply?.writeInt(ProxyDaemonContract.STRICT_FILE_SCHEMA)
-                    reply?.writeInt(ProxyDaemonContract.CAP_STRICT_FILE_READ)
+                    reply?.writeInt(ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA)
                     return true
                 }
                 ProxyDaemonContract.TXN_READ_FILE_CHUNK_STRICT -> {
@@ -1314,6 +1314,16 @@ object ProxyDaemonMain {
                         val request=StrictFileRead.request(data)
                         val bytes=StrictFileRead.read(request.path,request.offset,request.length,request.expected)
                         reply?.writeNoException();reply?.writeByteArray(bytes)
+                    }catch(ex:Throwable){reply?.writeException(wrapThrowable(ex))}
+                    return true
+                }
+                ProxyDaemonContract.TXN_STORAGE_METADATA -> {
+                    data.enforceInterface(DESCRIPTOR)
+                    try {
+                        val request=StorageMetadata.request(data)
+                        val result=StorageMetadata.execute(request)
+                        if(result.length>StorageMetadata.MAX_BYTES)throw IOException("Metadata response exceeds budget")
+                        reply?.writeNoException();reply?.writeByteArray(result.toByteArray(Charsets.UTF_8))
                     }catch(ex:Throwable){reply?.writeException(wrapThrowable(ex))}
                     return true
                 }

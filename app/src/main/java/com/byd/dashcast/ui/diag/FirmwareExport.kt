@@ -18,12 +18,16 @@ internal class FirmwareExport(
     private val volumeBytes: Long = 1024L*1024*1024, private val volumeEntries: Int = 2048,
     private val freeBytes: (File) -> Long = { it.usableSpace },
     private val afterRename: () -> Unit = {},
+    private val writes: FirmwareWriteGuard = device.outputGuard ?: FirmwareWriteGuard(device::validateDestination),
 ) {
     interface Device {
+        val outputGuard: FirmwareWriteGuard? get() = null
+        fun prepareDestination(path: String) {}
         fun context(): String
         fun discover(ledger: FirmwareLedger,check: () -> Unit,update: (String) -> Unit)
         fun open(source: FirmwareSource,identity: String): InputStream
         fun close() {}
+        fun validateDestination() {}
     }
     private var state = FullApkExport.Progress("Préparation collecte large",kind=ExportKind.FIRMWARE_LARGE,directory=directory)
     private var zip: ZipOutputStream? = null
@@ -47,7 +51,9 @@ internal class FirmwareExport(
         if(force || now-lastPublish>=250){ lastPublish=now;progress(state) }
     }
     private fun check() {
+        writes.check()
         if(cancelled())throw CancellationException("Annulation demandée ; volumes finalisés conservés")
+        writes.periodic()
         storageFailure?.let {throw it}
         val now=FullApkExport.monotonicMs()
         if(now-lastSpaceCheck>=1000){lastSpaceCheck=now;try{space()}catch(e:FirmwareStorage){storageFailure=e;throw e}}
@@ -59,12 +65,16 @@ internal class FirmwareExport(
     fun run(): FullApkExport.Progress {
         var outcome="failed";var message=""
         try {
+            ledger.protect(writes)
             require(volumeEntries in 1..4095)
             space();check()
-            val context=device.context()
             val schema=ledger.meta("schema")
+            if(schema!=null)check(schema==FirmwarePolicy.SCHEMA.toString() && ledger.meta("profile")==FirmwarePolicy.PROFILE) {
+                "Reprise refusée : périmètre de collecte différent. Archives conservées. Démarrer une nouvelle collecte du stockage interne."
+            }
+            val context=device.context()
             if(schema!=null) {
-                check(schema==FirmwarePolicy.SCHEMA.toString() && ledger.meta("profile")==FirmwarePolicy.PROFILE) { "Reprise refusée : ancienne collecte conservée, schéma/profil différent ; démarrer une nouvelle collecte globale" }
+                check(schema==FirmwarePolicy.SCHEMA.toString() && ledger.meta("profile")==FirmwarePolicy.PROFILE) { "Reprise refusée : périmètre de collecte différent. Archives conservées. Démarrer une nouvelle collecte du stockage interne." }
                 check(ledger.meta("context")==context) { "Reprise refusée : contexte ROM/identité différent ; créer une nouvelle session" }
             } else {
                 ledger.initialize(context)
@@ -95,24 +105,37 @@ internal class FirmwareExport(
         catch(e:FirmwareBudget){outcome="partial";message=e.message.orEmpty();runCatching {ledger.issue(message)}}
         catch(e: Exception) { message="${e.javaClass.simpleName}: ${e.message}";runCatching {ledger.issue(message)} }
         finally {
-            if(zip!=null && !broken) {
+            if(zip!=null && !broken && !writes.refused) {
                 // Cancellation/read errors can still finalize earlier complete entries. A destination
                 // failure leaves only .part and no source in that volume can be skipped on resume.
                 try { finishVolume() } catch(e:Exception) {
-                    runCatching {zip?.close()};zip=null;runCatching {raw?.close()};raw=null
+                    abortVolume()
                     volume?.let { runCatching {ledger.volumeState(it.id,"incomplete")} }
                     message+="; volume incomplet : ${e.message}"
                 }
             }
-            if(broken){runCatching {zip?.close()};zip=null;runCatching {raw?.close()};raw=null;volume?.let {runCatching {ledger.volumeState(it.id,"incomplete")}}}
+            if(broken || writes.refused){abortVolume();volume?.let {runCatching {ledger.volumeState(it.id,"incomplete")}}}
             runCatching {device.close()}.onFailure {message+="; nettoyage temporaire : ${it.message}";outcome="partial"}
             completed=ledger.successful()
             if(compatible || ledger.meta("schema")==null)runCatching {writeManifest(outcome,message)}.onFailure {message+="; manifeste indisponible : ${it.message}";outcome="failed"}
-            runCatching {File(directory,"RESULT.txt").writeText("FIRMWARE_LARGE $outcome\n$message\nReprendre la même session vérifie les ZIP avant de sauter les fichiers. Les .part sont incomplets.\n")}
+            if(compatible || ledger.meta("schema")==null)runCatching {
+                writes.validate()
+                File(directory,"RESULT.txt").writeText("FIRMWARE_LARGE $outcome\n$message\nReprendre la même session vérifie les ZIP avant de sauter les fichiers. Les .part sont incomplets.\n")
+            }.onFailure { message+="; résultat conservé dans DIAG : ${it.message}" }
+            if(writes.refused)outcome="failed"
             state=state.copy(stage=message,current="",running=false,outcome=outcome,discovered=ledger.sources,completed=completed,failed=failed,
                 bytes=copiedBytes,archives=archives.toList(),lastProgressMs=FullApkExport.monotonicMs());progress(state)
         }
         return state
+    }
+    private fun abortVolume() {
+        // Closing the ZIP or its buffer would emit a footer/flush queued payload.
+        // Release only the already-open raw descriptor after a known output refusal.
+        runCatching {raw?.close()};raw=null
+        (zip as? AbortableZip)?.abort();zip=null
+    }
+    private class AbortableZip(output:OutputStream):ZipOutputStream(output) {
+        fun abort() { def.end() }
     }
     private fun verifyVolumes() {
         for(v in ledger.volumes()) {
@@ -161,6 +184,7 @@ internal class FirmwareExport(
                 check(seen==expected.keys+"manifest-volume.json") {"Entrée ZIP supprimée ou métadonnées absentes"}
                 ledger.volumeState(v.id,"verified",file.length());archives.add(file);state=state.copy(archives=archives.toList())
             } catch(e:CancellationException){throw e}
+            catch(e:FirmwareOutputRefused){throw e}
             catch(e:FirmwareStorage){throw e}
             catch(e:FirmwareBudget){throw e}
             catch(e:android.database.sqlite.SQLiteException){throw e}
@@ -175,6 +199,7 @@ internal class FirmwareExport(
             check()
             try {input=device.open(source,candidate);identity=candidate;break}
             catch(e:CancellationException){throw e}
+            catch(e:FirmwareOutputRefused){throw e}
             catch(e:Exception){errors.add("$candidate: ${e.message}");ledger.issue("Ouverture refusée/changée ${source.path}: ${errors.last()}")}
         }
         if(input==null){failed++;ledger.sourceError(source.id,errors.joinToString("; "));update();return}
@@ -202,10 +227,11 @@ internal class FirmwareExport(
                 if(bytes!=expected)throw IOException("Taille source changée : $bytes/$expected")
                 success=true
             } catch(e:CancellationException){error=e.message.orEmpty();cancellation=e}
+            catch(e:FirmwareOutputRefused){throw e}
             catch(e:FirmwareDestinationFailure){throw e}
             catch(e:Exception){error="${e.javaClass.simpleName}: ${e.message}"}
             // A failed entry is explicitly journaled and remains unusable as a successful file.
-            zip!!.closeEntry()
+            writes.check();zip!!.closeEntry()
             ledger.batch {
                 ledger.copy(FirmwareLedger.Copy(source.id,volume!!.id,entry,bytes,hex(digest.digest()),success,error,identity,System.currentTimeMillis()))
                 if(success){ledger.sourceError(source.id,"")}else{ledger.sourceError(source.id,error);ledger.issue("Copie incomplète ${source.path}: $error")}
@@ -217,14 +243,15 @@ internal class FirmwareExport(
         } } catch(e:CancellationException){throw e}
     }
     private fun startVolume() {
-        space();val v=ledger.newVolume();volume=v
+        writes.validate();space();val v=ledger.newVolume();volume=v
         val target=File(directory,v.name+".part")
-        raw=FileOutputStream(target);zip=ZipOutputStream(raw!!.buffered(FirmwarePolicy.BUFFER)).apply{setLevel(0)}
+        writes.validate()
+        raw=FileOutputStream(target);zip=AbortableZip(writes.stream(raw!!.buffered(FirmwarePolicy.BUFFER))).apply{setLevel(0)}
         entries=0;payload=0
     }
     private fun finishVolume() {
         val output=zip?:return;val v=volume!!
-        update("Fermeture du ZIP — ne pas interrompre",v.name);space()
+        update("Fermeture du ZIP — ne pas interrompre",v.name);writes.validate();space()
         val records=ledger.copies(v.id)
         check(records.size==entries){"Journal de volume incomplet ; .part conservé"}
         output.putNextEntry(ZipEntry("manifest-volume.json"))
@@ -232,8 +259,10 @@ internal class FirmwareExport(
         output.closeEntry();output.finish();output.flush();raw!!.fd.sync();output.close();zip=null;raw=null
         space()
         val part=File(directory,v.name+".part");val final=File(directory,v.name)
+        writes.validate()
         check(!final.exists() && part.renameTo(final)){"Impossible de finaliser le ZIP sans écrasement"}
         afterRename() // Durable intent allows a future run to reconcile rename-before-checkpoint.
+        writes.validate()
         ledger.volumeState(v.id,"verified",final.length());archives.add(final);state=state.copy(archives=archives.toList());volume=null
         entries=0;payload=0
         update("Copie des fichiers accessibles — ZIP indépendants")
@@ -259,14 +288,16 @@ internal class FirmwareExport(
         return bytes to hex(digest.digest())
     }
     private fun writeManifest(outcome:String,message:String) {
+        writes.validate()
         val temporary=File(directory,"manifest.json.tmp")
-        FileOutputStream(temporary).use { stream -> val output=stream.bufferedWriter()
+        FileOutputStream(temporary).use { stream -> val output=writes.stream(stream).bufferedWriter()
             val writer=object:java.io.FilterWriter(output){
                 private var chars=0
                 override fun write(buffer:CharArray,offset:Int,length:Int){super.write(buffer,offset,length);chars+=length;if(chars>=256*1024){space();chars=0}}
                 override fun write(text:String,offset:Int,length:Int){super.write(text,offset,length);chars+=length;if(chars>=256*1024){space();chars=0}}
             }
             ledger.manifest(writer,outcome,message);writer.flush();stream.fd.sync() }
+        writes.validate()
         if(!temporary.renameTo(File(directory,"manifest.json")))throw IOException("Impossible de finaliser manifest.json")
     }
     private class FirmwareStorage(message:String):IOException(message)

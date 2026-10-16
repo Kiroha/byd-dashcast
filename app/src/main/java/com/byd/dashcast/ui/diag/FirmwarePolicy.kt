@@ -6,8 +6,8 @@ import java.util.Base64
 
 /** Static exclusions; FirmwareMounts must additionally admit the observed namespace/mount. */
 internal object FirmwarePolicy {
-    const val PROFILE = "FIRMWARE_GLOBAL_SHELL_V2"
-    const val SCHEMA = 2
+    const val PROFILE = "FIRMWARE_INTERNAL_SHELL_V3"
+    const val SCHEMA = 3
     const val MAX_SOURCES = 200_000
     const val MAX_INVENTORY_BYTES = 64L * 1024 * 1024
     const val MAX_INCIDENTS = 2048

@@ -154,7 +154,7 @@ class DiagActivity : Activity() {
         }
         controls.addView(fullExportBtn)
         controls.addView(TextView(this).apply {
-            text = "Fichiers lisibles des montages et stockages via le daemon ADB. Peut inclure des données personnelles. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible."
+            text = "Stockage interne uniquement via le daemon ADB. SD et USB exclues. Peut inclure des données personnelles. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible."
             textSize = 14f
         })
         runBtn = Button(this).apply {
@@ -317,12 +317,12 @@ class DiagActivity : Activity() {
     private fun chooseSystemExport() {
         if (sBusy.get()) { log("Un diagnostic est déjà en cours. Attendre sa fin."); return }
         AlertDialog.Builder(this).setCustomTitle(TextView(this).apply {
-                text="Export complet accessible — véhicule stationné\n\nFichiers lisibles des montages et stockages via le daemon ADB. Peut inclure des données personnelles et identifiants. ZIP locaux, partage manuel. Garder DIAG visible."
+                text="Export complet accessible — véhicule stationné\n\nStockage interne uniquement via le daemon ADB. SD et USB exclues. Peut inclure des données personnelles et identifiants. ZIP locaux, partage manuel. Garder DIAG visible."
                 textSize=16f;val density=resources.displayMetrics.density
                 setPadding((24*density).toInt(),(20*density).toInt(),(24*density).toInt(),(12*density).toInt())
             })
             .setItems(buildList {
-                add("Nouvelle collecte complète accessible")
+                add("Nouvelle collecte du stockage interne")
                 if (FullApkExportSession.snapshot?.kind == ExportKind.FIRMWARE_LARGE && FullApkExportSession.snapshot?.directory != null)
                     add("Reprendre la collecte précédente — vérifier les ZIP et continuer")
             }.toTypedArray()) { _, index ->
@@ -336,7 +336,7 @@ class DiagActivity : Activity() {
         log(if (kind == ExportKind.CONTEXT)
             "Relevé DiLink lancé : 14 lectures fixes via la connexion existante. Aucun envoi automatique ; résultats et ZIP conservés localement."
             else if (kind == ExportKind.FIRMWARE_LARGE)
-                "Fichiers ordinaires lisibles des montages et stockages via le daemon ADB (SHELL uniquement), y compris données accessibles. Peut inclure des données personnelles et identifiants. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible. Reprise après vérification des ZIP ; anciennes collectes conservées. Aucun contenu collecté exécuté, aucune image physique complète."
+                "Stockage interne uniquement via le daemon ADB (SHELL uniquement), y compris données internes accessibles. SD, USB et stockage adopté exclus. Peut inclure des données personnelles et identifiants. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible. Reprise après vérification des ZIP ; anciennes collectes conservées. Aucun contenu collecté exécuté, aucune image physique complète."
             else if (kind == ExportKind.SYSTEM_P15)
                 "Complément DiLink P15 : copie de ${SystemExportProfile.DILINK_P15.requestedPaths.size} chemins fixes sous les droits existants. Aucun binaire collecté exécuté. Les fichiers refusés restent signalés ; récupération non garantie. ZIP et manifest.json conservés localement."
             else "Local ${kind.label} export started. No automatic upload. Finished ZIPs are kept outside report cleanup.")
@@ -358,7 +358,7 @@ class DiagActivity : Activity() {
         cancelFullExportBtn.text = "Cancel ${state?.kind?.label ?: "local"} export"
         shareFullExportBtn.text = "${state?.kind?.label ?: "Local"} export files"
         if (state == null) {
-            fullExportStatus.text = "Export complet accessible prêt — montages et fichiers lisibles."
+            fullExportStatus.text = "Export complet accessible prêt — stockage interne uniquement ; SD et USB exclues."
             fullExportCurrent.text = "Nouvelle session ou reprise via Export complet accessible."
             return
         }

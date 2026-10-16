@@ -46,7 +46,7 @@ class StrictFileProtocolTest {
         }finally{parcel.recycle()}
     }
     @Test fun `old wrong UID absent or malformed capabilities fail explicitly without APP fallback`() {
-        for(mode in listOf("old","root","no-capability","wrong-schema","missing-flag","truncated-capability","trailing-capability","bad-pid","bad-instance")) {
+        for(mode in listOf("old","root","no-capability","wrong-schema","missing-flag","truncated-capability","trailing-capability","bad-pid","bad-instance","missing-metadata")) {
             val calls=ArrayList<Int>();var connects=0
             val binder=object:Binder(){override fun onTransact(code:Int,data:Parcel,reply:Parcel?,flags:Int):Boolean {
                 data.enforceInterface(ProxyDaemonContract.DESCRIPTOR);calls.add(code)
@@ -54,7 +54,7 @@ class StrictFileProtocolTest {
                     ProxyDaemonContract.TXN_WHOAMI -> {reply!!.writeNoException();reply.writeInt(if(mode=="root")0 else 2000);reply.writeInt(if(mode=="bad-pid")0 else 99);reply.writeString(if(mode=="old")"25" else "26");reply.writeString(if(mode=="bad-instance")"bad" else "0123456789abcdef0123456789abcdef")}
                     ProxyDaemonContract.TXN_FILE_READ_CAPABILITIES -> {
                         if(mode=="no-capability")return false
-                        reply!!.writeNoException();reply.writeInt(if(mode=="wrong-schema")2 else 1);if(mode!="truncated-capability")reply.writeInt(if(mode=="missing-flag")0 else 1);if(mode=="trailing-capability")reply.writeInt(0)
+                        reply!!.writeNoException();reply.writeInt(if(mode=="wrong-schema")2 else 1);if(mode!="truncated-capability")reply.writeInt(if(mode=="missing-flag")0 else if(mode=="missing-metadata")1 else 3);if(mode=="trailing-capability")reply.writeInt(0)
                     }
                     else -> fail("No source scan/read or shell command may follow failed negotiation")
                 }
@@ -62,13 +62,15 @@ class StrictFileProtocolTest {
             }}
             val device=FirmwareDevice(RuntimeEnvironment.getApplication(),endpoint={binder},connect={connects++;true})
             val directory=temp.newFolder()
-            FirmwareLedger(directory).use { ledger->
-                val result=FirmwareExport(device,directory,ledger,{false},{},freeBytes={4L*1024*1024*1024}).run()
+            com.byd.dashcast.ui.diag.FullApkExportSession.start(RuntimeEnvironment.getApplication(),com.byd.dashcast.ui.diag.ExportKind.FIRMWARE_LARGE,
+                launch={task,_->task.run()},firmwareFactory={_,_->device},root={_,_->directory}) {}
+            val result=com.byd.dashcast.ui.diag.FullApkExportSession.snapshot!!
                 assertEquals(mode,"failed",result.outcome);assertEquals(0,result.discovered);assertTrue(result.archives.isEmpty())
-                assertTrue(File(directory,"manifest.json").isFile)
+                // The real session negotiates and attests before mkdir, RUNNING, ledger,
+                // manifest or RESULT. An unproven destination cannot receive failure files.
+                assertTrue(directory.listFiles()!!.isEmpty())
                 assertEquals(1,connects);assertFalse(calls.contains(ProxyDaemonContract.TXN_READ_FILE_CHUNK))
                 assertFalse(calls.contains(ProxyDaemonContract.TXN_EXEC))
-            }
         }
     }
     @Test fun `cancellation after WHOAMI prevents capabilities and any subsequent call`() {

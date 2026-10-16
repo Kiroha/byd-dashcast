@@ -10,7 +10,8 @@ import java.io.Writer
 
 /** Disk-backed inventory and durable volume intent journal; used exclusively by one worker. */
 internal class FirmwareLedger(private val directory: File, private val sourceLimit: Int = FirmwarePolicy.MAX_SOURCES,
-    private val inventoryLimit: Long = FirmwarePolicy.MAX_INVENTORY_BYTES, private val incidentLimit: Int = FirmwarePolicy.MAX_INCIDENTS) : Closeable {
+    private val inventoryLimit: Long = FirmwarePolicy.MAX_INVENTORY_BYTES, private val incidentLimit: Int = FirmwarePolicy.MAX_INCIDENTS,
+    private var writes: FirmwareWriteGuard? = null) : Closeable {
     private val file = File(directory, "firmware-ledger.sqlite")
     private val db: SQLiteDatabase
     var sources = 0; private set
@@ -20,8 +21,13 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
     private var storedIncidents = 0L
     init {
         require(sourceLimit in 1..FirmwarePolicy.MAX_SOURCES && inventoryLimit in 1..FirmwarePolicy.MAX_INVENTORY_BYTES && incidentLimit in 1..FirmwarePolicy.MAX_INCIDENTS)
+        writes?.validate()
         check(directory.mkdirs() || directory.isDirectory)
+        writes?.check()
         db = SQLiteDatabase.openOrCreateDatabase(file, null)
+        // No WAL/checkpoint deferred to close after a terminal output refusal. Attestations
+        // happen outside transactions, which have finished before the latch can be lost.
+        db.rawQuery("PRAGMA journal_mode=DELETE",null).use {check(it.moveToFirst() && it.getString(0).equals("delete",true))}
         db.execSQL("PRAGMA synchronous=FULL")
         val pageBytes=db.rawQuery("PRAGMA page_size",null).use {it.moveToFirst();it.getLong(0)}
         db.rawQuery("PRAGMA max_page_count=${maxOf(16,(inventoryLimit*7/8)/pageBytes)}",null).use {it.moveToFirst()}
@@ -44,19 +50,23 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
         db.execSQL("CREATE INDEX IF NOT EXISTS copy_volume ON copies(volume)")
         sources = count("sources").toInt(); storedIncidents = count("incidents"); directoryCount = count("dirs"); incidents = meta("incident_count")?.toLongOrNull() ?: storedIncidents
     }
+    fun protect(guard: FirmwareWriteGuard) { check(writes == null || writes === guard); writes = guard; guard.check() }
     fun meta(key: String): String? = db.rawQuery("SELECT v FROM meta WHERE k=?", arrayOf(key)).use { if (it.moveToFirst()) it.getString(0) else null }
     fun meta(key: String, value: String) { write { db.insertWithOnConflict("meta", null, ContentValues().apply { put("k",key); put("v",value) }, SQLiteDatabase.CONFLICT_REPLACE) } }
     fun <T> batch(block: () -> T): T {
+        writes?.check()
         if(db.inTransaction())return block()
         val savedSources=sources;val savedIncidents=incidents;val savedStored=storedIncidents;val savedDirs=directoryCount
-        db.beginTransaction();var committed=false
-        try {budget();val result=block();budget();db.setTransactionSuccessful();committed=true;return result}
+        writes?.enterTransaction()
+        var begun=false;var committed=false
+        try {db.beginTransaction();begun=true;budget();val result=block();budget();writes?.check();db.setTransactionSuccessful();committed=true;return result}
         catch(e:android.database.sqlite.SQLiteFullException){throw FirmwareBudget("Inventory SQLite page budget reached; remaining coverage unknown")}
-        finally {db.endTransaction();if(!committed){sources=savedSources;incidents=savedIncidents;storedIncidents=savedStored;directoryCount=savedDirs}}
+        finally {try{if(begun)db.endTransaction()}finally{writes?.leaveTransaction()};if(!committed){sources=savedSources;incidents=savedIncidents;storedIncidents=savedStored;directoryCount=savedDirs}}
     }
-    private fun <T> write(block:()->T):T = if(db.inTransaction()) {
-        val result=block();if(++mutations%16==0)budget();result
-    } else batch(block)
+    private fun <T> write(block:()->T):T {
+        writes?.check()
+        return if(db.inTransaction()) {val result=block();if(++mutations%16==0)budget();result} else batch(block)
+    }
     fun initialize(context: String) = batch {
         meta("schema",FirmwarePolicy.SCHEMA.toString());meta("profile",FirmwarePolicy.PROFILE);meta("context",context);meta("started_at",System.currentTimeMillis().toString())
     }
@@ -140,12 +150,12 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
     fun totalBytes(): Long = db.rawQuery("SELECT COALESCE(SUM(c.bytes),0) FROM copies c JOIN volumes v ON v.id=c.volume WHERE c.success=1 AND v.state='verified'",null).use {it.moveToFirst();it.getLong(0)}
     fun manifest(writer: Writer,outcome: String,message: String) {
         fun q(s:String)=FirmwarePolicy.json(s)
-        writer.append("{\"schema\":${FirmwarePolicy.SCHEMA},\"kind\":\"FIRMWARE_LARGE\",\"profile\":${q(FirmwarePolicy.PROFILE)},\"outcome\":${q(outcome)},\"message\":${q(message)},\"wholeVehicleCoverage\":\"unverified\",\"scope\":\"All ordinary accessible files in the admitted SHELL daemon namespace only (UID2000), including readable data and user storage; no APP source scan/fallback. Explicit pseudo-filesystem, device, collector output/cache/bootstrap exclusions. No partition image or target execution; live non-atomic, potentially personal data.\",\"startedAt\":${q(meta("started_at").orEmpty())},\"contextBefore\":${meta("context").orEmpty().ifEmpty { "{}" }},\"contextAfter\":${meta("context_after").orEmpty().ifEmpty { "{}" }},\"discoveryComplete\":${meta("discovery_complete")=="1"},\"sourceCount\":$sources,\"incidentCount\":$incidents,\"incidentsOmitted\":${(incidents-storedIncidents).coerceAtLeast(0)},\"incidents\":[")
+        writer.append("{\"schema\":${FirmwarePolicy.SCHEMA},\"kind\":\"FIRMWARE_LARGE\",\"profile\":${q(FirmwarePolicy.PROFILE)},\"outcome\":${q(outcome)},\"message\":${q(message)},\"wholeVehicleCoverage\":\"unverified\",\"scope\":\"All ordinary accessible files on attested INTERNAL storage in the SHELL daemon namespace only (UID2000). SD/USB/adopted/unknown storage and aliases excluded before inventory/read; internal firmware, data and emulated storage only; no APP source scan/fallback. Explicit pseudo-filesystem, device, collector output/cache/bootstrap exclusions. No partition image or target execution; live non-atomic, potentially personal data.\",\"startedAt\":${q(meta("started_at").orEmpty())},\"contextBefore\":${meta("context").orEmpty().ifEmpty { "{}" }},\"contextAfter\":${meta("context_after").orEmpty().ifEmpty { "{}" }},\"discoveryComplete\":${meta("discovery_complete")=="1"},\"sourceCount\":$sources,\"incidentCount\":$incidents,\"incidentsOmitted\":${(incidents-storedIncidents).coerceAtLeast(0)},\"incidents\":[")
         var comma=false
         db.rawQuery("SELECT message FROM incidents ORDER BY id",null).use { while(it.moveToNext()){if(comma)writer.append(',');comma=true;writer.append(q(it.getString(0))) } }
         writer.append("],\"coverage\":[");comma=false
         db.rawQuery("SELECT identity,path,state,detail FROM coverage ORDER BY id",null).use {while(it.moveToNext()){if(comma)writer.append(',');comma=true;writer.append("{\"identity\":${q(it.getString(0))},\"path\":${q(it.getString(1))},\"state\":${q(it.getString(2))},\"detail\":${q(it.getString(3))}}")}}
-        writer.append("],\"mountsApp\":${meta("mounts_APP")?:"[]"},\"mountsShell\":${meta("mounts_SHELL")?:"[]"},\"exclusions\":${meta("exclusions")?:"[]"},\"volumes\":[");comma=false
+        writer.append("],\"mountsApp\":${meta("mounts_APP")?:"[]"},\"mountsShell\":${meta("mounts_SHELL")?:"[]"},\"storageProvenance\":${meta("storage_provenance")?:"{}"},\"exclusions\":${meta("exclusions")?:"[]"},\"volumes\":[");comma=false
         for(v in volumes()){if(comma)writer.append(',');comma=true;writer.append("{\"archive\":${q(v.name)},\"state\":${q(v.state)},\"bytes\":${v.bytes}}")}
         writer.append("],\"files\":[");comma=false
         forEachSource { s ->
@@ -174,6 +184,16 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
             writer.append("]}")
         }
         writer.append("]}\n")
+    }
+    companion object {
+        fun requireCompatibleResume(directory:File) {
+            val file=File(directory,"firmware-ledger.sqlite")
+            if(!file.isFile)throw IOException("Reprise refusée : journal inconnu ; démarrer une nouvelle collecte du stockage interne")
+            SQLiteDatabase.openDatabase(file.path,null,SQLiteDatabase.OPEN_READONLY).use { db->
+                fun read(key:String)=db.rawQuery("SELECT v FROM meta WHERE k=?",arrayOf(key)).use {if(it.moveToFirst())it.getString(0) else null}
+                if(read("schema")!=FirmwarePolicy.SCHEMA.toString() || read("profile")!=FirmwarePolicy.PROFILE)throw IOException("Reprise refusée : périmètre de collecte différent. Archives conservées. Démarrer une nouvelle collecte du stockage interne.")
+            }
+        }
     }
     override fun close() = db.close()
 }

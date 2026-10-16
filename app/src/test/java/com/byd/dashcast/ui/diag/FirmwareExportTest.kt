@@ -24,11 +24,12 @@ class FirmwareExportTest {
     @get:Rule val temp=TemporaryFolder()
     private class Device(val files:LinkedHashMap<String,ByteArray>):FirmwareExport.Device {
         var contextValue="{\"fingerprint\":\"synthetic\"}"
+        var contexts=0
         var opens=0
         var discovered=0
         var reader:((FirmwareSource,String)->InputStream)?=null
         var discovery:((FirmwareLedger)->Unit)?=null
-        override fun context()=contextValue
+        override fun context():String {contexts++;return contextValue}
         override fun discover(ledger:FirmwareLedger,check:()->Unit,update:(String)->Unit) {
             discovered++
             if(discovery!=null){discovery!!(ledger);return}
@@ -114,7 +115,7 @@ class FirmwareExportTest {
             val d=temp.newFolder();val data=files(1);run(d,Device(data));val manifest=File(d,"manifest.json").readBytes()
             FirmwareLedger(d).use{it.meta(key,"different")}
             val device=Device(data);val result=run(d,device)
-            assertEquals("failed",result.outcome);assertEquals(0,device.opens);assertEquals(0,device.discovered);assertArrayEquals(manifest,File(d,"manifest.json").readBytes())
+            assertEquals("failed",result.outcome);assertEquals(0,device.opens);assertEquals(0,device.discovered);assertEquals(if(key=="context")1 else 0,device.contexts);assertArrayEquals(manifest,File(d,"manifest.json").readBytes())
         }
     }
     @Test fun `daemon denial never falls back to a readable APP source`() {
@@ -200,7 +201,7 @@ class FirmwareExportTest {
             action.performClick()
             val dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
             val items=(0 until dialog.listView.adapter.count).map{dialog.listView.adapter.getItem(it).toString()}
-            assertEquals("Nouvelle collecte complète accessible",items.first());assertFalse(items.any{it.contains("P15")||it.contains("SYSTEM")||it.contains("CONTEXTE")})
+            assertEquals("Nouvelle collecte du stockage interne",items.first());assertFalse(items.any{it.contains("P15")||it.contains("SYSTEM")||it.contains("CONTEXTE")})
             dialog.dismiss()
         } finally {controller.destroy()}
     }
@@ -209,7 +210,7 @@ class FirmwareExportTest {
         val d=temp.newFolder();val data=files(1);val first=run(d,Device(data));val file=first.archives.single()
         val rows=ZipFile(file).use{z->z.entries().asSequence().map{it.name to z.getInputStream(it).readBytes()}.toList()}
         val mutated=rows.map{(name,bytes)->if(name=="manifest-volume.json"){
-            val changed=String(bytes,Charsets.UTF_8).replaceFirst("\"schema\":2","\"schema\":9").toByteArray(Charsets.UTF_8)
+            val changed=String(bytes,Charsets.UTF_8).replaceFirst("\"schema\":3","\"schema\":9").toByteArray(Charsets.UTF_8)
             assertEquals(bytes.size,changed.size);assertFalse(bytes.contentEquals(changed));name to changed
         }else name to bytes}
         rewrite(file,mutated)
@@ -251,6 +252,42 @@ class FirmwareExportTest {
             assertEquals("failed",result.outcome);assertEquals(0,result.completed)
             assertEquals("failed",org.json.JSONObject(File(dir,"manifest.json").readText()).getString("outcome"))
         }
+    }
+
+    @Test fun `old V2 SD inventory is refused before daemon context volume verification or source reads`() {
+        val d=temp.newFolder();val old=File(d,"firmware-0001.zip").apply {writeText("untouched old archive")}
+        val manifest=File(d,"manifest.json").apply {writeText("{\"schema\":2,\"profile\":\"FIRMWARE_GLOBAL_SHELL_V2\"}")}
+        FirmwareLedger(d).use { ledger->
+            ledger.initialize("old context");ledger.meta("schema","2");ledger.meta("profile","FIRMWARE_GLOBAL_SHELL_V2");ledger.meta("discovery_complete","1")
+            ledger.add("SHELL",FirmwareObserved("/storage/A1B2-C3D4/surveillance/file","/storage/A1B2-C3D4/surveillance/file",1,"old"))
+        }
+        val before=manifest.readBytes();val archive=old.readBytes()
+        val forbidden=object:FirmwareExport.Device {
+            override fun context():String=throw AssertionError("old profile must fail before daemon context")
+            override fun discover(ledger:FirmwareLedger,check:()->Unit,update:(String)->Unit)=throw AssertionError("no old SD inventory")
+            override fun open(source:FirmwareSource,identity:String):InputStream=throw AssertionError("no old SD copy")
+        }
+        FirmwareLedger(d).use { ledger->
+            val result=FirmwareExport(forbidden,d,ledger,{false},{},freeBytes={4L*1024*1024*1024}).run()
+            assertEquals("failed",result.outcome);assertTrue(result.stage.contains("périmètre"));assertEquals(0,result.completed)
+        }
+        assertArrayEquals(before,manifest.readBytes());assertArrayEquals(archive,old.readBytes())
+        val journal=File(d,"firmware-ledger.sqlite").readBytes()
+        try{FirmwareLedger.requireCompatibleResume(d);fail()}catch(_:IOException){}
+        assertArrayEquals(journal,File(d,"firmware-ledger.sqlite").readBytes())
+    }
+
+    @Test fun `excluded external source is rejected before metadata inspection snapshot or file chunk`() {
+        val app=org.robolectric.RuntimeEnvironment.getApplication()
+        var calls=0
+        val binder=object:android.os.Binder(){override fun onTransact(code:Int,data:android.os.Parcel,reply:android.os.Parcel?,flags:Int):Boolean{calls++;throw AssertionError("no external source call")}}
+        val device=FirmwareDevice(app,endpoint={binder},connect={true})
+        val text="1 0 0:1 / / rw - rootfs rootfs rw\n2 1 179:65 / /storage/A1B2-C3D4 rw - exfat /dev/block/vold/public:179,65 rw\n"
+        val mounts=FirmwareMounts.parse(text.byteInputStream())
+        FirmwareDevice::class.java.getDeclaredField("shellMounts").apply {isAccessible=true;set(device,mounts)}
+        val path="/storage/A1B2-C3D4/surveillance/file"
+        try{device.open(FirmwareSource(canonical=path,shellPath=path,shellSize=0,shellStamp="old"),"SHELL");fail()}catch(e:IOException){assertTrue(e.message.orEmpty().contains("Exclusion avant métadonnées"))}
+        assertEquals(0,calls)
     }
 
 }
