@@ -20,6 +20,9 @@ import android.os.IBinder
  */
 object ProxyDaemonContract {
 
+    const val STRICT_FILE_SCHEMA = 1
+    const val CAP_STRICT_FILE_READ = 1
+
     // ─── Binder identity ─────────────────────────────────────────────────
 
     /** AIDL-style descriptor for [android.os.Binder#attachInterface]. */
@@ -225,4 +228,13 @@ object ProxyDaemonContract {
     /** No args → `String report`. Stops the sampler (if still running) and returns every
      *  change recorded since [TXN_PROJECTION_TRACE_START]. */
     const val TXN_PROJECTION_TRACE_DRAIN = IBinder.FIRST_CALL_TRANSACTION + 36 // 37
+    /** No args → int schema, int flags. Added in protocol 26; old endpoints may return false. */
+    const val TXN_FILE_READ_CAPABILITIES = IBinder.FIRST_CALL_TRANSACTION + 37 // 38
+
+    /** String path, long offset, int length, six longs dev/inode/mode/size/mtime/ctime → byte[].
+     * Opens O_RDONLY|O_NOFOLLOW|O_NONBLOCK; fstat identity/type before and after pread.
+     * Errors are remote exceptions, including unreadable empty files; only attested EOF is empty.
+     * Every request closes its FD. No persistent handle, execution, writes or permission changes. */
+    const val TXN_READ_FILE_CHUNK_STRICT = IBinder.FIRST_CALL_TRANSACTION + 38 // 39
+
 }

@@ -11,16 +11,11 @@ import java.util.Base64
 
 class FirmwarePolicyTest {
     @get:Rule val temp=TemporaryFolder()
-    @Test fun `scope requires both requested and canonical paths and strict APEX versions`() {
-        assertTrue(FirmwarePolicy.accepted("/system/vendor/lib/a.so","/vendor/lib/a.so"))
-        assertTrue(FirmwarePolicy.firmware("/apex/com.android.runtime@123/lib64/a.so"))
-        assertTrue(FirmwarePolicy.firmware("/system/etc/a b|c\n'd"))
-        for(path in listOf("/dev/x","/proc/a","/sys/x","/data/apex/x","/systematic/x","/system/../data/key","/system//a","/apex/foo@bad/lib/x","/apex/foo@12x/lib/x","/apex/foo@1@2/lib/x","/apex/apex-info-list.xml"))assertFalse(path,FirmwarePolicy.firmware(path))
-        assertFalse(FirmwarePolicy.accepted("/system/bin/x","/data/private/x"))
-        assertFalse(FirmwarePolicy.accepted("/data/private/x","/system/bin/x"))
-        assertFalse(FirmwarePolicy.accepted("/data/app/pkg/base.apk","/data/app/pkg/base.apk"))
-        assertTrue(FirmwarePolicy.accepted("/data/app/pkg/base.apk","/data/app/pkg/base.apk",true))
-        assertFalse(FirmwarePolicy.accepted("/data/data/pkg/private.apk","/data/data/pkg/private.apk",true))
+    @Test fun `global scope accepts ordinary paths independent of root and rejects interfaces and our own output`() {
+        for(path in listOf("/","/system/lib/a.so","/data/vendor/file","/storage/emulated/0/photo.jpg","/data/apex/decompressed/x","/apex/module@bad/lib/x","/random/file"))assertTrue(path,FirmwarePolicy.firmware(path))
+        for(path in listOf("/dev/x","/proc/a","/sys/x","/system/../data/key","/system//a","/data/local/tmp/dashcast-firmware-123/names-1","/data/media/0/Android/data/com.byd.dashcast/files/a.zip","/data/user/10/com.byd.dashcast/shared_prefs/a","/data/data/com.byd.dashcast/cache/x"))assertFalse(path,FirmwarePolicy.firmware(path))
+        assertFalse(FirmwarePolicy.accepted("/data/file","/proc/uptime"))
+        assertTrue(FirmwarePolicy.accepted("/data/vendor/file","/data/vendor/file"))
     }
     @Test fun `bounded line decoder rejects truncation and invalid UTF8 before interpreting paths`() {
         try{FirmwarePolicy.boundedLines("x".repeat(FirmwarePolicy.MAX_LINE+1));fail()}catch(_:IOException){}
@@ -61,12 +56,12 @@ class FirmwarePolicyTest {
         }
         val snapshot=File(temp.newFolder(),"names-1")
         val command=FirmwareShell.snapshot("/system","/data/local/tmp/dashcast-firmware-123/names-1",true)
-            .replace("/system",folder.absolutePath).replace("/data/local/tmp/dashcast-firmware-123/names-1",snapshot.absolutePath)
+            .replace("/system",folder.absolutePath).replace("/data/local/tmp/dashcast-firmware-123/names-1",snapshot.absolutePath).replace("/data/local/tmp/dashcast-firmware-123",snapshot.parentFile!!.absolutePath)
         assertEquals(0,shell(command).first)
         val paths=ArrayList<String>();FirmwareNames.read(snapshot.inputStream(),{fail(it)}){if(it!=null)paths.add(it)}
         assertEquals(40,paths.size);assertEquals(40,paths.distinct().size)
     }
-    @Test fun `shell page records denied entry and still inventories its readable sibling`() {
+    @Test fun `shell metadata never opens unreadable files and still inventories its sibling`() {
         val folder=temp.newFolder();val denied=File(folder,"denied");denied.writeText("fixture")
         Files.setPosixFilePermissions(denied.toPath(),emptySet())
         File(folder,"good").writeBytes(byteArrayOf())
@@ -74,12 +69,12 @@ class FirmwarePolicyTest {
             val result=shell(FirmwareShell.batch(listOf("/system/denied","/system/good")).replace("/system",folder.absolutePath))
             assertEquals(result.second,0,result.first)
             val rows=FirmwarePolicy.boundedLines(result.second)
-            // This desktop fixture runs as an unprivileged user; no vehicle permission is changed.
-            assertEquals(1,rows.count{it.startsWith("E|")});assertEquals(1,rows.count{it.startsWith("F|")});assertTrue(rows.contains("BATCH|2"))
+            // Metadata does not read payload; the strict FD reader later records any denied open.
+            assertEquals(0,rows.count{it.startsWith("E|")});assertEquals(2,rows.count{it.startsWith("F|")});assertTrue(rows.contains("BATCH|2"))
         } finally { Files.setPosixFilePermissions(denied.toPath(),setOf(java.nio.file.attribute.PosixFilePermission.OWNER_READ,java.nio.file.attribute.PosixFilePermission.OWNER_WRITE)) }
     }
     @Test fun `file symlink escape is rejected before shell read-open probe`() {
-        val folder=temp.newFolder();val outside=temp.newFile();outside.writeText("fixture")
+        val folder=temp.newFolder();val outside=File("/proc/version")
         val link=File(folder,"alias");Files.createSymbolicLink(link.toPath(),outside.toPath())
         val result=shell(FirmwareShell.inspect("/system/alias").replace("/system",folder.absolutePath))
         assertEquals(3,result.first);assertTrue(result.second.contains("outside-scope"));assertFalse(result.second.startsWith("F|"))
@@ -101,6 +96,36 @@ class FirmwarePolicyTest {
         FirmwareNames.read(names.inputStream(),issues::add,accepted::add)
         assertEquals(listOf("/system/a| b\n","/system/c\n\n",null,null),accepted)
         assertEquals(3,issues.size)
+    }
+
+    @Test fun `all-excluded snapshot still yields bounded pages and cancellation before another input chunk`() {
+        val bytes=(0 until 10000).joinToString("") {"/proc/excluded$it\u0000"}.toByteArray()
+        var reads=0;var stopped=false;var pages=0
+        val input=object:java.io.ByteArrayInputStream(bytes){override fun read(b:ByteArray,off:Int,len:Int):Int {reads++;return super.read(b,off,len)}}
+        try {
+            FirmwareNames.pages(input,{if(stopped)throw java.util.concurrent.CancellationException()}) {paths,issues->
+                assertEquals(FirmwarePolicy.PAGE,paths.size);assertTrue(issues.isEmpty());assertTrue(paths.all{!FirmwarePolicy.firmware(it!!)})
+                pages++;stopped=true
+            };fail()
+        }catch(_:java.util.concurrent.CancellationException){}
+        assertEquals(1,pages);assertEquals(1,reads)
+    }
+    @Test fun `malformed names and exclusions share bounded pages without per-name destination mutation`() {
+        val bytes=buildString {repeat(100){append("/proc/x$it\u0000")}}.toByteArray()+byteArrayOf(0xc3.toByte(),0)
+        var entries=0;var pages=0;var issues=0
+        FirmwareNames.pages(bytes.inputStream(),{}) {paths,errors->assertTrue(paths.size<=FirmwarePolicy.PAGE);entries+=paths.size;pages++;issues+=errors.size}
+        assertEquals(101,entries);assertEquals(7,pages);assertEquals(1,issues)
+    }
+    @Test fun `temporary filesystem reserve fails closed before a snapshot can be written`() {
+        val guard=FirmwareShell.space("/data/local/tmp/dashcast-firmware-123")
+        val low=shell("stat() { case \"\$*\" in *%a*) printf '1' ;; *%S*) printf '4096' ;; esac; }; $guard printf unexpected")
+        assertEquals(123,low.first);assertFalse(low.second.contains("unexpected"))
+        val unknown=shell("stat() { return 1; }; $guard printf unexpected")
+        assertEquals(123,unknown.first)
+        val malformed=shell("stat() { printf 'unknown'; }; $guard printf unexpected")
+        assertEquals(123,malformed.first);assertFalse(malformed.second.contains("unexpected"))
+        val enough=shell("stat() { case \"\$*\" in *%a*) printf '1000000' ;; *%S*) printf '4096' ;; esac; }; $guard printf ready")
+        assertEquals(0,enough.first);assertEquals("ready",enough.second)
     }
 
 }
