@@ -22,6 +22,7 @@ object ProxyDaemonContract {
 
     const val STRICT_FILE_SCHEMA = 1
     const val CAP_STRICT_FILE_READ = 1
+    const val CAP_STORAGE_METADATA = 2
 
     // ─── Binder identity ─────────────────────────────────────────────────
 
@@ -236,5 +237,8 @@ object ProxyDaemonContract {
      * Errors are remote exceptions, including unreadable empty files; only attested EOF is empty.
      * Every request closes its FD. No persistent handle, execution, writes or permission changes. */
     const val TXN_READ_FILE_CHUNK_STRICT = IBinder.FIRST_CALL_TRANSACTION + 38 // 39
+    /** int closedOperation, byte[] UTF8 validatedArgument → byte[] complete bounded UTF8 metadata.
+     * Additive capability at protocol 26; bootstrap never uses ProxyShell or a PID file. */
+    const val TXN_STORAGE_METADATA = IBinder.FIRST_CALL_TRANSACTION + 39 // 40
 
 }

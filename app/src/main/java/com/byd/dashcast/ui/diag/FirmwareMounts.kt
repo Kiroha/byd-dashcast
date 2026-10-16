@@ -7,7 +7,7 @@ import java.security.MessageDigest
 /** Mount metadata only. Mount IDs, propagation IDs and options are provenance, not resume identity. */
 internal data class FirmwareMount(val device: String, val root: String, val point: String, val type: String, val raw: String = "", val source: String = "")
 
-internal class FirmwareMounts(val entries: List<FirmwareMount>, private val exclusions: List<String> = emptyList()) {
+internal class FirmwareMounts(val entries: List<FirmwareMount>, private val exclusions: List<String> = emptyList(), val storageProof:FirmwareStorage=FirmwareStorage()) {
     companion object {
         const val MAX_BYTES = 2 * 1024 * 1024
         const val MAX_MOUNTS = 4096
@@ -30,7 +30,7 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
                 }
             }
         }
-        fun parse(input: InputStream, exclusions: List<String> = emptyList()): FirmwareMounts {
+        fun parse(input: InputStream, exclusions: List<String> = emptyList(),storage:FirmwareStorage=FirmwareStorage()): FirmwareMounts {
             var bytes=0
             val bounded=object:java.io.FilterInputStream(input){
                 override fun read():Int {val n=super.read();if(n>=0 && ++bytes>MAX_BYTES)throw IOException("Mount metadata exceeds byte budget");return n}
@@ -52,13 +52,11 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
                 if(c==10)consume() else {if(line.length>=FirmwarePolicy.MAX_LINE)throw IOException("Mount metadata line exceeds budget");line.append(c.toChar())}}
             if(line.isNotEmpty())throw IOException("Incomplete mountinfo final record")
             if(result.none{it.point=="/"})throw IOException("Mountinfo has no root; namespace coverage unknown")
-            return FirmwareMounts(result,exclusions)
+            return FirmwareMounts(result,exclusions,storage)
         }
     }
     private val points=java.util.TreeMap<String,FirmwareMount>().apply {this@FirmwareMounts.entries.forEach {put(it.point,it)}}
     private val topologyCache=object:LinkedHashMap<String,String>(32,0.75f,true){override fun removeEldestEntry(eldest:MutableMap.MutableEntry<String,String>?)=size>32}
-    private val knownFuseDevices=entries.filter {it.type in setOf("fuse","fuseblk") && androidStorage.matches(it.point) &&
-        (it.source=="/dev/fuse" || it.source.startsWith("/dev/block/"))}.map{it.device}.toSet()
     private val ambiguous=entries.groupBy{it.point}.filterValues{it.size>1}.keys
     private val sensitiveDevices=entries.filter { it.type in pseudo || listOf("/dev","/proc","/sys").any { root->within(it.point,root) } }.map{it.device}.toSet()
     private fun backing(path: String, mount: FirmwareMount) = (mount.root.trimEnd('/') + "/" + path.removePrefix(mount.point).trimStart('/')).trimEnd('/').ifEmpty{"/"}
@@ -67,21 +65,36 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
         var candidate=path
         while(true){points[candidate]?.let{return it};if(candidate=="/")return null;candidate=candidate.substringBeforeLast('/',"").ifEmpty{"/"}}
     }
+    private val proofs=entries.associateWith {storageProof.classify(it,::mount)}
+    private val externalDevices=proofs.filterValues{it.kind=="external"}.keys.map{it.device}.toSet()
+    private val internalDevices=proofs.filterValues{it.internal}.keys.map{it.device}.toSet()
+    fun withStorage(storage:FirmwareStorage)=FirmwareMounts(entries,exclusions,storage)
+    /** Destination attestation omits collector-output exclusions, but never storage provenance. */
+    fun storageDecision(path:String):String? {
+        if(!FirmwarePolicy.sane(path))return "unknown storage: invalid path"
+        if(FirmwareStorage.externalPath(path))return "external storage: SD/USB/adopted volume path"
+        val mount=mount(path)?:return "unknown storage: unobserved mount"
+        if(mount.point in ambiguous || mount.device in sensitiveDevices || mount.type !in storage)return "unknown storage: ambiguous or non-ordinary mount"
+        if(mount.device in externalDevices || storageProof.externalMount(mount))return "external storage: volume/device/backing excluded"
+        val proof=proofs[mount]?:return "unknown storage: missing provenance"
+        return if(proof.internal || mount.device in internalDevices)null else proof.reason()
+    }
     fun reason(mount: FirmwareMount): String? = when {
         mount.point in ambiguous -> "ambiguous overlaid mountpoint"
         mount.type in pseudo -> "pseudo filesystem ${mount.type}"
         mount.type !in storage -> "unrecognised/non-local filesystem ${mount.type}"
-        mount.type in setOf("fuse","fuseblk") && mount.device !in knownFuseDevices -> "unrecognised/non-local FUSE provenance"
         mount.device in sensitiveDevices -> "filesystem also mounted as device/pseudo interface"
         !FirmwarePolicy.firmware(mount.point) -> "excluded interface or collector output"
-        else -> null
+        else -> storageDecision(mount.point)
     }
     fun decision(path: String): String? {
+        if(FirmwareStorage.externalPath(path))return "external storage: SD/USB/adopted volume path"
         if(!FirmwarePolicy.firmware(path))return "excluded interface or collector output"
         if(exclusions.any{within(path,it)})return "collector private/cache/export tree"
         val mount=mount(path)?:return "unobserved mount"
         reason(mount)?.let{return it}
         val backed=backing(path,mount)
+        if(FirmwareStorage.externalPath(backed))return "external storage: removable/adopted backing subtree"
         if(!FirmwarePolicy.firmware(backed) || backed.startsWith("/local/tmp/dashcast") || ownUserBacking.matches(backed))return "collector/interface backing subtree"
         if(excludedBacking.any{it.first==mount.device && within(backed,it.second)})return "bind alias of collector output"
         return null
@@ -111,6 +124,6 @@ internal class FirmwareMounts(val entries: List<FirmwareMount>, private val excl
     fun fingerprint(): String = FirmwareExport.hex(MessageDigest.getInstance("SHA-256").digest(
         (entries.sortedWith(compareBy({it.point},{it.device},{it.root},{it.type})).joinToString(",","[","]") {
             listOf(it.point,it.device,it.root,it.type,decision(it.point).orEmpty()).joinToString(",","[","]",transform=FirmwarePolicy::json)
-        }+exclusions.sorted().joinToString(",","[","]",transform=FirmwarePolicy::json)).toByteArray(Charsets.UTF_8)))
+        }+exclusions.sorted().joinToString(",","[","]",transform=FirmwarePolicy::json)+storageProof.json()).toByteArray(Charsets.UTF_8)))
 
 }

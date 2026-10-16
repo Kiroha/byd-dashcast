@@ -7,15 +7,17 @@ import java.io.IOException
 class FirmwareMountsTest {
     private fun row(id:Int,dev:String,root:String,point:String,type:String="ext4",extra:String="",source:String="source")=
         "$id 1 $dev $root $point rw $extra- $type $source rw\n"
+    private val internalBlocks=(1..4096).associate {"8:$it" to FirmwareStorage.Block("8:$it","/sys/devices/platform/soc/mmc_host/mmc0/block/mmcblk0","0","MMC")}
+    private val storage=FirmwareStorage(internalBlocks,"null","private mounted null\nemulated mounted null")
     private fun table(extra:String="",excluded:List<String> = emptyList())=FirmwareMounts.parse(
-        (row(1,"0:1","/","/","rootfs")+row(2,"8:2","/","/data")+extra).byteInputStream(),excluded)
+        (row(1,"0:1","/","/","rootfs")+row(2,"8:2","/","/data")+extra).byteInputStream(),excluded,storage)
 
     @Test fun `mount parser preserves escaped paths optional metadata and raw provenance`() {
         val value=table(row(3,"8:3","/a\\040b\\011c\\012d\\134e","/storage/a\\040b","vfat","shared:17 future:thing "))
         val mount=value.entries.last()
         assertEquals("/a b\tc\nd\\e",mount.root);assertEquals("/storage/a b",mount.point)
         assertTrue(mount.raw.contains("future:thing"));assertTrue(value.json().contains("rawMountinfo"))
-        assertNull(value.decision("/storage/a b/photo.jpeg"))
+        assertNotNull(value.decision("/storage/a b/photo.jpeg"))
     }
     @Test fun `pseudo aliases unknown types and nested overrides are excluded by longest mount`() {
         val value=table(row(3,"0:5","/","/proc","proc")+row(4,"0:5","/sys","/data/alias","proc")+
@@ -82,7 +84,7 @@ class FirmwareMountsTest {
     }
     @Test fun `4096 mounts use prefix lookup and bounded directory topology cache`() {
         val text=buildString {append(row(1,"0:1","/","/","rootfs"));repeat(FirmwareMounts.MAX_MOUNTS-1){append(row(it+2,"8:${it+1}","/","/vol${it.toString().padStart(4,'0')}"))}}
-        val value=FirmwareMounts.parse(text.byteInputStream())
+        val value=FirmwareMounts.parse(text.byteInputStream(),storage=storage)
         assertEquals(FirmwareMounts.MAX_MOUNTS,value.entries.size)
         for(i in 0 until 1000){val path="/vol${i.toString().padStart(4,'0')}/deep/file";assertEquals("8:${i+1}",value.mount(path)!!.device);assertEquals("[]",value.topology(path))}
         val cache=FirmwareMounts::class.java.getDeclaredField("topologyCache").apply{isAccessible=true}.get(value) as Map<*,*>

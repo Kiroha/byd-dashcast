@@ -7,6 +7,7 @@ import android.os.Parcel
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import com.byd.dashcast.proxy.daemon.StrictFileRead
+import com.byd.dashcast.proxy.daemon.StorageMetadata
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -26,18 +27,23 @@ internal class FirmwareSerialGate {
 
 internal class FirmwareDevice(private val context: Context, private val cancelled: () -> Boolean = {false},
     private val endpoint: () -> IBinder? = {ProxyClient.getProxyDaemonBinder()},
+    private val observeOutput:(String,List<String>,FirmwareStorage)->String = FirmwareOutput::observe,
     private val connect: (Context) -> Boolean = {ProxyClient.connect(it)}) : FirmwareExport.Device {
+    override val outputGuard=FirmwareWriteGuard { validateDestinationState() }
     private val gate=FirmwareSerialGate()
     private var initialized=false
     private var binder: IBinder?=null
     private var shellProblem=""
     private var shellMounts:FirmwareMounts?=null
     private var protocol="unavailable"
-    private val exclusions=buildList {
-        add(context.applicationInfo.dataDir)
-        context.getExternalFilesDirs(null).filterNotNull().forEach {add(it.parentFile!!.path)}
-        context.externalCacheDirs.filterNotNull().forEach {add(it.parentFile!!.path)}
-    }.flatMap {listOf(it,runCatching {File(it).canonicalPath}.getOrDefault(it))}.distinct()
+    private val exclusions=listOf(context.applicationInfo.dataDir,
+        "/storage/emulated/${android.os.Process.myUid()/100000}/Android/data/${context.packageName}",
+        "/data/media/${android.os.Process.myUid()/100000}/Android/data/${context.packageName}")
+    private var preparedContext:String?=null
+    private var destination:String?=null
+    private var appOutputView:String?=null
+    private var pinnedOutputMounts:FirmwareMounts?=null
+    private var temporaryParent:String?=null
     private val temporary="/data/local/tmp/dashcast-firmware-${java.util.UUID.randomUUID()}"
     private var temporaryReady=false
     private var shellSnapshotsBlocked=false
@@ -57,15 +63,14 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     }
 
     override fun context(): String {
+        preparedContext?.let {preparedContext=null;return it}
         init()
         val values=sortedMapOf("fingerprint" to Build.FINGERPRINT,"device" to Build.DEVICE,"product" to Build.PRODUCT,
             "display" to Build.DISPLAY,"api" to Build.VERSION.SDK_INT.toString(),"appUid" to android.os.Process.myUid().toString(),
             "shellUid" to if(binder==null)"unavailable" else "2000","profile" to FirmwarePolicy.PROFILE)
         if(binder!=null) {
             for(key in listOf("ro.build.fingerprint","ro.build.version.incremental","ro.build.region","sys.byd.countrycode")) {
-                val result=exec("getprop ${ApkInventoryShell.quote(key)}")
-                if(result.first!=0)throw IOException("Contexte ROM SHELL indisponible : $key exit=${result.first}")
-                values["shell:$key"]=result.second.trim()
+                values["shell:$key"]=metadata(StorageMetadata.PROPERTY,key).trim()
             }
         }
         shellMounts=readMounts()
@@ -75,7 +80,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     }
     override fun discover(ledger:FirmwareLedger,check:()->Unit,update:(String)->Unit) {
         init();check();updateDiscovery=update
-        ledger.coverage("SCOPE","mountinfo","declared","Global ordinary accessible files in the SHELL daemon mount namespace only (UID2000), including readable /data and user storage, independent of extension. Explicit device/pseudo/collector exclusions; live non-atomic, no partition image, no APP source scan/fallback.")
+        ledger.coverage("SCOPE","mountinfo","declared","Ordinary accessible files on attested INTERNAL storage only in the SHELL daemon namespace (UID2000), independent of extension. SD, USB, adopted and unknown storage excluded before inventory and reads, including aliases. Internal firmware/data/emulated storage retained; no APP source scan/fallback, live non-atomic, no partition image.")
         ledger.meta("exclusions",exclusions.joinToString(",","[","]",transform=FirmwarePolicy::json))
         if(shellProblem.isNotEmpty())ledger.issue(shellProblem)
         for(identity in listOf("SHELL")) {
@@ -83,10 +88,12 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
             val table=shellMounts
             if(table==null){ledger.coverage(identity,"/","unavailable",shellProblem);continue}
             ledger.meta("mounts_$identity",table.json())
+            ledger.meta("storage_provenance",table.storageProof.json())
+            for(issue in table.storageProof.issues)ledger.issue(issue)
             for(mount in table.entries) {
                 check();val reason=table.decision(mount.point)
                 ledger.coverage(identity,mount.point,if(reason==null)"mount_admitted" else "mount_excluded",reason?:"${mount.type}; ${mount.device}; root=${mount.root}")
-                if(reason?.startsWith("unrecognised/non-local")==true || reason?.startsWith("ambiguous")==true)ledger.issue("Montage non inventorié : ${mount.point} : $reason")
+                if(reason?.startsWith("unrecognised/non-local")==true || reason?.startsWith("ambiguous")==true || reason?.startsWith("unknown storage")==true)ledger.issue("Montage non inventorié : ${mount.point} : $reason")
                 if(reason==null && table.decision(mount.point)==null)ledger.enqueue(identity,mount.point)
             }
         }
@@ -101,10 +108,10 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
             }
     }
     override fun close() {
-        updateDiscovery=null
+        updateDiscovery=null;preparedContext=null
+        outputGuard.check()
         if(temporaryReady) {
-            val removed=exec("rm -rf ${ApkInventoryShell.quote(temporary)} && [ ! -e ${ApkInventoryShell.quote(temporary)} ]",true)
-            if(removed.first!=0)throw IOException("Snapshot temporaire conservé : $temporary")
+            if(!removeTemporary(temporary,true))throw IOException("Snapshot temporaire conservé : $temporary")
             temporaryReady=false
         }
     }
@@ -115,20 +122,131 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     }
     private fun temporary() {
         if(temporaryReady)return
+        outputGuard.validate()
+        attestTemporary(temporary)
         val ready=exec("umask 077; mkdir ${ApkInventoryShell.quote(temporary)}")
         if(ready.first!=0)throw IOException("Répertoire de snapshots SHELL indisponible")
         temporaryReady=true
     }
     private fun readMounts():FirmwareMounts {
-        temporary()
-        val target="$temporary/mountinfo"
-        val result=exec(FirmwareShell.space(temporary)+"umask 077; ( ulimit -f 2048 || exit 125; cat /proc/self/mountinfo ) > ${ApkInventoryShell.quote(target)} 2>/dev/null")
-        if(result.first!=0)throw IOException("Snapshot mountinfo incomplet, exit ${result.first}")
-        val metadata=exec("stat -L -c '%f:%s:%Y:%Z:%i:%d' ${ApkInventoryShell.quote(target)}")
-        if(metadata.first!=0)throw IOException("Métadonnées snapshot mountinfo refusées")
-        val expected=StrictFileRead.Expected.shell(metadata.second.trim())
-        if(expected.size>FirmwareMounts.MAX_BYTES)throw IOException("Snapshot mountinfo excessif")
-        return rawStream(target,expected).use {FirmwareMounts.parse(it,exclusions)}
+        // Bootstrap is direct metadata only: do not create a snapshot on an unproven medium.
+        val bytes=metadata(StorageMetadata.MOUNTINFO).toByteArray(Charsets.UTF_8)
+        if(bytes.size>196608)throw IOException("Mountinfo absent/excessif ; aucun temporaire créé")
+        val raw=FirmwareMounts.parse(bytes.inputStream(),exclusions)
+        return raw.withStorage(readStorage(raw))
+    }
+    private fun readStorage(mounts:FirmwareMounts):FirmwareStorage {
+        val issues=ArrayList<String>()
+        fun field(operation:Int,label:String,maxBytes:Int):String? {
+            return try {val value=metadata(operation);if(value.toByteArray(Charsets.UTF_8).size>maxBytes)throw IOException("excessif");value.trimEnd('\n','\r')}
+            catch(e:CancellationException){throw e}catch(e:Exception){issues.add("Métadonnées $label indisponibles/excessives ; provenance inconnue");null}
+        }
+        val primary=field(StorageMetadata.PRIMARY_UUID,"primary storage UUID",4096)?.takeIf {it=="null" || it.matches(Regex("[A-Za-z0-9_-]+"))}
+        val volumes=field(StorageMetadata.VOLUMES,"storage volumes",64*1024)
+        val boot=field(StorageMetadata.BOOT_DEVICE,"boot controller",4096).orEmpty()
+        val nodes=LinkedHashMap<String,FirmwareStorage.Block>()
+        val pending=java.util.ArrayDeque<Pair<String,Int>>()
+        mounts.entries.filter {it.device.substringBefore(':').toLongOrNull()?.let {major->major>0}==true &&
+            !FirmwareStorage.externalPath(it.point) && !FirmwareStorage.externalSource(it.source)}.map{it.device}.distinct().forEach{pending.add(it to 0)}
+        while(pending.isNotEmpty()) {
+            if(cancelled())throw CancellationException("Annulation pendant provenance stockage")
+            val (device,depth)=pending.removeFirst()
+            if(device in nodes)continue
+            if(nodes.size>=FirmwareStorage.MAX_BLOCKS){issues.add("Limite ${FirmwareStorage.MAX_BLOCKS} métadonnées blocs ; supports restants inconnus");break}
+            if(depth>FirmwareStorage.MAX_DEPTH){issues.add("Profondeur blocs limitée : $device");continue}
+            try {
+                val f=FirmwarePolicy.boundedLines(metadata(StorageMetadata.BLOCK,device)).single().split('|')
+                if(f.size!=7 || f[0]!="BLOCK" || f[1]!=device)throw IOException("Champs blocs invalides")
+                val path=FirmwarePolicy.decoded(f[2]);val rawBacking=FirmwarePolicy.decoded(f[6])
+                val backing=if(rawBacking.isEmpty())"" else if(rawBacking.endsWith('\n'))rawBacking.removeSuffix("\n") else throw IOException("Attribut loop tronqué")
+                val dependencies=if(f[5].isEmpty())emptyList() else f[5].split(',')
+                if(!path.startsWith("/sys/devices/") || path.length>4096 || dependencies.size>16 || dependencies.any{!it.matches(Regex("[0-9]+:[0-9]+"))} || f[3] !in setOf("","0","1") || f[4].length>32 || backing.length>4096)throw IOException("Provenance blocs invalide")
+                nodes[device]=FirmwareStorage.Block(device,path,f[3],f[4],dependencies,backing)
+                dependencies.forEach{pending.add(it to depth+1)}
+            }catch(e:CancellationException){throw e}catch(e:Exception){nodes[device]=FirmwareStorage.Block(device,"","","");issues.add("Provenance bloc inconnue $device : ${e.message}")}
+        }
+        return FirmwareStorage(nodes,primary,volumes,boot,issues)
+    }
+    /** Own output path metadata only. Resolve the nearest existing ancestor without creating it. */
+    private fun attestInternalPath(path:String):String {
+        if(!FirmwarePolicy.sane(path))throw IOException("Chemin destination invalide")
+        val f=metadata(StorageMetadata.OUTPUT,path,cleanup=true).trimEnd('\n').split('|')
+        if(f.size!=2)throw IOException("Métadonnées destination invalides")
+        val real=FirmwarePolicy.decoded(f[0]);val device=f[1].toLongOrNull()?:throw IOException("Périphérique destination inconnu")
+        val table=table("SHELL")
+        val reason=table.storageDecision(path)?:table.storageDecision(real)
+        if(reason!=null || !table.deviceMatches(real,device))throw IOException("Destination/temporaire refusé : stockage interne non établi ($reason)")
+        return real
+    }
+    override fun prepareDestination(path:String) = outputGuard.attest {
+        val context=context()
+        attestInternalPath(path);attestAppOutput(path)
+        // All later writes, including the NUL inventory snapshots, require an internal temp FS.
+        temporaryParent=attestInternalPath("/data/local/tmp")
+        preparedContext=context;destination=path;pinnedOutputMounts=table("SHELL")
+    }
+    private fun attestAppOutput(path:String) {
+        val view=observeOutput(path,exclusions,table("SHELL").storageProof)
+        if(appOutputView!=null && view!=appOutputView)throw IOException("Vue sortie APP changée pendant finalisation ; aucune nouvelle provenance admise")
+        appOutputView=view
+    }
+    override fun validateDestination() = outputGuard.validate()
+    private fun validateDestinationState(extra:String?=null) {
+        val path=destination?:throw IOException("Destination non préparée")
+        // Retain the initial physical proofs in both namespaces. Volatile mount IDs may
+        // change; a covering device/root/point/type/source tuple may never be replaced.
+        val previous=pinnedOutputMounts?:throw IOException("Preuve sortie absente")
+        val bytes=metadata(StorageMetadata.MOUNTINFO,cleanup=true).toByteArray(Charsets.UTF_8)
+        val fresh=FirmwareMounts.parse(bytes.inputStream(),exclusions,previous.storageProof)
+        for(target in listOfNotNull(path,"/data/local/tmp",extra)) {
+            val before=previous.mount(target);val after=fresh.mount(target)
+            if(before==null || after==null || listOf(before.device,before.root,before.point,before.type,before.source)!=listOf(after.device,after.root,after.point,after.type,after.source))throw IOException("Vue destination changée pendant finalisation ; provenance nouvelle refusée")
+        }
+        shellMounts=fresh
+        attestInternalPath(path);attestAppOutput(path);attestInternalPath("/data/local/tmp")
+    }
+    /** Exact generated temp path, fresh covering view, canonical path and actual device.
+     * A missing target is not removed. Cancellation permits only these bounded checks and
+     * the ensuing closed cleanup command; a terminal refusal permits no Binder call. */
+    private fun attestTemporary(path:String):Boolean {
+        var exists=false
+        outputGuard.attest {
+            validateDestinationState(path)
+            val real=attestInternalPath(path)
+            val parent=temporaryParent?:throw IOException("Preuve temporaire absente")
+            val expected=parent+temporary.removePrefix("/data/local/tmp")+path.removePrefix(temporary)
+            if(real==expected)exists=true
+            else if(!expected.startsWith(real.trimEnd('/')+"/"))throw IOException("Chemin temporaire canonique changé ; suppression refusée")
+        }
+        return exists
+    }
+    private fun removeTemporary(path:String,directory:Boolean):Boolean {
+        if(!attestTemporary(path))return true
+        // Never recursively descend into a newly mounted child or an unknown leftover.
+        // Known snapshots are removed individually; a nonempty temp directory is retained.
+        val command=if(directory)"rmdir" else "rm -f"
+        return exec("$command ${ApkInventoryShell.quote(path)} && [ ! -e ${ApkInventoryShell.quote(path)} ]",true).first==0
+    }
+    private fun metadata(operation:Int,argument:String="",cleanup:Boolean=false):String {
+        outputGuard.check()
+        if(!cleanup && cancelled())throw CancellationException("Annulation avant métadonnées")
+        return gate.call {
+            val b=binder?:throw IOException("Daemon metadata absent")
+            val data=Parcel.obtain();val reply=Parcel.obtain()
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);data.writeInt(operation);data.writeByteArray(argument.toByteArray(Charsets.UTF_8))
+                if(!b.transact(ProxyDaemonContract.TXN_STORAGE_METADATA,data,reply,0))throw IOException("Capacité metadata absente")
+                reply.readException()
+                if(reply.dataAvail()<4)throw IOException("Réponse metadata tronquée")
+                val position=reply.dataPosition();val length=reply.readInt()
+                if(length !in 0..StorageMetadata.MAX_BYTES || reply.dataAvail()!=((length+3)/4)*4)throw IOException("Réponse metadata mal cadrée/excessive")
+                reply.setDataPosition(position)
+                val response=reply.createByteArray()?:throw IOException("Réponse metadata nulle")
+                val value=Charsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(response)).toString()
+                if(reply.dataAvail()!=0 || value.toByteArray(Charsets.UTF_8).size>StorageMetadata.MAX_BYTES)throw IOException("Réponse metadata excessive")
+                value
+            }finally{data.recycle();reply.recycle()}
+        }
     }
     private fun rawStream(path:String,expected:StrictFileRead.Expected):InputStream=object:InputStream(){
         private var offset=0L;private var ended=false
@@ -161,12 +279,13 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
                 if(!binder!!.transact(ProxyDaemonContract.TXN_FILE_READ_CAPABILITIES,data,reply,0))throw IOException("Lecture stricte non annoncée")
                 reply.readException();if(reply.dataAvail()!=8)throw IOException("Réponse capacités mal cadrée");val schema=reply.readInt();val flags=reply.readInt()
-                if(schema!=ProxyDaemonContract.STRICT_FILE_SCHEMA || flags and ProxyDaemonContract.CAP_STRICT_FILE_READ==0)throw IOException("Schéma/capacité stricte incompatible")
+                if(schema!=ProxyDaemonContract.STRICT_FILE_SCHEMA || flags and (ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA)!=(ProxyDaemonContract.CAP_STRICT_FILE_READ or ProxyDaemonContract.CAP_STORAGE_METADATA))throw IOException("Schéma/capacité stricte incompatible")
             }finally{reply.recycle();data.recycle()}
         }
     }
     private fun scanShell(dir:FirmwareDirectory,ledger:FirmwareLedger,check:()->Unit) {
-        if(!temporaryReady || shellSnapshotsBlocked)throw IOException("Snapshot SHELL indisponible ou nettoyage précédent non confirmé ; aucun nouveau snapshot")
+        if(!temporaryReady)temporary()
+        if(shellSnapshotsBlocked)throw IOException("Snapshot SHELL indisponible ou nettoyage précédent non confirmé ; aucun nouveau snapshot")
         if(table("SHELL").entries.any{it.point==dir.path}) {
             val node=exec(FirmwareShell.batch(listOf(dir.path)))
             if(node.first!=0)throw IOException("Type du montage SHELL inconnu")
@@ -190,6 +309,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
         val incidentsBefore=ledger.incidents
         val snapshot="$temporary/names-${dir.id}"
         try {
+        attestTemporary(snapshot)
         val result=exec(FirmwareShell.snapshot(dir.path,snapshot,aliasAllowed))
         check()
         val completion=FirmwarePolicy.boundedLines(result.second).firstOrNull{it.startsWith("SCAN|") }?.substringAfter('|')?.toIntOrNull()
@@ -264,7 +384,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 if(complete && ledger.incidents==incidentsBefore)ledger.completeDirectory("SHELL",node,table("SHELL").topology(dir.path),dir.path)
             }
         }finally{
-            val removed=runCatching {exec("rm -f ${ApkInventoryShell.quote(snapshot)} && [ ! -e ${ApkInventoryShell.quote(snapshot)} ]",true).first==0}.getOrDefault(false)
+            val removed=runCatching {removeTemporary(snapshot,false)}.getOrDefault(false)
             if(!removed){shellSnapshotsBlocked=true;ledger.issue("Nettoyage snapshot SHELL non confirmé : $snapshot ; aucun nouveau snapshot dans cette session")}
         }
     }
@@ -295,6 +415,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
         return rawStream(canonical,StrictFileRead.Expected.shell(stamp))
     }
     private fun exec(command:String,cleanup:Boolean=false):Pair<Int,String> {
+        outputGuard.check()
         if(!cleanup && cancelled())throw CancellationException("Annulation après le retour de la commande précédente")
         return gate.call {
         val b=binder?:throw IOException("SHELL indisponible")
@@ -310,6 +431,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
         }
     }
     private fun strictChunk(path:String,offset:Long,size:Int,expected:StrictFileRead.Expected):ByteArray {
+        outputGuard.check()
         if(cancelled())throw CancellationException("Annulation après le retour de la lecture précédente")
         return gate.call {
         val b=binder?:throw IOException("SHELL indisponible")
