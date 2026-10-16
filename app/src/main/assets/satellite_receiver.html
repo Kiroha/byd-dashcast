@@ -16,32 +16,44 @@ const video = document.getElementById('video');
 const status = document.getElementById('status');
 const metrics = document.getElementById('metrics');
 let peer = null, owner = null, negotiation = null, chain = Promise.resolve(), watchdog = null;
-let lastFrames = -1, lastProgress = 0;
+const pendingOperations = new Set();
+// The first image has a finite startup budget; an established image has a shorter stale limit.
+const FIRST_FRAME_MS = 15000, TOTAL_STARTUP_MS = 30000, STALL_MS = 6000, STATS_PENDING_MS = 8000;
+let lastProgress = 0, startedAt = 0, answerAt = null, diagnosticAttempt = 0;
+let qualityBaseline = null, webkitBaseline = null, statsBaseline = null, statsReportId = null;
+let statsRequestedAt = null, statsCompletedAt = null, statsState = 'not_requested', observed = {};
 let epoch = 0, queued = 0, statsInFlight = false, metricsVisible = false;
 let previousStats = null;
 let decodedReported = false, connectedReported = false;
-function progress(code) { if (typeof DashCastVideo.progress === 'function') DashCastVideo.progress(code); }
+function progress(code) { if (typeof DashCastVideo.progress === 'function') DashCastVideo.progress(diagnosticAttempt, code); }
 window.setMetricsVisible = value => { metricsVisible = value === true; metrics.style.display = metricsVisible ? 'block' : 'none'; };
 function send(type, values) {
-  if (owner && negotiation) DashCastVideo.send(owner, JSON.stringify(Object.assign({type, negotiation}, values)));
+  if (owner && negotiation) DashCastVideo.send(diagnosticAttempt, owner, JSON.stringify(Object.assign({type, negotiation}, values)));
 }
 function resetReceiver(invalidate = true) {
   if (invalidate) { epoch++; chain = Promise.resolve(); queued = 0; }
+  for (const cancel of pendingOperations) cancel();
+  pendingOperations.clear();
   if (watchdog) clearInterval(watchdog);
   watchdog = null;
-  if (peer) { peer.onicecandidate = null; peer.ontrack = null; peer.close(); }
+  if (peer) { peer.onicecandidate = null; peer.ontrack = null; peer.onconnectionstatechange = null; peer.close(); }
   peer = null; owner = null; negotiation = null;
   video.srcObject = null; status.style.display = 'flex';
-  lastFrames = -1; lastProgress = 0; statsInFlight = false; previousStats = null;
+  lastProgress = 0; answerAt = null; statsInFlight = false; previousStats = null;
+  statsBaseline = null; statsReportId = null; qualityBaseline = null; webkitBaseline = null;
+  statsRequestedAt = null; statsCompletedAt = null; statsState = 'not_requested'; observed = {};
   decodedReported = false; connectedReported = false;
   metrics.textContent = '';
 }
 function bounded(promise) {
-  let timer;
-  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), 8000); });
+  let timer, cancel;
+  const timeout = new Promise((_, reject) => {
+    cancel = () => reject(new Error('timeout'));
+    pendingOperations.add(cancel); timer = setTimeout(cancel, 8000);
+  });
   return Promise.race([promise, timeout]).then(value => {
-    clearTimeout(timer); return value;
-  }, error => { clearTimeout(timer); throw error; });
+    clearTimeout(timer); pendingOperations.delete(cancel); return value;
+  }, error => { clearTimeout(timer); pendingOperations.delete(cancel); throw error; });
 }
 
 function updateMetrics(stats, report, frames) {
@@ -67,18 +79,115 @@ function updateMetrics(stats, report, frames) {
   metrics.textContent = `${name} · ${width === null ? '?' : width}×${height === null ? '?' : height} · ${format(fps)} fps · ${format(kbps)} kbps · decode ${format(decodeMs)} ms · dropped ${dropped === null ? '?' : dropped} · efficient decoder ${hardware}`;
 }
 
-async function receive(id, raw) {
+// Scalars only. Unknown counters remain null, and each counter has its own baseline.
+function counter(value) { return Number.isSafeInteger(value) && value >= 0 && value <= 9000000000000 ? value : null; }
+function qualityCounters() {
+  try {
+    const quality = typeof video.getVideoPlaybackQuality === 'function' ? video.getVideoPlaybackQuality() : null;
+    const total = quality ? counter(quality.totalVideoFrames) : null;
+    const dropped = quality ? counter(quality.droppedVideoFrames) : null;
+    return {total, dropped, decoded:total !== null && dropped !== null && total >= dropped ? total - dropped : null};
+  } catch (_) { return {total:null, dropped:null, decoded:null}; }
+}
+function baselineDom() {
+  qualityBaseline = qualityCounters();
+  webkitBaseline = counter(video.webkitDecodedFrameCount);
+}
+function markDecoded() {
+  if (!decodedReported) { decodedReported = true; progress('frames_decoded'); }
+  lastProgress = performance.now(); status.style.display = 'none';
+}
+function sampleDom() {
+  const quality = qualityCounters(), webkit = counter(video.webkitDecodedFrameCount);
+  // A newly exposed API or a reset/decreased counter establishes a baseline, never freshness.
+  if ((quality.decoded !== null && qualityBaseline !== null && qualityBaseline.decoded !== null &&
+      quality.total >= qualityBaseline.total && quality.dropped >= qualityBaseline.dropped &&
+      quality.decoded > qualityBaseline.decoded) ||
+      (webkit !== null && webkitBaseline !== null && webkit > webkitBaseline)) markDecoded();
+  if (quality.decoded !== null) qualityBaseline = quality;
+  if (webkit !== null) webkitBaseline = webkit;
+  observed.qualityTotal = quality.total; observed.qualityDropped = quality.dropped;
+  observed.webkitDecoded = webkit;
+}
+function observe() {
+  if (typeof DashCastVideo.observe !== 'function') return;
+  const now = performance.now();
+  const age = at => at === null ? null : Math.min(86400000, Math.max(0, Math.floor(now - at)));
+  DashCastVideo.observe(diagnosticAttempt, JSON.stringify(Object.assign({}, observed, {
+    startupAgeMs:age(startedAt), answerAgeMs:age(answerAt), decodedAgeMs:decodedReported ? age(lastProgress) : null,
+    statsPendingAgeMs:statsInFlight ? age(statsRequestedAt) : null,
+    statsCompletedAgeMs:age(statsCompletedAt), statsState, trackReceived:observed.trackReceived === true,
+    mediaConnected:connectedReported, decoded:decodedReported
+  })));
+}
+function requestStats(connection, monitorEpoch) {
+  if (statsInFlight) {
+    if (performance.now() - statsRequestedAt >= STATS_PENDING_MS) statsState = 'timed_out';
+    return;
+  }
+  statsInFlight = true; statsRequestedAt = performance.now(); statsState = 'pending';
+  // Do not release this latch on a timer: the underlying operation may never settle.
+  // DOM sampling and the image watchdog remain independent of that operation.
+  Promise.resolve().then(() => {
+    if (peer !== connection || monitorEpoch !== epoch) return null;
+    return connection.getStats();
+  }).then(stats => {
+    if (peer !== connection || monitorEpoch !== epoch) return;
+    statsCompletedAt = performance.now(); statsState = 'completed';
+    let inbound = null, reportId = null;
+    stats.forEach((report, key) => {
+      if (report.type === 'inbound-rtp' && !report.isRemote &&
+          (report.kind === 'video' || report.mediaType === 'video')) { inbound = report; reportId = key; }
+    });
+    const frames = inbound ? counter(inbound.framesDecoded) : null;
+    // A fresh peer starts at zero. A replacement stats source needs its own baseline.
+    if (frames !== null) {
+      if ((statsReportId === null && statsBaseline === null && frames > 0) ||
+          (reportId === statsReportId && statsBaseline !== null && frames > statsBaseline)) markDecoded();
+      statsBaseline = frames; statsReportId = reportId;
+    }
+    const codec = inbound ? stats.get(inbound.codecId) : null;
+    observed.codec = codec && ['video/H264','video/VP8','video/VP9','video/AV1'].includes(codec.mimeType) ? codec.mimeType.slice(6) : null;
+    for (const name of ['bytesReceived','packetsReceived','packetsLost','framesReceived','framesDecoded','keyFramesDecoded','framesDropped'])
+      observed[name] = inbound ? counter(inbound[name]) : null;
+    if (inbound) updateMetrics(stats, inbound, frames);
+  }).catch(() => {
+    if (peer === connection && monitorEpoch === epoch) { statsCompletedAt = performance.now(); statsState = 'failed'; }
+  }).then(() => { if (peer === connection && monitorEpoch === epoch) statsInFlight = false; });
+}
+function monitor(connection) {
+  const monitorEpoch = epoch;
+  startedAt = performance.now(); baselineDom();
+  watchdog = setInterval(() => {
+    if (peer !== connection || monitorEpoch !== epoch) return;
+    // Sample the independent DOM counters before judging freshness, including hung stats.
+    sampleDom();
+    if (statsInFlight && performance.now() - statsRequestedAt >= STATS_PENDING_MS) statsState = 'timed_out';
+    observe(); // One bounded snapshot per second, including the last pre-timeout evidence.
+    if ((!decodedReported && ((answerAt !== null && performance.now() - answerAt > FIRST_FRAME_MS) ||
+        performance.now() - startedAt > TOTAL_STARTUP_MS)) ||
+        (decodedReported && performance.now() - lastProgress > STALL_MS)) {
+      send('video.error', {code:'video_timeout'}); resetReceiver(); return;
+    }
+    requestStats(connection, monitorEpoch);
+  }, 1000);
+}
+
+async function receive(id, raw, attempt) {
   const message = JSON.parse(raw);
   if (message.type === 'video.offer') {
-    resetReceiver(false); owner = id; negotiation = message.negotiation;
+    resetReceiver(false); owner = id; negotiation = message.negotiation; diagnosticAttempt = attempt;
     const connection = new RTCPeerConnection({iceServers: [], bundlePolicy: 'max-bundle'});
     peer = connection;
+    monitor(connection);
     connection.onicecandidate = event => {
       if (peer === connection && event.candidate) send('video.ice', event.candidate.toJSON());
     };
     connection.ontrack = event => {
       if (peer !== connection || event.track.kind !== 'video') return;
-      progress('track_received');
+      progress('track_received'); observed.trackReceived = true;
+      // The element can retain cumulative counters from the preceding peer.
+      baselineDom();
       video.srcObject = new MediaStream([event.track]);
       video.play().catch(() => {
         if (peer === connection) { send('video.error', {code:'playback_failed'}); resetReceiver(); }
@@ -99,53 +208,26 @@ async function receive(id, raw) {
     await bounded(connection.setLocalDescription(answer));
     if (peer !== connection) return;
     send('video.answer', {sdp:connection.localDescription.sdp});
-    // A stopped source must not leave a frozen map visible indefinitely.
-    lastProgress = performance.now();
-    watchdog = setInterval(() => {
-      if (peer !== connection) return;
-      // Decoder liveness has its own deadline. A hung getStats promise cannot delay clearing.
-      if (performance.now() - lastProgress > 6000) {
-        send('video.error', {code:'video_timeout'}); resetReceiver(); return;
-      }
-      if (statsInFlight) return;
-      statsInFlight = true;
-      const statsEpoch = epoch;
-      bounded(connection.getStats()).then(stats => {
-        if (peer !== connection || statsEpoch !== epoch) return;
-        let inbound = null;
-        stats.forEach(report => {
-          if (report.type === 'inbound-rtp' && (report.kind === 'video' || report.mediaType === 'video')) inbound = report;
-        });
-        let frames = inbound && Number.isFinite(inbound.framesDecoded) ? inbound.framesDecoded : -1;
-        if (frames < 0 && typeof video.getVideoPlaybackQuality === 'function') {
-          const quality = video.getVideoPlaybackQuality();
-          if (quality && Number.isFinite(quality.totalVideoFrames) && Number.isFinite(quality.droppedVideoFrames))
-            frames = Math.max(0, quality.totalVideoFrames - quality.droppedVideoFrames);
-        }
-        if (frames < 0 && Number.isFinite(video.webkitDecodedFrameCount)) frames = video.webkitDecodedFrameCount;
-        // Packet counters and control heartbeats never prove successful decoding.
-        if (frames > 0 && frames > lastFrames) {
-          if (!decodedReported) { decodedReported = true; progress('frames_decoded'); }
-          lastFrames = frames; lastProgress = performance.now(); status.style.display = 'none';
-        }
-        if (inbound) updateMetrics(stats, inbound, frames);
-      }).catch(() => {
-        if (peer === connection && statsEpoch === epoch) { send('video.error', {code:'stats_failed'}); resetReceiver(); }
-      }).then(() => { if (peer === connection && statsEpoch === epoch) statsInFlight = false; });
-    }, 1000);
+    answerAt = performance.now();
   } else if (id === owner && message.negotiation === negotiation && peer) {
     if (message.type === 'video.ice') await peer.addIceCandidate({candidate:message.candidate,
       sdpMid:message.sdpMid, sdpMLineIndex:message.sdpMLineIndex});
     else if (message.type === 'video.stop') resetReceiver();
   }
 }
-window.receiveSignal = (id, raw) => {
+window.receiveSignal = (id, raw, attempt) => {
+  // A replacement offer preempts pending SDP. Its old timeout must never discard the new peer.
+  let type;
+  try { type = JSON.parse(raw).type; } catch (_) {
+    send('video.error', {code:'negotiation_failed'}); resetReceiver(); return;
+  }
+  if (type === 'video.offer') resetReceiver();
   // Bound async signalling as well as native input. A reset invalidates queued old-socket ICE.
   if (queued >= 32) { send('video.error', {code:'signalling_overflow'}); resetReceiver(); return; }
   const submittedEpoch = epoch;
   queued++;
   chain = chain.then(() => {
-    if (submittedEpoch === epoch) return receive(id, raw);
+    if (submittedEpoch === epoch) return receive(id, raw, attempt);
   }).catch(() => {
     if (submittedEpoch === epoch) {
       send('video.error', {code:'negotiation_failed'}); resetReceiver();

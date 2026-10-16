@@ -5,10 +5,20 @@ vehicle receives a single WebRTC track using its installed WebView. It still dec
 the video. Video is experimental until Tbox Ultra 1 / Android 15 and the actual DiLink 3 / Android 10
 vehicle pass the companion's external-video checklist and performance comparison.
 
-The bundled receiver keeps one asynchronous stats request in flight. Its independent six-second
-watchdog clears a stalled image even when `getStats()` never settles. Only decoded-frame counters
-(or actual HTML video decoded-frame counters on older WebViews) establish progress; incoming bytes
-and WSS heartbeats never refresh it. Offer/session reset fences old SDP and stats callbacks.
+The bundled receiver samples HTML video counters once per second independently of `getStats()`.
+Only one underlying stats operation may remain unresolved per peer. At eight seconds it is marked
+timed out in diagnostics, without starting another operation or stopping a healthy decoder.
+A failed stats operation is diagnostic evidence; it does not stop progressing DOM counters.
+The first image has fifteen seconds after the answer is queued, with a hard thirty-second startup
+cap from the offer and the existing eight-second limit for each SDP operation. These budgets are
+not renewed by track/connection/ICE/byte events. After actual decoded-frame progress, the existing
+six-second stale-image limit applies. Incoming bytes and WSS heartbeats never refresh an image.
+
+DOM quality and WebKit counters have separate baselines captured at each new peer/track. Newly
+exposed APIs, decreased raw quality/decoded counters and replacement stats sources rebaseline
+without proving progress. A fresh peer's positive stats decode count is valid evidence. Replacement
+offers preempt pending SDP, cancel its local deadlines and fence its late failures/completions.
+Closing/hiding the viewer releases the peer and all monitoring; no offscreen decoder is retained.
 
 Diagnostics are opt-in: long-press **Preview received map** on the main display to toggle a small
 codec/dimensions/FPS/bitrate/drop/decode-time overlay, then open the cluster viewer. Hardware decoder
@@ -46,6 +56,17 @@ after returning to CarPlay. The newest stage appears first, local session number
 attempts, and the copy includes up to 32 retained entries with saturating scalar totals. Receiver
 bug reports include a separate **Satellite video** history with readiness, received offers,
 queued answers, track/media connection and actual decoded-frame progress.
+
+DashCast 1.9.29-beta also retains the last scalar observation for up to eight receiver attempts
+in process memory. Each one-second snapshot records nullable inbound bytes/packets, received,
+decoded, key and dropped frames, quality/WebKit counters, a codec whitelist, stats state/ages
+and track/connection/decode flags. Missing/invalid values print `?`, never a fabricated zero.
+The attempt number is local, unrelated to wire/session/track identities. Native code bounds
+fields and types, coalesces pending snapshots to one main-thread delivery and rejects obsolete
+WebView/peer attempts. Final snapshots survive stop/CarPlay transitions as historical evidence.
+Compare sender-encoded frames with receiver bytes/packets and decoded counters; a timed-out stats
+operation leaves RTP reception unknown even when DOM decoding is established. Decoded counters
+do not establish physical display, hardware decode or reduced vehicle CPU/GPU use.
 
 These fixed labels, elapsed ages and counts never include payloads, tokens, SDP, routes,
 notifications, candidate/device/network identities or arbitrary errors. ICE uses counters only.
@@ -132,3 +153,21 @@ last ACK is historical, not proof the current receiver cache/image is present. T
 16–64 KiB snapshots: reject only diagnostics, preserving ping/guidance. The existing global message
 limit still applies above 64 KiB. Test unsupported receivers, late/wrong-generation ACKs and LAN
 loss without automatic replay. JVM/TLS fixtures establish these boundaries, not real vehicle video.
+
+## Watchdog regression and vehicle retest
+
+The pre-fix implementation returned early while a stats promise was pending, suppressing DOM
+fallback sampling; its six-second watchdog could stop before the stats request's eight-second
+deadline. Deterministic tests now cover a permanently pending stats operation with progressing
+DOM frames for more than twenty seconds, failed/missing stats, no image at startup, six-second
+stalls after a first frame, raw counter resets, replacement sources and late SDP/stats callbacks.
+Native tests cover strict scalar types/privacy, bounded retention/coalescing and obsolete peer,
+WebView, hidden-viewer and stop generations. These establish the software defect and correction,
+not whether it caused the reported Tbox black screen.
+
+On the parked vehicle, keep DashSat 0.9.2-dev installed, authorize the selected app, return to
+DashCast and leave **Preview received map** visible for at least fifteen seconds. Switch back to
+DashSat, send its diagnostics to DashCast and wait for the received confirmation; then return
+and submit the normal DashCast bug report. The receiver history must now preserve the relevant
+attempt's nullable RTP/decode observations through those foreground switches. A black image still
+requires evidence to distinguish missing RTP reception, decoding failure and unavailable counters.

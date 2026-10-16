@@ -41,6 +41,18 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
     private enum class Bootstrap { STARTING, READY, FAILED }
     private var bootstrap = Bootstrap.STARTING
     private var generation = 0L
+    private var videoAttempt: Long? = null
+    private var videoNegotiation: String? = null
+    private val observationLock = Any()
+    private var pendingObservation: Triple<Long, Long, SatelliteVideoDiagnostics.Observation>? = null
+    private var observationPosted = false
+
+    private fun endVideoAttempt(end: SatelliteVideoDiagnostics.End) {
+        videoAttempt?.let { SatelliteVideoDiagnostics.endAttempt(it, end) }
+        videoAttempt = null
+        videoNegotiation = null
+        synchronized(observationLock) { pendingObservation = null }
+    }
     private lateinit var container: FrameLayout
     private lateinit var overlay: LinearLayout
     private lateinit var stateLabel: TextView
@@ -128,6 +140,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         try {
             val view = WebView(this)
             webView = view
+            SatelliteVideoDiagnostics.providerVersion(runCatching { WebView.getCurrentWebViewPackage()?.versionName }.getOrNull())
             view.settings.apply {
                 javaScriptEnabled = true
                 mediaPlaybackRequiresUserGesture = false
@@ -183,11 +196,20 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         }
 
         @JavascriptInterface
-        fun send(id: String, message: String) {
+        fun send(peerAttempt: Long, id: String, message: String) {
             if (message.length > SatelliteProtocol.MAX_MESSAGE_BYTES) return
             main.post {
-                if (attempt == generation && ready && visible && !isFinishing && !isDestroyed)
+                if (attempt == generation && peerAttempt == videoAttempt && ready && visible && !isFinishing && !isDestroyed) {
                     SatelliteVideoHub.reply(this@SatelliteVideoActivity, id, message)
+                    val json = runCatching { JSONObject(message) }.getOrNull()
+                    if (json?.optString("type") == "video.error") endVideoAttempt(when (json.optString("code")) {
+                        "video_timeout" -> SatelliteVideoDiagnostics.End.VIDEO_TIMEOUT
+                        "playback_failed" -> SatelliteVideoDiagnostics.End.PLAYBACK_FAILED
+                        "connection_lost" -> SatelliteVideoDiagnostics.End.CONNECTION_LOST
+                        "negotiation_failed" -> SatelliteVideoDiagnostics.End.NEGOTIATION_FAILED
+                        else -> SatelliteVideoDiagnostics.End.OTHER_FAILURE
+                    })
+                }
             }
         }
 
@@ -198,10 +220,32 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         }
 
         @JavascriptInterface
-        fun progress(code: String) {
+        fun progress(peerAttempt: Long, code: String) {
             main.post {
-                if (attempt == generation && ready && visible && !isFinishing && !isDestroyed)
+                if (attempt == generation && peerAttempt == videoAttempt && ready && visible && !isFinishing && !isDestroyed)
                     SatelliteVideoDiagnostics.progress(code)
+            }
+        }
+
+        @JavascriptInterface
+        fun observe(peerAttempt: Long, raw: String) {
+            val observation = SatelliteVideoDiagnostics.Observation.parse(raw) ?: return
+            // At most one main-thread delivery is queued, even if the UI thread is busy.
+            synchronized(observationLock) {
+                val pending = pendingObservation
+                if (pending != null && (pending.first > attempt ||
+                        (pending.first == attempt && pending.second > peerAttempt))) return
+                pendingObservation = Triple(attempt, peerAttempt, observation)
+                if (observationPosted) return
+                observationPosted = true
+            }
+            main.post {
+                val latest = synchronized(observationLock) {
+                    observationPosted = false
+                    pendingObservation.also { pendingObservation = null }
+                } ?: return@post
+                if (latest.first == generation && latest.second == videoAttempt && ready && visible && !isFinishing && !isDestroyed)
+                    SatelliteVideoDiagnostics.observe(latest.second, latest.third)
             }
         }
     }
@@ -212,7 +256,16 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         main.post {
             if (attempt != generation || !ready || !visible || isFinishing || isDestroyed) return@post
             this.session = session
-            webView?.evaluateJavascript("window.receiveSignal(${JSONObject.quote(session)},${JSONObject.quote(json)})", null)
+            when (message.optString("type")) {
+                "video.offer" -> {
+                    endVideoAttempt(SatelliteVideoDiagnostics.End.REPLACED)
+                    videoAttempt = SatelliteVideoDiagnostics.beginAttempt()
+                    videoNegotiation = message.optString("negotiation")
+                }
+                "video.stop" -> if (message.optString("negotiation") == videoNegotiation)
+                    endVideoAttempt(SatelliteVideoDiagnostics.End.SENDER_STOPPED)
+            }
+            webView?.evaluateJavascript("window.receiveSignal(${JSONObject.quote(session)},${JSONObject.quote(json)},${videoAttempt ?: 0})", null)
         }
     }
 
@@ -220,6 +273,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         val attempt = generation
         main.post {
             if (attempt != generation) return@post
+            endVideoAttempt(SatelliteVideoDiagnostics.End.CONTROL_RESET)
             session = null
             if (!isFinishing && !isDestroyed) webView?.evaluateJavascript("window.resetReceiver()", null)
         }
@@ -236,6 +290,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
 
     override fun onStop() {
         visible = false
+        endVideoAttempt(SatelliteVideoDiagnostics.End.VIEWER_HIDDEN)
         main.removeCallbacks(projectionGuard)
         cancelStartupDeadline()
         SatelliteVideoHub.detach(this)
@@ -273,6 +328,7 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
     }
 
     private fun releaseWebView() {
+        endVideoAttempt(SatelliteVideoDiagnostics.End.VIEWER_RELEASED)
         generation++ // Fence every old bridge, renderer callback and deadline before retry.
         cancelStartupDeadline()
         SatelliteVideoHub.detach(this)

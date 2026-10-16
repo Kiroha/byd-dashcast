@@ -8,9 +8,10 @@ const html = readFileSync(new URL('../../app/src/main/assets/satellite_receiver.
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
 
 function harness({supported = true, holdFirstOffer = false, holdStats = false, omitFrames = false} = {}) {
-  const peers = [], replies = [], progress = [], intervals = new Map(), timeouts = new Map(), events = new Map();
-  let timer = 0, now = 0, releaseFirst, releaseStats;
-  const video = {srcObject: null, play: () => Promise.resolve()};
+  const peers = [], replies = [], progress = [], observations = [], intervals = new Map(), timeouts = new Map(), events = new Map();
+  let timer = 0, now = 0, attempt = 0, releaseFirst;
+  const statsResolvers = new Map();
+  const video = {srcObject: null, webkitDecodedFrameCount:0, play: () => Promise.resolve()};
   const status = {style: {display: 'flex'}};
   const metrics = {style: {display:'none'}, textContent:''};
   class Peer {
@@ -24,7 +25,9 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     async addIceCandidate(candidate) { this.ice.push(candidate); }
     async getStats() {
       this.statsCalls++;
-      if (holdStats) await new Promise(resolve => { releaseStats = resolve; });
+      if (this.rejectStats) throw new Error('private internal failure');
+      if (holdStats) await new Promise(resolve => statsResolvers.set(this, resolve));
+      if (this.report) return this.report();
       return new Map([['inbound', {type:'inbound-rtp', kind:'video', bytesReceived:now * 100,
         timestamp:now, ...(omitFrames ? {} : {framesDecoded:this.frames})}]]);
     }
@@ -35,24 +38,30 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : status},
     MediaStream: class {constructor(tracks) { this.tracks = tracks; }},
     DashCastVideo: {ready: value => replies.push({ready: value}), failed: code => replies.push({failed: code}),
-      progress: code => progress.push(code),
-      send: (session, raw) => replies.push({session, ...JSON.parse(raw)})},
+      progress: (attempt, code) => progress.push(code),
+      observe: (attempt, raw) => observations.push({attempt, ...JSON.parse(raw)}),
+      send: (attempt, session, raw) => replies.push({session, ...JSON.parse(raw)})},
     performance: {now: () => now},
     setInterval: callback => { intervals.set(++timer, callback); return timer; },
     clearInterval: id => intervals.delete(id),
-    setTimeout: callback => { timeouts.set(++timer, callback); return timer; },
+    setTimeout: (callback, delay) => { callback.at = now + delay; timeouts.set(++timer, callback); return timer; },
     clearTimeout: id => timeouts.delete(id),
     ...(supported ? {RTCPeerConnection: Peer} : {}),
   });
   for (const script of scripts) vm.runInContext(script, context);
-  return {context, peers, replies, progress, video, status, metrics, intervals, timeouts, events,
+  return {context, peers, replies, progress, observations, video, status, metrics, intervals, timeouts, events,
     offer: (session = 'session', negotiation = 'first') => context.window.receiveSignal(session,
-      JSON.stringify({type: 'video.offer', negotiation, sdp: 'test-offer'})),
+      JSON.stringify({type: 'video.offer', negotiation, sdp: 'test-offer'}), ++attempt),
     signal: (message, session = 'session') => context.window.receiveSignal(session, JSON.stringify(message)),
     reset: () => context.window.resetReceiver(),
     releaseFirst: () => releaseFirst(),
-    releaseStats: () => releaseStats(),
-    advance: async millis => { now = millis; for (const callback of [...intervals.values()]) callback(); await flush(); },
+    releaseStats: (index = 0) => statsResolvers.get(peers[index])(),
+    advance: async millis => {
+      now = millis;
+      for (const callback of [...intervals.values()]) callback();
+      for (const [id, callback] of [...timeouts]) if (callback.at <= now) { timeouts.delete(id); callback(); }
+      await flush();
+    },
   };
 }
 async function flush() { for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve)); }
@@ -120,7 +129,7 @@ test('audio tracks do not enter the displayed media stream', async () => {
 test('zero decoded frames do not hide the waiting screen or renew liveness', async () => {
   const h = harness(); h.offer(); await flush();
   await h.advance(1000); assert.equal(h.status.style.display, 'flex');
-  await h.advance(6001); assert.equal(h.peers[0].closed, true);
+  await h.advance(15001); assert.equal(h.peers[0].closed, true);
   assert.equal(h.replies.at(-1).code, 'video_timeout');
 });
 
@@ -174,16 +183,16 @@ test('packet progress without decoded-frame evidence never preserves a frozen ma
   const h = harness({omitFrames:true}); h.offer(); await flush();
   await h.advance(1000); await h.advance(5000);
   assert.equal(h.status.style.display, 'flex');
-  await h.advance(6001);
+  await h.advance(15001);
   assert.equal(h.peers[0].closed, true);
   assert.equal(h.replies.at(-1).code, 'video_timeout');
 });
 
-test('a hung getStats has one in-flight request and cannot postpone the six-second clear', async () => {
+test('a hung getStats has one in-flight request and cannot postpone the first-image deadline', async () => {
   const h = harness({holdStats:true}); h.offer(); await flush();
   await h.advance(1000); await h.advance(2000); await h.advance(5000);
   assert.equal(h.peers[0].statsCalls, 1);
-  await h.advance(6001);
+  await h.advance(15001);
   assert.equal(h.peers[0].closed, true);
   assert.equal(h.video.srcObject, null);
   h.offer('new', 'new'); await flush();
@@ -218,7 +227,192 @@ test('frames dropped before decoding do not refresh presented-frame liveness', a
   h.video.getVideoPlaybackQuality = () => ({totalVideoFrames:100, droppedVideoFrames:100});
   await h.advance(5000);
   assert.equal(h.status.style.display, 'flex');
-  await h.advance(6001);
+  await h.advance(15001);
   assert.equal(h.peers[0].closed, true);
   assert.equal(h.replies.at(-1).code, 'video_timeout');
+});
+
+test('hung stats cannot suppress independent decoded DOM progress beyond its eight-second timeout', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  for (let seconds = 1; seconds <= 22; seconds++) {
+    h.video.webkitDecodedFrameCount++;
+    await h.advance(seconds * 1000);
+  }
+  assert.equal(h.peers[0].statsCalls, 1);
+  assert.equal(h.peers[0].closed, false);
+  assert.equal(h.status.style.display, 'none');
+  assert.equal(h.observations.at(-1).statsState, 'timed_out');
+  assert.equal(h.observations.at(-1).framesDecoded, undefined);
+  assert.equal(h.observations.length, 22);
+  assert.deepEqual(h.progress, ['frames_decoded']);
+  h.reset();
+  assert.equal(h.intervals.size, 0); assert.equal(h.timeouts.size, 0);
+});
+
+test('quality counters progress while stats are pending, then a real six-second freeze clears the image', async () => {
+  const h = harness({holdStats:true});
+  let total = 5;
+  h.video.getVideoPlaybackQuality = () => ({totalVideoFrames:total, droppedVideoFrames:1});
+  h.offer(); await flush();
+  total = 6; await h.advance(1000);
+  total = 7; await h.advance(5000);
+  assert.equal(h.status.style.display, 'none');
+  await h.advance(11001);
+  assert.equal(h.peers[0].closed, true);
+  assert.equal(h.status.style.display, 'flex');
+  assert.equal(h.intervals.size, 0); assert.equal(h.timeouts.size, 0);
+  const count = h.observations.length;
+  h.releaseStats(); await flush();
+  assert.equal(h.observations.length, count);
+});
+
+test('stats failure is diagnostic only when an independent decoder counter keeps progressing', async () => {
+  const h = harness(); h.offer(); await flush(); h.peers[0].rejectStats = true;
+  for (let seconds = 1; seconds <= 20; seconds++) {
+    h.video.webkitDecodedFrameCount++;
+    await h.advance(seconds * 1000);
+  }
+  assert.equal(h.peers[0].closed, false);
+  assert.equal(h.observations.at(-1).statsCompletedAgeMs, 1000);
+  assert.equal(h.replies.some(reply => reply.code === 'stats_failed'), false);
+});
+
+test('first image gets fifteen seconds after the answer while established stalls remain six seconds', async () => {
+  const h = harness(); h.offer(); await flush();
+  await h.advance(7000); assert.equal(h.peers[0].closed, false);
+  h.peers[0].frames = 1; await h.advance(14000);
+  assert.equal(h.peers[0].closed, false);
+  await h.advance(20001); assert.equal(h.peers[0].closed, true);
+});
+
+test('connection and track events do not extend the finite first-image budget', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  h.peers[0].connectionState = 'connected'; h.peers[0].onconnectionstatechange();
+  await h.advance(1000);
+  await h.advance(14000);
+  h.peers[0].ontrack({track:{kind:'video'}});
+  h.peers[0].onconnectionstatechange();
+  await h.advance(15001);
+  assert.equal(h.peers[0].closed, true);
+  assert.equal(h.observations.at(-1).decoded, false);
+});
+
+test('old cumulative DOM counters are baselines for each new peer, never a fresh image', async () => {
+  const h = harness({holdStats:true});
+  h.video.webkitDecodedFrameCount = 100;
+  h.offer(); await flush();
+  await h.advance(1000);
+  assert.equal(h.status.style.display, 'flex');
+  await h.advance(15001); assert.equal(h.peers[0].closed, true);
+  h.offer('session', 'second'); await flush();
+  await h.advance(16000);
+  assert.equal(h.status.style.display, 'flex');
+  assert.deepEqual(h.progress, []);
+});
+
+test('DOM baseline is also captured at track attachment and counter decreases do not renew liveness', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  h.video.webkitDecodedFrameCount = 10;
+  h.peers[0].ontrack({track:{kind:'video'}});
+  await h.advance(1000);
+  assert.equal(h.status.style.display, 'flex');
+  h.video.webkitDecodedFrameCount = 11; await h.advance(2000);
+  h.video.webkitDecodedFrameCount = 0; await h.advance(7000);
+  await h.advance(8001);
+  assert.equal(h.peers[0].closed, true);
+});
+
+test('a reset counter can establish new progress only after its subsequent increase', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  h.video.webkitDecodedFrameCount = 10; await h.advance(1000);
+  h.video.webkitDecodedFrameCount = 0; await h.advance(5000);
+  h.video.webkitDecodedFrameCount = 1; await h.advance(6000);
+  await h.advance(10000);
+  assert.equal(h.peers[0].closed, false);
+});
+
+test('newly exposed fallback counters never compare against a different API cumulative count', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  h.video.webkitDecodedFrameCount = 2; await h.advance(1000);
+  h.video.getVideoPlaybackQuality = () => ({totalVideoFrames:10000, droppedVideoFrames:0});
+  await h.advance(5000); await h.advance(7001);
+  assert.equal(h.peers[0].closed, true);
+});
+
+test('stats report replacement and counter decrease establish baselines without refreshing freshness', async () => {
+  const h = harness(); h.offer(); await flush();
+  let key = 'first', frames = 5;
+  h.peers[0].report = () => new Map([[key, {type:'inbound-rtp', mediaType:'video', framesDecoded:frames}]]);
+  await h.advance(1000);
+  key = 'replacement'; frames = 100;
+  await h.advance(5000);
+  frames = 0; await h.advance(6000);
+  await h.advance(7001);
+  assert.equal(h.peers[0].closed, true);
+});
+
+test('a newly answered peer has its own fifteen-second first-image budget after slow negotiation', async () => {
+  const h = harness({holdFirstOffer:true}); h.offer(); await flush();
+  await h.advance(5000); h.releaseFirst(); await flush();
+  await h.advance(16000); assert.equal(h.peers[0].closed, false);
+  await h.advance(20001); assert.equal(h.peers[0].closed, true);
+});
+
+test('late stats cannot supply progress or diagnostics to a peer reopened in the same viewer', async () => {
+  const h = harness({holdStats:true}); h.offer(); await flush();
+  await h.advance(1000);
+  h.peers[0].frames = 100;
+  h.offer('session', 'new'); await flush();
+  h.releaseStats(0); await flush();
+  assert.deepEqual(h.progress, []);
+  await h.advance(2000);
+  assert.equal(h.observations.at(-1).attempt, 2);
+  assert.equal(h.observations.at(-1).decoded, false);
+  assert.equal(h.observations.at(-1).statsState, 'not_requested');
+});
+
+test('only fixed scalar codec and counter evidence reaches the bridge', async () => {
+  const h = harness(); h.offer(); await flush();
+  h.peers[0].report = () => new Map([
+    ['private-track-id', {type:'inbound-rtp', kind:'video', codecId:'private-codec',
+      framesDecoded:3, bytesReceived:42, packetsReceived:5, keyFramesDecoded:1,
+      packetsLost:-1, framesReceived:'private token', framesDropped:NaN, ssrc:'private route'}],
+    ['private-codec', {mimeType:'video/H264', sdpFmtpLine:'private SDP'}],
+  ]);
+  await h.advance(1000); await h.advance(2000);
+  const observation = h.observations.at(-1);
+  assert.equal(observation.codec, 'H264');
+  assert.equal(observation.bytesReceived, 42);
+  assert.equal(observation.keyFramesDecoded, 1);
+  assert.equal(observation.packetsLost, null);
+  assert.equal(observation.framesReceived, null);
+  assert.equal(observation.framesDropped, null);
+  assert.equal(JSON.stringify(h.observations).includes('private'), false);
+});
+
+
+test('a replacement offer preempts pending SDP and its old timeout cannot discard the new peer', async () => {
+  const h = harness({holdFirstOffer:true}); h.offer('session', 'old'); await flush();
+  h.offer('session', 'new'); await flush();
+  assert.equal(h.peers.length, 2);
+  assert.equal(h.peers[0].closed, true);
+  assert.equal(h.peers[1].closed, false);
+  assert.equal(h.replies.filter(reply => reply.type === 'video.answer').length, 1);
+  await h.advance(9000);
+  assert.equal(h.peers[1].closed, false);
+  h.releaseFirst(); await flush();
+  assert.equal(h.peers[1].closed, false);
+  h.reset(); await flush();
+  assert.equal(h.intervals.size, 0); assert.equal(h.timeouts.size, 0);
+});
+
+test('raw quality counter decreases rebaseline even if the derived successful count increases', async () => {
+  const h = harness({holdStats:true});
+  let total = 100, dropped = 90;
+  h.video.getVideoPlaybackQuality = () => ({totalVideoFrames:total, droppedVideoFrames:dropped});
+  h.offer(); await flush();
+  total = 101; await h.advance(1000);
+  total = 20; dropped = 0; await h.advance(5000);
+  await h.advance(7001);
+  assert.equal(h.peers[0].closed, true);
 });
