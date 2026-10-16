@@ -128,4 +128,43 @@ class FirmwarePolicyTest {
         assertEquals(0,enough.first);assertEquals("ready",enough.second)
     }
 
+    @Test fun `snapshot stderr is bounded at producer and failed find keeps NUL names and exact exit separately`() {
+        val folder=temp.newFolder();val snapshot=File(temp.newFolder(),"names-1")
+        val script=FirmwareShell.snapshot("/system","/data/local/tmp/dashcast-firmware-123/names-1",false)
+            .replace("/system",folder.absolutePath).replace("/data/local/tmp/dashcast-firmware-123/names-1",snapshot.absolutePath)
+            .replace("/data/local/tmp/dashcast-firmware-123",snapshot.parentFile!!.absolutePath)
+        // Function replacement reproduces an Android find permission error without touching
+        // any real vehicle path. More stderr than the Binder budget must still stay bounded.
+        val result=shell("find() { printf '%s\\000' ${ApkInventoryShell.quote(folder.path+"/a b|c\n")}; i=0; while [ \"\$i\" -lt 10000 ]; do printf 'éééé permission denied\\n' >&2; i=\$((i+1)); done; return 1; }; $script")
+        assertEquals(result.second,0,result.first);assertTrue(result.second.toByteArray().size<3000)
+        val parsed=FirmwareShell.snapshotResult(result.second)
+        assertEquals(1,parsed.first);assertTrue(parsed.second.contains("permission denied"));assertTrue(parsed.second.toByteArray().size<=2050)
+        val names=ArrayList<String?>();FirmwareNames.read(snapshot.inputStream(),{fail(it)},names::add)
+        assertEquals(listOf(folder.path+"/a b|c\n"),names)
+        assertFalse(snapshot.readBytes().toString(Charsets.UTF_8).contains("permission denied"))
+    }
+    @Test fun `empty successful snapshot differs from denied snapshot and incomplete markers stay unknown`() {
+        assertEquals(0 to "",FirmwareShell.snapshotResult("SCAN|0\nSCAN_ERROR|\n"))
+        assertEquals(null to "",FirmwareShell.snapshotResult("SCAN_ERROR|\n"))
+        for(text in listOf("SCAN|0\n","SCAN|0\nSCAN_ERROR|@@@\n","junk\nSCAN|0\nSCAN_ERROR|\n")) {
+            try{FirmwareShell.snapshotResult(text);fail(text)}catch(_:Exception){}
+        }
+        val encoded=Base64.getEncoder().encodeToString(byteArrayOf(0xc3.toByte()))
+        assertNotNull(FirmwareShell.snapshotResult("SCAN|1\nSCAN_ERROR|$encoded\n").second)
+    }
+    @Test fun `shell cannot equate inaccessible or absent path with a proven special file`() {
+        val path=temp.root.path+"/absent"
+        val result=shell(FirmwareShell.batch(listOf("/system/absent")).replace("/system",temp.root.path))
+        assertTrue(result.second.contains("U|"));assertFalse(result.second.contains("S|"))
+        assertTrue(result.second.contains(Base64.getEncoder().encodeToString(path.toByteArray())))
+    }
+    @Test fun `package references validate framing and package grammar before any path can become a seed`() {
+        val text="package:/data/app/opaque/base.apk=com.example.app\npackage:/data/app/opaque/base.apk=com.example.duplicate\n\nPACKAGES|0\n"
+        assertEquals(listOf("/data/app/opaque/base.apk"),FirmwareDiscoverySeeds.packagePaths(0,text))
+        for(bad in listOf(text.replace("PACKAGES|0","PACKAGES|1"),text.substringBefore("PACKAGES"),text.replace("com.example.app","a;id"),text.replace("/data/app/opaque","/data/../opaque"),"PACKAGES|0\n")) {
+            try{FirmwareDiscoverySeeds.packagePaths(0,bad);fail(bad)}catch(_:Exception){}
+        }
+        assertTrue(FirmwareDiscoverySeeds.known(10).contains("/storage/emulated/10"))
+    }
+
 }

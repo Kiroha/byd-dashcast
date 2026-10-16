@@ -59,4 +59,14 @@ class FirmwareDiagnosticsTest {
         }
         worker.join(5000);assertFalse(worker.isAlive);assertNull(failure.get())
     }
+    @Test fun `terminal counts and journal metadata survive first cause freeze and reset for next session`() {
+        FirmwareDiagnostics.begin();FirmwareDiagnostics.phase("inventory","/data");FirmwareDiagnostics.ready()
+        FirmwareDiagnostics.failure(IOException("first inventory failure"))
+        val cause=FirmwareDiagnostics.failureSummary()
+        FirmwareDiagnostics.terminal(FullApkExport.Progress("Collecte vide",kind=ExportKind.FIRMWARE_LARGE,running=false,outcome="partial"),"retryable=3", "find Permission denied https://example.invalid/token "+"é".repeat(9000))
+        assertEquals(cause,FirmwareDiagnostics.failureSummary())
+        val snapshot=FirmwareDiagnostics.snapshot();assertTrue(snapshot.contains("sources=0; exported=0; failed=0"));assertTrue(snapshot.contains("finishedZips=0"));assertTrue(snapshot.contains("retryable=3"));assertTrue(snapshot.contains("Permission denied <url>"))
+        assertTrue(snapshot.toByteArray().size<=FirmwareDiagnostics.MAX_BYTES)
+        FirmwareDiagnostics.begin();assertFalse(FirmwareDiagnostics.snapshot().contains("TERMINAL"))
+    }
 }

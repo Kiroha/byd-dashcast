@@ -85,6 +85,7 @@ internal object FullApkExportSession {
                         com.byd.dashcast.util.AppLogger.e("FirmwareExport",FirmwareDiagnostics.failureSummary().orEmpty())
                     }
                     snapshot = previous.copy(stage = if(kind==ExportKind.FIRMWARE_LARGE)FirmwareDiagnostics.failureSummary().orEmpty() else "Export failed: ${e.message}", outcome = "failed", running = false)
+                    if(kind==ExportKind.FIRMWARE_LARGE)FirmwareDiagnostics.terminal(snapshot!!)
                 } finally {
                     runCatching {firmwareDevice?.close()}
                     DiLinkContextDevice.whenTransportIdle(finished)

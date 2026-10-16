@@ -82,6 +82,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
     }
     override fun discover(ledger:FirmwareLedger,check:()->Unit,update:(String)->Unit) {
         init();check();updateDiscovery=update
+        ledger.retryIncompleteDirectories()
         ledger.coverage("SCOPE","mountinfo","declared","Ordinary accessible files on attested INTERNAL storage only in the SHELL daemon namespace (UID2000), independent of extension. SD, USB, adopted and unknown storage excluded before inventory and reads, including aliases. Internal firmware/data/emulated storage retained; no APP source scan/fallback, live non-atomic, no partition image.")
         ledger.meta("exclusions",exclusions.joinToString(",","[","]",transform=FirmwarePolicy::json))
         if(shellProblem.isNotEmpty())ledger.issue(shellProblem)
@@ -99,6 +100,32 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 if(reason==null && table.decision(mount.point)==null)ledger.enqueue(identity,mount.point)
             }
         }
+        // Android can permit lookup/read of a known descendant while denying listing of
+        // its parent (/data and /storage/emulated on this ROM). These are additional
+        // traversal entry points, never a replacement for the complete admitted mount scan.
+        fun seed(path:String,origin:String) {
+            check()
+            val reason=table("SHELL").decision(path)
+            ledger.coverage("SHELL",path,if(reason==null)"seed_admitted" else "seed_excluded","$origin; ${reason?:"independent known descendant; existing permissions only"}")
+            if(reason==null)ledger.enqueue("SHELL",path)
+        }
+        val user=android.os.Process.myUid()/100000
+        for(path in FirmwareDiscoverySeeds.known(user))seed(path,"known Android traversal root")
+        update("SHELL chemins des applications installées")
+        ledger.meta("references_complete","0")
+        try {
+            val packages=exec(FirmwareDiscoverySeeds.packages(user))
+            val paths=FirmwareDiscoverySeeds.packagePaths(packages.first,packages.second)
+            for(path in paths) {
+                File(path).parent?.let{seed(it,"SHELL PackageManager parent")}
+                seed(path,"SHELL PackageManager APK; readable even if parent listing is refused")
+            }
+            ledger.meta("references_complete","1")
+            ledger.coverage("SHELL","PackageManager","references_enumerated","${paths.size} installed APK paths for user $user; parent directories and exact APKs independently admitted, no APP fallback")
+        }catch(e:CancellationException){throw e}
+        catch(e:FirmwareOutputRefused){throw e}
+        catch(e:FirmwareBudget){throw e}
+        catch(e:Exception){ledger.issue("SHELL références PackageManager incomplètes : ${e.message}")}
         while(true) {
                 check();ledger.budget()
                 val dir=ledger.nextDirectory()?:break
@@ -106,7 +133,8 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                 try {scanShell(dir,ledger,check)}
                 catch(e:CancellationException){throw e}
                 catch(e:FirmwareBudget){throw e}
-                catch(e:Exception){ledger.issue("${dir.identity} inventaire ${dir.path} : ${e.message}");ledger.coverage(dir.identity,dir.path,"partial",e.message.orEmpty());ledger.advance(dir,dir.offset,true)}
+                catch(e:FirmwareOutputRefused){throw e}
+                catch(e:Exception){ledger.issue("${dir.identity} inventaire ${dir.path} : ${e.message}");ledger.coverage(dir.identity,dir.path,"partial",e.message.orEmpty());ledger.incomplete(dir,dir.offset)}
             }
     }
     override fun close() {
@@ -334,14 +362,16 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
         }
     }
     private fun scanShell(dir:FirmwareDirectory,ledger:FirmwareLedger,check:()->Unit) {
+        table("SHELL").decision(dir.path)?.let {throw IOException("Exclusion avant inventaire : $it")}
         if(!temporaryReady)temporary()
         if(shellSnapshotsBlocked)throw IOException("Snapshot SHELL indisponible ou nettoyage précédent non confirmé ; aucun nouveau snapshot")
-        if(table("SHELL").entries.any{it.point==dir.path}) {
+        run {
             val node=exec(FirmwareShell.batch(listOf(dir.path)))
             if(node.first!=0)throw IOException("Type du montage SHELL inconnu")
             val rows=FirmwarePolicy.boundedLines(node.second)
             val file=rows.singleOrNull{it.startsWith("F|")}
             if(file!=null){ledger.add("SHELL",observedShell(file.split('|')));ledger.advance(dir,1,true);ledger.coverage("SHELL",dir.path,"file_mount_collected");return}
+            if(rows.any{it.startsWith("U|")}){ledger.issue("SHELL chemin absent ou inaccessible, type non établi : ${dir.path}");ledger.coverage("SHELL",dir.path,"unavailable_type_unknown");ledger.incomplete(dir,0);return}
             if(rows.any{it.startsWith("S|")}){ledger.coverage("SHELL",dir.path,"non_regular_mount_skipped");ledger.advance(dir,0,true);return}
         }
         val aliasAllowed=false
@@ -362,9 +392,10 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
         attestTemporary(snapshot)
         val result=exec(FirmwareShell.snapshot(dir.path,snapshot,aliasAllowed))
         check()
-        val completion=FirmwarePolicy.boundedLines(result.second).firstOrNull{it.startsWith("SCAN|") }?.substringAfter('|')?.toIntOrNull()
+        val snapshotResult=FirmwareShell.snapshotResult(result.second)
+        val completion=snapshotResult.first
         val complete=result.first==0 && completion==0
-        if(!complete)ledger.issue("SHELL snapshot partiel ${dir.path}, exit=${result.first}/$completion ; limite 30s et 16MiB")
+        if(!complete || snapshotResult.second.isNotEmpty())ledger.issue("SHELL snapshot ${if(complete)"avertissement" else "partiel"} ${dir.path}, exit=${result.first}/$completion ; limite 30s et 16MiB ; ${snapshotResult.second}")
         val sizeReply=exec("stat -L -c %s ${ApkInventoryShell.quote(snapshot)}")
         val size=sizeReply.second.trim().toLongOrNull()?.takeIf{it in 0..16L*1024*1024}?:throw IOException("Taille snapshot inconnue/excessive")
         val snapshotStat=exec("stat -L -c '%f:%s:%Y:%Z:%i:%d' ${ApkInventoryShell.quote(snapshot)}")
@@ -387,6 +418,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
                         line.startsWith("F|")->{val f=line.split('|');if(f.size!=5)throw IOException("Métadonnées ambiguës")
                             try {ledger.add("SHELL",observedShell(f))}catch(e:FirmwareBudget){throw e}catch(e:Exception){ledger.issue("SHELL fichier refusé : ${e.message}")};rows++}
                         line.startsWith("S|")->{ledger.coverage("SHELL",FirmwarePolicy.decoded(line.substringAfter('|')),"non_regular_or_directory_alias_skipped");rows++}
+                        line.startsWith("U|")->{val path=FirmwarePolicy.decoded(line.substringAfter('|'));ledger.issue("SHELL type enfant absent/inaccessible : $path");if(table("SHELL").decision(path)==null)ledger.enqueue("SHELL",path);rows++}
                         line.startsWith("E|")->{val f=line.split('|');ledger.issue("SHELL métadonnées refusées : "+if(f.size==3)FirmwarePolicy.decoded(f[1])+": "+f[2]else line.take(300));rows++}
                         line=="BATCH|${names.size}"->Unit
                         line.isNotEmpty()->throw IOException("Sortie de métadonnées inconnue : ${line.take(240)}")
@@ -429,7 +461,7 @@ internal class FirmwareDevice(private val context: Context, private val cancelle
             val after=exec("stat -L -c %s ${ApkInventoryShell.quote(snapshot)}")
             if(after.first!=0 || after.second.trim().toLongOrNull()!=size)throw IOException("Snapshot modifié pendant lecture")
             ledger.batch {
-                ledger.advance(dir,seen,true)
+                if(complete)ledger.advance(dir,seen,true) else ledger.incomplete(dir,seen)
                 ledger.coverage("SHELL",dir.path,if(complete)"enumerated" else "partial","$seen direct entries, one bounded NUL snapshot; live non-atomic. Interrupted directory rescanned, not skipped by unstable ordinal.")
                 if(complete && ledger.incidents==incidentsBefore)ledger.completeDirectory("SHELL",node,table("SHELL").topology(dir.path),dir.path)
             }
@@ -520,8 +552,22 @@ internal object FirmwareShell {
         require(FirmwarePolicy.firmware(path) && temporary.matches(Regex("/data/local/tmp/dashcast-firmware-[a-f0-9-]+/names-[0-9]+")))
         return space(temporary.substringBeforeLast('/'))+"dc_d=${q(path)}; " + (if(allowAlias)"" else "[ ! -L \"\$dc_d\" ] || exit 2; ") +
             "dc_p=\$dc_d; " + resolve("exit 2") + canonicalGuard("exit 2",false) +
-            "[ -d \"\$dc_real\" ] || exit 1; umask 077; ( ulimit -f 16384 || exit 125; " +
-            "find -H \"\$dc_d\" -mindepth 1 -maxdepth 1 -print0 ) > ${q(temporary)} 2>/dev/null; dc_rc=\$?; printf 'SCAN|%s\\n' \"\$dc_rc\""
+            "[ -d \"\$dc_real\" ] || exit 1; umask 077; { dc_error=\$( " +
+            "( ( ulimit -f 16384 || exit 125; find -H \"\$dc_d\" -mindepth 1 -maxdepth 1 -print0 ) > ${q(temporary)}; " +
+            "dc_rc=\$?; printf 'SCAN|%s\\n' \"\$dc_rc\" >&3 ) 2>&1 | { head -c 2048; cat >/dev/null; } ); " +
+            "printf 'SCAN_ERROR|'; printf '%s' \"\$dc_error\" | base64 | tr -d '\\n'; printf '\\n'; } 3>&1"
+    }
+    /** stderr is capped before entering Binder. A byte cutoff may split UTF-8; diagnostic
+     * replacement is intentional and cannot invalidate the separate NUL name snapshot. */
+    fun snapshotResult(text:String):Pair<Int?,String> {
+        val rows=FirmwarePolicy.boundedLines(text)
+        val status=rows.filter{it.startsWith("SCAN|")}.singleOrNull()?.substringAfter('|')?.toIntOrNull()?.takeIf{it in 0..255}
+        val encoded=rows.filter{it.startsWith("SCAN_ERROR|")}.singleOrNull()?.substringAfter('|')
+        if(rows.any{it.isNotEmpty() && !it.startsWith("SCAN|") && !it.startsWith("SCAN_ERROR|")})throw IOException("Réponse snapshot inconnue")
+        if(encoded==null || encoded.length>2732)throw IOException("Diagnostic snapshot absent/excessif")
+        val bytes=java.util.Base64.getDecoder().decode(encoded)
+        if(bytes.size>2048)throw IOException("Diagnostic snapshot excessif")
+        return status to String(bytes,Charsets.UTF_8)
     }
     fun batch(paths:List<String>):String {
         require(paths.size in 1..FirmwarePolicy.PAGE && paths.all(FirmwarePolicy::firmware))
@@ -529,7 +575,9 @@ internal object FirmwareShell {
             "if [ -L \"\$dc_p\" ] && [ -d \"\$dc_p\" ]; then printf 'S|'; $ENCODE_PATH; printf '\\n'; " +
             "elif [ -d \"\$dc_p\" ]; then printf 'D|'; $ENCODE_PATH; printf '\\n'; " +
             "elif [ -f \"\$dc_p\" ]; then " + inspectBody("continue") +
-            "else printf 'S|'; $ENCODE_PATH; printf '\\n'; fi; done; printf 'BATCH|${paths.size}\\n'"
+            "else dc_kind=\$(stat -L -c %f \"\$dc_p\" 2>/dev/null); " +
+            "case \"\$dc_kind\" in ''|*[!0-9a-fA-F]*) printf 'U|' ;; *) printf 'S|' ;; esac; " +
+            "$ENCODE_PATH; printf '\\n'; fi; done; printf 'BATCH|${paths.size}\\n'"
     }
     private fun resolve(failure:String):String =
         "dc_real=\$(readlink -f \"\$dc_p\" 2>/dev/null; dc_rc=\$?; printf '.DC.%s' \"\$dc_rc\"); " +
@@ -557,5 +605,40 @@ internal object FirmwareShell {
             "case \"\$dc_size\" in ''|*[!0-9]*) " + failure("unknown-size") + ";; esac; " +
             "printf 'F|'; $ENCODE_PATH; printf '|'; printf '%s' \"\$dc_real\" | base64 | tr -d '\\n'; " +
             "printf '|%s|%s\\n' \"\$dc_size\" \"\$dc_stat\"; "
+    }
+}
+
+/** Lookup scaffolding for searchable descendants of unlistable Android ancestors. Fixed
+ * roots and SHELL PackageManager references still pass the same physical/exclusion gate. */
+internal object FirmwareDiscoverySeeds {
+    const val REVISION="2"
+    fun known(user:Int):List<String> {
+        require(user>=0)
+        return listOf("/data/app","/data/app-private","/data/preloads","/data/preinstall","/data/local","/data/local/tmp",
+            "/data/system","/data/vendor","/data/misc","/data/dalvik-cache","/data/resource-cache","/data/anr",
+            "/data/tombstones","/data/log","/data/logs","/data/data","/data/user/$user","/data/user_de/$user",
+            "/data/system_ce/$user","/data/system_de/$user","/data/misc_ce/$user","/data/misc_de/$user",
+            "/data/media/$user","/storage/emulated/$user","/mnt/runtime/default/emulated/$user",
+            "/mnt/runtime/read/emulated/$user","/mnt/runtime/write/emulated/$user","/mnt/runtime/full/emulated/$user")
+    }
+    fun packages(user:Int):String {
+        require(user>=0)
+        return "pm list packages -f --user $user; dc_rc=\$?; printf '\\nPACKAGES|%s\\n' \"\$dc_rc\""
+    }
+    fun packagePaths(exit:Int,text:String):List<String> {
+        val rows=FirmwarePolicy.boundedLines(text).filter{it.isNotEmpty()}
+        if(exit!=0 || rows.lastOrNull()!="PACKAGES|0")throw IOException("Inventaire PackageManager refusé/incomplet, exit=$exit")
+        val paths=LinkedHashSet<String>()
+        for(row in rows.dropLast(1)) {
+            if(!row.startsWith("package:"))throw IOException("Réponse PackageManager inconnue : ${row.take(200)}")
+            val body=row.removePrefix("package:");val separator=body.lastIndexOf('=')
+            if(separator<=0 || !body.substring(separator+1).matches(Regex("[A-Za-z0-9_.]+")))throw IOException("Référence PackageManager ambiguë")
+            val path=body.substring(0,separator)
+            if(!FirmwarePolicy.sane(path) || !path.endsWith(".apk",true))throw IOException("Chemin APK PackageManager invalide")
+            paths.add(path)
+            if(paths.size>FirmwarePolicy.MAX_SOURCES)throw FirmwareBudget("Limite des références PackageManager atteinte")
+        }
+        if(paths.isEmpty())throw IOException("Aucune référence PackageManager ; couverture inconnue")
+        return paths.toList()
     }
 }
