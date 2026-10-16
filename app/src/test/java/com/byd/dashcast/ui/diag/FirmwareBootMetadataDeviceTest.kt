@@ -80,13 +80,14 @@ class FirmwareBootMetadataDeviceTest {
                 ProxyDaemonContract.TXN_EXEC->{
                     assertTrue(inventoryAllowed);val command=data.readString()!!
                     val text=when {
+                        command.startsWith("pm list packages -f --user ") -> "package:/storage/A1B2-C3D4/blocked.apk=com.example.fixture\n\nPACKAGES|0\n"
                         command.startsWith("umask 077; mkdir '")->{
                             createdTemporary=command.substringAfter("umask 077; mkdir '").substringBeforeLast('\'')
                             assertTrue(createdTemporary!!.matches(Regex("/data/local/tmp/dashcast-firmware-[a-f0-9-]+")));""
                         }
                         command.startsWith("for dc_p in '")->{
                             val path=command.substringAfter("for dc_p in '").substringBefore("'; do")
-                            assertTrue("excluded root reached source metadata: $path",path in setOf("/","/data","/storage/emulated","/full-userdata"))
+                            assertTrue("excluded root reached source metadata: $path",path in setOf("/","/data","/storage/emulated","/full-userdata")+FirmwareDiscoverySeeds.known(0))
                             inventoryPaths.add(path);"S|${encoded(path)}\nBATCH|1\n"
                         }
                         command==FirmwareShell.inspect(positivePath)->"F|${encoded(positivePath)}|${encoded(positivePath)}|1|$positiveStamp\n"
@@ -167,7 +168,8 @@ class FirmwareBootMetadataDeviceTest {
             device.discover(ledger,{}, {})
             assertNull(ledger.nextDirectory());assertEquals(0,ledger.sources)
         }
-        assertEquals(setOf("/","/data","/storage/emulated","/full-userdata"),endpoint.inventoryPaths.toSet())
+        assertTrue(endpoint.inventoryPaths.toSet().containsAll(setOf("/","/data","/storage/emulated","/full-userdata")))
+        assertTrue(endpoint.inventoryPaths.none{it.startsWith("/storage/A1B2-C3D4") || it.startsWith("/mnt/media_rw")})
         assertTrue(endpoint.chunkPaths.isEmpty())
         val denied=listOf("/storage/A1B2-C3D4/file","/mnt/media_rw/sdcardv/file","/virtual-card-alias/file","/derived-emulated/file","/apex/module/file","/full-userdata/cells_sd/guest/sdcard/file")
         for(path in denied) {

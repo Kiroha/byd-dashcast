@@ -116,6 +116,24 @@ internal class FirmwareLedger(private val directory: File, private val sourceLim
     fun nextDirectory(): FirmwareDirectory? = db.rawQuery("SELECT id,identity,path,offset FROM dirs WHERE done=0 ORDER BY id LIMIT 1",null).use {
         if (!it.moveToFirst()) null else FirmwareDirectory(it.getLong(0),it.getString(1),it.getString(2),it.getInt(3)) }
     fun advance(dir: FirmwareDirectory, offset: Int, done: Boolean) { write { db.execSQL("UPDATE dirs SET offset=?,done=? WHERE id=?",arrayOf<Any>(offset,if(done)1 else 0,dir.id)) } }
+    /** State 2 is incomplete but not pending in this invocation. Retry once on the next
+     * invocation, starting from a fresh name snapshot rather than an unstable ordinal. */
+    fun incomplete(dir:FirmwareDirectory,offset:Int) {write {db.execSQL("UPDATE dirs SET offset=?,done=2 WHERE id=?",arrayOf<Any>(offset,dir.id))}}
+    fun retryIncompleteDirectories() {write {db.execSQL("UPDATE dirs SET offset=0,done=0 WHERE done=2")}}
+    fun restartDiscovery() {batch {db.execSQL("UPDATE dirs SET offset=0,done=0");meta("discovery_complete","limited")}}
+    fun discoveryComplete() = meta("references_complete")!="0" && db.rawQuery("SELECT 1 FROM dirs WHERE done<>1 LIMIT 1",null).use {!it.moveToFirst()}
+    fun diagnosticSummary():String = db.rawQuery("SELECT COUNT(*),COALESCE(SUM(done=0),0),COALESCE(SUM(done=2),0) FROM dirs",null).use {
+        it.moveToFirst();val excluded=db.rawQuery("SELECT COUNT(DISTINCT path) FROM coverage WHERE state='mount_excluded'",null).use {c->c.moveToFirst();c.getLong(0)}
+        "directories=${it.getLong(0)}; pending=${it.getLong(1)}; retryable=${it.getLong(2)}; discovery=${meta("discovery_complete")?:"not completed"}; mountsExcluded=$excluded; incidents=$incidents"
+    }
+    /** Bounded own journal metadata only; no collected source content is read or attached. */
+    fun diagnosticIssues():String {
+        val rows=java.util.TreeMap<Long,String>()
+        for(order in listOf("ASC","DESC"))db.rawQuery("SELECT id,message FROM incidents ORDER BY id $order LIMIT 6",null).use {
+            while(it.moveToNext())rows[it.getLong(0)]=FirmwareDiagnostics.bounded(it.getString(1),300)
+        }
+        return "recorded=$incidents; shown=${rows.size}; remaining omitted\n"+rows.entries.joinToString("\n"){"${it.key}: ${it.value}"}
+    }
     fun byCanonical(path: String): FirmwareSource? = db.rawQuery("SELECT * FROM sources WHERE canonical=? OR id IN (SELECT source FROM preferred_paths WHERE canonical=?) LIMIT 1",arrayOf(path,path)).use { if(it.moveToFirst()) source(it) else null }
     private fun byNode(node:String):FirmwareSource?=db.rawQuery("SELECT s.* FROM sources s JOIN nodes n ON n.source=s.id WHERE n.node=? LIMIT 1",arrayOf(node)).use {if(it.moveToFirst())source(it) else null}
     private fun preferred(id:Long,identity:String):String?=db.rawQuery("SELECT canonical FROM preferred_paths WHERE source=? AND identity=?",arrayOf(id.toString(),identity)).use {if(it.moveToFirst())it.getString(0) else null}

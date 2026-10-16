@@ -82,11 +82,14 @@ internal class FirmwareExport(
             compatible=true
             verifyVolumes()
             completed=ledger.successful();copiedBytes=ledger.totalBytes()
+            if(ledger.meta("discovery_revision")!=FirmwareDiscoverySeeds.REVISION) {
+                ledger.restartDiscovery();ledger.meta("discovery_revision",FirmwareDiscoverySeeds.REVISION)
+            }
             if(ledger.meta("discovery_complete")!="1") {
                 update("Inventaire sur disque — daemon SHELL")
                 try {
                     device.discover(ledger,::check) { update("Inventaire sur disque — daemon SHELL",it,false) }
-                    ledger.meta("discovery_complete","1")
+                    ledger.meta("discovery_complete",if(ledger.discoveryComplete())"1" else "limited")
                 } catch(e: FirmwareBudget) { ledger.issue(e.message.orEmpty());ledger.meta("discovery_complete","limited") }
             }
             update("Copie des fichiers accessibles — ZIP indépendants")
@@ -100,7 +103,8 @@ internal class FirmwareExport(
             val after=device.context();ledger.meta("context_after",after)
             if(after!=context) ledger.issue("Contexte final différent du contexte initial ; aucune atomicité de la collecte garantie")
             outcome=if(ledger.incidents>0 || failed>0 || completed<ledger.sources || ledger.sources==0 || ledger.meta("discovery_complete")!="1")"partial" else "finished"
-            message="Collecte large $outcome. Sources live non atomiques ; droits et couverture limités, consulter manifest.json."
+            message=if(ledger.sources==0)"Collecte vide : aucun fichier accessible inventorié, aucun ZIP de données. Refus et limites dans manifest.json et le rapport de bug."
+                else "Collecte terminée : $completed/${ledger.sources} fichiers, $failed échecs, ${archives.size} ZIP ; résultat $outcome. Sources live non atomiques ; couverture limitée, consulter manifest.json."
         } catch(e: CancellationException) {outcome="cancelled";message=e.message.orEmpty()}
         catch(e:FirmwareBudget){outcome="partial";message=e.message.orEmpty();runCatching {ledger.issue(message)}}
         catch(e: Exception) { message="${e.javaClass.simpleName}: ${e.message}";runCatching {ledger.issue(message)} }
@@ -124,7 +128,9 @@ internal class FirmwareExport(
             }.onFailure { message+="; résultat conservé dans DIAG : ${it.message}" }
             if(writes.refused)outcome="failed"
             state=state.copy(stage=message,current="",running=false,outcome=outcome,discovered=ledger.sources,completed=completed,failed=failed,
-                bytes=copiedBytes,archives=archives.toList(),lastProgressMs=FullApkExport.monotonicMs());progress(state)
+                bytes=copiedBytes,archives=archives.toList(),lastProgressMs=FullApkExport.monotonicMs())
+            runCatching {FirmwareDiagnostics.terminal(state,ledger.diagnosticSummary(),ledger.diagnosticIssues())}
+            progress(state)
         }
         return state
     }

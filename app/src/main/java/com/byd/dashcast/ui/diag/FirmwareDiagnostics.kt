@@ -9,7 +9,7 @@ internal object FirmwareDiagnostics {
         SESSION(512), STATE(512), PHASE(512), REQUESTED(4096), CANONICAL(4096), ACTUAL_DEVICE(128), DAEMON(1024),
         FAILURE(4096), PRIMARY_UUID(4096), VOLUMES(8192), BOOT_DEVICE(4096), BOOT_USERDATA(4096),
         BLOCKS(20480), PROVENANCE(8192), SHELL_OUTPUT_MOUNTS(8192), APP_OUTPUT_MOUNTS(8192),
-        METADATA_ISSUES(8192)
+        METADATA_ISSUES(8192), TERMINAL(2048), ISSUES(4096)
     }
     private val fields=java.util.EnumMap<Field,String>(Field::class.java)
     private var failed=false
@@ -49,6 +49,14 @@ internal object FirmwareDiagnostics {
         return "$first\n${fields[Field.PHASE].orEmpty()} : ${bounded(fields[Field.FAILURE].orEmpty(),220)}\nDétails dans le rapport de bug."
     }
     @Synchronized fun failurePath():String?=if(failed)fields[Field.REQUESTED] else null
+    /** Terminal scalars and own journal metadata survive an earlier frozen first cause.
+     * This does not touch storage, Binder, source payloads or the report upload path. */
+    @Synchronized fun terminal(state:FullApkExport.Progress,summary:String="",issues:String?=null) {
+        fields[Field.TERMINAL]=bounded(redact("outcome=${state.outcome}; running=${state.running}; sources=${state.discovered}; exported=${state.completed}; failed=${state.failed}; bytes=${state.bytes}; finishedZips=${state.archives.size}\n${state.stage}\n$summary"),Field.TERMINAL.limit)
+        if(issues!=null)fields[Field.ISSUES]=bounded(redact(issues),Field.ISSUES.limit)
+    }
+    private fun redact(text:String)=text.replace(Regex("https?://\\S+"),"<url>")
+        .replace(Regex("[0-9]{6,12}:[A-Za-z0-9_-]{25,}"),"<token>")
     @Synchronized fun snapshot():String {
         if(fields.isEmpty())return "No internal-storage export diagnostic in this process.\n"
         val text=buildString {
