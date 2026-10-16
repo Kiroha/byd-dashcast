@@ -14,11 +14,13 @@ internal object SatelliteRemoteVideoDiagnostics {
     enum class State { STOPPED, STARTING, WAITING_VIEWER, NEGOTIATING, CONNECTED_WAITING_FRAMES, STREAMING, CONTROL_UNAVAILABLE, RECEIVER_ADDRESS_UNSUPPORTED, CAPTURE_UNAVAILABLE, CONSENT_REQUIRED, NATIVE_UNAVAILABLE, CAPTURE_REVOKED, CAPTURE_LOCKED, CAPTURE_PAUSED, CAPTURE_HIDDEN, MEDIA_CONNECTION_LOST, SIGNALLING_OVERFLOW, NEGOTIATION_FAILED, VIDEO_PROTOCOL_FAILED, RECEIVER_VIDEO_FAILED, ICE_FAILED, MEDIA_CONNECTION_TIMEOUT, ENCODER_STALLED, STATS_TIMEOUT, OTHER_FAILURE }
     data class Entry(val event: Event, val cause: Cause, val share: Long, val ageMs: Long)
     data class Snapshot(val request: Long, val appVersionCode: Int, val state: State, val captureBusy: Boolean,
-        val share: Long, val snapshotAgeMs: Long, val counts: List<Pair<Event, Int>>, val recent: List<Entry>)
+        val share: Long, val snapshotAgeMs: Long, val counts: List<Pair<Event, Int>>, val recent: List<Entry>, val details: List<SenderAttempt>? = null)
+    data class SenderAttempt(val attempt: Long, val share: Long, val ageMs: Long, val sampleAgeMs: Long?,
+        val ended: Boolean, val codec: String?, val counters: Map<String, Long?>)
 
     fun parse(json: JSONObject): Snapshot {
         require(json.toString().toByteArray(Charsets.UTF_8).size <= MAX_BYTES)
-        keys(json, setOf("type", "schema", "request", "snapshotAgeMs", "appVersionCode", "state", "captureBusy", "share", "counts", "recent"))
+        keys(json, setOf("type", "schema", "request", "snapshotAgeMs", "appVersionCode", "state", "captureBusy", "share", "counts", "recent") + if (json.has("details")) setOf("details") else emptySet())
         require(json.get("type") == "diagnostics.video")
         SatelliteProtocol.integer(json, "schema", 1, 1)
         val request = SatelliteProtocol.integer(json, "request", 1, MAX_ORDINAL)
@@ -42,7 +44,32 @@ internal object SatelliteRemoteVideoDiagnostics {
             previousAge = SatelliteProtocol.integer(row, "ageMs", previousAge, MAX_AGE_MS)
             Entry(event, cause, ordinal, previousAge)
         }
-        return Snapshot(request, version, state, busy, share, age, totals, rows)
+        return Snapshot(request, version, state, busy, share, age, totals, rows,
+            if (json.has("details")) parseDetails(json.getJSONObject("details"), share) else null)
+    }
+    private val senderCounters = listOf("bytesSent", "packetsSent", "framesEncoded", "keyFramesEncoded", "pliCount", "nackCount", "firCount")
+    private fun parseDetails(json: JSONObject, share: Long): List<SenderAttempt> {
+        keys(json, setOf("schema", "attempts"))
+        SatelliteProtocol.integer(json, "schema", 1, 1)
+        val rows = json.getJSONArray("attempts"); require(rows.length() <= 4)
+        var previousAttempt = MAX_ORDINAL + 1
+        return (0 until rows.length()).map { index ->
+            val row = rows.getJSONObject(index)
+            keys(row, setOf("attempt", "share", "ageMs", "sampleAgeMs", "ended", "codec") + senderCounters)
+            val attempt = SatelliteProtocol.integer(row, "attempt", 1, previousAttempt - 1)
+            previousAttempt = attempt
+            val session = SatelliteProtocol.integer(row, "share", 0, share)
+            val age = SatelliteProtocol.integer(row, "ageMs", 0, MAX_AGE_MS)
+            fun nullable(key: String, max: Long): Long? = if (row.get(key) === JSONObject.NULL) null else SatelliteProtocol.integer(row, key, 0, max)
+            val sampleAge = nullable("sampleAgeMs", age)
+            val ended = row.get("ended"); require(ended is Boolean)
+            val codec = row.get("codec"); require(codec === JSONObject.NULL || codec in setOf("h264", "vp8", "vp9", "av1"))
+            val counters = senderCounters.associateWith { nullable(it, 9_000_000_000_000L) }
+            val frames = counters["framesEncoded"]; val keys = counters["keyFramesEncoded"]
+            require(frames == null || keys == null || keys <= frames)
+            require(sampleAge != null || (codec === JSONObject.NULL && counters.values.all { it == null }))
+            SenderAttempt(attempt, session, age, sampleAge, ended, codec as? String, counters)
+        }
     }
     private inline fun <reified T : Enum<T>> value(json: JSONObject, key: String): T =
         enumValues<T>().singleOrNull { it.name.lowercase() == json.get(key) } ?: throw IllegalArgumentException()
@@ -83,6 +110,12 @@ internal object SatelliteRemoteVideoDiagnostics {
                 append("Ages saturate at 86400000 ms (at least 24 hours); counts and share ordinals at 1000000 are lower bounds and may merge attempts.\n")
                 append("Counters are process totals (up to 32 selected event types); share numbers are local ordinals.\n")
                 append(value.counts.joinToString(" ") { "${it.first.name.lowercase()}=${it.second}" }).append('\n')
+                value.details?.forEach { row ->
+                    append("senderAttempt=").append(row.attempt).append(" share=").append(row.share)
+                    append(" ageAtCaptureMs=").append(row.ageMs).append(" sampleAgeAtCaptureMs=").append(row.sampleAgeMs ?: "?")
+                    append(" ended=").append(row.ended).append(" codec=").append(row.codec ?: "?").append(' ')
+                    append(row.counters.entries.joinToString(" ") { "${it.key}=${it.value ?: "?"}" }).append('\n')
+                }
                 value.recent.forEach { row ->
                     append("eventAgeAtCaptureMs=").append(row.ageMs).append(" share=").append(row.share)
                     append(" event=").append(row.event.name.lowercase()).append(" cause=").append(row.cause.name.lowercase()).append('\n')

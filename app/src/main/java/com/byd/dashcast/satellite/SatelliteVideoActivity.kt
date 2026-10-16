@@ -44,7 +44,9 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
     private var videoAttempt: Long? = null
     private var videoNegotiation: String? = null
     private val observationLock = Any()
-    private var pendingObservation: Triple<Long, Long, SatelliteVideoDiagnostics.Observation>? = null
+    private data class PendingObservation(val generation: Long, val peer: Long,
+        val value: SatelliteVideoDiagnostics.Observation, val terminal: Boolean)
+    private var pendingObservation: PendingObservation? = null
     private var observationPosted = false
 
     private fun endVideoAttempt(end: SatelliteVideoDiagnostics.End) {
@@ -228,14 +230,20 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
         }
 
         @JavascriptInterface
-        fun observe(peerAttempt: Long, raw: String) {
+        fun observe(peerAttempt: Long, raw: String) = enqueueObservation(peerAttempt, raw, false)
+
+        @JavascriptInterface
+        fun observeFinal(peerAttempt: Long, raw: String) = enqueueObservation(peerAttempt, raw, true)
+
+        private fun enqueueObservation(peerAttempt: Long, raw: String, terminal: Boolean) {
             val observation = SatelliteVideoDiagnostics.Observation.parse(raw) ?: return
             // At most one main-thread delivery is queued, even if the UI thread is busy.
             synchronized(observationLock) {
                 val pending = pendingObservation
-                if (pending != null && (pending.first > attempt ||
-                        (pending.first == attempt && pending.second > peerAttempt))) return
-                pendingObservation = Triple(attempt, peerAttempt, observation)
+                if (pending != null && (pending.generation > attempt ||
+                        (pending.generation == attempt && pending.peer > peerAttempt))) return
+                if (pending?.generation == attempt && pending.peer == peerAttempt && pending.terminal) return
+                pendingObservation = PendingObservation(attempt, peerAttempt, observation, terminal)
                 if (observationPosted) return
                 observationPosted = true
             }
@@ -244,8 +252,8 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
                     observationPosted = false
                     pendingObservation.also { pendingObservation = null }
                 } ?: return@post
-                if (latest.first == generation && latest.second == videoAttempt && ready && visible && !isFinishing && !isDestroyed)
-                    SatelliteVideoDiagnostics.observe(latest.second, latest.third)
+                if (latest.generation == generation && latest.peer == videoAttempt && ready && visible && !isFinishing && !isDestroyed)
+                    SatelliteVideoDiagnostics.observe(latest.peer, latest.value, latest.terminal)
             }
         }
     }

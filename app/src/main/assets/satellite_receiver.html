@@ -25,6 +25,7 @@ let statsRequestedAt = null, statsCompletedAt = null, statsState = 'not_requeste
 let epoch = 0, queued = 0, statsInFlight = false, metricsVisible = false;
 let previousStats = null;
 let decodedReported = false, connectedReported = false;
+let remoteTrack = null, playState = 'not_requested';
 function progress(code) { if (typeof DashCastVideo.progress === 'function') DashCastVideo.progress(diagnosticAttempt, code); }
 window.setMetricsVisible = value => { metricsVisible = value === true; metrics.style.display = metricsVisible ? 'block' : 'none'; };
 function send(type, values) {
@@ -38,6 +39,8 @@ function resetReceiver(invalidate = true) {
   watchdog = null;
   if (peer) { peer.onicecandidate = null; peer.ontrack = null; peer.onconnectionstatechange = null; peer.close(); }
   peer = null; owner = null; negotiation = null;
+  if (remoteTrack) remoteTrack.onended = null;
+  remoteTrack = null; playState = 'not_requested';
   video.srcObject = null; status.style.display = 'flex';
   lastProgress = 0; answerAt = null; statsInFlight = false; previousStats = null;
   statsBaseline = null; statsReportId = null; qualityBaseline = null; webkitBaseline = null;
@@ -80,6 +83,7 @@ function updateMetrics(stats, report, frames) {
 }
 
 // Scalars only. Unknown counters remain null, and each counter has its own baseline.
+function evidence(read) { try { return read(); } catch (_) { return null; } }
 function counter(value) { return Number.isSafeInteger(value) && value >= 0 && value <= 9000000000000 ? value : null; }
 function qualityCounters() {
   try {
@@ -91,14 +95,14 @@ function qualityCounters() {
 }
 function baselineDom() {
   qualityBaseline = qualityCounters();
-  webkitBaseline = counter(video.webkitDecodedFrameCount);
+  webkitBaseline = counter(evidence(() => video.webkitDecodedFrameCount));
 }
 function markDecoded() {
   if (!decodedReported) { decodedReported = true; progress('frames_decoded'); }
   lastProgress = performance.now(); status.style.display = 'none';
 }
 function sampleDom() {
-  const quality = qualityCounters(), webkit = counter(video.webkitDecodedFrameCount);
+  const quality = qualityCounters(), webkit = counter(evidence(() => video.webkitDecodedFrameCount));
   // A newly exposed API or a reset/decreased counter establishes a baseline, never freshness.
   if ((quality.decoded !== null && qualityBaseline !== null && qualityBaseline.decoded !== null &&
       quality.total >= qualityBaseline.total && quality.dropped >= qualityBaseline.dropped &&
@@ -109,16 +113,59 @@ function sampleDom() {
   observed.qualityTotal = quality.total; observed.qualityDropped = quality.dropped;
   observed.webkitDecoded = webkit;
 }
-function observe() {
+// Read only actual selected-codec parameters. Never retain raw SDP or fmtp strings.
+function h264Parameters(codec, connection) {
+  const result = {h264ProfileIdc:null, h264ProfileIop:null, h264LevelIdc:null, packetizationMode:null};
+  if (!codec || codec.mimeType !== 'video/H264') return result;
+  let fmtp = typeof codec.sdpFmtpLine === 'string' ? codec.sdpFmtpLine : null;
+  if (fmtp === null && Number.isInteger(codec.payloadType) && codec.payloadType >= 0 && codec.payloadType <= 127) {
+    const description = connection.localDescription;
+    if (description && typeof description.sdp === 'string') {
+      const prefix = 'a=fmtp:' + codec.payloadType + ' ';
+      const lines = description.sdp.split(/\r?\n/).filter(line => line.indexOf(prefix) === 0);
+      if (lines.length === 1) fmtp = lines[0].slice(prefix.length);
+    }
+  }
+  if (fmtp === null || fmtp.length > 2048) return result;
+  const values = {};
+  for (const item of fmtp.split(';')) {
+    const pair = item.trim().split('=');
+    const key = pair[0].toLowerCase();
+    if (key !== 'profile-level-id' && key !== 'packetization-mode') continue;
+    // Duplicate, absent or malformed values remain unknown; do not infer RFC defaults.
+    values[key] = Object.prototype.hasOwnProperty.call(values, key) ? null : (pair.length === 2 ? pair[1].trim() : null);
+  }
+  const profile = values['profile-level-id'];
+  if (typeof profile === 'string' && /^[0-9a-f]{6}$/i.test(profile)) {
+    const idc = parseInt(profile.slice(0,2),16), iop = parseInt(profile.slice(2,4),16), level = parseInt(profile.slice(4,6),16);
+    if ([66,77,88,100,110,122,244].includes(idc) && [10,11,12,13,20,21,22,30,31,32,40,41,42,50,51,52,60,61,62].includes(level)) {
+      result.h264ProfileIdc = idc; result.h264ProfileIop = iop; result.h264LevelIdc = level;
+    }
+  }
+  if (values['packetization-mode'] === '0' || values['packetization-mode'] === '1') result.packetizationMode = Number(values['packetization-mode']);
+  return result;
+}
+function observe(terminal = false) {
   if (typeof DashCastVideo.observe !== 'function') return;
   const now = performance.now();
   const age = at => at === null ? null : Math.min(86400000, Math.max(0, Math.floor(now - at)));
-  DashCastVideo.observe(diagnosticAttempt, JSON.stringify(Object.assign({}, observed, {
+  const boundedInteger = (value, max) => Number.isInteger(value) && value >= 0 && value <= max ? value : null;
+  const quality = qualityCounters();
+  const payload = JSON.stringify(Object.assign({}, observed, {
+    qualityTotal:quality.total, qualityDropped:quality.dropped, webkitDecoded:counter(evidence(() => video.webkitDecodedFrameCount)),
+    videoReadyState:boundedInteger(evidence(() => video.readyState),4), videoNetworkState:boundedInteger(evidence(() => video.networkState),3),
+    videoWidth:boundedInteger(evidence(() => video.videoWidth),8192), videoHeight:boundedInteger(evidence(() => video.videoHeight),8192),
+    mediaError:boundedInteger(evidence(() => video.error && video.error.code),4) >= 1 ? boundedInteger(evidence(() => video.error && video.error.code),4) : null,
+    videoPaused:typeof evidence(() => video.paused) === 'boolean' ? evidence(() => video.paused) : null,
+    playState, trackState:['live','ended'].includes(evidence(() => remoteTrack && remoteTrack.readyState)) ? evidence(() => remoteTrack.readyState) : null,
+    trackMuted:typeof evidence(() => remoteTrack && remoteTrack.muted) === 'boolean' ? evidence(() => remoteTrack.muted) : null,
     startupAgeMs:age(startedAt), answerAgeMs:age(answerAt), decodedAgeMs:decodedReported ? age(lastProgress) : null,
     statsPendingAgeMs:statsInFlight ? age(statsRequestedAt) : null,
     statsCompletedAgeMs:age(statsCompletedAt), statsState, trackReceived:observed.trackReceived === true,
     mediaConnected:connectedReported, decoded:decodedReported
-  })));
+  }));
+  if (terminal && typeof DashCastVideo.observeFinal === 'function') DashCastVideo.observeFinal(diagnosticAttempt, payload);
+  else DashCastVideo.observe(diagnosticAttempt, payload);
 }
 function requestStats(connection, monitorEpoch) {
   if (statsInFlight) {
@@ -148,8 +195,10 @@ function requestStats(connection, monitorEpoch) {
     }
     const codec = inbound ? stats.get(inbound.codecId) : null;
     observed.codec = codec && ['video/H264','video/VP8','video/VP9','video/AV1'].includes(codec.mimeType) ? codec.mimeType.slice(6) : null;
-    for (const name of ['bytesReceived','packetsReceived','packetsLost','framesReceived','framesDecoded','keyFramesDecoded','framesDropped'])
+    for (const name of ['bytesReceived','packetsReceived','packetsLost','framesReceived','framesDecoded','keyFramesDecoded','framesDropped','pliCount','nackCount','firCount'])
       observed[name] = inbound ? counter(inbound[name]) : null;
+    observed.decodeTimeMs = inbound && Number.isFinite(inbound.totalDecodeTime) && inbound.totalDecodeTime >= 0 && inbound.totalDecodeTime <= 86400 ? Math.floor(inbound.totalDecodeTime * 1000) : null;
+    Object.assign(observed, h264Parameters(codec, connection));
     if (inbound) updateMetrics(stats, inbound, frames);
   }).catch(() => {
     if (peer === connection && monitorEpoch === epoch) { statsCompletedAt = performance.now(); statsState = 'failed'; }
@@ -188,17 +237,34 @@ async function receive(id, raw, attempt) {
       progress('track_received'); observed.trackReceived = true;
       // The element can retain cumulative counters from the preceding peer.
       baselineDom();
+      if (remoteTrack) remoteTrack.onended = null;
+      remoteTrack = event.track;
+      const track = remoteTrack;
+      remoteTrack.onended = () => {
+        if (peer !== connection || remoteTrack !== track) return;
+        observe(true);
+      };
       video.srcObject = new MediaStream([event.track]);
-      video.play().catch(() => {
-        if (peer === connection) { send('video.error', {code:'playback_failed'}); resetReceiver(); }
-      });
+      playState = 'pending';
+      const playbackFailed = () => {
+        if (peer !== connection || remoteTrack !== track) return;
+        playState = 'rejected'; observe(true);
+        send('video.error', {code:'playback_failed'}); resetReceiver();
+      };
+      try {
+        const playback = video.play();
+        if (playback && typeof playback.then === 'function') playback.then(() => {
+          if (peer === connection && remoteTrack === track) playState = 'resolved';
+        }, playbackFailed);
+        else playState = 'unavailable';
+      } catch (_) { playbackFailed(); }
     };
     connection.onconnectionstatechange = () => {
       if (peer === connection && connection.connectionState === 'connected' && !connectedReported) {
         connectedReported = true; progress('media_connected');
       }
       if (peer === connection && ['failed', 'closed', 'disconnected'].includes(connection.connectionState)) {
-        send('video.error', {code:'connection_lost'}); resetReceiver();
+        observe(true); send('video.error', {code:'connection_lost'}); resetReceiver();
       }
     };
     await bounded(connection.setRemoteDescription({type:'offer', sdp:message.sdp}));

@@ -308,3 +308,28 @@ guidance; disconnect clears; stale socket cleanup cannot clear a replacement; ig
 restores the opted-in receiver; video preview/project/stop release the decoder; test video
 resolution/frame rate and latency with Overdrive recording throughout. No measured latency or
 vehicle support claim follows from JVM/JavaScript tests.
+
+
+### Optional first-frame diagnostics details
+
+An authenticated `welcome` may additionally advertise `"videoDiagnosticsDetails":1` (an exact
+integer), alongside `"videoDiagnostics":1`. A sender MUST omit the entire `details` key unless
+both capabilities are exactly integer 1 on its current authenticated control connection.
+Reset this capability and every queued request on disconnect/reconnect. The optional extension
+keeps diagnostics `schema:1` and the existing ACK unchanged. Legacy snapshots remain valid.
+Malformed details receive a diagnostics-only rejected ACK; control and guidance remain independent.
+The complete UTF-8 message, including details, remains bounded to 16384 bytes.
+
+`details` has exactly `schema:1` and `attempts` (at most four, newest local attempt first).
+Each fixed-field row contains local `attempt` and `share` ordinals, `ageMs`, nullable
+`sampleAgeMs`, `ended`, nullable codec (`h264`, `vp8`, `vp9`, `av1`), and nullable counters
+`bytesSent`, `packetsSent`, `framesEncoded`, `keyFramesEncoded`, `pliCount`, `nackCount`, `firCount`.
+Ordinals are bounded to 1000000; ages saturate at 86400000 ms; counters are integers 0..9000000000000.
+Attempt ordinals strictly decrease; row.share cannot exceed snapshot.share; sampleAgeMs cannot
+exceed ageMs. Unknown remains null, including every measurement before a first stats sample.
+Keyframe count cannot exceed encoded frame count when both are available. Samples are historical,
+retain their original timestamp through peer disposal, and do not establish a current receiver image.
+Sender outbound RTCP PLI/NACK/FIR counts mean feedback **received**; receiver inbound counts mean
+feedback **sent**. No SSRC, codec/track/session/negotiation identity, raw SDP/fmtp, exception text,
+address, content or route text is exported. The JSON schema and compatibility fixtures define the
+strict field allowlist. This extension never changes capture, decoding, freshness or codec selection.

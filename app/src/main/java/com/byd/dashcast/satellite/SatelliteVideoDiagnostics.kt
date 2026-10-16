@@ -41,15 +41,17 @@ object SatelliteVideoDiagnostics {
         val trackReceived: Boolean,
         val mediaConnected: Boolean,
         val decoded: Boolean,
+        val playback: Map<String, Any?> = emptyMap(),
     ) {
         fun summary(): String = "codec=${codec ?: "?"} stats=$statsState " +
             "track=$trackReceived media_connected=$mediaConnected decoded=$decoded " +
-            counters.entries.joinToString(" ") { "${it.key}=${it.value ?: "?"}" }
+            counters.entries.joinToString(" ") { "${it.key}=${it.value ?: "?"}" } + " " +
+            playback.entries.joinToString(" ") { "${it.key}=${it.value ?: "?"}" }
 
         companion object {
             private val counterNames = listOf("bytesReceived", "packetsReceived", "packetsLost",
                 "framesReceived", "framesDecoded", "keyFramesDecoded", "framesDropped",
-                "qualityTotal", "qualityDropped", "webkitDecoded")
+                "qualityTotal", "qualityDropped", "webkitDecoded", "pliCount", "nackCount", "firCount")
             private val ageNames = listOf("startupAgeMs", "answerAgeMs", "decodedAgeMs", "statsPendingAgeMs", "statsCompletedAgeMs")
             private val codecs = setOf("H264", "VP8", "VP9", "AV1")
             private val states = setOf("not_requested", "pending", "timed_out", "completed", "failed")
@@ -69,7 +71,18 @@ object SatelliteVideoDiagnostics {
                 val decoded = flag("decoded") ?: return null
                 return Observation(counterNames.associateWith { number(it, 9_000_000_000_000L) } +
                     ageNames.associateWith { number(it, 86_400_000L) },
-                    (json.opt("codec") as? String)?.takeIf { it in codecs }, state, track, connected, decoded)
+                    (json.opt("codec") as? String)?.takeIf { it in codecs }, state, track, connected, decoded,
+                    mapOf("decodeTimeMs" to number("decodeTimeMs", 86_400_000),
+                        "h264ProfileIdc" to number("h264ProfileIdc", 255)?.takeIf { it in setOf(66L,77L,88L,100L,110L,122L,244L) },
+                        "h264ProfileIop" to number("h264ProfileIop", 255),
+                        "h264LevelIdc" to number("h264LevelIdc", 62)?.takeIf { it in setOf(10L,11L,12L,13L,20L,21L,22L,30L,31L,32L,40L,41L,42L,50L,51L,52L,60L,61L,62L) },
+                        "packetizationMode" to number("packetizationMode", 1),
+                        "videoReadyState" to number("videoReadyState", 4), "videoNetworkState" to number("videoNetworkState", 3),
+                        "videoWidth" to number("videoWidth", 8192), "videoHeight" to number("videoHeight", 8192),
+                        "mediaError" to number("mediaError", 4)?.takeIf { it > 0 },
+                        "videoPaused" to flag("videoPaused"), "trackMuted" to flag("trackMuted"),
+                        "trackState" to (json.opt("trackState") as? String)?.takeIf { it in setOf("live", "ended") },
+                        "playState" to (json.opt("playState") as? String)?.takeIf { it in setOf("not_requested", "pending", "resolved", "rejected", "unavailable") }))
             }
         }
     }
@@ -77,7 +90,7 @@ object SatelliteVideoDiagnostics {
         SENDER_STOPPED, VIDEO_TIMEOUT, PLAYBACK_FAILED, CONNECTION_LOST, NEGOTIATION_FAILED, OTHER_FAILURE }
     internal class Attempts(private val clock: () -> Long = SystemClock::elapsedRealtime) {
         private data class Attempt(val number: Long, val at: Long, var lastAt: Long? = null,
-            var observation: Observation? = null, var end: End? = null)
+            var observation: Observation? = null, var end: End? = null, var finalSample: Boolean = false)
         private val attempts = ArrayDeque<Attempt>()
         private var next = 0L
         @Synchronized fun begin(): Long {
@@ -85,10 +98,11 @@ object SatelliteVideoDiagnostics {
             if (attempts.size == 8) attempts.removeFirst()
             return (++next).also { attempts.addLast(Attempt(it, clock())) }
         }
-        @Synchronized fun observe(number: Long, observation: Observation) {
+        @Synchronized fun observe(number: Long, observation: Observation, terminal: Boolean = false) {
             val active = attempts.lastOrNull()?.takeIf { it.number == number && it.end == null } ?: return
             val now = clock()
-            if (active.lastAt?.let { now - it < 900 } == true) return
+            if (active.finalSample || (!terminal && active.lastAt?.let { now - it < 900 } == true)) return
+            active.finalSample = terminal
             active.observation = observation
             active.lastAt = now
         }
@@ -113,7 +127,7 @@ object SatelliteVideoDiagnostics {
     }
     private val attempts = Attempts()
     internal fun beginAttempt(): Long = attempts.begin()
-    internal fun observe(attempt: Long, observation: Observation) = attempts.observe(attempt, observation)
+    internal fun observe(attempt: Long, observation: Observation, terminal: Boolean = false) = attempts.observe(attempt, observation, terminal)
     internal fun endAttempt(attempt: Long, end: End) = attempts.end(attempt, end)
     private val timeline = Timeline()
     fun record(event: Event, recent: Boolean = true) = timeline.record(event, recent)
