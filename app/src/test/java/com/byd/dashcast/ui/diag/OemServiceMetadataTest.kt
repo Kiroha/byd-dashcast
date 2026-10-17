@@ -468,7 +468,7 @@ class OemServiceMetadataTest {
         assertFalse(recovered.countsKnown)
     }
 
-    @Test fun `one OEM entry offers two distinct profiles and cancelling service confirmation launches nothing`() {
+    @Test fun `one OEM entry offers distinct metadata and source profiles and cancelling service confirmation launches nothing`() {
         val controller = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
             val buttons = mutableListOf<Button>()
@@ -477,7 +477,7 @@ class OemServiceMetadataTest {
             assertEquals(1, buttons.count { it.text.toString() == "Relevés locaux OEM" })
             buttons.single { it.text.toString() == "Relevés locaux OEM" }.performClick()
             val list = ShadowAlertDialog.getLatestAlertDialog().listView
-            assertEquals(3, list.adapter.count)
+            assertEquals(4, list.adapter.count)
             assertTrue(list.adapter.getItem(0).toString().contains("16 lectures"))
             assertTrue(list.adapter.getItem(1).toString().contains("54 lectures"))
             list.performItemClick(null, 1, 1)

@@ -41,6 +41,8 @@ internal class DiLinkContextDevice(
 
     companion object {
         private val transport = DiLinkContextTransport()
+        /** Narrow source-reader entry; reuses the same physical-call quarantine, without retry. */
+        internal fun executeScoped(call: () -> DiLinkContextTransport.Reply) = transport.execute(call)
         fun isTransportPending() = transport.isBusy()
         fun whenTransportIdle(finished: () -> Unit) = transport.whenIdle(finished)
     }
