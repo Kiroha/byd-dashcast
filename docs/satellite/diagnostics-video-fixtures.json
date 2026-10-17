@@ -108,6 +108,198 @@
         "schema": 1,
         "attempts": []
       }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "unknown",
+                "inspection": "complete",
+                "sps": null,
+                "pps": null,
+                "idr": null,
+                "profileIdc": null,
+                "constraintFlags": null,
+                "levelIdc": null
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "truncated",
+                "sps": null,
+                "pps": true,
+                "idr": null,
+                "profileIdc": null,
+                "constraintFlags": null,
+                "levelIdc": null
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "rejected": [
@@ -1616,6 +1808,1483 @@
             "share": 0,
             "ageMs": 5000,
             "sampleAgeMs": null,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": true,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 86400001,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": 1,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 0,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 8193,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": "960",
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "avcc",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "private",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": 1,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 256,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": -1,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": "31"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "unknown",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "truncated",
+                "sps": true,
+                "pps": false,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": null,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": false,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31,
+                "nalPayload": "private"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              },
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              },
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              },
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              },
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              },
+              {
+                "ageMs": 1000,
+                "declaredKey": false,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 0,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              },
+              {
+                "ageMs": 1,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 1,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
+            "ended": true,
+            "codec": "h264",
+            "bytesSent": 123456,
+            "packetsSent": 100,
+            "framesEncoded": 30,
+            "keyFramesEncoded": 1,
+            "pliCount": 2,
+            "nackCount": 0,
+            "firCount": null,
+            "h264": [
+              {
+                "ageMs": 1000,
+                "declaredKey": true,
+                "width": 960,
+                "height": 540,
+                "framing": "annex_b",
+                "inspection": "complete",
+                "sps": true,
+                "pps": true,
+                "idr": true,
+                "profileIdc": 66,
+                "constraintFlags": 224,
+                "levelIdc": 31
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "diagnostics.video",
+      "schema": 1,
+      "request": 1,
+      "snapshotAgeMs": 200,
+      "appVersionCode": 12,
+      "state": "waiting_viewer",
+      "captureBusy": true,
+      "share": 2,
+      "counts": {
+        "offer_sent": 1,
+        "waiting_viewer": 2
+      },
+      "recent": [
+        {
+          "event": "waiting_viewer",
+          "cause": "none",
+          "share": 2,
+          "ageMs": 0
+        },
+        {
+          "event": "offer_sent",
+          "cause": "none",
+          "share": 1,
+          "ageMs": 8000
+        }
+      ],
+      "details": {
+        "schema": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "share": 0,
+            "ageMs": 5000,
+            "sampleAgeMs": 2000,
             "ended": true,
             "codec": "h264",
             "bytesSent": 123456,

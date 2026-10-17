@@ -139,6 +139,7 @@ class SatelliteWebSocketServerTest {
         val socket = Socket(); open(socket); hello(socket)
         assertEquals(1, JSONObject(socket.messages.first()).get("videoDiagnostics"))
         assertEquals(1, JSONObject(socket.messages.first()).get("videoDiagnosticsDetails"))
+        assertEquals(1, JSONObject(socket.messages.first()).get("videoDiagnosticsH264"))
         val invalid = diagnostics().put("state", "untrusted free text")
         server.onMessage(socket.socket, invalid.toString())
         assertEquals("rejected", JSONObject(socket.messages.last()).getString("status"))

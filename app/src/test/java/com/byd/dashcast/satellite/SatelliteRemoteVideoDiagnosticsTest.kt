@@ -115,4 +115,18 @@ class SatelliteRemoteVideoDiagnosticsTest {
         assertTrue(summary.contains("historical evidence"))
     }
 
+    @Test fun `actual encoded header evidence has independent ages and immutable typed bounded report copy`() {
+        val fixture=fixtures().getJSONArray("accepted").let { list -> (0 until list.length()).map { list.getJSONObject(it) }.first { it.optJSONObject("details")?.optInt("schema")==2 } }
+        val row=fixture.getJSONObject("details").getJSONArray("attempts").getJSONObject(0)
+        row.put("sampleAgeMs",JSONObject.NULL).put("codec",JSONObject.NULL)
+        listOf("bytesSent","packetsSent","framesEncoded","keyFramesEncoded","pliCount","nackCount","firCount").forEach{row.put(it,JSONObject.NULL)}
+        val parsed=SatelliteRemoteVideoDiagnostics.parse(fixture)
+        assertNull(parsed.details!![0].sampleAgeMs);assertEquals(66L,parsed.details[0].h264!![0].metadata["profileIdc"])
+        row.getJSONArray("h264").getJSONObject(0).put("profileIdc",100)
+        val ledger=SatelliteRemoteVideoDiagnostics.Ledger{0};ledger.connected("owner","peer");assertTrue(ledger.accept("owner",parsed))
+        val report=ledger.summary();assertTrue(report.contains("profileIdc=66"));assertTrue(report.contains("sdkDimensions=960x540"))
+        assertTrue(report.contains("not linked to an IDR"));assertFalse(report.contains("profileIdc=100"))
+        assertTrue(report.length<16_384)
+    }
+
 }

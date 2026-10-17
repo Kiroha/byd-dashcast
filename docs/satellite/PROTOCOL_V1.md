@@ -333,3 +333,38 @@ Sender outbound RTCP PLI/NACK/FIR counts mean feedback **received**; receiver in
 feedback **sent**. No SSRC, codec/track/session/negotiation identity, raw SDP/fmtp, exception text,
 address, content or route text is exported. The JSON schema and compatibility fixtures define the
 strict field allowlist. This extension never changes capture, decoding, freshness or codec selection.
+
+
+### Optional actual encoded H264 header observations
+
+An authenticated welcome may advertise exact integer `"videoDiagnosticsH264":1` in addition to
+both existing diagnostics capabilities. Only when all three are exactly integer 1 on the current
+authenticated connection may a sender use `details.schema:2`. Otherwise it MUST retain the exact
+schema-1 details shape (or omit details when unsupported). Reset all capabilities and pending
+requests on control replacement. Top-level diagnostics and ACK remain schema 1. Receivers accept
+both strict details schemas; malformed extensions reject diagnostics only. The entire message
+still fits within 16384 UTF-8 bytes.
+
+Schema 2 adds required `h264` to each attempt row: at most four observations, oldest first,
+containing exactly `ageMs`, `declaredKey`, nullable `width` and `height`, `framing` (`annex_b` or
+`unknown`), `inspection` (`complete` or `truncated`), nullable Boolean `sps`, `pps`, `idr`, and
+nullable byte integers `profileIdc`, `constraintFlags`, `levelIdc`. Observation age is frozen at
+manual snapshot time independently of the RTC statistics sample age, cannot exceed attempt age,
+and is nonincreasing through the array. Later observations require declaredKey=true. Dimensions
+are the SDK EncodedImage metadata, null or 1..8192; they are NOT parsed SPS dimensions.
+
+The sender samples its first actual H264 encoded output, then up to three later SDK-declared key
+outputs. Per attempt it examines no more than 180 callbacks during 12 seconds from the first
+output, scans at most 256 KiB total and 96 KiB per selected buffer, and stops without a timer.
+The same budget survives encoder replacement or reinitialization; retired or stale callbacks
+cannot update evidence. It reads only the encoder buffer's current position..limit synchronously,
+without retaining, copying, modifying or exporting media bytes.
+
+`complete` means the bounded inspection covered the EncodedImage window, NOT validation of a
+bitstream. Length-prefixed/unknown framing yields null presence. Truncated, short or invalid NAL
+headers cannot establish absence. A positive presence means a recognized header was observed;
+false is allowed only after complete recognized Annex B inspection. SPS metadata is either three
+nulls or three 0..255 bytes with sps=true. It is the first observed fixed SPS header in that buffer,
+not a validated SPS, evidence of SPS-to-IDR association, negotiated profile, successful RTP delivery
+or receiver decoding. No raw NAL, SPS, codec implementation name or other free-form content is
+retained. This diagnostic extension does not alter codec selection, capture, recovery or freshness.
