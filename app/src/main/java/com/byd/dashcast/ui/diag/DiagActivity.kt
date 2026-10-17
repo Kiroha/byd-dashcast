@@ -365,6 +365,7 @@ class DiagActivity : Activity() {
         AlertDialog.Builder(this).setTitle("Identité du service OEM — véhicule stationné")
             .setMessage("${DiLinkContextPlan.Profile.OEM_SERVICE.commands.size} lectures fixes : identité du daemon, version système, liste des services, processus sans arguments, chemins candidats et déclarations init limitées. Les fichiers refusés ou hors limites restent signalés.\n\n" +
                 "Lecture des sources uniquement ; DashCast crée un ZIP local et le transport peut créer son fichier temporaire PID. Aucun outil ouvert ni réglage OEM modifié. Aucune tentative d’authentification.\n\n" +
+                "Les déclarations init sont réparties en 32 pages indépendantes. Prévoir quelques minutes ; davantage si plusieurs pages expirent. La progression indique chaque page. Annuler conserve les résultats reçus après le retour de la commande en cours ; un transport bloqué peut rester en attente.\n\n" +
                 "Stockage interne uniquement, partage manuel. Véhicule stationné ; garder DIAG visible jusqu'à la fin.")
             .setPositiveButton("Lancer le relevé") { _, _ -> startFullApkExport(ExportKind.OEM_SERVICE) }
             .setNegativeButton("Annuler", null).show()
@@ -449,7 +450,9 @@ class DiagActivity : Activity() {
                 "${state.kind.contextProfile.title} · " +
                     (if (FullApkExportSession.isCancelling()) "Annulation après la commande en cours…" else state.stage) +
                     "\n${state.completed + state.failed}/${state.discovered} lectures traitées · ${state.completed} reconnues · ${state.failed} incomplètes" +
-                    "\nDurée ${elapsed}s · commande/stade ${idle}s · limite commande 30s, transport 35s"
+                    "\nDurée ${elapsed}s · commande/stade ${idle}s · " +
+                    (if (state.kind == ExportKind.OEM_SERVICE) "délais de réponse : commande 30s, transport 35s ; l’appel physique peut rester en attente"
+                     else "limite commande 30s, transport 35s")
             } else {
                 "${state.kind.contextProfile.title} : ${contextOutcomeLabel(state.outcome)} · ${state.archives.size} ZIP finalisé(s)" +
                     (if (state.countsKnown) "\n${state.completed + state.failed}/${state.discovered} lectures traitées · ${state.failed} incomplètes"
@@ -508,8 +511,11 @@ class DiagActivity : Activity() {
         val files = state.archives + metadata.map { File(directory, it) }.filter { it.isFile }
         val labels = files.map { "${it.name} (${if(it.length()<1048576) "${it.length()/1024} KiB" else "${it.length()/1048576} MiB"})" }.toTypedArray()
         val context = state.kind.isContext
+        val profileDescription = if (state.kind == ExportKind.OEM_SERVICE && !state.countsKnown)
+            "Le ZIP conserve le profil et le nombre de lectures de sa collecte d’origine. Consulter plan.json et resultats.json ; aucune migration vers le profil actuel n’a été effectuée. "
+            else "Le ZIP contient les résultats reçus et les statuts des ${if (context) state.kind.contextProfile.commands.size else 0} lectures du profil ${if (context) state.kind.contextProfile.id else ""}. "
         AlertDialog.Builder(this).setTitle(if (context) "Fichiers · ${state.kind.contextProfile.title}" else "Local ${state.kind.label} export files")
-            .setMessage(if (context) "${directory.absolutePath}\n\nLe ZIP contient les résultats reçus et les statuts des ${state.kind.contextProfile.commands.size} lectures du profil ${state.kind.contextProfile.id}. " +
+            .setMessage(if (context) "${directory.absolutePath}\n\n$profileDescription" +
                 "Un relevé partiel ou annulé reste lisible. resultats.json décrit les limites ; integrite.json contient le SHA-256 du ZIP. Partage manuel uniquement."
                 else "${directory.absolutePath}\n\nTransférer TOUS les ZIP finalisés et manifest.json du même dossier. Chaque ZIP est indépendant. " +
                     "Les .part sont incomplets. Le manifeste extérieur décrit chemins, SHA-256 et limites de couverture. Aucun envoi automatique.")
