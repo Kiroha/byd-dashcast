@@ -14,7 +14,8 @@ internal enum class ExportKind(val label: String, val noun: String, val rootName
     CONTEXT("CONTEXTE", "context reads", "context-exports", "context-export-", "context", "context"),
     QR_DIAGNOSTIC("QR DIAGNOSTIC", "QR diagnostic metadata reads", "qr-diagnostic-exports", "qr-diagnostic-", "qr-diagnostic", "qr-diagnostic"),
     OEM_SERVICE("SERVICE OEM", "OEM service metadata reads", "oem-service-exports", "oem-service-", "oem-service", "oem-service"),
-    OEM_INIT_SOURCES("SOURCES INIT OEM", "init source files", "oem-init-source-exports", "oem-init-sources-", "init-sources", "oem-init-sources");
+    OEM_INIT_SOURCES("SOURCES INIT OEM", "init source files", "oem-init-source-exports", "oem-init-sources-", "init-sources", "oem-init-sources"),
+    OEM_BOOTSTRAP("DÉMARRAGE OEM", "bootstrap evidence items", "oem-bootstrap-exports", "oem-bootstrap-", "bootstrap", "oem-bootstrap");
 
     val isSystem: Boolean get() = this == SYSTEM || this == SYSTEM_P15
     val isContext: Boolean get() = this == CONTEXT || this == QR_DIAGNOSTIC || this == OEM_SERVICE
