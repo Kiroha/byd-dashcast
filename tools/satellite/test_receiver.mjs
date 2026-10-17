@@ -14,6 +14,7 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
   const video = {srcObject: null, webkitDecodedFrameCount:0, play: () => Promise.resolve()};
   const status = {style: {display: 'flex'}};
   const metrics = {style: {display:'none'}, textContent:''};
+  const reference = {style: {display:'none'}};
   class Peer {
     constructor(config) { this.config = config; this.ice = []; this.closed = false; this.frames = 0; this.statsCalls = 0; peers.push(this); }
     async setRemoteDescription(description) {
@@ -35,7 +36,7 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
   }
   const context = vm.createContext({
     window: {addEventListener: (type, listener) => events.set(type, listener)},
-    document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : status},
+    document: {getElementById: id => id === 'video' ? video : id === 'metrics' ? metrics : id === 'reference' ? reference : status},
     MediaStream: class {constructor(tracks) { this.tracks = tracks; }},
     DashCastVideo: {ready: value => replies.push({ready: value}), failed: code => replies.push({failed: code}),
       progress: (attempt, code) => progress.push(code),
@@ -50,7 +51,7 @@ function harness({supported = true, holdFirstOffer = false, holdStats = false, o
     ...(supported ? {RTCPeerConnection: Peer} : {}),
   });
   for (const script of scripts) vm.runInContext(script, context);
-  return {context, peers, replies, progress, observations, video, status, metrics, intervals, timeouts, events,
+  return {context, peers, replies, progress, observations, video, status, metrics, reference, intervals, timeouts, events,
     offer: (session = 'session', negotiation = 'first') => context.window.receiveSignal(session,
       JSON.stringify({type: 'video.offer', negotiation, sdp: 'test-offer'}), ++attempt),
     signal: (message, session = 'session') => context.window.receiveSignal(session, JSON.stringify(message)),
@@ -471,4 +472,18 @@ test('maximum receiver observation remains within native input bound', async () 
   const h=harness();h.offer();await flush();
   h.peers[0].report=()=>new Map([['inbound',{type:'inbound-rtp',kind:'video',codecId:'c',...Object.fromEntries(['bytesReceived','packetsReceived','packetsLost','framesReceived','framesDecoded','keyFramesDecoded','framesDropped','pliCount','nackCount','firCount'].map(k=>[k,9000000000000])),totalDecodeTime:86400}],['c',{mimeType:'video/H264',sdpFmtpLine:'profile-level-id=42e01f;packetization-mode=1'}]]);
   await h.advance(1000);await h.advance(2000);assert.ok(JSON.stringify(h.observations.at(-1)).length<=2048);
+});
+
+test('reference is labelled before decode and resets before normal offers', async () => {
+  const h = harness();
+  h.signal({type:'video.offer', negotiation:'ref', sdp:'test-offer', sourceMode:'reference'});
+  await flush();
+  assert.equal(h.reference.style.display,'block');
+  assert.equal(h.status.style.display,'flex');
+  h.offer('session','normal'); await flush();
+  assert.equal(h.reference.style.display,'none');
+  h.signal({type:'video.offer',negotiation:'bad',sdp:'test-offer',sourceMode:true}); await flush();
+  assert.equal(h.reference.style.display,'none');
+  assert.equal(h.peers.length,2);
+  assert.ok(h.peers.every(peer => peer.closed));
 });

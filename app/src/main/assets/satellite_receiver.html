@@ -2,8 +2,8 @@
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:">
-<style>html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:sans-serif}video{width:100%;height:100%;object-fit:contain}#status{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center}#metrics{position:absolute;bottom:8px;left:8px;padding:4px 8px;background:#000b;color:#fff;font-size:12px;pointer-events:none;display:none}</style>
-</head><body><video id="video" autoplay playsinline muted></video><div id="status">__WAITING__</div><div id="metrics"></div>
+<style>html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:sans-serif}video{width:100%;height:100%;object-fit:contain}#status{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center}#metrics{position:absolute;bottom:8px;left:8px;padding:4px 8px;background:#000b;color:#fff;font-size:12px;pointer-events:none;display:none}#reference{position:absolute;top:8px;left:8px;right:8px;padding:8px;background:#743500;color:#fff;font-size:18px;text-align:center;pointer-events:none;display:none}</style>
+</head><body><video id="video" autoplay playsinline muted></video><div id="status">__WAITING__</div><div id="metrics"></div><div id="reference">TEST PATTERN · compatibility test · no app images</div>
 <script>
 'use strict';
 // Keep this independent bootstrap ES5-compatible: it also catches a later script parse error.
@@ -15,6 +15,7 @@ window.addEventListener('error', function () { DashCastVideo.failed('script_erro
 const video = document.getElementById('video');
 const status = document.getElementById('status');
 const metrics = document.getElementById('metrics');
+const referenceLabel = document.getElementById('reference');
 let peer = null, owner = null, negotiation = null, chain = Promise.resolve(), watchdog = null;
 const pendingOperations = new Set();
 // The first image has a finite startup budget; an established image has a shorter stale limit.
@@ -41,7 +42,7 @@ function resetReceiver(invalidate = true) {
   peer = null; owner = null; negotiation = null;
   if (remoteTrack) remoteTrack.onended = null;
   remoteTrack = null; playState = 'not_requested';
-  video.srcObject = null; status.style.display = 'flex';
+  video.srcObject = null; status.style.display = 'flex'; referenceLabel.style.display = 'none';
   lastProgress = 0; answerAt = null; statsInFlight = false; previousStats = null;
   statsBaseline = null; statsReportId = null; qualityBaseline = null; webkitBaseline = null;
   statsRequestedAt = null; statsCompletedAt = null; statsState = 'not_requested'; observed = {};
@@ -225,7 +226,10 @@ function monitor(connection) {
 async function receive(id, raw, attempt) {
   const message = JSON.parse(raw);
   if (message.type === 'video.offer') {
-    resetReceiver(false); owner = id; negotiation = message.negotiation; diagnosticAttempt = attempt;
+    resetReceiver(false);
+    if (message.sourceMode !== undefined && message.sourceMode !== 'reference') throw new Error('invalid_source_mode');
+    referenceLabel.style.display = message.sourceMode === 'reference' ? 'block' : 'none';
+    owner = id; negotiation = message.negotiation; diagnosticAttempt = attempt;
     const connection = new RTCPeerConnection({iceServers: [], bundlePolicy: 'max-bundle'});
     peer = connection;
     monitor(connection);

@@ -92,7 +92,7 @@ class SatelliteWebSocketServer(
                 sendBounded(conn, JSONObject().put("type", "welcome").put("version", SatelliteProtocol.VERSION)
                     .put("session", created.id).put("navigationTimeoutMs", SatelliteProtocol.NAV_TIMEOUT_MS)
                     .put("remoteGuidance", SatellitePrefs.usesRemoteGuidance(context))
-                    .put("genericRoundabouts", true).put("videoDiagnostics", 1).put("videoDiagnosticsDetails", 1).put("videoDiagnosticsH264", 1)
+                    .put("genericRoundabouts", true).put("videoDiagnostics", 1).put("videoDiagnosticsDetails", 1).put("videoDiagnosticsH264", 1).put("videoReferenceTest", 1)
                     .put("videoTransport", "webrtc").toString())
                 SatelliteVideoHub.connect(created.id) { sendBounded(conn, it) }
                 return
@@ -127,6 +127,7 @@ class SatelliteWebSocketServer(
                     require(negotiation is String && negotiation.matches(Regex("[A-Za-z0-9_-]{1,64}")))
                     when (type) {
                         "video.offer" -> {
+                            if (json.has("sourceMode")) require(json.get("sourceMode") == "reference")
                             val sdp = json.get("sdp")
                             require(sdp is String && sdp.length in 1..60_000)
                             val media = sdp.lineSequence().filter { it.startsWith("m=") }.toList()
