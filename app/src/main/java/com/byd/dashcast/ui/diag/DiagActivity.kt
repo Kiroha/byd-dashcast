@@ -69,6 +69,7 @@ class DiagActivity : Activity() {
     private lateinit var reportingPairBtn: Button
     private var reportingPairInFlight = false
     private lateinit var fullExportBtn: Button
+    private lateinit var qrDiagnosticBtn: Button
     private lateinit var fullExportStatus: TextView
     private lateinit var fullExportCurrent: TextView
     private lateinit var cancelFullExportBtn: Button
@@ -86,7 +87,7 @@ class DiagActivity : Activity() {
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, hudBenchBtn, reportingPairBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -155,6 +156,15 @@ class DiagActivity : Activity() {
         controls.addView(fullExportBtn)
         controls.addView(TextView(this).apply {
             text = "Stockage interne uniquement via le daemon ADB. SD et USB exclues. Peut inclure des données personnelles. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible."
+            textSize = 14f
+        })
+        qrDiagnosticBtn = Button(this).apply {
+            text = "QR développeur : relevé local"
+            setOnClickListener { chooseQrDiagnostic() }
+        }
+        controls.addView(qrDiagnosticBtn)
+        controls.addView(TextView(this).apply {
+            text = "Métadonnées uniquement. Aucun code saisi ni outil ouvert."
             textSize = 14f
         })
         runBtn = Button(this).apply {
@@ -330,11 +340,22 @@ class DiagActivity : Activity() {
             }.setNegativeButton("Annuler", null).show()
     }
 
+    private fun chooseQrDiagnostic() {
+        if (sBusy.get()) { log("Un diagnostic est déjà en cours. Attendre sa fin."); return }
+        AlertDialog.Builder(this)
+            .setTitle("Diagnostic QR développeur — véhicule stationné")
+            .setMessage("${DiLinkContextPlan.Profile.QR_DIAGNOSTIC.commands.size} lectures fixes : identité du daemon, utilisateur Android courant, pays/langue/horloge et métadonnées des outils OEM, AuthService et du paquet Android shell.\n\n" +
+                "Aucun outil OEM ouvert, aucun code saisi, aucun QR validé. Aucun pays, certificat ou réglage modifié. Ce relevé ne démontre pas un droit d'accès aux outils.\n\n" +
+                "ZIP local sur le stockage interne uniquement ; partage manuel. Garder DIAG visible jusqu'à la fin.")
+            .setPositiveButton("Lancer le relevé") { _, _ -> startFullApkExport(ExportKind.QR_DIAGNOSTIC) }
+            .setNegativeButton("Annuler", null).show()
+    }
+
     private fun startFullApkExport(kind: ExportKind = ExportKind.APK, resumeDirectory: File? = null) {
         if (!claimBusyOrWarn()) return
         allDiagButtons().forEach { it.isEnabled = false }
-        log(if (kind == ExportKind.CONTEXT)
-            "Relevé DiLink lancé : 14 lectures fixes via la connexion existante. Aucun envoi automatique ; résultats et ZIP conservés localement."
+        log(if (kind.isContext)
+            "${kind.contextProfile.title} lancé : ${kind.contextProfile.commands.size} lectures fixes via la connexion existante. Aucun outil ouvert ni code saisi. Aucun envoi automatique ; résultats et ZIP conservés localement."
             else if (kind == ExportKind.FIRMWARE_LARGE)
                 "Stockage interne uniquement via le daemon ADB (SHELL uniquement), y compris données internes accessibles. SD, USB et stockage adopté exclus. Peut inclure des données personnelles et identifiants. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible. Reprise après vérification des ZIP ; anciennes collectes conservées. Aucun contenu collecté exécuté, aucune image physique complète."
             else if (kind == ExportKind.SYSTEM_P15)
@@ -365,26 +386,27 @@ class DiagActivity : Activity() {
         val now = FullApkExport.monotonicMs()
         val elapsed = ((now - state.startedMs) / 1000).coerceAtLeast(0)
         val idle = ((now - state.lastProgressMs) / 1000).coerceAtLeast(0)
-        if (state.kind == ExportKind.CONTEXT) {
+        if (state.kind.isContext) {
             cancelFullExportBtn.text = if (FullApkExportSession.isCancelling()) "Annulation en attente…" else "Annuler le relevé"
             shareFullExportBtn.text = "Fichiers du relevé"
             shareFullExportBtn.isEnabled = state.directory != null && !state.running
             val pending = !state.running && DiLinkContextDevice.isTransportPending()
             fullExportStatus.text = if (state.running) {
-                (if (FullApkExportSession.isCancelling()) "Annulation après la commande en cours…" else state.stage) +
-                    "\n${state.completed + state.failed}/14 lectures traitées · ${state.completed} reconnues · ${state.failed} incomplètes" +
+                "${state.kind.contextProfile.title} · " +
+                    (if (FullApkExportSession.isCancelling()) "Annulation après la commande en cours…" else state.stage) +
+                    "\n${state.completed + state.failed}/${state.discovered} lectures traitées · ${state.completed} reconnues · ${state.failed} incomplètes" +
                     "\nDurée ${elapsed}s · commande/stade ${idle}s · limite commande 30s, transport 35s"
             } else {
-                "Relevé DiLink : ${contextOutcomeLabel(state.outcome)} · ${state.archives.size} ZIP finalisé(s)" +
-                    (if (state.countsKnown) "\n${state.completed + state.failed}/14 lectures traitées · ${state.failed} incomplètes"
+                "${state.kind.contextProfile.title} : ${contextOutcomeLabel(state.outcome)} · ${state.archives.size} ZIP finalisé(s)" +
+                    (if (state.countsKnown) "\n${state.completed + state.failed}/${state.discovered} lectures traitées · ${state.failed} incomplètes"
                      else "\nRelevé précédent : consulter resultats.json") +
                     (if (pending) "\nCommande toujours en attente : diagnostics bloqués jusqu’au retour du transport." else "\n${state.stage.take(190)}")
             }
             fullExportCurrent.text = if (state.running) state.current else state.directory?.absolutePath ?: "Aucun dossier disponible"
             if (!state.running && state.directory != null && lastExportDirectory != state.directory) {
                 lastExportDirectory = state.directory
-                log("Relevé DiLink ${state.outcome} : ${state.directory.absolutePath}\n${state.stage}\n" +
-                    "Ouvrir Fichiers du relevé pour partager le ZIP manuellement. Les refus/absences sont conservés dans resultats.json.")
+                log("${state.kind.contextProfile.title} ${state.outcome} : ${state.directory.absolutePath}\n${state.stage}\n" +
+                    "Ouvrir Fichiers du relevé → Lister / partager → sélectionner le ZIP. Les refus/absences sont conservés dans resultats.json.")
             }
             return
         }
@@ -423,13 +445,13 @@ class DiagActivity : Activity() {
     private fun showFullExportFiles() {
         val state = FullApkExportSession.snapshot ?: return
         val directory = state.directory ?: return
-        val metadata = if (state.kind == ExportKind.CONTEXT) listOf("manifest.json", "resultats.json", "integrite.json", "RESULT.txt", "ERREUR_LIVRAISON.txt")
+        val metadata = if (state.kind.isContext) listOf("manifest.json", "resultats.json", "integrite.json", "RESULT.txt", "ERREUR_LIVRAISON.txt")
             else listOf("manifest.json")
         val files = state.archives + metadata.map { File(directory, it) }.filter { it.isFile }
         val labels = files.map { "${it.name} (${if(it.length()<1048576) "${it.length()/1024} KiB" else "${it.length()/1048576} MiB"})" }.toTypedArray()
-        val context = state.kind == ExportKind.CONTEXT
-        AlertDialog.Builder(this).setTitle(if (context) "Fichiers du relevé DiLink" else "Local ${state.kind.label} export files")
-            .setMessage(if (context) "${directory.absolutePath}\n\nLe ZIP contient les résultats reçus et les statuts des 14 lectures. " +
+        val context = state.kind.isContext
+        AlertDialog.Builder(this).setTitle(if (context) "Fichiers · ${state.kind.contextProfile.title}" else "Local ${state.kind.label} export files")
+            .setMessage(if (context) "${directory.absolutePath}\n\nLe ZIP contient les résultats reçus et les statuts des ${state.kind.contextProfile.commands.size} lectures du profil ${state.kind.contextProfile.id}. " +
                 "Un relevé partiel ou annulé reste lisible. resultats.json décrit les limites ; integrite.json contient le SHA-256 du ZIP. Partage manuel uniquement."
                 else "${directory.absolutePath}\n\nTransférer TOUS les ZIP finalisés et manifest.json du même dossier. Chaque ZIP est indépendant. " +
                     "Les .part sont incomplets. Le manifeste extérieur décrit chemins, SHA-256 et limites de couverture. Aucun envoi automatique.")
@@ -445,7 +467,10 @@ class DiagActivity : Activity() {
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             startActivity(Intent.createChooser(intent, "Share local ${state.kind.label} export"))
-                        } catch (e: Exception) { log("Share unavailable: ${e.message}. Local file: ${files[index].absolutePath}") }
+                        } catch (e: Exception) {
+                            log(if (context) "Partage indisponible : ${e.message}. Fichier local conservé : ${files[index].absolutePath}"
+                                else "Share unavailable: ${e.message}. Local file: ${files[index].absolutePath}")
+                        }
                     }.setNegativeButton(android.R.string.cancel, null).show()
             }.setNegativeButton(android.R.string.cancel, null).show()
     }

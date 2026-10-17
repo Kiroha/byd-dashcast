@@ -20,10 +20,13 @@ internal class DiLinkContextExport(
     private val progress: (FullApkExport.Progress) -> Unit,
     private val freeBytes: (File) -> Long = { it.usableSpace },
     private val appRuntime: Map<String, Any?> = emptyMap(),
+    private val profile: DiLinkContextPlan.Profile = DiLinkContextPlan.Profile.CONTEXT,
 ) {
     fun interface Device { fun read(command: DiLinkContextPlan.Command): DiLinkContextTransport.Reply }
-    private var state = FullApkExport.Progress("Préparation du relevé DiLink", kind = ExportKind.CONTEXT,
-        discovered = DiLinkContextPlan.commands.size, directory = directory)
+    private val commands = profile.commands
+    private val archiveName = "${profile.kind.archivePrefix}-001.zip"
+    private var state = FullApkExport.Progress("Préparation · ${profile.title}", kind = profile.kind,
+        discovered = commands.size, directory = directory)
     private val rows = mutableListOf<Map<String, Any?>>()
     private val outputFiles = mutableListOf<File>()
     private var outcome = "running"
@@ -41,14 +44,16 @@ internal class DiLinkContextExport(
             }
             ownsDestination = true
             ensureSpace()
-            save("plan.json", json(mapOf("schema" to SCHEMA, "commands" to DiLinkContextPlan.commands.map(::commandJson),
+            save("plan.json", json(mapOf("schema" to SCHEMA, "kind" to profile.kind.name,
+                "profile" to profile.id, "planned" to commands.size, "coverage" to profile.coverage,
+                "commands" to commands.map(::commandJson),
                 "not_applicable" to listOf("adb version (PC-only)", "adb devices (PC-only)"),
                 "transport" to TRANSPORT, "app_runtime" to appRuntime, "output_format" to DiLinkContextPlan.OUTPUT_DESCRIPTION)))
             writeResults()
-            for ((index, command) in DiLinkContextPlan.commands.withIndex()) {
+            for ((index, command) in commands.withIndex()) {
                 if (cancelled()) { outcome = "cancelled"; break }
                 ensureSpace()
-                publish(state.copy(stage = "Lecture ${index + 1}/${DiLinkContextPlan.commands.size} · ${command.label}",
+                publish(state.copy(stage = "Lecture ${index + 1}/${commands.size} · ${command.label}",
                     current = command.shell, lastProgressMs = FullApkExport.monotonicMs()))
                 val beforeUtc = utcNow()
                 val before = FullApkExport.monotonicMs()
@@ -77,16 +82,16 @@ internal class DiLinkContextExport(
                 if (reply.fatal) { message = reply.error.take(2048); outcome = "partial"; break }
             }
             if (outcome == "running") outcome = if (cancelled()) "cancelled"
-                else if (rows.size == DiLinkContextPlan.commands.size && rows.all { it["status"] == "ok" }) "finished" else "partial"
+                else if (rows.size == commands.size && rows.all { it["status"] == "ok" }) "finished" else "partial"
             message = when (outcome) {
-                "finished" -> "Les 14 lectures du plan ont fourni des résultats reconnus. Validation matérielle et droits OEM non établis."
+                "finished" -> "Les ${commands.size} lectures du plan ont fourni des résultats reconnus. Validation matérielle et droits OEM non établis."
                 "cancelled" -> "Relevé annulé entre deux commandes ; les résultats déjà reçus sont conservés."
                 else -> message.ifEmpty { "Des lectures sont indisponibles ou incomplètes ; consulter resultats.json." }
             }
             val payload = writeFinalMetadata()
-            publish(state.copy(stage = "Création du ZIP local", current = "context-001.zip", lastProgressMs = FullApkExport.monotonicMs()))
+            publish(state.copy(stage = "Création du ZIP local", current = archiveName, lastProgressMs = FullApkExport.monotonicMs()))
             ensureSpace()
-            val part = File(directory, "context-001.zip.part")
+            val part = File(directory, "$archiveName.part")
             check(part.createNewFile()) { "Archive staging file already exists" }
             ZipOutputStream(part.outputStream().buffered()).use { zip ->
                 for (file in payload + File(directory, "manifest.json")) {
@@ -95,11 +100,12 @@ internal class DiLinkContextExport(
                     zip.closeEntry()
                 }
             }
-            val target = File(directory, "context-001.zip")
+            val target = File(directory, archiveName)
             check(!target.exists() && part.renameTo(target)) { "Cannot finalize context ZIP; .part is incomplete" }
             archive = target
             // Outside the ZIP to avoid a self-referential archive digest.
-            save("integrite.json", json(mapOf("schema" to SCHEMA, "collection_outcome" to outcome,
+            save("integrite.json", json(mapOf("schema" to SCHEMA, "kind" to profile.kind.name,
+                "profile" to profile.id, "collection_outcome" to outcome,
                 "archive_outcome" to "finished", "archive" to fileJson(target),
                 "manifest" to fileJson(File(directory, "manifest.json")), "hash_scope" to "Stored exported bytes; not original separate stdout/stderr streams")))
         } catch (e: Exception) {
@@ -125,34 +131,39 @@ internal class DiLinkContextExport(
 
     private fun writeFinalMetadata(): List<File> {
         writeResults()
-        save("RESULT.txt", "Relevé DiLink (résultat des lectures) : $outcome\n$message\n${rows.size}/14 lectures traitées.\n" +
+        save("RESULT.txt", "${profile.title} (résultat des lectures) : $outcome\nProfil : ${profile.id}\n$message\n${rows.size}/${commands.size} lectures traitées.\n" +
             "La finalisation du ZIP et son SHA-256 sont attestés séparément par integrite.json.\n" +
             "Données système lues ; réglages véhicule inchangés par ces commandes. Export local uniquement.\n" +
             "Le transport existant peut créer son fichier PID temporaire. Aucune activité OEM n'est ouverte.\n" +
-            "Résultats non atomiques ; horloge observée sur l'appareil, aucune comparaison PC fiable.\n")
+            "Résultats non atomiques ; horloge observée sur l'appareil, aucune comparaison PC fiable.\n" +
+            "Présence d'un paquet, composants déclarés et états User n ne prouvent pas un droit de lancement.\n" +
+            "Aucun code saisi ni QR validé ; aucune autorisation contournée par ce relevé.\n")
         val payload = listOf(File(directory, "plan.json"), File(directory, "resultats.json"), File(directory, "RESULT.txt")) + outputFiles
-        save("manifest.json", json(mapOf("schema" to SCHEMA, "kind" to ExportKind.CONTEXT.name,
+        save("manifest.json", json(mapOf("schema" to SCHEMA, "kind" to profile.kind.name, "profile" to profile.id,
             "outcome" to outcome, "outcome_scope" to "Collection only; ZIP finalization and archive digest are attested separately by integrite.json.",
-            "message" to message, "planned" to 14, "attempted" to rows.size,
-            "files" to payload.map(::fileJson), "coverage" to "Fixed P12 metadata plan only; complete DiLink platform coverage is not established.",
+            "message" to message, "planned" to commands.size, "attempted" to rows.size,
+            "files" to payload.map(::fileJson), "coverage" to profile.coverage,
             "app_runtime" to appRuntime, "output_format" to DiLinkContextPlan.OUTPUT_DESCRIPTION)))
         return payload
     }
 
     private fun writeResults() {
         val completedKeys = rows.map { it["key"] }.toSet()
-        save("resultats.json", json(mapOf("schema" to SCHEMA, "kind" to ExportKind.CONTEXT.name,
+        save("resultats.json", json(mapOf("schema" to SCHEMA, "kind" to profile.kind.name, "profile" to profile.id,
+            "coverage" to profile.coverage,
             "outcome" to outcome, "message" to message, "started_utc_from_device_clock" to startedUtc,
             "outcome_scope" to "Collection only; ZIP finalization and archive digest are attested separately by integrite.json.",
-            "updated_utc_from_device_clock" to utcNow(), "planned" to 14, "attempted" to rows.size,
+            "updated_utc_from_device_clock" to utcNow(), "planned" to commands.size, "attempted" to rows.size,
             "transport" to TRANSPORT, "app_runtime" to appRuntime, "output_format" to DiLinkContextPlan.OUTPUT_DESCRIPTION,
-            "commands" to (rows + DiLinkContextPlan.commands.filter { it.key !in completedKeys }.map {
+            "commands" to (rows + commands.filter { it.key !in completedKeys }.map {
                 commandJson(it) + mapOf("status" to if (outcome == "running") "pending" else "not_attempted")
             }), "not_applicable" to listOf("adb version (PC-only)", "adb devices (PC-only)"),
             "limitations" to listOf("No APK, activity or OEM operation is launched.",
                 "No VIN, IMEI or account is requested; package/service metadata can still identify the firmware.",
                 "No independent PC clock comparison. Empty properties remain unknown.",
                 "Service list and package metadata do not prove access rights or local authorization.",
+                "Current Android user is separate from package User n lines; effective launch rights are untested.",
+                "No QR, code, authentication API or remote approval is requested; no authorization bypass is demonstrated.",
                 "No connection, bootstrap, retry, root, settings, certificate or DNS operation by this feature."))))
     }
     private fun commandJson(command: DiLinkContextPlan.Command): Map<String, Any?> = mapOf(

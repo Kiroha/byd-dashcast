@@ -8,11 +8,12 @@ import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 /** Captures only the already-connected PROXY binder. Never connects, bootstraps or retries. */
 internal class DiLinkContextDevice(
     private val pinnedBinder: IBinder? = ProxyClient.getProxyDaemonBinder(),
+    private val profile: DiLinkContextPlan.Profile = DiLinkContextPlan.Profile.CONTEXT,
 ) : DiLinkContextExport.Device {
 
     override fun read(command: DiLinkContextPlan.Command): DiLinkContextTransport.Reply {
         // Reject fabricated commands as well as any future caller-supplied shell text.
-        require(command in DiLinkContextPlan.commands) { "Command is outside the fixed context plan" }
+        require(command in profile.commands) { "Command is outside the fixed ${profile.id} plan" }
         val binder = pinnedBinder ?: return DiLinkContextTransport.Reply(null, "",
             "No already-connected PROXY daemon; no connection or bootstrap attempted", true)
         return transport.execute {
