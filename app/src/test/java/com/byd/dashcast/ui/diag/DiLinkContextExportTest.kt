@@ -26,6 +26,7 @@ class DiLinkContextExportTest {
         }
         DiLinkContextPlan.Kind.PACKAGE_PATH -> "package:/system/app/${command.subject}/base.apk"
         DiLinkContextPlan.Kind.PACKAGE_DUMP -> "Packages:\n  Package [${command.subject}] (test):\n    userId=1000"
+        else -> error("New service-only kind outside this preserved profile")
     }
     private fun device(replace: (DiLinkContextPlan.Command) -> DiLinkContextTransport.Reply? = { null }) =
         DiLinkContextExport.Device { command -> replace(command) ?: DiLinkContextTransport.Reply(0, text(command)) }

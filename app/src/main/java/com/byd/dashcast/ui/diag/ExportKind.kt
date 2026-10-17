@@ -12,13 +12,15 @@ internal enum class ExportKind(val label: String, val noun: String, val rootName
     SYSTEM_P15("SYSTEM P15", "targeted system files", "system-p15-exports", "system-p15-export-", "system", "system"),
     FIRMWARE_LARGE("FIRMWARE LARGE", "firmware files", "firmware-exports", "firmware-export-", "firmware", "firmware"),
     CONTEXT("CONTEXTE", "context reads", "context-exports", "context-export-", "context", "context"),
-    QR_DIAGNOSTIC("QR DIAGNOSTIC", "QR diagnostic metadata reads", "qr-diagnostic-exports", "qr-diagnostic-", "qr-diagnostic", "qr-diagnostic");
+    QR_DIAGNOSTIC("QR DIAGNOSTIC", "QR diagnostic metadata reads", "qr-diagnostic-exports", "qr-diagnostic-", "qr-diagnostic", "qr-diagnostic"),
+    OEM_SERVICE("SERVICE OEM", "OEM service metadata reads", "oem-service-exports", "oem-service-", "oem-service", "oem-service");
 
     val isSystem: Boolean get() = this == SYSTEM || this == SYSTEM_P15
-    val isContext: Boolean get() = this == CONTEXT || this == QR_DIAGNOSTIC
+    val isContext: Boolean get() = this == CONTEXT || this == QR_DIAGNOSTIC || this == OEM_SERVICE
     val contextProfile: DiLinkContextPlan.Profile get() = when (this) {
         CONTEXT -> DiLinkContextPlan.Profile.CONTEXT
         QR_DIAGNOSTIC -> DiLinkContextPlan.Profile.QR_DIAGNOSTIC
+        OEM_SERVICE -> DiLinkContextPlan.Profile.OEM_SERVICE
         else -> error("Not a context metadata profile")
     }
     val systemProfile: SystemExportProfile get() = if (this == SYSTEM_P15) SystemExportProfile.DILINK_P15 else SystemExportProfile.FULL

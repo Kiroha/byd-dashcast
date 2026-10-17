@@ -81,6 +81,7 @@ class DiLinkContextDeviceTest {
                     DiLinkContextPlan.Kind.PROPERTY -> "synthetic"
                     DiLinkContextPlan.Kind.PACKAGE_PATH -> "package:/system/app/test/base.apk"
                     DiLinkContextPlan.Kind.PACKAGE_DUMP -> "Package [${command.subject}] (test):"
+                    else -> error("New service-only kind outside this preserved profile")
                 }
                 reply!!.writeNoException(); reply.writeInt(0); reply.writeString(output)
                 return true
