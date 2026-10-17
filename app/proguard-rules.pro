@@ -84,9 +84,10 @@
 
 # ---- Android components are auto-kept by AGP; add explicit keeps here if any
 #      helper is ever loaded via Class.forName in the future. ----
--keepclassmembers class com.byd.dashcast.satellite.SatelliteVideoActivity$Bridge {
-    @android.webkit.JavascriptInterface <methods>;
-}
+# The pinned AAR supplies no consumer rules. Native WebRTC looks up Java classes,
+# constructors and callbacks by name; preserving only native methods is insufficient.
+-keep class org.webrtc.** { *; }
+
 
 # Android 29 ART rejects the optimized server run() when R8 inlines this
 # synchronized timer startup and moves a field read outside its catch-all while

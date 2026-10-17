@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute a release's exact bundled video page in a stock API 29 emulator WebView."""
+"""Legacy WebView fixture probe; this does not validate the native receiver used from 1.9.46."""
 import argparse
 import os
 from pathlib import Path

@@ -11,7 +11,7 @@ object SatelliteVideoDiagnostics {
         TRACK_RECEIVED, MEDIA_CONNECTED, FRAMES_DECODED, SENDER_STOPPED,
         SCRIPT_ERROR, BOOTSTRAP_TIMEOUT, WEBVIEW_UNAVAILABLE, PAGE_LOAD_FAILED, RENDERER_GONE,
         PLAYBACK_FAILED, CONNECTION_LOST, VIDEO_TIMEOUT, STATS_FAILED, SIGNALLING_OVERFLOW,
-        NEGOTIATION_FAILED, OTHER_FAILURE,
+        NEGOTIATION_FAILED, NATIVE_RECEIVER_UNAVAILABLE, HARDWARE_DECODER_UNAVAILABLE, OTHER_FAILURE,
     }
     internal class Timeline(private val clock: () -> Long = SystemClock::elapsedRealtime) {
         private data class Entry(val at: Long, val event: Event)
@@ -132,8 +132,9 @@ object SatelliteVideoDiagnostics {
     internal fun endAttempt(attempt: Long, end: End) = attempts.end(attempt, end)
     private val timeline = Timeline()
     fun record(event: Event, recent: Boolean = true) = timeline.record(event, recent)
-    fun summary(): String = timeline.summary() + "\nWebView version=${providerVersion ?: "?"}\n" + attempts.summary()
-    fun failure(code: String) = record(when (code) {
+    fun summary(): String = timeline.summary() + "\nNative WebRTC version=${NativeVideoPolicy.SDK}; hardware H264 only. Legacy WebView version=${providerVersion ?: "?"}\n" + attempts.summary()
+    fun failure(code: String) = record(failureEvent(code))
+    internal fun failureEvent(code: String): Event = when (code) {
         "script_error" -> Event.SCRIPT_ERROR
         "bootstrap_timeout" -> Event.BOOTSTRAP_TIMEOUT
         "webrtc_unavailable", "webview_create_failed", "webview_linkage_failed" -> Event.WEBVIEW_UNAVAILABLE
@@ -145,8 +146,10 @@ object SatelliteVideoDiagnostics {
         "stats_failed" -> Event.STATS_FAILED
         "signalling_overflow" -> Event.SIGNALLING_OVERFLOW
         "negotiation_failed" -> Event.NEGOTIATION_FAILED
+        "native_receiver_unavailable" -> Event.NATIVE_RECEIVER_UNAVAILABLE
+        "hardware_decoder_unavailable" -> Event.HARDWARE_DECODER_UNAVAILABLE
         else -> Event.OTHER_FAILURE
-    })
+    }
     fun progress(code: String) {
         val event = when (code) {
             "track_received" -> Event.TRACK_RECEIVED

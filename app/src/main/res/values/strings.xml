@@ -748,4 +748,12 @@
     <string name="satellite_video_loading">Préparation du récepteur vidéo…</string>
     <string name="satellite_video_waiting">En attente du partage vidéo depuis DashSat…</string>
     <string name="satellite_video_unavailable">Le récepteur vidéo ne peut pas démarrer. Réessayez ou fermez cette vue.</string>
+    <string name="satellite_native_loading" translatable="false">Preparing hardware video receiver…</string>
+    <string name="satellite_native_waiting" translatable="false">Waiting for video from DashSat…</string>
+    <string name="satellite_native_failed" translatable="false">Video could not start or stopped. Retry, or send a DashCast bug report.</string>
+    <string name="satellite_native_no_hardware" translatable="false">A usable hardware H.264 decoder is unavailable. Send a DashCast bug report.</string>
+    <string name="satellite_native_backend" translatable="false">Native WebRTC 150.7871.01 · hardware H.264 only</string>
+    <string name="satellite_native_reference" translatable="false">TEST PATTERN · compatibility test · no app images</string>
+    <string name="satellite_native_retry" translatable="false">Retry</string>
+    <string name="satellite_native_close" translatable="false">Close</string>
 </resources>

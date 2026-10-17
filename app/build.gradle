@@ -2045,8 +2045,8 @@ android {
         // 676 = 1.9.37-beta: equivalent mounts, scoped storage aliases and attested boot userdata fallback.
         // 678 = 1.9.39-beta: separate fixed passive QR developer metadata preflight with local ZIP sharing.
         // 684 = 1.9.45-beta: bounded passive OEM bootstrap/process identity and strict source ZIP.
-        versionCode 684
-        versionName "1.9.45-beta"
+        versionCode 685
+        versionName "1.9.46-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
@@ -2241,9 +2241,9 @@ dependencies {
     compileOnly fileTree(include: ['*.jar'], dir: 'libs')
     testCompileOnly fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.13.2'
-    // Opt-in satellite control/signalling only; video uses the installed WebView WebRTC engine.
-    // Keep this pure-Java dependency pinned and avoid adding native codecs to the base APK.
+    // Authenticated satellite control and an app-local, hardware-only native video receiver.
     implementation 'org.java-websocket:Java-WebSocket:1.6.0'
+    implementation 'io.github.webrtc-sdk:android:150.7871.01'
     // Temporary satellite pairing: a six-digit code with password-authenticated key exchange.
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.86'
 
@@ -2414,4 +2414,33 @@ kotlin {
         // Verified in bytecode: both DisplayReadyCallback.class and its $DefaultImpls.class exist.
         freeCompilerArgs.add('-jvm-default=enable')
     }
+}
+
+// Refuse a changed binary under the reviewed coordinate, in local and CI builds.
+afterEvaluate {
+def reviewedWebRtcFiles = files(['debugRuntimeClasspath', 'releaseRuntimeClasspath'].collect { configuration ->
+configurations.getByName(configuration).incoming.artifactView {
+    componentFilter { id -> id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+        id.group == 'io.github.webrtc-sdk' && id.module == 'android' }
+}.files
+})
+tasks.register('verifyWebRtcArchive') {
+    inputs.files(reviewedWebRtcFiles)
+    doLast {
+        def archive = inputs.files.singleFile
+        if (archive.name != 'android-150.7871.01.aar') {
+            throw new GradleException('Reviewed native WebRTC archive unavailable.')
+        }
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        archive.withInputStream { stream ->
+            byte[] buffer = new byte[8192]
+            int count
+            while ((count = stream.read(buffer)) > 0) digest.update(buffer, 0, count)
+        }
+        if (digest.digest().encodeHex().toString() != '0a1627b1a48c2bc17d9a40d62fc47bd45166f44a311e95917f147c402de379b0') {
+            throw new GradleException('Native WebRTC archive differs from the reviewed SHA-256.')
+        }
+    }
+}
+tasks.named('preBuild') { dependsOn 'verifyWebRtcArchive' }
 }
