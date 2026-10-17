@@ -2044,8 +2044,9 @@ android {
         // 675 = 1.9.36-beta: bounded preflight metadata diagnostics in consented bug reports.
         // 676 = 1.9.37-beta: equivalent mounts, scoped storage aliases and attested boot userdata fallback.
         // 678 = 1.9.39-beta: separate fixed passive QR developer metadata preflight with local ZIP sharing.
-        versionCode 683
-        versionName "1.9.44-beta"
+        // 684 = 1.9.45-beta: bounded passive OEM bootstrap/process identity and strict source ZIP.
+        versionCode 684
+        versionName "1.9.45-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
