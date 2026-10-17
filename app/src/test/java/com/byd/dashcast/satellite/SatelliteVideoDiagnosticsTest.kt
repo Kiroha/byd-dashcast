@@ -148,4 +148,15 @@ class SatelliteVideoDiagnosticsTest {
         assertFalse(parsed.summary().contains("private"))
     }
 
+
+    @Test fun `reference mode belongs to receiver attempt and survives replacement without sender snapshot`() {
+        val history = SatelliteVideoDiagnostics.Attempts { 100L }
+        val reference = history.begin(SatelliteVideoDiagnostics.SourceMode.REFERENCE)
+        history.end(reference, SatelliteVideoDiagnostics.End.VIEWER_HIDDEN)
+        history.begin()
+        val rows = history.summary().lineSequence().filter { it.startsWith("attempt=") }.toList()
+        assertTrue(rows[0].contains("sourceMode=capture"))
+        assertTrue(rows[1].contains("sourceMode=reference"))
+        assertTrue(rows[1].contains("end=viewer_hidden"))
+    }
 }

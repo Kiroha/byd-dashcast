@@ -86,17 +86,18 @@ object SatelliteVideoDiagnostics {
             }
         }
     }
+    internal enum class SourceMode { CAPTURE, REFERENCE }
     internal enum class End { REPLACED, VIEWER_HIDDEN, VIEWER_RELEASED, CONTROL_RESET,
         SENDER_STOPPED, VIDEO_TIMEOUT, PLAYBACK_FAILED, CONNECTION_LOST, NEGOTIATION_FAILED, OTHER_FAILURE }
     internal class Attempts(private val clock: () -> Long = SystemClock::elapsedRealtime) {
-        private data class Attempt(val number: Long, val at: Long, var lastAt: Long? = null,
+        private data class Attempt(val number: Long, val at: Long, val sourceMode: SourceMode, var lastAt: Long? = null,
             var observation: Observation? = null, var end: End? = null, var finalSample: Boolean = false)
         private val attempts = ArrayDeque<Attempt>()
         private var next = 0L
-        @Synchronized fun begin(): Long {
+        @Synchronized fun begin(sourceMode: SourceMode = SourceMode.CAPTURE): Long {
             attempts.lastOrNull()?.takeIf { it.end == null }?.end = End.REPLACED
             if (attempts.size == 8) attempts.removeFirst()
-            return (++next).also { attempts.addLast(Attempt(it, clock())) }
+            return (++next).also { attempts.addLast(Attempt(it, clock(), sourceMode)) }
         }
         @Synchronized fun observe(number: Long, observation: Observation, terminal: Boolean = false) {
             val active = attempts.lastOrNull()?.takeIf { it.number == number && it.end == null } ?: return
@@ -115,7 +116,7 @@ object SatelliteVideoDiagnostics {
                 "Historical decode counters do not prove current display or hardware decoding.\n" +
                 attempts.toList().asReversed().joinToString("\n") { attempt ->
                     "attempt=${attempt.number} age_s=${(now - attempt.at).coerceAtLeast(0) / 1000} " +
-                        "end=${attempt.end?.name?.lowercase() ?: "active"} " +
+                        "sourceMode=${attempt.sourceMode.name.lowercase()} end=${attempt.end?.name?.lowercase() ?: "active"} " +
                         "sample_age_ms=${attempt.lastAt?.let { (now - it).coerceAtLeast(0) } ?: "?"} " +
                         (attempt.observation?.summary() ?: "no observation")
                 }
@@ -126,7 +127,7 @@ object SatelliteVideoDiagnostics {
         providerVersion = value?.takeIf { it.length <= 40 && it.matches(Regex("[0-9]+(?:\\.[0-9]+){0,7}")) }
     }
     private val attempts = Attempts()
-    internal fun beginAttempt(): Long = attempts.begin()
+    internal fun beginAttempt(sourceMode: SourceMode = SourceMode.CAPTURE): Long = attempts.begin(sourceMode)
     internal fun observe(attempt: Long, observation: Observation, terminal: Boolean = false) = attempts.observe(attempt, observation, terminal)
     internal fun endAttempt(attempt: Long, end: End) = attempts.end(attempt, end)
     private val timeline = Timeline()

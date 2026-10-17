@@ -368,3 +368,37 @@ nulls or three 0..255 bytes with sps=true. It is the first observed fixed SPS he
 not a validated SPS, evidence of SPS-to-IDR association, negotiated profile, successful RTP delivery
 or receiver decoding. No raw NAL, SPS, codec implementation name or other free-form content is
 retained. This diagnostic extension does not alter codec selection, capture, recovery or freshness.
+
+
+### Optional synthetic video reference test
+
+Exact integer `"videoReferenceTest":1` in the authenticated welcome extends the existing
+`videoDiagnostics:1`, `videoDiagnosticsDetails:1`, and `videoDiagnosticsH264:1` contract. All four
+must be exact integers on the same control generation. This one capability enables both the
+explicit reference offer and diagnostics details schema 3; reset it on reconnect. Missing, boolean,
+string, floating-point or unknown values do not enable testing or schema 3.
+
+Normal capture retains the exact legacy `video.offer` shape. A supported reference test adds
+`"sourceMode":"reference"` to its offer. No other value or type is accepted. This describes
+synthetic pre-encoded media, never an app image, and grants no capture/input permissions.
+The viewer visibly labels the test before the first decoded image and while rendering it.
+A receiver must never infer hardware decoding, successful display or guidance from this label.
+
+Details schema 3 extends schema 2 with one required `sourceMode` scalar on each attempt:
+exactly `capture` or `reference`. The sender fixes it at attempt creation. All previous bounds,
+ordering, nullable scalars, byte limits, strict unknown-key rejection and ACK rules remain unchanged.
+Without the complete capability contract, capture attempts keep the exact older schema shape;
+reference attempts are omitted from older details rather than reported as ordinary capture.
+Top-level diagnostics/ACK schema remains 1. A malformed mode rejects only that diagnostics request.
+
+The reference implementation requires fresh Android MediaProjection consent, shares the existing
+foreground service, uses no captured pixel data, sends only pre-encoded synthetic IDRs through the
+same native WebRTC RTP/DTLS stack, and has no software encoding fallback. Its fixtures are 960×452,
+Constrained Baseline level 3.1, include SPS/PPS and an IDR large enough for FU-A. Original platform
+texture timestamps are consumed once: timer-forced cached frames are disabled in reference mode.
+It permits at most 5 outputs/second and 75 outputs total, with no catch-up. The capture lease ends
+no later than 60 seconds after consent or 15 seconds after the first reference negotiation starts,
+whichever comes first, even with zero callbacks or no visible viewer. Peer replacement/source
+resume never renews either deadline. Completion is not proof of decoding; normal sharing afterward
+requires a new consent. Two immutable direct payload buffers remain leased until native release;
+when unavailable, frames are dropped. Assets are bounded and hash-validated off callback/main threads.

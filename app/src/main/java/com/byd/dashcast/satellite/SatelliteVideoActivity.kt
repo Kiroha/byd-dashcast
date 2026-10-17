@@ -266,8 +266,11 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
             this.session = session
             when (message.optString("type")) {
                 "video.offer" -> {
+                    if (message.has("sourceMode") && message.opt("sourceMode") != "reference") return@post
                     endVideoAttempt(SatelliteVideoDiagnostics.End.REPLACED)
-                    videoAttempt = SatelliteVideoDiagnostics.beginAttempt()
+                    val sourceMode = if (message.opt("sourceMode") == "reference") SatelliteVideoDiagnostics.SourceMode.REFERENCE
+                        else SatelliteVideoDiagnostics.SourceMode.CAPTURE
+                    videoAttempt = SatelliteVideoDiagnostics.beginAttempt(sourceMode)
                     videoNegotiation = message.optString("negotiation")
                 }
                 "video.stop" -> if (message.optString("negotiation") == videoNegotiation)

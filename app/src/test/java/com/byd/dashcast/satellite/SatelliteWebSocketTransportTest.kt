@@ -105,6 +105,7 @@ class SatelliteWebSocketTransportTest {
                     assertEquals(1, JSONObject(message).get("videoDiagnostics"))
                     assertEquals(1, JSONObject(message).get("videoDiagnosticsDetails"))
         assertEquals(1, JSONObject(message).get("videoDiagnosticsH264"))
+        assertEquals(1, JSONObject(message).get("videoReferenceTest"))
                     welcomed.countDown()
                     val snapshot = JSONObject(java.io.File("../docs/satellite/diagnostics-video-fixtures.json").readText())
                         .getJSONArray("accepted").getJSONObject(1)

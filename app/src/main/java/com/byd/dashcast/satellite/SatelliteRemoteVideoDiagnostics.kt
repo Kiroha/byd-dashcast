@@ -16,7 +16,7 @@ internal object SatelliteRemoteVideoDiagnostics {
     data class Snapshot(val request: Long, val appVersionCode: Int, val state: State, val captureBusy: Boolean,
         val share: Long, val snapshotAgeMs: Long, val counts: List<Pair<Event, Int>>, val recent: List<Entry>, val details: List<SenderAttempt>? = null)
     data class SenderAttempt(val attempt: Long, val share: Long, val ageMs: Long, val sampleAgeMs: Long?,
-        val ended: Boolean, val codec: String?, val counters: Map<String, Long?>, val h264: List<H264Observation>? = null)
+        val ended: Boolean, val codec: String?, val counters: Map<String, Long?>, val h264: List<H264Observation>? = null, val sourceMode: String? = null)
     data class H264Observation(val ageMs: Long, val declaredKey: Boolean, val width: Long?, val height: Long?,
         val framing: String, val inspection: String, val presence: Map<String, Boolean?>, val metadata: Map<String, Long?>)
 
@@ -52,12 +52,12 @@ internal object SatelliteRemoteVideoDiagnostics {
     private val senderCounters = listOf("bytesSent", "packetsSent", "framesEncoded", "keyFramesEncoded", "pliCount", "nackCount", "firCount")
     private fun parseDetails(json: JSONObject, share: Long): List<SenderAttempt> {
         keys(json, setOf("schema", "attempts"))
-        val schema = SatelliteProtocol.integer(json, "schema", 1, 2)
+        val schema = SatelliteProtocol.integer(json, "schema", 1, 3)
         val rows = json.getJSONArray("attempts"); require(rows.length() <= 4)
         var previousAttempt = MAX_ORDINAL + 1
         return (0 until rows.length()).map { index ->
             val row = rows.getJSONObject(index)
-            keys(row, setOf("attempt", "share", "ageMs", "sampleAgeMs", "ended", "codec") + senderCounters + if (schema == 2L) setOf("h264") else emptySet())
+            keys(row, setOf("attempt", "share", "ageMs", "sampleAgeMs", "ended", "codec") + senderCounters + (if (schema >= 2L) setOf("h264") else emptySet()) + (if (schema == 3L) setOf("sourceMode") else emptySet()))
             val attempt = SatelliteProtocol.integer(row, "attempt", 1, previousAttempt - 1)
             previousAttempt = attempt
             val session = SatelliteProtocol.integer(row, "share", 0, share)
@@ -70,8 +70,10 @@ internal object SatelliteRemoteVideoDiagnostics {
             val frames = counters["framesEncoded"]; val keys = counters["keyFramesEncoded"]
             require(frames == null || keys == null || keys <= frames)
             require(sampleAge != null || (codec === JSONObject.NULL && counters.values.all { it == null }))
+            if (schema == 3L) require(row.get("sourceMode") in setOf("capture", "reference"))
             SenderAttempt(attempt, session, age, sampleAge, ended, codec as? String, counters,
-                if (schema == 2L) parseH264(row.getJSONArray("h264"), age) else null)
+                if (schema >= 2L) parseH264(row.getJSONArray("h264"), age) else null,
+                if (schema == 3L) row.getString("sourceMode") else null)
         }
     }
     private fun parseH264(rows: org.json.JSONArray, age: Long): List<H264Observation> {
@@ -142,6 +144,7 @@ internal object SatelliteRemoteVideoDiagnostics {
                 value.details?.forEach { row ->
                     append("senderAttempt=").append(row.attempt).append(" share=").append(row.share)
                     append(" ageAtCaptureMs=").append(row.ageMs).append(" sampleAgeAtCaptureMs=").append(row.sampleAgeMs ?: "?")
+                    append(" sourceMode=").append(row.sourceMode ?: "unknown")
                     append(" ended=").append(row.ended).append(" codec=").append(row.codec ?: "?").append(' ')
                     append(row.counters.entries.joinToString(" ") { "${it.key}=${it.value ?: "?"}" }).append('\n')
                     row.h264?.forEach { item ->

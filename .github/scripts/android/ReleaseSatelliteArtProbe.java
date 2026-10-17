@@ -349,7 +349,7 @@ public final class ReleaseSatelliteArtProbe {
                 JSONObject welcome = new JSONObject(new String(payload, StandardCharsets.UTF_8));
                 if (opcode != 1 || !"welcome".equals(welcome.optString("type")))
                     throw new AssertionError("Authenticated hello did not get welcome");
-                for (String capability : new String[] {"videoDiagnostics", "videoDiagnosticsDetails", "videoDiagnosticsH264"})
+                for (String capability : new String[] {"videoDiagnostics", "videoDiagnosticsDetails", "videoDiagnosticsH264", "videoReferenceTest"})
                     if (!(welcome.get(capability) instanceof Integer) || welcome.getInt(capability) != 1)
                         throw new AssertionError("Missing exact diagnostics capability");
                 checkH264Diagnostics(input, output);
@@ -390,10 +390,22 @@ public final class ReleaseSatelliteArtProbe {
         if (!"diagnostics.video.ack".equals(rejected.optString("type")) || rejected.getInt("request") != 2 ||
                 !"rejected".equals(rejected.optString("status")))
             throw new AssertionError("Malformed H264 diagnostics not rejected independently");
+        observation.put("inspection", "complete").put("pps", true);
+        diagnostic.put("request", 3).getJSONObject("details").put("schema", 3);
+        attempt.put("sourceMode", "reference");
+        sendFrame(output, 1, diagnostic.toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject referenceAccepted = readJson(input);
+        if (!"accepted".equals(referenceAccepted.optString("status")) || referenceAccepted.getInt("request") != 3)
+            throw new AssertionError("Reference diagnostics not accepted");
+        diagnostic.put("request", 4); attempt.put("sourceMode", true);
+        sendFrame(output, 1, diagnostic.toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject referenceRejected = readJson(input);
+        if (!"rejected".equals(referenceRejected.optString("status")) || referenceRejected.getInt("request") != 4)
+            throw new AssertionError("Invalid reference mode not rejected");
         sendFrame(output, 1, new JSONObject().put("type", "ping").toString().getBytes(StandardCharsets.UTF_8));
         if (!"pong".equals(readJson(input).optString("type")))
             throw new AssertionError("Diagnostics rejection interrupted authenticated control");
-        System.out.println("ART_H264_DIAGNOSTICS_ACCEPT_REJECT_CONTROL_OK");
+        System.out.println("ART_H264_DIAGNOSTICS_ACCEPT_REJECT_CONTROL_OK\nART_REFERENCE_DIAGNOSTICS_ACCEPT_REJECT_CONTROL_OK");
     }
 
     private static JSONObject readJson(InputStream input) throws Exception {
