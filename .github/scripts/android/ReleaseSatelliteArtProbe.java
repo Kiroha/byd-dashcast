@@ -346,8 +346,13 @@ public final class ReleaseSatelliteArtProbe {
                 payload[i] = (byte) value;
             }
             if (expectedWelcome) {
-                if (opcode != 1 || !"welcome".equals(new JSONObject(new String(payload, StandardCharsets.UTF_8))
-                        .optString("type"))) throw new AssertionError("Authenticated hello did not get welcome");
+                JSONObject welcome = new JSONObject(new String(payload, StandardCharsets.UTF_8));
+                if (opcode != 1 || !"welcome".equals(welcome.optString("type")))
+                    throw new AssertionError("Authenticated hello did not get welcome");
+                for (String capability : new String[] {"videoDiagnostics", "videoDiagnosticsDetails", "videoDiagnosticsH264"})
+                    if (!(welcome.get(capability) instanceof Integer) || welcome.getInt(capability) != 1)
+                        throw new AssertionError("Missing exact diagnostics capability");
+                checkH264Diagnostics(input, output);
                 sendFrame(output, 8, new byte[] {3, (byte) 232});
                 // Complete the close handshake before proving a replacement connection.
                 // Sending bytes individually creates one TLS record per byte and can
@@ -359,11 +364,58 @@ public final class ReleaseSatelliteArtProbe {
         }
     }
 
+    /** Exercises strict schema 2 in the exact minified APK, then proves rejection preserves control. */
+    private static void checkH264Diagnostics(InputStream input, OutputStream output) throws Exception {
+        JSONObject observation = new JSONObject().put("ageMs", 500).put("declaredKey", true)
+                .put("width", 960).put("height", 540).put("framing", "annex_b").put("inspection", "complete")
+                .put("sps", true).put("pps", true).put("idr", true)
+                .put("profileIdc", 66).put("constraintFlags", 224).put("levelIdc", 31);
+        JSONObject attempt = new JSONObject().put("attempt", 1).put("share", 1).put("ageMs", 1000)
+                .put("sampleAgeMs", JSONObject.NULL).put("ended", true).put("codec", JSONObject.NULL)
+                .put("h264", new org.json.JSONArray().put(observation));
+        for (String key : new String[] {"bytesSent", "packetsSent", "framesEncoded", "keyFramesEncoded", "pliCount", "nackCount", "firCount"})
+            attempt.put(key, JSONObject.NULL);
+        JSONObject diagnostic = new JSONObject().put("type", "diagnostics.video").put("schema", 1).put("request", 1)
+                .put("snapshotAgeMs", 0).put("appVersionCode", 16).put("state", "capture_paused")
+                .put("captureBusy", true).put("share", 1).put("counts", new JSONObject()).put("recent", new org.json.JSONArray())
+                .put("details", new JSONObject().put("schema", 2).put("attempts", new org.json.JSONArray().put(attempt)));
+        sendFrame(output, 1, diagnostic.toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject accepted = readJson(input);
+        if (!"diagnostics.video.ack".equals(accepted.optString("type")) || accepted.getInt("schema") != 1 ||
+                accepted.getInt("request") != 1 || !"accepted".equals(accepted.optString("status")))
+            throw new AssertionError("Valid H264 diagnostics not accepted");
+        diagnostic.put("request", 2); observation.put("inspection", "truncated").put("pps", false);
+        sendFrame(output, 1, diagnostic.toString().getBytes(StandardCharsets.UTF_8));
+        JSONObject rejected = readJson(input);
+        if (!"diagnostics.video.ack".equals(rejected.optString("type")) || rejected.getInt("request") != 2 ||
+                !"rejected".equals(rejected.optString("status")))
+            throw new AssertionError("Malformed H264 diagnostics not rejected independently");
+        sendFrame(output, 1, new JSONObject().put("type", "ping").toString().getBytes(StandardCharsets.UTF_8));
+        if (!"pong".equals(readJson(input).optString("type")))
+            throw new AssertionError("Diagnostics rejection interrupted authenticated control");
+        System.out.println("ART_H264_DIAGNOSTICS_ACCEPT_REJECT_CONTROL_OK");
+    }
+
+    private static JSONObject readJson(InputStream input) throws Exception {
+        int first = input.read(); int length = input.read();
+        if (first < 0 || (first & 15) != 1 || length < 0 || (length & 128) != 0)
+            throw new AssertionError("Expected unmasked text frame");
+        if (length == 126) length = (input.read() << 8) | input.read();
+        else if (length == 127) throw new AssertionError("Unexpected large frame");
+        if (length > 16384) throw new AssertionError("Response budget exceeded");
+        byte[] payload = new byte[length];
+        for (int i = 0; i < length; i++) {
+            int value = input.read(); if (value < 0) throw new AssertionError("Truncated response"); payload[i] = (byte) value;
+        }
+        return new JSONObject(new String(payload, StandardCharsets.UTF_8));
+    }
+
     private static void sendFrame(OutputStream output, int opcode, byte[] payload) throws Exception {
-        if (payload.length >= 126) throw new AssertionError("Probe sends only short frames");
+        if (payload.length > 16384) throw new AssertionError("Probe frame budget exceeded");
         ByteArrayOutputStream frame = new ByteArrayOutputStream();
         frame.write(128 | opcode);
-        frame.write(128 | payload.length);
+        if (payload.length < 126) frame.write(128 | payload.length);
+        else { frame.write(128 | 126); frame.write(payload.length >> 8); frame.write(payload.length & 255); }
         byte[] mask = new byte[] {17, 34, 51, 68};
         frame.write(mask);
         for (int i = 0; i < payload.length; i++) frame.write(payload[i] ^ mask[i % 4]);

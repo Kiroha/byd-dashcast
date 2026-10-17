@@ -356,166 +356,454 @@
       }
     },
     "details": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "attempts"
-      ],
-      "properties": {
-        "schema": {
-          "const": 1
-        },
-        "attempts": {
-          "type": "array",
-          "maxItems": 4,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "attempt",
-              "share",
-              "ageMs",
-              "sampleAgeMs",
-              "ended",
-              "codec",
-              "bytesSent",
-              "packetsSent",
-              "framesEncoded",
-              "keyFramesEncoded",
-              "pliCount",
-              "nackCount",
-              "firCount"
-            ],
-            "properties": {
-              "attempt": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 1000000
-              },
-              "share": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 1000000
-              },
-              "ageMs": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 86400000
-              },
-              "sampleAgeMs": {
-                "anyOf": [
-                  {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "attempts"
+          ],
+          "properties": {
+            "schema": {
+              "const": 1
+            },
+            "attempts": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "attempt",
+                  "share",
+                  "ageMs",
+                  "sampleAgeMs",
+                  "ended",
+                  "codec",
+                  "bytesSent",
+                  "packetsSent",
+                  "framesEncoded",
+                  "keyFramesEncoded",
+                  "pliCount",
+                  "nackCount",
+                  "firCount"
+                ],
+                "properties": {
+                  "attempt": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  },
+                  "share": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  },
+                  "ageMs": {
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400000
                   },
-                  {
-                    "type": "null"
+                  "sampleAgeMs": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ended": {
+                    "type": "boolean"
+                  },
+                  "codec": {
+                    "enum": [
+                      "h264",
+                      "vp8",
+                      "vp9",
+                      "av1",
+                      null
+                    ]
+                  },
+                  "bytesSent": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "packetsSent": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "framesEncoded": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "keyFramesEncoded": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pliCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nackCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "firCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
-                ]
-              },
-              "ended": {
-                "type": "boolean"
-              },
-              "codec": {
-                "enum": [
-                  "h264",
-                  "vp8",
-                  "vp9",
-                  "av1",
-                  null
-                ]
-              },
-              "bytesSent": {
-                "anyOf": [
-                  {
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "attempts"
+          ],
+          "properties": {
+            "schema": {
+              "const": 2
+            },
+            "attempts": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "attempt",
+                  "share",
+                  "ageMs",
+                  "sampleAgeMs",
+                  "ended",
+                  "codec",
+                  "bytesSent",
+                  "packetsSent",
+                  "framesEncoded",
+                  "keyFramesEncoded",
+                  "pliCount",
+                  "nackCount",
+                  "firCount",
+                  "h264"
+                ],
+                "properties": {
+                  "attempt": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  },
+                  "share": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 9000000000000
+                    "maximum": 1000000
                   },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "packetsSent": {
-                "anyOf": [
-                  {
+                  "ageMs": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 9000000000000
+                    "maximum": 86400000
                   },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "framesEncoded": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9000000000000
+                  "sampleAgeMs": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "keyFramesEncoded": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9000000000000
+                  "ended": {
+                    "type": "boolean"
                   },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "pliCount": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9000000000000
+                  "codec": {
+                    "enum": [
+                      "h264",
+                      "vp8",
+                      "vp9",
+                      "av1",
+                      null
+                    ]
                   },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "nackCount": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9000000000000
+                  "bytesSent": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "firCount": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 9000000000000
+                  "packetsSent": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
-                  {
-                    "type": "null"
+                  "framesEncoded": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "keyFramesEncoded": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pliCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nackCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "firCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9000000000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "h264": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "ageMs",
+                        "declaredKey",
+                        "width",
+                        "height",
+                        "framing",
+                        "inspection",
+                        "sps",
+                        "pps",
+                        "idr",
+                        "profileIdc",
+                        "constraintFlags",
+                        "levelIdc"
+                      ],
+                      "properties": {
+                        "ageMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 86400000
+                        },
+                        "declaredKey": {
+                          "type": "boolean"
+                        },
+                        "width": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 8192
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "height": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 8192
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "framing": {
+                          "enum": [
+                            "annex_b",
+                            "unknown"
+                          ]
+                        },
+                        "inspection": {
+                          "enum": [
+                            "complete",
+                            "truncated"
+                          ]
+                        },
+                        "sps": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "pps": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "idr": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "profileIdc": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "constraintFlags": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "levelIdc": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
                   }
-                ]
+                }
               }
             }
           }
         }
-      }
+      ]
     }
   },
-  "$comment": "Implementations additionally enforce <=16384 UTF-8 bytes, exact Int/Long numeric types, newest-first nondecreasing ages and row.share <= snapshot.share. Ages and counts saturate; see PROTOCOL_V1.md. Optional details additionally require strictly decreasing local attempt ordinals, share <= snapshot.share, sampleAgeMs <= ageMs, keyFramesEncoded <= framesEncoded when both known, and all measurements null when sampleAgeMs is null. Feedback counts are sender-received RTCP feedback."
+  "$comment": "Implementations additionally enforce <=16384 UTF-8 bytes, exact Int/Long numeric types, newest-first nondecreasing ages and row.share <= snapshot.share. Ages and counts saturate; see PROTOCOL_V1.md. Optional details additionally require strictly decreasing local attempt ordinals, share <= snapshot.share, sampleAgeMs <= ageMs, keyFramesEncoded <= framesEncoded when both known, and all measurements null when sampleAgeMs is null. Feedback counts are sender-received RTCP feedback. Details schema 2 additionally requires exact H264 capability opt-in, at most four encoded H264 observations per attempt, oldest-first nonincreasing observation ages <= attempt age, later observations declaredKey=true, width/height null or1..8192, unknown framing requires null presence, false presence requires complete inspection, and SPS metadata all null or all known with sps=true. Observation ages are independent of RTC stats sample age."
 }
