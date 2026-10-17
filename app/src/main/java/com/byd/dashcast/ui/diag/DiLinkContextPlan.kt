@@ -8,8 +8,8 @@ internal object DiLinkContextPlan {
             "Fixed P12 metadata plan only; complete DiLink platform coverage is not established."),
         QR_DIAGNOSTIC("QR_DEVELOPER_DIAGNOSTIC_METADATA_V1", "Diagnostic QR développeur",
             "Fixed metadata preflight for developer/diagnostic QR research only; no tool launch, code entry or authorization attempt. Package presence, component declarations and per-user states do not establish launch permission or QR bypass."),
-        OEM_SERVICE("OEM_STRATEGY_SERVICE_METADATA_V1", "Identité du service OEM",
-            "Fixed service/process/path metadata and bounded init service declarations only. No binary copy, process arguments, OEM policy/authentication call or authorization attempt. Closed root/hw scope, unresolved imports and omissions are explicit; no global absence or server implementation is established.");
+        OEM_SERVICE("OEM_STRATEGY_SERVICE_METADATA_V2", "Identité du service OEM",
+            "Fixed service/process/path metadata and 32 independent ordinal init pages, at most 16 entry slots each in the same closed root/hw scope. Aggregate ceilings: 512 selected slots, 8 MiB source and 192 KiB filtered output. Page byte/time limits can omit assigned slots; changing entries can overlap or disappear between pages. No binary copy, process arguments, OEM policy/authentication call or authorization attempt; no global absence, atomic snapshot or server implementation is established.");
 
         val commands: List<Command> get() = when (this) {
             CONTEXT -> DiLinkContextPlan.commands
@@ -87,7 +87,11 @@ internal object DiLinkContextPlan {
             add(Command("candidate_${partition}_metadata", "Chemin candidat $partition : métadonnées", listOf("ls", "-ldZ", path), Kind.PATH_METADATA, path))
             add(Command("candidate_${partition}_link", "Chemin candidat $partition : lien littéral", listOf("readlink", path), Kind.PATH_METADATA, path))
         }
-        add(Command("init_service_metadata", "Déclarations init bornées, sans arguments", listOf("sh", "-c", OemServiceMetadata.script), Kind.INIT_METADATA))
+        for (page in 1..OemServiceMetadata.PAGE_COUNT) {
+            add(Command("init_service_metadata_${page.toString().padStart(2, '0')}",
+                "Déclarations init · page $page/${OemServiceMetadata.PAGE_COUNT}",
+                listOf("sh", "-c", OemServiceMetadata.script(page)), Kind.INIT_METADATA, page.toString()))
+        }
     }
     const val COMMAND_TIMEOUT_MS = 30_000L
     const val TRANSPORT_TIMEOUT_MS = 35_000L
@@ -143,7 +147,9 @@ internal object DiLinkContextPlan {
             }
             Kind.PATH_METADATA -> if (value.isEmpty()) Interpretation("value_absent", "No path metadata received; no presence inferred")
                 else Interpretation("ok", values = mapOf("interpretation" to "Literal candidate metadata only; link targets are not followed or read by this command."))
-            Kind.INIT_METADATA -> OemServiceMetadata.interpret(value)
+            Kind.INIT_METADATA -> command.subject.toIntOrNull()?.takeIf { it in 1..OemServiceMetadata.PAGE_COUNT }
+                ?.let { OemServiceMetadata.interpret(value, it) }
+                ?: Interpretation("unexpected_output", "Init command page identity missing")
         }
     }
 

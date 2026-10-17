@@ -24,13 +24,16 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipFile
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class OemServiceMetadataTest {
     @get:Rule val temporary = TemporaryFolder()
     private val profile = DiLinkContextPlan.Profile.OEM_SERVICE
-    private val initCommand get() = profile.commands.single { it.kind == DiLinkContextPlan.Kind.INIT_METADATA }
+    private val initCommands get() = profile.commands.filter { it.kind == DiLinkContextPlan.Kind.INIT_METADATA }
+    private val initCommand get() = initCommands.first()
     private val ample = { _: File -> Long.MAX_VALUE }
 
     private fun reply(command: DiLinkContextPlan.Command): String = when (command.kind) {
@@ -42,13 +45,20 @@ class OemServiceMetadataTest {
         DiLinkContextPlan.Kind.SERVICE_CHECK -> "Service strategyservice: found"
         DiLinkContextPlan.Kind.PROCESS_METADATA -> "UID PID PPID NAME\n1000 200 1 unknown-publisher"
         DiLinkContextPlan.Kind.PATH_METADATA -> "synthetic literal metadata"
-        DiLinkContextPlan.Kind.INIT_METADATA -> "BEGIN OEM_INIT_METADATA_V1\nTOTAL files=0 source_bytes=0\nEND SCOPED_COMPLETE"
+        DiLinkContextPlan.Kind.INIT_METADATA -> completePage(command.subject.toInt())
         else -> error("Not in OEM service profile")
     }
 
+    private fun completePage(page: Int = 1): String {
+        val headers = OemServiceMetadata.script(page).lineSequence().filter { it.startsWith("emit '") }
+            .take(4).map { it.removePrefix("emit '").removeSuffix("'") }.toList()
+        return (headers + listOf("TOTAL files=0 selected=0 source_bytes=0",
+            "PAGE_END index=$page count=32 first=${(page - 1) * 16 + 1} last=${page * 16}", "END SCOPED_COMPLETE")).joinToString("\n")
+    }
+
     @Test fun `closed service profile contains exactly metadata-only argv with no process arguments`() {
-        assertEquals(23, profile.commands.size)
-        assertEquals(23, profile.commands.map { it.key }.toSet().size)
+        assertEquals(54, profile.commands.size)
+        assertEquals(54, profile.commands.map { it.key }.toSet().size)
         assertEquals(listOf("id", "am get-current-user", "date +%s"), profile.commands.take(3).map { it.shell })
         assertEquals(listOf("ro.build.fingerprint", "ro.build.version.sdk", "ro.build.type", "apps.setting.product.inswver", "sys.byd.countrycode", "init.svc.strategyservice"),
             profile.commands.filter { it.kind == DiLinkContextPlan.Kind.PROPERTY }.map { it.subject })
@@ -56,13 +66,13 @@ class OemServiceMetadataTest {
         assertEquals(listOf("service check strategyservice", "service list"), profile.commands.filter { it.argv.first() == "service" }.map { it.shell }.sorted())
         assertEquals(10, profile.commands.count { it.kind == DiLinkContextPlan.Kind.PATH_METADATA })
         assertTrue(profile.commands.filter { it.kind != DiLinkContextPlan.Kind.INIT_METADATA }.all { row -> row.argv.all { Regex("[A-Za-z0-9_./%+:,-]+").matches(it) } })
-        assertEquals(listOf("sh", "-c", OemServiceMetadata.script), initCommand.argv)
+        assertEquals(listOf("sh", "-c", OemServiceMetadata.script(1)), initCommand.argv)
         assertEquals(14, DiLinkContextPlan.commands.size)
         assertEquals(16, DiLinkContextPlan.Profile.QR_DIAGNOSTIC.commands.size)
         assertNotEquals(ExportKind.QR_DIAGNOSTIC.rootName, profile.kind.rootName)
-        assertFalse(OemServiceMetadata.script.contains("eval "))
-        assertFalse(OemServiceMetadata.script.contains("awk "))
-        assertFalse(OemServiceMetadata.script.contains("/proc"))
+        assertFalse(OemServiceMetadata.script(1).contains("eval "))
+        assertFalse(OemServiceMetadata.script(1).contains("awk "))
+        assertFalse(OemServiceMetadata.script(1).contains("/proc"))
     }
 
     @Test fun `device rejects altered scripts arbitrary argv and legacy command outside new plan`() {
@@ -78,21 +88,26 @@ class OemServiceMetadataTest {
         assertEquals(0, calls)
     }
 
-    private fun fixtureScript(root: File): String {
-        var script = OemServiceMetadata.script.replace("/init*.rc", "${root.path}/init*.rc")
+    private fun fixtureScript(root: File, page: Int = 1): String {
+        var script = OemServiceMetadata.script(page).replace("/init*.rc", "${root.path}/init*.rc")
         for (partition in listOf("system", "vendor", "odm", "product", "system_ext"))
             script = script.replace("/$partition/etc/init", "${root.path}/$partition/etc/init")
         return script
     }
-    private fun runReader(root: File, transform: (String) -> String = { it }, createRoots: Boolean = true): String {
+    private fun runReader(root: File, transform: (String) -> String = { it }, createRoots: Boolean = true, page: Int = 1, environment: Map<String, String> = emptyMap()): String {
         if (createRoots) for (partition in listOf("system", "vendor", "odm", "product", "system_ext"))
             File(root, "$partition/etc/init/hw").mkdirs()
-        val script = transform(fixtureScript(root))
+        val script = transform(fixtureScript(root, page))
         // Exercise the exact shipped argv serializer through a real POSIX shell. Test-only roots.
         val command = initCommand.copy(argv = listOf("sh", "-c", script)).shell
-        val process = ProcessBuilder("/bin/sh", "-c", command).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText()
-        assertTrue(process.waitFor(10, TimeUnit.SECONDS))
+        val outputFile = temporary.newFile()
+        val builder = ProcessBuilder("/bin/sh", "-c", command).redirectErrorStream(true).redirectOutput(outputFile)
+        builder.environment().putAll(environment)
+        val process = builder.start()
+        val finished = process.waitFor(15, TimeUnit.SECONDS)
+        if (!finished) process.destroyForcibly()
+        assertTrue("Reader did not return within test deadline", finished)
+        val output = outputFile.readText()
         assertEquals(output, 0, process.exitValue())
         return output.trimEnd('\n', '\r')
     }
@@ -118,7 +133,7 @@ class OemServiceMetadataTest {
             import /vendor/etc/init/optional.rc
         """.trimIndent().replace("\\t", "\t"))
         val output = runReader(root)
-        assertEquals(output, "ok", OemServiceMetadata.interpret(output).status)
+        assertEquals(output, "ok", OemServiceMetadata.interpret(output, 1).status)
         assertTrue(output.contains("unknown-publisher /vendor/bin/unknown-binary"))
         assertTrue(output.contains("another /system/bin/another"))
         assertTrue(output.contains(" user system"))
@@ -140,8 +155,8 @@ class OemServiceMetadataTest {
         val mkfifo = ProcessBuilder("mkfifo", fifo.path).start(); assertEquals(0, mkfifo.waitFor())
         initFile(root, "dynamic.rc", "import /vendor/etc/init/${'$'}{ro.hardware}.rc\n")
         val output = runReader(root)
-        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output).status)
-        assertTrue(OemServiceMetadata.interpret(output).values.isEmpty())
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
+        assertTrue(OemServiceMetadata.interpret(output, 1).values.isEmpty())
         assertTrue(output.contains("symlink_file"))
         assertTrue(output.contains("nonregular_file"))
         assertTrue(output.contains("file_byte_limit"))
@@ -157,7 +172,7 @@ class OemServiceMetadataTest {
             parentFile!!.mkdirs(); writeText("service real-name /vendor/bin/publisher --not-exported\n    user system\n")
         }
         val output = runReader(root)
-        assertEquals(output, "ok", OemServiceMetadata.interpret(output).status)
+        assertEquals(output, "ok", OemServiceMetadata.interpret(output, 1).status)
         assertTrue(output.contains("SERVICE ${vendor.path}:1 real-name /vendor/bin/publisher"))
         assertFalse(output.contains("--not-exported"))
         assertTrue(output.contains("TOTAL files=1"))
@@ -167,7 +182,7 @@ class OemServiceMetadataTest {
         val root = temporary.newFolder()
         initFile(root, "indent.rc", "    service indented /vendor/bin/publisher\nuser system\ngroup system inet\n    on boot\nuser ACTION_SECRET\n    import /vendor/etc/init/optional.rc\nuser IMPORT_SECRET\nservice second /system/bin/second\nseclabel u:r:system_server:s0\n")
         val output = runReader(root)
-        assertEquals(output, "ok", OemServiceMetadata.interpret(output).status)
+        assertEquals(output, "ok", OemServiceMetadata.interpret(output, 1).status)
         assertTrue(output.contains(" indented /vendor/bin/publisher"))
         assertTrue(output.contains(" user system"))
         assertTrue(output.contains(" group system inet"))
@@ -182,8 +197,8 @@ class OemServiceMetadataTest {
         assertTrue(output.contains("root_unavailable"))
         assertFalse(output.contains("ROOT_MISSING"))
         assertTrue(output.contains(" observed /system/bin/observed"))
-        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output).status)
-        assertTrue(OemServiceMetadata.interpret(output).values.isEmpty())
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
+        assertTrue(OemServiceMetadata.interpret(output, 1).values.isEmpty())
     }
 
     @Test fun `file count budget includes rejected links before any later ordinary file read`() {
@@ -195,7 +210,7 @@ class OemServiceMetadataTest {
         assertTrue(output.contains("symlink_file"))
         assertTrue(output.contains("file_count_limit"))
         assertFalse(output.contains("NOT_READ")); assertFalse(output.contains("PRIVATE"))
-        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output).status)
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
     }
 
     @Test fun `line byte count total file and output limits cannot claim complete observations`() {
@@ -204,21 +219,191 @@ class OemServiceMetadataTest {
             val root = temporary.newFolder(); initFile(root, "bounded.rc", text)
             val output = runReader(root)
             assertTrue(output, output.contains(reason))
-            assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output).status)
+            assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
         }
         val root = temporary.newFolder(); initFile(root, "one.rc", "service one /system/bin/one\n")
         for ((transform, reason) in listOf<Pair<(String) -> String, String>>(
             ({ value: String -> value.replace("-gt 512", "-gt 0") }) to "file_count_limit",
-            ({ value: String -> value.replace("-gt 8388608", "-gt 0") }) to "total_byte_limit",
-            ({ value: String -> value.replace("-gt 196608", "-gt 1") }) to "output_limit")) {
-            assertNotEquals(OemServiceMetadata.script, transform(OemServiceMetadata.script))
+            ({ value: String -> value.replace("262144-total", "0-total") }) to "page_byte_limit",
+            ({ value: String -> value.replace("-gt 5888", "-gt 500") }) to "output_limit")) {
+            assertNotEquals(OemServiceMetadata.script(1), transform(OemServiceMetadata.script(1)))
             val output = runReader(root, transform)
             assertTrue(output, output.contains(reason))
-            assertNotEquals("ok", OemServiceMetadata.interpret(output).status)
+            assertNotEquals("ok", OemServiceMetadata.interpret(output, 1).status)
         }
-        val scoped = "BEGIN OEM_INIT_METADATA_V1\nTOTAL files=0 source_bytes=0\nEND SCOPED_COMPLETE"
-        assertEquals("unexpected_output", OemServiceMetadata.interpret(scoped.removeSuffix("END SCOPED_COMPLETE")).status)
-        assertEquals("unexpected_output", OemServiceMetadata.interpret("$scoped\n[output truncated]").status)
+        val scoped = completePage()
+        assertEquals("unexpected_output", OemServiceMetadata.interpret(scoped.removeSuffix("END SCOPED_COMPLETE"), 1).status)
+        assertEquals("unexpected_output", OemServiceMetadata.interpret("$scoped\n[output truncated]", 1).status)
+    }
+
+    @Test fun `32 exact ordinal pages read 512 slots once and never inspect the next entry`() {
+        val root = temporary.newFolder()
+        for (index in 0..512) initFile(root, "%03d.rc".format(index), "service slot$index /system/bin/item$index\n")
+        val services = mutableListOf<Int>()
+        for (page in 1..32) {
+            val output = runReader(root, page = page)
+            assertEquals(output, "ok", OemServiceMetadata.interpret(output, page).status)
+            val pageServices = Regex(" slot([0-9]+) /system/bin/item").findAll(output).map { it.groupValues[1].toInt() }.toList()
+            assertEquals((16 * (page - 1) until 16 * page).toList(), pageServices)
+            assertTrue(output.toByteArray().size <= OemServiceMetadata.PAGE_OUTPUT_BYTES)
+            services.addAll(pageServices)
+        }
+        assertEquals((0 until 512).toList(), services)
+        assertEquals(512, OemServiceMetadata.PAGE_COUNT * OemServiceMetadata.PAGE_ENTRIES)
+        assertEquals(8 * 1024 * 1024, OemServiceMetadata.PAGE_COUNT * OemServiceMetadata.PAGE_SOURCE_BYTES)
+        assertEquals(192 * 1024, OemServiceMetadata.PAGE_COUNT * OemServiceMetadata.PAGE_OUTPUT_BYTES)
+    }
+
+    @Test fun `selection precedes every external file utility and rejected links occupy page boundary slots`() {
+        val root = temporary.newFolder()
+        for (index in 0 until 35) initFile(root, "%03d.rc".format(index), "service slot$index /system/bin/item$index\n")
+        val private = temporary.newFile().apply { writeText("service PRIVATE /private --PRIVATE\n") }
+        val linked = File(root, "system/etc/init/015.rc").apply { delete() }
+        Files.createSymbolicLink(linked.toPath(), private.toPath())
+        val tools = temporary.newFolder()
+        val log = temporary.newFile()
+        for (tool in listOf("head", "stat", "readlink")) {
+            File(tools, tool).apply {
+                writeText("#!/bin/sh\nprintf '%s\\n' \"${'$'}@\" >> \"${'$'}OEM_UTILITY_LOG\"\nexec /usr/bin/$tool \"${'$'}@\"\n")
+                setExecutable(true)
+            }
+        }
+        val environment = mapOf("PATH" to "${tools.path}:${System.getenv("PATH")}", "OEM_UTILITY_LOG" to log.path)
+        val first = runReader(root, environment = environment)
+        assertTrue(first.contains("symlink_file ${linked.path}"))
+        assertFalse(first.contains("slot16")); assertFalse(first.contains("PRIVATE"))
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(first, 1).status)
+        log.writeText("")
+        val second = runReader(root, page = 2, environment = environment)
+        assertEquals("ok", OemServiceMetadata.interpret(second, 2).status)
+        assertTrue(second.contains("slot16")); assertTrue(second.contains("slot31"))
+        assertFalse(second.contains("slot15")); assertFalse(second.contains("slot32"))
+        val observedFiles = log.readLines().filter { it.endsWith(".rc") }.toSet()
+        assertEquals((16..31).map { File(root, "system/etc/init/%03d.rc".format(it)).path }.toSet(), observedFiles)
+    }
+
+    @Test fun `real source and filtered output budgets include retained framing and stop with omissions`() {
+        val root = temporary.newFolder()
+        val content = ("#" + "x".repeat(510) + "\n").repeat(128)
+        assertEquals(65536, content.length)
+        for (index in 0..4) initFile(root, "$index.rc", content)
+        val tools = temporary.newFolder()
+        val log = temporary.newFile()
+        File(tools, "head").apply {
+            writeText("#!/bin/sh\nprintf '%s\\n' \"${'$'}2\" >> \"${'$'}OEM_HEAD_LOG\"\nexec /usr/bin/head \"${'$'}@\"\n")
+            setExecutable(true)
+        }
+        val output = runReader(root, environment = mapOf("PATH" to "${tools.path}:${System.getenv("PATH")}", "OEM_HEAD_LOG" to log.path))
+        assertTrue(output.contains("INCOMPLETE page_byte_limit"))
+        assertTrue(output.contains("source_bytes=262144"))
+        assertEquals(262144, log.readLines().sumOf { it.toInt() })
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
+        val outputRoot = temporary.newFolder()
+        initFile(outputRoot, "many.rc", (0..100).joinToString("\n") { "service item$it /system/bin/item$it" })
+        val capped = runReader(outputRoot)
+        assertTrue(capped.contains("INCOMPLETE output_limit"))
+        assertTrue(capped.toByteArray().size <= 6144)
+        assertTrue(capped.contains("PAGE_END index=1 count=32 first=1 last=16\nEND INCOMPLETE"))
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(capped, 1).status)
+    }
+
+    private fun clock(values: List<String>): (String) -> String = { script ->
+        val cases = values.mapIndexed { index, value -> "${index + 1}) now='$value';;" }.joinToString("\n")
+        script.replace("previous=0", "previous=0\nclock_index=0")
+            .replace("now=${'$'}(date +%s 2>/dev/null)", "clock_index=${'$'}((clock_index+1))\ncase ${'$'}clock_index in\n$cases\n*) now='${values.last()}';;\nesac")
+    }
+
+    @Test fun `bad clocks and rollback above start fail closed before source reads`() {
+        for (value in listOf("", "no-clock", "-1", "01792240000", "9999999999999999999999999999", "2147483601")) {
+            val root = temporary.newFolder(); initFile(root, "private.rc", "service MUST_NOT_READ /private\n")
+            val output = runReader(root, clock(listOf(value)))
+            assertTrue(output, output.contains("INCOMPLETE clock_unavailable"))
+            assertFalse(output.contains("MUST_NOT_READ"))
+            assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
+        }
+        val root = temporary.newFolder(); initFile(root, "private.rc", "service MUST_NOT_READ /private\n")
+        val rollback = runReader(root, clock(listOf("1792240000", "1792240005", "1792240004")))
+        assertTrue(rollback.contains("INCOMPLETE clock_rollback"))
+        assertFalse(rollback.contains("MUST_NOT_READ"))
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(rollback, 1).status)
+    }
+
+    @Test fun `deadline after final file retains useful metadata and never claims page completion`() {
+        val root = temporary.newFolder()
+        for (index in 0 until 16) initFile(root, "%02d.rc".format(index), "service slot$index /system/bin/item$index\n")
+        val values = List(49) { "1792240000" } + "1792240012"
+        val output = runReader(root, clock(values))
+        assertEquals(16, Regex("\nSERVICE ").findAll(output).count())
+        assertTrue(output, output.contains("INCOMPLETE time_budget"))
+        assertTrue(output.endsWith("END INCOMPLETE"))
+        assertEquals("incomplete_metadata", OemServiceMetadata.interpret(output, 1).status)
+    }
+
+    @Test fun `page interpretation rejects another window malformed framing and excessive declared totals`() {
+        val page = completePage(2)
+        assertEquals("ok", OemServiceMetadata.interpret(page, 2).status)
+        for (value in listOf(page, page.replace("PAGE_END index=2", "PAGE_END index=1"),
+            page.replace("source_bytes=0", "source_bytes=262145"), page.replace("selected=0", "selected=17"),
+            page.replace("END SCOPED_COMPLETE", "END UNKNOWN"), "$page\nUNRECOGNIZED")) {
+            val expectedPage = if (value == page) 1 else 2
+            assertEquals(value, "unexpected_output", OemServiceMetadata.interpret(value, expectedPage).status)
+        }
+    }
+
+    @Test fun `normal page timeout preserves neighboring replies but fatal transport and cancellation stop later reads`() {
+        for (mode in listOf("timeout", "fatal", "cancel")) {
+            val directory = temporary.newFolder()
+            var cancelled = false
+            var calls = 0
+            val result = DiLinkContextExport(DiLinkContextExport.Device { command ->
+                calls++
+                if (command.kind == DiLinkContextPlan.Kind.INIT_METADATA && command.subject == "2") {
+                    when (mode) {
+                        "timeout" -> DiLinkContextTransport.Reply(-1, "ERR timeout 30s")
+                        "fatal" -> DiLinkContextTransport.Reply(null, "", "Transport did not return; call remains pending, no retry", true)
+                        else -> { cancelled = true; DiLinkContextTransport.Reply(0, reply(command)) }
+                    }
+                } else DiLinkContextTransport.Reply(0, reply(command))
+            }, directory, { cancelled }, {}, ample, profile = profile).run()
+            assertEquals(if (mode == "timeout") 54 else 24, calls)
+            assertEquals(if (mode == "cancel") "cancelled" else "partial", result.outcome)
+            ZipFile(result.archives.single()).use { zip ->
+                assertTrue(zip.getInputStream(zip.getEntry("23-init_service_metadata_01.combined.txt")).reader().readText().contains("PAGE index=1"))
+                val rows = JSONObject(zip.getInputStream(zip.getEntry("resultats.json")).reader().readText()).getJSONArray("commands")
+                assertEquals(if (mode == "timeout") "ok" else "not_attempted", rows.getJSONObject(24).getString("status"))
+                assertEquals(if (mode == "timeout") "timeout" else if (mode == "fatal") "transport_error" else "ok", rows.getJSONObject(23).getString("status"))
+            }
+        }
+    }
+
+    @Test fun `V1 archive recovery preserves original profile bytes and sharing never relabels as V2`() {
+        val directory = temporary.newFolder("oem-service-20261017-131425-000")
+        val archive = File(directory, "oem-service-001.zip")
+        ZipOutputStream(archive.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("plan.json"))
+            zip.write("""{"profile":"OEM_STRATEGY_SERVICE_METADATA_V1","planned":23,"app_runtime":{"app_version_name":"1.9.41-beta","app_version_code":680}}""".toByteArray())
+            zip.closeEntry()
+        }
+        File(directory, "RESULT.txt").writeText("Identité du service OEM : partial\nProfil : OEM_STRATEGY_SERVICE_METADATA_V1\n23/23 lectures traitées.\n")
+        val before = sha(archive.readBytes())
+        val state = FullApkExportSession.recoverPrevious(ExportKind.OEM_SERVICE, directory)
+        assertEquals("previous", state.outcome)
+        assertFalse(state.countsKnown)
+        assertTrue(state.stage.contains("OEM_STRATEGY_SERVICE_METADATA_V1"))
+        val controller = Robolectric.buildActivity(DiagActivity::class.java).create()
+        try {
+            val method = DiagActivity::class.java.getDeclaredMethod("showFullExportFiles", FullApkExport.Progress::class.java).apply { isAccessible = true }
+            method.invoke(controller.get(), state)
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            val message = org.robolectric.Shadows.shadowOf(dialog).message.toString()
+            assertTrue(message.contains("collecte d’origine"))
+            assertFalse(message.contains("54 lectures")); assertFalse(message.contains(profile.id))
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertTrue(ShadowAlertDialog.getLatestAlertDialog().listView.adapter.getItem(0).toString().startsWith(archive.name))
+        } finally { controller.destroy() }
+        assertEquals(before, sha(archive.readBytes()))
+        ZipFile(archive).use { zip -> assertTrue(zip.getInputStream(zip.getEntry("plan.json")).reader().readText().contains("OEM_STRATEGY_SERVICE_METADATA_V1")) }
     }
 
     @Test fun `unknown elevated conflicting or malformed shell identities stop before all other metadata reads`() {
@@ -246,7 +431,7 @@ class OemServiceMetadataTest {
         }, directory, { false }, {}, ample, profile = profile).run()
         assertEquals(ExportKind.OEM_SERVICE, result.kind)
         assertEquals("partial", result.outcome)
-        assertEquals(22, result.completed)
+        assertEquals(53, result.completed)
         val archive = result.archives.single(); assertEquals("oem-service-001.zip", archive.name)
         ZipFile(archive).use { zip ->
             for (name in listOf("plan.json", "manifest.json", "resultats.json")) {
@@ -294,7 +479,7 @@ class OemServiceMetadataTest {
             val list = ShadowAlertDialog.getLatestAlertDialog().listView
             assertEquals(3, list.adapter.count)
             assertTrue(list.adapter.getItem(0).toString().contains("16 lectures"))
-            assertTrue(list.adapter.getItem(1).toString().contains("23 lectures"))
+            assertTrue(list.adapter.getItem(1).toString().contains("54 lectures"))
             list.performItemClick(null, 1, 1)
             val confirm = ShadowAlertDialog.getLatestAlertDialog()
             val message = org.robolectric.Shadows.shadowOf(confirm).message.toString()
@@ -334,7 +519,8 @@ class OemServiceMetadataTest {
             val filesMethod = DiagActivity::class.java.getDeclaredMethod("showFullExportFiles", FullApkExport.Progress::class.java).apply { isAccessible = true }
             filesMethod.invoke(activity, state)
             val files = ShadowAlertDialog.getLatestAlertDialog()
-            assertTrue(org.robolectric.Shadows.shadowOf(files).message.toString().contains(profile.id))
+            assertTrue(org.robolectric.Shadows.shadowOf(files).message.toString().contains("collecte d’origine"))
+            assertFalse(org.robolectric.Shadows.shadowOf(files).message.toString().contains(profile.id))
             files.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
             val list = ShadowAlertDialog.getLatestAlertDialog().listView

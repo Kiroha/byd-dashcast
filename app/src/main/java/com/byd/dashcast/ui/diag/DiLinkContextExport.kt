@@ -145,7 +145,11 @@ internal class DiLinkContextExport(
             "Aucun code saisi ni QR validé ; aucune autorisation contournée par ce relevé.\n")
         if (profile == DiLinkContextPlan.Profile.OEM_SERVICE) {
             File(directory, "RESULT.txt").appendText("Déclarations init : racine /init*.rc et cinq partitions etc/init + hw uniquement ; imports et liens non suivis.\n" +
-                "Limites : 512 fichiers, 64 Kio/fichier, 8 Mio source, 512 lignes/fichier, 1024 octets/ligne, 192 Kio de sortie filtrée.\n" +
+                "Limites : 512 emplacements sélectionnés, 64 Kio/fichier, 8 Mio source, 512 lignes/fichier, 1024 octets/ligne, 192 Kio de sortie filtrée.\n" +
+                "32 pages ordinales indépendantes : 16 emplacements, 256 Kio source et 6 Kio de sortie par page ; les limites incluent les liens et fichiers refusés.\n" +
+                "Budget souple de 12 s/page ; délais de réponse inchangés de 30 s/commande et 35 s/transport. Un appel physique peut rester en attente et bloque alors les diagnostics sans reprise ni chevauchement. Un délai de commande retourné peut laisser les pages suivantes continuer.\n" +
+                "Si les 32 pages expirent, les délais de commande seuls peuvent totaliser 16 minutes, plus le relevé et la création du ZIP.\n" +
+                "Les pages ne sont pas atomiques : des changements d’entrées peuvent créer des doublons ou omissions. Une page achevée ne prouve aucune absence globale.\n" +
                 "Seuls noms/exécutables sans arguments, user/group/seclabel et imports littéraux sont exportés. Les omissions restent incomplètes.\n" +
                 "Aucune méthode OEM de politique ou d'authentification invoquée ; aucun binaire candidat copié ni exécuté.\n")
         }
