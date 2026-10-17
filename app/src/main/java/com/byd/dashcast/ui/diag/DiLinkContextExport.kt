@@ -64,8 +64,12 @@ internal class DiLinkContextExport(
                 val received = reply.combinedOutput.toByteArray(Charsets.UTF_8)
                 val clipped = received.size > MAX_ARCHIVED_OUTPUT
                 val text = if (clipped) String(received, 0, MAX_ARCHIVED_OUTPUT, Charsets.UTF_8) else reply.combinedOutput
-                val interpreted = if (clipped) DiLinkContextPlan.Interpretation("truncated", "Collector output limit reached")
+                val parsed = if (clipped) DiLinkContextPlan.Interpretation("truncated", "Collector output limit reached")
                     else DiLinkContextPlan.interpret(command, reply.exitCode, text, reply.error.take(2048))
+                val identityRefused = profile == DiLinkContextPlan.Profile.OEM_SERVICE && command.kind == DiLinkContextPlan.Kind.ID &&
+                    (parsed.status != "ok" || !DiLinkContextPlan.isExpectedShellIdentity(text))
+                val interpreted = if (identityRefused) DiLinkContextPlan.Interpretation("identity_refused",
+                    "Expected unambiguous shell UID 2000 (and matching euid when present); remaining reads not attempted") else parsed
                 val outputName = "${(index + 1).toString().padStart(2, '0')}-${command.key}.combined.txt"
                 val output = File(directory, outputName)
                 output.writeText(text, Charsets.UTF_8)
@@ -79,6 +83,7 @@ internal class DiLinkContextExport(
                     failed = rows.count { it["status"] != "ok" }, bytes = outputFiles.sumOf { it.length() },
                     lastProgressMs = FullApkExport.monotonicMs()))
                 writeResults()
+                if (identityRefused) { message = interpreted.reason; outcome = "partial"; break }
                 if (reply.fatal) { message = reply.error.take(2048); outcome = "partial"; break }
             }
             if (outcome == "running") outcome = if (cancelled()) "cancelled"
@@ -138,6 +143,12 @@ internal class DiLinkContextExport(
             "Résultats non atomiques ; horloge observée sur l'appareil, aucune comparaison PC fiable.\n" +
             "Présence d'un paquet, composants déclarés et états User n ne prouvent pas un droit de lancement.\n" +
             "Aucun code saisi ni QR validé ; aucune autorisation contournée par ce relevé.\n")
+        if (profile == DiLinkContextPlan.Profile.OEM_SERVICE) {
+            File(directory, "RESULT.txt").appendText("Déclarations init : racine /init*.rc et cinq partitions etc/init + hw uniquement ; imports et liens non suivis.\n" +
+                "Limites : 512 fichiers, 64 Kio/fichier, 8 Mio source, 512 lignes/fichier, 1024 octets/ligne, 192 Kio de sortie filtrée.\n" +
+                "Seuls noms/exécutables sans arguments, user/group/seclabel et imports littéraux sont exportés. Les omissions restent incomplètes.\n" +
+                "Aucune méthode OEM de politique ou d'authentification invoquée ; aucun binaire candidat copié ni exécuté.\n")
+        }
         val payload = listOf(File(directory, "plan.json"), File(directory, "resultats.json"), File(directory, "RESULT.txt")) + outputFiles
         save("manifest.json", json(mapOf("schema" to SCHEMA, "kind" to profile.kind.name, "profile" to profile.id,
             "outcome" to outcome, "outcome_scope" to "Collection only; ZIP finalization and archive digest are attested separately by integrite.json.",

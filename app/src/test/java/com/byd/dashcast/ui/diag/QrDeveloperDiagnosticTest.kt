@@ -49,6 +49,7 @@ class QrDeveloperDiagnosticTest {
         DiLinkContextPlan.Kind.PACKAGE_PATH -> "package:/system/app/${command.subject}/base.apk"
         DiLinkContextPlan.Kind.PACKAGE_DUMP -> "Packages:\n  Package [${command.subject}] (synthetic):\n    userId=1000\n    User 0: installed=true\n    User 10: installed=false"
         DiLinkContextPlan.Kind.SERVICES -> error("Service discovery is outside the QR profile")
+        else -> error("New service-only kind outside this preserved profile")
     }
 
     @Test fun `QR profile is exactly sixteen fixed passive reads and preserves general fourteen`() {
@@ -305,7 +306,9 @@ class QrDeveloperDiagnosticTest {
             }
             visit(activity.window.decorView)
             assertEquals(1, buttons.count { it.text.toString() == "Export complet accessible" })
-            buttons.single { it.text.toString() == "QR développeur : relevé local" }.performClick()
+            buttons.single { it.text.toString() == "Relevés locaux OEM" }.performClick()
+            val chooser = ShadowAlertDialog.getLatestAlertDialog().listView
+            chooser.performItemClick(null, 0, 0)
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             val shadow = org.robolectric.Shadows.shadowOf(dialog)
             assertTrue(shadow.message.toString().contains("16 lectures fixes"))

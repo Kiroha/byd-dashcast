@@ -9,6 +9,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
+import java.nio.file.Files
+import java.nio.file.LinkOption
 
 /** Process-scoped state contains no Activity reference. Rotation/reentry observes the same job.
  * A process death stops the job; its running marker and .part files remain visibly interrupted. */
@@ -105,6 +107,38 @@ internal object FullApkExportSession {
     fun cancel() { cancellation.set(true) }
     fun isCancelling() = cancellation.get() && snapshot?.running == true
 
+    internal data class OemHistory(val entries: List<Pair<ExportKind, File>>, val limited: Boolean, val unavailable: Boolean)
+
+    /** Worker-only bounded history of app-owned metadata exports; never replaces live state. */
+    internal fun previousOemReports(context: Context): OemHistory = previousOemReports(
+        listOf(ExportKind.QR_DIAGNOSTIC, ExportKind.OEM_SERVICE).map { it to exportRoot(context, it, true) })
+
+    internal fun previousOemReports(bases: List<Pair<ExportKind, File>>): OemHistory {
+        val selected = mutableListOf<Pair<ExportKind, File>>()
+        var limited = false
+        var unavailable = false
+        for ((kind, base) in bases) {
+            require(kind == ExportKind.QR_DIAGNOSTIC || kind == ExportKind.OEM_SERVICE)
+            if (!Files.exists(base.toPath(), LinkOption.NOFOLLOW_LINKS)) continue
+            if (!Files.isDirectory(base.toPath(), LinkOption.NOFOLLOW_LINKS)) { unavailable = true; continue }
+            try {
+                Files.newDirectoryStream(base.toPath()).use { stream ->
+                    val iterator = stream.iterator()
+                    var count = 0
+                    while (iterator.hasNext() && count < 128) {
+                        val path = iterator.next(); count++
+                        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS) &&
+                            Regex(Regex.escape(kind.prefix) + "[0-9]{8}-[0-9]{6}-[0-9]{3}").matches(path.fileName.toString()))
+                            selected.add(kind to path.toFile())
+                    }
+                    if (iterator.hasNext()) limited = true
+                }
+            } catch (_: Exception) { unavailable = true }
+        }
+        val sorted = selected.sortedByDescending { (kind, file) -> file.name.removePrefix(kind.prefix) }
+        return OemHistory(sorted.take(20), limited || sorted.size > 20, unavailable)
+    }
+
     /** Metadata-only recovery; never delete or automatically upload earlier exports. */
     @Synchronized fun inspectPrevious(context: Context) {
         if (snapshot != null || recovering) return
@@ -140,7 +174,7 @@ internal object FullApkExportSession {
     }
 
     private fun exportRoot(context: Context, kind: ExportKind, existingOnly:Boolean=false): File {
-        if(existingOnly || kind==ExportKind.FIRMWARE_LARGE || kind==ExportKind.QR_DIAGNOSTIC)return File("/storage/emulated/${Process.myUid()/100000}/Android/data/${context.packageName}/files",kind.rootName)
+        if(existingOnly || kind==ExportKind.FIRMWARE_LARGE || kind==ExportKind.QR_DIAGNOSTIC || kind==ExportKind.OEM_SERVICE)return File("/storage/emulated/${Process.myUid()/100000}/Android/data/${context.packageName}/files",kind.rootName)
         val base = try { context.getExternalFilesDir(null) } catch (_: Exception) { null }
             ?: File("/storage/emulated/0/Android/data/${context.packageName}/files")
         return File(base, kind.rootName)

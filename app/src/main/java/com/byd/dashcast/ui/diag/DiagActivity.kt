@@ -159,8 +159,8 @@ class DiagActivity : Activity() {
             textSize = 14f
         })
         qrDiagnosticBtn = Button(this).apply {
-            text = "QR développeur : relevé local"
-            setOnClickListener { chooseQrDiagnostic() }
+            text = "Relevés locaux OEM"
+            setOnClickListener { chooseOemMetadata() }
         }
         controls.addView(qrDiagnosticBtn)
         controls.addView(TextView(this).apply {
@@ -351,6 +351,60 @@ class DiagActivity : Activity() {
             .setNegativeButton("Annuler", null).show()
     }
 
+    private fun chooseOemMetadata() {
+        if (sBusy.get()) { log("Un diagnostic est déjà en cours. Attendre sa fin."); return }
+        AlertDialog.Builder(this).setTitle("Relevés locaux OEM — véhicule stationné")
+            .setItems(arrayOf("Métadonnées QR — ${DiLinkContextPlan.Profile.QR_DIAGNOSTIC.commands.size} lectures",
+                "Identité du service OEM — ${DiLinkContextPlan.Profile.OEM_SERVICE.commands.size} lectures", "Relevés précédents")) { _, index ->
+                when (index) { 0 -> chooseQrDiagnostic(); 1 -> chooseOemServiceMetadata(); else -> showOemHistory() }
+            }.setNegativeButton("Annuler", null).show()
+    }
+
+    private fun chooseOemServiceMetadata() {
+        if (sBusy.get()) { log("Un diagnostic est déjà en cours. Attendre sa fin."); return }
+        AlertDialog.Builder(this).setTitle("Identité du service OEM — véhicule stationné")
+            .setMessage("${DiLinkContextPlan.Profile.OEM_SERVICE.commands.size} lectures fixes : identité du daemon, version système, liste des services, processus sans arguments, chemins candidats et déclarations init limitées. Les fichiers refusés ou hors limites restent signalés.\n\n" +
+                "Lecture des sources uniquement ; DashCast crée un ZIP local et le transport peut créer son fichier temporaire PID. Aucun outil ouvert ni réglage OEM modifié. Aucune tentative d’authentification.\n\n" +
+                "Stockage interne uniquement, partage manuel. Véhicule stationné ; garder DIAG visible jusqu'à la fin.")
+            .setPositiveButton("Lancer le relevé") { _, _ -> startFullApkExport(ExportKind.OEM_SERVICE) }
+            .setNegativeButton("Annuler", null).show()
+    }
+
+    private fun showOemHistory() {
+        val owner = WeakReference(this)
+        val app = applicationContext
+        Thread({
+            val history = FullApkExportSession.previousOemReports(app)
+            owner.get()?.runOnUiThread {
+                val activity = owner.get() ?: return@runOnUiThread
+                if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                if (sBusy.get()) { activity.log("Un diagnostic est en cours. Attendre sa fin."); return@runOnUiThread }
+                activity.showOemHistory(history)
+            }
+        }, "oem-report-history").start()
+    }
+
+    private fun showOemHistory(history: FullApkExportSession.OemHistory) {
+        val labels = history.entries.map { (kind, directory) ->
+            "${kind.contextProfile.title} · ${directory.name.removePrefix(kind.prefix)}"
+        }.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Relevés précédents · stockage interne")
+            .setItems(labels) { _, index ->
+                val (kind, directory) = history.entries[index]
+                val owner = WeakReference(this)
+                Thread({
+                    val recovered = FullApkExportSession.recoverPrevious(kind, directory)
+                    owner.get()?.runOnUiThread {
+                        val activity = owner.get() ?: return@runOnUiThread
+                        if (!activity.isFinishing && !activity.isDestroyed && !sBusy.get()) activity.showFullExportFiles(recovered)
+                    }
+                }, "oem-report-files").start()
+            }.setNegativeButton("Fermer", null).show()
+        log(if (history.entries.isEmpty()) "Aucun relevé OEM précédent disponible dans le stockage interne."
+            else "${history.entries.size} relevé(s) OEM proposé(s). Ouvrir un dossier pour consulter ou partager ses fichiers sans nouvelle collecte.")
+        if (history.limited || history.unavailable) log("Historique limité : au plus 128 entrées par profil et 20 relevés affichés ; certains dossiers peuvent être indisponibles.")
+    }
+
     private fun startFullApkExport(kind: ExportKind = ExportKind.APK, resumeDirectory: File? = null) {
         if (!claimBusyOrWarn()) return
         allDiagButtons().forEach { it.isEnabled = false }
@@ -444,6 +498,10 @@ class DiagActivity : Activity() {
 
     private fun showFullExportFiles() {
         val state = FullApkExportSession.snapshot ?: return
+        showFullExportFiles(state)
+    }
+
+    private fun showFullExportFiles(state: FullApkExport.Progress) {
         val directory = state.directory ?: return
         val metadata = if (state.kind.isContext) listOf("manifest.json", "resultats.json", "integrite.json", "RESULT.txt", "ERREUR_LIVRAISON.txt")
             else listOf("manifest.json")

@@ -2,22 +2,33 @@ package com.byd.dashcast.ui.diag
 
 /** Closed metadata plan. There is no shell command input in this feature. */
 internal object DiLinkContextPlan {
-    enum class Kind { ID, EPOCH, CURRENT_USER, SERVICES, PROPERTY, PACKAGE_PATH, PACKAGE_DUMP }
+    enum class Kind { ID, EPOCH, CURRENT_USER, SERVICES, PROPERTY, PACKAGE_PATH, PACKAGE_DUMP, SERVICE_CHECK, PROCESS_METADATA, PATH_METADATA, INIT_METADATA }
     enum class Profile(val id: String, val title: String, val coverage: String) {
         CONTEXT("DILINK_CONTEXT_P12_V1", "Relevé DiLink",
             "Fixed P12 metadata plan only; complete DiLink platform coverage is not established."),
         QR_DIAGNOSTIC("QR_DEVELOPER_DIAGNOSTIC_METADATA_V1", "Diagnostic QR développeur",
-            "Fixed metadata preflight for developer/diagnostic QR research only; no tool launch, code entry or authorization attempt. Package presence, component declarations and per-user states do not establish launch permission or QR bypass.");
+            "Fixed metadata preflight for developer/diagnostic QR research only; no tool launch, code entry or authorization attempt. Package presence, component declarations and per-user states do not establish launch permission or QR bypass."),
+        OEM_SERVICE("OEM_STRATEGY_SERVICE_METADATA_V1", "Identité du service OEM",
+            "Fixed service/process/path metadata and bounded init service declarations only. No binary copy, process arguments, OEM policy/authentication call or authorization attempt. Closed root/hw scope, unresolved imports and omissions are explicit; no global absence or server implementation is established.");
 
         val commands: List<Command> get() = when (this) {
             CONTEXT -> DiLinkContextPlan.commands
             QR_DIAGNOSTIC -> qrDiagnosticCommands
+            OEM_SERVICE -> oemServiceCommands
         }
-        val kind: ExportKind get() = if (this == CONTEXT) ExportKind.CONTEXT else ExportKind.QR_DIAGNOSTIC
+        val kind: ExportKind get() = when (this) {
+            CONTEXT -> ExportKind.CONTEXT
+            QR_DIAGNOSTIC -> ExportKind.QR_DIAGNOSTIC
+            OEM_SERVICE -> ExportKind.OEM_SERVICE
+        }
     }
     data class Command(val key: String, val label: String, val argv: List<String>, val kind: Kind,
                        val subject: String = "") {
-        val shell: String get() = argv.joinToString(" ")
+        // Legacy literal-only plans retain their byte-identical serialization. The one closed
+        // script is POSIX-quoted as an argv, never joined as executable caller-supplied text.
+        val shell: String get() = if (kind == Kind.INIT_METADATA)
+            argv.joinToString(" ") { "'" + it.replace("'", "'\"'\"'") + "'" }
+            else argv.joinToString(" ")
     }
     val commands: List<Command> = buildList {
         add(Command("shell_id", "Identité du transport", listOf("id"), Kind.ID))
@@ -57,6 +68,26 @@ internal object DiLinkContextPlan {
             add(Command("pm_path_$key", "$label : chemins APK", listOf("pm", "path", name), Kind.PACKAGE_PATH, name))
             add(Command("dumpsys_package_$key", "$label : métadonnées", listOf("dumpsys", "package", name), Kind.PACKAGE_DUMP, name))
         }
+    }
+    private val oemServiceCommands: List<Command> = buildList {
+        add(Command("shell_id", "Identité du transport", listOf("id"), Kind.ID))
+        add(Command("current_android_user", "Utilisateur Android courant", listOf("am", "get-current-user"), Kind.CURRENT_USER))
+        add(Command("shell_date_epoch", "Horloge de la voiture", listOf("date", "+%s"), Kind.EPOCH))
+        for ((property, label) in listOf(
+            "ro.build.fingerprint" to "Empreinte système", "ro.build.version.sdk" to "Version API Android",
+            "ro.build.type" to "Type de système", "apps.setting.product.inswver" to "Version système",
+            "sys.byd.countrycode" to "Code pays", "init.svc.strategyservice" to "État init déclaré")) {
+            add(Command("getprop_${property.replace('.', '_')}", label, listOf("getprop", property), Kind.PROPERTY, property))
+        }
+        add(Command("service_check_strategyservice", "Présence déclarée du service", listOf("service", "check", "strategyservice"), Kind.SERVICE_CHECK))
+        add(Command("service_list", "Liste des services", listOf("service", "list"), Kind.SERVICES))
+        add(Command("process_metadata", "Identité des processus sans arguments", listOf("ps", "-A", "-o", "UID,PID,PPID,NAME"), Kind.PROCESS_METADATA))
+        for (partition in listOf("system", "vendor", "odm", "product", "system_ext")) {
+            val path = "/$partition/bin/strategyservice"
+            add(Command("candidate_${partition}_metadata", "Chemin candidat $partition : métadonnées", listOf("ls", "-ldZ", path), Kind.PATH_METADATA, path))
+            add(Command("candidate_${partition}_link", "Chemin candidat $partition : lien littéral", listOf("readlink", path), Kind.PATH_METADATA, path))
+        }
+        add(Command("init_service_metadata", "Déclarations init bornées, sans arguments", listOf("sh", "-c", OemServiceMetadata.script), Kind.INIT_METADATA))
     }
     const val COMMAND_TIMEOUT_MS = 30_000L
     const val TRANSPORT_TIMEOUT_MS = 35_000L
@@ -99,7 +130,30 @@ internal object DiLinkContextPlan {
                 Interpretation("ok", values = mapOf("interpretation" to "Package metadata only; activity access and effective permissions are not established."))
                 else Interpretation("package_metadata_unavailable", "Expected package marker absent")
             Kind.SERVICES -> interpretServices(value)
+            Kind.SERVICE_CHECK -> if (value == "Service strategyservice: found")
+                Interpretation("ok", values = mapOf("listed_service" to "strategyservice", "interpretation" to "Service manager observation only; no policy method invoked or implementation identified."))
+                else if (value == "Service strategyservice: not found") Interpretation("value_absent", "Service manager did not report the name; no global absence inferred")
+                else Interpretation("unexpected_output", "Unrecognized service check output")
+            Kind.PROCESS_METADATA -> {
+                val lines = value.lines().map { it.trim().split(Regex("\\s+")) }
+                if (lines.firstOrNull() != listOf("UID", "PID", "PPID", "NAME") || lines.drop(1).any {
+                    it.size != 4 || it.take(3).any { number -> !Regex("[0-9]+").matches(number) }
+                }) Interpretation("unexpected_output", "Process metadata columns not recognized; no process arguments requested")
+                else Interpretation("ok", values = mapOf("interpretation" to "UID/PID/PPID/NAME snapshot only; executable ownership and Binder implementation remain unproven."))
+            }
+            Kind.PATH_METADATA -> if (value.isEmpty()) Interpretation("value_absent", "No path metadata received; no presence inferred")
+                else Interpretation("ok", values = mapOf("interpretation" to "Literal candidate metadata only; link targets are not followed or read by this command."))
+            Kind.INIT_METADATA -> OemServiceMetadata.interpret(value)
         }
+    }
+
+    /** This new profile is shell-only. Real and effective identity must agree when supplied. */
+    fun isExpectedShellIdentity(output: String): Boolean {
+        val uid = Regex("(?:^|\\s)uid=([0-9]+)(?:\\([^\\r\\n)]*\\))?(?=\\s|$)").findAll(output).toList()
+        val euid = Regex("(?:^|\\s)euid=([0-9]+)(?:\\([^\\r\\n)]*\\))?(?=\\s|$)").findAll(output).toList()
+        return uid.size == 1 && Regex("(?:^|\\s)uid=").findAll(output).count() == uid.size && uid.single().groupValues[1] == "2000" &&
+            euid.size <= 1 && Regex("(?:^|\\s)euid=").findAll(output).count() == euid.size &&
+            euid.all { it.groupValues[1] == "2000" }
     }
 
     private fun interpretServices(value: String): Interpretation {
