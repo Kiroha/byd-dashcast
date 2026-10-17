@@ -17,6 +17,7 @@ class DiLinkContextExportTest {
     private fun text(command: DiLinkContextPlan.Command): String = when (command.kind) {
         DiLinkContextPlan.Kind.ID -> "uid=2000(shell) gid=2000(shell)"
         DiLinkContextPlan.Kind.EPOCH -> "1792140000"
+        DiLinkContextPlan.Kind.CURRENT_USER -> "0"
         DiLinkContextPlan.Kind.SERVICES -> "Found 2 services:\n0 byd_auth_service: [byd.auth]\n1 FissionHostSvc: []"
         DiLinkContextPlan.Kind.PROPERTY -> when (command.subject) {
             "sys.byd.countrycode" -> "33"

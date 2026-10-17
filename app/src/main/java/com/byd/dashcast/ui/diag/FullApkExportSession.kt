@@ -33,7 +33,8 @@ internal object FullApkExportSession {
                 return
             }
             cancellation.set(false)
-            snapshot = FullApkExport.Progress("Preparing local ${kind.label} export", kind = kind)
+            snapshot = FullApkExport.Progress("Preparing local ${kind.label} export", kind = kind,
+                discovered = if (kind.isContext) kind.contextProfile.commands.size else 0)
             launch(Runnable {
                 var marker: File? = null
                 var firmwareDevice:FirmwareExport.Device?=null
@@ -60,20 +61,21 @@ internal object FullApkExportSession {
                         "Only .zip volumes are finished; .part files are incomplete.\n")
                     val result = if (kind == ExportKind.FIRMWARE_LARGE) {
                         FirmwareLedger(directory,writes=firmwareWrites).use { ledger -> FirmwareExport(firmwareDevice!!,directory,ledger,cancellation::get,{ snapshot = it },writes=firmwareWrites!!).run() }
-                    } else if (kind == ExportKind.CONTEXT) {
-                        DiLinkContextExport(DiLinkContextDevice(), directory, cancellation::get,
+                    } else if (kind.isContext) {
+                        DiLinkContextExport(DiLinkContextDevice(profile = kind.contextProfile), directory, cancellation::get,
                             { snapshot = it }, appRuntime = mapOf("package" to app.packageName,
                                 "app_uid" to Process.myUid(), "android_api" to Build.VERSION.SDK_INT,
                                 "app_version_name" to BuildConfig.VERSION_NAME, "app_version_code" to BuildConfig.VERSION_CODE,
                                 "build_fingerprint" to Build.FINGERPRINT,
-                                "scope" to "App-local runtime values; distinct from the transport UID observed by id.")).run()
+                                "scope" to "App-local runtime values; distinct from the transport UID observed by id."),
+                            profile = kind.contextProfile).run()
                     } else {
                         val device = if (kind == ExportKind.APK) FullApkExportDevice(app) else SystemExportDevice(app, kind.systemProfile)
                         FullApkExport(device, directory, cancellation::get,
                             { snapshot = it }, kind = kind).run()
                     }
                     // Keep a concise outcome even if the JSON manifest could not be saved (disk full).
-                    if (kind != ExportKind.CONTEXT && kind != ExportKind.FIRMWARE_LARGE) runCatching { File(directory, "RESULT.txt").writeText(
+                    if (!kind.isContext && kind != ExportKind.FIRMWARE_LARGE) runCatching { File(directory, "RESULT.txt").writeText(
                         "${kind.label} export: ${result.outcome}\n${result.stage}\nCoverage of the whole vehicle is unverified.\n" +
                             "Finished ZIP volumes: ${result.archives.size}\nIncomplete .part volumes must not be used as successful exports.\n") }
                     firmwareWrites?.validate()
@@ -125,7 +127,7 @@ internal object FullApkExportSession {
         val files = latest.listFiles().orEmpty()
         val archives = files.filter { it.isFile && it.name.endsWith(".zip") }.sortedBy { it.name }
         val interrupted = files.any { it.name == "RUNNING.txt" || it.name.endsWith(".part") }
-        val integrityFailure = kind == ExportKind.CONTEXT && files.any { it.isFile && it.name == "ERREUR_LIVRAISON.txt" }
+        val integrityFailure = kind.isContext && files.any { it.isFile && it.name == "ERREUR_LIVRAISON.txt" }
         val result = files.firstOrNull { it.name == "RESULT.txt" }?.let { runCatching { it.bufferedReader().use { reader ->
             ExportText.read(reader, 1600).first } }.getOrNull() }
         return FullApkExport.Progress(
@@ -138,7 +140,7 @@ internal object FullApkExportSession {
     }
 
     private fun exportRoot(context: Context, kind: ExportKind, existingOnly:Boolean=false): File {
-        if(existingOnly || kind==ExportKind.FIRMWARE_LARGE)return File("/storage/emulated/${Process.myUid()/100000}/Android/data/${context.packageName}/files",kind.rootName)
+        if(existingOnly || kind==ExportKind.FIRMWARE_LARGE || kind==ExportKind.QR_DIAGNOSTIC)return File("/storage/emulated/${Process.myUid()/100000}/Android/data/${context.packageName}/files",kind.rootName)
         val base = try { context.getExternalFilesDir(null) } catch (_: Exception) { null }
             ?: File("/storage/emulated/0/Android/data/${context.packageName}/files")
         return File(base, kind.rootName)

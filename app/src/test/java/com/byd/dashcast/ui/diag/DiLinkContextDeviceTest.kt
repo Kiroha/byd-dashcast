@@ -76,6 +76,7 @@ class DiLinkContextDeviceTest {
                 val output = when (command.kind) {
                     DiLinkContextPlan.Kind.ID -> "uid=2000(shell)"
                     DiLinkContextPlan.Kind.EPOCH -> "1792140000"
+                    DiLinkContextPlan.Kind.CURRENT_USER -> "0"
                     DiLinkContextPlan.Kind.SERVICES -> "Found 0 services:"
                     DiLinkContextPlan.Kind.PROPERTY -> "synthetic"
                     DiLinkContextPlan.Kind.PACKAGE_PATH -> "package:/system/app/test/base.apk"

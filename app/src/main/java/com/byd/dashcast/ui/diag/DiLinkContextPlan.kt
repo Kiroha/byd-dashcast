@@ -2,7 +2,19 @@ package com.byd.dashcast.ui.diag
 
 /** Closed metadata plan. There is no shell command input in this feature. */
 internal object DiLinkContextPlan {
-    enum class Kind { ID, EPOCH, SERVICES, PROPERTY, PACKAGE_PATH, PACKAGE_DUMP }
+    enum class Kind { ID, EPOCH, CURRENT_USER, SERVICES, PROPERTY, PACKAGE_PATH, PACKAGE_DUMP }
+    enum class Profile(val id: String, val title: String, val coverage: String) {
+        CONTEXT("DILINK_CONTEXT_P12_V1", "Relevé DiLink",
+            "Fixed P12 metadata plan only; complete DiLink platform coverage is not established."),
+        QR_DIAGNOSTIC("QR_DEVELOPER_DIAGNOSTIC_METADATA_V1", "Diagnostic QR développeur",
+            "Fixed metadata preflight for developer/diagnostic QR research only; no tool launch, code entry or authorization attempt. Package presence, component declarations and per-user states do not establish launch permission or QR bypass.");
+
+        val commands: List<Command> get() = when (this) {
+            CONTEXT -> DiLinkContextPlan.commands
+            QR_DIAGNOSTIC -> qrDiagnosticCommands
+        }
+        val kind: ExportKind get() = if (this == CONTEXT) ExportKind.CONTEXT else ExportKind.QR_DIAGNOSTIC
+    }
     data class Command(val key: String, val label: String, val argv: List<String>, val kind: Kind,
                        val subject: String = "") {
         val shell: String get() = argv.joinToString(" ")
@@ -26,6 +38,26 @@ internal object DiLinkContextPlan {
             add(Command("dumpsys_package_$key", "$label : métadonnées", listOf("dumpsys", "package", name), Kind.PACKAGE_DUMP, name))
         }
     }
+    private val qrDiagnosticCommands: List<Command> = buildList {
+        add(Command("shell_id", "Identité du transport", listOf("id"), Kind.ID))
+        add(Command("current_android_user", "Utilisateur Android courant", listOf("am", "get-current-user"), Kind.CURRENT_USER))
+        add(Command("shell_date_epoch", "Horloge de la voiture", listOf("date", "+%s"), Kind.EPOCH))
+        for ((property, label) in listOf(
+            "sys.byd.countrycode" to "Code pays", "ro.build.type" to "Type de système",
+            "ro.build.version.sdk" to "Version API Android", "apps.setting.product.inswver" to "Version système",
+            "ro.build.region" to "Région système", "persist.sys.locale" to "Langue du système",
+            "persist.sys.timezone" to "Fuseau horaire")) {
+            add(Command("getprop_${property.replace('.', '_')}", label,
+                listOf("getprop", property), Kind.PROPERTY, property))
+        }
+        for ((name, key, label) in listOf(
+            Triple("com.byd.byddevelopmenttools", "tools", "Outils OEM"),
+            Triple("com.byd.authservice", "authservice", "AuthService"),
+            Triple("com.android.shell", "shell", "Paquet Android shell"))) {
+            add(Command("pm_path_$key", "$label : chemins APK", listOf("pm", "path", name), Kind.PACKAGE_PATH, name))
+            add(Command("dumpsys_package_$key", "$label : métadonnées", listOf("dumpsys", "package", name), Kind.PACKAGE_DUMP, name))
+        }
+    }
     const val COMMAND_TIMEOUT_MS = 30_000L
     const val TRANSPORT_TIMEOUT_MS = 35_000L
     const val MAX_OUTPUT_BYTES = 256 * 1024
@@ -44,6 +76,10 @@ internal object DiLinkContextPlan {
         }
         val value = output.trim()
         return when (command.kind) {
+            Kind.CURRENT_USER -> value.toIntOrNull()?.takeIf { it >= 0 }?.let {
+                Interpretation("ok", values = mapOf("current_android_user" to it,
+                    "interpretation" to "Current Android user observed separately; package User n lines are not assumed to refer to this user. Launch rights remain untested."))
+            } ?: Interpretation("unexpected_output", "No non-negative Android user ID recognized; current user remains unknown")
             Kind.ID -> Regex("\\buid=([0-9]+)").find(value)?.let {
                 Interpretation("ok", values = mapOf("observed_uid" to it.groupValues[1]))
             } ?: Interpretation("unexpected_output", "No UID recognized; transport privilege remains unknown")
