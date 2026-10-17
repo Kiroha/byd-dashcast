@@ -1,3 +1,13 @@
+// Resolve the produced APK lazily without retaining a Project/Task in an execution closure.
+abstract class SatelliteNativeApkArguments implements org.gradle.process.CommandLineArgumentProvider {
+    @org.gradle.api.tasks.InputDirectory
+    @org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+    abstract org.gradle.api.file.DirectoryProperty getApkDirectory()
+    @Override Iterable<String> asArguments() {
+        return ['--apk-dir', apkDirectory.get().asFile.absolutePath]
+    }
+}
+
 apply plugin: 'com.android.application'
 
 // Reporting credentials are NOT part of the build any more (audit AUD-001).
@@ -2219,7 +2229,18 @@ android {
                 // assemble tasks ("Task with name 'assembleRelease' not found"). matching{} +
                 // configureEach{} defers the wiring until the task actually exists, and stays lazy.
                 def assembleName = "assemble${variant.name.capitalize()}".toString()
+                def nativeCheckArguments = objects.newInstance(SatelliteNativeApkArguments)
+                nativeCheckArguments.apkDirectory.set(variant.artifacts.get(
+                    com.android.build.api.artifact.SingleArtifact.APK.INSTANCE))
+                def nativeCheckScript = rootProject.layout.projectDirectory.file(
+                    '.github/scripts/check_satellite_native_bootstrap.py')
+                def nativeCheck = tasks.register("verifySatelliteNative${variant.name.capitalize()}", Exec) {
+                    inputs.file(nativeCheckScript)
+                    commandLine 'python3', nativeCheckScript.asFile.absolutePath
+                    argumentProviders.add(nativeCheckArguments)
+                }
                 tasks.matching { it.name == assembleName }.configureEach {
+                    dependsOn(nativeCheck)
                     finalizedBy(mappingCopy)
                 }
             }

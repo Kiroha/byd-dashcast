@@ -14,7 +14,8 @@ No dynamic version, custom native patch, system WebView update or firmware chang
   (25.00 MiB), before the final commit/VCS metadata refresh.
 - RX minSdk 28 / targetSdk 29 / compileSdk 36 and its signing identity are unchanged.
 - The AAR contains no consumer ProGuard rules; RX explicitly preserves `org.webrtc.**` JNI classes,
-  constructors and callbacks. Test the actual optimized APK on Android 29, not only JVM fixtures.
+  constructors and callbacks, plus `org.jni_zero` classes/methods annotated `CalledByNative`.
+  Test the actual optimized APK on Android 29, not only JVM fixtures.
 
 The MIT fork license and full upstream/third-party distribution notices are bundled in both APKs
 as `webrtc-sdk-license.txt` and `webrtc-third-party-notices.md`. Sources are pinned to
@@ -67,3 +68,28 @@ same-screen CarPlay switch sequence, source stop/revoke, Wi-Fi recovery and clus
 Measure 10/30-minute car CPU/GPU, heat, latency and Overdrive loss against local app rendering.
 Hardware availability, vehicle rendering and lower workload are not established by static/JVM tests,
 or by an x86 emulator native-load test using the same AAR's different ABI.
+
+## Optimized JNI bootstrap regression
+
+The first optimized M150 candidate passed JVM tests and compilation but aborted during actual
+Android 29 native initialization. Its DEX lacked `org.jni_zero.JniZero`, removed by R8 because
+its private native-called `init():Object[]` was outside the `org.webrtc` keep scope. The native
+bootstrap's failed class lookup reached JNI with a null class and caused SIGABRT. That candidate
+was rejected before publication. This is an optimized product packaging failure, not evidence
+of absent hardware and not a reason to fall back to software decoding.
+
+The exact SHA-pinned AAR contains 22 `org.jni_zero` classes outside `org.webrtc`; every native ABI
+contains the dotted bootstrap class literal `org.jni_zero.JniZero`. Its `init()` and
+`crashIfMultiplexingMisaligned(long,long)`, and `CommonApis.mapToArray(Map)` / `arrayToMap(Object[])`,
+carry `org.jni_zero.CalledByNative`. The keep rule retains these annotated entry points and owner
+classes. It deliberately allows unannotated unused members to shrink: the public class-loader
+setter references a generated `JniZeroJni` bridge absent from this distribution. No missing-class
+suppression, invented bridge or SDK binary patch is used.
+
+Release assembly now runs `.github/scripts/check_satellite_native_bootstrap.py` against the
+actual produced APK. The bounded reader checks DEX class definitions, declared private/static
+methods, exact descriptors and nonempty code, across all DEX files. A string/reference to a
+removed class or method cannot pass. Python regression fixtures cover missing definitions,
+renamed entry points, multidex, duplicates and invalid table offsets. Python 3 is required for
+this release verification step. This static gate cannot prove JNI execution: the optimized
+Android 29 native-load/peer/EGL/disposal probe remains a separate required release check.

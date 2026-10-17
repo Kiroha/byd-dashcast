@@ -87,6 +87,12 @@
 # The pinned AAR supplies no consumer rules. Native WebRTC looks up Java classes,
 # constructors and callbacks by name; preserving only native methods is insufficient.
 -keep class org.webrtc.** { *; }
+# M150 also bootstraps through JNI Zero outside org.webrtc. Keep annotated native entry
+# points and their owner classes, including private JniZero.init() and CommonApis helpers.
+# Do not retain every member: the unused public setter references an absent generated bridge.
+-keepclasseswithmembers,includedescriptorclasses class org.jni_zero.** {
+    @org.jni_zero.CalledByNative <methods>;
+}
 
 
 # Android 29 ART rejects the optimized server run() when R8 inlines this

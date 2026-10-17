@@ -84,6 +84,11 @@ delivery on the vehicle; retest those on the parked vehicle with DashSat 0.6.0-d
 
 ## Native video receiver from 1.9.46-beta
 
+Release assembly also runs the JNI bootstrap declaration gate. It rejects missing/renamed
+`org.jni_zero` entry points in the actual optimized APK before release publication. Run its fixtures
+with `python3 .github/scripts/test_satellite_native_bootstrap.py`. This cannot replace actual ART
+native initialization: the initial optimized candidate was rejected after a real JNI SIGABRT.
+
 The control/TLS ART check above remains required. The default video viewer now uses app-local
 native WebRTC, independently of the installed system WebView. Its JNI entry points, EGL lifecycle,
 receive-only peer callbacks and hardware absence must also be checked using the optimized APK.
