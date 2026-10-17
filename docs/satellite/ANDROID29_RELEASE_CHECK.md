@@ -82,9 +82,17 @@ through pinned TLS, the WebSocket upgrade and authenticated control frames. It d
 not establish compatibility with the BYD ROM's hardware provider or prove guidance
 delivery on the vehicle; retest those on the parked vehicle with DashSat 0.6.0-dev.
 
-First-frame diagnostics must also be checked on the actual installed WebView. Older WebView fields
-may be absent and must remain unknown. The selected H.264 profile/level/packetization values come
-only from the selected codec report (or its exact answer payload), never the first advertised codec.
-Receiver inbound PLI/NACK/FIR are sent feedback, and totalDecodeTime is exported as bounded
-integer milliseconds. Element/track/playback observations do not prove physical display, hardware
-decoding or guidance freshness. Terminal samples remain bounded and do not request more stats.
+## Native video receiver from 1.9.46-beta
+
+The control/TLS ART check above remains required. The default video viewer now uses app-local
+native WebRTC, independently of the installed system WebView. Its JNI entry points, EGL lifecycle,
+receive-only peer callbacks and hardware absence must also be checked using the optimized APK.
+An x86 emulator may load the same AAR's matching x86 library beside the production ARM-only dex;
+record that ABI substitution explicitly. It does not prove ARM hardware decoding or vehicle output.
+Actual acceptance requires the target car's selected hardware decoder to initialize and produce
+both decoded textures and completed EGL swaps. See [NATIVE_WEBRTC.md](NATIVE_WEBRTC.md).
+
+The retained `check_satellite_webview.py`, old bundled HTML and Node fixtures are historical
+WebView compatibility probes. They neither gate native startup nor prove native media decoding.
+Older WebView report fields may remain unavailable; current native reports use their separate
+backend, SDK, selected decoder, initialization, sink-frame and rendered-frame evidence.

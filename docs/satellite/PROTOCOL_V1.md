@@ -1,7 +1,7 @@
 # DashCast satellite protocol v1
 
 Status: experimental receiver and guidance companion APKs are available. Vehicle rendering,
-AndroidKeyStore TLS handshakes and WebView codec performance still need device testing.
+AndroidKeyStore TLS handshakes and hardware video decoding/performance still need device testing.
 The receiver is disabled by default. This is a local protocol with no cloud relay or discovery.
 
 ## Pairing and transport
@@ -189,7 +189,8 @@ per negotiation, candidate length 2048, media index 0–8. SDP is bounded to 60,
 the whole message must also meet the UTF-8 limit. The receiver has no STUN/TURN servers; the
 companion must likewise use local host candidates and an empty ICE server list. Media uses WebRTC
 DTLS-SRTP directly between LAN peers, separate from the ordered control socket. Prefer H.264 if
-both endpoints negotiate it; do not assume every vehicle WebView offers a hardware decoder.
+both endpoints negotiate it. DashCast 1.9.46-beta uses an app-local native hardware H.264 receiver;
+hardware capability and successful decoding still require validation on each vehicle.
 
 ```json
 {"type":"video.stop","negotiation":"attempt_1"}
@@ -199,12 +200,12 @@ Viewer errors use `{"type":"video.error","negotiation":"attempt_1","code":"..."}
 `negotiation_failed`, `connection_lost`, `video_timeout`, `playback_failed`, `signalling_overflow`).
 After an error/stop use a new negotiation ID. Waiting viewers can accept a new offer without
 reopening the Activity. An external reset discards queued old-session signalling. A hidden/closed
-viewer releases its connection; a stopped video source clears the displayed image after six
-seconds without decoder progress. Keep screen-capture frames flowing even when the map is static.
+viewer releases its connection. Explicit stop/reset clears the displayed image immediately; a
+stalled source clears after six seconds without actual render progress. Keep screen-capture frames flowing even when the map is static.
 
 No remote touch/key injection, audio forwarding, cloud relay, automatic arbitrary-app background
 capture or ABRP-specific integration is promised by v1. Application capture and protected-screen
-restrictions depend on the companion Android version and app. WebView absence/incompatibility
+restrictions depend on the companion Android version and app. Native SDK/decoder unavailability
 causes a controlled viewer failure while local navigation and projection remain available.
 
 ## Optional manual video diagnostics

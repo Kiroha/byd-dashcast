@@ -40,9 +40,10 @@ Do not promise unattended video restart where Android requires a new capture con
 Add a maintained, pinned native WebRTC sender dependency in the **companion**, single video track,
 local ICE only, WSS signalling as specified in `PROTOCOL_V1.md`. Begin with modest resolution/frame
 rate, negotiate a supported codec, and measure screen-to-cluster latency, CPU/GPU, thermal behavior
-and Overdrive frame loss on the vehicle. The DashCast receiver deliberately uses installed WebView
-WebRTC instead of shipping a large native codec AAR to all users. If OEM WebView proves insufficient,
-evaluate a native receiver from that evidence, including APK size and ABI impact.
+and Overdrive frame loss on the vehicle. After repeated negotiated H.264 streams produced no decoded frames on the OEM WebView, DashCast
+1.9.46-beta adopts the same pinned native SDK as DashSat. The receiver is hardware H.264 only;
+record its increased APK size/ARM ABI impact and validate actual decoding and sustained vehicle load.
+No system WebView replacement is required.
 
 Keep interaction on the box/main display initially. Remote input would need its own explicit
 permission model and coordinate mapping; capture permission does not authorize input injection.

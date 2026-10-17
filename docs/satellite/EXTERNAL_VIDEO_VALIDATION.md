@@ -1,35 +1,36 @@
 # External video receiver checks
 
-The companion provides user-consented app/display capture and native hardware encoding; the
-vehicle receives a single WebRTC track using its installed WebView. It still decodes and composes
-the video. Video is experimental until Tbox Ultra 1 / Android 15 and the actual DiLink 3 / Android 10
-vehicle pass the companion's external-video checklist and performance comparison.
+From DashCast 1.9.46-beta, the default receiver is app-local native WebRTC 150.7871.01, matching
+DashSat 0.9.9-dev. The system WebView is not changed. Capture, application rendering and hardware
+encoding remain on the companion. The vehicle must still decode and compose the received track;
+lower CPU/GPU usage is a vehicle acceptance gate, not an established result.
 
-The bundled receiver samples HTML video counters once per second independently of `getStats()`.
-Only one underlying stats operation may remain unresolved per peer. At eight seconds it is marked
-timed out in diagnostics, without starting another operation or stopping a healthy decoder.
-A failed stats operation is diagnostic evidence; it does not stop progressing DOM counters.
-The first image has fifteen seconds after the answer is queued, with a hard thirty-second startup
-cap from the offer and the existing eight-second limit for each SDP operation. These budgets are
-not renewed by track/connection/ICE/byte events. After actual decoded-frame progress, the existing
-six-second stale-image limit applies. Incoming bytes and WSS heartbeats never refresh an image.
+Only hardware H.264 Baseline is advertised. A missing/failed hardware decoder causes a visible
+failure, never a software fallback. API 29+ checks the actual selected MediaCodec hardware flags;
+API 28 fails closed outside the documented vendor families. Reports distinguish decoder creation,
+successful initialization, decoded texture delivery and completed EGL swaps. No pixel readback,
+I420 conversion, audio forwarding, remote input or new vehicle API is added. See
+[NATIVE_WEBRTC.md](NATIVE_WEBRTC.md) for dependency, ABI, licensing and compatibility evidence.
 
-DOM quality and WebKit counters have separate baselines captured at each new peer/track. Newly
-exposed APIs, decreased raw quality/decoded counters and replacement stats sources rebaseline
-without proving progress. A fresh peer's positive stats decode count is valid evidence. Replacement
-offers preempt pending SDP, cancel its local deadlines and fence its late failures/completions.
-Closing/hiding the viewer releases the peer and all monitoring; no offscreen decoder is retained.
+An independent main-thread monitor checks image progress once per second, even if native work or
+getStats blocks. Only completed EGL swaps refresh image freshness. First-image budget: 15 seconds
+from answer, 30 seconds absolute from offer; each SDP stage: 8 seconds; stalled image: 6 seconds.
+A single unresolved stats call cannot create more stats requests. Signalling has one bounded
+32-entry inbox; replacement offers discard obsolete signals. ICE is private IPv4 UDP host-only,
+limited to 128 candidates, and remote candidates must match the current authenticated WSS peer.
+Native interface discovery supports vehicle hotspot/AP interfaces without a Wi-Fi Network handle;
+it never changes process-wide routing or creates STUN/TURN/cellular media fallbacks.
 
-Diagnostics are opt-in: long-press **Preview received map** on the main display to toggle a small
-codec/dimensions/FPS/bitrate/drop/decode-time overlay, then open the cluster viewer. Hardware decoder
-efficiency is unknown unless the platform reports `powerEfficientDecoder`. This field indicates
-power-efficient platform decoding, not a direct GPU load measurement. No SDP, route, addresses or
-arbitrary diagnostic strings are displayed or logged.
+Stop, reset, failure and replacement immediately show an opaque waiting/failure screen, so an old
+TextureView buffer cannot remain presented as a current image. Hiding the main preview invalidates
+callbacks and releases its peer, decoder, renderer and EGL context on the serialized media worker.
+No hidden preview decoder is retained. The existing 500 ms cluster destination/projection guard
+and daemon ownership are preserved; main preview remains independent of cluster projection.
 
-The cluster viewer continuously checks that its original resolved display is still the activity's
-display and that the existing ClusterService projection remains active. Loss closes only this viewer
-and its decoder. Main-display preview is independent. No new projection activation, daemon ownership,
-OEM restore, CAN/AAOS action, driver restriction bypass or input forwarding is introduced.
+Use **Send diagnostics to DashCast** in DashSat, then export a DashCast bug report. Native scalar
+observations replace the former long-press WebView metrics overlay. The TEST PATTERN badge labels
+the test and does not prove a decoded image. Actual native decoding and rendering on the target
+DiLink 3 Android 10 vehicle, and sustained CPU/GPU/Overdrive improvement, still require testing.
 
 ## Setup when the Tbox uses the car's main display
 
@@ -48,7 +49,12 @@ source capture pause/hiding, control loss or fatal failure ends sharing and requ
 there is no unattended recapture. Opening ABRP alone does not grant capture permission or start
 video transmission. Guidance and video remain separate.
 
-## Retained video stages and readiness ordering
+## Historical WebView implementation (before 1.9.46-beta)
+
+The following records describe the retired WebView backend and its historical checks. They do not
+describe the native receiver or constitute native decoder validation.
+
+### Retained video stages and readiness ordering
 
 DashSat 0.9.1-dev and DashCast 1.9.22-beta add bounded process-local stage histories that survive
 display switching. In DashSat, read **Recent video activity** or choose **Copy video diagnostics**

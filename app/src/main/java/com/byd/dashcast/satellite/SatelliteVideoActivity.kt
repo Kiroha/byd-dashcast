@@ -1,66 +1,39 @@
 package com.byd.dashcast.satellite
 
 import android.app.Activity
-import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.graphics.Color
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.webkit.RenderProcessGoneDetail
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.edit
 import com.byd.dashcast.R
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.util.LocaleHelper
-import com.byd.dashcast.util.AppLogger
 import org.json.JSONObject
-import java.io.ByteArrayInputStream
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicLong
 
-/** Receive-only WebRTC viewer. Loaded exclusively from a bundled page, never from the network. */
-@Suppress("DEPRECATION") // API 28/29 need these display and fullscreen APIs.
+/** Receive-only app-local native WebRTC. Hidden previews retain no peer, decoder or EGL surface. */
+@Suppress("DEPRECATION")
 class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
-    private var webView: WebView? = null
-    private var ready = false
-    private var visible = false
-    private var session: String? = null
     private val main = Handler(Looper.getMainLooper())
-    private var showMetrics = false
-    private enum class Bootstrap { STARTING, READY, FAILED }
-    private var bootstrap = Bootstrap.STARTING
-    private var generation = 0L
-    private var videoAttempt: Long? = null
-    private var videoNegotiation: String? = null
-    private val observationLock = Any()
-    private data class PendingObservation(val generation: Long, val peer: Long,
-        val value: SatelliteVideoDiagnostics.Observation, val terminal: Boolean)
-    private var pendingObservation: PendingObservation? = null
-    private var observationPosted = false
-
-    private fun endVideoAttempt(end: SatelliteVideoDiagnostics.End) {
-        videoAttempt?.let { SatelliteVideoDiagnostics.endAttempt(it, end) }
-        videoAttempt = null
-        videoNegotiation = null
-        synchronized(observationLock) { pendingObservation = null }
-    }
+    private val controlEpoch = AtomicLong()
+    @Volatile private var generation = 0L
+    @Volatile private var visible = false
+    @Volatile private var ready = false
+    @Volatile private var receiver: SatelliteVideoReceiver? = null
     private lateinit var container: FrameLayout
     private lateinit var overlay: LinearLayout
     private lateinit var stateLabel: TextView
     private lateinit var retryButton: Button
-    private lateinit var providerLabel: TextView
-    private var startupDeadline: Runnable? = null
+    private lateinit var referenceLabel: TextView
+    private var deadline: Runnable? = null
     private val projectionGuard = object : Runnable {
         override fun run() {
             if (!visible || isFinishing || isDestroyed) return
@@ -68,302 +41,134 @@ class SatelliteVideoActivity : Activity(), SatelliteVideoHub.Viewer {
             main.postDelayed(this, 500)
         }
     }
-    @Suppress("DEPRECATION")
     private fun validDestination(): Boolean {
         if (!SatellitePrefs.isEnabled(this)) return false
-        if (!intent.hasExtra(EXPECTED_DISPLAY)) return true // Main display preview is independent.
-        val expected = intent.getIntExtra(EXPECTED_DISPLAY, -1)
+        if (!intent.hasExtra(EXPECTED_DISPLAY)) return true
         val cluster = ClusterService.getInstance()
-        return SatelliteVideoDestination.allowed(expected, windowManager.defaultDisplay.displayId,
-            cluster?.displayId ?: -1, cluster?.isProjectionActive() == true)
+        return SatelliteVideoDestination.allowed(intent.getIntExtra(EXPECTED_DISPLAY, -1),
+            windowManager.defaultDisplay.displayId, cluster?.displayId ?: -1, cluster?.isProjectionActive() == true)
     }
-
     override fun attachBaseContext(base: Context) = super.attachBaseContext(LocaleHelper.applyLocale(base))
-
-    @SuppressLint("SetJavaScriptEnabled") // Only bundled HTML; network/file navigation is blocked.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!validDestination()) {
-            finish(); return
-        }
-        // A second preview must release the old decoder rather than retain two WebViews.
-        current.get()?.finish()
+        if (!validDestination()) { finish(); return }
+        current.get()?.let { it.releaseReceiver(); it.finish() }
         current = WeakReference(this)
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
         container = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         overlay = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(32, 24, 32, 24)
-            setBackgroundColor(Color.BLACK)
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
+            setPadding(32, 24, 32, 24); setBackgroundColor(Color.BLACK)
         }
         stateLabel = TextView(this).apply {
-            tag = "satellite_video_state"
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
+            tag = "satellite_video_state"; textSize = 20f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         retryButton = Button(this).apply {
-            tag = "satellite_video_retry"
-            setText(R.string.satellite_pair_retry)
+            tag = "satellite_video_retry"; setText(R.string.satellite_native_retry)
             setOnClickListener { startViewer() }
         }
         overlay.addView(stateLabel)
-        providerLabel = TextView(this).apply {
-            tag = "satellite_video_provider"
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-        }
-        overlay.addView(providerLabel)
-        overlay.addView(retryButton)
-        overlay.addView(Button(this).apply {
-            setText(R.string.consent_close)
-            setOnClickListener { finish() }
+        overlay.addView(TextView(this).apply {
+            setText(R.string.satellite_native_backend); setTextColor(Color.WHITE); gravity = Gravity.CENTER
         })
+        overlay.addView(retryButton)
+        overlay.addView(Button(this).apply { setText(R.string.satellite_native_close); setOnClickListener { finish() } })
         container.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        referenceLabel = TextView(this).apply {
+            setText(R.string.satellite_native_reference); textSize = 14f; setTextColor(Color.WHITE)
+            setBackgroundColor(Color.BLACK); visibility = View.GONE
+        }
+        container.addView(referenceLabel, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
         setContentView(container)
-        startViewer()
     }
-
-    @SuppressLint("SetJavaScriptEnabled") // Only bundled HTML; network/file navigation is blocked.
     private fun startViewer() {
-        if (isFinishing || isDestroyed || !validDestination()) return
-        releaseWebView()
-        bootstrap = Bootstrap.STARTING
+        if (!visible || isFinishing || isDestroyed || !validDestination()) return
+        releaseReceiver()
+        val owner = generation
+        stateLabel.setText(R.string.satellite_native_loading)
+        retryButton.visibility = View.GONE; referenceLabel.visibility = View.GONE; overlay.visibility = View.VISIBLE
         SatelliteVideoDiagnostics.record(SatelliteVideoDiagnostics.Event.VIEWER_STARTING)
-        ready = false
-        stateLabel.setText(R.string.satellite_video_loading)
-        retryButton.visibility = View.GONE
-        providerLabel.visibility = View.GONE
-        overlay.visibility = View.VISIBLE
-        val attempt = generation
-        try {
-            val view = WebView(this)
-            webView = view
-            SatelliteVideoDiagnostics.providerVersion(runCatching { WebView.getCurrentWebViewPackage()?.versionName }.getOrNull())
-            view.settings.apply {
-                javaScriptEnabled = true
-                mediaPlaybackRequiresUserGesture = false
-                allowFileAccess = false
-                allowContentAccess = false
-                setSupportMultipleWindows(false)
-            }
-            showMetrics = getPreferences(Context.MODE_PRIVATE).getBoolean("video_metrics", false)
-            // Opt-in diagnostic overlay. Configure on the main display before opening the cluster.
-            if (!intent.hasExtra(EXPECTED_DISPLAY)) view.setOnLongClickListener {
-                showMetrics = !showMetrics
-                getPreferences(Context.MODE_PRIVATE).edit { putBoolean("video_metrics", showMetrics) }
-                view.evaluateJavascript("window.setMetricsVisible($showMetrics)", null)
-                true
-            }
-            view.addJavascriptInterface(Bridge(attempt), "DashCastVideo")
-            view.webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
-                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =
-                    WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
-                override fun onReceivedError(view: WebView, request: WebResourceRequest,
-                    error: android.webkit.WebResourceError) {
-                    if (request.isForMainFrame) failed(attempt, "page_load_failed")
-                }
-                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-                    failed(attempt, "renderer_gone")
-                    return true
-                }
-            }
-            container.addView(view, 0, FrameLayout.LayoutParams(-1, -1))
-            val html = assets.open("satellite_receiver.html").bufferedReader().use { it.readText() }
-                .replace("__WAITING__", escapeHtml(getString(R.string.satellite_video_waiting)))
-            view.loadDataWithBaseURL("https://satellite.dashcast.invalid/", html, "text/html", "UTF-8", null)
-            watchStartup()
-        } catch (_: Exception) { failed(attempt, "webview_create_failed") }
-        catch (_: LinkageError) { failed(attempt, "webview_linkage_failed") }
-    }
-
-    inner class Bridge(private val attempt: Long) {
-        @JavascriptInterface
-        fun ready(supported: Boolean) {
-            main.post {
-                if (attempt != generation || bootstrap != Bootstrap.STARTING || isFinishing || isDestroyed) return@post
-                if (!supported) { failed(attempt, "webrtc_unavailable"); return@post }
-                cancelStartupDeadline()
-                bootstrap = Bootstrap.READY
+        val callbacks = object : SatelliteVideoReceiver.Listener {
+            private fun current() = owner == generation && visible && !isFinishing && !isDestroyed
+            override fun ready() {
+                if (!current() || ready) return
+                deadline?.let(main::removeCallbacks); deadline = null
                 ready = true
-                overlay.visibility = View.GONE
-                AppLogger.i("SatelliteVideo", "bootstrap: ready")
-                webView?.evaluateJavascript("window.setMetricsVisible($showMetrics)", null)
-                if (visible) SatelliteVideoHub.attach(this@SatelliteVideoActivity)
+                stateLabel.setText(R.string.satellite_native_waiting)
+                SatelliteVideoHub.attach(this@SatelliteVideoActivity)
+            }
+            override fun failed(code: String) {
+                if (!current()) return
+                deadline?.let(main::removeCallbacks); deadline = null
+                SatelliteVideoDiagnostics.failure(code)
+                stateLabel.setText(if (code == "hardware_decoder_unavailable") R.string.satellite_native_no_hardware else R.string.satellite_native_failed)
+                retryButton.visibility = View.VISIBLE; referenceLabel.visibility = View.GONE; overlay.visibility = View.VISIBLE
+                // Initialization failure must release partial EGL/native resources as well.
+                if (!ready) releaseReceiver()
+            }
+            override fun status(reference: Boolean, rendered: Boolean) {
+                if (!current() || !ready) return
+                referenceLabel.visibility = if (reference) View.VISIBLE else View.GONE
+                overlay.visibility = if (rendered) View.GONE else View.VISIBLE
+                if (!rendered) stateLabel.setText(R.string.satellite_native_waiting)
+            }
+            override fun reply(session: String, raw: String) {
+                if (current() && ready) SatelliteVideoHub.reply(this@SatelliteVideoActivity, session, raw)
             }
         }
-
-        @JavascriptInterface
-        fun send(peerAttempt: Long, id: String, message: String) {
-            if (message.length > SatelliteProtocol.MAX_MESSAGE_BYTES) return
-            main.post {
-                if (attempt == generation && peerAttempt == videoAttempt && ready && visible && !isFinishing && !isDestroyed) {
-                    SatelliteVideoHub.reply(this@SatelliteVideoActivity, id, message)
-                    val json = runCatching { JSONObject(message) }.getOrNull()
-                    if (json?.optString("type") == "video.error") endVideoAttempt(when (json.optString("code")) {
-                        "video_timeout" -> SatelliteVideoDiagnostics.End.VIDEO_TIMEOUT
-                        "playback_failed" -> SatelliteVideoDiagnostics.End.PLAYBACK_FAILED
-                        "connection_lost" -> SatelliteVideoDiagnostics.End.CONNECTION_LOST
-                        "negotiation_failed" -> SatelliteVideoDiagnostics.End.NEGOTIATION_FAILED
-                        else -> SatelliteVideoDiagnostics.End.OTHER_FAILURE
-                    })
-                }
-            }
-        }
-
-        @JavascriptInterface
-        fun failed(code: String) {
-            // Do not accept arbitrary console/error text, SDP or URLs into support logs.
-            if (code == "script_error") main.post { failed(attempt, "script_error") }
-        }
-
-        @JavascriptInterface
-        fun progress(peerAttempt: Long, code: String) {
-            main.post {
-                if (attempt == generation && peerAttempt == videoAttempt && ready && visible && !isFinishing && !isDestroyed)
-                    SatelliteVideoDiagnostics.progress(code)
-            }
-        }
-
-        @JavascriptInterface
-        fun observe(peerAttempt: Long, raw: String) = enqueueObservation(peerAttempt, raw, false)
-
-        @JavascriptInterface
-        fun observeFinal(peerAttempt: Long, raw: String) = enqueueObservation(peerAttempt, raw, true)
-
-        private fun enqueueObservation(peerAttempt: Long, raw: String, terminal: Boolean) {
-            val observation = SatelliteVideoDiagnostics.Observation.parse(raw) ?: return
-            // At most one main-thread delivery is queued, even if the UI thread is busy.
-            synchronized(observationLock) {
-                val pending = pendingObservation
-                if (pending != null && (pending.generation > attempt ||
-                        (pending.generation == attempt && pending.peer > peerAttempt))) return
-                if (pending?.generation == attempt && pending.peer == peerAttempt && pending.terminal) return
-                pendingObservation = PendingObservation(attempt, peerAttempt, observation, terminal)
-                if (observationPosted) return
-                observationPosted = true
-            }
-            main.post {
-                val latest = synchronized(observationLock) {
-                    observationPosted = false
-                    pendingObservation.also { pendingObservation = null }
-                } ?: return@post
-                if (latest.generation == generation && latest.peer == videoAttempt && ready && visible && !isFinishing && !isDestroyed)
-                    SatelliteVideoDiagnostics.observe(latest.peer, latest.value, latest.terminal)
-            }
-        }
+        try {
+            val next = receiverFactory(this, callbacks).also { receiver = it }
+            container.addView(next.view, 0, FrameLayout.LayoutParams(-1, -1))
+            deadline = Runnable { callbacks.failed("native_receiver_unavailable") }.also { main.postDelayed(it, STARTUP_TIMEOUT_MS) }
+            next.start()
+        } catch (_: Exception) { callbacks.failed("native_receiver_unavailable") }
+        catch (_: LinkageError) { callbacks.failed("native_receiver_unavailable") }
     }
-
     override fun signal(session: String, message: JSONObject) {
-        val json = message.toString()
-        val attempt = generation
-        main.post {
-            if (attempt != generation || !ready || !visible || isFinishing || isDestroyed) return@post
-            this.session = session
-            when (message.optString("type")) {
-                "video.offer" -> {
-                    if (message.has("sourceMode") && message.opt("sourceMode") != "reference") return@post
-                    endVideoAttempt(SatelliteVideoDiagnostics.End.REPLACED)
-                    val sourceMode = if (message.opt("sourceMode") == "reference") SatelliteVideoDiagnostics.SourceMode.REFERENCE
-                        else SatelliteVideoDiagnostics.SourceMode.CAPTURE
-                    videoAttempt = SatelliteVideoDiagnostics.beginAttempt(sourceMode)
-                    videoNegotiation = message.optString("negotiation")
-                }
-                "video.stop" -> if (message.optString("negotiation") == videoNegotiation)
-                    endVideoAttempt(SatelliteVideoDiagnostics.End.SENDER_STOPPED)
-            }
-            webView?.evaluateJavascript("window.receiveSignal(${JSONObject.quote(session)},${JSONObject.quote(json)},${videoAttempt ?: 0})", null)
-        }
+        // The receiver bounds/coalesces its inbox before posting; the Hub never queues arbitrary SDPs on main.
+        if (message.optString("type") == "video.offer") controlEpoch.incrementAndGet()
+        val current = receiver
+        if (ready && visible && current === receiver) current?.signal(session, message)
     }
-
     override fun reset() {
-        val attempt = generation
+        val epoch = controlEpoch.incrementAndGet() // Invalidate queued offers immediately, including under the Hub monitor.
+        receiver?.reset() // Only invalidation/enqueue; native disposal never runs under the Hub monitor.
         main.post {
-            if (attempt != generation) return@post
-            endVideoAttempt(SatelliteVideoDiagnostics.End.CONTROL_RESET)
-            session = null
-            if (!isFinishing && !isDestroyed) webView?.evaluateJavascript("window.resetReceiver()", null)
+            if (epoch == controlEpoch.get() && visible && !isFinishing && !isDestroyed && ready) {
+                referenceLabel.visibility = View.GONE; overlay.visibility = View.VISIBLE
+                stateLabel.setText(R.string.satellite_native_waiting)
+            }
         }
     }
-
     override fun onStart() {
-        super.onStart()
-        val newlyVisible = !visible
-        visible = true
-        if (newlyVisible) projectionGuard.run()
-        watchStartup()
-        if (newlyVisible && ready && !isFinishing) SatelliteVideoHub.attach(this)
+        super.onStart(); visible = true
+        if (!isFinishing) { projectionGuard.run(); startViewer() }
     }
-
     override fun onStop() {
         visible = false
-        endVideoAttempt(SatelliteVideoDiagnostics.End.VIEWER_HIDDEN)
         main.removeCallbacks(projectionGuard)
-        cancelStartupDeadline()
-        SatelliteVideoHub.detach(this)
-        reset()
+        releaseReceiver()
         super.onStop()
     }
-
-    private fun watchStartup() {
-        if (!visible || isFinishing || isDestroyed || bootstrap != Bootstrap.STARTING || startupDeadline != null) return
-        val attempt = generation
-        startupDeadline = Runnable { failed(attempt, "bootstrap_timeout") }.also {
-            main.postDelayed(it, STARTUP_TIMEOUT_MS)
-        }
-    }
-
-    private fun cancelStartupDeadline() {
-        startupDeadline?.let(main::removeCallbacks)
-        startupDeadline = null
-    }
-
-    private fun failed(attempt: Long, code: String) {
-        if (attempt != generation || bootstrap == Bootstrap.FAILED || isFinishing || isDestroyed) return
-        bootstrap = Bootstrap.FAILED
-        SatelliteVideoDiagnostics.failure(code)
-        ready = false
-        releaseWebView()
-        stateLabel.setText(R.string.satellite_video_unavailable)
-        val providerVersion = runCatching { WebView.getCurrentWebViewPackage()?.versionName }
-            .getOrNull()?.takeIf { it.matches(Regex("[0-9.]{1,40}")) } ?: "?"
-        providerLabel.text = getString(R.string.satellite_video_provider, providerVersion)
-        providerLabel.visibility = View.VISIBLE
-        retryButton.visibility = View.VISIBLE
-        overlay.visibility = View.VISIBLE
-        AppLogger.w("SatelliteVideo", "bootstrap: $code (WebView $providerVersion)")
-    }
-
-    private fun releaseWebView() {
-        endVideoAttempt(SatelliteVideoDiagnostics.End.VIEWER_RELEASED)
-        generation++ // Fence every old bridge, renderer callback and deadline before retry.
-        cancelStartupDeadline()
+    private fun releaseReceiver() {
+        generation++; controlEpoch.incrementAndGet(); ready = false
+        deadline?.let(main::removeCallbacks); deadline = null
         SatelliteVideoHub.detach(this)
-        session = null
-        webView?.apply {
-            (parent as? ViewGroup)?.removeView(this)
-            try { removeJavascriptInterface("DashCastVideo"); stopLoading(); destroy() } catch (_: Exception) {}
-        }
-        webView = null
+        val old = receiver; receiver = null
+        old?.close() // Fences callbacks before any asynchronous codec disposal.
+        old?.view?.let { it.visibility = View.GONE; container.removeView(it) }
     }
-
     override fun onDestroy() {
-        ready = false
-        releaseWebView()
-        main.removeCallbacksAndMessages(null)
+        releaseReceiver(); main.removeCallbacksAndMessages(null)
         if (current.get() === this) current.clear()
         super.onDestroy()
     }
-
     companion object {
         const val EXPECTED_DISPLAY = "satellite_expected_display"
         internal const val STARTUP_TIMEOUT_MS = 10_000L
+        internal var receiverFactory: (Context, SatelliteVideoReceiver.Listener) -> SatelliteVideoReceiver = { context, listener -> NativeVideoReceiver(context, listener) }
         private var current = WeakReference<SatelliteVideoActivity>(null)
-        fun closeViewer() { current.get()?.finish() }
-        private fun escapeHtml(value: String) = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        fun closeViewer() { current.get()?.let { it.releaseReceiver(); it.finish() } }
     }
 }
