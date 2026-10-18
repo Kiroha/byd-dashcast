@@ -78,7 +78,8 @@ internal class ObservedHardwareDecoder(private val delegate: VideoDecoder, priva
         } else { binding.incrementAndGet(); failure() }
         return if (result == VideoCodecStatus.FALLBACK_SOFTWARE || (result == VideoCodecStatus.OK && !initialized)) VideoCodecStatus.ERROR else result
     }
-    override fun decode(image: EncodedImage, info: VideoDecoder.DecodeInfo): VideoCodecStatus {
+    // The pinned native VideoDecoderWrapper deliberately passes null for the optional metadata.
+    override fun decode(image: EncodedImage, info: VideoDecoder.DecodeInfo?): VideoCodecStatus {
         if (!initialized || !alive() || released.get()) return VideoCodecStatus.ERROR
         val status = try { delegate.decode(image, info) } catch (_: Exception) { VideoCodecStatus.ERROR }
         when (status) {

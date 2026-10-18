@@ -12,9 +12,11 @@ class HardwareVideoReceiverFactoryTest {
         var status = VideoCodecStatus.OK
         var releases = 0; var decodes = 0
         var throwInit = false; var throwDecode = false
+        var lastImage: EncodedImage? = null
+        var lastInfo: VideoDecoder.DecodeInfo? = null
         override fun createNative(webrtcEnv: Long) = 123L
         override fun initDecode(settings: VideoDecoder.Settings, callback: VideoDecoder.Callback): VideoCodecStatus { this.callback = callback; if (throwInit) throw IllegalStateException("fixture"); return status }
-        override fun decode(image: EncodedImage, info: VideoDecoder.DecodeInfo): VideoCodecStatus { decodes++; if (throwDecode) throw IllegalStateException("fixture"); return status }
+        override fun decode(image: EncodedImage, info: VideoDecoder.DecodeInfo?): VideoCodecStatus { decodes++; lastImage = image; lastInfo = info; if (throwDecode) throw IllegalStateException("fixture"); return status }
         override fun release(): VideoCodecStatus { releases++; return VideoCodecStatus.OK }
         override fun getImplementationName() = "OMX.vendor.avc.decoder"
     }
@@ -41,6 +43,89 @@ class HardwareVideoReceiverFactoryTest {
         assertEquals(VideoCodecStatus.ERROR, decoder.initDecode(VideoDecoder.Settings(1, 960, 540)) { _, _, _ -> })
         assertEquals(1, failures)
     }
+    @Test fun `SDK interface decode forwards null JNI metadata and preserves present metadata identity`() {
+        val delegate = Decoder()
+        var failures = 0
+        val evidence = mutableListOf<String>()
+        val decoder: VideoDecoder = ObservedHardwareDecoder(delegate, { true }, { value, _ -> evidence += value }, { failures++ })
+        assertEquals(VideoCodecStatus.OK, decoder.initDecode(VideoDecoder.Settings(1, 32, 32)) { _, _, _ -> })
+        val image = encodedImage()
+        try {
+            // The pinned native VideoDecoderWrapper passes null through this Java interface.
+            assertEquals(VideoCodecStatus.OK, decoder.decode(image, null))
+            assertSame(image, delegate.lastImage)
+            assertNull(delegate.lastInfo)
+            val info = VideoDecoder.DecodeInfo(false, 7)
+            assertEquals(VideoCodecStatus.OK, decoder.decode(image, info))
+            assertSame(image, delegate.lastImage)
+            assertSame(info, delegate.lastInfo)
+            assertEquals(2, delegate.decodes)
+            assertEquals(0, failures)
+            assertEquals(listOf("initialized"), evidence)
+        } finally {
+            decoder.release()
+            image.release()
+        }
+    }
+    @Test fun `null metadata preserves terminal decode failures and fences later callbacks`() {
+        val errors = listOf(VideoCodecStatus.ERROR, VideoCodecStatus.FALLBACK_SOFTWARE, VideoCodecStatus.TIMEOUT,
+            VideoCodecStatus.MEMORY, VideoCodecStatus.ERR_PARAMETER, VideoCodecStatus.UNINITIALIZED)
+        for ((status, throws) in errors.map { it to false } + (VideoCodecStatus.OK to true)) {
+            val delegate = Decoder()
+            var delivered = 0
+            var failures = 0
+            val decoder: VideoDecoder = ObservedHardwareDecoder(delegate, { true }, { _, _ -> }, { failures++ })
+            assertEquals(VideoCodecStatus.OK, decoder.initDecode(VideoDecoder.Settings(1, 32, 32)) { _, _, _ -> delivered++ })
+            delegate.status = status
+            delegate.throwDecode = throws
+            val image = encodedImage()
+            try {
+                val expected = if (throws || status == VideoCodecStatus.FALLBACK_SOFTWARE) VideoCodecStatus.ERROR else status
+                assertEquals(expected, decoder.decode(image, null))
+                assertSame(image, delegate.lastImage)
+                assertNull(delegate.lastInfo)
+                assertEquals(1, failures)
+                assertEquals(VideoCodecStatus.ERROR, decoder.decode(image, null))
+                assertEquals(1, delegate.decodes)
+                val buffer = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(VideoFrame.TextureBuffer::class.java)) { _, _, _ ->
+                    error("A retired callback must not inspect its borrowed texture")
+                } as VideoFrame.TextureBuffer
+                delegate.callback!!.onDecodedFrame(VideoFrame(buffer, 0, 1), null, null)
+                assertEquals(0, delivered)
+            } finally {
+                decoder.release()
+                decoder.release()
+                image.release()
+            }
+            assertEquals(1, delegate.releases)
+        }
+    }
+    @Test fun `null metadata cannot bypass uninitialized stale or released decoder guards`() {
+        for (state in listOf("uninitialized", "stale", "released")) {
+            val delegate = Decoder()
+            var alive = true
+            var failures = 0
+            val decoder: VideoDecoder = ObservedHardwareDecoder(delegate, { alive }, { _, _ -> }, { failures++ })
+            if (state != "uninitialized")
+                assertEquals(VideoCodecStatus.OK, decoder.initDecode(VideoDecoder.Settings(1, 32, 32)) { _, _, _ -> })
+            if (state == "stale") alive = false
+            if (state == "released") decoder.release()
+            val image = encodedImage()
+            try {
+                assertEquals(state, VideoCodecStatus.ERROR, decoder.decode(image, null))
+                assertEquals(state, 0, delegate.decodes)
+                assertEquals(state, 0, failures)
+            } finally {
+                decoder.release()
+                image.release()
+            }
+            assertEquals(state, 1, delegate.releases)
+        }
+    }
+    private fun encodedImage(): EncodedImage = EncodedImage.builder()
+        .setBuffer(java.nio.ByteBuffer.allocateDirect(1), {})
+        .setEncodedWidth(32).setEncodedHeight(32).setCaptureTimeNs(1)
+        .setFrameType(EncodedImage.FrameType.VideoFrameKey).createEncodedImage()
     @Test fun `decoder callback forwards only borrowed textures in the current live generation without buffer reads or retains`() {
         var alive = true; var delivered = 0; var failures = 0
         val delegate = Decoder()
