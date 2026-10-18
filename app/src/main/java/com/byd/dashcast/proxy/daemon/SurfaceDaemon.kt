@@ -189,6 +189,17 @@ object SurfaceDaemon {
     @Volatile private var sContext: Context? = null
     @Volatile private var sSysContext: Context? = null
     private val sSlots = ConcurrentHashMap<String, SlotInfo>()
+    // Includes requests whose holder/VD has not been committed yet. Release and a newer
+    // attach must also cancel those requests, rather than allow a late VD to resurrect them.
+    private val sSlotRequests = HashMap<String, SlotInfo>()
+    private val sSlotRegistryLock = Any()
+
+    private fun onSlotMain(operation: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) operation()
+        else if (!Handler(Looper.getMainLooper()).post { operation() }) {
+            out("[Fission] slot lifecycle dispatch rejected; resources unavailable")
+        }
+    }
 
     private class SlotInfo(
         @JvmField val pkg: String,
@@ -199,46 +210,95 @@ object SurfaceDaemon {
     ) {
         @JvmField var overlayView: View? = null
         @JvmField var overlayWM: WindowManager? = null
-        @JvmField var vd: VirtualDisplay? = null
-        @JvmField var displayId = 0
         @JvmField val resizeGeneration = AtomicLong()
         private var ownerLease: DeathLease? = null
-        private var released = false
-
-        @Synchronized fun setOwnerLease(lease: DeathLease) {
-            if (released) lease.close()
-            else ownerLease = lease
-        }
-
-        @Synchronized fun isReleased(): Boolean = released
-
-        @Synchronized fun release() {
-            if (released) return
-            released = true
-            val lease = ownerLease
-            ownerLease = null
-            lease?.close()
-            val display = vd
-            if (display != null) {
+        val surfaces = SlotSurfaceLifecycle<Surface, VirtualDisplay>(
+            isSurfaceValid = { it.isValid },
+            displayId = { it.display.displayId },
+            isDisplayValid = { it.display.isValid },
+            bind = { display, surface -> display.surface = surface },
+            releaseDisplay = { display ->
                 try { display.release() }
                 catch (e: Exception) { out("[Fission] slot[$pkg] VD release error: " + e.message) }
-                vd = null
+            },
+            dispatch = { operation -> onSlotMain(operation) },
+            onClosed = { reason ->
+                if (reason != null) out("[Fission] slot[$pkg] binding failed closed: " +
+                    reason.javaClass.simpleName + ": " + reason.message)
+                forgetSlot(this)
+                releaseOverlayAndLease()
+            },
+            onBindingChanged = { generation, bound ->
+                out("[Fission] slot[$pkg] holder generation=$generation " +
+                    if (bound) "bound (resource only)" else "detached/unavailable")
+            },
+        )
+
+        fun setOwnerLease(lease: DeathLease) {
+            val reject = synchronized(this) {
+                if (surfaces.isClosed) true else { ownerLease = lease; false }
             }
-            val view = overlayView
-            val wm = overlayWM
-            overlayView = null
-            overlayWM = null
-            if (view != null && wm != null) {
-                val r = Runnable {
-                    try { wm.removeViewImmediate(view) }
-                    catch (e: Exception) {
-                        out("[Fission] slot[$pkg] overlay remove error: " + e.message)
-                    }
-                }
-                if (Looper.myLooper() == Looper.getMainLooper()) r.run()
-                else Handler(Looper.getMainLooper()).post(r)
-            }
+            if (reject) lease.close()
         }
+
+        fun isReleased(): Boolean = surfaces.isClosed
+
+        fun release() { surfaces.close() }
+
+        // Called only on the main lifecycle lane, without either state monitor held.
+        private fun releaseOverlayAndLease() {
+            val lease: DeathLease?
+            val view: View?
+            val wm: WindowManager?
+            synchronized(this) {
+                lease = ownerLease
+                ownerLease = null
+                view = overlayView
+                wm = overlayWM
+                overlayView = null
+                overlayWM = null
+            }
+            lease?.close()
+            if (view != null && wm != null) {
+                try { wm.removeViewImmediate(view) }
+                catch (e: Exception) {
+                    out("[Fission] slot[$pkg] overlay remove error: " + e.message)
+                }
+            }
+            // SurfaceHolder owns its Surface. Never call Surface.release() here.
+        }
+    }
+
+    private fun beginSlot(slot: SlotInfo) {
+        val replaced: List<SlotInfo>
+        synchronized(sSlotRegistryLock) {
+            replaced = listOfNotNull(sSlotRequests.put(slot.pkg, slot), sSlots.remove(slot.pkg)).distinct()
+        }
+        replaced.forEach { it.release() }
+    }
+
+    private fun forgetSlot(slot: SlotInfo) {
+        synchronized(sSlotRegistryLock) {
+            if (sSlotRequests[slot.pkg] === slot) sSlotRequests.remove(slot.pkg)
+            sSlots.remove(slot.pkg, slot)
+        }
+    }
+
+    private fun releaseSlot(key: String) {
+        val removed: List<SlotInfo>
+        synchronized(sSlotRegistryLock) {
+            removed = listOfNotNull(sSlotRequests.remove(key), sSlots.remove(key)).distinct()
+        }
+        removed.forEach { it.release() }
+    }
+
+    private fun isCurrentSlotRequest(slot: SlotInfo): Boolean = synchronized(sSlotRegistryLock) {
+        sSlotRequests[slot.pkg] === slot && !slot.isReleased()
+    }
+
+    private fun publishSlot(slot: SlotInfo): Boolean = synchronized(sSlotRegistryLock) {
+        if (sSlotRequests[slot.pkg] !== slot || slot.isReleased()) false
+        else { sSlots[slot.pkg] = slot; true }
     }
 
     // InputManager (init une seule fois, lu depuis les threads Binder → volatile)
@@ -1026,23 +1086,19 @@ object SurfaceDaemon {
         val w = data.readInt()
         val h = data.readInt()
         out("[Fission] CLUSTER_ATTACH $w×$h")
-        val existing = sSlots.remove("__default__")
-        existing?.release()
         val slot = SlotInfo("__default__", 0, 0, w, h)
+        beginSlot(slot)
         val surface = tryAttachSlotOverlay(slot)
-        if (surface == null) { reply.writeNoException(); reply.writeInt(0); return true }
+        if (surface == null) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true }
         val displayId = createTrustedVdForSlot(slot, surface, "dashcast_cluster_default")
         if (displayId < 0) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true }
-        // Release whatever this replaced. The pre-check above releases an EXISTING slot, but two
-        // concurrent attaches for the same key can both observe null there and both build; the
-        // second put would then drop the first SlotInfo on the floor, leaking a
-        // TYPE_SYSTEM_OVERLAY window, a VirtualDisplay and a Surface in a daemon that outlives the
-        // app. Phase4DisplayVerbs' VirtualDisplay registry — same process, same shape — has always
-        // done this; this map had drifted from it.
-        run { val replaced = sSlots.put("__default__", slot); replaced?.release() }
+        val publishedSurface = slot.surfaces.currentSurface()
+        if (publishedSurface == null || slot.surfaces.readyDisplayId() != displayId) {
+            slot.release(); reply.writeNoException(); reply.writeInt(0); return true
+        }
         out("[Fission] CLUSTER_ATTACH OK displayId=$displayId")
         reply.writeNoException(); reply.writeInt(1)
-        reply.writeParcelable(surface, 0); reply.writeInt(displayId)
+        reply.writeParcelable(publishedSurface, 0); reply.writeInt(displayId)
         return true
     }
 
@@ -1061,23 +1117,25 @@ object SurfaceDaemon {
         // Here it costs one field and travels with the block a triager actually reads.
         out("[Fission] ATTACH_SLOT pkg=" + pkg + " (" + x + "," + y + "," + w + "×" + h + ")" +
             " build=" + BuildConfig.VERSION_CODE)
-        val existing = sSlots.remove(pkg)
-        existing?.release()
         val slot = SlotInfo(pkg, x, y, w, h)
+        beginSlot(slot)
         val surface = tryAttachSlotOverlay(slot)
-        if (surface == null) { reply.writeNoException(); reply.writeInt(0); return true }
+        if (surface == null) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true }
         val displayId = createTrustedVdForSlot(slot, surface,
             "dashcast_slot_" + pkg.replace('.', '_'))
         if (displayId < 0) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true }
-        // Release whatever this replaced — same reason as in handleClusterAttach.
-        run { val replaced = sSlots.put(pkg, slot); replaced?.release() }
         if (owner != null && !attachSlotOwner(pkg, slot, owner)) {
-            if (sSlots.remove(pkg, slot)) slot.release()
+            forgetSlot(slot)
+            slot.release()
             reply.writeNoException(); reply.writeInt(0); return true
+        }
+        val publishedSurface = slot.surfaces.currentSurface()
+        if (publishedSurface == null || slot.surfaces.readyDisplayId() != displayId) {
+            slot.release(); reply.writeNoException(); reply.writeInt(0); return true
         }
         out("[Fission] ATTACH_SLOT OK pkg=$pkg displayId=$displayId")
         reply.writeNoException(); reply.writeInt(1)
-        reply.writeParcelable(surface, 0); reply.writeInt(displayId)
+        reply.writeParcelable(publishedSurface, 0); reply.writeInt(displayId)
         return true
     }
 
@@ -1085,7 +1143,8 @@ object SurfaceDaemon {
         return try {
             val lease = DeathLease.attach(BinderDeathOwner(owner)) {
                 out("[Fission] slot owner died — releasing $key")
-                if (sSlots.remove(key, slot)) slot.release()
+                forgetSlot(slot)
+                slot.release()
             }
             slot.setOwnerLease(lease)
             !slot.isReleased() && sSlots[key] === slot
@@ -1099,8 +1158,7 @@ object SurfaceDaemon {
     private fun handleReleaseSlot(data: Parcel, reply: Parcel): Boolean {
         val pkg = data.readString()!!
         out("[Fission] RELEASE_SLOT pkg=$pkg")
-        val slot = sSlots.remove(pkg)
-        slot?.release()
+        releaseSlot(pkg)
         reply.writeNoException(); reply.writeInt(1)
         return true
     }
@@ -1126,51 +1184,43 @@ object SurfaceDaemon {
             oldX = slot.x; oldY = slot.y; oldW = slot.w; oldH = slot.h
         }
         val latch = CountDownLatch(1)
-        val overlayResized = AtomicBoolean(false)
-        val resizeOverlay = Runnable resize@{
+        val resized = AtomicBoolean(false)
+        val resize = Runnable resize@{
             try {
                 if (!isCurrentResize(pkg, slot, generation)) return@resize
                 applySlotOverlayGeometry(slot, x, y, w, h)
-                overlayResized.set(true)
+                if (!isCurrentResize(pkg, slot, generation)) return@resize
+                if (!slot.surfaces.withDisplay { it.resize(w, h, 160) }) return@resize
+                synchronized(slot) {
+                    if (!isCurrentResize(pkg, slot, generation)) return@resize
+                    slot.x = x; slot.y = y; slot.w = w; slot.h = h
+                }
+                resized.set(true)
             } catch (e: Exception) {
-                out("[Fission] RESIZE_SLOT overlay error: " + e.message)
+                out("[Fission] RESIZE_SLOT error: " + e.message)
             } finally { latch.countDown() }
         }
         val mainHandler = Handler(Looper.getMainLooper())
-        if (!mainHandler.post(resizeOverlay)) {
+        if (Looper.myLooper() == Looper.getMainLooper()) resize.run()
+        else if (!mainHandler.post(resize)) {
             reply.writeNoException(); reply.writeInt(0); return true
         }
-        var completed = false
-        try { completed = latch.await(1, TimeUnit.SECONDS) }
-        catch (interrupted: InterruptedException) { Thread.currentThread().interrupt() }
+        val completed = try {
+            if (Looper.myLooper() == Looper.getMainLooper()) latch.count == 0L
+            else latch.await(1, TimeUnit.SECONDS)
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
         if (!completed) {
-            mainHandler.removeCallbacks(resizeOverlay)
-            out("[Fission] RESIZE_SLOT overlay timed out — VD resize skipped to avoid size mismatch")
+            mainHandler.removeCallbacks(resize)
+            out("[Fission] RESIZE_SLOT timed out; queued geometry/VD rollback")
+        }
+        val success = completed && resized.get() && isCurrentResize(pkg, slot, generation)
+        if (!success) {
             scheduleResizeRollback(mainHandler, pkg, slot, generation, oldX, oldY, oldW, oldH)
-            reply.writeNoException(); reply.writeInt(0); return true
         }
-        if (!overlayResized.get()) {
-            scheduleResizeRollback(mainHandler, pkg, slot, generation, oldX, oldY, oldW, oldH)
-            reply.writeNoException(); reply.writeInt(0); return true
-        }
-        try {
-            val vd = slot.vd
-            if (!isCurrentResize(pkg, slot, generation) || vd == null) {
-                throw IllegalStateException("slot superseded or released")
-            }
-            vd.resize(w, h, 160)
-        } catch (e: Exception) {
-            out("[Fission] RESIZE_SLOT VD error: " + e.message)
-            scheduleResizeRollback(mainHandler, pkg, slot, generation, oldX, oldY, oldW, oldH)
-            reply.writeNoException(); reply.writeInt(0); return true
-        }
-        synchronized(slot) {
-            if (!isCurrentResize(pkg, slot, generation)) {
-                reply.writeNoException(); reply.writeInt(0); return true
-            }
-            slot.x = x; slot.y = y; slot.w = w; slot.h = h
-        }
-        reply.writeNoException(); reply.writeInt(1)
+        reply.writeNoException(); reply.writeInt(if (success) 1 else 0)
         return true
     }
 
@@ -1187,13 +1237,30 @@ object SurfaceDaemon {
             if (!isCurrentResize(pkg, slot, generation)) return
             rollbackGeneration = slot.resizeGeneration.incrementAndGet()
         }
-        mainHandler.post {
-            if (!isCurrentResize(pkg, slot, rollbackGeneration)) return@post
-            try { applySlotOverlayGeometry(slot, x, y, w, h) }
-            catch (rollbackError: Exception) {
-                out("[Fission] RESIZE_SLOT overlay rollback error: " + rollbackError.message)
+        val rollback = Runnable rollback@{
+            if (!isCurrentResize(pkg, slot, rollbackGeneration)) return@rollback
+            try {
+                // A timed-out resize may already have returned from the platform with new
+                // dimensions. Restore both resources on this lane, never just the overlay.
+                if (!slot.surfaces.withDisplay { it.resize(w, h, 160) }) {
+                    slot.release()
+                    return@rollback
+                }
+                applySlotOverlayGeometry(slot, x, y, w, h)
+                synchronized(slot) {
+                    if (!isCurrentResize(pkg, slot, rollbackGeneration)) return@rollback
+                    // Timeout may have won after the resize committed its metadata but
+                    // before the completion latch was signalled. Restore all three views
+                    // of geometry, so a later request snapshots the actual old dimensions.
+                    slot.x = x; slot.y = y; slot.w = w; slot.h = h
+                }
+            } catch (rollbackError: Exception) {
+                out("[Fission] RESIZE_SLOT rollback failed closed: " + rollbackError.message)
+                slot.release()
             }
         }
+        if (Looper.myLooper() == Looper.getMainLooper()) rollback.run()
+        else if (!mainHandler.post(rollback)) slot.release()
     }
 
     private fun applySlotOverlayGeometry(slot: SlotInfo, x: Int, y: Int, w: Int, h: Int) {
@@ -1215,11 +1282,10 @@ object SurfaceDaemon {
     private fun handleActivateLayout(data: Parcel, reply: Parcel): Boolean {
         val n = data.readInt()
         out("[Fission] ACTIVATE_LAYOUT n=$n")
-        for (key in ArrayList(sSlots.keys)) {
-            if (key.startsWith("layout_")) {
-                val s = sSlots.remove(key); s?.release()
-            }
+        val layoutKeys = synchronized(sSlotRegistryLock) {
+            sSlotRequests.keys.filter { it.startsWith("layout_") }
         }
+        layoutKeys.forEach { releaseSlot(it) }
         reply.writeNoException(); reply.writeInt(n)
         for (i in 0 until n) {
             val label = data.readString()!!
@@ -1230,11 +1296,11 @@ object SurfaceDaemon {
             val safe = label.replace(Regex("[^A-Za-z0-9_]"), "_")
             val key = "layout_" + safe + "_" + i
             val slot = SlotInfo(key, x, y, w, h)
+            beginSlot(slot)
             val surface = tryAttachSlotOverlay(slot)
-            if (surface == null) { reply.writeInt(-1); continue }
+            if (surface == null) { slot.release(); reply.writeInt(-1); continue }
             val displayId = createTrustedVdForSlot(slot, surface, "dashcast_layout_$safe")
             if (displayId < 0) { slot.release(); reply.writeInt(-1); continue }
-            run { val replaced = sSlots.put(key, slot); replaced?.release() }
             out("[Fission] ACTIVATE_LAYOUT [$label] → displayId=$displayId")
             reply.writeInt(displayId)
         }
@@ -1244,7 +1310,7 @@ object SurfaceDaemon {
     private fun handleQuerySlot(data: Parcel, reply: Parcel): Boolean {
         val pkg = data.readString()!!
         val slot = sSlots[pkg]
-        val displayId = if (slot != null && slot.vd != null) slot.displayId else -1
+        val displayId = slot?.surfaces?.readyDisplayId() ?: -1
         out("[Fission] QUERY_SLOT pkg=$pkg → displayId=$displayId")
         reply.writeNoException()
         reply.writeInt(displayId)
@@ -1288,10 +1354,13 @@ object SurfaceDaemon {
      */
     private fun handleDeactivateLayout(data: Parcel, reply: Parcel): Boolean {
         out("[Fission] DEACTIVATE_LAYOUT slots=" + sSlots.size)
-        for (key in ArrayList(sSlots.keys)) {
-            val s = sSlots.remove(key)
-            s?.release()
+        val removed: List<SlotInfo>
+        synchronized(sSlotRegistryLock) {
+            removed = (sSlotRequests.values + sSlots.values).distinct()
+            sSlotRequests.clear()
+            sSlots.clear()
         }
+        removed.forEach { it.release() }
         reply.writeNoException(); reply.writeInt(1)
         return true
     }
@@ -1364,7 +1433,6 @@ object SurfaceDaemon {
                 " " + describeDisplay(target) +
                 " latch setup pkg=" + slot.pkg)
             val latch = CountDownLatch(1)
-            val surfaceRef = AtomicReference<Surface?>()
             val errorRef = AtomicReference<String?>()
             // Localises a mid-attach throw. On DiLink 5.0 both captures
             // (INC-20260615-160735, INC-20260622-080346) stop after step3 +
@@ -1379,12 +1447,8 @@ object SurfaceDaemon {
             // the case the stage ref exists to tell apart from "threw inside a statement".
             // Naming a real stage here would assert the opposite of what happened.
             val stageRef = AtomicReference("queued-never-dispatched")
-            // Set true when the binder thread gives up (timeout / invalid surface). The
-            // attach runnable checks it under the slot monitor after wm.addView so a
-            // late-running attach removes its own window instead of leaking it.
-            val aborted = AtomicBoolean(false)
-
             val attach = Runnable attach@{
+                if (slot.isReleased()) { latch.countDown(); return@attach }
                 // First statement: the runnable IS running, so the timeout can no longer be
                 // reported as "never dispatched". getResources() below is unguarded, so this
                 // stage has to be named before it, not after.
@@ -1447,8 +1511,9 @@ object SurfaceDaemon {
                             val s = h.surface
                             if (s != null && s.isValid) {
                                 out("[ATTACH_SLOT] surfaceCreated valid pkg=" + slot.pkg)
-                                surfaceRef.compareAndSet(null, s); latch.countDown()
-                            }
+                                slot.surfaces.available(s)
+                                latch.countDown()
+                            } else slot.surfaces.destroyed()
                         }
 
                         override fun surfaceChanged(h: SurfaceHolder, f: Int, w2: Int, h2: Int) {
@@ -1456,12 +1521,14 @@ object SurfaceDaemon {
                             if (s != null && s.isValid) {
                                 out("[ATTACH_SLOT] surfaceChanged valid " + w2 + "x" + h2 +
                                     " pkg=" + slot.pkg)
-                                surfaceRef.compareAndSet(null, s); latch.countDown()
-                            }
+                                slot.surfaces.available(s)
+                                latch.countDown()
+                            } else slot.surfaces.destroyed()
                         }
 
                         override fun surfaceDestroyed(h: SurfaceHolder) {
                             out("[ATTACH_SLOT] surfaceDestroyed pkg=" + slot.pkg)
+                            slot.surfaces.destroyed()
                         }
                     })
 
@@ -1488,18 +1555,17 @@ object SurfaceDaemon {
                     // identical in a capture.
                     stageRef.set("step5-publish")
                     out("[ATTACH_SLOT] step5: wm.addView returned pkg=" + slot.pkg)
-                    // Publish under the slot monitor and re-check the abort flag: if the
-                    // binder thread already timed out, remove this just-added window here
-                    // (we are on the main looper — the correct thread for removeView) rather
-                    // than leak an orphaned TYPE_SYSTEM_OVERLAY in the permanent daemon.
-                    synchronized(slot) {
-                        if (aborted.get()) {
-                            try { wm.removeViewImmediate(sv) }
-                            catch (ignore: Exception) {}
-                        } else {
+                    // A timeout/replacement can invalidate the slot while addView blocks.
+                    // Publish only local references under the monitor; remove outside it.
+                    val keep = synchronized(slot) {
+                        if (slot.isReleased()) false else {
                             slot.overlayView = sv
                             slot.overlayWM = wm
+                            true
                         }
+                    }
+                    if (!keep) {
+                        try { wm.removeViewImmediate(sv) } catch (ignore: Exception) {}
                     }
                 } catch (e: Exception) {
                     // Name the stage: a SecurityException here used to be un-attributable.
@@ -1520,22 +1586,31 @@ object SurfaceDaemon {
             }
 
             if (Looper.myLooper() == Looper.getMainLooper()) attach.run()
-            else Handler(Looper.getMainLooper()).post(attach)
+            else if (!Handler(Looper.getMainLooper()).post(attach)) {
+                slot.release()
+                return null
+            }
 
-            if (!latch.await(2, TimeUnit.SECONDS)) {
+            // A caller already on main may use a synchronously delivered holder, but must
+            // never wait for a callback that itself needs this same looper.
+            val completed = if (Looper.myLooper() == Looper.getMainLooper())
+                latch.count == 0L else latch.await(2, TimeUnit.SECONDS)
+            if (!completed) {
                 // Report the stage the attach runnable was stuck in — a main-looper stall and
                 // a blocking framework call inside addView look the same without it.
-                out("[ATTACH_SLOT] TIMEOUT 2s at " + stageRef.get() + " pkg=" + slot.pkg)
-                abortOverlayAttach(slot, aborted); return null
+                val waitReason = if (Looper.myLooper() == Looper.getMainLooper())
+                    "no synchronous holder on main; refusing to wait" else "TIMEOUT 2s"
+                out("[ATTACH_SLOT] $waitReason at " + stageRef.get() + " pkg=" + slot.pkg)
+                abortOverlayAttach(slot); return null
             }
             if (errorRef.get() != null) {
                 out("[ATTACH_SLOT] FAIL: " + errorRef.get())
-                abortOverlayAttach(slot, aborted); return null
+                abortOverlayAttach(slot); return null
             }
-            val surface = surfaceRef.get()
+            val surface = slot.surfaces.currentSurface()
             if (surface == null || !surface.isValid) {
                 out("[ATTACH_SLOT] FAIL: no valid surface pkg=" + slot.pkg)
-                abortOverlayAttach(slot, aborted); return null
+                abortOverlayAttach(slot); return null
             }
             out("[ATTACH_SLOT] OK surface valid pkg=" + slot.pkg +
                 " display=" + target.displayId)
@@ -1626,53 +1701,78 @@ object SurfaceDaemon {
         }
     }
 
-    /**
-     * Abort an in-flight overlay attach after a failure: mark the attach runnable to
-     * self-remove if it runs late, then release any window it already added. Prevents an
-     * orphaned TYPE_SYSTEM_OVERLAY window (+ Surface) accumulating in this permanent daemon
-     * on every slow/failed attach. The slot monitor orders this against the runnable's
-     * publish so the window is removed exactly once (here, or by the late runnable).
-     */
-    private fun abortOverlayAttach(slot: SlotInfo, aborted: AtomicBoolean) {
-        synchronized(slot) {
-            aborted.set(true)
-        }
+    /** Cancels both a queued attach and a late VD result, without waiting on main. */
+    private fun abortOverlayAttach(slot: SlotInfo) {
+        forgetSlot(slot)
         slot.release()
     }
 
-    /** Creates a TRUSTED VirtualDisplay for the given slot. Never returns display id=0. */
-    @SuppressLint("WrongConstant")
+    /** Creates and commits on the same lane as holder callbacks, resize and disposal. */
     private fun createTrustedVdForSlot(slot: SlotInfo, surface: Surface, vdName: String): Int {
-        try {
-            out("[CREATE_VD] name=" + vdName + " size=" + slot.w + "x" + slot.h + " dpi=160")
-            val dm = sContext!!.getSystemService(DisplayManager::class.java)
-            var vd: VirtualDisplay? = null
+        val result = AtomicReference(-1)
+        val latch = CountDownLatch(1)
+        val create = Runnable {
             try {
-                // flags 1346 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)|TRUSTED(1024)
-                vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 1346)
-                if (vd != null) out("[CREATE_VD] TRUSTED OK name=$vdName")
+                if (!isCurrentSlotRequest(slot)) return@Runnable
+                // The surface argument preserves the existing call boundary. The lifecycle
+                // deliberately reads the latest holder rather than this earlier snapshot.
+                if (!surface.isValid && slot.surfaces.currentSurface() == null) {
+                    slot.release()
+                    return@Runnable
+                }
+                val displayId = slot.surfaces.create { current ->
+                    createTrustedSlotDisplay(slot, current, vdName)
+                }
+                if (displayId > 0 && publishSlot(slot)) result.set(displayId)
+                else slot.release()
             } catch (e: Exception) {
-                out("[CREATE_VD] TRUSTED failed, fallback flags=322: " + e.message)
-            }
-            if (vd == null) {
-                // flags 322 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)
-                vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 322)
-                if (vd != null) out("[CREATE_VD] fallback OK name=$vdName")
-            }
-            if (vd == null) { out("[CREATE_VD] FAIL: both flags failed name=$vdName"); return -1 }
-            slot.vd = vd
-            slot.displayId = vd.display.displayId
-            // Safety guard: new VD must never land on display 0
-            if (slot.displayId == 0) {
-                out("SAFETY: createTrustedVdForSlot: VD got displayId=0 — RELEASING")
-                vd.release(); slot.vd = null; return -1
-            }
-            out("[CREATE_VD] OK displayId=" + slot.displayId + " name=" + vdName)
-            return slot.displayId
-        } catch (e: Exception) {
-            out("[Fission] createTrustedVdForSlot error: " + e.message)
+                out("[Fission] createTrustedVdForSlot error: " + e.message)
+                slot.release()
+            } finally { latch.countDown() }
+        }
+        val main = Handler(Looper.getMainLooper())
+        if (Looper.myLooper() == Looper.getMainLooper()) create.run()
+        else if (!main.post(create)) {
+            abortOverlayAttach(slot)
             return -1
         }
+        val completed = try {
+            if (Looper.myLooper() == Looper.getMainLooper()) latch.count == 0L
+            else latch.await(2, TimeUnit.SECONDS)
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
+        if (!completed) {
+            main.removeCallbacks(create)
+            out("[CREATE_VD] TIMEOUT 2s name=$vdName; late result will be released")
+            abortOverlayAttach(slot)
+            return -1
+        }
+        return if (isCurrentSlotRequest(slot) && slot.surfaces.readyDisplayId() == result.get())
+            result.get() else -1
+    }
+
+    /** Existing flags/fallback are unchanged. The lifecycle validates id and owns disposal. */
+    @SuppressLint("WrongConstant")
+    private fun createTrustedSlotDisplay(slot: SlotInfo, surface: Surface, vdName: String): VirtualDisplay? {
+        out("[CREATE_VD] name=" + vdName + " size=" + slot.w + "x" + slot.h + " dpi=160")
+        val dm = sContext!!.getSystemService(DisplayManager::class.java)
+        var vd: VirtualDisplay? = null
+        try {
+            // flags 1346 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)|TRUSTED(1024)
+            vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 1346)
+            if (vd != null) out("[CREATE_VD] TRUSTED OK name=$vdName")
+        } catch (e: Exception) {
+            out("[CREATE_VD] TRUSTED failed, fallback flags=322: " + e.message)
+        }
+        if (vd == null) {
+            // flags 322 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)
+            vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 322)
+            if (vd != null) out("[CREATE_VD] fallback OK name=$vdName")
+        }
+        if (vd == null) out("[CREATE_VD] FAIL: both flags failed name=$vdName")
+        return vd
     }
 
     private fun createOverlayLayoutParams(

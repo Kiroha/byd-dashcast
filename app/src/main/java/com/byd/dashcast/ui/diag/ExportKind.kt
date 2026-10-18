@@ -15,10 +15,12 @@ internal enum class ExportKind(val label: String, val noun: String, val rootName
     QR_DIAGNOSTIC("QR DIAGNOSTIC", "QR diagnostic metadata reads", "qr-diagnostic-exports", "qr-diagnostic-", "qr-diagnostic", "qr-diagnostic"),
     OEM_SERVICE("SERVICE OEM", "OEM service metadata reads", "oem-service-exports", "oem-service-", "oem-service", "oem-service"),
     OEM_INIT_SOURCES("SOURCES INIT OEM", "init source files", "oem-init-source-exports", "oem-init-sources-", "init-sources", "oem-init-sources"),
-    OEM_BOOTSTRAP("DÉMARRAGE OEM", "bootstrap evidence items", "oem-bootstrap-exports", "oem-bootstrap-", "bootstrap", "oem-bootstrap");
+    OEM_BOOTSTRAP("DÉMARRAGE OEM", "bootstrap evidence items", "oem-bootstrap-exports", "oem-bootstrap-", "bootstrap", "oem-bootstrap"),
+    CLUSTER_CONTEXT("CONTEXTE CLUSTER", "cluster evidence items", "cluster-context-exports", "cluster-context-", "cluster", "cluster-context");
 
     val isSystem: Boolean get() = this == SYSTEM || this == SYSTEM_P15
     val isContext: Boolean get() = this == CONTEXT || this == QR_DIAGNOSTIC || this == OEM_SERVICE
+    val isOemSource: Boolean get() = this == OEM_INIT_SOURCES || this == OEM_BOOTSTRAP || this == CLUSTER_CONTEXT
     val contextProfile: DiLinkContextPlan.Profile get() = when (this) {
         CONTEXT -> DiLinkContextPlan.Profile.CONTEXT
         QR_DIAGNOSTIC -> DiLinkContextPlan.Profile.QR_DIAGNOSTIC

@@ -13,7 +13,9 @@ import java.util.concurrent.atomic.AtomicReference
 internal class OemBootstrapDevice(
     private val binder: IBinder? = ProxyClient.getProxyDaemonBinder(),
     private val transport: (() -> DiLinkContextTransport.Reply) -> DiLinkContextTransport.Reply = DiLinkContextDevice::executeScoped,
+    private val scope: Scope = Scope.BOOTSTRAP,
 ) : OemBootstrapExport.Device {
+    enum class Scope { BOOTSTRAP, CLUSTER }
     private var terminal = false
     private var ready = false
     override val terminated: Boolean get() = terminal
@@ -91,7 +93,8 @@ internal class OemBootstrapDevice(
             val uid = reply.readInt(); val pid = reply.readInt(); val protocol = boundedString(reply, 16); val nonce = boundedString(reply, 32)
             if (uid != 2000 || pid <= 0 || (protocol.toIntOrNull() ?: 0) < 26 ||
                 !nonce.matches(Regex("[0-9a-f]{32}")) || reply.dataAvail() != 0) throw IOException("Daemon identity/protocol refused")
-            mapOf("daemon_uid" to uid.toString(), "daemon_pid" to pid.toString(), "daemon_protocol" to protocol)
+            mapOf("daemon_uid" to uid.toString(), "daemon_pid" to pid.toString(), "daemon_protocol" to protocol) +
+                if (scope == Scope.CLUSTER) mapOf("daemon_instance_nonce" to nonce) else emptyMap()
         }, ProxyDaemonContract.TXN_WHOAMI)
         check()
         exchange({ data, reply ->
@@ -105,7 +108,7 @@ internal class OemBootstrapDevice(
     }
     override fun metadata(label: String, pid: Int?): List<OemBootstrapPolicy.Blob> {
         check(ready)
-        val (script, limits) = when (label) {
+        val (script, limits) = if (scope == Scope.CLUSTER) ClusterContextPolicy.script(label, pid) else when (label) {
             "inventory" -> OemBootstrapPolicy.inventoryScript() to OemBootstrapPolicy.inventoryLimits
             else -> {
                 if (label.startsWith("sources_")) {
@@ -125,14 +128,16 @@ internal class OemBootstrapDevice(
             if (reply.dataAvail() != 0 || exit != 0 || text.contains("[output truncated]")) throw IOException("Bootstrap metadata failed/truncated, exit=$exit")
             text
         }, ProxyDaemonContract.TXN_EXEC)
-        return try { OemBootstrapPolicy.parse(label, output, limits) }
+        return try { OemBootstrapPolicy.parse(label, output, limits,
+            if (scope == Scope.CLUSTER) ClusterContextPolicy.PROFILE else OemBootstrapPolicy.PROFILE) }
         catch (e: Exception) { terminal = true; throw e }
     }
     override fun chunk(entry: OemBootstrapPolicy.Source, offset: Long, length: Int): ByteArray {
         check(ready)
         val path = entry.path
         val expected = entry.stamp ?: throw IOException("No strict source metadata")
-        require(path in OemBootstrapPolicy.sources && entry.status == "ok" &&
+        val allowedPath = if (scope == Scope.CLUSTER) path == ClusterContextPolicy.PROVIDER else path in OemBootstrapPolicy.sources
+        require(allowedPath && entry.status == "ok" &&
             length in 1..OemBootstrapPolicy.CHUNK && offset in 0..expected.size)
         val count = minOf(length.toLong(), expected.size - offset).toInt()
         return exchange({ data, reply ->

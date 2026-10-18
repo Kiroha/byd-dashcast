@@ -208,7 +208,9 @@ object FissionClient {
 
     /**
      * Queries the displayId of an existing slot for `pkg`.
-     * Returns the live displayId if the daemon still holds the slot, -1 otherwise.
+     * Returns a positive displayId only while the daemon has a valid current holder bound
+     * to that slot's valid VirtualDisplay, -1 otherwise (including holder recreation).
+     * This checks configured resources, not pixel delivery or frame freshness.
      * Fast O(1) call — no shell, no polling.
      */
     @JvmStatic
