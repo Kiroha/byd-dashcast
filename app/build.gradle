@@ -2062,8 +2062,9 @@ android {
         // Add a passive bounded cluster provider/process evidence preset in the OEM submenu.
         // No OEM protocol/display-selection/permission changes; parked validation is pending.
         // The version bump also makes normal startup replace an older persistent SurfaceDaemon.)
-        versionCode 686
-        versionName "1.9.47-beta"
+        // 687 = 1.9.48-beta: accept optional null JNI decode metadata without closing satellite video.
+        versionCode 687
+        versionName "1.9.48-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

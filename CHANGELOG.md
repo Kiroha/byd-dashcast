@@ -15,6 +15,14 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.48-beta (versionCode 687)
+
+**Fix Satellite video closing when the native decoder receives its first image.** The pinned
+WebRTC SDK passes null for optional decode metadata. Accept and forward that value unchanged
+instead of throwing at the Kotlin boundary before decoding. Keep hardware-only H.264 selection,
+decoder lifecycle guards and terminal error handling. Existing DashSat 0.9.9-dev remains compatible;
+only the vehicle app needs this update. [Release notes](docs/releases/1.9.48-beta.md).
+
 ### 1.9.21-beta (versionCode 660)
 
 **Receive generic Satellite roundabouts without inventing an exit.** Update DashSat to
