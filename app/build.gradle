@@ -2055,8 +2055,15 @@ android {
         // 676 = 1.9.37-beta: equivalent mounts, scoped storage aliases and attested boot userdata fallback.
         // 678 = 1.9.39-beta: separate fixed passive QR developer metadata preflight with local ZIP sharing.
         // 684 = 1.9.45-beta: bounded passive OEM bootstrap/process identity and strict source ZIP.
-        versionCode 685
-        versionName "1.9.46-beta"
+        // 686 = 1.9.47-beta (CLUSTER SLOT SURFACE RECOVERY AND TARGETED CONTEXT.
+        // Track holder generations, rebind a recreated holder to the same VirtualDisplay,
+        // serialize create/resize/detach/disposal and fail closed after binding errors.
+        // Query only valid bound resources; cancel late pending requests without resurrection.
+        // Add a passive bounded cluster provider/process evidence preset in the OEM submenu.
+        // No OEM protocol/display-selection/permission changes; parked validation is pending.
+        // The version bump also makes normal startup replace an older persistent SurfaceDaemon.)
+        versionCode 686
+        versionName "1.9.47-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

@@ -63,6 +63,13 @@ internal object FullApkExportSession {
                         "Only .zip volumes are finished; .part files are incomplete.\n")
                     val result = if (kind == ExportKind.FIRMWARE_LARGE) {
                         FirmwareLedger(directory,writes=firmwareWrites).use { ledger -> FirmwareExport(firmwareDevice!!,directory,ledger,cancellation::get,{ snapshot = it },writes=firmwareWrites!!).run() }
+                    } else if (kind == ExportKind.CLUSTER_CONTEXT) {
+                        ClusterContextExport(OemBootstrapDevice(scope = OemBootstrapDevice.Scope.CLUSTER),
+                            directory, cancellation::get, { snapshot = it },
+                            appRuntime = mapOf("package" to app.packageName, "app_uid" to Process.myUid().toString(),
+                                "android_api" to Build.VERSION.SDK_INT.toString(), "app_version" to BuildConfig.VERSION_NAME,
+                                "app_version_code" to BuildConfig.VERSION_CODE.toString(), "build_fingerprint" to Build.FINGERPRINT,
+                                "scope" to "App-local runtime; distinct from pinned daemon and process observations")).run()
                     } else if (kind == ExportKind.OEM_BOOTSTRAP) {
                         OemBootstrapExport(OemBootstrapDevice(), directory, cancellation::get, { snapshot = it },
                             appRuntime = mapOf("package" to app.packageName, "app_uid" to Process.myUid().toString(),
@@ -89,7 +96,7 @@ internal object FullApkExportSession {
                             { snapshot = it }, kind = kind).run()
                     }
                     // Keep a concise outcome even if the JSON manifest could not be saved (disk full).
-                    if (!kind.isContext && kind != ExportKind.FIRMWARE_LARGE && kind != ExportKind.OEM_INIT_SOURCES && kind != ExportKind.OEM_BOOTSTRAP) runCatching { File(directory, "RESULT.txt").writeText(
+                    if (!kind.isContext && kind != ExportKind.FIRMWARE_LARGE && !kind.isOemSource) runCatching { File(directory, "RESULT.txt").writeText(
                         "${kind.label} export: ${result.outcome}\n${result.stage}\nCoverage of the whole vehicle is unverified.\n" +
                             "Finished ZIP volumes: ${result.archives.size}\nIncomplete .part volumes must not be used as successful exports.\n") }
                     firmwareWrites?.validate()
@@ -123,14 +130,15 @@ internal object FullApkExportSession {
 
     /** Worker-only bounded history of app-owned metadata exports; never replaces live state. */
     internal fun previousOemReports(context: Context): OemHistory = previousOemReports(
-        listOf(ExportKind.QR_DIAGNOSTIC, ExportKind.OEM_SERVICE, ExportKind.OEM_INIT_SOURCES, ExportKind.OEM_BOOTSTRAP).map { it to exportRoot(context, it, true) })
+        listOf(ExportKind.QR_DIAGNOSTIC, ExportKind.OEM_SERVICE, ExportKind.OEM_INIT_SOURCES, ExportKind.OEM_BOOTSTRAP,
+            ExportKind.CLUSTER_CONTEXT).map { it to exportRoot(context, it, true) })
 
     internal fun previousOemReports(bases: List<Pair<ExportKind, File>>): OemHistory {
         val selected = mutableListOf<Pair<ExportKind, File>>()
         var limited = false
         var unavailable = false
         for ((kind, base) in bases) {
-            require(kind == ExportKind.QR_DIAGNOSTIC || kind == ExportKind.OEM_SERVICE || kind == ExportKind.OEM_INIT_SOURCES || kind == ExportKind.OEM_BOOTSTRAP)
+            require(kind == ExportKind.QR_DIAGNOSTIC || kind == ExportKind.OEM_SERVICE || kind.isOemSource)
             if (!Files.exists(base.toPath(), LinkOption.NOFOLLOW_LINKS)) continue
             if (!Files.isDirectory(base.toPath(), LinkOption.NOFOLLOW_LINKS)) { unavailable = true; continue }
             try {
@@ -173,7 +181,7 @@ internal object FullApkExportSession {
         val files = latest.listFiles().orEmpty()
         val archives = files.filter { it.isFile && it.name.endsWith(".zip") }.sortedBy { it.name }
         val interrupted = files.any { it.name == "RUNNING.txt" || it.name.endsWith(".part") }
-        val integrityFailure = (kind.isContext || kind == ExportKind.OEM_INIT_SOURCES || kind == ExportKind.OEM_BOOTSTRAP) && files.any { it.isFile && it.name == "ERREUR_LIVRAISON.txt" }
+        val integrityFailure = (kind.isContext || kind.isOemSource) && files.any { it.isFile && it.name == "ERREUR_LIVRAISON.txt" }
         val result = files.firstOrNull { it.name == "RESULT.txt" }?.let { runCatching { it.bufferedReader().use { reader ->
             ExportText.read(reader, 1600).first } }.getOrNull() }
         return FullApkExport.Progress(
@@ -186,7 +194,7 @@ internal object FullApkExportSession {
     }
 
     private fun exportRoot(context: Context, kind: ExportKind, existingOnly:Boolean=false): File {
-        if(existingOnly || kind==ExportKind.FIRMWARE_LARGE || kind==ExportKind.QR_DIAGNOSTIC || kind==ExportKind.OEM_SERVICE || kind==ExportKind.OEM_INIT_SOURCES || kind==ExportKind.OEM_BOOTSTRAP)return File("/storage/emulated/${Process.myUid()/100000}/Android/data/${context.packageName}/files",kind.rootName)
+        if(existingOnly || kind==ExportKind.FIRMWARE_LARGE || kind==ExportKind.QR_DIAGNOSTIC || kind==ExportKind.OEM_SERVICE || kind.isOemSource)return File("/storage/emulated/${Process.myUid()/100000}/Android/data/${context.packageName}/files",kind.rootName)
         val base = try { context.getExternalFilesDir(null) } catch (_: Exception) { null }
             ?: File("/storage/emulated/0/Android/data/${context.packageName}/files")
         return File(base, kind.rootName)

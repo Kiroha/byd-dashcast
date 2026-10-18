@@ -1,9 +1,76 @@
-# Targeted local firmware collection
+# Local firmware collection
 
-In **DIAG**, choose **Export system files — framework, libraries & configs**. This SYSTEM profile
-collects original firmware files for offline analysis. It complements **Export ALL accessible APKs**;
-the APK profile, its `apk-exports` directory and its APK selection semantics are preserved.
-Use while parked and keep DashCast in the foreground. No movement state is inferred or enforced.
+The current top-level **DIAG** export action is **Export complet accessible**, which collects
+accessible files from internal storage through the existing daemon and excludes SD/USB storage.
+The old separate APK and SYSTEM export buttons are no longer offered. Existing exports and their
+profile readers remain available; the legacy SYSTEM scope is documented below for interpreting
+those files. A previous global export does not need to be repeated for the cluster evidence below.
+
+## Targeted cluster context
+
+While parked, open **DIAG → Relevés locaux OEM → Contexte cluster — bibliothèque et processus**,
+then choose **Lancer le relevé** and keep DIAG visible until local finalization finishes.
+This passive collection uses the already-connected ProxyDaemon. It does not connect/bootstrap
+another daemon, start an OEM activity, activate projection, restart a process or change a setting.
+Vehicle movement is not inferred or enforced by this action.
+
+The closed `CLUSTER_CONTEXT_V1` profile copies exactly
+`/system/lib64/libwindowsurface_android.so`, at most 8 MiB. It requires a canonical regular file,
+uses existing strict 64 KiB reads that recheck the opened FD, and finalizes the local copy only
+when pre/post stat identity, pre/post source SHA-256 and copied SHA-256 all agree. These observations
+do not prove authenticity, an atomic filesystem snapshot or that this exact file is loaded.
+Only stat/canonical-path/SHA metadata is collected for `/system/lib64/libutils.so`,
+`/system/lib64/libc.so`, `/apex/com.android.runtime/lib64/bionic/libc.so` and
+`/system/bin/qtandroidnative`. Those four files are not copied again.
+The 8 MiB byte limit covers the strict provider copy. Remote `sha256sum` reads the complete
+five fixed literal files and can follow their existing firmware aliases; those reads use the
+existing command timeout and soft acquisition budget, without an additional byte cap. No path
+discovered from a link observation is submitted as another target.
+
+Selected fingerprint, Android API, product/version and `ro.build.system.fission_single_os`
+properties are captured before and after. Empty, unavailable or changed values remain explicit.
+A bounded `ps -A -o PID,NAME` observation selects at most two numeric PIDs for each exact name
+`qtandroidnative`, `com.xdja.containerservice` and `surfaceflinger`, six PIDs in total. Each selected
+PID gets stat before/after (including starttime), the first NUL-terminated full argv[0], bounded
+status and maps, and the literal text of exe/root/mount-namespace/PID-namespace links. Later command
+arguments are excluded. Native argv[0] accepts only the exact basename or the explicit
+`/system/bin/…` literal; the Java process requires its complete name. The 15-byte stat `comm`
+field is never treated as the complete Java process name. Reuse, disappearance, mismatch, denied
+reads and unsupported shell behavior leave process identity unverified.
+
+Maps are a prefix from offset zero, at most 64 KiB per PID and 384 KiB total raw maps. Their
+truncation is recorded and does not establish that a library is absent. Other per-PID caps are
+4 KiB per stat, 1 KiB argv[0], 8 KiB status and 1 KiB per link. The existing 192 KiB EXEC character
+cap remains unchanged; Base64/framing is bounded before transport and charged against a 1 MiB
+aggregate metadata wire budget, including failed calls. No path discovered in properties, maps
+or links becomes another read target, command, executable, or `/proc/<pid>/root` traversal.
+
+Acquisition has a three-minute soft monotonic budget, with a four-minute soft total session budget
+reserving up to one further minute for local finalization. A physical Binder call can outlast the
+35-second client timeout; the shared transport then remains quarantined until it returns, without
+retry or overlapping diagnostics. Cancellation takes effect between reads. Partial results remain
+useful; missing or refused evidence is not global absence or a compatibility result.
+
+The source paths are read only. DashCast writes its local copies, manifests and ZIP on primary
+internal shared storage; the existing EXEC transport can also create its bounded PID temporary.
+The profile does not promise zero writes anywhere on the device. No collected content is executed.
+Use **Fichiers du relevé → Lister / partager** to transfer `cluster-context-001.zip` manually,
+including when collection is partial. `integrite.json` outside the ZIP attests its final local hash.
+The directory is:
+
+```text
+/storage/emulated/<Android-user>/Android/data/com.byd.dashcast/files/cluster-context-exports/cluster-context-<timestamp>/
+```
+
+The collector itself never activates the cluster. A separate parked check of Layout drawing,
+holder recreation, resize and teardown is described in [CLUSTER_SLOT_LIFECYCLE.md](CLUSTER_SLOT_LIFECYCLE.md).
+API-29 JVM/Robolectric checks do not establish behavior on the actual BYD firmware.
+
+## Legacy SYSTEM profile
+
+This section describes retained SYSTEM exports and their original selection semantics, not a
+current top-level DIAG button. Use while parked and keep DashCast in the foreground. No movement
+state is inferred or enforced.
 
 The pinned panel explicitly identifies APK or SYSTEM and shows stage/current path, file counts,
 MiB streamed, elapsed time and time since actual byte/stage progress. After 15 seconds without
@@ -118,7 +185,8 @@ Cancelled/destination-failed volumes remain `.part`; finished ZIPs are retained.
 markers include the profile. Rotation/reopening observes the process session. After process death,
 the latest timestamp across APK and SYSTEM roots is shown as interrupted/previous, never resumed.
 
-Choose **SYSTEM export files** to see the directory and manually share a finished ZIP or manifest.
+Older builds called the associated file action **SYSTEM export files**. Current file dialogs
+retain the originating profile; open the available export's files to share a finished ZIP or manifest.
 An already-authorized ADB connection may pull the displayed directory. For example:
 
 ```sh

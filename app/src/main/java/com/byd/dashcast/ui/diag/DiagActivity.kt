@@ -356,9 +356,21 @@ class DiagActivity : Activity() {
         AlertDialog.Builder(this).setTitle("Relevés locaux OEM — véhicule stationné")
             .setItems(arrayOf("Métadonnées QR — ${DiLinkContextPlan.Profile.QR_DIAGNOSTIC.commands.size} lectures",
                 "Identité du service OEM — ${DiLinkContextPlan.Profile.OEM_SERVICE.commands.size} lectures",
-                "Sources init OEM — fichiers complets ciblés", "Démarrage et identité du service OEM", "Relevés précédents")) { _, index ->
-                when (index) { 0 -> chooseQrDiagnostic(); 1 -> chooseOemServiceMetadata(); 2 -> chooseOemInitSources(); 3 -> chooseOemBootstrap(); else -> showOemHistory() }
+                "Sources init OEM — fichiers complets ciblés", "Démarrage et identité du service OEM",
+                "Contexte cluster — bibliothèque et processus", "Relevés précédents")) { _, index ->
+                when (index) { 0 -> chooseQrDiagnostic(); 1 -> chooseOemServiceMetadata(); 2 -> chooseOemInitSources(); 3 -> chooseOemBootstrap(); 4 -> chooseClusterContext(); else -> showOemHistory() }
             }.setNegativeButton("Annuler", null).show()
+    }
+
+    private fun chooseClusterContext() {
+        if (sBusy.get()) { log("Un diagnostic est déjà en cours."); return }
+        AlertDialog.Builder(this).setTitle("Contexte cluster — véhicule stationné")
+            .setMessage("Relevé ciblé pour l’analyse hors ligne du cluster : une bibliothèque graphique, identité système et métadonnées de trois noms de processus. Aucune collecte globale à relancer.\n\n" +
+                "Sources lues uniquement via le daemon déjà connecté ; aucun affichage activé, outil OEM ouvert ou réglage modifié. DashCast écrit ses copies et son ZIP sur le stockage principal, partage manuel. Les métadonnées peuvent identifier le système ; seul le premier nom du processus est conservé, sans les arguments suivants.\n\n" +
+                "Au plus 1 bibliothèque de 8 Mio, 6 PID et 64 Kio de cartographie mémoire par PID. Budget souple : 3 min de lectures, 4 min au total ; un appel physique peut rester en attente plus longtemps. Refus, limites et résultats non atomiques restent signalés. Même partiel, le ZIP est utile.\n\n" +
+                "Garder DIAG visible. L’arrêt des lectures prend effet après le retour de l’appel en cours. Le transport existant peut créer son fichier PID temporaire.")
+            .setPositiveButton("Lancer le relevé") { _, _ -> startFullApkExport(ExportKind.CLUSTER_CONTEXT) }
+            .setNegativeButton("Annuler", null).show()
     }
 
     private fun chooseOemBootstrap() {
@@ -410,7 +422,7 @@ class DiagActivity : Activity() {
 
     private fun showOemHistory(history: FullApkExportSession.OemHistory) {
         val labels = history.entries.map { (kind, directory) ->
-            "${if (kind == ExportKind.OEM_BOOTSTRAP) "Démarrage OEM" else if (kind == ExportKind.OEM_INIT_SOURCES) "Sources init OEM" else kind.contextProfile.title} · ${directory.name.removePrefix(kind.prefix)}"
+            "${oemReportTitle(kind)} · ${directory.name.removePrefix(kind.prefix)}"
         }.toTypedArray()
         AlertDialog.Builder(this).setTitle("Relevés précédents · stockage interne")
             .setItems(labels) { _, index ->
@@ -434,6 +446,8 @@ class DiagActivity : Activity() {
         allDiagButtons().forEach { it.isEnabled = false }
         log(if (kind.isContext)
             "${kind.contextProfile.title} lancé : ${kind.contextProfile.commands.size} lectures fixes via la connexion existante. Aucun outil ouvert ni code saisi. Aucun envoi automatique ; résultats et ZIP conservés localement."
+            else if (kind == ExportKind.CLUSTER_CONTEXT)
+                "Contexte cluster : bibliothèque exacte et processus ciblés, lectures uniquement. Copies et ZIP locaux ; garder DIAG visible puis partager le ZIP, même partiel."
             else if (kind == ExportKind.OEM_BOOTSTRAP)
                 "Démarrage OEM : relevé ciblé, sources lues uniquement, copies et ZIP locaux. Garder DIAG visible ; un résultat partiel reste utile."
             else if (kind == ExportKind.OEM_INIT_SOURCES)
@@ -468,10 +482,14 @@ class DiagActivity : Activity() {
         val now = FullApkExport.monotonicMs()
         val elapsed = ((now - state.startedMs) / 1000).coerceAtLeast(0)
         val idle = ((now - state.lastProgressMs) / 1000).coerceAtLeast(0)
-        if (state.kind == ExportKind.OEM_INIT_SOURCES || state.kind == ExportKind.OEM_BOOTSTRAP) {
-            val bootstrap = state.kind == ExportKind.OEM_BOOTSTRAP
-            val title = if (bootstrap) "Démarrage OEM" else "Sources init OEM"
-            val finalizing = state.stage == (if (bootstrap) OemBootstrapExport.FINALIZING else "Création du ZIP des sources déjà acquises")
+        if (state.kind.isOemSource) {
+            val bootstrap = state.kind != ExportKind.OEM_INIT_SOURCES
+            val title = oemReportTitle(state.kind)
+            val finalizing = state.stage == when (state.kind) {
+                ExportKind.CLUSTER_CONTEXT -> ClusterContextExport.FINALIZING
+                ExportKind.OEM_BOOTSTRAP -> OemBootstrapExport.FINALIZING
+                else -> "Création du ZIP des sources déjà acquises"
+            }
             cancelFullExportBtn.isEnabled = state.running && !FullApkExportSession.isCancelling() && !finalizing
             cancelFullExportBtn.text = if (finalizing) "Finalisation locale des sources conservées…"
                 else if (FullApkExportSession.isCancelling()) "Arrêt des lectures demandé ; finalisation locale possible"
@@ -541,6 +559,13 @@ class DiagActivity : Activity() {
         }
     }
 
+    private fun oemReportTitle(kind: ExportKind): String = when (kind) {
+        ExportKind.CLUSTER_CONTEXT -> "Contexte cluster"
+        ExportKind.OEM_BOOTSTRAP -> "Démarrage OEM"
+        ExportKind.OEM_INIT_SOURCES -> "Sources init OEM"
+        else -> kind.contextProfile.title
+    }
+
     private fun contextOutcomeLabel(outcome: String): String = when (outcome) {
         "finished" -> "terminé"
         "partial" -> "partiel"
@@ -558,7 +583,7 @@ class DiagActivity : Activity() {
 
     private fun showFullExportFiles(state: FullApkExport.Progress) {
         val directory = state.directory ?: return
-        val sourceReport = state.kind == ExportKind.OEM_INIT_SOURCES || state.kind == ExportKind.OEM_BOOTSTRAP
+        val sourceReport = state.kind.isOemSource
         val metadata = if (state.kind.isContext || sourceReport) listOf("manifest.json", "resultats.json", "integrite.json", "RESULT.txt", "ERREUR_LIVRAISON.txt")
             else listOf("manifest.json")
         val files = state.archives + metadata.map { File(directory, it) }.filter { it.isFile }
@@ -567,7 +592,7 @@ class DiagActivity : Activity() {
         val profileDescription = if (state.kind == ExportKind.OEM_SERVICE && !state.countsKnown)
             "Le ZIP conserve le profil et le nombre de lectures de sa collecte d’origine. Consulter plan.json et resultats.json ; aucune migration vers le profil actuel n’a été effectuée. "
             else "Le ZIP contient les résultats reçus et les statuts des ${if (context) state.kind.contextProfile.commands.size else 0} lectures du profil ${if (context) state.kind.contextProfile.id else ""}. "
-        AlertDialog.Builder(this).setTitle(if (state.kind == ExportKind.OEM_BOOTSTRAP) "Fichiers · Démarrage OEM" else if (sourceReport) "Fichiers · Sources init OEM" else if (context) "Fichiers · ${state.kind.contextProfile.title}" else "Local ${state.kind.label} export files")
+        AlertDialog.Builder(this).setTitle(if (sourceReport) "Fichiers · ${oemReportTitle(state.kind)}" else if (context) "Fichiers · ${state.kind.contextProfile.title}" else "Local ${state.kind.label} export files")
             .setMessage(if (sourceReport) "${directory.absolutePath}\n\nLe ZIP contient les sources et métadonnées acquises et leur manifeste. Même partiel, il reste utile. Les refus et limites figurent dans manifest.json ; integrite.json atteste le ZIP si disponible. En cas d’échec du ZIP, les copies déjà finalisées restent dans le dossier. Partage manuel uniquement."
                 else if (context) "${directory.absolutePath}\n\n$profileDescription" +
                 "Un relevé partiel ou annulé reste lisible. resultats.json décrit les limites ; integrite.json contient le SHA-256 du ZIP. Partage manuel uniquement."

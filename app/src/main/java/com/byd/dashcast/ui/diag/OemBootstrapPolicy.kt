@@ -49,7 +49,7 @@ internal object OemBootstrapPolicy {
     private const val FOOTER = "\n.DC_BOOT_RC."
     /** A bounded streaming prefix precedes Base64, including for size-zero proc files. The
      * appended exit marker is absent only when the prefix itself reached its explicit cap. */
-    private val helpers = """
+    internal val helpers = """
 LC_ALL=C
 export LC_ALL
 emit() {
@@ -110,11 +110,11 @@ emit() {
     fun sourceLimits(offset: Int) = linkedMapOf<String, Int>().apply {
         sourceIndices(offset).forEach { put("stat_$it", 1024); put("canonical_$it", 4096) }
     }
-    fun parse(label: String, output: String, limits: Map<String, Int>): List<Blob> {
+    fun parse(label: String, output: String, limits: Map<String, Int>, profile: String = PROFILE): List<Blob> {
         if (output.length > MAX_REPLY_CHARS || output.toByteArray(Charsets.UTF_8).size > MAX_REPLY_CHARS)
             throw IOException("Bootstrap metadata response exceeds bound")
         val lines = output.trimEnd('\r', '\n').split('\n')
-        if (lines.size != limits.size + 2 || lines.first() != "BEGIN|$PROFILE|$label" || lines.last() != "END|$PROFILE|$label")
+        if (lines.size != limits.size + 2 || lines.first() != "BEGIN|$profile|$label" || lines.last() != "END|$profile|$label")
             throw IOException("Bootstrap metadata framing missing")
         return limits.entries.mapIndexed { index, (id, cap) ->
             val f = lines[index + 1].split('|')
