@@ -1571,6 +1571,7 @@ class MainActivity : AppCompatActivity(),
         FissionOrchestrator.isAutoStartRequested(this)
 
     private fun restoreBydDashboard() {
+        val completeAdasStop = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(this)
         btnRestoreCluster.isEnabled = false
         mNavCoordinator?.setStatusRestoring()
         mUsageTracker.trackStop(mCurrentDashboardPkg)
@@ -1588,7 +1589,7 @@ class MainActivity : AppCompatActivity(),
         // Layout teardown is asynchronous but MUST complete first: each slot app is moved to
         // display 0, removeTask+force-stopped with PID verification, then its VD is released.
         FissionOrchestrator.stopAutoOrchestrator {
-            continueRestoreBydDashboard(capturedClusterPkg, capturedSecondPkg)
+            continueRestoreBydDashboard(capturedClusterPkg, capturedSecondPkg, completeAdasStop)
         }
     }
 
@@ -1626,7 +1627,8 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private fun continueRestoreBydDashboard(capturedClusterPkg: String?, capturedSecondPkg: String?) {
+    private fun continueRestoreBydDashboard(capturedClusterPkg: String?, capturedSecondPkg: String?,
+                                           completeAdasStop: Runnable) {
         // v1.2.81 — every classic cluster app is moved back to display 0 AND force-stopped.
         // evictAllThen now covers the whole tracked set, so the unverified moveToMainDisplay() that
         // used to run first is gone: it fired moves nobody checked and then CLEARED the set, which
@@ -1640,6 +1642,7 @@ class MainActivity : AppCompatActivity(),
             // Cluster pkg already killed → pass null so the helper only sends sendInfo(18+0).
             AdbLocalClient.restoreBydOnCluster(this, null, object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
+                    completeAdasStop.run()
                     runOnUiThread {
                         try {
                             restoreHomeIfRequested(restoreHome)
@@ -1661,6 +1664,7 @@ class MainActivity : AppCompatActivity(),
                 }
 
                 override fun onError(err: String?) {
+                    completeAdasStop.run()
                     runOnUiThread {
                         try {
                             restoreHomeIfRequested(restoreHome)

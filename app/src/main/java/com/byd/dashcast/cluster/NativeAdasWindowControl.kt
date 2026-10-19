@@ -51,7 +51,9 @@ internal class NativeAdasWindowControl(
 
     private val active = AtomicReference<Request?>()
     fun request(action: Action, callback: (Result) -> Unit): Request {
-        ProjectionAdasCoordinator.cancelForManualRecovery()
+        if (!ProjectionAdasCoordinator.prepareManualRequest(action)) {
+            return Request(callback) {}.also { it.complete(Result.BUSY) }
+        }
         if (action == Action.RESTORE) active.get()?.cancel()
         val request = Request(callback) { active.compareAndSet(it, null) }
         if (!active.compareAndSet(null, request)) {
@@ -104,7 +106,11 @@ internal class NativeAdasWindowControl(
         val RECEIVER = ComponentName("com.byd.clusterdebug", "com.byd.clusterdebug.BroadcastReceiverCAN")
         private var instance: NativeAdasWindowControl? = null
 
-        fun cancelPending() { instance?.active?.get()?.cancel() }
+        fun cancelPending(): Boolean {
+            val owner = instance ?: return true
+            owner.active.get()?.cancel()
+            return owner.active.get() == null
+        }
 
         @Synchronized fun get(context: Context): NativeAdasWindowControl {
             instance?.let { return it }

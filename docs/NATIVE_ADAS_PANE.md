@@ -18,8 +18,7 @@ exported and unpermissioned OEM receiver, and this researched SEAL firmware fing
 
 The maintainer identifies this car as a SEAL with Android 10 / DiLink 3 and SX361 firmware
 `6125f_1for2_USER_SIGN_SX361_202606100404_Q2700`. Other fingerprints are refused. This is a
-compatibility restriction based on the evidence, not certification that DashCast's implementation
-has passed a vehicle test.
+compatibility restriction based on the evidence, not certification for other vehicles or firmwares.
 
 The fingerprint and SX361 identifier are recorded in the maintainer's bug report captured
 2026-10-12 at 18:58:17 (`byd_bugreport_20261012_185817_2dc33102e7e0485c97b84d034da34fca.txt`,
@@ -41,8 +40,9 @@ Evidence retained outside the source repository:
   It decodes `wholeFrame` comma-separated hex bytes and calls `BYDAutoTestDevice.set` with
   `TEST_SIMULATE_DOWN_SET` (`0xAA00020F`). No service initialization or AutoContainer command is
   needed for explicit component delivery.
-- The maintainer has verified **Electro's hide** on this car. Neither an Electro restore nor the
-  DashCast hide/restore pair has been validated on the car.
+- The maintainer verified **Electro's hide** on this car, then confirmed that DashCast
+  **1.9.50-beta** hides the pane on projection launch and brings it back with full restoration.
+  The later explicit re-hide and Stop corrections below still require their own vehicle test.
 
 The manual fallback permits only these two frames:
 
@@ -148,6 +148,43 @@ of ten, command 12, a 1,200 ms wait, then command 53. Repeated teardown coalesce
 Manual fallback recovery remains available if the service or proxy is unavailable. No software result
 is described as proof the pane is visible. The recovery journal is retained even after delivery.
 
+### Re-hide after full restoration and projection Stop
+
+The 2026-10-20 reports captured at 00:15:41 and 00:19:11 show repeated manual hides ending in
+`ORIGINAL_UNKNOWN`. The latter records a verified projected app at 00:18:14, full restoration
+delivery at 00:18:42, and the failed manual hide at 00:18:50. The button was still using the
+independent one-frame fallback, whose SDK cache was not `1`; full restoration had also retired
+the active projection target. The reports do not retain the returned cache value.
+
+With projection masking enabled, **Hide the entire pane** now reuses the full existing sequence.
+It keeps the existing projection identity only as an inert candidate, rechecks its current owner,
+exact resumed display, typed/raw power, supported firmware, protocol and pinned daemon, and commits
+the recovery journal before writes. It never relaxes the legacy fallback's original-value gate or
+falls back to one frame after an uncertain full-sequence failure. The automatic preference is not
+changed by a manual request.
+
+Full restoration suspends automatic hiding for that projection owner. Late launch callbacks,
+same-owner Fission app/slot changes and preference notifications cannot re-hide the pane. A fresh
+manual Hide can rearm after proof; a genuinely new projection owner can use the enabled automatic
+setting. The first three ordered hide deliveries complete the UI request, not the full pass or any
+physical-state acknowledgement. Before that delivery, dismissal or the 15-second UI deadline cancels
+the request; afterwards, dismissal leaves the remaining sequence running. Recovery stays accessible
+while a hide is pending. A rapid re-hide also waits for a one-second admission quiet period after
+full restoration, without changing the recovered sequence's internal delays.
+
+**Stop projection** immediately revokes hide authority and remembers whether this projection used
+the masking workflow, including after a manual full restore. It captures the old cleanup ticket
+before asynchronous teardown, then waits for the final native-close command completion (success or
+error) and a one-second quiet period before running the full 40-frame / 12 / 1,200-ms / 53 restoration.
+Classic, Fission and service teardown share this boundary; duplicate stops coalesce. An explicit
+full restore during that wait joins the same recovery. One-frame hiding is refused while recovery
+is pending, but saved-value one-frame restoration remains available on its independent lane without
+interrupting the pending full recovery, including when native teardown IPC is blocked.
+A newer projection owner retires the old pending completion. A historical journal
+alone never authorizes automatic restoration on an unrelated Stop. Known, in-process masking debt
+does survive an owner replacement until a full restoration succeeds, so Stop can recover a previous
+mask even if the replacement app never verifies or starts its own masking pass.
+
 ### Evidence and deliberate host adaptations
 
 Research root: `tiers_apk/Electro/analysis-rea-20261019/` (outside this source repository).
@@ -184,13 +221,14 @@ DashCast reproduces the fixed masking/recovery sequence, with these explicit hos
   a previous request. The existing manual one-frame recovery is preserved as a fallback.
 
 This is **not** a claim that all of Electro is reproduced. Exact active-theme identity, complete MCU
-side effects, and physical restoration remain unverified. In particular, command 53 forces type 0;
+side effects, and recovery of all ancillary state remain unverified. In particular, command 53 forces type 0;
 it does not restore a captured prior ancillary type. Android source analysis cannot prove all effects
 of raw `TEST_SIMULATE_DOWN_SET` beyond the researched consumer.
 
 ## Required vehicle validation
 
-While parked on the researched firmware, check hide → restore, repeated manual restore, activity
-recreation and app process restart. Confirm the pane returns under its normal OEM conditions,
-and document the full-pane warning effect. Other firmwares remain unavailable until their
-consumer and restoration contract are researched and tested.
+While parked on the researched firmware, check projection launch → full restore → Hide again,
+then Stop after a hide and after manual full restoration. Also check repeated manual restoration,
+activity recreation and app process restart. Confirm the pane returns under its normal OEM
+conditions, and document the full-pane warning effect. Other firmwares remain unavailable until
+their consumer and restoration contract are researched and tested.

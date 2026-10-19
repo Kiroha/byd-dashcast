@@ -98,6 +98,9 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
 
     fun stop() {
         val session = mProjectionSession
+        val completeAdasStop = session?.let {
+            com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mContext, it)
+        } ?: Runnable {}
         mProjectionSession = null
         // Sentinel: any orphan ClusterManager callback (handler postDelayed) will be ignored
         mKnownClusterDisplayId = -2
@@ -120,6 +123,7 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
         // Chained: cmd=18 first, then cmd=0 in the callback to guarantee execution order.
         if (session == null) {
             AppLogger.d(TAG, "stop: no projection session to restore")
+            completeAdasStop.run()
             return
         }
         ProjectionCommandBus.sendBarrier(
@@ -130,13 +134,23 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
                     ProjectionCommandBus.sendInfo(
                         mContext, session, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_RESTORE_NATIVE, "",
                         object : AdbLocalClient.Callback {
-                            override fun onSuccess(out: String?) { AppLogger.i(TAG, "restoreNative ADB(cmd=0): $out") }
-                            override fun onError(err: String?) { AppLogger.e(TAG, "restoreNative ADB error: $err") }
+                            override fun onSuccess(out: String?) {
+                                AppLogger.i(TAG, "restoreNative ADB(cmd=0): $out")
+                                ProjectionCommandBus.endSession(session)
+                                completeAdasStop.run()
+                            }
+                            override fun onError(err: String?) {
+                                AppLogger.e(TAG, "restoreNative ADB error: $err")
+                                ProjectionCommandBus.endSession(session)
+                                completeAdasStop.run()
+                            }
                         })
                 }
 
                 override fun onError(err: String?) {
                     AppLogger.e(TAG, "stopProjection ADB error: $err")
+                    ProjectionCommandBus.endSession(session)
+                    completeAdasStop.run()
                 }
             })
         // Reset to -1 happens in start() — NOT here.

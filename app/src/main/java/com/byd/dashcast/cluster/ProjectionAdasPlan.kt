@@ -19,10 +19,12 @@ internal class ProjectionAdasPlan(private val io: Io) {
     private var powerOk = false
     private var transition = 0L
     private var lastInit = Long.MIN_VALUE
+    private var firstDelivery: ((Boolean) -> Unit)? = null
 
-    @Synchronized fun cancel() { generation++; batch++; transition++; active = false; busy = false; recoveryReady = false }
-    @Synchronized fun start(initialRawPower: Int? = null) {
+    @Synchronized fun cancel() { generation++; batch++; transition++; active = false; busy = false; recoveryReady = false; firstDelivery = null }
+    @Synchronized fun start(initialRawPower: Int? = null, delivered: ((Boolean) -> Unit)? = null) {
         cancel()
+        firstDelivery = delivered
         active = true
         powerOk = initialRawPower == 3
         lastInit = Long.MIN_VALUE
@@ -31,13 +33,21 @@ internal class ProjectionAdasPlan(private val io: Io) {
             io.journal { saved ->
                 if (!current(g)) return@journal
                 if (saved) { recoveryReady = true; pass(g, true); layout(g, 0) }
-                else if (retry) io.later(12_000) { if (current(g)) arm(false) }
+                else {
+                    delivery(false)
+                    if (retry) io.later(12_000) { if (current(g)) arm(false) }
+                }
             }
         }
         arm(true)
     }
     @Synchronized private fun current(g: Long) = active && generation == g && io.valid()
     @Synchronized private fun current(g: Long, b: Long) = current(g) && batch == b
+    private fun delivery(ok: Boolean) {
+        val callback = firstDelivery ?: return
+        firstDelivery = null
+        callback(ok)
+    }
 
     private fun pass(g: Long, retry: Boolean) {
         if (!current(g)) return
@@ -51,17 +61,18 @@ internal class ProjectionAdasPlan(private val io: Io) {
         }
         io.journal { saved ->
             if (!valid()) return@journal
-            if (!saved) { finish(); return@journal }
+            if (!saved) { delivery(false); finish(); return@journal }
             io.command(13, valid) { commandOk ->
                 if (!valid()) return@command
-                if (!commandOk) { finish(); return@command }
+                if (!commandOk) { delivery(false); finish(); return@command }
                 io.initialize(valid) { initialized ->
                     if (!valid()) return@initialize
-                    if (!initialized) { finish(); return@initialize }
+                    if (!initialized) { delivery(false); finish(); return@initialize }
                     lastInit = io.now()
                     io.later(1_000) {
                         if (valid()) io.frames(HIDE, 3, valid) { ok ->
                             if (valid()) {
+                                delivery(ok)
                                 if (ok) phase(g, b, 0, 0, ::finish) else finish()
                             }
                         }

@@ -140,4 +140,39 @@ class ProjectionAdasPlanTest {
         var result: Boolean? = null; plan.restore { result = it }
         assertEquals(false, result); assertTrue(io.frames.isEmpty())
     }
+    @Test fun `explicit hide reports delivery only after the first hide batch not when armed`() {
+        val io = Fake().apply { holdNext = true }; val plan = ProjectionAdasPlan(io)
+        val delivered = mutableListOf<Boolean>()
+        plan.start(delivered = delivered::add)
+        assertTrue(delivered.isEmpty())
+        io.until(1000)
+        assertTrue(delivered.isEmpty())
+        io.delayedFrame!!()
+        assertEquals(listOf(true), delivered)
+        io.until(30000)
+        assertEquals(listOf(true), delivered)
+        assertEquals(263 * 3, io.frames.size)
+    }
+    @Test fun `superseded batch cannot settle explicit delivery or emit its late frame`() {
+        val io = Fake().apply { holdNext = true }; val plan = ProjectionAdasPlan(io)
+        val delivered = mutableListOf<Boolean>()
+        plan.start(delivered = delivered::add); io.until(1000)
+        val stale = io.delayedFrame!!
+        io.until(4000)
+        assertEquals(listOf(true), delivered)
+        val count = io.frames.size
+        stale()
+        assertEquals(count, io.frames.size)
+        assertEquals(listOf(true), delivered)
+    }
+    @Test fun `failed initial delivery is not reported as sent`() {
+        for (journalFailure in listOf(false, true)) {
+            val io = Fake().apply { saved = !journalFailure; frameFailure = !journalFailure }
+            val plan = ProjectionAdasPlan(io)
+            val delivered = mutableListOf<Boolean>()
+            plan.start(delivered = delivered::add); io.until(30000)
+            assertEquals(listOf(false), delivered)
+            assertTrue(io.frames.isEmpty())
+        }
+    }
 }
