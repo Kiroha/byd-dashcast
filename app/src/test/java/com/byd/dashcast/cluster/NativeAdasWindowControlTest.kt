@@ -3,6 +3,7 @@ package com.byd.dashcast.cluster
 import android.app.Application
 import com.byd.dashcast.cluster.NativeAdasWindowControl.Action
 import com.byd.dashcast.cluster.NativeAdasWindowControl.Result
+import com.byd.dashcast.util.AppLogger
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -101,11 +102,16 @@ class NativeAdasWindowControlTest {
     }
 
     @Test fun `query failure never persists or emits`() {
-        read = { error("SDK query failed") }
+        val before = AppLogger.getEntries().lastOrNull()?.sequence ?: 0L
+        read = { throw NoSuchMethodException("private SDK details and identifiers") }
         val results = mutableListOf<Result>()
         control.request(Action.HIDE, results::add); probe.run()
         assertEquals(listOf(Result.SEND_FAILED), results)
         assertEquals(listOf("available", "read"), events)
+        assertNull(saved)
+        val logs = AppLogger.getEntries().filter { it.sequence > before && it.tag == "NativeAdasWindow" }
+        assertTrue(logs.any { it.message == "stage=original_read exception=NoSuchMethodException" })
+        assertFalse(logs.any { it.message.contains("private SDK details") })
     }
 
     @Test fun `multiple activities share the same in flight guard`() {

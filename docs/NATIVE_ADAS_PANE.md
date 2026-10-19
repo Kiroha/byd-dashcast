@@ -84,6 +84,26 @@ All UI results describe a **request sent**, never SDK acceptance, a device ackno
 the rendered state. Android accepting a broadcast does not propagate either the OEM SDK result
 or the physical downlink result. No secret, notification or route text is shown or logged.
 
+## Integer reader compatibility correction
+
+The 2026-10-19 report captured at 21:23 records four hide requests ending in `SEND_FAILED`,
+followed by a restore request ending in `RECOVERY_MISSING`. Projection was already confirmed
+before the first hide request. No hide success was reported and no usable recovery value was
+found; these results do not establish a requirement to delay the request until projection starts.
+
+The researched SDK exposes inherited `AbsBYDAutoDevice.get(int[], Class<?>)`, while the daemon
+previously resolved only `get(int[])`. This concrete signature mismatch predicts a lookup
+failure on that SDK. The report did not retain the exception, so the exact runtime failure
+cannot be proved retrospectively. Both instrument and setting integer reads now prefer the
+existing public `get(int[])` where available, otherwise resolving the public inherited typed
+getter and passing primitive `int.class`, as required by the SDK. They invoke the selected
+method once: SDK errors, exceptions and malformed results never trigger another overload.
+
+An original-value query exception now records only `stage=original_read` and its exception
+class, without its message, stack trace or property value. It still prevents recovery capture
+and every hide frame. The manual actions, fingerprint binding, original-value gate, recovery
+journal and downlink contract are unchanged. Vehicle validation is still required.
+
 ## Required vehicle validation
 
 While parked on the researched firmware, check hide → restore, repeated manual restore, activity
