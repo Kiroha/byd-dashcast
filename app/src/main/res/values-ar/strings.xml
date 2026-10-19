@@ -694,4 +694,19 @@
     <string name="satellite_video_loading">جارٍ تجهيز مستقبل الفيديو…</string>
     <string name="satellite_video_waiting">بانتظار مشاركة الفيديو من DashSat…</string>
     <string name="satellite_video_unavailable">تعذر بدء مستقبل الفيديو. حاول مرة أخرى أو أغلق هذا العارض.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">لوحة ADAS: إخفاء / استعادة</string>
+    <string name="native_adas_warning">يخفي لوحة ADAS بالكامل من مجموعة العدادات، بما فيها تحذيرات المسافة والمسار. تعيد الاستعادة التحكم إلى شروط العرض الأصلية؛ ولا يزال تأثيرها بحاجة إلى التحقق على السيارة. تُرسل الأوامر يدوياً فقط.</string>
+    <string name="native_adas_hide">إخفاء اللوحة بالكامل</string>
+    <string name="native_adas_restore">استعادة اللوحة الأصلية</string>
+    <string name="native_adas_state_unknown">الحالة المرئية للوحة غير معروفة.</string>
+    <string name="native_adas_pending">جارٍ تنفيذ الأمر…</string>
+    <string name="native_adas_hide_sent">أُرسل طلب الإخفاء. تحقّق من العدادات: لا توجد استجابة تؤكد النتيجة المرئية.</string>
+    <string name="native_adas_restore_sent">أُرسل طلب الاستعادة. تحقّق من العدادات؛ يمكنك إعادة المحاولة.</string>
+    <string name="native_adas_unavailable">الأمر غير متاح على هذا الجهاز أو اتصال النظام غير متاح.</string>
+    <string name="native_adas_original_unknown">رُفض الإخفاء: تعذّر تأكيد الحالة الأصلية.</string>
+    <string name="native_adas_recovery_missing">الاستعادة غير متاحة: لا توجد قيمة أصلية محفوظة لهذا البرنامج الثابت.</string>
+    <string name="native_adas_recovery_failed">أُلغي الإخفاء: تعذّر حفظ قيمة الاستعادة.</string>
+    <string name="native_adas_send_failed">لم يتأكد الإرسال. تحقّق من العدادات قبل إعادة المحاولة.</string>
 </resources>

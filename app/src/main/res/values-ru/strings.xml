@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Подготовка приёмника видео…</string>
     <string name="satellite_video_waiting">Ожидание трансляции видео из DashSat…</string>
     <string name="satellite_video_unavailable">Не удалось запустить приёмник видео. Повторите попытку или закройте просмотр.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Панель ADAS: скрыть / восстановить</string>
+    <string name="native_adas_warning">Скрывает всю панель ADAS на приборной панели, включая предупреждения о дистанции и полосе. Восстановление возвращает управление штатным условиям отображения; эффект ещё требуется проверить на автомобиле. Команды отправляются только вручную.</string>
+    <string name="native_adas_hide">Скрыть всю панель</string>
+    <string name="native_adas_restore">Восстановить штатную панель</string>
+    <string name="native_adas_state_unknown">Визуальное состояние панели неизвестно.</string>
+    <string name="native_adas_pending">Выполняется команда…</string>
+    <string name="native_adas_hide_sent">Запрос скрытия отправлен. Проверьте приборную панель: визуального подтверждения нет.</string>
+    <string name="native_adas_restore_sent">Запрос восстановления отправлен. Проверьте приборную панель; можно повторить попытку.</string>
+    <string name="native_adas_unavailable">Команда недоступна на этом устройстве или нет системного соединения.</string>
+    <string name="native_adas_original_unknown">Скрытие отклонено: исходное штатное состояние не подтверждено.</string>
+    <string name="native_adas_recovery_missing">Восстановление недоступно: для этой прошивки не сохранено штатное значение.</string>
+    <string name="native_adas_recovery_failed">Скрытие отменено: не удалось сохранить значение для восстановления.</string>
+    <string name="native_adas_send_failed">Отправка не подтверждена. Перед повтором проверьте приборную панель.</string>
 </resources>

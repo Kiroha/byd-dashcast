@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Videoempfänger wird vorbereitet…</string>
     <string name="satellite_video_waiting">Warten auf die Videoübertragung von DashSat…</string>
     <string name="satellite_video_unavailable">Der Videoempfänger konnte nicht starten. Versuchen Sie es erneut oder schließen Sie diese Ansicht.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">ADAS-Fenster: ausblenden / wiederherstellen</string>
+    <string name="native_adas_warning">Blendet das gesamte ADAS-Fenster im Kombiinstrument aus, einschließlich Abstands- und Spurwarnungen. Wiederherstellen überlässt die Anzeige wieder den OEM-Bedingungen; die Wirkung muss noch am Fahrzeug geprüft werden. Befehle werden nur manuell gesendet.</string>
+    <string name="native_adas_hide">Gesamtes Fenster ausblenden</string>
+    <string name="native_adas_restore">OEM-Fenster wiederherstellen</string>
+    <string name="native_adas_state_unknown">Der sichtbare Zustand des Fensters ist unbekannt.</string>
+    <string name="native_adas_pending">Befehl wird ausgeführt…</string>
+    <string name="native_adas_hide_sent">Anfrage zum Ausblenden gesendet. Kombiinstrument prüfen: keine visuelle Rückmeldung verfügbar.</string>
+    <string name="native_adas_restore_sent">Wiederherstellungsanfrage gesendet. Kombiinstrument prüfen; Wiederholung ist möglich.</string>
+    <string name="native_adas_unavailable">Befehl auf diesem Gerät oder Systemverbindung nicht verfügbar.</string>
+    <string name="native_adas_original_unknown">Ausblenden abgelehnt: ursprünglicher OEM-Zustand konnte nicht bestätigt werden.</string>
+    <string name="native_adas_recovery_missing">Wiederherstellung nicht verfügbar: kein OEM-Wert für diese Firmware gespeichert.</string>
+    <string name="native_adas_recovery_failed">Ausblenden abgebrochen: Wiederherstellungswert konnte nicht gespeichert werden.</string>
+    <string name="native_adas_send_failed">Übermittlung nicht bestätigt. Vor erneutem Versuch Kombiinstrument prüfen.</string>
 </resources>

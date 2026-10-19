@@ -2,6 +2,7 @@ package com.byd.dashcast.data.prefs
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import java.io.Closeable
 import java.util.LinkedList
 
@@ -62,6 +63,8 @@ object ClusterPrefs {
      * some screen sizes but causes a visible shape change on others.
      */
     const val KEY_ADAS_WINDOW_FIX = "adas_window_fix"
+    private const val KEY_NATIVE_ADAS_RESTORE = "native_adas_restore_value"
+    private const val KEY_NATIVE_ADAS_RESTORE_FIRMWARE = "native_adas_restore_firmware"
     private const val KEY_SMALL_CLUSTER_PANEL = "small_cluster_panel_seen"
 
     /** Diagnostic opt-in: log the RAW nav-notification text to calibrate Waze/Maps parsing. */
@@ -266,6 +269,19 @@ object ClusterPrefs {
     fun setAdasWindowFixEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_ADAS_WINDOW_FIX, enabled).apply()
     }
+
+    /** Recovery evidence, not the current cluster display state or an automatic-start request. */
+    internal fun nativeAdasRestoreValue(ctx: Context): Int? =
+        prefs(ctx).let { prefs ->
+            prefs.getInt(KEY_NATIVE_ADAS_RESTORE, -1).takeIf {
+                it == 1 && prefs.getString(KEY_NATIVE_ADAS_RESTORE_FIRMWARE, null) == Build.FINGERPRINT
+            }
+        }
+
+    /** The recovery value must reach disk before the first physical masking request. */
+    internal fun saveNativeAdasRestoreValue(ctx: Context): Boolean =
+        edit(ctx).putInt(KEY_NATIVE_ADAS_RESTORE, 1)
+            .putString(KEY_NATIVE_ADAS_RESTORE_FIRMWARE, Build.FINGERPRINT).commit()
 
     /**
      * Latched the first time this car's cluster is ever seen at 1280x480 — see

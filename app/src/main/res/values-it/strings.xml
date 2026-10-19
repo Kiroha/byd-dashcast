@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Preparazione del ricevitore video…</string>
     <string name="satellite_video_waiting">In attesa della condivisione video da DashSat…</string>
     <string name="satellite_video_unavailable">Impossibile avviare il ricevitore video. Riprova o chiudi questa schermata.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Riquadro ADAS: nascondi / ripristina</string>
+    <string name="native_adas_warning">Nasconde l’intero riquadro ADAS del quadro strumenti, inclusi gli avvisi di distanza e corsia. Il ripristino restituisce il controllo alle condizioni di visualizzazione OEM; l’effetto deve ancora essere verificato sul veicolo. I comandi sono solo manuali.</string>
+    <string name="native_adas_hide">Nascondi l’intero riquadro</string>
+    <string name="native_adas_restore">Ripristina il riquadro OEM</string>
+    <string name="native_adas_state_unknown">Lo stato visivo del riquadro è sconosciuto.</string>
+    <string name="native_adas_pending">Comando in corso…</string>
+    <string name="native_adas_hide_sent">Richiesta di nascondere inviata. Controlla il quadro: nessun riscontro visivo viene restituito.</string>
+    <string name="native_adas_restore_sent">Richiesta di ripristino inviata. Controlla il quadro; puoi riprovare.</string>
+    <string name="native_adas_unavailable">Comando non disponibile sul dispositivo o collegamento di sistema non disponibile.</string>
+    <string name="native_adas_original_unknown">Operazione rifiutata: impossibile confermare lo stato OEM originale.</string>
+    <string name="native_adas_recovery_missing">Ripristino non disponibile: nessun valore OEM salvato per questo firmware.</string>
+    <string name="native_adas_recovery_failed">Operazione annullata: impossibile salvare il valore di ripristino.</string>
+    <string name="native_adas_send_failed">Invio non confermato. Controlla il quadro prima di riprovare.</string>
 </resources>

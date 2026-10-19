@@ -972,6 +972,14 @@ object ProxyClient {
     fun canInstrumentGet(featureId: Int): Int =
             callWithRetry("canInstrumentGet") { ProxyCanVerbs.canInstrumentGet(featureId) }
 
+    /** A manual display setting must not bootstrap or retry its original-state query. */
+    internal fun canInstrumentGetOnCurrentBinder(binder: IBinder, featureId: Int): Int {
+        if (sBinder !== binder) throw ProxyException("instrument connection replaced")
+        val value = runPinned(binder) { ProxyCanVerbs.canInstrumentGet(featureId) }
+        if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("instrument connection replaced")
+        return value
+    }
+
     /** Read an integer from a CAN *setting* feature (privileged daemon context). */
     @JvmStatic
     @Throws(ProxyException::class)

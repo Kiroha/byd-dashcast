@@ -756,4 +756,19 @@
     <string name="satellite_native_reference" translatable="false">TEST PATTERN · compatibility test · no app images</string>
     <string name="satellite_native_retry" translatable="false">Retry</string>
     <string name="satellite_native_close" translatable="false">Close</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Volet ADAS : masquer / rétablir</string>
+    <string name="native_adas_warning">Masque tout le volet ADAS du combiné, y compris ses alertes de distance et de voie. Le rétablissement rend la main aux conditions d’affichage OEM ; son effet reste à valider sur le véhicule. Les commandes sont uniquement manuelles.</string>
+    <string name="native_adas_hide">Masquer le volet complet</string>
+    <string name="native_adas_restore">Rétablir le volet OEM</string>
+    <string name="native_adas_state_unknown">L’état visuel du volet n’est pas connu.</string>
+    <string name="native_adas_pending">Commande en cours…</string>
+    <string name="native_adas_hide_sent">Demande de masquage envoyée. Vérifiez le combiné : aucun résultat visuel n’est renvoyé.</string>
+    <string name="native_adas_restore_sent">Demande de rétablissement envoyée. Vérifiez le combiné ; vous pouvez réessayer.</string>
+    <string name="native_adas_unavailable">Commande indisponible sur cet appareil ou liaison système indisponible.</string>
+    <string name="native_adas_original_unknown">Masquage refusé : l’état OEM d’origine n’a pas pu être confirmé.</string>
+    <string name="native_adas_recovery_missing">Rétablissement indisponible : aucune valeur OEM sauvegardée pour ce firmware.</string>
+    <string name="native_adas_recovery_failed">Masquage annulé : impossible de sauvegarder la valeur de rétablissement.</string>
+    <string name="native_adas_send_failed">Envoi non confirmé. Vérifiez le combiné avant de réessayer.</string>
 </resources>

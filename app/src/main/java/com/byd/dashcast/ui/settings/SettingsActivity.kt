@@ -83,6 +83,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var cbFissionMode: CompoundButton
     private lateinit var swFissionAutoLayout: CompoundButton
     private lateinit var swFissionPrecreateSlots: CompoundButton
+    private var nativeAdasDialog: NativeAdasWindowDialog? = null
 
     @Volatile
     private var mDestroyed = false
@@ -120,6 +121,10 @@ class SettingsActivity : AppCompatActivity() {
         refreshReportChannelRow()
         findViewById<View>(R.id.btn_satellite)?.setOnClickListener {
             startActivity(Intent(this, com.byd.dashcast.satellite.SatelliteSettingsActivity::class.java))
+        }
+        findViewById<View>(R.id.btn_native_adas_panel)?.setOnClickListener {
+            nativeAdasDialog?.close()
+            nativeAdasDialog = NativeAdasWindowDialog(this).also { it.show() }
         }
     }
 
@@ -224,6 +229,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mDestroyed = true
+        nativeAdasDialog?.close()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Preparando el receptor de vídeo…</string>
     <string name="satellite_video_waiting">Esperando la transmisión de vídeo desde DashSat…</string>
     <string name="satellite_video_unavailable">No se pudo iniciar el receptor de vídeo. Inténtalo de nuevo o cierra esta vista.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Panel ADAS: ocultar / restaurar</string>
+    <string name="native_adas_warning">Oculta todo el panel ADAS del cuadro, incluidas sus alertas de distancia y de carril. Restaurar devuelve el control a las condiciones de visualización OEM; su efecto aún debe validarse en el vehículo. Las órdenes son solo manuales.</string>
+    <string name="native_adas_hide">Ocultar todo el panel</string>
+    <string name="native_adas_restore">Restaurar el panel OEM</string>
+    <string name="native_adas_state_unknown">Se desconoce el estado visual del panel.</string>
+    <string name="native_adas_pending">Orden en curso…</string>
+    <string name="native_adas_hide_sent">Solicitud de ocultación enviada. Comprueba el cuadro: no se recibe confirmación visual.</string>
+    <string name="native_adas_restore_sent">Solicitud de restauración enviada. Comprueba el cuadro; puedes volver a intentarlo.</string>
+    <string name="native_adas_unavailable">Orden no disponible en este dispositivo o conexión del sistema no disponible.</string>
+    <string name="native_adas_original_unknown">Ocultación rechazada: no se pudo confirmar el estado OEM original.</string>
+    <string name="native_adas_recovery_missing">Restauración no disponible: no hay valor OEM guardado para este firmware.</string>
+    <string name="native_adas_recovery_failed">Ocultación cancelada: no se pudo guardar el valor de recuperación.</string>
+    <string name="native_adas_send_failed">Envío no confirmado. Comprueba el cuadro antes de reintentar.</string>
 </resources>
