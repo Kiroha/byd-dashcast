@@ -477,9 +477,11 @@ class OemServiceMetadataTest {
             assertEquals(1, buttons.count { it.text.toString() == "Relevés locaux OEM" })
             buttons.single { it.text.toString() == "Relevés locaux OEM" }.performClick()
             val list = ShadowAlertDialog.getLatestAlertDialog().listView
-            assertEquals(5, list.adapter.count)
+            assertEquals(6, list.adapter.count)
             assertTrue(list.adapter.getItem(0).toString().contains("16 lectures"))
             assertTrue(list.adapter.getItem(1).toString().contains("54 lectures"))
+            assertEquals("Contexte cluster — bibliothèque et processus", list.adapter.getItem(4).toString())
+            assertEquals("Relevés précédents", list.adapter.getItem(5).toString())
             list.performItemClick(null, 1, 1)
             val confirm = ShadowAlertDialog.getLatestAlertDialog()
             val message = org.robolectric.Shadows.shadowOf(confirm).message.toString()
