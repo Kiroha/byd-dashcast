@@ -2063,8 +2063,10 @@ android {
         // No OEM protocol/display-selection/permission changes; parked validation is pending.
         // The version bump also makes normal startup replace an older persistent SurfaceDaemon.)
         // 687 = 1.9.48-beta: accept optional null JNI decode metadata without closing satellite video.
-        versionCode 687
-        versionName "1.9.48-beta"
+        // 688 = 1.9.49-beta: manual native ADAS pane hide/restore with durable recovery;
+        // full-pane visual warnings are hidden too, and vehicle validation remains pending.
+        versionCode 688
+        versionName "1.9.49-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
