@@ -2068,8 +2068,11 @@ android {
         // 689 = 1.9.50-beta: projection-coupled Electro ADAS masking/recovery and typed OEM reads;
         // opt-in defaults off, exact SX361 firmware only, and parked vehicle validation is pending.
         // The version bump also replaces older persistent daemons with protocol 27 on normal startup.
-        versionCode 689
-        versionName "1.9.50-beta"
+        // 690 = 1.9.51-beta: reuse the full ADAS sequence for explicit re-hide after restoration;
+        // finish full recovery after Classic/Fission projection teardown and the OEM quiet period.
+        // Initial hide/restore worked on the car in 1.9.50; these new cycles still need vehicle tests.
+        versionCode 690
+        versionName "1.9.51-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
