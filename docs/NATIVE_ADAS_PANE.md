@@ -1,11 +1,12 @@
-# Manual native ADAS pane requests
+# Native ADAS pane control
 
-Settings → **ADAS pane: hide / restore** opens two manual actions. This is independent of
-the older **ADAS Window Fix**, which changes projection geometry. No projection, navigation,
-music, boot, resume, reconnect or periodic task calls this control.
+Settings → **ADAS pane: hide / restore** offers manual fallback actions and an opt-in
+**Hide the ADAS pane during projection** setting (off by default). The older **ADAS Window Fix**
+changes projection geometry and remains independent. Enabling the new option requires the parked
+acknowledgement; it arms a projection-coupled workflow rather than immediately sending a frame.
 
 The control intentionally hides the **entire pane, including its distance alerts and lane
-warnings**. The dialog repeats that effect and requires a new parked acknowledgement for each hide. Restore remains accessible
+warnings**. The dialog repeats that effect and requires a new parked acknowledgement for each manual hide or initial enabling of automatic mode. Restore remains accessible
 without that acknowledgement or an available proxy reader.
 
 ## Initial compatibility and evidence
@@ -43,7 +44,7 @@ Evidence retained outside the source repository:
 - The maintainer has verified **Electro's hide** on this car. Neither an Electro restore nor the
   DashCast hide/restore pair has been validated on the car.
 
-The only permitted frames are:
+The manual fallback permits only these two frames:
 
 | Request | Bytes | Evidence |
 | --- | --- | --- |
@@ -54,9 +55,9 @@ The frame is property ID BE32, length `01`, then one value byte. The explicit ta
 `com.byd.clusterdebug/com.byd.clusterdebug.BroadcastReceiverCAN`, action `com.byd.cluster.spi`.
 Only this explicit manual broadcast includes stopped packages, so the manifest receiver can run
 before its app has first been opened; no service is started.
-No arbitrary frame, AutoContainer `13/88/89`, geometry change or guessed input `2` is exposed.
+No arbitrary frame or guessed input `2` is exposed by the manual fallback.
 
-## Recovery and failure behavior
+## Manual fallback recovery and failure behavior
 
 Before **each** hide, query exactly the original input through the already connected, pinned
 ProxyDaemon, once and without reconnect. Only `1` is accepted; `0`, `2`, SDK sentinel values,
@@ -103,6 +104,89 @@ An original-value query exception now records only `stage=original_read` and its
 class, without its message, stack trace or property value. It still prevents recovery capture
 and every hide frame. The manual actions, fingerprint binding, original-value gate, recovery
 journal and downlink contract are unchanged. Vehicle validation is still required.
+
+## Projection-coupled sequence
+
+The recovered Electro 1.14.0-lab-80 path starts only after an app is resumed on its target
+projection display. DashCast records a requested target before asynchronous launch work, then
+independently checks the resumed activity on that exact display. Task placement, a launch callback,
+a saved profile, and foreground activity on display 0 are insufficient. Ambiguous/truncated dumps
+are refused. Proof expires after three seconds. A replacement session, manual recovery, display
+loss, source loss or daemon replacement invalidates queued frames and commands.
+
+The typed power gate and raw maintenance monitor are **different SDK channels** on SX361:
+`BYDAutoBodyworkDevice.getPowerLevel()` uses device **1001**, and must equal **2**; Electro's raw
+`BYDAutoManager.getInt(1000, 0x12d0002a)` maintenance monitor must equal **3**. Neither proves parked
+status. The platform monitor is `getInt(1000, 0x40d00010)`, with maintenance IDs 102/115/141/181.
+Daemon protocol 27 adds only these closed read operations. Typed state is checked continuously,
+not replaced by a constant after activation. Invalid results never become a success value.
+
+Before the first mutating command, commit a firmware-bound recovery journal. Then:
+
+1. AutoContainer 13; allowlist `com.byd.clusterdebug` for device idle and start its
+   `.ClusterDebugService`; wait 1,000 ms.
+2. Three `23,50,00,08,01,00` frames.
+3. Ordered phases: 60 × `26,F0,00,28,01,06`; 50 × `43,20,00,00,01,01`;
+   50 × `43,20,00,21,01,01`; 40 × `26,F0,00,28,01,06`; 60 × `23,50,00,08,01,00`.
+   Each batch contains at most ten frames. One complete pass contains 263 frames.
+4. One guarded additional pass 12 seconds after completion/failure. It cannot recursively retry.
+5. Post-launch layout commands 18/0/16/35 nominally begin at 0.5/1/2/3 seconds, followed by a new
+   masking pass. Each superseded pass loses its frame/retry authority. The OEM global one-second
+   debug debounce is preserved; DashCast does not add extra delay to force otherwise ignored commands.
+6. A raw power transition to 3 schedules a guarded full pass after four seconds. While qualified
+   and not busy, maintenance sends three hide frames every three polling ticks. Service initialization
+   refresh is limited to once per 60 seconds. Initial raw state does not manufacture a transition.
+
+Frames use package-targeted **ordered** broadcasts with the foreground flag, allowing the receiver
+registered by the service to participate. The framework callback orders delivery but carries no OEM
+SDK/MCU/display acknowledgement. Only a `SecurityException` before the first callback permits the
+compatibility shell path. Partial security failures, runtime errors, timeout and interruption never
+replay an uncertain prefix. Every batch has a five-second deadline and checks cancellation per frame.
+
+Disable, explicit full recovery, or known projection teardown requests 40 restore frames in batches
+of ten, command 12, a 1,200 ms wait, then command 53. Repeated teardown coalesces an ongoing recovery.
+Manual fallback recovery remains available if the service or proxy is unavailable. No software result
+is described as proof the pane is visible. The recovery journal is retained even after delivery.
+
+### Evidence and deliberate host adaptations
+
+Research root: `tiers_apk/Electro/analysis-rea-20261019/` (outside this source repository).
+
+- `projection-order/findings.json` and `projection-order/parity-gaps/findings.json` retain the
+  actual protected-method paths, literal frames, phases, timers, callbacks and exception handlers.
+  `verify_reconstruction.py` passed: 1,568 wrappers, 1,526 completely decoded methods, all 175
+  projection-manager methods decoded; no target execution.
+- `native-parity-contract/clusterDebug.json`, REA
+  `ev_8fded3880b347307f2465603a590dea4e98173a5ce8dc26869825193102c7f33`, confirms current-firmware
+  command 12/13 set test-mode item `0x2f` to 1/0; command 53 forces ADAS type item `0x1dc` to 0.
+- `native-parity-contract/adasSelfStudy.json`, REA
+  `ev_36cc41d918b24df4119d74af34de24ea660c26ec5c8d5cbcac1da5f8316f6992`, identifies `0x43200000`
+  as CAN432 presence and `0x43200021` as ADAS type. Type 1 suppresses the legacy 2D pane in the
+  available theme corpus; `0x23500008=0` suppresses the 3R1V pane. These are more than a text/UI offset.
+- `projection-order/parity-gaps/acc-input-contract.json` and `sdk-power-route-excerpts.json`
+  distinguish typed device1001 power callbacks from raw device1000 queries.
+
+DashCast reproduces the fixed masking/recovery sequence, with these explicit host adaptations:
+
+- Its existing projection owner/session and command sequencer retain ownership. The coordinator
+  never begins a competing projection. A guarded cleanup ticket queues restore commands behind
+  already-started owner commands, survives that owner ending, and is revoked by any newer owner. Fission adopts a logical session only when reusing native
+  projection with no current owner token.
+- Typed ACC callbacks are replaced by bounded read polling alongside resumed-activity proof.
+  Power is sampled each polling iteration; platform every third iteration. IPC latency adds to the
+  nominal one-second delay. Failed/expired evidence cancels sends; it does not invent a restore on
+  an unknown power transition. Known projection teardown and explicit recovery remain the recovery paths.
+- Shell compatibility sends one frame per call so cancellation can be checked between frames,
+  preserving the fixed order/count. Every mutating IPC is single-attempt and pinned to one daemon.
+  Separate bounded read, write and recovery lanes prevent a blocked SDK query from starving recovery.
+- The journal is retained, unlike Electro's marker deletion after software success. No unrequested
+  boot/ACC_OFF marker cleanup is installed. Opening Settings or reconnecting a daemon does not replay
+  a previous request. The existing manual one-frame recovery is preserved as a fallback.
+
+This is **not** a claim that all of Electro is reproduced. Exact active-theme identity, complete MCU
+side effects, and physical restoration remain unverified. In particular, command 53 forces type 0;
+it does not restore a captured prior ancillary type. Android source analysis cannot prove all effects
+of raw `TEST_SIMULATE_DOWN_SET` beyond the researched consumer.
 
 ## Required vehicle validation
 

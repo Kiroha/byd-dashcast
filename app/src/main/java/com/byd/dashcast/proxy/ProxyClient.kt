@@ -707,6 +707,29 @@ object ProxyClient {
     fun runShell(cmd: String): String =
             callWithRetry("runShell") { ProxyProcessVerbs.runShell(cmd) }
 
+    /** A failed response may follow an applied command: never reconnect or replay this call. */
+    internal fun runShellOnce(binder: IBinder, command: String): String {
+        if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("connection replaced")
+        return runPinned(binder) { ProxyProcessVerbs.runShell(command) }
+    }
+
+    internal fun readAdasBodywork(binder: IBinder, property: Int): Int {
+        require(property == 0 || property == 0x40d00010 || property == 0x12d0002a)
+        if (!supportsProtocol(27) || sBinder !== binder) throw ProxyException("ADAS reader unavailable")
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
+            data.writeInt(property)
+            if (!binder.transact(ProxyDaemonContract.TXN_ADAS_BODYWORK_READ, data, reply, 0))
+                throw ProxyException("ADAS reader unsupported")
+            reply.readException()
+            val value = reply.readInt()
+            if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("connection replaced")
+            return value
+        } finally { reply.recycle(); data.recycle() }
+    }
+
     /** Run the full Phase 4 feasibility probe suite inside the daemon (pipe-separated result). */
     @JvmStatic
     @Throws(ProxyException::class)

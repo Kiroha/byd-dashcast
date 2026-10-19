@@ -11,6 +11,8 @@ internal class ProjectionCommandSequencer {
 
     class Session internal constructor(internal val generation: Long)
 
+    class CleanupTicket internal constructor(internal val generation: Long)
+
     sealed class Result {
         data class Success(val output: String?) : Result()
         data class Error(val message: String?) : Result()
@@ -25,23 +27,37 @@ internal class ProjectionCommandSequencer {
         val launch: (Completion) -> Unit,
         val completion: Completion,
         val dispatchIfSuperseded: Boolean,
+        val cleanup: CleanupTicket? = null,
+        val cleanupValid: (() -> Boolean)? = null,
     ) {
         var completed = false
     }
 
     private val queue = ArrayDeque<Pending>()
     private var generation = 0L
+    private var ownerSession: Session? = null
+    private var retiredGeneration: Long? = null
     private var inFlight = false
 
     @Synchronized
-    fun beginSession(): Session = Session(++generation)
+    fun beginSession(): Session {
+        retiredGeneration = null
+        return Session(++generation).also { ownerSession = it }
+    }
+
+    @Synchronized fun currentSession(): Session? = ownerSession
+
+    @Synchronized fun cleanupTicket(): CleanupTicket = CleanupTicket(generation)
+
+    private fun cleanupCurrent(ticket: CleanupTicket): Boolean =
+        ticket.generation == generation || ticket.generation == retiredGeneration
 
     @Synchronized
     fun isCurrent(session: Session): Boolean = session.generation == generation
 
     fun endSession(session: Session) {
         val next = synchronized(this) {
-            if (session.generation == generation) generation++
+            if (session.generation == generation) { retiredGeneration = generation; generation++; ownerSession = null }
             takeNextLocked()
         }
         dispatch(next)
@@ -60,11 +76,26 @@ internal class ProjectionCommandSequencer {
         dispatch(next)
     }
 
+    /** Read-only ticket survives its owner's end, but never a newer beginSession. */
+    fun submitCleanup(ticket: CleanupTicket, valid: () -> Boolean,
+                      launch: (Completion) -> Unit, completion: Completion) {
+        val next = synchronized(this) {
+            queue.addLast(Pending(Session(ticket.generation), launch, completion, false, ticket, valid))
+            takeNextLocked()
+        }
+        dispatch(next)
+    }
+
     private fun takeNextLocked(): Pending? {
         if (inFlight) return null
         while (queue.isNotEmpty()) {
             val pending = queue.removeFirst()
-            if (pending.session.generation != generation && !pending.dispatchIfSuperseded) continue
+            if (pending.cleanup != null) {
+                if (!cleanupCurrent(pending.cleanup)) {
+                    pending.completion.complete(Result.Error("cleanup retired"))
+                    continue
+                }
+            } else if (pending.session.generation != generation && !pending.dispatchIfSuperseded) continue
             inFlight = true
             return pending
         }
@@ -73,6 +104,11 @@ internal class ProjectionCommandSequencer {
 
     private fun dispatch(pending: Pending?) {
         if (pending == null) return
+        if (pending.cleanup != null &&
+            (!synchronized(this) { cleanupCurrent(pending.cleanup) } || pending.cleanupValid?.invoke() != true)) {
+            complete(pending, Result.Error("cleanup retired"))
+            return
+        }
         try {
             pending.launch(Completion { result -> complete(pending, result) })
         } catch (t: Throwable) {
@@ -81,6 +117,7 @@ internal class ProjectionCommandSequencer {
     }
 
     private fun complete(pending: Pending, result: Result) {
+        val cleanupAllowed = pending.cleanupValid?.invoke() == true
         val next = synchronized(this) {
             if (pending.completed) return
             pending.completed = true
@@ -88,7 +125,10 @@ internal class ProjectionCommandSequencer {
 
             // Keep result delivery and any follow-up enqueue in the same ordering decision as a
             // competing beginSession(). The callback is small and only posts or queues more work.
-            if (pending.session.generation == generation) {
+            if (pending.cleanup != null) {
+                pending.completion.complete(if (cleanupCurrent(pending.cleanup) && cleanupAllowed)
+                    result else Result.Error("cleanup retired"))
+            } else if (pending.session.generation == generation) {
                 pending.completion.complete(result)
             }
             takeNextLocked()
@@ -102,13 +142,41 @@ internal object ProjectionCommandBus {
     private const val TAG = "ProjectionCommandBus"
     private val sequencer = ProjectionCommandSequencer()
 
-    fun beginSession(): ProjectionCommandSequencer.Session = sequencer.beginSession()
+    fun currentSession(): ProjectionCommandSequencer.Session? =
+        sequencer.currentSession()
+
+    fun beginSession(): ProjectionCommandSequencer.Session {
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.cancelForManualRecovery()
+        return sequencer.beginSession()
+    }
 
     fun isCurrent(session: ProjectionCommandSequencer.Session): Boolean =
         sequencer.isCurrent(session)
 
     fun endSession(session: ProjectionCommandSequencer.Session) {
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.sessionEnded(session)
         sequencer.endSession(session)
+    }
+
+    /** Uses the existing owner queue with the caller's single-attempt transport. */
+    fun submitOwned(session: ProjectionCommandSequencer.Session, valid: () -> Boolean,
+                    launch: ((Boolean) -> Unit) -> Unit, done: (Boolean) -> Unit) {
+        sequencer.submit(session, { completion ->
+            if (!valid()) completion.complete(ProjectionCommandSequencer.Result.Error("retired"))
+            else launch { ok -> completion.complete(if (ok) ProjectionCommandSequencer.Result.Success(null)
+                else ProjectionCommandSequencer.Result.Error("delivery failed")) }
+        }, { result -> done(result is ProjectionCommandSequencer.Result.Success) })
+    }
+
+    fun cleanupTicket(): ProjectionCommandSequencer.CleanupTicket = sequencer.cleanupTicket()
+
+    fun submitCleanup(ticket: ProjectionCommandSequencer.CleanupTicket, valid: () -> Boolean,
+                      launch: ((Boolean) -> Unit) -> Unit, done: (Boolean) -> Unit) {
+        sequencer.submitCleanup(ticket, valid, { completion ->
+            if (!valid()) completion.complete(ProjectionCommandSequencer.Result.Error("retired"))
+            else launch { ok -> completion.complete(if (ok) ProjectionCommandSequencer.Result.Success(null)
+                else ProjectionCommandSequencer.Result.Error("delivery failed")) }
+        }, { result -> done(result is ProjectionCommandSequencer.Result.Success) })
     }
 
     fun sendInfo(

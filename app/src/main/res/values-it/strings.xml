@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">Riquadro ADAS: nascondi / ripristina</string>
-    <string name="native_adas_warning">Nasconde l’intero riquadro ADAS del quadro strumenti, inclusi gli avvisi di distanza e corsia. Il ripristino restituisce il controllo alle condizioni di visualizzazione OEM; l’effetto deve ancora essere verificato sul veicolo. I comandi sono solo manuali.</string>
+    <string name="native_adas_warning">Nasconde l’intero pannello ADAS, inclusi gli avvisi di distanza e corsia. La modalità proiezione ripete le richieste durante la sessione. Il ripristino OEM deve ancora essere verificato sul veicolo.</string>
     <string name="native_adas_hide">Nascondi l’intero riquadro</string>
     <string name="native_adas_restore">Ripristina il riquadro OEM</string>
     <string name="native_adas_state_unknown">Lo stato visivo del riquadro è sconosciuto.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Ripristino non disponibile: nessun valore OEM salvato per questo firmware.</string>
     <string name="native_adas_recovery_failed">Operazione annullata: impossibile salvare il valore di ripristino.</string>
     <string name="native_adas_send_failed">Invio non confermato. Controlla il quadro prima di riprovare.</string>
+    <string name="native_adas_projection_option">Nascondi il pannello ADAS durante la proiezione</string>
+    <string name="native_adas_projection_help">Dopo la conferma dell’app proiettata, applica la sequenza completa, inclusi gli avvisi del pannello. Disattivando si richiede il ripristino OEM. Verifica il display.</string>
+    <string name="native_adas_projection_restore">Ripristina con la sequenza completa</string>
+    <string name="native_adas_preference_failed">Impossibile salvare l’impostazione. Il valore precedente viene mantenuto.</string>
 </resources>

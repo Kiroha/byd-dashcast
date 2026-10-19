@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">ADAS paneli: yashirish / tiklash</string>
-    <string name="native_adas_warning">Asboblar panelidagi butun ADAS qismini, masofa va qator ogohlantirishlari bilan birga yashiradi. Tiklash boshqaruvni OEM ko‘rsatish shartlariga qaytaradi; ta’siri hali avtomobilda tekshirilishi kerak. Buyruqlar faqat qo‘lda yuboriladi.</string>
+    <string name="native_adas_warning">Masofa va qator ogohlantirishlari bilan birga butun ADAS panelini yashiradi. Proyeksiya rejimi seans davomida so‘rovlarni takrorlaydi. OEM tiklashini avtomobilda tekshirish kerak.</string>
     <string name="native_adas_hide">Butun panelni yashirish</string>
     <string name="native_adas_restore">OEM panelini tiklash</string>
     <string name="native_adas_state_unknown">Panelning ko‘rinish holati noma’lum.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Tiklash mavjud emas: bu proshivka uchun OEM qiymati saqlanmagan.</string>
     <string name="native_adas_recovery_failed">Yashirish bekor qilindi: tiklash qiymatini saqlab bo‘lmadi.</string>
     <string name="native_adas_send_failed">Yuborish tasdiqlanmadi. Qayta urinishdan oldin asboblar panelini tekshiring.</string>
+    <string name="native_adas_projection_option">Proyeksiya vaqtida ADAS panelini yashirish</string>
+    <string name="native_adas_projection_help">Ilova proyeksiyasi tasdiqlangach, panel ogohlantirishlari bilan birga to‘liq ketma-ketlik qo‘llanadi. O‘chirish OEM tiklashini so‘raydi. Ekranni tekshiring.</string>
+    <string name="native_adas_projection_restore">To‘liq ketma-ketlik bilan tiklash</string>
+    <string name="native_adas_preference_failed">Sozlama saqlanmadi. Oldingi qiymat saqlandi.</string>
 </resources>

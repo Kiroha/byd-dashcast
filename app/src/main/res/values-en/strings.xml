@@ -708,7 +708,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">ADAS pane: hide / restore</string>
-    <string name="native_adas_warning">Hides the entire cluster ADAS pane, including its distance and lane warnings. Restore returns control to the OEM display conditions; its effect still needs validation on the vehicle. Commands are manual only.</string>
+    <string name="native_adas_warning">Hides the entire ADAS pane, including distance and lane warnings. Projection mode repeats requests during the session. The OEM recovery sequence still requires vehicle validation.</string>
     <string name="native_adas_hide">Hide the entire pane</string>
     <string name="native_adas_restore">Restore the OEM pane</string>
     <string name="native_adas_state_unknown">The pane’s visual state is unknown.</string>
@@ -720,4 +720,8 @@
     <string name="native_adas_recovery_missing">Restore unavailable: no OEM value saved for this firmware.</string>
     <string name="native_adas_recovery_failed">Hide cancelled: the recovery value could not be saved.</string>
     <string name="native_adas_send_failed">Delivery not confirmed. Check the cluster before retrying.</string>
+    <string name="native_adas_projection_option">Hide the ADAS pane during projection</string>
+    <string name="native_adas_projection_help">After the projected app is confirmed, apply the full sequence, including pane alerts. Disabling requests OEM restoration. Check the actual display result.</string>
+    <string name="native_adas_projection_restore">Restore with the full sequence</string>
+    <string name="native_adas_preference_failed">Could not save this setting. The previous value is retained.</string>
 </resources>

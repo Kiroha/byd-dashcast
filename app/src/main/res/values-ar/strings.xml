@@ -697,7 +697,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">لوحة ADAS: إخفاء / استعادة</string>
-    <string name="native_adas_warning">يخفي لوحة ADAS بالكامل من مجموعة العدادات، بما فيها تحذيرات المسافة والمسار. تعيد الاستعادة التحكم إلى شروط العرض الأصلية؛ ولا يزال تأثيرها بحاجة إلى التحقق على السيارة. تُرسل الأوامر يدوياً فقط.</string>
+    <string name="native_adas_warning">يخفي لوحة ADAS بالكامل، بما فيها تحذيرات المسافة والمسار. يكرر وضع العرض الطلبات أثناء الجلسة. لا يزال تسلسل استعادة OEM بحاجة إلى التحقق على السيارة.</string>
     <string name="native_adas_hide">إخفاء اللوحة بالكامل</string>
     <string name="native_adas_restore">استعادة اللوحة الأصلية</string>
     <string name="native_adas_state_unknown">الحالة المرئية للوحة غير معروفة.</string>
@@ -709,4 +709,8 @@
     <string name="native_adas_recovery_missing">الاستعادة غير متاحة: لا توجد قيمة أصلية محفوظة لهذا البرنامج الثابت.</string>
     <string name="native_adas_recovery_failed">أُلغي الإخفاء: تعذّر حفظ قيمة الاستعادة.</string>
     <string name="native_adas_send_failed">لم يتأكد الإرسال. تحقّق من العدادات قبل إعادة المحاولة.</string>
+    <string name="native_adas_projection_option">إخفاء لوحة ADAS أثناء العرض</string>
+    <string name="native_adas_projection_help">بعد تأكيد التطبيق المعروض، يُطبّق التسلسل الكامل بما فيه تنبيهات اللوحة. يطلب التعطيل استعادة عرض الشركة المصنّعة. تحقق من النتيجة على الشاشة.</string>
+    <string name="native_adas_projection_restore">استعادة العرض بالتسلسل الكامل</string>
+    <string name="native_adas_preference_failed">تعذر حفظ الإعداد. تم الاحتفاظ بالقيمة السابقة.</string>
 </resources>

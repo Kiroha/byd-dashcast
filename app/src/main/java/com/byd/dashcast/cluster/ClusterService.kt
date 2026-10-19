@@ -303,6 +303,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     override fun onDestroy() {
+        ProjectionAdasCoordinator.stop(this)
         mOperationGate.invalidate()
         mDestroyed = true
         try {
@@ -624,6 +625,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     private fun moveTaskToDisplayInternal(packageName: String?, targetDisplayId: Int,
                                           callback: LaunchCallback?) {
         val operation = mOperationGate.capture()
+        ProjectionAdasCoordinator.targetRequested(this, packageName, targetDisplayId)
         if (PKG_FORCE_FRESH_LAUNCH == packageName && targetDisplayId > 0) {
             AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for $packageName")
             fallbackLaunch(packageName, targetDisplayId, callback, operation)
@@ -765,6 +767,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
             callback?.onResult(false)
             return
         }
+        ProjectionAdasCoordinator.targetRequested(this, packageName, displayId)
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → $packageName")
         val inFlight = mPendingLaunchRunnable
         if (inFlight != null) {
@@ -923,6 +926,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
                                     callback: LaunchCallback?) {
         val operation = mOperationGate.capture()
         if (!operation.isValid) return
+        ProjectionAdasCoordinator.targetRequested(this, packageName, displayId)
         AppLogger.log(TAG, "launchOnDashboardWithBounds 500ms → " + packageName +
             " [" + left + "," + top + "," + right + "," + bottom + "]")
         // Keep the 500ms schedule on the main handler (preserves timing + cancel semantics),
@@ -1032,10 +1036,9 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
      */
     private fun postLaunchResult(callback: LaunchCallback?, success: Boolean,
                                  operation: LifecycleGate.Token) {
-        if (callback == null) return
         mMainHandler.post {
             if (!operation.isValid) return@post
-            callback.onResult(success)
+            callback?.onResult(success)
         }
     }
 
@@ -1420,6 +1423,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     fun stopProjectionNoAdb() {
+        ProjectionAdasCoordinator.stop(this)
         AppLogger.log(TAG, "stopProjectionNoAdb requested")
         // v1.8.2 — was hardcoded "-d 1". The fission VirtualDisplay is display 1 on most DiLink 3
         // units but not all (INC-20260721 saw it come up as display 3), and resetting the wrong

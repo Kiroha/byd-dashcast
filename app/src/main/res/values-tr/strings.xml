@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">ADAS paneli: gizle / geri yükle</string>
-    <string name="native_adas_warning">Gösterge panelindeki ADAS bölümünü, mesafe ve şerit uyarıları dahil tamamen gizler. Geri yükleme, denetimi OEM görüntüleme koşullarına döndürür; etkisi araçta henüz doğrulanmalıdır. Komutlar yalnızca elle gönderilir.</string>
+    <string name="native_adas_warning">Mesafe ve şerit uyarıları dahil tüm ADAS panelini gizler. Yansıtma modu oturum boyunca istekleri tekrarlar. OEM geri yüklemesi araçta henüz doğrulanmalıdır.</string>
     <string name="native_adas_hide">Panelin tamamını gizle</string>
     <string name="native_adas_restore">OEM panelini geri yükle</string>
     <string name="native_adas_state_unknown">Panelin görsel durumu bilinmiyor.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Geri yükleme kullanılamıyor: bu donanım yazılımı için kayıtlı OEM değeri yok.</string>
     <string name="native_adas_recovery_failed">Gizleme iptal edildi: geri yükleme değeri kaydedilemedi.</string>
     <string name="native_adas_send_failed">Gönderim doğrulanmadı. Yeniden denemeden önce göstergeyi kontrol edin.</string>
+    <string name="native_adas_projection_option">Yansıtma sırasında ADAS panelini gizle</string>
+    <string name="native_adas_projection_help">Yansıtılan uygulama doğrulandıktan sonra panel uyarıları dahil tam sıra uygulanır. Kapatmak OEM geri yüklemesini ister. Ekrandaki sonucu kontrol edin.</string>
+    <string name="native_adas_projection_restore">Tam sırayla geri yükle</string>
+    <string name="native_adas_preference_failed">Ayar kaydedilemedi. Önceki değer korundu.</string>
 </resources>
