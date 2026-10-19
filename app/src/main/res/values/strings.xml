@@ -759,7 +759,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">Volet ADAS : masquer / rétablir</string>
-    <string name="native_adas_warning">Masque tout le volet ADAS du combiné, y compris ses alertes de distance et de voie. Le rétablissement rend la main aux conditions d’affichage OEM ; son effet reste à valider sur le véhicule. Les commandes sont uniquement manuelles.</string>
+    <string name="native_adas_warning">Masque tout le volet ADAS, y compris ses alertes de distance et de voie. Le mode projection répète les demandes pendant la session. La séquence de rétablissement OEM reste à valider sur le véhicule.</string>
     <string name="native_adas_hide">Masquer le volet complet</string>
     <string name="native_adas_restore">Rétablir le volet OEM</string>
     <string name="native_adas_state_unknown">L’état visuel du volet n’est pas connu.</string>
@@ -771,4 +771,8 @@
     <string name="native_adas_recovery_missing">Rétablissement indisponible : aucune valeur OEM sauvegardée pour ce firmware.</string>
     <string name="native_adas_recovery_failed">Masquage annulé : impossible de sauvegarder la valeur de rétablissement.</string>
     <string name="native_adas_send_failed">Envoi non confirmé. Vérifiez le combiné avant de réessayer.</string>
+    <string name="native_adas_projection_option">Masquer le volet ADAS pendant la projection</string>
+    <string name="native_adas_projection_help">Après confirmation de l’application projetée, applique la séquence complète, alertes du volet incluses. Désactiver demande le rétablissement OEM. Le résultat à l’écran reste à vérifier.</string>
+    <string name="native_adas_projection_restore">Rétablir avec la séquence complète</string>
+    <string name="native_adas_preference_failed">Impossible d’enregistrer ce réglage. La valeur précédente est conservée.</string>
 </resources>

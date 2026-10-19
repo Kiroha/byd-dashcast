@@ -71,6 +71,7 @@ class SatelliteWebSocketTransportTest {
         val navigated = CountDownLatch(1)
         val diagnosticAcks = java.util.concurrent.LinkedBlockingQueue<String>()
         val failure = AtomicReference<Exception?>()
+        val receiverFailure = AtomicReference<SatelliteReceiverFailure?>()
         val received = AtomicReference<SatelliteProtocol.Navigation?>()
         val status = SatelliteStatusTracker()
         val owner = status.begin()
@@ -84,12 +85,15 @@ class SatelliteWebSocketTransportTest {
                 }
                 override fun expired(session: String) = Unit
                 override fun disconnected(session: String) { status.disconnected(owner, session) }
-                override fun failed(reason: SatelliteReceiverFailure) { status.failed(owner, reason) }
+                override fun failed(reason: SatelliteReceiverFailure) { receiverFailure.set(reason); status.failed(owner, reason) }
             })
         server = receiver
         receiver.isDaemon = true
         receiver.start()
-        assertTrue("Receiver never reported a bound listener", listening.await(5, TimeUnit.SECONDS))
+        val bound = listening.await(5, TimeUnit.SECONDS)
+        assertTrue("Receiver never reported a bound listener: failure=${receiverFailure.get()}, " +
+            "status=${status.snapshot(true, true, 0).connection}, enabled=${SatellitePrefs.isEnabled(context)}, " +
+            "tokenMatches=${SatellitePrefs.tokenMatches(token, SatellitePrefs.token(context))}", bound)
         assertEquals(SatelliteStatusTracker.Connection.WAITING, status.snapshot(true, true, 0).connection)
         val sender = object : WebSocketClient(URI("wss://127.0.0.1:${receiver.port}${SatelliteProtocol.PATH}")) {
             override fun onSetSSLParameters(parameters: SSLParameters) {

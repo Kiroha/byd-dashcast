@@ -701,7 +701,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">Panel ADAS: ukryj / przywróć</string>
-    <string name="native_adas_warning">Ukrywa cały panel ADAS zestawu wskaźników, w tym ostrzeżenia o odległości i pasie ruchu. Przywrócenie oddaje sterowanie warunkom wyświetlania OEM; efekt wymaga jeszcze sprawdzenia w samochodzie. Polecenia są wyłącznie ręczne.</string>
+    <string name="native_adas_warning">Ukrywa cały panel ADAS, w tym ostrzeżenia o odległości i pasie ruchu. Tryb projekcji ponawia żądania podczas sesji. Przywracanie OEM wymaga jeszcze sprawdzenia w samochodzie.</string>
     <string name="native_adas_hide">Ukryj cały panel</string>
     <string name="native_adas_restore">Przywróć panel OEM</string>
     <string name="native_adas_state_unknown">Stan wizualny panelu jest nieznany.</string>
@@ -713,4 +713,8 @@
     <string name="native_adas_recovery_missing">Przywrócenie niedostępne: brak zapisanej wartości OEM dla tego oprogramowania.</string>
     <string name="native_adas_recovery_failed">Ukrywanie anulowane: nie udało się zapisać wartości przywracania.</string>
     <string name="native_adas_send_failed">Wysłanie niepotwierdzone. Sprawdź zestaw wskaźników przed ponowieniem.</string>
+    <string name="native_adas_projection_option">Ukryj panel ADAS podczas projekcji</string>
+    <string name="native_adas_projection_help">Po potwierdzeniu wyświetlanej aplikacji stosuje pełną sekwencję, w tym ukrycie ostrzeżeń panelu. Wyłączenie żąda przywrócenia OEM. Sprawdź ekran.</string>
+    <string name="native_adas_projection_restore">Przywróć pełną sekwencją</string>
+    <string name="native_adas_preference_failed">Nie można zapisać ustawienia. Zachowano poprzednią wartość.</string>
 </resources>

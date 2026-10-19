@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">Панель ADAS: скрыть / восстановить</string>
-    <string name="native_adas_warning">Скрывает всю панель ADAS на приборной панели, включая предупреждения о дистанции и полосе. Восстановление возвращает управление штатным условиям отображения; эффект ещё требуется проверить на автомобиле. Команды отправляются только вручную.</string>
+    <string name="native_adas_warning">Скрывает всю панель ADAS, включая предупреждения о дистанции и полосе. Режим проекции повторяет запросы во время сеанса. Восстановление OEM ещё требует проверки на автомобиле.</string>
     <string name="native_adas_hide">Скрыть всю панель</string>
     <string name="native_adas_restore">Восстановить штатную панель</string>
     <string name="native_adas_state_unknown">Визуальное состояние панели неизвестно.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Восстановление недоступно: для этой прошивки не сохранено штатное значение.</string>
     <string name="native_adas_recovery_failed">Скрытие отменено: не удалось сохранить значение для восстановления.</string>
     <string name="native_adas_send_failed">Отправка не подтверждена. Перед повтором проверьте приборную панель.</string>
+    <string name="native_adas_projection_option">Скрывать панель ADAS при проекции</string>
+    <string name="native_adas_projection_help">После подтверждения проецируемого приложения выполняется полная последовательность, включая скрытие предупреждений панели. Отключение запрашивает восстановление OEM. Проверьте экран.</string>
+    <string name="native_adas_projection_restore">Восстановить полной последовательностью</string>
+    <string name="native_adas_preference_failed">Не удалось сохранить настройку. Сохранено предыдущее значение.</string>
 </resources>

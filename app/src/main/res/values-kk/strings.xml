@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">ADAS панелі: жасыру / қалпына келтіру</string>
-    <string name="native_adas_warning">Аспаптардағы ADAS панелін қашықтық пен жолақ ескертулерімен бірге толық жасырады. Қалпына келтіру басқаруды OEM көрсету шарттарына қайтарады; әсері көлікте әлі тексерілуі тиіс. Пәрмендер тек қолмен жіберіледі.</string>
+    <string name="native_adas_warning">ADAS панелін қашықтық пен жолақ ескертулерімен бірге толық жасырады. Проекция режимі сеанс бойы сұрауларды қайталайды. OEM қалпына келтіруін көлікте тексеру қажет.</string>
     <string name="native_adas_hide">Панельді толық жасыру</string>
     <string name="native_adas_restore">OEM панелін қалпына келтіру</string>
     <string name="native_adas_state_unknown">Панельдің көрінетін күйі белгісіз.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Қалпына келтіру қолжетімсіз: осы микробағдарлама үшін OEM мәні сақталмаған.</string>
     <string name="native_adas_recovery_failed">Жасыру тоқтатылды: қалпына келтіру мәнін сақтау мүмкін болмады.</string>
     <string name="native_adas_send_failed">Жіберу расталмады. Қайталамас бұрын аспаптарды тексеріңіз.</string>
+    <string name="native_adas_projection_option">Проекция кезінде ADAS панелін жасыру</string>
+    <string name="native_adas_projection_help">Қолданба проекциясы расталғаннан кейін панель ескертулерімен бірге толық реттілік орындалады. Өшіру OEM қалпына келтіруін сұрайды. Экранды тексеріңіз.</string>
+    <string name="native_adas_projection_restore">Толық реттілікпен қалпына келтіру</string>
+    <string name="native_adas_preference_failed">Параметр сақталмады. Алдыңғы мән сақталды.</string>
 </resources>

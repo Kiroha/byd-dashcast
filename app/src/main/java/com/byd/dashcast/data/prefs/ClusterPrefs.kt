@@ -270,6 +270,29 @@ object ClusterPrefs {
         edit(ctx).putBoolean(KEY_ADAS_WINDOW_FIX, enabled).apply()
     }
 
+    internal fun isProjectionAdasEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean("projection_adas_hide", false)
+
+    internal fun setProjectionAdasEnabled(ctx: Context, enabled: Boolean): Boolean =
+        saveProjectionAdasEnabled(prefs(ctx), enabled)
+
+    @Synchronized internal fun saveProjectionAdasEnabled(preferences: SharedPreferences, enabled: Boolean): Boolean {
+        val previous = preferences.getBoolean("projection_adas_hide", false)
+        if (preferences.edit().putBoolean("projection_adas_hide", enabled).commit()) return true
+        // A failed disk commit still changes SharedPreferences memory. Restore the prior opt-in
+        // before returning failure; a failed initial enable must never arm a later projection.
+        preferences.edit().putBoolean("projection_adas_hide", previous).commit()
+        return false
+    }
+
+    internal fun hasProjectionAdasRecovery(ctx: Context): Boolean =
+        prefs(ctx).getBoolean("projection_adas_recovery", false) && nativeAdasRestoreValue(ctx) == 1
+
+    internal fun saveProjectionAdasRecovery(ctx: Context): Boolean =
+        edit(ctx).putBoolean("projection_adas_recovery", true)
+            .putInt(KEY_NATIVE_ADAS_RESTORE, 1)
+            .putString(KEY_NATIVE_ADAS_RESTORE_FIRMWARE, Build.FINGERPRINT).commit()
+
     /** Recovery evidence, not the current cluster display state or an automatic-start request. */
     internal fun nativeAdasRestoreValue(ctx: Context): Int? =
         prefs(ctx).let { prefs ->

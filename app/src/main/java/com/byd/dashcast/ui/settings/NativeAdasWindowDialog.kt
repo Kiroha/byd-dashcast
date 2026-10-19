@@ -12,6 +12,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.byd.dashcast.R
 import com.byd.dashcast.cluster.NativeAdasWindowControl
+import com.byd.dashcast.cluster.ProjectionAdasCoordinator
+import com.byd.dashcast.data.prefs.ClusterPrefs
 import java.io.Closeable
 
 /** Manual requests, deliberately independent of projection's existing ADAS geometry fix. */
@@ -23,6 +25,8 @@ internal class NativeAdasWindowDialog(
     private var request: NativeAdasWindowControl.Request? = null
     private var closed = false
     private var pending = false
+    private var preferencePending = false
+    private var changingPreference = false
     private var generation = 0
     private val status = TextView(activity).apply {
         setText(R.string.native_adas_state_unknown)
@@ -41,11 +45,23 @@ internal class NativeAdasWindowDialog(
         setText(R.string.native_adas_restore)
         minHeight = dp(64)
     }
+    private val automatic = CheckBox(activity).apply {
+        setText(R.string.native_adas_projection_option)
+        minHeight = dp(64)
+        isChecked = ClusterPrefs.isProjectionAdasEnabled(activity)
+    }
+    private val fullRestore = Button(activity).apply {
+        setText(R.string.native_adas_projection_restore)
+        minHeight = dp(64)
+    }
     private val body = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(24), dp(8), dp(24), dp(8))
         addView(TextView(activity).apply { setText(R.string.native_adas_warning) })
         addView(parked)
+        addView(automatic)
+        addView(TextView(activity).apply { setText(R.string.native_adas_projection_help) })
+        addView(fullRestore)
         addView(hide)
         addView(restore)
         addView(status)
@@ -69,6 +85,47 @@ internal class NativeAdasWindowDialog(
         parked.setOnCheckedChangeListener { _, _ -> updateButtons() }
         hide.setOnClickListener { if (parked.isChecked) send(NativeAdasWindowControl.Action.HIDE) }
         restore.setOnClickListener { send(NativeAdasWindowControl.Action.RESTORE) }
+        automatic.setOnCheckedChangeListener { _, enabled ->
+            if (changingPreference || preferencePending) return@setOnCheckedChangeListener
+            if (enabled && !parked.isChecked) {
+                changingPreference = true
+                automatic.isChecked = ClusterPrefs.isProjectionAdasEnabled(activity)
+                changingPreference = false
+                return@setOnCheckedChangeListener
+            }
+            preferencePending = true
+            updateButtons()
+            kotlin.concurrent.thread(name = "adas-preference") {
+                val saved = ClusterPrefs.setProjectionAdasEnabled(activity.applicationContext, enabled)
+                handler.post {
+                    preferencePending = false
+                    if (saved) ProjectionAdasCoordinator.preferenceChanged(activity)
+                    if (!closed) {
+                        changingPreference = true
+                        automatic.isChecked = ClusterPrefs.isProjectionAdasEnabled(activity)
+                        changingPreference = false
+                        status.setText(if (saved) R.string.native_adas_projection_help else R.string.native_adas_preference_failed)
+                        parked.isChecked = false
+                        updateButtons()
+                    }
+                }
+            }
+        }
+        fullRestore.setOnClickListener {
+            request?.cancel()
+            pending = true
+            parked.isChecked = false
+            updateButtons()
+            status.setText(R.string.native_adas_pending)
+            ProjectionAdasCoordinator.restore(activity) { ok ->
+                pending = false
+                if (!closed) {
+                    updateButtons()
+                    status.setText(if (ok) R.string.native_adas_restore_sent else R.string.native_adas_send_failed)
+                }
+            }
+        }
+        updateButtons()
         dialog.show()
     }
 
@@ -100,9 +157,11 @@ internal class NativeAdasWindowDialog(
     }
 
     private fun updateButtons() {
-        hide.isEnabled = !pending && parked.isChecked
-        restore.isEnabled = !pending
+        hide.isEnabled = !pending && !preferencePending && parked.isChecked
+        restore.isEnabled = !pending && !preferencePending
         parked.isEnabled = !pending
+        automatic.isEnabled = !pending && !preferencePending && (automatic.isChecked || parked.isChecked)
+        fullRestore.isEnabled = !pending && !preferencePending
     }
 
     override fun close() {

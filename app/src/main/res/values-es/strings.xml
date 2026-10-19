@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">Panel ADAS: ocultar / restaurar</string>
-    <string name="native_adas_warning">Oculta todo el panel ADAS del cuadro, incluidas sus alertas de distancia y de carril. Restaurar devuelve el control a las condiciones de visualización OEM; su efecto aún debe validarse en el vehículo. Las órdenes son solo manuales.</string>
+    <string name="native_adas_warning">Oculta todo el panel ADAS, incluidas las alertas de distancia y carril. El modo proyección repite las solicitudes durante la sesión. La restauración OEM aún debe validarse en el vehículo.</string>
     <string name="native_adas_hide">Ocultar todo el panel</string>
     <string name="native_adas_restore">Restaurar el panel OEM</string>
     <string name="native_adas_state_unknown">Se desconoce el estado visual del panel.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Restauración no disponible: no hay valor OEM guardado para este firmware.</string>
     <string name="native_adas_recovery_failed">Ocultación cancelada: no se pudo guardar el valor de recuperación.</string>
     <string name="native_adas_send_failed">Envío no confirmado. Comprueba el cuadro antes de reintentar.</string>
+    <string name="native_adas_projection_option">Ocultar el panel ADAS durante la proyección</string>
+    <string name="native_adas_projection_help">Tras confirmar la aplicación proyectada, aplica la secuencia completa, incluidas las alertas del panel. Desactivar solicita la restauración OEM. Comprueba la pantalla.</string>
+    <string name="native_adas_projection_restore">Restaurar con la secuencia completa</string>
+    <string name="native_adas_preference_failed">No se pudo guardar el ajuste. Se conserva el valor anterior.</string>
 </resources>

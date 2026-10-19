@@ -242,4 +242,7 @@ object ProxyDaemonContract {
      * Additive capability at protocol 26; bootstrap never uses ProxyShell or a PID file. */
     const val TXN_STORAGE_METADATA = IBinder.FIRST_CALL_TRANSACTION + 39 // 40
 
+    /** int property: 0 for typed power, or one of the two closed ADAS monitor IDs → int. */
+    const val TXN_ADAS_BODYWORK_READ = IBinder.FIRST_CALL_TRANSACTION + 40 // 41, protocol 27
+
 }

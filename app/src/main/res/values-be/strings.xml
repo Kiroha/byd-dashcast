@@ -692,7 +692,7 @@
 
     <!-- Manual native ADAS pane requests; never an observed visual state. -->
     <string name="settings_native_adas_panel">Панэль ADAS: схаваць / аднавіць</string>
-    <string name="native_adas_warning">Хавае ўсю панэль ADAS на шчытку прыбораў, у тым ліку папярэджанні пра дыстанцыю і паласу. Аднаўленне вяртае кіраванне штатным умовам адлюстравання; эфект яшчэ трэба праверыць на аўтамабілі. Каманды адпраўляюцца толькі ўручную.</string>
+    <string name="native_adas_warning">Хавае ўсю панэль ADAS, у тым ліку папярэджанні пра дыстанцыю і паласу. Рэжым праекцыі паўтарае запыты падчас сеанса. Аднаўленне OEM яшчэ патрабуе праверкі на аўтамабілі.</string>
     <string name="native_adas_hide">Схаваць усю панэль</string>
     <string name="native_adas_restore">Аднавіць штатную панэль</string>
     <string name="native_adas_state_unknown">Візуальны стан панэлі невядомы.</string>
@@ -704,4 +704,8 @@
     <string name="native_adas_recovery_missing">Аднаўленне недаступнае: для гэтай прашыўкі не захавана штатнае значэнне.</string>
     <string name="native_adas_recovery_failed">Схаванне скасавана: не ўдалося захаваць значэнне аднаўлення.</string>
     <string name="native_adas_send_failed">Адпраўка не пацверджана. Перад паўторам праверце шчыток прыбораў.</string>
+    <string name="native_adas_projection_option">Хаваць панэль ADAS падчас праекцыі</string>
+    <string name="native_adas_projection_help">Пасля пацверджання праграмы выконваецца поўная паслядоўнасць, уключаючы схаванне папярэджанняў панэлі. Выключэнне запытвае аднаўленне OEM. Праверце экран.</string>
+    <string name="native_adas_projection_restore">Аднавіць поўнай паслядоўнасцю</string>
+    <string name="native_adas_preference_failed">Не ўдалося захаваць наладу. Папярэдняе значэнне захавана.</string>
 </resources>

@@ -231,6 +231,11 @@ class FissionOrchestrator(
 
     /** Called on Activity.onDestroy() — shuts down executor and releases slots if finishing. */
     fun destroy(isFinishing: Boolean) {
+        if (isFinishing && (mSlots.isNotEmpty() || reusedProjectionSession != null)) {
+            com.byd.dashcast.cluster.ProjectionAdasCoordinator.stop(mAppCtx)
+            reusedProjectionSession?.let(com.byd.dashcast.cluster.display.ProjectionCommandBus::endSession)
+            reusedProjectionSession = null
+        }
         mDestroyed = true
         abandonClusterActivation()
         mMainHandler.removeCallbacksAndMessages(null)
@@ -313,8 +318,13 @@ class FissionOrchestrator(
      *                  path — keeps the previous behaviour byte for byte; the user-triggered path
      *                  passes one so the failure reaches the UI.
      */
+    private var reusedProjectionSession: com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session? = null
+
     private fun ensureClusterProjectionThen(next: Runnable, onFailure: Runnable?) {
         if (ClusterManager.isQtInProjectionMode()) {
+            if (com.byd.dashcast.cluster.display.ProjectionCommandBus.currentSession() == null) {
+                reusedProjectionSession = com.byd.dashcast.cluster.display.ProjectionCommandBus.beginSession()
+            }
             next.run()
             return
         }
@@ -397,6 +407,9 @@ class FissionOrchestrator(
     }
 
     private fun stopAll(purgeDaemonSlots: Boolean, onComplete: Runnable?) {
+        reusedProjectionSession?.let(com.byd.dashcast.cluster.display.ProjectionCommandBus::endSession)
+        reusedProjectionSession = null
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.stop(mAppCtx)
         abandonClusterActivation()
         post { mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)) }
         val accepted = submitQuietly("stopAll") {
@@ -504,6 +517,7 @@ class FissionOrchestrator(
     }
 
     fun releaseSlotAsync(pkg: String) {
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.stop(mAppCtx)
         submitQuietly("releaseSlotAsync $pkg") {
             // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
             val binder = mDaemonBinder
@@ -524,6 +538,10 @@ class FissionOrchestrator(
             mSelectedMirrorPackage = LayoutSlotSelection.resolve(
                     mSelectedMirrorPackage, orderedSlotPackages())
             mProjecting = mSlots.isNotEmpty()
+            if (!mProjecting) {
+                reusedProjectionSession?.let(com.byd.dashcast.cluster.display.ProjectionCommandBus::endSession)
+                reusedProjectionSession = null
+            }
             post { mCallbacks.onSlotsChanged(mSlots.values) }
         }
     }
@@ -551,6 +569,7 @@ class FissionOrchestrator(
     }
 
     fun switchToLayoutAsync(newLayout: LayoutPreset?) {
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.cancelForManualRecovery()
         submitQuietly("switchToLayoutAsync") {
             try {
                 switchActiveLayout(newLayout, null)
@@ -724,6 +743,7 @@ class FissionOrchestrator(
             mSelectedMirrorPackage = LayoutSlotSelection.resolve(
                     mSelectedMirrorPackage, orderedSlotPackages())
             mProjecting = true
+            com.byd.dashcast.cluster.ProjectionAdasCoordinator.targetRequested(mAppCtx, pkg, displayId)
 
             post {
                 mCallbacks.onSlotsChanged(mSlots.values)
@@ -737,6 +757,7 @@ class FissionOrchestrator(
 
     @Throws(Exception::class)
     private fun doSwitchToLayout(newLayout: LayoutPreset?, surfaceHolder: SurfaceHolder?) {
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.cancelForManualRecovery()
         val targetSlots = LinkedHashMap<String, LayoutPreset.SlotDef>()
         if (newLayout != null) {
             for (s in newLayout.slots) {

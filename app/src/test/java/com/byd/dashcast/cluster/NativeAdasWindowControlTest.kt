@@ -114,13 +114,14 @@ class NativeAdasWindowControlTest {
         assertFalse(logs.any { it.message.contains("private SDK details") })
     }
 
-    @Test fun `multiple activities share the same in flight guard`() {
+    @Test fun `restore from another activity preempts a queued hide`() {
+        saved = 1
         val results = mutableListOf<Result>()
-        control.request(Action.HIDE) { }
+        control.request(Action.HIDE) { fail("cancelled hide callback") }
         control.request(Action.RESTORE, results::add)
-        assertEquals(listOf(Result.BUSY), results)
-        assertTrue(dispatch.tasks.isEmpty())
-        probe.run()
+        dispatch.run(); probe.run()
+        assertEquals(listOf(Result.RESTORE_SENT), results)
+        assertFalse(events.contains("read"))
     }
 
     @Test fun `cancelling a queued request prevents every probe and physical write`() {
