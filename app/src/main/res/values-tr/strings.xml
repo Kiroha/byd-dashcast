@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Video alıcısı hazırlanıyor…</string>
     <string name="satellite_video_waiting">DashSat video paylaşımı bekleniyor…</string>
     <string name="satellite_video_unavailable">Video alıcısı başlatılamadı. Yeniden deneyin veya bu görünümü kapatın.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">ADAS paneli: gizle / geri yükle</string>
+    <string name="native_adas_warning">Gösterge panelindeki ADAS bölümünü, mesafe ve şerit uyarıları dahil tamamen gizler. Geri yükleme, denetimi OEM görüntüleme koşullarına döndürür; etkisi araçta henüz doğrulanmalıdır. Komutlar yalnızca elle gönderilir.</string>
+    <string name="native_adas_hide">Panelin tamamını gizle</string>
+    <string name="native_adas_restore">OEM panelini geri yükle</string>
+    <string name="native_adas_state_unknown">Panelin görsel durumu bilinmiyor.</string>
+    <string name="native_adas_pending">Komut işleniyor…</string>
+    <string name="native_adas_hide_sent">Gizleme isteği gönderildi. Göstergeyi kontrol edin: görsel sonuç bildirilmiyor.</string>
+    <string name="native_adas_restore_sent">Geri yükleme isteği gönderildi. Göstergeyi kontrol edin; tekrar deneyebilirsiniz.</string>
+    <string name="native_adas_unavailable">Bu cihazda komut veya sistem bağlantısı kullanılamıyor.</string>
+    <string name="native_adas_original_unknown">Gizleme reddedildi: özgün OEM durumu doğrulanamadı.</string>
+    <string name="native_adas_recovery_missing">Geri yükleme kullanılamıyor: bu donanım yazılımı için kayıtlı OEM değeri yok.</string>
+    <string name="native_adas_recovery_failed">Gizleme iptal edildi: geri yükleme değeri kaydedilemedi.</string>
+    <string name="native_adas_send_failed">Gönderim doğrulanmadı. Yeniden denemeden önce göstergeyi kontrol edin.</string>
 </resources>

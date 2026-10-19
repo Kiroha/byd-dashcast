@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Бейне қабылдағыш дайындалуда…</string>
     <string name="satellite_video_waiting">DashSat бейне бөлісуін күту…</string>
     <string name="satellite_video_unavailable">Бейне қабылдағыш іске қосылмады. Қайталап көріңіз немесе осы терезені жабыңыз.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">ADAS панелі: жасыру / қалпына келтіру</string>
+    <string name="native_adas_warning">Аспаптардағы ADAS панелін қашықтық пен жолақ ескертулерімен бірге толық жасырады. Қалпына келтіру басқаруды OEM көрсету шарттарына қайтарады; әсері көлікте әлі тексерілуі тиіс. Пәрмендер тек қолмен жіберіледі.</string>
+    <string name="native_adas_hide">Панельді толық жасыру</string>
+    <string name="native_adas_restore">OEM панелін қалпына келтіру</string>
+    <string name="native_adas_state_unknown">Панельдің көрінетін күйі белгісіз.</string>
+    <string name="native_adas_pending">Пәрмен орындалуда…</string>
+    <string name="native_adas_hide_sent">Жасыру сұрауы жіберілді. Аспаптарды тексеріңіз: көрініс нәтижесі қайтарылмайды.</string>
+    <string name="native_adas_restore_sent">Қалпына келтіру сұрауы жіберілді. Аспаптарды тексеріңіз; қайталауға болады.</string>
+    <string name="native_adas_unavailable">Бұл құрылғыда пәрмен немесе жүйелік байланыс қолжетімсіз.</string>
+    <string name="native_adas_original_unknown">Жасыру қабылданбады: бастапқы OEM күйі расталмады.</string>
+    <string name="native_adas_recovery_missing">Қалпына келтіру қолжетімсіз: осы микробағдарлама үшін OEM мәні сақталмаған.</string>
+    <string name="native_adas_recovery_failed">Жасыру тоқтатылды: қалпына келтіру мәнін сақтау мүмкін болмады.</string>
+    <string name="native_adas_send_failed">Жіберу расталмады. Қайталамас бұрын аспаптарды тексеріңіз.</string>
 </resources>

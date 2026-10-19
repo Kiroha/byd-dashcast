@@ -698,4 +698,19 @@
     <string name="satellite_video_loading">Przygotowywanie odbiornika wideo…</string>
     <string name="satellite_video_waiting">Oczekiwanie na transmisję wideo z DashSat…</string>
     <string name="satellite_video_unavailable">Nie udało się uruchomić odbiornika wideo. Spróbuj ponownie lub zamknij ten widok.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Panel ADAS: ukryj / przywróć</string>
+    <string name="native_adas_warning">Ukrywa cały panel ADAS zestawu wskaźników, w tym ostrzeżenia o odległości i pasie ruchu. Przywrócenie oddaje sterowanie warunkom wyświetlania OEM; efekt wymaga jeszcze sprawdzenia w samochodzie. Polecenia są wyłącznie ręczne.</string>
+    <string name="native_adas_hide">Ukryj cały panel</string>
+    <string name="native_adas_restore">Przywróć panel OEM</string>
+    <string name="native_adas_state_unknown">Stan wizualny panelu jest nieznany.</string>
+    <string name="native_adas_pending">Wysyłanie polecenia…</string>
+    <string name="native_adas_hide_sent">Wysłano żądanie ukrycia. Sprawdź zestaw wskaźników: brak potwierdzenia wizualnego.</string>
+    <string name="native_adas_restore_sent">Wysłano żądanie przywrócenia. Sprawdź zestaw wskaźników; możesz ponowić próbę.</string>
+    <string name="native_adas_unavailable">Polecenie niedostępne na tym urządzeniu lub brak połączenia systemowego.</string>
+    <string name="native_adas_original_unknown">Odmowa ukrycia: nie potwierdzono pierwotnego stanu OEM.</string>
+    <string name="native_adas_recovery_missing">Przywrócenie niedostępne: brak zapisanej wartości OEM dla tego oprogramowania.</string>
+    <string name="native_adas_recovery_failed">Ukrywanie anulowane: nie udało się zapisać wartości przywracania.</string>
+    <string name="native_adas_send_failed">Wysłanie niepotwierdzone. Sprawdź zestaw wskaźników przed ponowieniem.</string>
 </resources>

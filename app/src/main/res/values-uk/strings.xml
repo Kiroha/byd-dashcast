@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Підготовка приймача відео…</string>
     <string name="satellite_video_waiting">Очікування трансляції відео з DashSat…</string>
     <string name="satellite_video_unavailable">Не вдалося запустити приймач відео. Спробуйте ще раз або закрийте перегляд.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Панель ADAS: приховати / відновити</string>
+    <string name="native_adas_warning">Приховує всю панель ADAS на щитку приладів, зокрема попередження про дистанцію та смугу. Відновлення повертає керування штатним умовам відображення; ефект ще потрібно перевірити на автомобілі. Команди надсилаються лише вручну.</string>
+    <string name="native_adas_hide">Приховати всю панель</string>
+    <string name="native_adas_restore">Відновити штатну панель</string>
+    <string name="native_adas_state_unknown">Візуальний стан панелі невідомий.</string>
+    <string name="native_adas_pending">Виконується команда…</string>
+    <string name="native_adas_hide_sent">Запит приховування надіслано. Перевірте щиток приладів: візуального підтвердження немає.</string>
+    <string name="native_adas_restore_sent">Запит відновлення надіслано. Перевірте щиток приладів; можна повторити спробу.</string>
+    <string name="native_adas_unavailable">Команда недоступна на цьому пристрої або немає системного з’єднання.</string>
+    <string name="native_adas_original_unknown">Приховування відхилено: початковий штатний стан не підтверджено.</string>
+    <string name="native_adas_recovery_missing">Відновлення недоступне: для цієї прошивки не збережено штатне значення.</string>
+    <string name="native_adas_recovery_failed">Приховування скасовано: не вдалося зберегти значення відновлення.</string>
+    <string name="native_adas_send_failed">Надсилання не підтверджено. Перед повтором перевірте щиток приладів.</string>
 </resources>

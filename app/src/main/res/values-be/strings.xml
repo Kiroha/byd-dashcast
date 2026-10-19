@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Падрыхтоўка прыёмніка відэа…</string>
     <string name="satellite_video_waiting">Чаканне трансляцыі відэа з DashSat…</string>
     <string name="satellite_video_unavailable">Не ўдалося запусціць прыёмнік відэа. Паўтарыце спробу або закрыйце прагляд.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">Панэль ADAS: схаваць / аднавіць</string>
+    <string name="native_adas_warning">Хавае ўсю панэль ADAS на шчытку прыбораў, у тым ліку папярэджанні пра дыстанцыю і паласу. Аднаўленне вяртае кіраванне штатным умовам адлюстравання; эфект яшчэ трэба праверыць на аўтамабілі. Каманды адпраўляюцца толькі ўручную.</string>
+    <string name="native_adas_hide">Схаваць усю панэль</string>
+    <string name="native_adas_restore">Аднавіць штатную панэль</string>
+    <string name="native_adas_state_unknown">Візуальны стан панэлі невядомы.</string>
+    <string name="native_adas_pending">Выконваецца каманда…</string>
+    <string name="native_adas_hide_sent">Запыт схавання адпраўлены. Праверце шчыток прыбораў: візуальнага пацвярджэння няма.</string>
+    <string name="native_adas_restore_sent">Запыт аднаўлення адпраўлены. Праверце шчыток прыбораў; можна паўтарыць спробу.</string>
+    <string name="native_adas_unavailable">Каманда недаступная на гэтай прыладзе або няма сістэмнага злучэння.</string>
+    <string name="native_adas_original_unknown">Схаванне адхілена: пачатковы штатны стан не пацверджаны.</string>
+    <string name="native_adas_recovery_missing">Аднаўленне недаступнае: для гэтай прашыўкі не захавана штатнае значэнне.</string>
+    <string name="native_adas_recovery_failed">Схаванне скасавана: не ўдалося захаваць значэнне аднаўлення.</string>
+    <string name="native_adas_send_failed">Адпраўка не пацверджана. Перад паўторам праверце шчыток прыбораў.</string>
 </resources>

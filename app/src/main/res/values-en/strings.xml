@@ -705,4 +705,19 @@
     <string name="satellite_video_loading">Preparing video receiver…</string>
     <string name="satellite_video_waiting">Waiting for video sharing from DashSat…</string>
     <string name="satellite_video_unavailable">The video receiver could not start. Try again or close this viewer.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">ADAS pane: hide / restore</string>
+    <string name="native_adas_warning">Hides the entire cluster ADAS pane, including its distance and lane warnings. Restore returns control to the OEM display conditions; its effect still needs validation on the vehicle. Commands are manual only.</string>
+    <string name="native_adas_hide">Hide the entire pane</string>
+    <string name="native_adas_restore">Restore the OEM pane</string>
+    <string name="native_adas_state_unknown">The pane’s visual state is unknown.</string>
+    <string name="native_adas_pending">Command in progress…</string>
+    <string name="native_adas_hide_sent">Hide request sent. Check the cluster: no visual result is returned.</string>
+    <string name="native_adas_restore_sent">Restore request sent. Check the cluster; you can retry.</string>
+    <string name="native_adas_unavailable">Command unavailable on this device or system connection unavailable.</string>
+    <string name="native_adas_original_unknown">Hide refused: the original OEM state could not be confirmed.</string>
+    <string name="native_adas_recovery_missing">Restore unavailable: no OEM value saved for this firmware.</string>
+    <string name="native_adas_recovery_failed">Hide cancelled: the recovery value could not be saved.</string>
+    <string name="native_adas_send_failed">Delivery not confirmed. Check the cluster before retrying.</string>
 </resources>

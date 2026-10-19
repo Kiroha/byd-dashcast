@@ -714,6 +714,14 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
+                        <Button
+                            android:id="@+id/btn_native_adas_panel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="16dp"
+                            android:minHeight="64dp"
+                            android:text="@string/settings_native_adas_panel"/>
+
                         <!-- v1.2.42 — Carte SIM personnelle : conditionne le bouton Hotspot du navrail -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">

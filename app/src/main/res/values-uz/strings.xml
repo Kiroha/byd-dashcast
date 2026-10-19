@@ -689,4 +689,19 @@
     <string name="satellite_video_loading">Video qabul qilgich tayyorlanmoqda…</string>
     <string name="satellite_video_waiting">DashSat video ulashishi kutilmoqda…</string>
     <string name="satellite_video_unavailable">Video qabul qilgich ishga tushmadi. Qayta urinib ko‘ring yoki ushbu oynani yoping.</string>
+
+    <!-- Manual native ADAS pane requests; never an observed visual state. -->
+    <string name="settings_native_adas_panel">ADAS paneli: yashirish / tiklash</string>
+    <string name="native_adas_warning">Asboblar panelidagi butun ADAS qismini, masofa va qator ogohlantirishlari bilan birga yashiradi. Tiklash boshqaruvni OEM ko‘rsatish shartlariga qaytaradi; ta’siri hali avtomobilda tekshirilishi kerak. Buyruqlar faqat qo‘lda yuboriladi.</string>
+    <string name="native_adas_hide">Butun panelni yashirish</string>
+    <string name="native_adas_restore">OEM panelini tiklash</string>
+    <string name="native_adas_state_unknown">Panelning ko‘rinish holati noma’lum.</string>
+    <string name="native_adas_pending">Buyruq bajarilmoqda…</string>
+    <string name="native_adas_hide_sent">Yashirish so‘rovi yuborildi. Asboblar panelini tekshiring: vizual natija qaytarilmaydi.</string>
+    <string name="native_adas_restore_sent">Tiklash so‘rovi yuborildi. Asboblar panelini tekshiring; qayta urinishingiz mumkin.</string>
+    <string name="native_adas_unavailable">Bu qurilmada buyruq yoki tizim ulanishi mavjud emas.</string>
+    <string name="native_adas_original_unknown">Yashirish rad etildi: dastlabki OEM holati tasdiqlanmadi.</string>
+    <string name="native_adas_recovery_missing">Tiklash mavjud emas: bu proshivka uchun OEM qiymati saqlanmagan.</string>
+    <string name="native_adas_recovery_failed">Yashirish bekor qilindi: tiklash qiymatini saqlab bo‘lmadi.</string>
+    <string name="native_adas_send_failed">Yuborish tasdiqlanmadi. Qayta urinishdan oldin asboblar panelini tekshiring.</string>
 </resources>
