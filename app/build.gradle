@@ -2065,8 +2065,11 @@ android {
         // 687 = 1.9.48-beta: accept optional null JNI decode metadata without closing satellite video.
         // 688 = 1.9.49-beta: manual native ADAS pane hide/restore with durable recovery;
         // full-pane visual warnings are hidden too, and vehicle validation remains pending.
-        versionCode 688
-        versionName "1.9.49-beta"
+        // 689 = 1.9.50-beta: projection-coupled Electro ADAS masking/recovery and typed OEM reads;
+        // opt-in defaults off, exact SX361 firmware only, and parked vehicle validation is pending.
+        // The version bump also replaces older persistent daemons with protocol 27 on normal startup.
+        versionCode 689
+        versionName "1.9.50-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
