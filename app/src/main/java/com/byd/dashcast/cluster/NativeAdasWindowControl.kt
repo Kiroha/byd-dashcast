@@ -78,7 +78,11 @@ internal class NativeAdasWindowControl(
         if (!device.available()) return Result.UNAVAILABLE
         if (action == Action.HIDE) {
             // 0, 2 and SDK sentinel/error values are not verified original display inputs.
-            if (device.originalValue() != 1) return Result.ORIGINAL_UNKNOWN
+            val original = try { device.originalValue() } catch (e: Exception) {
+                AppLogger.w("NativeAdasWindow", "stage=original_read exception=${e.javaClass.simpleName}")
+                return Result.SEND_FAILED
+            }
+            if (original != 1) return Result.ORIGINAL_UNKNOWN
             if (request.cancelled()) return Result.CANCELLED
             if (!recovery.saveOriginal()) return Result.RECOVERY_FAILED
         } else if (recovery.value() != 1) {

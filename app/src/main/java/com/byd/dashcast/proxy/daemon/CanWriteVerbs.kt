@@ -172,8 +172,8 @@ object CanWriteVerbs {
     @Volatile private var sDoubleField: Field? = null     // BYDAutoEventValue.doubleValue (or floatValue)
     @Volatile private var sSetMethod: Method? = null      // InstrumentDevice.set(int[], BYDAutoEventValue)
     @Volatile private var sSettingSetMethod: Method? = null // SettingDevice.set(int[], BYDAutoEventValue)
-    @Volatile private var sGetMethod: Method? = null      // InstrumentDevice.get(int[])
-    @Volatile private var sSettingGetMethod: Method? = null // SettingDevice.get(int[])
+    @Volatile private var sGetMethod: Method? = null      // InstrumentDevice.get(int[]) or get(int[], Class)
+    @Volatile private var sSettingGetMethod: Method? = null // SettingDevice.get(int[]) or get(int[], Class)
 
     /** (featureId,rc) → last time we logged it, so a rejected per-frame write logs ~every 30 s. */
     private val sRejectLog = ConcurrentHashMap<Long, Long>()
@@ -291,7 +291,7 @@ object CanWriteVerbs {
 
     /**
      * Read an integer value from a CAN *instrument* feature via
-     * `BYDAutoInstrumentDevice.get(int[])` → `BYDAutoEventValue.intValue`.
+     * the runtime SDK's `get(int[])` or `get(int[], int.class)` → `BYDAutoEventValue.intValue`.
      *
      * Runs inside the daemon (uid 2000) with the permission-bypass context, exactly like
      * [setInt]. In-app reads (uid of the app) throw an `InvocationTargetException` — only the
@@ -303,13 +303,13 @@ object CanWriteVerbs {
     @Throws(Throwable::class)
     fun getInt(wrappedCtx: Context, featureId: Int): Int {
         ensureDevice(wrappedCtx)
-        val res = ensureGetMethod().invoke(sDevice, intArrayOf(featureId))
+        val res = invokeIntGet(ensureGetMethod(), sDevice, featureId)
         return readIntFromResult(res)
     }
 
     /**
      * Read an integer value from a CAN *setting* feature via
-     * `BYDAutoSettingDevice.get(int[])` → `BYDAutoEventValue.intValue`.
+     * the runtime SDK's `get(int[])` or `get(int[], int.class)` → `BYDAutoEventValue.intValue`.
      * Use this to read e.g. [SET_HUD_MODE_FEEDBACK] while the OEM nav drives the HUD.
      *
      * @return the feature's current integer value
@@ -318,20 +318,24 @@ object CanWriteVerbs {
     @Throws(Throwable::class)
     fun settingGetInt(wrappedCtx: Context, featureId: Int): Int {
         ensureSettingDevice(wrappedCtx)
-        val res = ensureSettingGetMethod().invoke(sSettingDevice, intArrayOf(featureId))
+        val res = invokeIntGet(ensureSettingGetMethod(), sSettingDevice, featureId)
         return readIntFromResult(res)
     }
 
-    /** Extracts `intValue` from a `get(int[])` result (an array or a single event). */
+    private fun invokeIntGet(method: Method, device: Any?, featureId: Int): Any? =
+        if (method.parameterTypes.size == 1) method.invoke(device, intArrayOf(featureId))
+        else method.invoke(device, intArrayOf(featureId), Int::class.javaPrimitiveType)
+
+    /** Extracts `intValue` from an SDK getter result (an array or a single event). */
     @Throws(Throwable::class)
     private fun readIntFromResult(res: Any?): Int {
         var ev: Any? = res
         if (res != null && res.javaClass.isArray) {
             val len = ReflectArray.getLength(res)
-            if (len == 0) throw IllegalStateException("get(int[]) returned an empty array")
+            if (len == 0) throw IllegalStateException("SDK getter returned an empty array")
             ev = ReflectArray.get(res, 0)
         }
-        if (ev == null) throw IllegalStateException("get(int[]) returned a null value")
+        if (ev == null) throw IllegalStateException("SDK getter returned a null value")
         return ensureIntField().getInt(ev)
     }
 
@@ -454,18 +458,15 @@ object CanWriteVerbs {
         }
     }
 
-    /** Finds a `get(int[])` method anywhere in the runtime class hierarchy. */
+    /** Preserve the legacy getter when present; DiLink 3 also exposes an inherited typed getter. */
     @Throws(NoSuchMethodException::class)
-    private fun findGet(cls: Class<*>): Method {
-        for (cand in cls.methods) {
-            if ("get" != cand.name) continue
-            val pt = cand.parameterTypes
-            if (pt.size == 1 && pt[0] == IntArray::class.java) {
-                return cand
-            }
+    private fun findGet(cls: Class<*>): Method =
+        try {
+            cls.getMethod("get", IntArray::class.java)
+        } catch (_: NoSuchMethodException) {
+            // The SDK compares against primitive int.class; boxed Integer.class returns an error.
+            cls.getMethod("get", IntArray::class.java, Class::class.java)
         }
-        throw NoSuchMethodException("no get(int[]) on " + cls.name)
-    }
 
     @Throws(Throwable::class)
     private fun ensureSettingDevice(ctx: Context) {
