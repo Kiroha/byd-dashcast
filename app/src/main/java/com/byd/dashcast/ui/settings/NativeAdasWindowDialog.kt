@@ -23,8 +23,10 @@ internal class NativeAdasWindowDialog(
 ) : Closeable {
     private val handler = Handler(Looper.getMainLooper())
     private var request: NativeAdasWindowControl.Request? = null
+    private var projectionRequest: Closeable? = null
     private var closed = false
     private var pending = false
+    private var pendingHide = false
     private var preferencePending = false
     private var changingPreference = false
     private var generation = 0
@@ -72,7 +74,7 @@ internal class NativeAdasWindowDialog(
         .setNegativeButton(R.string.resize_btn_close, null)
         .create()
     private val deadline = Runnable {
-        request?.cancel()
+        cancelRequest()
         generation++
         pending = false
         status.setText(R.string.native_adas_send_failed)
@@ -112,12 +114,15 @@ internal class NativeAdasWindowDialog(
             }
         }
         fullRestore.setOnClickListener {
-            request?.cancel()
+            cancelRequest()
+            val current = ++generation
             pending = true
+            pendingHide = false
             parked.isChecked = false
             updateButtons()
             status.setText(R.string.native_adas_pending)
             ProjectionAdasCoordinator.restore(activity) { ok ->
+                if (closed || generation != current) return@restore
                 pending = false
                 if (!closed) {
                     updateButtons()
@@ -130,14 +135,16 @@ internal class NativeAdasWindowDialog(
     }
 
     private fun send(action: NativeAdasWindowControl.Action) {
-        if (closed || pending) return
+        if (closed || (pending && action == NativeAdasWindowControl.Action.HIDE)) return
+        cancelRequest()
         pending = true
+        pendingHide = action == NativeAdasWindowControl.Action.HIDE
         val current = ++generation
         parked.isChecked = false
         status.setText(R.string.native_adas_pending)
         updateButtons()
         handler.postDelayed(deadline, 15_000)
-        request = control.request(action) { result -> handler.post {
+        val complete: (NativeAdasWindowControl.Result) -> Unit = { result -> handler.post {
             if (closed || !pending || generation != current) return@post
             handler.removeCallbacks(deadline)
             pending = false
@@ -154,20 +161,31 @@ internal class NativeAdasWindowDialog(
             parked.isChecked = false
             updateButtons()
         } }
+        if (pendingHide && ClusterPrefs.isProjectionAdasEnabled(activity)) {
+            projectionRequest = ProjectionAdasCoordinator.requestHide(activity, complete)
+        } else request = control.request(action, complete)
+    }
+
+    private fun cancelRequest() {
+        request?.cancel()
+        request = null
+        projectionRequest?.close()
+        projectionRequest = null
+        handler.removeCallbacks(deadline)
     }
 
     private fun updateButtons() {
         hide.isEnabled = !pending && !preferencePending && parked.isChecked
-        restore.isEnabled = !pending && !preferencePending
+        restore.isEnabled = (!pending || pendingHide) && !preferencePending
         parked.isEnabled = !pending
         automatic.isEnabled = !pending && !preferencePending && (automatic.isChecked || parked.isChecked)
-        fullRestore.isEnabled = !pending && !preferencePending
+        fullRestore.isEnabled = (!pending || pendingHide) && !preferencePending
     }
 
     override fun close() {
         if (closed) return
         closed = true
-        request?.cancel()
+        cancelRequest()
         handler.removeCallbacksAndMessages(null)
         if (dialog.isShowing) dialog.dismiss()
     }

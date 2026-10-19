@@ -231,8 +231,11 @@ class FissionOrchestrator(
 
     /** Called on Activity.onDestroy() — shuts down executor and releases slots if finishing. */
     fun destroy(isFinishing: Boolean) {
+        val completeAdasStop = if (isFinishing) projectionAdasSession?.let {
+            com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mAppCtx, it)
+        } ?: Runnable {} else Runnable {}
+        if (isFinishing) projectionAdasSession = null
         if (isFinishing && (mSlots.isNotEmpty() || reusedProjectionSession != null)) {
-            com.byd.dashcast.cluster.ProjectionAdasCoordinator.stop(mAppCtx)
             reusedProjectionSession?.let(com.byd.dashcast.cluster.display.ProjectionCommandBus::endSession)
             reusedProjectionSession = null
         }
@@ -242,30 +245,33 @@ class FissionOrchestrator(
         if (isFinishing && mSlots.isNotEmpty()) {
             val binder = mDaemonBinder
             val pkgs = ArrayList(mSlots.keys)
-            submitQuietly("destroy teardown") {
-                val keepVds = ClusterPrefs.isFissionPrecreateSlots(mAppCtx)
-                for (pkg in pkgs) {
-                    // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
-                    if (binder != null) FissionClient.moveToDisplay0(binder, pkg)
-                    if (!keepVds) {
-                        if (binder != null) {
-                            try {
-                                FissionClient.releaseSlot(binder, pkg)
-                                FissionReleaseDebt.settled(pkg)
-                            } catch (error: Throwable) {
+            val accepted = submitQuietly("destroy teardown") {
+                try {
+                    val keepVds = ClusterPrefs.isFissionPrecreateSlots(mAppCtx)
+                    for (pkg in pkgs) {
+                        // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
+                        if (binder != null) FissionClient.moveToDisplay0(binder, pkg)
+                        if (!keepVds) {
+                            if (binder != null) {
+                                try {
+                                    FissionClient.releaseSlot(binder, pkg)
+                                    FissionReleaseDebt.settled(pkg)
+                                } catch (error: Throwable) {
+                                    FissionReleaseDebt.record(pkg)
+                                }
+                            } else {
                                 FissionReleaseDebt.record(pkg)
                             }
-                        } else {
-                            FissionReleaseDebt.record(pkg)
                         }
+                        ShellGateway.execShell(mAppCtx, "am force-stop $pkg")
                     }
-                    ShellGateway.execShell(mAppCtx, "am force-stop $pkg")
-                }
-                if (binder != null) {
-                    try { FissionClient.stopMirror(binder) } catch (ignored: Throwable) {}
-                }
+                    if (binder != null) {
+                        try { FissionClient.stopMirror(binder) } catch (ignored: Throwable) {}
+                    }
+                } finally { completeAdasStop.run() }
             }
-        }
+            if (!accepted) completeAdasStop.run()
+        } else completeAdasStop.run()
         mExec.shutdown()
     }
 
@@ -319,6 +325,7 @@ class FissionOrchestrator(
      *                  passes one so the failure reaches the UI.
      */
     private var reusedProjectionSession: com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session? = null
+    @Volatile private var projectionAdasSession: com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session? = null
 
     private fun ensureClusterProjectionThen(next: Runnable, onFailure: Runnable?) {
         if (ClusterManager.isQtInProjectionMode()) {
@@ -407,79 +414,85 @@ class FissionOrchestrator(
     }
 
     private fun stopAll(purgeDaemonSlots: Boolean, onComplete: Runnable?) {
+        val completeAdasStop = projectionAdasSession?.let {
+            com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mAppCtx, it)
+        } ?: Runnable {}
+        projectionAdasSession = null
         reusedProjectionSession?.let(com.byd.dashcast.cluster.display.ProjectionCommandBus::endSession)
         reusedProjectionSession = null
-        com.byd.dashcast.cluster.ProjectionAdasCoordinator.stop(mAppCtx)
         abandonClusterActivation()
         post { mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)) }
         val accepted = submitQuietly("stopAll") {
-            // Free zones hold no app and are not in mSlots, so the teardown plan below never
-            // sees them — release them first or a stop leaves an orphaned overlay on the
-            // cluster. No-op unless a manual activation created some.
-            releaseFreeZones()
-            val packages = ArrayList(mSlots.keys)
-            if (!purgeDaemonSlots && !mProjecting && packages.isEmpty()) {
+            try {
+                // Free zones hold no app and are not in mSlots, so the teardown plan below never
+                // sees them — release them first or a stop leaves an orphaned overlay on the
+                // cluster. No-op unless a manual activation created some.
+                releaseFreeZones()
+                val packages = ArrayList(mSlots.keys)
+                if (!purgeDaemonSlots && !mProjecting && packages.isEmpty()) {
+                    mMainHandler.post {
+                        mCallbacks.onStatusMessage(null)
+                        if (onComplete != null) onComplete.run()
+                    }
+                    return@submitQuietly
+                }
+                mProjecting = false
+                mMirrorReady = false
+                // When "Pre-create slots on startup" is on, keep VDs alive so they persist
+                // for the next session — only kill apps and move them back to display 0.
+                val keepVds = ClusterPrefs.isFissionPrecreateSlots(mAppCtx)
+                val binder = mDaemonBinder
+                val unreleased = FissionTeardownPlan.run(
+                        packages, keepVds, object : FissionTeardownPlan.Operations {
+                    override fun moveToDisplay0(packageName: String): String? {
+                        if (binder == null) throw IllegalStateException("mirror daemon unavailable")
+                        val result = FissionClient.moveToDisplay0(binder, packageName)
+                        if (result == null || (!result.startsWith("OK ") &&
+                                        !result.startsWith("SKIP ") &&
+                                        !result.startsWith("no task for "))) {
+                            throw IllegalStateException(result ?: "empty move result")
+                        }
+                        AppLogger.i(TAG, "Layout teardown move verified pkg=$packageName → $result")
+                        return result
+                    }
+
+                    override fun forceStopAndWait(packageName: String): Boolean = forceStopAndWaitForResult(packageName)
+
+                    override fun releaseSlot(packageName: String) {
+                        if (binder == null) throw IllegalStateException("mirror daemon unavailable")
+                        FissionClient.releaseSlot(binder, packageName)
+                        FissionReleaseDebt.settled(packageName)
+                    }
+
+                    override fun onStepError(packageName: String, step: String, error: Throwable) {
+                        AppLogger.e(TAG, "Layout teardown $step failed for $packageName: " + error.message)
+                    }
+                })
+                FissionReleaseDebt.recordAll(unreleased)
+                mSlots.clear()
+                mSelectedMirrorPackage = null
+                if (purgeDaemonSlots && binder != null) {
+                    try {
+                        FissionClient.deactivateLayout(binder)
+                        FissionReleaseDebt.clearAll()
+                    } catch (error: Exception) {
+                        AppLogger.e(TAG, "global slot purge failed: " + error.message)
+                    }
+                }
+                if (binder != null) {
+                    try { FissionClient.stopMirror(binder) } catch (ignored: Throwable) {}
+                }
+                mDaemonBinder = null
+                mFirstDisplayId = -1
                 mMainHandler.post {
+                    mCallbacks.onSlotsChanged(mSlots.values)
+                    mCallbacks.onDaemonBinderAcquired(null)
                     mCallbacks.onStatusMessage(null)
                     if (onComplete != null) onComplete.run()
                 }
-                return@submitQuietly
-            }
-            mProjecting = false
-            mMirrorReady = false
-            // When "Pre-create slots on startup" is on, keep VDs alive so they persist
-            // for the next session — only kill apps and move them back to display 0.
-            val keepVds = ClusterPrefs.isFissionPrecreateSlots(mAppCtx)
-            val binder = mDaemonBinder
-            val unreleased = FissionTeardownPlan.run(
-                    packages, keepVds, object : FissionTeardownPlan.Operations {
-                override fun moveToDisplay0(packageName: String): String? {
-                    if (binder == null) throw IllegalStateException("mirror daemon unavailable")
-                    val result = FissionClient.moveToDisplay0(binder, packageName)
-                    if (result == null || (!result.startsWith("OK ") &&
-                                    !result.startsWith("SKIP ") &&
-                                    !result.startsWith("no task for "))) {
-                        throw IllegalStateException(result ?: "empty move result")
-                    }
-                    AppLogger.i(TAG, "Layout teardown move verified pkg=$packageName → $result")
-                    return result
-                }
-
-                override fun forceStopAndWait(packageName: String): Boolean = forceStopAndWaitForResult(packageName)
-
-                override fun releaseSlot(packageName: String) {
-                    if (binder == null) throw IllegalStateException("mirror daemon unavailable")
-                    FissionClient.releaseSlot(binder, packageName)
-                    FissionReleaseDebt.settled(packageName)
-                }
-
-                override fun onStepError(packageName: String, step: String, error: Throwable) {
-                    AppLogger.e(TAG, "Layout teardown $step failed for $packageName: " + error.message)
-                }
-            })
-            FissionReleaseDebt.recordAll(unreleased)
-            mSlots.clear()
-            mSelectedMirrorPackage = null
-            if (purgeDaemonSlots && binder != null) {
-                try {
-                    FissionClient.deactivateLayout(binder)
-                    FissionReleaseDebt.clearAll()
-                } catch (error: Exception) {
-                    AppLogger.e(TAG, "global slot purge failed: " + error.message)
-                }
-            }
-            if (binder != null) {
-                try { FissionClient.stopMirror(binder) } catch (ignored: Throwable) {}
-            }
-            mDaemonBinder = null
-            mFirstDisplayId = -1
-            mMainHandler.post {
-                mCallbacks.onSlotsChanged(mSlots.values)
-                mCallbacks.onDaemonBinderAcquired(null)
-                mCallbacks.onStatusMessage(null)
-                if (onComplete != null) onComplete.run()
-            }
+            } finally { completeAdasStop.run() }
         }
+        if (!accepted) completeAdasStop.run()
         if (!accepted && onComplete != null) {
             // The executor was already shut down, so nothing above will ever run — but the caller
             // is waiting on this continuation (stopAutoOrchestrator hands it its completion).
@@ -743,6 +756,7 @@ class FissionOrchestrator(
             mSelectedMirrorPackage = LayoutSlotSelection.resolve(
                     mSelectedMirrorPackage, orderedSlotPackages())
             mProjecting = true
+            projectionAdasSession = com.byd.dashcast.cluster.display.ProjectionCommandBus.currentSession()
             com.byd.dashcast.cluster.ProjectionAdasCoordinator.targetRequested(mAppCtx, pkg, displayId)
 
             post {

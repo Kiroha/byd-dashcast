@@ -146,7 +146,7 @@ internal object ProjectionCommandBus {
         sequencer.currentSession()
 
     fun beginSession(): ProjectionCommandSequencer.Session {
-        com.byd.dashcast.cluster.ProjectionAdasCoordinator.cancelForManualRecovery()
+        com.byd.dashcast.cluster.ProjectionAdasCoordinator.projectionReplaced()
         return sequencer.beginSession()
     }
 

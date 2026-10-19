@@ -303,7 +303,6 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     override fun onDestroy() {
-        ProjectionAdasCoordinator.stop(this)
         mOperationGate.invalidate()
         mDestroyed = true
         try {
@@ -328,7 +327,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
             mMirrorManager!!.release()
             if (mProjectionActive) {
                 mDisplayHelper.stop()
-            }
+            } else ProjectionAdasCoordinator.stop(this)
             // Same reason as stopProjectionNoAdb: the registry is process-wide and outlives this
             // service, so a geometry left behind here would be picked up by the next mirror attempt
             // even though no projection is running. No-op on DL3/DL5.
@@ -1423,7 +1422,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     fun stopProjectionNoAdb() {
-        ProjectionAdasCoordinator.stop(this)
+        val completeAdasStop = ProjectionAdasCoordinator.prepareStop(this)
         AppLogger.log(TAG, "stopProjectionNoAdb requested")
         // v1.8.2 — was hardcoded "-d 1". The fission VirtualDisplay is display 1 on most DiLink 3
         // units but not all (INC-20260721 saw it come up as display 3), and resetting the wrong
@@ -1460,6 +1459,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
         val nm = getSystemService(NOTIFICATION_SERVICE) as? NotificationManager
         nm?.cancel(NOTIF_ID)
         stopSelf()
+        completeAdasStop.run()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
