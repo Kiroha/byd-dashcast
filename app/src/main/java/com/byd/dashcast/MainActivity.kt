@@ -61,6 +61,7 @@ import com.byd.dashcast.ui.main.AppsPanelLayoutPolicy
 import com.byd.dashcast.ui.main.ClusterControlCoordinator
 import com.byd.dashcast.ui.main.DisplayStatePollCoordinator
 import com.byd.dashcast.ui.main.DashboardSelectionTracker
+import com.byd.dashcast.ui.main.DashboardResumeCoordinator
 import com.byd.dashcast.ui.main.FissionCoordinator
 import com.byd.dashcast.ui.main.FullscreenMirrorCoordinator
 import com.byd.dashcast.ui.main.InsetAutoApplicator
@@ -226,7 +227,7 @@ class MainActivity : AppCompatActivity(),
         if (mPendingAutoLaunchPkg == null && !bootAutoStartEnabled) {
             val prevSession = ClusterPrefs.getSessionClusterPkgs(this)
             if (prevSession.isNotEmpty()) {
-            sessionResumePending = true
+                sessionResumePending = true
                 val lastPkg = ClusterPrefs.getLastClusterPkg(this)
                 mPendingAutoLaunchPkg = if (lastPkg != null && prevSession.contains(lastPkg))
                     lastPkg
@@ -502,6 +503,7 @@ class MainActivity : AppCompatActivity(),
 
     private fun quickSwitchToApp(pkgName: String) {
         if (mClusterService == null) return
+        mClusterService?.cancelPendingLaunchRecovery()
         if (pkgName == mCurrentDashboardPkg) {
             startClusterMirror()
             return
@@ -737,34 +739,7 @@ class MainActivity : AppCompatActivity(),
             if (pending != null) {
                 mPendingAppAfterActivation = null
                 AppLogger.i(TAG, "Auto-sending pending app after activation: " + pending.packageName)
-                // v1.3.8-beta — if the cached pkg matches a restored app, pre-check pidof and force a
-                // fresh launch if the process is dead (avoids mirroring an empty cluster display).
-                if (pending.packageName == mCurrentDashboardPkg) {
-                    val checkPkg = pending.packageName
-                    ShellGateway.execShellWithResult(this, "pidof $checkPkg", object : AdbLocalClient.Callback {
-                        override fun onSuccess(out: String?) {
-                            val alive = out != null && out.trim().isNotEmpty()
-                            runOnUiThread {
-                                if (isFinishing || isDestroyed) return@runOnUiThread
-                                if (!alive) {
-                                    AppLogger.w(TAG, "auto-restore: $checkPkg process is dead → clearing cluster state for fresh launch")
-                                    clearClusterState()
-                                }
-                                onSendToDashboard(pending)
-                            }
-                        }
-
-                        override fun onError(err: String?) {
-                            AppLogger.w(TAG, "auto-restore: pidof failed ($err) — proceeding with mirror shortcut")
-                            runOnUiThread {
-                                if (isFinishing || isDestroyed) return@runOnUiThread
-                                onSendToDashboard(pending)
-                            }
-                        }
-                    })
-                } else {
-                    onSendToDashboard(pending)
-                }
+                onSendToDashboard(pending)
             }
 
             // Auto-Launch process. Only runs if the app list is already loaded; if the
@@ -846,9 +821,10 @@ class MainActivity : AppCompatActivity(),
             selectLayoutMirror(app.packageName)
             return
         }
+        mClusterService?.cancelPendingLaunchRecovery()
         val selection = mDashboardSelectionTracker.begin(app.packageName)
         if (selection.isDuplicatePending) {
-            AppLogger.d(TAG, "onSendToDashboard: boot adoption already pending for " + app.packageName)
+            AppLogger.d(TAG, "onSendToDashboard: task validation already pending for " + app.packageName)
             return
         }
         val selectionGeneration = selection.generation
@@ -877,75 +853,69 @@ class MainActivity : AppCompatActivity(),
         val appName = app.appName
         val pkgName = app.packageName
 
-        // Guard: the boot flow already launched this app onto the cluster headlessly
-        // (ClusterService.sBootLaunchedPkg). Adopt it and show the mirror instead of relaunching —
-        // a relaunch would force-stop the running nav (INC-20260716-091016).
-        if (pkgName == com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg
-                && (mClusterService?.displayId ?: -1) > 0) {
-            // Consume-once up front so a re-entrant/racing tap can't take this branch twice, and so a
-            // later switch-away-then-back is governed by the normal mCurrentDashboardPkg guard.
-            com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg = null
-            if (!mDashboardSelectionTracker.markBootPending(pkgName, selectionGeneration)) {
-                com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg = pkgName
-                return
-            }
-            // The boot flow launched this app headlessly onto the cluster. If it is STILL on the
-            // cluster, just show the mirror — a relaunch would recreate the running nav
-            // (INC-20260716-091016). But if it has since left the cluster (crash, OEM nav takeover, or
-            // its task was moved away) the mirror would be blank/stale, so fall through to a normal
-            // launch instead. Location is checked off the main thread through the typed daemon verb.
+        // Persisted markers survive ACC OFF; only a current task on this display proves presence.
+        val fromBoot = pkgName == ClusterService.sBootLaunchedPkg
+        if (fromBoot || pkgName == mCurrentDashboardPkg) {
+            if (fromBoot) ClusterService.sBootLaunchedPkg = null
             val expectedDisplayId = svc.displayId
-            svc.findPackageLocation(pkgName, object : ClusterService.TaskLocationCallback {
-                override fun onResult(location: TaskLocation) {
-                    if (isFinishing || isDestroyed) return
-                    if (mClusterService !== svc || svc.displayId != expectedDisplayId) {
-                        if (mDashboardSelectionTracker.completeBoot(pkgName, selectionGeneration)
-                                && ClusterService.sBootLaunchedPkg == null) {
-                            ClusterService.sBootLaunchedPkg = pkgName
-                        }
-                        return
+            DashboardResumeCoordinator(mDashboardSelectionTracker).resume(
+                pkgName, selectionGeneration, fromBoot, expectedDisplayId,
+                object : DashboardResumeCoordinator.Host {
+                    override fun isOwnerCurrent() = !isFinishing && !isDestroyed &&
+                        mClusterService === svc && svc.displayId == expectedDisplayId
+
+                    override fun findLocation(callback: (TaskLocation) -> Unit) {
+                        svc.findPackageLocation(pkgName, callback::invoke)
                     }
-                    if (!mDashboardSelectionTracker.completeBoot(pkgName, selectionGeneration)) return
-                    when (location.matchDisplay(expectedDisplayId)) {
-                        TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> {
-                            ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
-                            AppLogger.d(TAG, "onSendToDashboard: boot-launched task present — show mirror only")
-                            mCurrentDashboardPkg = pkgName
-                            startClusterMirror()
-                        }
-                        TaskLocation.DisplayMatch.ON_OTHER_DISPLAY,
-                        TaskLocation.DisplayMatch.ABSENT -> {
-                            // Latch already cleared → this re-entry takes the normal launch path.
-                            mCurrentDashboardPkg = null
-                            AppLogger.i(TAG, "onSendToDashboard: boot-launched task not on display "
-                                    + expectedDisplayId + " — launching $pkgName")
-                            onSendToDashboard(app)
-                        }
-                        TaskLocation.DisplayMatch.UNKNOWN -> {
-                            // Never turn an ATM/transport failure into a destructive nav relaunch.
-                            // Preserve the prior mirror-only behavior and let a later tap retry.
-                            if (ClusterService.sBootLaunchedPkg == null) {
-                                ClusterService.sBootLaunchedPkg = pkgName
-                            }
-                            mCurrentDashboardPkg = pkgName
-                            ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
-                            AppLogger.w(TAG, "onSendToDashboard: task location unknown — preserving boot-launched app")
-                            startClusterMirror()
-                        }
+
+                    override fun reanchor(isCurrent: () -> Boolean, callback: (Boolean) -> Unit) {
+                        svc.enforceTaskOnDisplay(pkgName, expectedDisplayId, callback::invoke, isCurrent)
                     }
-                }
-            })
+
+                    override fun onReady() {
+                        AppLogger.d(TAG, "onSendToDashboard: task verified on cluster — show mirror only")
+                        mLastLaunchTime = System.currentTimeMillis()
+                        if (pkgName == mMainDisplayPkg) {
+                            mMainDisplayPkg = null
+                            mAppListCoordinator.setMainPackage(null)
+                            ClusterPrefs.setMainPkg(this@MainActivity, null)
+                        }
+                        mCurrentDashboardPkg = pkgName
+                        mCurrentDashboardApp = appName
+                        mSessionTracker.add(pkgName)
+                        ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
+                        ClusterPrefs.setClusterName(this@MainActivity, appName)
+                        ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
+                        mAppListCoordinator.setCurrentPackage(pkgName)
+                        updateDashboardStatus(appName)
+                        updateControlLabel()
+                        startClusterMirror()
+                    }
+
+                    override fun onAbsent() {
+                        clearClusterState()
+                        AppLogger.i(TAG, "onSendToDashboard: saved task absent — launching $pkgName")
+                        onSendToDashboard(app)
+                    }
+
+                    override fun onUnknown() {
+                        AppLogger.w(TAG, "onSendToDashboard: task location unknown — preserving session for retry")
+                        startClusterMirror()
+                    }
+
+                    override fun onReanchorFailed() {
+                        Toast.makeText(applicationContext,
+                            getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
+                    }
+
+                    override fun restoreBootLatch() {
+                        if (ClusterService.sBootLaunchedPkg == null) ClusterService.sBootLaunchedPkg = pkgName
+                    }
+                })
             return
         }
 
         ClusterPrefs.incrementLaunchCount(this, app.packageName)
-
-        // Guard: if already on the cluster, just show the mirror (no moveTaskToDisplay).
-        if (pkgName == mCurrentDashboardPkg) {
-            AppLogger.d(TAG, "onSendToDashboard: already on cluster — show mirror only")
-            startClusterMirror()
-            return
-        }
 
         // If this app was on the main display, clear that state immediately.
         if (pkgName == mMainDisplayPkg) {
@@ -1122,6 +1092,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onLaunchShortcut(app: AppInfo, shortcut: AppShortcut) {
+        mClusterService?.cancelPendingLaunchRecovery()
         mDashboardSelectionTracker.begin(null)
         mPendingAppAfterActivation = null
         mPendingShortcutAfterActivation = null
@@ -1335,6 +1306,8 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToMain(app: AppInfo) {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         ClusterPrefs.incrementLaunchCount(this, app.packageName)
         mUsageTracker.trackStop(mCurrentDashboardPkg)
         // Clean up cluster state before move
@@ -1381,6 +1354,8 @@ class MainActivity : AppCompatActivity(),
 
     /** Performs the actual force-stop after the user confirmed. */
     private fun doKillApp(app: AppInfo) {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         // Fission-layout app: route through the orchestrator so its VD slot is released.
         if (FissionOrchestrator.isLayoutPackage(app.packageName)) {
             AppLogger.log(TAG, "doKillApp: fission layout slot — " + app.packageName)
@@ -1571,6 +1546,8 @@ class MainActivity : AppCompatActivity(),
         FissionOrchestrator.isAutoStartRequested(this)
 
     private fun restoreBydDashboard() {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         val completeAdasStop = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(this)
         btnRestoreCluster.isEnabled = false
         mNavCoordinator?.setStatusRestoring()
@@ -1751,6 +1728,8 @@ class MainActivity : AppCompatActivity(),
 
     /** Force-stops then relaunches the app currently active on the cluster. */
     private fun relaunchCurrentApp() {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         val pkg = mCurrentDashboardPkg ?: return
         AppLogger.i(TAG, "relaunchCurrentApp → $pkg")
         AdbLocalClient.forceStopApp(this, pkg, object : AdbLocalClient.Callback {
@@ -1793,6 +1772,8 @@ class MainActivity : AppCompatActivity(),
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
     private fun originCluster() {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         btnRestoreCluster.isEnabled = false
         mNavCoordinator?.setStatusRestoringOrigin()
         mUsageTracker.trackStop(mCurrentDashboardPkg)
@@ -2234,6 +2215,8 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun selectLayoutMirror(packageName: String) {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         val target = FissionOrchestrator.selectLayoutMirrorPackage(packageName) ?: return
         AppLogger.i(TAG, "Selected tactile Layout mirror: ${target.pkg}@${target.displayId}")
         updateLayoutMirrorSwitcher()
@@ -2242,6 +2225,8 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun stepLayoutMirror(delta: Int) {
+        mClusterService?.cancelPendingLaunchRecovery()
+        mDashboardSelectionTracker.begin(null)
         val target = FissionOrchestrator.stepLayoutMirrorSelection(delta) ?: return
         AppLogger.i(TAG, "Stepped tactile Layout mirror: ${target.pkg}@${target.displayId}")
         updateLayoutMirrorSwitcher()

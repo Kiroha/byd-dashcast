@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "28"
+    private const val PROTOCOL_VERSION = "29"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -178,6 +178,8 @@ object ProxyDaemonMain {
      *  [Phase4Probes] without re-acquiring. */
     @SuppressLint("StaticFieldLeak") // system context, daemon process-scoped, safe
     @Volatile private var sSystemContext: Context? = null
+
+    internal fun taskRecoveryContext(): Context? = sSystemContext
 
     /** Permission-bypass wrapper around [sSystemContext].
      *  Set immediately after [sSystemContext]; used by [CanWriteVerbs] so that
@@ -966,11 +968,12 @@ object ProxyDaemonMain {
                     val did = data.readInt()
                     val w = data.readInt()
                     val h = data.readInt()
+                    val recoveryToken = LaunchRecoveryToken.readOptional(data)
                     try {
                         // `!!` reproduces the Java behaviour exactly: launchAndForce declares a
                         // non-null package, so a null off the wire threw NPE inside it, and the
                         // catch below turns that into a Parcel-encodable NullPointerException.
-                        val log = Phase4TaskVerbs.launchAndForce(pkg!!, cls, did, w, h)
+                        val log = Phase4TaskVerbs.launchAndForce(pkg!!, cls, did, w, h, recoveryToken)
                         if (reply != null) {
                             reply.writeNoException()
                             reply.writeString(log)

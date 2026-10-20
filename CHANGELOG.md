@@ -15,6 +15,24 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.52-beta (versionCode 691)
+
+**Improve Waze recovery after ACC OFF/ON.** Validate remembered cluster tasks before skipping
+launch, reject late results from old sessions, and add one exact-SX361 empty-primary recovery
+attempt with per-request validity and verified original display/stack placement. Preserve
+recovered geometry and stop destructive fallback when placement is uncertain.
+
+**Add manual read-only ADAS target snapshots.** The new diagnostic keeps raw outcomes and
+includes its latest retained snapshot in bug reports without new reads during report generation.
+Its optional decoder schematic is not verified live surroundings or a driving aid.
+
+Validation: **1,632 JVM tests / 264 suites**, debug and R8 release builds, native WebRTC
+bootstrap declaration checks and release lint (**0 errors, 20 warnings**) pass. Independent
+release tooling, ART/TLS and native WebRTC emulator checks also pass. Parked ACC
+OFF/ON and ADAS hardware validation remain pending. The version bump refreshes persistent
+daemons to protocol 29. DashSat 0.9.9-dev remains compatible; 1.9.0 remains stable.
+[Release notes](docs/releases/1.9.52-beta.md).
+
 ### 1.9.48-beta (versionCode 687)
 
 **Fix Satellite video closing when the native decoder receives its first image.** The pinned

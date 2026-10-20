@@ -884,10 +884,10 @@ object ProxyClient {
     @JvmStatic
     @Throws(ProxyException::class)
     fun launchAndForce(pkg: String?, activityCls: String?,
-                       displayId: Int, width: Int, height: Int): String? {
+                       displayId: Int, width: Int, height: Int, recoveryToken: IBinder? = null): String? {
         if (pkg == null || pkg.isEmpty()) throw ProxyException("pkg required")
         return callWithRetry("launchAndForce") {
-            ProxyFissionVerbs.launchAndForce(pkg, activityCls, displayId, width, height)
+            ProxyFissionVerbs.launchAndForce(pkg, activityCls, displayId, width, height, recoveryToken)
         }
     }
 

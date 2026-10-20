@@ -20,6 +20,9 @@ import android.os.IBinder
  */
 object ProxyDaemonContract {
 
+    // Protocol 29 appends an optional read-only validity Binder to TXN_LAUNCH_AND_FORCE.
+    // Missing token preserves the historical launch, with SX361 primary recovery disabled.
+
     const val STRICT_FILE_SCHEMA = 1
     const val CAP_STRICT_FILE_READ = 1
     const val CAP_STORAGE_METADATA = 2

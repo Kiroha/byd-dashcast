@@ -49,12 +49,14 @@ import com.byd.dashcast.proxy.DaemonBinderResolver
 import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ShellGateway
+import com.byd.dashcast.proxy.daemon.TaskLaunchRecovery
 import com.byd.dashcast.util.AppLogger
 import com.byd.dashcast.util.concurrent.LifecycleGate
 
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * ClusterService — Foreground Service that maintains projection on the cluster
@@ -129,6 +131,9 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     @Volatile private var mProjectionActive = false
     @Volatile private var mDestroyed = false
     private val mOperationGate = LifecycleGate()
+    private val mRecoveryRequests = AtomicLong()
+    private val mRecoveredPlacement = RecoveredPlacementGuard()
+    @Volatile private var mRecoveryDisplayId = -1
     private var mPendingDashboardCallback: LaunchCallback? = null
     private var mPendingLaunchRunnable: Runnable? = null
 
@@ -303,6 +308,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     override fun onDestroy() {
+        cancelPendingLaunchRecovery()
+        mRecoveredPlacement.clear()
         mOperationGate.invalidate()
         mDestroyed = true
         try {
@@ -461,6 +468,14 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     val inputForwarder: ClusterInputForwarder? get() = mInputForwarder
     val displayId: Int get() = mDisplayHelper.getKnownClusterDisplayId()
 
+    fun shouldPreserveRecoveredPlacement(packageName: String?, displayId: Int): Boolean =
+        mRecoveredPlacement.preserves(packageName, displayId)
+
+    /** The daemon reads this request's validity directly; no queued package-wide cancellation. */
+    fun cancelPendingLaunchRecovery() {
+        mRecoveryRequests.incrementAndGet()
+    }
+
     fun interface LaunchCallback {
         fun onResult(success: Boolean)
     }
@@ -535,15 +550,43 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
      * already done the job — the normal case — the task is found on the right display and nothing
      * is sent at all.
      */
-    fun enforceTaskOnDisplay(packageName: String?, targetDisplayId: Int) {
-        if (packageName == null || packageName.isEmpty() || targetDisplayId <= 0) return
-        if (PKG_FORCE_FRESH_LAUNCH == packageName) {
-            AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg $packageName")
+    fun enforceTaskOnDisplay(packageName: String?, targetDisplayId: Int,
+                             callback: LaunchCallback? = null,
+                             isRequestCurrent: () -> Boolean = { true }) {
+        val operation = mOperationGate.capture()
+        fun complete(success: Boolean) {
+            if (callback == null) return
+            mMainHandler.post {
+                if (operation.isValid && isRequestCurrent()) {
+                    callback.onResult(success && displayId == targetDisplayId)
+                }
+            }
+        }
+        fun canEnforce(): Boolean {
+            if (!operation.isValid || !isRequestCurrent()) return false
+            if (shouldPreserveRecoveredPlacement(packageName, targetDisplayId)) {
+                complete(false)
+                return false
+            }
+            if (displayId == targetDisplayId) return true
+            complete(false)
+            return false
+        }
+        if (packageName.isNullOrEmpty() || targetDisplayId <= 0) {
+            complete(false)
             return
         }
-        val operation = mOperationGate.capture()
+        if (shouldPreserveRecoveredPlacement(packageName, targetDisplayId)) {
+            complete(false)
+            return
+        }
+        if (PKG_FORCE_FRESH_LAUNCH == packageName) {
+            AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg $packageName")
+            complete(false)
+            return
+        }
         sMoveTaskExecutor.execute {
-            if (!operation.isValid) return@execute
+            if (!canEnforce()) return@execute
             val location: TaskLocation
             try {
                 location = ProxyClient.findTaskLocationForPackage(packageName)
@@ -552,22 +595,26 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
                 // mistake TaskLocation exists to prevent.
                 AppLogger.d(TAG, "enforceTaskOnDisplay: probe failed for " + packageName +
                     " (" + t.javaClass.simpleName + ") — leaving it alone")
+                complete(false)
                 return@execute
             }
-            if (!operation.isValid) return@execute
+            if (!canEnforce()) return@execute
             when (location.matchDisplay(targetDisplayId)) {
                 TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> {
                     AppLogger.d(TAG, "enforceTaskOnDisplay: " + packageName +
                         " already on display " + targetDisplayId + " — nothing to do")
+                    complete(true)
                     return@execute
                 }
                 TaskLocation.DisplayMatch.ABSENT -> {
                     AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for $packageName")
+                    complete(false)
                     return@execute
                 }
                 TaskLocation.DisplayMatch.UNKNOWN -> {
                     AppLogger.d(TAG, "enforceTaskOnDisplay: location unknown for " + packageName +
                         " — leaving it alone")
+                    complete(false)
                     return@execute
                 }
                 else -> {
@@ -581,12 +628,18 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
             AppLogger.i(TAG, "enforceTaskOnDisplay: " + packageName + " is on display " +
                 location.displayId + ", re-anchoring to " + targetDisplayId + " via daemon")
             try {
+                if (!canEnforce()) return@execute
                 val log = ProxyClient.moveAndResize(packageName, targetDisplayId, 0, 0, w, h)
                 AppLogger.i(TAG, "enforceTaskOnDisplay result:\n" +
                     (if (log == null || log.isEmpty()) "(empty)" else log))
+                if (callback != null && operation.isValid) {
+                    complete(ProxyClient.findTaskLocationForPackage(packageName)
+                        .matchDisplay(targetDisplayId) == TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY)
+                }
             } catch (t: Throwable) {
                 AppLogger.w(TAG, "enforceTaskOnDisplay: daemon move failed for " + packageName +
                     ": " + t.javaClass.simpleName + ": " + t.message)
+                complete(false)
             }
         }
     }
@@ -766,6 +819,9 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
             callback?.onResult(false)
             return
         }
+        cancelPendingLaunchRecovery()
+        mRecoveredPlacement.clear()
+        val recoveryGeneration = mRecoveryRequests.get()
         ProjectionAdasCoordinator.targetRequested(this, packageName, displayId)
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → $packageName")
         val inFlight = mPendingLaunchRunnable
@@ -842,10 +898,19 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
                             var daemonTried = false
                             if (!legacyPath && ProxyClient.isConnected()) {
                                 daemonTried = true
-                                if (daemonLaunchSync(packageName, displayId, clW, clH, operation)) {
-                                    AppLogger.i(TAG, "launchOnDashboard OK (daemon) → $packageName")
-                                    postLaunchResult(callback, true, operation)
-                                    return@doLaunch
+                                when (daemonLaunchSync(packageName, displayId, clW, clH, operation, recoveryGeneration)) {
+                                    TaskLaunchRecovery.Outcome.SUCCESS -> {
+                                        AppLogger.i(TAG, "launchOnDashboard OK (daemon) → $packageName")
+                                        postLaunchResult(callback, true, operation)
+                                        return@doLaunch
+                                    }
+                                    TaskLaunchRecovery.Outcome.FRAMEWORK_BLOCKED,
+                                    TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED -> {
+                                        AppLogger.w(TAG, "Launch could not be confirmed for $packageName — ending this attempt")
+                                        postLaunchResult(callback, false, operation)
+                                        return@doLaunch
+                                    }
+                                    TaskLaunchRecovery.Outcome.FAILED -> Unit
                                 }
                                 AppLogger.w(TAG, "daemon launch failed — falling back to app-side for $packageName")
                             }
@@ -882,7 +947,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
                                 // (use_legacy_path ON, or daemon was down at decision time) — the daemon
                                 // HOLDS the cross-user permission, so it is the only path that can land it.
                                 AppLogger.w(TAG, "app-side launch failed — routing via proxy daemon launchAndForce")
-                                val ok = daemonLaunchSync(packageName, displayId, clW, clH, operation)
+                                val ok = daemonLaunchSync(packageName, displayId, clW, clH, operation, recoveryGeneration) ==
+                                    TaskLaunchRecovery.Outcome.SUCCESS
                                 AppLogger.i(TAG, "launchOnDashboard → daemon force path (ok=$ok) → $packageName")
                                 postLaunchResult(callback, ok, operation)
                             } else if (iamThrew) {
@@ -925,6 +991,9 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
                                     callback: LaunchCallback?) {
         val operation = mOperationGate.capture()
         if (!operation.isValid) return
+        cancelPendingLaunchRecovery()
+        mRecoveredPlacement.clear()
+        val recoveryGeneration = mRecoveryRequests.get()
         ProjectionAdasCoordinator.targetRequested(this, packageName, displayId)
         AppLogger.log(TAG, "launchOnDashboardWithBounds 500ms → " + packageName +
             " [" + left + "," + top + "," + right + "," + bottom + "]")
@@ -998,7 +1067,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
                                 // when the DL5 daemon launch actually failed, mistracking the app.
                                 val okWB = daemonLaunchSync(packageName, displayId,
                                     if (wbW > 0) wbW else clusterWidthOr(1920),
-                                    if (wbH > 0) wbH else clusterHeightOr(720), operation)
+                                    if (wbH > 0) wbH else clusterHeightOr(720), operation, recoveryGeneration) ==
+                                    TaskLaunchRecovery.Outcome.SUCCESS
                                 AppLogger.i(TAG, "launchOnDashboardWithBounds → daemon force path (ok=" +
                                     okWB + ") → " + packageName)
                                 postLaunchResult(callback, okWB, operation)
@@ -1207,49 +1277,48 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
      * already run on `sMoveTaskExecutor`. The diagnostic post-launch verify is
      * scheduled on `sDiagExecutor` so it never holds the move-task worker.
      *
-     * Success = the daemon did not report its own "FAIL: no task discovered" verdict AND
-     * the am transcript shows an accepted start. The daemon's verdict wins, because it is the
-     * only signal that actually proves a task exists; the transcript alone can look like a
-     * success on a launch that system_server threw away.
+     * Success requires the daemon's final completion marker. Intermediate shell output or an
+     * aborted cascade cannot establish success; optional-method ERR diagnostics remain allowed.
      */
     private fun daemonLaunchSync(packageName: String?, displayId: Int,
                                  width: Int, height: Int,
-                                 operation: LifecycleGate.Token): Boolean {
-        if (!operation.isValid) return false
-        var ok: Boolean
+                                 operation: LifecycleGate.Token,
+                                 recoveryGeneration: Long = mRecoveryRequests.get()): TaskLaunchRecovery.Outcome {
+        fun isCurrent() = operation.isValid && !mDestroyed &&
+            recoveryGeneration == mRecoveryRequests.get() && mRecoveryDisplayId == displayId
+        if (!isCurrent()) return TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED
+        var outcome: TaskLaunchRecovery.Outcome
+        var recoveredPrimary = false
         try {
             if (!ProxyClient.isConnected()) ProxyClient.connect(this)
-            if (!operation.isValid) return false
-            val log = ProxyClient.launchAndForce(packageName, null, displayId, width, height)
-            if (!operation.isValid) return false
-            val low = log?.lowercase(Locale.ROOT) ?: ""
-            // The daemon polls for the task after `am start` and appends its OWN verdict:
-            // "FAIL: no task discovered for <pkg>" when nothing came up. That verdict is
-            // authoritative and MUST win — the am transcript above it can read like a success
-            // ("Starting: Intent {…}") while system_server threw and no activity ever started
-            // (DiLink 3.0 FREEFORM stack creation NPE, INC-20260714-215700). Trusting the
-            // transcript alone reported ok=true on a launch that showed nothing on the
-            // cluster, and suppressed the app-side fallback.
-            val daemonSaysFail = low.contains("fail: no task discovered")
-            // The daemon's poll-based verdict is authoritative: if it did NOT append
-            // "FAIL: no task discovered", a task WAS discovered on the cluster display. Do NOT
-            // also require an am-transcript keyword ("status: ok" / "starting: intent") —
-            // launchAndForce does not emit a positive verdict string when a task is found, so
-            // ANDing that in vetoed task-PROVEN launches: it dropped the app's tracking (green
-            // bar / resize / stop) and forced the app-side fallback (cross-user DENIED on DL5).
-            // Only guard against EMPTY output (a transport error before the daemon ran), which
-            // cannot count as success. Do NOT infer failure from "exception" either — the
-            // cascade's optional-method reflection probes (setDisplayToSingleTaskInstance /
-            // setTaskWindowingModeFreeform) log a BENIGN NoSuchMethodException even on success.
-            ok = low.isNotEmpty() && !daemonSaysFail
-            AppLogger.i(TAG, "daemon launchAndForce result (ok=" + ok + "):\n" +
+            if (!isCurrent()) return TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED
+            val log = ProxyClient.launchAndForce(packageName, null, displayId, width, height,
+                com.byd.dashcast.proxy.daemon.LaunchRecoveryToken.create { isCurrent() })
+            if (!isCurrent()) return TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED
+            recoveredPrimary = TaskLaunchRecovery.hasRecoveredPrimary(log)
+            mRecoveredPlacement.record(packageName, displayId, log)
+            outcome = TaskLaunchRecovery.outcome(log)
+            if (outcome == TaskLaunchRecovery.Outcome.SUCCESS) {
+                val location = try {
+                    ProxyClient.findTaskLocationForPackage(packageName)
+                } catch (t: Throwable) {
+                    AppLogger.w(TAG, "daemon final task location unknown: " + t.message)
+                    TaskLocation.unknown()
+                }
+                if (!isCurrent()) return TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED
+                outcome = TaskLaunchRecovery.verifyPlacement(outcome, location, displayId, recoveredPrimary)
+            }
+            AppLogger.i(TAG, "daemon launchAndForce result (outcome=" + outcome + "):\n" +
                 (if (log != null && log.isNotEmpty()) log else "(empty)"))
         } catch (t: Throwable) {
             AppLogger.e(TAG, "daemon launchAndForce failed: " + t.message)
-            ok = false
+            outcome = if (recoveredPrimary) TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED
+                else TaskLaunchRecovery.Outcome.FAILED
         }
         // AAOS-only experiment + post-launch verify — diagnostic, off the critical path.
-        if (!operation.isValid) return false
+        if (!isCurrent()) return TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED
+        if (outcome == TaskLaunchRecovery.Outcome.FRAMEWORK_BLOCKED ||
+            outcome == TaskLaunchRecovery.Outcome.PLACEMENT_UNCONFIRMED) return outcome
         tryClusterFixedActivityExperiment(displayId, packageName, operation)
         // AUD-PERF-P3 — opt-in (Diagnostics screen), OFF by default. This dump shells
         // `dumpsys SurfaceFlinger`, taking SF's global lock 1.5 s into the projected app's
@@ -1259,7 +1328,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
         if (ClusterPrefs.isLaunchDiagnosticsEnabled(this)) {
             sDiagExecutor.execute { verifyClusterDisplayState(displayId, packageName, operation) }
         }
-        return ok
+        return outcome
     }
 
     /**
@@ -1422,6 +1491,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     fun stopProjectionNoAdb() {
+        cancelPendingLaunchRecovery()
+        mRecoveredPlacement.clear()
         val completeAdasStop = ProjectionAdasCoordinator.prepareStop(this)
         AppLogger.log(TAG, "stopProjectionNoAdb requested")
         // v1.8.2 — was hardcoded "-d 1". The fission VirtualDisplay is display 1 on most DiLink 3
@@ -1467,6 +1538,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     // ─────────────────────────────────────────────────────────────────────────
 
     override fun onDashboardDisplayConnected(display: Display?, displayId: Int) {
+        if (mRecoveryDisplayId != displayId) cancelPendingLaunchRecovery()
+        mRecoveryDisplayId = displayId
         AppLogger.log(TAG, "Cluster display connected: id=$displayId")
         mLauncher.setDashboardDisplayId(displayId)
         mInputForwarder?.setClusterDisplay(display)
@@ -1525,6 +1598,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     override fun onDashboardDisplayDisconnected() {
+        mRecoveryDisplayId = -1
+        cancelPendingLaunchRecovery()
         AppLogger.log(TAG, "Cluster display disconnected")
         mLauncher.setDashboardDisplayId(-1)
         // Projection ended — the boot-launched app is no longer on the cluster, so drop the latch

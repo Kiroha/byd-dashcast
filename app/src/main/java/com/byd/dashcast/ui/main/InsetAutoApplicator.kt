@@ -32,6 +32,10 @@ class InsetAutoApplicator(private val mHost: Host) {
         fun getCurrentPkg(): String?
         /** Returns the bound ClusterService, or null if not bound. */
         fun getClusterServiceIfBound(): ClusterService?
+        fun shouldPreserveRecoveredPlacement(pkg: String): Boolean {
+            val service = getClusterServiceIfBound() ?: return false
+            return service.shouldPreserveRecoveredPlacement(pkg, service.displayId)
+        }
     }
 
     private val mHandler = Handler(Looper.getMainLooper())
@@ -43,7 +47,7 @@ class InsetAutoApplicator(private val mHost: Host) {
      * their application 500 ms later. No-op if insets match the global defaults.
      */
     fun apply(pkg: String?) {
-        if (pkg == null) return
+        if (pkg == null || mHost.shouldPreserveRecoveredPlacement(pkg)) return
         val operation = mLifecycleGate.capture()
         if (!operation.isValid) return
         val ctx = mHost.getContext().applicationContext
@@ -134,7 +138,8 @@ class InsetAutoApplicator(private val mHost: Host) {
     }
 
     private fun isCurrent(operation: LifecycleGate.Token, pkg: String): Boolean {
-        return operation.isValid && pkg == mHost.getCurrentPkg()
+        return operation.isValid && pkg == mHost.getCurrentPkg() &&
+            !mHost.shouldPreserveRecoveredPlacement(pkg)
     }
 
     /** Permanently cancels delayed callbacks and interrupts the owned resize worker. */
