@@ -1,9 +1,14 @@
 package com.byd.dashcast.proxy.daemon
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.Rect
+import android.os.Build
 import android.util.Log
 
+import com.byd.dashcast.cluster.display.DaemonDisplayEnumerator
 import com.byd.dashcast.infrastructure.task.TaskLocation
 
 import java.lang.reflect.Field
@@ -213,7 +218,7 @@ object Phase4TaskVerbs {
     /** Starts the app on `displayId` WITHOUT --windowingMode (default = fullscreen stack), the
      *  last-resort that avoids the FREEFORM-stack WindowManager NPE on some DiLink 3 ROMs. */
     private fun startPlainOnDisplay(log: StringBuilder, displayId: Int,
-                                    cmpFlat: String?, packageName: String) {
+                                    cmpFlat: String?, packageName: String): String? {
         val target = if (cmpFlat != null) "-n $cmpFlat"
                      else "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $packageName"
         val cmd = "am start-activity -S -W" +
@@ -224,12 +229,16 @@ object Phase4TaskVerbs {
         log.append("(retrying without --windowingMode)\n$ ").append(cmd).append('\n')
         val out = execShell(cmd, 5000)
         log.append(out ?: "(no output)").append('\n')
+        return out
     }
+
+    private data class PlainLaunchResult(val taskId: Int, val frameworkBlocked: Boolean)
 
     /** A failed FREEFORM creation leaves a new empty split stack, so clean again before plain. */
     private fun retryPlainOnCleanDisplay(log: StringBuilder, displayId: Int,
-                                         cmpFlat: String?, packageName: String): Int {
-        return TaskLaunchRecovery.retryOnCleanDisplay(object : TaskLaunchRecovery.Operations {
+                                         cmpFlat: String?, packageName: String): PlainLaunchResult {
+        var plainOutput: String? = null
+        val taskId = TaskLaunchRecovery.retryOnCleanDisplay(object : TaskLaunchRecovery.Operations {
             override fun cleanDisplay(): String {
                 val cleanup = cleanFissionStacks(displayId)
                 log.append("(re-clean after FREEFORM failure)\n").append(cleanup)
@@ -237,11 +246,91 @@ object Phase4TaskVerbs {
             }
 
             override fun launchPlain() {
-                startPlainOnDisplay(log, displayId, cmpFlat, packageName)
+                plainOutput = startPlainOnDisplay(log, displayId, cmpFlat, packageName)
             }
 
             override fun pollTask(): Int = pollForTaskId(packageName)
         })
+        return PlainLaunchResult(taskId, taskId <= 0 && TaskLaunchRecovery.isBlockedAfterPlainLaunch(
+                plainOutput, findTaskLocationForPackage(packageName)))
+    }
+
+    private fun recoveryComponent(packageName: String, cmpFlat: String?, context: Context): ComponentName? {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(packageName)
+        if (context.packageManager.queryIntentActivities(home, 0).isNotEmpty()) return null
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            .setPackage(packageName)
+        val info = context.packageManager.resolveActivity(intent, 0)?.activityInfo ?: return null
+        if (info.packageName != packageName || !info.enabled || !info.exported) return null
+        val component = ComponentName(info.packageName, info.name)
+        if (cmpFlat != null && ComponentName.unflattenFromString(cmpFlat) != component) return null
+        val atm = Class.forName("android.app.ActivityTaskManager")
+        for (method in arrayOf("supportsMultiWindow", "supportsSplitScreenMultiWindow")) {
+            if (atm.getMethod(method, Context::class.java).invoke(null, context) != true) return null
+        }
+        val resizeMode = readFieldNoThrow(info, "resizeMode") as? Int ?: return null
+        if (ActivityInfo::class.java.getMethod("isResizeableMode", Int::class.javaPrimitiveType)
+                .invoke(null, resizeMode) != true) return null
+        return component
+    }
+
+    private fun recoverySnapshot(packageName: String, displayId: Int): EmptyPrimaryStackRecovery.Snapshot {
+        val currentUser = Class.forName("android.app.ActivityManager")
+            .getMethod("getCurrentUser").invoke(null) as? Int ?: -1
+        val display = DaemonDisplayEnumerator.parseDisplayDump(execShell("dumpsys display", 2000))
+            .singleOrNull { it.id == displayId }
+        val wm = Class.forName("android.view.WindowManagerGlobal")
+            .getMethod("getWindowManagerService").invoke(null)!!
+        val displayMode = wm.javaClass.getMethod("getWindowingMode", Int::class.javaPrimitiveType)
+            .invoke(wm, displayId) as? Int ?: -1
+        val location = findTaskLocationForPackage(packageName)
+        val atm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null)!!
+        val stacks = getAtmTaskListNoThrow(atm)?.map { info ->
+            EmptyPrimaryStackRecovery.Stack(
+                if (info == null) -1 else getStackOrRootTaskId(info),
+                if (info == null) -1 else readFieldNoThrow(info, "displayId") as? Int ?: -1,
+                if (info == null) -1 else readWindowingMode(info),
+                if (info == null) -1 else readActivityType(info),
+                if (info == null) null else getChildTaskIds(info)?.toList())
+        }
+        return EmptyPrimaryStackRecovery.Snapshot(Build.VERSION.SDK_INT, Build.FINGERPRINT,
+            currentUser, display, displayMode, true, location, stacks)
+    }
+
+    /** No force-stop, mode conversion or watchdog after this narrowly attributed OEM recovery. */
+    private fun recoverEmptyPrimary(log: StringBuilder, packageName: String, cmpFlat: String?,
+                                    displayId: Int, generation: Long, recoveryToken: android.os.IBinder?): Boolean {
+        if (!LaunchRecoveryToken.isCurrent(recoveryToken)) return false
+        if (!EmptyPrimaryStackRecovery.isKnownFirmware(Build.VERSION.SDK_INT, Build.FINGERPRINT)) return false
+        try {
+            val context = ProxyDaemonMain.taskRecoveryContext() ?: return false
+            val component = recoveryComponent(packageName, cmpFlat, context) ?: return false
+            val location = EmptyPrimaryStackRecovery.recover(displayId,
+                object : EmptyPrimaryStackRecovery.Operations {
+                    override fun isCurrent(): Boolean = sWatchdogs.isCurrent(packageName, generation) &&
+                        LaunchRecoveryToken.isCurrent(recoveryToken)
+
+                    override fun snapshot(): EmptyPrimaryStackRecovery.Snapshot? {
+                        if (recoveryComponent(packageName, cmpFlat, context) != component) return null
+                        return recoverySnapshot(packageName, displayId)
+                    }
+
+                    override fun launchPrimary() {
+                        val command = EmptyPrimaryStackRecovery.launchCommand(component.flattenToString(), displayId)
+                        log.append("(one SX361 empty-primary reuse attempt)\n$ ").append(command).append('\n')
+                        log.append(execShell(command, 5000) ?: "(no output)").append('\n')
+                        pollForTaskId(packageName)
+                    }
+                }) ?: return false
+            log.append(TaskLaunchRecovery.RECOVERED_PRIMARY_MARKER).append(" task=").append(location.taskId)
+                .append(" display=").append(displayId)
+                .append(" (original primary verified; FREEFORM cascade and watchdog skipped)\n")
+                .append("FINISH: launchAndForce complete.\n")
+            return true
+        } catch (error: Throwable) {
+            log.append("PRIMARY-RECOVERY-UNAVAILABLE: ").append(unwrap(error).javaClass.simpleName).append('\n')
+            return false
+        }
     }
 
     /**
@@ -843,7 +932,7 @@ object Phase4TaskVerbs {
      */
     @JvmStatic
     fun launchAndForce(packageName: String, activityClass: String?,
-                       displayId: Int, width: Int, height: Int): String {
+                       displayId: Int, width: Int, height: Int, recoveryToken: android.os.IBinder? = null): String {
         val log = StringBuilder()
         log.append("== launchAndForce ").append(packageName)
            .append(if (activityClass != null) "/$activityClass" else "")
@@ -851,6 +940,7 @@ object Phase4TaskVerbs {
            .append(' ').append(width).append('x').append(height).append(" ==\n")
         Log.i(TAG, "FISSION launchAndForce START pkg=$packageName displayId=$displayId " +
                 width + "x" + height)
+        val generation = sWatchdogs.start(packageName)
         try {
             // Pre-cleanup: nuke any zombie split-screen-primary / freeform stack.
             log.append(cleanFissionStacks(displayId))
@@ -926,9 +1016,12 @@ object Phase4TaskVerbs {
             // the cluster at full size — and the FREEFORM flip further down still gets its chance.
             // EARLY trigger: both --windowingMode 5 attempts clearly threw (am printed the error).
             var triedPlain = false
+            var frameworkBlocked = false
             var taskId: Int
             if (!started) {
-                taskId = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName)
+                val plain = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName)
+                taskId = plain.taskId
+                frameworkBlocked = plain.frameworkBlocked
                 triedPlain = true
             } else {
                 // Poll up to ~5 s for the task to appear.
@@ -941,11 +1034,22 @@ object Phase4TaskVerbs {
             // where started=true skipped the old !started-gated last-resort). Retry once without the
             // windowing mode, keyed on the ACTUAL outcome (no task) rather than the am exit text.
             if (taskId <= 0 && !triedPlain) {
-                taskId = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName)
+                val plain = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName)
+                taskId = plain.taskId
+                frameworkBlocked = plain.frameworkBlocked
                 log.append("findTask(post-fallback) = ").append(taskId).append('\n')
             }
 
             if (taskId <= 0) {
+                if (frameworkBlocked) {
+                    if (recoverEmptyPrimary(log, packageName, cmpFlat, displayId, generation, recoveryToken)) return log.toString()
+                    val location = findTaskLocationForPackage(packageName)
+                    val marker = if (location.status == TaskLocation.Status.ABSENT) {
+                        TaskLaunchRecovery.FRAMEWORK_BLOCKED_MARKER
+                    } else TaskLaunchRecovery.PLACEMENT_UNCONFIRMED_MARKER
+                    log.append(marker).append(" pkg=").append(packageName)
+                        .append(" display=").append(displayId).append('\n')
+                }
                 log.append("FAIL: no task discovered for ").append(packageName).append('\n')
                 return log.toString()
             }
@@ -1006,6 +1110,8 @@ object Phase4TaskVerbs {
         } catch (t: Throwable) {
             log.append("EXCEPTION: ").append(t).append('\n')
             Log.e(TAG, "FISSION launchAndForce EXCEPTION: $t")
+        } finally {
+            sWatchdogs.finish(packageName, generation)
         }
         return log.toString()
     }
@@ -1190,9 +1296,9 @@ object Phase4TaskVerbs {
 
     /**
      * Reflective, never-throwing call to `removeStacksInWindowingModes(int[])` (Android ≤11 /
-     * DiLink 3) or its Android-12+ name `removeRootTasksInWindowingModes` (DiLink 5). Unlike
-     * `removeStack(int)` this routes to `ActivityStackSupervisor.removeStack(stack)` and destroys
-     * the stack OBJECT — the only Q-surface verb that can dissolve a 0-task stack.
+     * DiLink 3) or its Android-12+ name `removeRootTasksInWindowingModes` (DiLink 5). On SX361 it
+     * delegates to the same supervisor removal path; it can also leave an empty stack behind.
+     * Its effect must be verified against the live stack list.
      *
      * Callers MUST gate this on [allSplitStacksEmpty].
      *
@@ -1364,9 +1470,8 @@ object Phase4TaskVerbs {
                         log.append("  REMOVE-UNVERIFIED stackId=").append(stackId)
                            .append(" (stack list unreadable — not counted)\n")
                     } else {
-                        // Still there. Escalate ONCE to the only Q-surface verb that destroys
-                        // the stack OBJECT instead of its tasks — hard-gated on "no split-screen
-                        // stack anywhere holds a task" so a live projection can never be killed.
+                        // One existing system-wide attempt, only with no live split stack.
+                        // SX361 can leave the object behind through this route as well.
                         if (!escalated) {
                             escalated = true
                             if (allSplitStacksEmpty(getAtmTaskListNoThrow(iAtm))) {

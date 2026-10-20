@@ -2071,8 +2071,12 @@ android {
         // 690 = 1.9.51-beta: reuse the full ADAS sequence for explicit re-hide after restoration;
         // finish full recovery after Classic/Fission projection teardown and the OEM quiet period.
         // Initial hide/restore worked on the car in 1.9.50; these new cycles still need vehicle tests.
-        versionCode 690
-        versionName "1.9.51-beta"
+        // 691 = 1.9.52-beta: validate cached cluster tasks after ACC OFF and add a bounded,
+        // exact-SX361 empty-primary recovery with per-request validity and geometry protection.
+        // Include manual read-only ADAS target snapshots and retained bug-report diagnostics.
+        // The version bump refreshes persistent daemons to protocol 29; vehicle validation is pending.
+        versionCode 691
+        versionName "1.9.52-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

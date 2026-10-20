@@ -24,7 +24,7 @@ internal object ProxyFissionVerbs {
     @Throws(RemoteException::class, ProxyClient.ProxyException::class)
     fun launchAndForce(
         pkg: String?, activityCls: String?,
-        displayId: Int, width: Int, height: Int
+        displayId: Int, width: Int, height: Int, recoveryToken: IBinder? = null
     ): String? {
         val b: IBinder? = ProxyClient.dispatchBinder()
         if (b == null || !b.isBinderAlive()) throw ProxyClient.ProxyException("not connected")
@@ -42,6 +42,7 @@ internal object ProxyFissionVerbs {
             data.writeInt(displayId)
             data.writeInt(width)
             data.writeInt(height)
+            if (ProxyClient.supportsProtocol(29)) data.writeStrongBinder(recoveryToken)
             b.transact(ProxyDaemonContract.TXN_LAUNCH_AND_FORCE, data, reply, 0)
             reply.readException()
             return reply.readString()

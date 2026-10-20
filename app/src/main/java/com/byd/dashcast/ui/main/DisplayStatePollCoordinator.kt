@@ -13,7 +13,11 @@ import com.byd.dashcast.util.AppLogger
  *
  * Call [start] in onStart and [stop] in onStop.
  */
-class DisplayStatePollCoordinator(private val mHost: Host) {
+class DisplayStatePollCoordinator(
+    private val mHost: Host,
+    private val executeShell: (Context, String, AdbLocalClient.Callback) -> Unit =
+        { context, command, callback -> ShellGateway.execShellWithResult(context, command, callback) },
+) {
 
     interface Host {
         fun getContext(): Context
@@ -33,11 +37,14 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
 
     private val mHandler = Handler(Looper.getMainLooper())
     private var mPollRunnable: Runnable? = null
+    private var mGeneration = 0L
 
     fun start() {
         if (mPollRunnable != null) return
+        mGeneration++
         val r = object : Runnable {
             override fun run() {
+                if (mPollRunnable !== this) return
                 reconcileCluster()
                 reconcileMain()
                 mHandler.postDelayed(this, POLL_INTERVAL_MS)
@@ -48,6 +55,7 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
     }
 
     fun stop() {
+        mGeneration++
         val r = mPollRunnable
         if (r != null) {
             mHandler.removeCallbacks(r)
@@ -59,9 +67,11 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
 
     private fun reconcileCluster() {
         val clusterPkg = mHost.getClusterPkg() ?: return
+        val launchTime = mHost.getLastLaunchTime()
+        val generation = mGeneration
 
         // Grace period of 8 s after a launch so the process has time to register in pidof.
-        if (System.currentTimeMillis() - mHost.getLastLaunchTime() < 8_000) {
+        if (System.currentTimeMillis() - launchTime < 8_000) {
             return
         }
 
@@ -69,7 +79,7 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
         // per 5 s they kept the AppLogger buffer perpetually dirty, which locked
         // LogActivity into its 500 ms refresh cadence. Only the death transition
         // (below, WARN) is an event worth recording.
-        ShellGateway.execShellWithResult(mHost.getContext(), "pidof $clusterPkg",
+        executeShell(mHost.getContext(), "pidof $clusterPkg",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     val alive = out != null && out.trim().isNotEmpty()
@@ -78,7 +88,9 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
                     }
                     mHost.runOnMainThread(Runnable {
                         if (!mHost.isActivityAlive()) return@Runnable
+                        if (generation != mGeneration || mPollRunnable == null) return@Runnable
                         if (clusterPkg != mHost.getClusterPkg()) return@Runnable
+                        if (launchTime != mHost.getLastLaunchTime()) return@Runnable
                         AppLogger.w(TAG, "$clusterPkg process died → clearing cluster state")
                         mHost.onClusterPkgDied()
                     })
@@ -94,14 +106,16 @@ class DisplayStatePollCoordinator(private val mHost: Host) {
 
     private fun reconcileMain() {
         val mainPkg = mHost.getMainDisplayPkg() ?: return
+        val generation = mGeneration
 
-        ShellGateway.execShellWithResult(mHost.getContext(), "pidof $mainPkg",
+        executeShell(mHost.getContext(), "pidof $mainPkg",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
                     val alive = out != null && out.trim().isNotEmpty()
                     if (alive) return
                     mHost.runOnMainThread(Runnable {
                         if (!mHost.isActivityAlive()) return@Runnable
+                        if (generation != mGeneration || mPollRunnable == null) return@Runnable
                         if (mainPkg != mHost.getMainDisplayPkg()) return@Runnable
                         AppLogger.w(TAG, "main-display app $mainPkg process died → clearing main marker")
                         mHost.onMainPkgDied()
