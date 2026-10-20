@@ -713,6 +713,27 @@ object ProxyClient {
         return runPinned(binder) { ProxyProcessVerbs.runShell(command) }
     }
 
+    /** One manual cache read on the already connected daemon. Never bootstrap, reconnect or replay. */
+    internal fun readAdasTarget(binder: IBinder, property: Int): Int {
+        AdasTargetProperties.requireAllowed(property)
+        if (!supportsProtocol(28)) throw ProxyException(
+            "Proxy daemon protocol 28 required; update/restart the daemon using the existing DashCast controls")
+        if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("connection replaced or unavailable")
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
+            data.writeInt(property)
+            if (!binder.transact(ProxyDaemonContract.TXN_ADAS_TARGET_READ, data, reply, 0))
+                throw ProxyException("ADAS target read unsupported")
+            reply.readException()
+            if (reply.dataAvail() < 4) throw ProxyException("Missing ADAS integer reply")
+            val value = reply.readInt()
+            if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("connection replaced during read")
+            return value
+        } finally { reply.recycle(); data.recycle() }
+    }
+
     internal fun readAdasBodywork(binder: IBinder, property: Int): Int {
         require(property == 0 || property == 0x40d00010 || property == 0x12d0002a)
         if (!supportsProtocol(27) || sBinder !== binder) throw ProxyException("ADAS reader unavailable")

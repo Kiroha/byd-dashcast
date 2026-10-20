@@ -211,6 +211,12 @@
             android:label="Diagnostic"
             android:screenOrientation="landscape"/>
 
+        <activity
+            android:name=".ui.diag.AdasTargetDiagActivity"
+            android:exported="false"
+            android:label="ADAS target diagnostic"
+            android:screenOrientation="landscape"/>
+
         <!-- HUD bench (DL3) — proven HUD-control confirmation + raw logcat recorder -->
         <activity
             android:name=".hud.HudDiagActivity"
