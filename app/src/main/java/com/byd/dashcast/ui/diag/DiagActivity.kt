@@ -70,6 +70,7 @@ class DiagActivity : Activity() {
     private var reportingPairInFlight = false
     private lateinit var fullExportBtn: Button
     private lateinit var qrDiagnosticBtn: Button
+    private lateinit var adasTargetsBtn: Button
     private lateinit var fullExportStatus: TextView
     private lateinit var fullExportCurrent: TextView
     private lateinit var cancelFullExportBtn: Button
@@ -87,7 +88,7 @@ class DiagActivity : Activity() {
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn, adasTargetsBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -167,6 +168,11 @@ class DiagActivity : Activity() {
             text = "Métadonnées uniquement. Aucun code saisi ni outil ouvert."
             textSize = 14f
         })
+        adasTargetsBtn = Button(this).apply {
+            text = "ADAS targets (read-only snapshot)"
+            setOnClickListener { if (!sBusy.get()) startActivity(Intent(this@DiagActivity, AdasTargetDiagActivity::class.java)) }
+        }
+        controls.addView(adasTargetsBtn)
         runBtn = Button(this).apply {
             text = "BYD APK Extraction"
             // Projection may already be mined, but HUD receiver evidence is still needed.
@@ -982,9 +988,11 @@ class DiagActivity : Activity() {
 
     private fun resetButton() = releaseBusy()
 
-    private companion object {
-        const val TAG = "DiagActivity"
-        val sBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+    companion object {
+        private const val TAG = "DiagActivity"
+        private val sBusy = java.util.concurrent.atomic.AtomicBoolean(false)
+        internal fun claimAdasDiagnostic(): Boolean = sBusy.compareAndSet(false, true)
+        internal fun releaseAdasDiagnostic() { sBusy.set(false) }
 
         private fun logExtraction(owner: WeakReference<DiagActivity>, line: String) {
             AppLogger.i(TAG, line)

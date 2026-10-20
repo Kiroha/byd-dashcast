@@ -245,4 +245,8 @@ object ProxyDaemonContract {
     /** int property: 0 for typed power, or one of the two closed ADAS monitor IDs → int. */
     const val TXN_ADAS_BODYWORK_READ = IBinder.FIRST_CALL_TRANSACTION + 40 // 41, protocol 27
 
+    /** int exact SX326 candidate property → int raw cache result (including OEM sentinels).
+     * Uses device 1038 and the original system context; no setters, subscriptions or retries. */
+    const val TXN_ADAS_TARGET_READ = IBinder.FIRST_CALL_TRANSACTION + 41 // 42, protocol 28
+
 }

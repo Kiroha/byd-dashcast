@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "27"
+    private const val PROTOCOL_VERSION = "28"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -1153,6 +1153,18 @@ object ProxyDaemonMain {
                     } catch (ex: Throwable) {
                         reply?.writeException(wrapThrowable(ex))
                     }
+                    return true
+                }
+                ProxyDaemonContract.TXN_ADAS_TARGET_READ -> {
+                    data.enforceInterface(DESCRIPTOR)
+                    try {
+                        val property = data.readInt()
+                        com.byd.dashcast.proxy.AdasTargetProperties.requireAllowed(property)
+                        val ctx = sSystemContext ?: error("original system context unavailable")
+                        val value = AdasTargetReader.read(ctx, property)
+                        reply?.writeNoException()
+                        reply?.writeInt(value)
+                    } catch (ex: Throwable) { reply?.writeException(wrapThrowable(ex)) }
                     return true
                 }
                 ProxyDaemonContract.TXN_ADAS_BODYWORK_READ -> {
