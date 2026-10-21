@@ -49,7 +49,7 @@ internal class ProjectionCommandSequencer {
 
     @Synchronized fun cleanupTicket(): CleanupTicket = CleanupTicket(generation)
 
-    private fun cleanupCurrent(ticket: CleanupTicket): Boolean =
+    @Synchronized fun cleanupCurrent(ticket: CleanupTicket): Boolean =
         ticket.generation == generation || ticket.generation == retiredGeneration
 
     @Synchronized
@@ -169,6 +169,9 @@ internal object ProjectionCommandBus {
     }
 
     fun cleanupTicket(): ProjectionCommandSequencer.CleanupTicket = sequencer.cleanupTicket()
+
+    fun cleanupCurrent(ticket: ProjectionCommandSequencer.CleanupTicket): Boolean =
+        sequencer.cleanupCurrent(ticket)
 
     fun submitCleanup(ticket: ProjectionCommandSequencer.CleanupTicket, valid: () -> Boolean,
                       launch: ((Boolean) -> Unit) -> Unit, done: (Boolean) -> Unit) {
