@@ -15,6 +15,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.54-beta (versionCode 693)
+
+**Finish Stop after the last native cluster-size command.** Cancel pending ADAS hiding
+before eviction and start existing recovery after the real completion boundary. Reject
+remaining commands and UI callbacks from an older projection; handle final errors,
+interruptions and callback failures without duplicate completion or native replay.
+
+No OEM write commands or ADAS frame counts/delays are added. The exact SX361 compatibility
+gate and full-pane warning effect remain; parked-vehicle validation is still required.
+Retain 1.9.53-beta passive ADAS log diagnostics and proxy protocol 30. DashSat 0.9.9-dev
+remains compatible; 1.9.0 remains stable. [Release notes](docs/releases/1.9.54-beta.md).
+
 ### 1.9.53-beta (versionCode 692)
 
 **Inspect existing OEM ADAS logs from Diag.** A separate manual action checks fixed OEM log

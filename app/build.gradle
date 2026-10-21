@@ -2078,8 +2078,11 @@ android {
         // 692 = 1.9.53-beta: inspect existing OEM ADAS logs manually and retain bounded
         // historical results in bug reports. Refresh daemons to protocol 30 on normal startup;
         // vehicle log visibility, permissions and active target feeds remain unverified.
-        versionCode 692
-        versionName "1.9.53-beta"
+        // 693 = 1.9.54-beta: finish Stop only after the final native size command, cancel ADAS
+        // hiding before eviction and reject stale restore tails after a newer projection starts.
+        // Preserve protocol 30 and passive ADAS log diagnostics; parked validation is pending.
+        versionCode 693
+        versionName "1.9.54-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

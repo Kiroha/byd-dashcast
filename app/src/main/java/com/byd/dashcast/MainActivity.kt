@@ -33,6 +33,8 @@ import com.byd.dashcast.app.BootDisplayCleanup
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.cluster.ClusterSessionTracker
 import com.byd.dashcast.cluster.display.DashboardLauncher
+import com.byd.dashcast.cluster.display.ProjectionCommandBus
+import com.byd.dashcast.cluster.display.ProjectionCommandSequencer
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager
 import com.byd.dashcast.data.apps.AppRepository
 import com.byd.dashcast.data.prefs.ClusterPrefs
@@ -1774,6 +1776,8 @@ class MainActivity : AppCompatActivity(),
     private fun originCluster() {
         mClusterService?.cancelPendingLaunchRecovery()
         mDashboardSelectionTracker.begin(null)
+        val stopTicket = ProjectionCommandBus.cleanupTicket()
+        val completeAdasStop = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(this)
         btnRestoreCluster.isEnabled = false
         mNavCoordinator?.setStatusRestoringOrigin()
         mUsageTracker.trackStop(mCurrentDashboardPkg)
@@ -1789,11 +1793,13 @@ class MainActivity : AppCompatActivity(),
         mAppListCoordinator.setCurrentPackage(null)
 
         FissionOrchestrator.stopAutoOrchestrator {
-            continueOriginCluster(capturedClusterPkg, capturedSecondPkg)
+            continueOriginCluster(capturedClusterPkg, capturedSecondPkg, stopTicket, completeAdasStop)
         }
     }
 
-    private fun continueOriginCluster(capturedClusterPkg: String?, capturedSecondPkg: String?) {
+    private fun continueOriginCluster(capturedClusterPkg: String?, capturedSecondPkg: String?,
+                                      stopTicket: ProjectionCommandSequencer.CleanupTicket,
+                                      completeAdasStop: Runnable) {
         // Same as continueRestoreBydDashboard: evictAllThen covers the tracked set itself.
         AppLogger.log(TAG, "originCluster() cmd=" + ClusterPrefs.getClusterType(this))
 
@@ -1803,8 +1809,10 @@ class MainActivity : AppCompatActivity(),
         ) { restoreHome, callerComplete ->
             AdbLocalClient.restoreOriginCluster(this, ClusterPrefs.getClusterType(this), null, object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
+                    completeAdasStop.run()
                     runOnUiThread {
                         try {
+                            if (!ProjectionCommandBus.cleanupCurrent(stopTicket)) return@runOnUiThread
                             restoreHomeIfRequested(restoreHome)
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             if (mServiceBound && mClusterService != null) {
@@ -1814,7 +1822,7 @@ class MainActivity : AppCompatActivity(),
                             updateDashboardStatus(null)
                             showAppList()
                             btnRestoreCluster.isEnabled = true
-                            AppLogger.log(TAG, "Original cluster restored ✓")
+                            AppLogger.log(TAG, "Original cluster restore commands delivered; rendered state unknown")
                         } finally {
                             callerComplete.run()
                         }
@@ -1822,8 +1830,10 @@ class MainActivity : AppCompatActivity(),
                 }
 
                 override fun onError(err: String?) {
+                    completeAdasStop.run()
                     runOnUiThread {
                         try {
+                            if (!ProjectionCommandBus.cleanupCurrent(stopTicket)) return@runOnUiThread
                             restoreHomeIfRequested(restoreHome)
                             if (isFinishing || isDestroyed) return@runOnUiThread
                             btnRestoreCluster.isEnabled = true
@@ -1839,7 +1849,7 @@ class MainActivity : AppCompatActivity(),
                         }
                     }
                 }
-            })
+            }, valid = { ProjectionCommandBus.cleanupCurrent(stopTicket) })
         }
     }
 

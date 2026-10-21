@@ -12,8 +12,10 @@ import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.R
 import com.byd.dashcast.cluster.EvictionOutcomePolicy
 import com.byd.dashcast.cluster.EvictionTaskSetPolicy
+import com.byd.dashcast.cluster.AdasCommandResult
 import com.byd.dashcast.cluster.display.ClusterGeometryPolicy
 import com.byd.dashcast.cluster.display.ClusterManager
+import com.byd.dashcast.cluster.display.ProjectionCommandBus
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.infrastructure.task.LegacyTaskLocationParser
 import com.byd.dashcast.infrastructure.task.TaskLocation
@@ -998,15 +1000,17 @@ object AdbLocalClient {
      * Origin cluster — restores the Qt cluster to the screen size configured by the user.
      *
      * Sequence:
-     *   1. sendInfo(1000, 18)            — close projection (投屏关闭)          → wait 6s
-     *   2. sendInfo(1000,  0)            — refresh Qt stream                   → wait 6s
+     *   1. sendInfo(1000, 18)            — close projection (投屏关闭)          → wait 2s
+     *   2. sendInfo(1000,  0)            — refresh Qt stream                   → wait 3s
      *   3. sendInfo(1000, screenSizeCmd) — switch Qt to the correct resolution
+     * Completion includes the final shape command; ADAS recovery must run after it.
      *
      * @param requestedScreenSizeCmd size code: 29=8.8" (Atto 3), 30=12.3" (Seal EU — CONFIRMED), 31=10.25" (Seal U-DMI)
      * @param targetPackage nullable: package to force-stop before restore
      */
     fun restoreOriginCluster(context: Context, requestedScreenSizeCmd: Int,
-                             targetPackage: String?, callback: Callback) {
+                             targetPackage: String?, callback: Callback,
+                             valid: () -> Boolean = { true }) {
         // This is the DEFAULT Stop flow and it passes the raw preference, whose default is 30
         // (12.3"). On an Atto 3 / Dolphin that never had its cluster size configured, every Stop
         // was therefore ordering a 1280x480 panel into the 12.3" shape — which drops it into its
@@ -1027,16 +1031,29 @@ object AdbLocalClient {
         }
         // v1.2.78 — see restoreBydOnCluster() above for rationale.
         ClusterManager.notifyProjectionStopped()
+        val ticket = ProjectionCommandBus.cleanupTicket()
+        val completed = AtomicBoolean()
+        fun ownerCurrent() = valid() && ProjectionCommandBus.cleanupCurrent(ticket)
+        fun requireOwner() = check(ownerCurrent()) { "projection replaced" }
+        fun success(output: String) {
+            if (completed.compareAndSet(false, true)) callback.onSuccess(output)
+        }
+        fun failure(error: Throwable) {
+            if (error is InterruptedException) Thread.currentThread().interrupt()
+            if (completed.compareAndSet(false, true))
+                callback.onError("${error.javaClass.simpleName}: ${error.message}")
+        }
         sExecutor.execute {
             AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd +
                 (if (targetPackage != null) " target=$targetPackage" else ""))
             // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
-            // Falls back to the legacy shell flow on any failure.
+            // Compatibility fallback is allowed only before native refresh completes.
             // DL5: skip typed path — Phase4ProcessVerbs hardcodes "AutoContainer".
             if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)) {
                 val t0 = SystemClock.elapsedRealtime()
-                var callbackFired = false
+                var refreshed = false
                 try {
+                    requireOwner()
                     if (!ProxyClient.isConnected()) {
                         // Never call connect() from an executor thread — blocks 10–15 s.
                         // ProxyKeeperService reconnects in background; skip to legacy path.
@@ -1045,34 +1062,34 @@ object AdbLocalClient {
                     val sb = StringBuilder()
                     if (targetPackage != null && targetPackage.isNotEmpty()) {
                         // Phase 4d.1 (build 180): see restoreBydOnCluster above.
+                        requireOwner()
                         ProxyClient.forceStopPackage(targetPackage, 0)
                         sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n")
                         Thread.sleep(500)
                         verifyForceStop(targetPackage, sb)
                     }
+                    requireOwner()
                     ProxyClient.autoContainerSendInfo(1000, 18, "")
                     sb.append("sendInfo(18) : OK (typed)\n")
                     Thread.sleep(2000)
+                    requireOwner()
                     ProxyClient.autoContainerSendInfo(1000, 0, "")
                     sb.append("sendInfo(0)  : OK (typed)\n")
+                    refreshed = true
+                    Thread.sleep(3000)
+                    requireOwner()
+                    ProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "")
+                    sb.append("sendInfo($screenSizeCmd) : OK (typed)\n")
                     val dt = SystemClock.elapsedRealtime() - t0
                     AppLogger.log(TAG, "beta restoreOriginCluster typed ok (${dt}ms)")
-                    // Fire callback now — UI unblocked, ClusterManager state cleaned up.
-                    // screenSizeCmd is cosmetic and completes in background.
-                    callbackFired = true
-                    callback.onSuccess("Origin cluster restored ✓ (typed)\n$sb")
-                    Thread.sleep(3000)
-                    ProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "")
-                    AppLogger.log(TAG, "restoreOriginCluster screenSize(cmd=$screenSizeCmd) sent in background")
+                    success("Origin cluster restore commands delivered (typed)\n$sb")
                     return@execute
                 } catch (t: Throwable) {
-                    if (t is InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        return@execute // callback already fired; background screenSizeCmd aborted
-                    }
-                    if (callbackFired) {
-                        // Background screenSizeCmd failed — log only, callback already done
-                        AppLogger.w(TAG, "restoreOriginCluster background screenSize failed: " + t.message)
+                    // Never replay native close after refresh, owner retirement, or a callback failure.
+                    if (completed.get()) return@execute
+                    if (refreshed || t is InterruptedException || !ownerCurrent()) {
+                        AppLogger.w(TAG, "restoreOriginCluster final delivery failed: " + t.message)
+                        failure(t)
                         return@execute
                     }
                     val dt = SystemClock.elapsedRealtime() - t0
@@ -1082,48 +1099,46 @@ object AdbLocalClient {
                 }
             }
             try {
+                requireOwner()
+                val sb = StringBuilder()
                 connect(context).use { dadb ->
-                    val sb = StringBuilder()
-
                     // Force-stop target package before restore (same reason as
                     // restoreBydOnCluster: avoid task relocation to display 0).
                     if (targetPackage != null && targetPackage.isNotEmpty()) {
+                        requireOwner()
                         dadb.shell("am force-stop $targetPackage 2>&1")
                         sb.append("force-stop ").append(targetPackage).append("\n")
                         Thread.sleep(500)
                     }
 
+                    requireOwner()
                     val rStop = dadb.shell(
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1")
                     sb.append("sendInfo(18) : ").append(rStop.allOutput.trim()).append("\n")
                     Thread.sleep(2000)
 
+                    requireOwner()
                     val rRefresh = dadb.shell(
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1")
                     sb.append("sendInfo(0)  : ").append(rRefresh.allOutput.trim()).append("\n")
-
-                    noteTransportSuccess()
-                    AppLogger.log(TAG, "restoreOriginCluster -> OK (screenSize in background)")
-                    // Fire callback now — UI unblocked, ClusterManager state cleaned up.
-                    // screenSizeCmd is cosmetic and completes in background after 3s Qt settling.
-                    callback.onSuccess("Origin cluster restored ✓\n$sb")
-                    try {
-                        Thread.sleep(3000)
-                        dadb.shell("service call " + autoContainerSvcName(context) +
-                            " 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1")
-                        AppLogger.log(TAG, "restoreOriginCluster screenSize(cmd=$screenSizeCmd) sent in background")
-                    } catch (bg: Exception) {
-                        if (bg is InterruptedException) Thread.currentThread().interrupt()
-                        noteTransportFailure(context, bg)
-                        AppLogger.w(TAG, "restoreOriginCluster background screenSize failed: " + bg.message)
+                    Thread.sleep(3000)
+                    requireOwner()
+                    val rShape = dadb.shell("service call " + autoContainerSvcName(context) +
+                        " 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1 && echo DASHCAST_ADAS_OK")
+                    check(rShape.exitCode == 0 && AdasCommandResult.accepted(rShape.allOutput)) {
+                        "screen size command failed: ${rShape.allOutput.trim()}"
                     }
+                    sb.append("sendInfo($screenSizeCmd) : ").append(rShape.allOutput.trim()).append("\n")
                 }
+                noteTransportSuccess()
+                AppLogger.log(TAG, "restoreOriginCluster -> commands delivered")
+                success("Origin cluster restore commands delivered\n$sb")
             } catch (e: Exception) {
+                if (completed.get()) return@execute
                 if (e is InterruptedException) Thread.currentThread().interrupt()
                 noteTransportFailure(context, e)
-                val msg = e.javaClass.simpleName + ": " + e.message
                 AppLogger.e(TAG, "restoreOriginCluster ERROR", e)
-                callback.onError(msg)
+                failure(e)
             }
         } // adb-origin-cluster-thread
     }

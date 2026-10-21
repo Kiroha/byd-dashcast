@@ -185,6 +185,17 @@ alone never authorizes automatic restoration on an unrelated Stop. Known, in-pro
 does survive an owner replacement until a full restoration succeeds, so Stop can recover a previous
 mask even if the replacement app never verifies or starts its own masking pass.
 
+The original-cluster Stop path includes its final size/theme command (29/30/31) in
+that native completion boundary. Its UI remains in the restoring state through
+18 → 2 seconds → 0 → 3 seconds → size; only the terminal callback releases the
+eviction launch fence and starts the existing recovery quiet period. Previously
+the callback fired immediately after 0, leaving a background size command racing
+the recovery's 12/53 commands ([20:21 incident](incidents/INC-20261021-202126-ADAS-STOP-RESTORE.md)).
+Stop revokes masking before asynchronous eviction. Final-size error or interruption
+still completes cleanup once, retaining the journal and manual recovery. Old delayed
+native writes and old UI teardown are rejected after a new projection owner begins.
+An already admitted Binder/ADB operation cannot be recalled atomically.
+
 ### Evidence and deliberate host adaptations
 
 Research root: `tiers_apk/Electro/analysis-rea-20261019/` (outside this source repository).
