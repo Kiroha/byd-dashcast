@@ -75,3 +75,64 @@ single manager initialization, decoder completeness/ranges, timeout/cancellation
 stale watchdog identity, no automatic reads, large-font short-screen layout and normal/fallback
 report inclusion. Static and JVM checks do not validate OEM access, hardware behavior or the
 source/freshness of values on a vehicle. No vehicle command, installation or ADB test was run.
+
+## Existing OEM log inspection
+
+The same bench has a separate **Inspect existing OEM ADAS logs** button. It requires the
+stationary-test acknowledgment and attached Android default display. Opening/resuming the
+screen or creating a report never starts it. Both manual buttons share the diagnostic slot;
+canceling, leaving the screen or the 8-second logical deadline retires the inspection, while
+an already admitted synchronous call keeps the slot until physical return. Late results are
+retained as historical diagnostics, never plotted. This is a visibility test, not target access
+or a working 360-degree view.
+
+Protocol **30**, transaction 43, adds a no-argument read-only request on the already connected
+proxy daemon. It never reconnects/retries, starts a daemon, enables logging, changes properties,
+permissions or permission contexts, restarts services, subscribes to OEM data or opens an SPI
+device. The raw-property diagnostic still accepts protocol 28. An older daemon returns an
+explicit update/restart instruction; app version is unchanged, so an existing daemon can remain
+alive after installation.
+
+The fixed paths follow the analyzed SX326 firmware's `xdja.fission_host.rc` bind mounts:
+host `/data/logs` is exposed to cell2 at `/data/logs/host/logs`, and host cluster/SPI log
+directories at `/data/logs/host/clusterlogs` and `/data/logs/host/spilogs`. Only directory metadata
+is inspected for the last two, whose filename/producer contracts are unproved. The first is
+scanned for exact `aplog` and numeric rotations 1..10 (including zero-padded two-digit suffixes),
+matching `apk_logfs`'s `-f /data/logs/aplog -r5000 -n10`. This logging service is disabled unless
+the OEM property enables it; DashCast does not enable it. Paths and effective shell/SELinux
+access remain runtime questions.
+
+Collection streams at most 128 directory entries, chooses at most six files by observed mtime,
+and reads at most 256 KiB from each tail (1.5 MiB total). Directory ancestors must be actual
+directories, with identity checked around collection. Entries must be regular files; open uses
+`O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC`, with descriptor type/identity checks before/after bounded reads
+and path/parent rechecks. Device nodes, FIFOs and symlinks are rejected. Append is allowed and
+marked non-atomic; detected truncation/rotation discards that file's records. Concurrent in-place
+rewrites or truncate/regrow cannot be ruled out by metadata, so this is not a filesystem snapshot.
+The five-second I/O budget is checked between operations; it cannot interrupt a blocked native
+filesystem operation. Metadata and up to 64 exact target callback records fit in 24 KiB. No
+unrelated log payload is retained. Missing/denied/empty/nonregular/changed/unsupported/budget
+outcomes are distinct; missing matches in bounded tails do not prove global absence.
+
+`libBydDataSource.so`'s `CLUSTER_LOG` INFO callbacks use `[callbackInt] id=%d(%s), value=%d` and
+`[callbackReal] id=%d(%s), value=%f`. The filter requires exact IDs **499..519**, exact names and
+callback kind: seven declared groups (`leftFrontTarget`, `rightFrontTarget`, `leftRearTarget`,
+`rightRearTarget`, `frontTargetOne`, `frontTargetTwo`, `rearTarget`), each with `State`, `PosX` and
+`PosY`. Values are already decoded DataItems: raw `0x295`/`0x374` conversion is never reapplied.
+Callbacks emit changes, not a heartbeat; state 0 can leave cached coordinates. Rear declarations
+do not establish active rear feeds. Inspection receipt times are not log or sensor timestamps;
+the excerpt removes unrelated prefixes and does not reconstruct atomic target sets or freshness.
+
+The 21 mappings, log formats and mount/logfs evidence are recorded in the firmware investigation
+`REA-ADAS-Bridge-20261021` (`ipc/target_callback_format.json`, `ipc/FINDINGS.txt`). Kernel routing
+and HAL dispatch evidence in `ingress/FINDINGS.txt` also correct an earlier hypothesis: MCU source
+1 routes to both IVI and cluster, and the 32 target keys plus LKS appear in the cluster B-key
+table. Android cache misses alone do not prove the raw data stays exclusively in the cluster;
+unrecognized HAL keys can be discarded. No supported Android target-data endpoint is established.
+
+The latest result/error is bounded process memory and is replaced by the next accepted manual
+inspection. Normal and fallback bug reports include it without another read, through the existing
+redaction/delivery flow; events enter `AdasLogDiag`. Tests cover closed scope, exact parsing,
+rejected types, empty/denied access, mutation, resource bounds, cancellation/late returns, pinned
+protocol behavior, explicit UI admission and both report paths. Static/JVM checks do not establish
+vehicle log visibility, active feeds, permissions or hardware compatibility.

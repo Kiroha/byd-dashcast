@@ -2,6 +2,7 @@ package com.byd.dashcast.report
 
 import com.byd.dashcast.proxy.AdasTargetProperties
 import com.byd.dashcast.ui.diag.AdasTargetDiagnostics
+import com.byd.dashcast.ui.diag.AdasLogDiagnostics
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,6 +16,33 @@ import java.util.concurrent.atomic.AtomicInteger
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class AdasTargetDiagnosticsReportTest {
+    @Test fun `normal and fallback reports include retained OEM log inspection without another file read`() {
+        val reads = AtomicInteger()
+        assertTrue(AdasLogDiagnostics.capture.start("daemonUid=2000; movement=UNKNOWN") {
+            reads.incrementAndGet(); "schema=1; root=/data/logs/host/logs status=DENIED; source freshness unknown"
+        })
+        val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+        while (AdasLogDiagnostics.capture.isBusy() && System.nanoTime() < end) Thread.sleep(2)
+        assertFalse(AdasLogDiagnostics.capture.isBusy())
+        val context = RuntimeEnvironment.getApplication()
+        for (fallback in listOf(false, true)) {
+            val output = File(context.cacheDir, if (fallback) "adas-logs-fallback-directory" else "adas-logs-normal.txt")
+            if (fallback) assertTrue(output.mkdir())
+            var produced: File? = null
+            BugReportCapture.finish(context, output, "Manual fixture", object : BugReportCapture.Callback {
+                override fun onReady(file: File) { produced = file }
+                override fun onError(message: String, partial: File?) { produced = partial }
+            }, null, if (fallback) null else "Synthetic shell body")
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+            assertNotNull(produced)
+            val body = produced!!.readText()
+            assertTrue(body.contains("ADAS OEM LOG INSPECTION (historical manual excerpt; freshness unknown)"))
+            assertTrue(body.contains("status=DENIED")); assertTrue(body.contains("daemonUid=2000"))
+            assertEquals(1, reads.get())
+            if (fallback) assertTrue(body.contains("report body build failed"))
+        }
+    }
+
     @Test fun `normal and fallback reports include retained raw and errors without another OEM read`() {
         val reads = AtomicInteger()
         assertTrue(AdasTargetDiagnostics.capture.start(null, "runtimeApi=29; daemonUid=2000; hardware=unverified") {

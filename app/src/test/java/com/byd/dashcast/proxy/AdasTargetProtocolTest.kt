@@ -81,4 +81,34 @@ class AdasTargetProtocolTest {
             assertEquals(mode, 1, calls)
         }
     }
+
+    @Test fun `fixed OEM log request has no path arguments and old or malformed responses never replay`() {
+        version.set(null, "30")
+        for (mode in listOf("ok", "old", "replace", "unsupported", "missing", "null", "oversized", "denied")) {
+            var calls = 0
+            val binder = object : Binder() {
+                override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                    calls++
+                    assertEquals(ProxyDaemonContract.TXN_ADAS_LOG_PROBE, code)
+                    data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(0, data.dataAvail())
+                    if (mode == "unsupported") return false
+                    if (mode == "replace") binderField.set(null, Binder())
+                    if (mode == "denied") reply!!.writeException(SecurityException("fixture denied"))
+                    else {
+                        reply!!.writeNoException()
+                        if (mode != "missing") reply.writeString(when (mode) {
+                            "null" -> null
+                            "oversized" -> "schema=1;" + "x".repeat(AdasLogProbePolicy.MAX_RESPONSE)
+                            else -> "schema=1; historical fixture"
+                        })
+                    }
+                    return true
+                }
+            }
+            binderField.set(null, binder); version.set(null, if (mode == "old") "29" else "30")
+            if (mode == "ok") assertEquals("schema=1; historical fixture", ProxyClient.inspectAdasLogs(binder))
+            else assertThrows(Exception::class.java) { ProxyClient.inspectAdasLogs(binder) }
+            assertEquals(mode, if (mode == "old") 0 else 1, calls)
+        }
+    }
 }

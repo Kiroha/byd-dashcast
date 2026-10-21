@@ -521,6 +521,8 @@ object BugReportCapture {
                 .append(com.byd.dashcast.ui.diag.FirmwareDiagnostics.snapshot())
             sb.append("\n════════ ADAS TARGET DIAGNOSTIC (historical manual cache snapshot) ════════\n")
                 .append(com.byd.dashcast.ui.diag.AdasTargetDiagnostics.snapshot())
+            sb.append("\n════════ ADAS OEM LOG INSPECTION (historical manual excerpt; freshness unknown) ════════\n")
+                .append(com.byd.dashcast.ui.diag.AdasLogDiagnostics.snapshot())
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody)
             sb.append("\n════════ DASHCAST JOURNAL ════════\n").append(AppLogger.get())
             content = sb.toString()
@@ -534,6 +536,8 @@ object BugReportCapture {
                     com.byd.dashcast.ui.diag.FirmwareDiagnostics.snapshot() +
                     "\n════════ ADAS TARGET DIAGNOSTIC (historical manual cache snapshot) ════════\n" +
                     com.byd.dashcast.ui.diag.AdasTargetDiagnostics.snapshot() +
+                    "\n════════ ADAS OEM LOG INSPECTION (historical manual excerpt; freshness unknown) ════════\n" +
+                    com.byd.dashcast.ui.diag.AdasLogDiagnostics.snapshot() +
                     "\n════════ DASHCAST JOURNAL ════════\n" + AppLogger.get()
         }
         // AUD-004 — the single choke point. By this line `content` holds everything a report will
