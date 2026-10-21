@@ -734,6 +734,26 @@ object ProxyClient {
         } finally { reply.recycle(); data.recycle() }
     }
 
+    /** Manual fixed-scope file inspection. Pin the existing connection; never replay or reconnect. */
+    internal fun inspectAdasLogs(binder: IBinder): String {
+        if (!supportsProtocol(30)) throw ProxyException(
+            "Proxy daemon protocol 30 required; update/restart the daemon using the existing DashCast controls")
+        if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("connection replaced or unavailable")
+        val data = Parcel.obtain(); val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
+            if (!binder.transact(ProxyDaemonContract.TXN_ADAS_LOG_PROBE, data, reply, 0)) throw ProxyException("OEM log inspection unsupported")
+            reply.readException()
+            if (reply.dataAvail() !in 4..((AdasLogProbePolicy.MAX_RESPONSE + 1) * 2 + 8))
+                throw ProxyException("Missing or oversized OEM log wire reply")
+            val result = reply.readString() ?: throw ProxyException("Null OEM log reply")
+            if (result.length > AdasLogProbePolicy.MAX_RESPONSE || !result.startsWith("schema=1;") || reply.dataAvail() != 0)
+                throw ProxyException("Malformed or oversized OEM log reply")
+            if (sBinder !== binder || !binder.isBinderAlive) throw ProxyException("connection replaced during inspection")
+            return result
+        } finally { reply.recycle(); data.recycle() }
+    }
+
     internal fun readAdasBodywork(binder: IBinder, property: Int): Int {
         require(property == 0 || property == 0x40d00010 || property == 0x12d0002a)
         if (!supportsProtocol(27) || sBinder !== binder) throw ProxyException("ADAS reader unavailable")

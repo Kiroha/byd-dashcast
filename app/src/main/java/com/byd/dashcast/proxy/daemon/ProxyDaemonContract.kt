@@ -22,6 +22,7 @@ object ProxyDaemonContract {
 
     // Protocol 29 appends an optional read-only validity Binder to TXN_LAUNCH_AND_FORCE.
     // Missing token preserves the historical launch, with SX361 primary recovery disabled.
+    // Protocol 30 adds the independent fixed-scope existing ADAS log inspection verb.
 
     const val STRICT_FILE_SCHEMA = 1
     const val CAP_STRICT_FILE_READ = 1
@@ -251,5 +252,9 @@ object ProxyDaemonContract {
     /** int exact SX326 candidate property → int raw cache result (including OEM sentinels).
      * Uses device 1038 and the original system context; no setters, subscriptions or retries. */
     const val TXN_ADAS_TARGET_READ = IBinder.FIRST_CALL_TRANSACTION + 41 // 42, protocol 28
+
+    /** No args → bounded String: fixed existing OEM log metadata and target callback excerpts only.
+     * No logging activation, shell, device nodes, subscriptions, writes or persistent file handles. */
+    const val TXN_ADAS_LOG_PROBE = IBinder.FIRST_CALL_TRANSACTION + 42 // 43, protocol 30
 
 }

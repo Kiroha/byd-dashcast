@@ -38,6 +38,7 @@ class AdasTargetDiagActivityTest {
     @Before fun setup() { previous = binderField.get(null); previousVersion = version.get(null); version.set(null, "28") }
     @After fun restore() {
         AdasTargetDiagnostics.capture.cancel("Test finished")
+        AdasLogDiagnostics.capture.cancel("Test finished")
         binderField.set(null, previous); version.set(null, previousVersion)
     }
     private fun <T : View> find(activity: AdasTargetDiagActivity, tag: String): T = activity.findViewById<View>(android.R.id.content).findViewWithTag(tag)
@@ -89,6 +90,8 @@ class AdasTargetDiagActivityTest {
             find<CheckBox>(controller.get(), "adas_parked").isChecked = true
             find<Button>(controller.get(), "adas_read").performClick()
             assertTrue(entered.await(1, TimeUnit.SECONDS))
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+            assertFalse(find<Button>(controller.get(), "adas_logs").isEnabled)
             controller.pause().stop().destroy()
             assertEquals("CANCELLED", AdasTargetDiagnostics.capture.snapshot()!!.outcome)
             assertTrue(AdasTargetDiagnostics.capture.isBusy())
@@ -97,6 +100,33 @@ class AdasTargetDiagActivityTest {
         waitFor { !AdasTargetDiagnostics.capture.isBusy() }
         assertEquals(1, calls.get())
         assertTrue(DiagActivity.claimAdasDiagnostic()); DiagActivity.releaseAdasDiagnostic()
+    }
+
+    @Test fun `OEM log inspection is explicit acknowledged and historical across resume without raw reads`() {
+        version.set(null, "30")
+        val calls = AtomicInteger()
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_ADAS_LOG_PROBE, code)
+                calls.incrementAndGet(); reply!!.writeNoException()
+                reply.writeString("schema=1; root=/data/logs/host/logs status=DENIED; fixture")
+                return true
+            }
+        })
+        val controller = Robolectric.buildActivity(AdasTargetDiagActivity::class.java).setup()
+        try {
+            val activity = controller.get()
+            assertEquals(0, calls.get())
+            find<Button>(activity, "adas_logs").performClick(); assertEquals(0, calls.get())
+            assertTrue(find<TextView>(activity, "adas_status").text.contains("Acknowledge"))
+            find<CheckBox>(activity, "adas_parked").isChecked = true
+            find<Button>(activity, "adas_logs").performClick()
+            waitFor { !AdasLogDiagnostics.capture.isBusy() }
+            controller.pause().resume(); org.robolectric.shadows.ShadowLooper.idleMainLooper()
+            assertEquals(1, calls.get())
+            assertTrue(find<TextView>(activity, "adas_log_result").text.contains("status=DENIED"))
+            assertTrue(find<TextView>(activity, "adas_log_result").text.contains("not source/sensor time"))
+        } finally { controller.pause().stop().destroy() }
     }
 
     @Suppress("DEPRECATION")
@@ -142,7 +172,9 @@ class AdasTargetDiagActivityTest {
                 find<CheckBox>(activity, "adas_parked").isChecked = true
                 val button = find<Button>(activity, "adas_read")
                 assertFalse(button.isEnabled)
+                assertFalse(find<Button>(activity, "adas_logs").isEnabled)
                 button.performClick()
+                find<Button>(activity, "adas_logs").performClick()
                 assertEquals(0, calls.get())
                 assertTrue(find<TextView>(activity, "adas_status").text.contains("default display required"))
             }
