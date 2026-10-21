@@ -2075,8 +2075,11 @@ android {
         // exact-SX361 empty-primary recovery with per-request validity and geometry protection.
         // Include manual read-only ADAS target snapshots and retained bug-report diagnostics.
         // The version bump refreshes persistent daemons to protocol 29; vehicle validation is pending.
-        versionCode 691
-        versionName "1.9.52-beta"
+        // 692 = 1.9.53-beta: inspect existing OEM ADAS logs manually and retain bounded
+        // historical results in bug reports. Refresh daemons to protocol 30 on normal startup;
+        // vehicle log visibility, permissions and active target feeds remain unverified.
+        versionCode 692
+        versionName "1.9.53-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

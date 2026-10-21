@@ -15,6 +15,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.53-beta (versionCode 692)
+
+**Inspect existing OEM ADAS logs from Diag.** A separate manual action checks fixed OEM log
+locations and retains bounded target callback excerpts or explicit access/error outcomes.
+Normal and fallback bug reports include the latest result without performing another read.
+This is a historical log visibility test; live targets, sensor freshness and a 360-degree view
+are not established.
+
+The version bump refreshes persistent daemons to protocol 30 on normal startup. Vehicle log
+visibility, effective permissions and active target data remain unverified. DashSat 0.9.9-dev
+remains compatible; 1.9.0 remains stable. [Release notes](docs/releases/1.9.53-beta.md).
+
 ### 1.9.52-beta (versionCode 691)
 
 **Improve Waze recovery after ACC OFF/ON.** Validate remembered cluster tasks before skipping
