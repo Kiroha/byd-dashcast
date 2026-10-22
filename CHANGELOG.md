@@ -15,6 +15,20 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.60-beta (versionCode 699)
+
+**Read the selected OEM RCC through the Android service even when the host Qt
+process is hidden.** A separate read-only Cluster diagnostic verifies the OEM
+Java APK, pins its Binder and retains registration/native/selection receipts.
+It sends one fixed query without loading/restoring a theme or touching the
+live-test journal. Native renderer identity stays unknown; mutation still
+requires all existing strict checks. Protocol 33 is required for this query.
+
+Cluster and Reporting now open the existing diagnostic-report wizard directly,
+including cluster receipts and logs, with the configured channel and user consent.
+New controls are translated in all 13 locales.
+[Release notes](docs/releases/1.9.60-beta.md).
+
 ### 1.9.58-beta (versionCode 697)
 
 **Find diagnostic tools in dedicated pages.** The diagnostic menu opens ADAS,

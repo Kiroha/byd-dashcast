@@ -16,6 +16,9 @@ import android.widget.LinearLayout
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.R
+import com.byd.dashcast.report.BugWizardActivity
+import org.robolectric.Shadows.shadowOf
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -66,6 +69,21 @@ class ClusterThemeLiveControlsTest {
             all.filterIsInstance<Button>().single { it.text.toString().startsWith("Exports & OEM collection\n") }.performClick()
             assertTrue(all.filterIsInstance<Button>().single { it.text == "Export complet accessible" }.isShown)
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
+        } finally { c.pause().stop().destroy(); busy.set(false) }
+    }
+    @Test fun `cluster and reporting report shortcuts open the existing wizard without a cluster transaction`() {
+        val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
+        try {
+            val all = views(c.get().findViewById(android.R.id.content))
+            val label = c.get().getString(R.string.diag_send_report)
+            val shortcuts = all.filterIsInstance<Button>().filter { it.text == label }
+            assertEquals(2, shortcuts.size)
+            assertTrue(shortcuts.all { !it.isAllCaps && it.minimumHeight >= (48 * c.get().resources.displayMetrics.density).toInt() })
+            for (button in shortcuts) {
+                button.performClick()
+                assertEquals(BugWizardActivity::class.java.name, shadowOf(c.get()).nextStartedActivity.component!!.className)
+            }
+            assertTrue(all.filterIsInstance<Button>().any { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) })
         } finally { c.pause().stop().destroy(); busy.set(false) }
     }
     @Test fun `parked assertion mandatory and missing daemon releases claim before any load`() {

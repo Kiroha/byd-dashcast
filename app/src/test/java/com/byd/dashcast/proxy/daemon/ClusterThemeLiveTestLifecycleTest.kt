@@ -37,7 +37,8 @@ class ClusterThemeLiveTestLifecycleTest {
         set("filename", name); set("mutated", false); set("uncertain", false); set("root", "")
         set("renderer", ""); set("deadline", 0L); set("markerObserved", false); set("oemObserved", false); set("carrierRemoved", false); set("createdInode", -1L); set("createdDevice", -1L)
         set("themeObserved", false); set("variant", ClusterThemeVariant.MARKER)
-        flag("active").set(true); flag("restoreRequested").set(false)
+        flag("active").set(true); flag("queryActive").set(false); flag("restoreRequested").set(false)
+        set("oemQuery", JSONObject()); set("helperUnreaped", false)
         count("generation").set(10); count("restoring").set(-1)
         (field("observationPending").get(null) as AtomicInteger).set(0)
     }
@@ -133,6 +134,37 @@ class ClusterThemeLiveTestLifecycleTest {
             val result = method.invoke(ClusterThemeLiveTest, error) as ClusterRendererDiscovery.Failure
             assertEquals(kind, result.kind); assertEquals(label, result.label)
         }
+    }
+
+    @Test fun `read only query preserves the complete live test and recovery state`() {
+        flag("active").set(false); set("state", "REFUSED"); set("detail", "previous renderer discovery refusal")
+        set("mutated", false); set("loadSettled", true); set("defaultQueried", true); set("uncertain", false)
+        val before = JSONObject(ClusterThemeLiveTest.status())
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        ClusterThemeLiveTest.querySelection {
+            entered.countDown(); release.await()
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("nativeIdentity", "UNKNOWN"), true)
+        }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        assertEquals("PENDING", JSONObject(ClusterThemeLiveTest.status()).getJSONObject("oemQuery").getString("state"))
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        release.countDown(); drain()
+        val after = JSONObject(ClusterThemeLiveTest.status())
+        for (key in before.keys()) if (key != "oemQuery" && key != "remainingMs") assertEquals(key, before.get(key), after.get(key))
+        assertFalse(flag("active").get()); assertFalse(flag("restoreRequested").get()); assertFalse(flag("queryActive").get())
+        assertTrue(field("loadSettled").getBoolean(null)); assertTrue(field("defaultQueried").getBoolean(null))
+    }
+
+    @Test fun `active recovery quarantine and an unreaped query cannot admit another query`() {
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        flag("active").set(false); set("journalTrusted", false)
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        set("journalTrusted", true)
+        ClusterThemeLiveTest.querySelection { ClusterThemeQueryRunner.Result(JSONObject().put("state", "UNAVAILABLE"), false) }
+        drain()
+        assertTrue(flag("queryActive").get())
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        assertFalse(field("mutated").getBoolean(null)); assertFalse(flag("restoreRequested").get())
     }
 
 }

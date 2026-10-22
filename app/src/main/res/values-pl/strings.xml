@@ -717,4 +717,11 @@
     <string name="native_adas_projection_help">Po potwierdzeniu wyświetlanej aplikacji stosuje pełną sekwencję, w tym ukrycie ostrzeżeń panelu. Wyłączenie żąda przywrócenia OEM. Sprawdź ekran.</string>
     <string name="native_adas_projection_restore">Przywróć pełną sekwencją</string>
     <string name="native_adas_preference_failed">Nie można zapisać ustawienia. Zachowano poprzednią wartość.</string>
+    <!-- Closed read-only OEM RCC selection query. -->
+    <string name="diag_cluster_oem_query_button">Odczytaj wybór RCC OEM (tylko odczyt)</string>
+    <string name="diag_cluster_oem_query_explanation">Odpytuje usługę BYD bez szukania procesu Qt. Nie ładuje, nie przywraca ani nie usuwa motywu. Wymaga połączonego demona z protokołem 33. Odpowiedź opisuje wybór; nie potwierdza załadowania naszego motywu.</string>
+    <string name="diag_cluster_oem_query_busy">Trwa inna operacja. Poczekaj na jej zakończenie przed odczytem.</string>
+    <string name="diag_cluster_oem_query_result">Odczyt RCC OEM: %1$s\n%2$s\nRejestracja callbacku: %3$s; wynik natywny: %4$s\n%5$s\nCallback rozsyłany bez identyfikatora żądania: tylko obserwacja wyboru. Tożsamość natywna i obraz na ekranie są nieznane.</string>
+    <string name="diag_send_report">Wyślij raport diagnostyczny</string>
+    <string name="diag_send_report_help">Zawiera wyniki zestawu wskaźników i dziennik. Wyślij przez skonfigurowany kanał lub udostępnij plik.</string>
 </resources>

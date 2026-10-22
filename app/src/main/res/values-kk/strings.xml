@@ -708,4 +708,11 @@
     <string name="native_adas_projection_help">Қолданба проекциясы расталғаннан кейін панель ескертулерімен бірге толық реттілік орындалады. Өшіру OEM қалпына келтіруін сұрайды. Экранды тексеріңіз.</string>
     <string name="native_adas_projection_restore">Толық реттілікпен қалпына келтіру</string>
     <string name="native_adas_preference_failed">Параметр сақталмады. Алдыңғы мән сақталды.</string>
+    <!-- Closed read-only OEM RCC selection query. -->
+    <string name="diag_cluster_oem_query_button">OEM RCC таңдауын оқу (тек оқу)</string>
+    <string name="diag_cluster_oem_query_explanation">Qt процесін іздемей BYD қызметіне сұрау жібереді. Тақырып жүктелмейді, қалпына келтірілмейді және жойылмайды. 33 протоколымен қосылған daemon қажет. Жауап таңдауды сипаттайды, бірақ біздің тақырыптың жүктелуін растамайды.</string>
+    <string name="diag_cluster_oem_query_busy">Басқа операция орындалып жатыр. Сұраудан бұрын оның аяқталуын күтіңіз.</string>
+    <string name="diag_cluster_oem_query_result">OEM RCC дерегі: %1$s\n%2$s\nCallback тіркеу: %3$s; нативті нәтиже: %4$s\n%5$s\nСұрау идентификаторы жоқ таратылатын callback: тек таңдауды бақылау. Нативті сәйкестік пен экрандағы кескін белгісіз.</string>
+    <string name="diag_send_report">Диагностикалық есепті жіберу</string>
+    <string name="diag_send_report_help">Аспаптар панелінің нәтижелері мен журналды қамтиды. Бапталған арна арқылы жіберу немесе файлмен бөлісу.</string>
 </resources>

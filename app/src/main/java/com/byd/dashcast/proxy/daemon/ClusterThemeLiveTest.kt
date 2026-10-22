@@ -40,6 +40,8 @@ internal object ClusterThemeLiveTest {
     private val observationPending = AtomicInteger(0)
     private val restoreRequested = AtomicBoolean(false)
     private val active = AtomicBoolean(false)
+    private val queryActive = AtomicBoolean(false)
+    @Volatile private var oemQuery = JSONObject()
     @Volatile private var state = "IDLE"
     @Volatile private var detail = "No physical test started."
     @Volatile private var filename = ""
@@ -118,7 +120,29 @@ internal object ClusterThemeLiveTest {
             .put("mutated", mutated).put("uncertain", uncertain).put("defaultQueried", defaultQueried)
             .put("carrierRemoved", carrierRemoved).put("markerObservedByUser", markerObserved).put("oemObservedByUser", oemObserved)
             .put("themeObservedByUser", themeObserved)
-            .put("raw", raw.takeLast(16000)).toString()
+            .put("raw", raw.takeLast(16000)).put("oemQuery", oemQuery).toString()
+    }
+
+    @Synchronized fun querySelection(run: () -> ClusterThemeQueryRunner.Result = ClusterThemeQueryRunner::run): String {
+        initialize()
+        check(journalTrusted && !active.get() && !helperUnreaped) { "Live test/recovery/quarantine active; read-only query refused" }
+        check(queryActive.compareAndSet(false, true)) { "Read-only query already active or helper not reaped; no replay" }
+        oemQuery = JSONObject().put("state", "PENDING").put("phase", "queued")
+            .put("detail", "One read-only OEM selection query; no renderer discovery, carrier, load or restore.")
+            .put("nativeIdentity", "UNKNOWN").put("receivedEpochMs", System.currentTimeMillis())
+        worker.execute {
+            var reaped = true
+            try {
+                val result = run()
+                oemQuery = result.receipt; reaped = result.reaped
+            } catch (error: Throwable) {
+                reaped = false // An unexpected runner failure cannot establish that a child was reaped.
+                oemQuery = JSONObject().put("state", "UNAVAILABLE").put("phase", "helper-start")
+                    .put("detail", "${error.javaClass.simpleName}: ${error.message}; query child cleanup unconfirmed; further queries/tests blocked".take(768))
+                    .put("nativeIdentity", "UNKNOWN").put("receivedEpochMs", System.currentTimeMillis())
+            } finally { if (reaped) queryActive.set(false) }
+        }
+        return status()
     }
 
     @Synchronized fun start(source: ParcelFileDescriptor, parkedAssertion: Boolean,
@@ -128,7 +152,7 @@ internal object ClusterThemeLiveTest {
             val st = Os.fstat(source.fileDescriptor)
             check(ClusterThemePolicy.permitsCarrierSource(st.st_mode, st.st_size)) { "Source must be a bounded regular file (pipes/devices refused)" }
         } catch (t: Throwable) { source.close(); throw t }
-        if (!parkedAssertion || !active.compareAndSet(false, true)) {
+        if (!parkedAssertion || queryActive.get() || !active.compareAndSet(false, true)) {
             source.close(); return status()
         }
         val thisGeneration = generation.incrementAndGet()

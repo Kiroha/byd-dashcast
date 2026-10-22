@@ -2092,8 +2092,10 @@ android {
         // Share the marker's journal/recovery lane; hardware validation remains pending.
         // 697 = 1.9.58-beta: group Diag tools into dedicated pages; keep Restore and active
         // export progress/cancel visible. Preserve daemon protocol 32 and all command behavior.
-        versionCode 698
-        versionName "1.9.59-beta"
+        // 699 = 1.9.60-beta: independent read-only OEM RCC query across the Android/host boundary.
+        // Protocol 33; native renderer identity still required by unchanged load/restore paths.
+        versionCode 699
+        versionName "1.9.60-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

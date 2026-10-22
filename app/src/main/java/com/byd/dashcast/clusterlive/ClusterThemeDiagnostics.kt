@@ -18,7 +18,10 @@ internal object ClusterThemeDiagnostics {
     private const val MAX_EVENTS = 24
     private val stringFields = mapOf("state" to 64, "detail" to 768, "error" to 384,
         "filename" to 160, "renderer" to 32, "rendererIdentity" to 256, "connectionToken" to 96,
-        "operation" to 64, "kind" to 16, "rawSha256" to 64, "variant" to 64, "carrierSha256" to 64, "phase" to 64)
+        "operation" to 64, "kind" to 16, "rawSha256" to 64, "variant" to 64, "carrierSha256" to 64, "phase" to 64,
+        "oemQueryState" to 32, "oemQueryPhase" to 64, "oemQueryDetail" to 768,
+        "oemQuerySelection" to 1536, "oemQueryNativeIdentity" to 16)
+    private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs")
     private val booleanFields = listOf("mutated", "uncertain", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser")
     private var store: Context? = null
@@ -41,6 +44,11 @@ internal object ClusterThemeDiagnostics {
             if (reply.has("identity")) event.put("rendererIdentity", reply.get("identity"))
             if (reply.has("daemonUid")) event.put("daemonUid", reply.get("daemonUid"))
             for (field in booleanFields) if (reply.has(field)) event.put(field, reply.get(field))
+            reply.optJSONObject("oemQuery")?.let { query ->
+                for (field in listOf("state", "phase", "detail", "selection", "nativeIdentity", "registration", "native", "receivedEpochMs")) {
+                    if (query.has(field) && !query.isNull(field)) event.put("oemQuery" + field.replaceFirstChar { it.uppercase() }, query.get(field))
+                }
+            }
             // Retain changes without storing Parcel/base64 payloads or unbounded helper output.
             val raw = reply.optString("raw").take(32768)
             if (raw.isNotEmpty()) event.put("rawSha256", MessageDigest.getInstance("SHA-256")
@@ -120,6 +128,10 @@ internal object ClusterThemeDiagnostics {
         for (field in booleanFields) if (source.has(field)) {
             require(source.get(field) is Boolean); result.put(field, source.getBoolean(field))
         }
+        for (field in queryNumbers) if (source.has(field)) {
+            require(source.get(field) is Int || source.get(field) is Long)
+            result.put(field, source.getLong(field))
+        }
         if (source.has("daemonUid")) {
             require((source.get("daemonUid") is Int || source.get("daemonUid") is Long) && source.getLong("daemonUid") in 0..Int.MAX_VALUE)
             result.put("daemonUid", source.getInt("daemonUid"))
@@ -131,7 +143,7 @@ internal object ClusterThemeDiagnostics {
         return result
     }
 
-    private fun stableKey(event: JSONObject): String = (stringFields.keys + booleanFields + "daemonUid")
+    private fun stableKey(event: JSONObject): String = (stringFields.keys + booleanFields + queryNumbers + "daemonUid")
         .filter { it != "operation" || event.optString("kind") == "LOCAL" }
         .let { fields -> JSONArray(fields.map { field -> JSONArray(listOf(field, event.opt(field))) }).toString() }
     private fun encode() = JSONObject().put("schema", 1).put("events", JSONArray(events)).toString()

@@ -775,4 +775,11 @@
     <string name="native_adas_projection_help">Après confirmation de l’application projetée, applique la séquence complète, alertes du volet incluses. Désactiver demande le rétablissement OEM. Le résultat à l’écran reste à vérifier.</string>
     <string name="native_adas_projection_restore">Rétablir avec la séquence complète</string>
     <string name="native_adas_preference_failed">Impossible d’enregistrer ce réglage. La valeur précédente est conservée.</string>
+    <!-- Closed read-only OEM RCC selection query. -->
+    <string name="diag_cluster_oem_query_button">Consulter le RCC OEM (lecture seule)</string>
+    <string name="diag_cluster_oem_query_explanation">Interroge le service BYD sans rechercher le processus Qt. Aucun thème chargé, restauré ou supprimé. Nécessite le daemon connecté en protocole 33. La réponse décrit la sélection ; elle ne valide pas le chargement de notre thème.</string>
+    <string name="diag_cluster_oem_query_busy">Une autre opération est active. Attends sa fin avant cette consultation.</string>
+    <string name="diag_cluster_oem_query_result">Relevé RCC OEM : %1$s\n%2$s\nEnregistrement du callback : %3$s ; retour natif : %4$s\n%5$s\nCallback diffusé sans identifiant de requête : observation de sélection uniquement. Identité native et pixels physiques inconnus.</string>
+    <string name="diag_send_report">Envoyer un rapport de diagnostic</string>
+    <string name="diag_send_report_help">Inclut les résultats cluster et le journal. Envoi via le canal configuré ou partage d’un fichier.</string>
 </resources>
