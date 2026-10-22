@@ -3,17 +3,22 @@ package com.byd.dashcast.proxy.daemon
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
+import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import android.util.Base64
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
 import com.byd.dashcast.clusterlive.ClusterThemeProtocol
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
+import com.byd.dashcast.clusterlive.ClusterRendererDiscovery
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -333,13 +338,37 @@ internal object ClusterThemeLiveTest {
         val start = stat.substringAfterLast(')').trim().split(Regex("\\s+"))[19]
         return "$pid:$start:${Os.readlink("/proc/$pid/ns/mnt")}"
     }
+    private val rendererAccess = object : ClusterRendererDiscovery.Access<FileDescriptor> {
+        override fun open(pid: String): FileDescriptor = Os.open("/proc/$pid/cmdline",
+            OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_NONBLOCK or OsConstants.O_CLOEXEC, 0)
+        override fun read(fd: FileDescriptor, buffer: ByteArray, count: Int) = Os.read(fd, buffer, 0, count)
+        override fun close(fd: FileDescriptor) = Os.close(fd)
+    }
     private fun identifyRenderer() {
+        identifyRenderer(ClusterRendererDiscovery.scan(
+            entries = { visit -> Files.newDirectoryStream(Paths.get("/proc")).use { entries ->
+                for (entry in entries) visit(entry.fileName.toString())
+            } },
+            access = rendererAccess,
+            classify = ::procFailure,
+            clock = SystemClock::elapsedRealtime,
+        ))
+    }
+    private fun procFailure(error: Exception): ClusterRendererDiscovery.Failure {
+        val cause = generateSequence<Throwable>(error) { it.cause }.take(16).filterIsInstance<ErrnoException>().firstOrNull()
+            ?: return ClusterRendererDiscovery.failure(error)
+        return when (cause.errno) {
+            OsConstants.EACCES -> ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.DENIED, "EACCES")
+            OsConstants.EPERM -> ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.DENIED, "EPERM")
+            OsConstants.ENOENT -> ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.VANISHED, "ENOENT")
+            OsConstants.ESRCH -> ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.VANISHED, "ESRCH")
+            else -> ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.IO, "errno_${cause.errno}")
+        }
+    }
+    private fun identifyRenderer(discovery: ClusterRendererDiscovery.Result) {
         hashDeadline = SystemClock.elapsedRealtime() + 60000
         phase = "renderer-discovery"
-        val candidates = File("/proc").listFiles()?.filter { it.name.matches(Regex("[1-9][0-9]{0,8}")) }.orEmpty()
-            .filter { runCatching { File(it, "cmdline").readText().split('\u0000').first().substringAfterLast('/') == "qtandroidnative" }.getOrDefault(false) }
-        check(candidates.size == 1) { "Expected one readable qtandroidnative renderer; found ${candidates.size}. No UID/namespace fallback." }
-        val pid = candidates.single().name
+        val pid = discovery.requireSingle()
         if (renderer.isNotEmpty()) check(renderer == pid && identity == processIdentity(pid)) { "Renderer changed since journal; recovery must be inspected" }
         renderer = pid; identity = processIdentity(pid); root = "/proc/$pid/root"
         phase = "renderer-maps"

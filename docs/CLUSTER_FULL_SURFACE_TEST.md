@@ -101,6 +101,37 @@ beta695's app-private historical cache; the absence of old entries cannot identi
 a specific failing prerequisite. A new report after an attempted test preserves
 the current refusal without requesting any additional cluster operation.
 
+### Renderer discovery refusals
+
+The old `Expected one readable qtandroidnative renderer; found 0` message conflated
+failed `/proc` enumeration, unreadable process names, disappearing processes and
+no matching name in the daemon's visible process view. It does not establish that
+the renderer is absent or that the RCC was rejected: this phase precedes staging
+and every native RCC request.
+
+Renderer discovery now retains enumeration status, read/permission/race counters,
+the first bounded error label, and any entry/PID/time limit in the normal status
+detail and historical report cache. Only the first NUL-terminated `argv0` is
+considered; subsequent command arguments and arbitrary exception messages are
+omitted. The scan permits at most 8,192 entries, 4,096 PIDs and 1,025 bytes per PID
+under a five-second soft budget, checked between reads. An incomplete enumeration
+refuses admission even when one name matched. A read may outlast the soft budget;
+no subsequent phase starts after that read returns past the deadline.
+
+The existing exact `qtandroidnative` basename match is unchanged. A unique name
+is only a discovery candidate: all original process-generation, mount namespace,
+executable/maps inode and artifact hash checks still apply. There is no UID,
+namespace, path, alias or permission fallback. Denied or masked processes remain
+unknown; readable names do not establish the complete host process inventory.
+The `vanished` counter records ENOENT/ESRCH or a missing-file observation during
+the scan; it does not distinguish process exit from visibility restrictions.
+
+For the existing refusal, collect **Diag → Exports & OEM collection → Relevés
+locaux OEM → Contexte cluster — bibliothèque et processus**. This existing
+targeted export retains the bounded process list, exact-name argv0/stat bracket,
+maps and namespace link observations; it does not load a theme or activate a
+display. Its ZIP is useful even when reads are denied or the export is partial.
+
 ## Reproduction and checks
 
 ```bash

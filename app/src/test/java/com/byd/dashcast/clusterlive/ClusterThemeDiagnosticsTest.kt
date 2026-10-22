@@ -128,4 +128,26 @@ class ClusterThemeDiagnosticsTest {
         assertTrue(report.contains(profile.id)); assertTrue(report.contains(profile.carrierSha256))
         assertTrue(report.contains("renderer-artifact")); assertTrue(report.contains("themeObservedByUser"))
     }
+
+    @Test fun `renderer enumeration refusal and errno survive historical cache reload without raw output`() {
+        val result = ClusterRendererDiscovery.scan(entries = { visit ->
+            visit("1"); throw java.nio.file.AccessDeniedException("PRIVATE PATH")
+        }, access = rendererInputStreams { throw java.io.IOException("PRIVATE ERROR") }, classify = {
+            if (it is java.nio.file.AccessDeniedException)
+                ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.DENIED, "EACCES")
+            else ClusterRendererDiscovery.Failure(ClusterRendererDiscovery.FailureKind.IO, "errno_5")
+        })
+        val error = runCatching { result.requireSingle() }.exceptionOrNull()!!
+        val detail = "renderer-discovery: ${error.javaClass.simpleName}: ${error.message}"
+        assertTrue(detail.length <= 768)
+        ClusterThemeDiagnostics.received(app, "start-full-surface", "connection1", status(detail = detail)
+            .put("phase", "renderer-discovery").toString())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        val restored = JSONObject(report.lineSequence().first { it.contains(" historical {") }.substringAfter(" historical "))
+        assertEquals(detail, restored.getString("detail")); assertTrue(report.contains("list=DENIED:EACCES"))
+        assertTrue(report.contains("errors=1")); assertTrue(report.contains("first=cmdline:errno_5"))
+        assertTrue(report.contains("Contexte cluster")); assertTrue(report.contains("unavailable is not absent"))
+        assertFalse(report.contains("PRIVATE")); assertFalse(report.contains("rawSha256"))
+    }
 }

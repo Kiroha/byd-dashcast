@@ -2,6 +2,10 @@ package com.byd.dashcast.proxy.daemon
 
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
+import com.byd.dashcast.clusterlive.ClusterRendererDiscovery
+import com.byd.dashcast.clusterlive.rendererInputStreams
+import android.system.ErrnoException
+import android.system.OsConstants
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
@@ -16,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.lang.reflect.InvocationTargetException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -96,6 +101,38 @@ class ClusterThemeLiveTestLifecycleTest {
         ClusterThemeLiveTest.observe(1, name, ClusterThemeVariant.FULL_SURFACE_TEST); drain()
         assertFalse(field("markerObserved").getBoolean(null)); assertTrue(field("themeObserved").getBoolean(null))
         assertTrue(field("loadSettled").getBoolean(null))
+    }
+
+    @Test fun `renderer discovery refusal cannot pin a renderer stage a carrier or start a helper`() {
+        set("identity", ""); set("helperPid", 0); set("helperToken", "")
+        val result = ClusterRendererDiscovery.scan(entries = { it("42") }, access = rendererInputStreams {
+            throw java.nio.file.AccessDeniedException("private")
+        })
+        val method = ClusterThemeLiveTest::class.java.getDeclaredMethod("identifyRenderer", ClusterRendererDiscovery.Result::class.java)
+            .apply { isAccessible = true }
+        val error = runCatching { method.invoke(ClusterThemeLiveTest, result) }.exceptionOrNull() as InvocationTargetException
+        assertTrue(error.cause is IllegalStateException)
+        assertTrue(error.cause!!.message!!.contains("denied=1"))
+        assertEquals("renderer-discovery", field("phase").get(null))
+        assertEquals("", field("renderer").get(null)); assertEquals("", field("identity").get(null)); assertEquals("", field("root").get(null))
+        assertFalse(field("mutated").getBoolean(null)); assertEquals(-1L, field("createdInode").getLong(null))
+        assertEquals(0, field("helperPid").getInt(null)); assertEquals("", field("helperToken").get(null))
+    }
+
+    @Test fun `native errno remains distinguishable without exposing exception payloads`() {
+        val method = ClusterThemeLiveTest::class.java.getDeclaredMethod("procFailure", Exception::class.java)
+            .apply { isAccessible = true }
+        for ((errno, kind, label) in listOf(
+            Triple(OsConstants.EACCES, ClusterRendererDiscovery.FailureKind.DENIED, "EACCES"),
+            Triple(OsConstants.EPERM, ClusterRendererDiscovery.FailureKind.DENIED, "EPERM"),
+            Triple(OsConstants.ENOENT, ClusterRendererDiscovery.FailureKind.VANISHED, "ENOENT"),
+            Triple(OsConstants.ESRCH, ClusterRendererDiscovery.FailureKind.VANISHED, "ESRCH"),
+            Triple(OsConstants.EIO, ClusterRendererDiscovery.FailureKind.IO, "errno_${OsConstants.EIO}"),
+        )) {
+            val error = java.io.IOException("PRIVATE", ErrnoException("PRIVATE", errno))
+            val result = method.invoke(ClusterThemeLiveTest, error) as ClusterRendererDiscovery.Failure
+            assertEquals(kind, result.kind); assertEquals(label, result.label)
+        }
     }
 
 }
