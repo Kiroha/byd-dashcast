@@ -2090,8 +2090,10 @@ android {
         // 696 = 1.9.57-beta: separate, hash-pinned native full-surface theme experiment in Diag.
         // ON + Full + night only; retain functional OEM QML. Refresh daemons to protocol 32.
         // Share the marker's journal/recovery lane; hardware validation remains pending.
-        versionCode 696
-        versionName "1.9.57-beta"
+        // 697 = 1.9.58-beta: group Diag tools into dedicated pages; keep Restore and active
+        // export progress/cancel visible. Preserve daemon protocol 32 and all command behavior.
+        versionCode 697
+        versionName "1.9.58-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.TextView
 import androidx.core.content.FileProvider
 import com.byd.dashcast.proxy.daemon.StrictFileRead
 import org.json.JSONObject
@@ -156,12 +157,22 @@ class OemInitSourcesExportTest {
             val state = FullApkExport.Progress("Copie source 1/2", kind = ExportKind.OEM_INIT_SOURCES, directory = temporary.newFolder())
             field.set(null, state); render.invoke(activity)
             val buttons = mutableListOf<Button>()
-            fun visit(view: View) { if (view is Button) buttons.add(view); if (view is ViewGroup) repeat(view.childCount) { visit(view.getChildAt(it)) } }
+            val texts = mutableListOf<TextView>()
+            fun visit(view: View) { if (view is Button) buttons.add(view); if (view is TextView) texts.add(view); if (view is ViewGroup) repeat(view.childCount) { visit(view.getChildAt(it)) } }
             visit(activity.window.decorView)
-            val cancel = buttons.single { it.text.toString() == "Stopper les lectures ; conserver et finaliser le ZIP" }
+            val cancel = buttons.single { it.text.toString() == "Cancel export" }
             assertTrue(cancel.isEnabled)
+            assertEquals("Stop export reads and keep acquired files", cancel.contentDescription)
+            cancel.performClick()
+            assertTrue(cancellation.get()); assertFalse(cancel.isEnabled)
+            assertSame(state, FullApkExportSession.snapshot)
+            assertTrue(texts.any { it.text.toString().contains("Cancellation pending") })
+            assertTrue(texts.any { it.text.toString().contains("Arrêt des lectures après leur retour ; puis finalisation locale") })
+            cancellation.set(false)
             field.set(null, state.copy(stage = "Création du ZIP des sources déjà acquises")); render.invoke(activity)
-            assertFalse(cancel.isEnabled); assertTrue(cancel.text.toString().contains("Finalisation locale"))
+            assertFalse(cancel.isEnabled)
+            assertEquals("Cancel unavailable during local finalization", cancel.contentDescription)
+            assertTrue(texts.any { it.text.toString().contains("Création du ZIP des sources déjà acquises") })
             val history = FullApkExportSession.OemHistory(listOf(ExportKind.OEM_INIT_SOURCES to temporary.newFolder("oem-init-sources-20261017-120000-000")), false, false)
             DiagActivity::class.java.getDeclaredMethod("showOemHistory", FullApkExportSession.OemHistory::class.java)
                 .apply { isAccessible = true }.invoke(activity, history)

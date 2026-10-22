@@ -15,6 +15,20 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.58-beta (versionCode 697)
+
+**Find diagnostic tools in dedicated pages.** The diagnostic menu opens ADAS,
+Cluster Full Screen, HUD & navigation, Projection & displays, Exports & OEM
+collection, Reporting and Diagnostic log. Back returns to the menu; the selected
+page survives Activity recreation. Cluster restoration and active-export progress
+and cancellation remain accessible across pages. The selectable journal has its
+own scrollable page.
+
+Existing diagnostic handlers, cluster runtime checks and recovery remain unchanged;
+ProxyDaemon stays at protocol 32. Physical cluster rendering and restoration remain
+unvalidated. DashSat 0.9.9-dev stays compatible; 1.9.0 stays stable.
+[Release notes](docs/releases/1.9.58-beta.md).
+
 ### 1.9.57-beta (versionCode 696)
 
 **Test a native full-canvas cluster background from Diag.** A separate fixed RCC

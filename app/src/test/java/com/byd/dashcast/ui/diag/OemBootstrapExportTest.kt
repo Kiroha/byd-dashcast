@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.TextView
 import androidx.core.content.FileProvider
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -287,9 +288,20 @@ class OemBootstrapExportTest {
             val state = FullApkExport.Progress("Identité des processus", kind = ExportKind.OEM_BOOTSTRAP, directory = temporary.newFolder())
             field.set(null, state); render.invoke(activity)
             val buttons = mutableListOf<Button>()
-            fun visit(v: View) { if (v is Button) buttons.add(v); if (v is ViewGroup) repeat(v.childCount) { visit(v.getChildAt(it)) } }
-            visit(activity.window.decorView); val cancel = buttons.single { it.text.toString() == "Arrêter les lectures" }; assertTrue(cancel.isEnabled)
+            val texts = mutableListOf<TextView>()
+            fun visit(v: View) { if (v is Button) buttons.add(v); if (v is TextView) texts.add(v); if (v is ViewGroup) repeat(v.childCount) { visit(v.getChildAt(it)) } }
+            visit(activity.window.decorView)
+            val cancel = buttons.single { it.text.toString() == "Cancel export" }
+            assertTrue(cancel.isEnabled); assertEquals("Stop export reads", cancel.contentDescription)
+            cancel.performClick()
+            assertTrue(cancellation.get()); assertFalse(cancel.isEnabled)
+            assertSame(state, FullApkExportSession.snapshot)
+            assertTrue(texts.any { it.text.toString().contains("Cancellation pending") })
+            assertTrue(texts.any { it.text.toString().contains("Arrêt des lectures après leur retour ; puis finalisation locale") })
+            cancellation.set(false)
             field.set(null, state.copy(stage = OemBootstrapExport.FINALIZING)); render.invoke(activity); assertFalse(cancel.isEnabled)
+            assertEquals("Cancel unavailable during local finalization", cancel.contentDescription)
+            assertTrue(texts.any { it.text.toString().contains(OemBootstrapExport.FINALIZING) })
             DiagActivity::class.java.getDeclaredMethod("chooseOemMetadata").apply { isAccessible = true }.invoke(activity)
             val menu = ShadowAlertDialog.getLatestAlertDialog().listView
             assertTrue((0 until menu.adapter.count).any { menu.adapter.getItem(it).toString() == "Démarrage et identité du service OEM" })

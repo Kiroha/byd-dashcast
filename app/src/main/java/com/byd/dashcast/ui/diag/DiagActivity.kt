@@ -10,8 +10,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
-import android.text.method.ScrollingMovementMethod
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
@@ -75,8 +78,23 @@ class DiagActivity : Activity() {
     private lateinit var adasTargetsBtn: Button
     private lateinit var fullExportStatus: TextView
     private lateinit var fullExportCurrent: TextView
+    private lateinit var pinnedExportStatus: TextView
     private lateinit var cancelFullExportBtn: Button
     private lateinit var shareFullExportBtn: Button
+    private enum class Page(val title: String, val description: String) {
+        ADAS("ADAS", "Read-only target snapshots"),
+        CLUSTER("Cluster Full Screen", "Physical theme tests, status and local verification"),
+        HUD("HUD & navigation", "HUD bench, navigation icons and capture options"),
+        PROJECTION("Projection & displays", "OEM probes, registry, callbacks and traces"),
+        EXPORTS("Exports & OEM collection", "Local firmware files, OEM reports and manual sharing"),
+        REPORTING("Reporting", "Pair the reporting channel"),
+        LOG("Diagnostic log", "Read and select diagnostic results")
+    }
+    private var currentPage: Page? = null
+    private lateinit var pageTitle: TextView
+    private lateinit var backBtn: Button
+    private lateinit var homePage: ScrollView
+    private val pages = linkedMapOf<Page, ScrollView>()
     private val exportUiHandler = Handler(Looper.getMainLooper())
     private var lastExportDirectory: File? = null
     private val exportUiTick = object : Runnable {
@@ -119,48 +137,113 @@ class DiagActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(32, 32, 32, 32)
+            val padding = (12 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
         }
-        root.addView(TextView(this).apply { text = "Diagnostics"; textSize = 20f })
-        root.addView(TextView(this).apply {
+        val density = resources.displayMetrics.density
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            backBtn = Button(this@DiagActivity).apply {
+                text = "Back"
+                isAllCaps = false
+                contentDescription = "Back to diagnostic categories"
+                minHeight = (48 * density).toInt()
+                setOnClickListener { showPage(null) }
+            }
+            addView(backBtn)
+            pageTitle = TextView(this@DiagActivity).apply { textSize = 20f }
+            addView(pageTitle, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            minimumHeight = (48 * density).toInt()
+        })
+        val recoveryBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(recoveryBar)
+        pinnedExportStatus = TextView(this).apply {
+            textSize = 13f
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            visibility = View.GONE
+        }
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(pinnedExportStatus, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            cancelFullExportBtn = Button(this@DiagActivity).apply {
+                text = "Cancel export"
+                isAllCaps = false
+                minHeight = (48 * density).toInt()
+                setOnClickListener { FullApkExportSession.cancel(); renderFullExport() }
+                visibility = View.GONE
+            }
+            addView(cancelFullExportBtn)
+        })
+        val pageHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(pageHost,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        val menu = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        homePage = ScrollView(this).apply { addView(menu) }
+        pageHost.addView(homePage)
+        fun page(destination: Page): LinearLayout {
+            val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            val scroll = ScrollView(this).apply {
+                addView(body)
+                visibility = View.GONE
+                isFillViewport = true
+            }
+            pages[destination] = scroll
+            pageHost.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT))
+            menu.addView(Button(this).apply {
+                text = SpannableString("${destination.title}\n${destination.description}").apply {
+                    setSpan(RelativeSizeSpan(0.82f), destination.title.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                textSize = 16f
+                isAllCaps = false
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                minHeight = (64 * density).toInt()
+                contentDescription = "${destination.title}. ${destination.description}. Open page"
+                setOnClickListener { showPage(destination) }
+            })
+            body.addView(TextView(this).apply {
+                text = destination.description
+                textSize = 14f
+            })
+            return body
+        }
+        val adasBody = page(Page.ADAS)
+        val clusterBody = page(Page.CLUSTER)
+        val navigationBody = page(Page.HUD)
+        val projectionBody = page(Page.PROJECTION)
+        val exportBody = page(Page.EXPORTS)
+        val reportingBody = page(Page.REPORTING)
+        val activityLogBody = page(Page.LOG)
+
+        liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
+            claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
+            releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
+            statusContainer = clusterBody)
+        exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."
             textSize = 14f
         })
         fullExportStatus = TextView(this).apply { textSize = 16f }
-        root.addView(fullExportStatus)
+        exportBody.addView(fullExportStatus)
         fullExportCurrent = TextView(this).apply {
-            textSize = 16f
+            textSize = 14f
             setSingleLine(true)
             ellipsize = TextUtils.TruncateAt.MIDDLE
         }
-        root.addView(fullExportCurrent)
-        root.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            cancelFullExportBtn = Button(this@DiagActivity).apply {
-                text = "Cancel local export"
-                setOnClickListener { FullApkExportSession.cancel(); renderFullExport() }
-            }
-            shareFullExportBtn = Button(this@DiagActivity).apply {
-                text = "Local export files"
-                setOnClickListener { showFullExportFiles() }
-            }
-            addView(cancelFullExportBtn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(shareFullExportBtn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        })
-        // Controls scroll independently; the progress/stall indicator above stays visible even
-        // on a short landscape display, instead of being pushed below the diagnostic buttons.
-        val controls = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(ScrollView(this).apply { addView(controls) },
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-        liveThemeControls = ClusterThemeLiveControls(this, root, controls,
-            claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
-            releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) })
+        exportBody.addView(fullExportCurrent)
+        shareFullExportBtn = Button(this).apply {
+            text = "Local export files"
+            setOnClickListener { showFullExportFiles() }
+        }
+        exportBody.addView(shareFullExportBtn)
         fullExportBtn = Button(this).apply {
             text = "Export complet accessible"
             setOnClickListener { chooseSystemExport() }
         }
-        controls.addView(fullExportBtn)
-        controls.addView(TextView(this).apply {
+        exportBody.addView(fullExportBtn)
+        exportBody.addView(TextView(this).apply {
             text = "Stockage interne uniquement via le daemon ADB. SD et USB exclues. Peut inclure des données personnelles. ZIP locaux, partage manuel. Véhicule stationné ; garder DIAG visible."
             textSize = 14f
         })
@@ -168,8 +251,8 @@ class DiagActivity : Activity() {
             text = "Relevés locaux OEM"
             setOnClickListener { chooseOemMetadata() }
         }
-        controls.addView(qrDiagnosticBtn)
-        controls.addView(TextView(this).apply {
+        exportBody.addView(qrDiagnosticBtn)
+        exportBody.addView(TextView(this).apply {
             text = "Métadonnées uniquement. Aucun code saisi ni outil ouvert."
             textSize = 14f
         })
@@ -177,7 +260,7 @@ class DiagActivity : Activity() {
             text = "ADAS targets (read-only snapshot)"
             setOnClickListener { if (!sBusy.get()) startActivity(Intent(this@DiagActivity, AdasTargetDiagActivity::class.java)) }
         }
-        controls.addView(adasTargetsBtn)
+        adasBody.addView(adasTargetsBtn)
         runBtn = Button(this).apply {
             text = "BYD APK Extraction"
             // Projection may already be mined, but HUD receiver evidence is still needed.
@@ -188,7 +271,7 @@ class DiagActivity : Activity() {
             text = "HUD bench (DL3) — sendInfo2 NaviInfo test"
             setOnClickListener { if (!sBusy.get()) startActivity(Intent(this@DiagActivity, HudDiagActivity::class.java)) }
         }
-        controls.addView(hudBenchBtn)
+        navigationBody.addView(hudBenchBtn)
 
         navIconCaptureBtn = Button(this).apply {
             setText(R.string.diag_nav_icons_title)
@@ -201,14 +284,14 @@ class DiagActivity : Activity() {
                     .show()
             }
         }
-        controls.addView(navIconCaptureBtn)
+        navigationBody.addView(navIconCaptureBtn)
 
         experimentalThemeBtn = Button(this).apply {
             text = "Verify experimental theme (local only)"
             setOnClickListener { verifyExperimentalTheme() }
         }
-        controls.addView(experimentalThemeBtn)
-        controls.addView(TextView(this).apply {
+        clusterBody.addView(experimentalThemeBtn)
+        clusterBody.addView(TextView(this).apply {
             text = "Checks bundled files only. Does not load a cluster theme."
             textSize = 14f
         })
@@ -217,31 +300,31 @@ class DiagActivity : Activity() {
             text = "OEM cluster probes (read-only)"
             setOnClickListener { runOemProbes() }
         }
-        controls.addView(probeBtn)
+        projectionBody.addView(probeBtn)
 
         fissionRegistryBtn = Button(this).apply {
             text = "OEM display registry (read-only) — DL3"
             setOnClickListener { runFissionRegistryProbe() }
         }
-        controls.addView(fissionRegistryBtn)
+        projectionBody.addView(fissionRegistryBtn)
 
         armCallbackBtn = Button(this).apply {
             text = "Arm container callback (diagnostic)"
             setOnClickListener { runArmContainerCallback() }
         }
-        controls.addView(armCallbackBtn)
+        projectionBody.addView(armCallbackBtn)
 
         traceBtn = Button(this).apply {
             text = "Trace projection state (60s) — DL3"
             setOnClickListener { runProjectionTrace() }
         }
-        controls.addView(traceBtn)
+        projectionBody.addView(traceBtn)
 
         // Opt-in raw nav-notification capture (to calibrate the Waze/Maps text parser). OFF by
         // default: it logs the ACTUAL notification text — destination / current road / ETA, i.e.
         // location PII — into the journal that bug reports carry. Turn ON, drive a route, send a
         // bug report, then turn OFF.
-        controls.addView(CheckBox(this).apply {
+        navigationBody.addView(CheckBox(this).apply {
             text = "Capture raw nav-notification text (Waze diagnostic)"
             isChecked = ClusterPrefs.isNavRawCaptureEnabled(this@DiagActivity)
             setOnCheckedChangeListener { _, checked ->
@@ -258,7 +341,7 @@ class DiagActivity : Activity() {
         // tree under SF's global lock while the projected app is still cold-starting. Same
         // placement rationale as the capture toggle above: a technical action on the English-only
         // screen, so it costs no translated string.
-        controls.addView(CheckBox(this).apply {
+        projectionBody.addView(CheckBox(this).apply {
             text = "Dump cluster state after each launch (placement diagnostic)"
             isChecked = ClusterPrefs.isLaunchDiagnosticsEnabled(this@DiagActivity)
             setOnCheckedChangeListener { _, checked ->
@@ -315,19 +398,16 @@ class DiagActivity : Activity() {
                 }
             }
         }
-        controls.addView(reportingPairBtn)
+        reportingBody.addView(reportingPairBtn)
 
         logView = TextView(this).apply {
             textSize = 12f
-            movementMethod = ScrollingMovementMethod()
+            setTextIsSelectable(true)
             gravity = Gravity.TOP
         }
-        root.addView(ScrollView(this).apply {
-            addView(logView)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
-        })
+        activityLogBody.addView(logView)
 
+        showPage(Page.values().firstOrNull { it.name == saved?.getString("diag.page") })
         setContentView(root)
         log("Ready. Choose a diagnostic or Export complet accessible.")
         FullApkExportSession.inspectPrevious(applicationContext)
@@ -343,6 +423,24 @@ class DiagActivity : Activity() {
         exportUiHandler.removeCallbacks(exportUiTick)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onStop()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("diag.page", currentPage?.name)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun showPage(page: Page?) {
+        currentPage = page
+        pageTitle.text = page?.title ?: "Diagnostics"
+        backBtn.visibility = if (page == null) View.GONE else View.VISIBLE
+        homePage.visibility = if (page == null) View.VISIBLE else View.GONE
+        pages.forEach { (destination, view) -> view.visibility = if (page == destination) View.VISIBLE else View.GONE }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (currentPage != null) showPage(null) else super.onBackPressed()
     }
 
     private fun chooseSystemExport() {
@@ -487,13 +585,25 @@ class DiagActivity : Activity() {
     private fun renderFullExport() {
         if (!::fullExportStatus.isInitialized) return
         val state = FullApkExportSession.snapshot
+        val running = state?.running == true
+        cancelFullExportBtn.visibility = if (running) View.VISIBLE else View.GONE
+        pinnedExportStatus.visibility = if (running) View.VISIBLE else View.GONE
+        if (running) {
+            val active = checkNotNull(state)
+            val idleSeconds = ((FullApkExport.monotonicMs() - active.lastProgressMs) / 1000).coerceAtLeast(0)
+            val cancellation = FullApkExportSession.isCancelling()
+            pinnedExportStatus.text = "${active.kind.label}: ${active.stage.take(28)}\n" +
+                (if (cancellation) "Cancellation pending · ${idleSeconds}s no progress" else "No progress for ${idleSeconds}s")
+        }
         if (state?.running == true) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         allDiagButtons().forEach { it.isEnabled = !sBusy.get() }
         reportingPairBtn.isEnabled = !sBusy.get() && !reportingPairInFlight
         cancelFullExportBtn.isEnabled = state?.running == true && !FullApkExportSession.isCancelling()
         shareFullExportBtn.isEnabled = state?.directory != null && (state.kind != ExportKind.FIRMWARE_LARGE || !state.running)
-        cancelFullExportBtn.text = "Cancel ${state?.kind?.label ?: "local"} export"
+        cancelFullExportBtn.text = "Cancel export"
+        cancelFullExportBtn.contentDescription = "Cancel ${state?.kind?.label ?: "local"} export" +
+            if (FullApkExportSession.isCancelling()) ", cancellation pending" else ""
         shareFullExportBtn.text = "${state?.kind?.label ?: "Local"} export files"
         if (state == null) {
             fullExportStatus.text = "Export complet accessible prêt — stockage interne uniquement ; SD et USB exclues."
@@ -512,9 +622,8 @@ class DiagActivity : Activity() {
                 else -> "Création du ZIP des sources déjà acquises"
             }
             cancelFullExportBtn.isEnabled = state.running && !FullApkExportSession.isCancelling() && !finalizing
-            cancelFullExportBtn.text = if (finalizing) "Finalisation locale des sources conservées…"
-                else if (FullApkExportSession.isCancelling()) "Arrêt des lectures demandé ; finalisation locale possible"
-                else if (bootstrap) "Arrêter les lectures" else "Stopper les lectures ; conserver et finaliser le ZIP"
+            cancelFullExportBtn.contentDescription = if (finalizing) "Cancel unavailable during local finalization"
+                else if (bootstrap) "Stop export reads" else "Stop export reads and keep acquired files"
             shareFullExportBtn.text = "Fichiers du relevé"
             shareFullExportBtn.isEnabled = state.directory != null && !state.running
             val pending = DiLinkContextDevice.isTransportPending()
@@ -533,7 +642,7 @@ class DiagActivity : Activity() {
             return
         }
         if (state.kind.isContext) {
-            cancelFullExportBtn.text = if (FullApkExportSession.isCancelling()) "Annulation en attente…" else "Annuler le relevé"
+            cancelFullExportBtn.contentDescription = if (FullApkExportSession.isCancelling()) "Cancellation pending" else "Cancel diagnostic export"
             shareFullExportBtn.text = "Fichiers du relevé"
             shareFullExportBtn.isEnabled = state.directory != null && !state.running
             val pending = !state.running && DiLinkContextDevice.isTransportPending()

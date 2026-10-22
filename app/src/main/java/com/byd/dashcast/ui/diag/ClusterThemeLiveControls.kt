@@ -23,7 +23,8 @@ import java.util.concurrent.atomic.AtomicLong
 /** Reserved Restore lane, independent of both the command lane and Diag's global busy gate. */
 internal class ClusterThemeLiveControls(private val activity: Activity, header: LinearLayout, controls: LinearLayout,
     private val claimDiag: () -> Boolean, private val releaseDiag: () -> Unit,
-    private val otherBusy: () -> Boolean, private val transcript: (String) -> Unit) {
+    private val otherBusy: () -> Boolean, private val transcript: (String) -> Unit,
+    statusContainer: LinearLayout = header) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-restore-ui").apply { isDaemon = true } }
@@ -40,7 +41,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private var confirmation: AlertDialog? = null
     private var lastSummary = ""
     private val status = TextView(activity).apply {
-        textSize = 14f; maxLines = 4
+        textSize = 14f
         text = "Physical cluster state UNKNOWN. Read the current connected daemon status before drawing conclusions."
     }
     private val poll = object : Runnable {
@@ -52,9 +53,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         }
     }
     init {
-        // Measure recovery FIRST: later fixed export headers can exhaust a short viewport.
+        // Keep recovery in the fixed header; detailed status can live in the cluster page.
         val headerIndex = 0
-        header.addView(status, headerIndex)
+        statusContainer.addView(status)
         header.addView(Button(activity).apply {
             text = "Restore original cluster selection"
             contentDescription = "Restore original cluster selection, always available"
