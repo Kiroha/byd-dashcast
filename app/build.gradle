@@ -2087,8 +2087,11 @@ android {
         // 695 = 1.9.56-beta: retain bounded historical cluster-test receipts and local failures
         // in app-private storage and include them in normal/fallback bug reports without IPC.
         // Preserve protocol 31, the firmware gate and all OEM load/recovery behavior.
-        versionCode 695
-        versionName "1.9.56-beta"
+        // 696 = 1.9.57-beta: separate, hash-pinned native full-surface theme experiment in Diag.
+        // ON + Full + night only; retain functional OEM QML. Refresh daemons to protocol 32.
+        // Share the marker's journal/recovery lane; hardware validation remains pending.
+        versionCode 696
+        versionName "1.9.57-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

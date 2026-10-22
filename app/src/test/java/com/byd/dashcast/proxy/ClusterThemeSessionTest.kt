@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
+import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import org.junit.After
 import org.junit.Assert.*
@@ -32,6 +33,53 @@ class ClusterThemeSessionTest {
         assertThrows(IllegalStateException::class.java) { ClusterThemeSession.pin() }
         versionField.set(null, "30"); binderField.set(null, Binder())
         assertThrows(IllegalStateException::class.java) { ClusterThemeSession.pin() }
+    }
+    @Test fun `full surface start and observation refuse protocol 31 before any transaction`() {
+        val calls = AtomicInteger()
+        val binder = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                calls.incrementAndGet(); error("No IPC allowed")
+            }
+        }
+        binderField.set(null, binder); versionField.set(null, "31")
+        val session = ClusterThemeSession.pin()
+        val file = File.createTempFile("cluster-profile", ".rcc").apply { writeText("test") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+            assertThrows(IllegalStateException::class.java) {
+                session.start(descriptor, ClusterThemeVariant.FULL_SURFACE_TEST) { error("No transmission boundary") }
+            }
+        } } finally { file.delete() }
+        assertThrows(IllegalStateException::class.java) { session.observedFullSurface() }
+        assertEquals(0, calls.get()); assertSame(binder, binderField.get(null))
+    }
+
+    @Test fun `protocol 32 sends fixed full surface operation then variant specific observation with nonce`() {
+        val name = "Di3F_DynastyOceanTranslate_V0001_TranslateDashCast_" + "a".repeat(32) + ".rcc"
+        val calls = ArrayList<Int>()
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                val operation = data.readInt(); calls.add(operation)
+                when (operation) {
+                    5 -> {
+                        ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
+                        assertEquals(1, data.readInt())
+                    }
+                    6 -> assertEquals(name, data.readString())
+                    else -> error("Unexpected operation")
+                }
+                assertEquals(0, data.dataAvail())
+                reply!!.writeNoException(); reply.writeString("""{"filename":"$name","variant":"full-surface-test"}""")
+                return true
+            }
+        }); versionField.set(null, "32")
+        val session = ClusterThemeSession.pin()
+        val file = File.createTempFile("cluster-profile", ".rcc").apply { writeText("test") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
+            session.start(it, ClusterThemeVariant.FULL_SURFACE_TEST) {}
+        } } finally { file.delete() }
+        session.observedFullSurface()
+        assertEquals(listOf(5, 6), calls)
     }
     @Test fun `lost mutation reply is attempted once and never replayed`() {
         val calls = AtomicInteger()

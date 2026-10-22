@@ -15,6 +15,23 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.57-beta (versionCode 696)
+
+**Test a native full-canvas cluster background from Diag.** A separate fixed RCC
+experiment replaces the OEM background decorations with a dark QML background,
+cyan frame and corner marks only in power ON + Full navigation + night mode.
+OEM instruments and warning code retain their layout; the projected map is covered
+while active. Protocol 32 adds profile-specific load/observation operations while
+preserving the passive marker and the shared restoration/quarantine lane.
+
+Runtime identities remain mandatory. This is a composition test, not the finished
+concept theme or validated exclusive physical-screen control. Restoration is requested
+after 30 seconds while the daemon remains alive; reboot alone is not assured rollback.
+Validation: 1,704 JVM tests, 15 RCC tests, signed R8 build, lint 0 errors / 31 warnings,
+scanner and bounded exact-release API 29 ART checks pass. Physical rendering and
+restoration remain unvalidated. DashSat 0.9.9-dev stays compatible; 1.9.0 stays stable.
+[Release notes](docs/releases/1.9.57-beta.md).
+
 ### 1.9.56-beta (versionCode 695)
 
 **Keep cluster-test refusals and failures in bug reports.** Retain bounded historical

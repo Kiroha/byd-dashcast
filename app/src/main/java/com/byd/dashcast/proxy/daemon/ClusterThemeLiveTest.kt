@@ -8,6 +8,7 @@ import android.system.OsConstants
 import android.util.Base64
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
 import com.byd.dashcast.clusterlive.ClusterThemeProtocol
+import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -21,11 +22,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Single fixed experiment owned by ProxyDaemon. No OEM file is modified.
+/** Closed experiments sharing one ProxyDaemon journal/recovery lane. No OEM file is modified.
  * Status/restore calls do not wait on the command worker. A new daemon never replays a journal.
  */
 internal object ClusterThemeLiveTest {
-    private const val CARRIER_SHA = "e631fe209209cf2e9c9c93df5106ad267e4f38fa223f4ac8d4f3e660f07b614f"
     private val directory = File("/data/local/tmp/dashcast-cluster-live")
     private val journal = File(directory, "journal.json")
     private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-live-command").apply { isDaemon = true } }
@@ -47,6 +47,9 @@ internal object ClusterThemeLiveTest {
     @Volatile private var loadSettled = false
     @Volatile private var defaultQueried = false
     @Volatile private var markerObserved = false
+    @Volatile private var themeObserved = false
+    @Volatile private var variant = ClusterThemeVariant.MARKER
+    @Volatile private var phase = "idle"
     @Volatile private var oemObserved = false
     @Volatile private var carrierRemoved = false
     @Volatile private var raw = ""
@@ -74,7 +77,9 @@ internal object ClusterThemeLiveTest {
                         check(OsConstants.S_ISREG(st.st_mode) && st.st_uid == Process.myUid() && st.st_size in 1..32768)
                         JSONObject(input.readBytes().toString(Charsets.UTF_8))
                     }
-                    check(j.getInt("schema") == 1)
+                    variant = ClusterThemeVariant.recover(j.get("schema"),
+                        if (j.has("variant")) j.getString("variant") else null,
+                        if (j.has("carrierSha256")) j.getString("carrierSha256") else null)
                     val recordedMutation = j.getBoolean("mutated")
                     if (j.getString("state") != "CLEAN") {
                         filename = j.getString("filename"); check(ClusterThemePolicy.ownedName(filename))
@@ -87,7 +92,7 @@ internal object ClusterThemeLiveTest {
                     }
                 }.onFailure {
                     journalTrusted = false; active.set(true); uncertain = true; state = "QUARANTINE"
-                    detail = "Unreadable previous journal; no new test and no automatic action."
+                    detail = "Unreadable/incompatible previous journal; no new test or automatic action: ${it.message}".take(2000)
                 }
             }
             initialized = true
@@ -101,14 +106,18 @@ internal object ClusterThemeLiveTest {
     fun status(): String {
         initialize()
         return JSONObject().put("state", state).put("detail", detail).put("filename", filename)
+            .put("variant", if (journalTrusted) variant.id else "UNKNOWN")
+            .put("carrierSha256", if (journalTrusted) variant.carrierSha256 else "").put("phase", phase)
             .put("daemonUid", Process.myUid()).put("renderer", renderer).put("identity", identity)
             .put("remainingMs", (deadline - SystemClock.elapsedRealtime()).coerceAtLeast(0))
             .put("mutated", mutated).put("uncertain", uncertain).put("defaultQueried", defaultQueried)
             .put("carrierRemoved", carrierRemoved).put("markerObservedByUser", markerObserved).put("oemObservedByUser", oemObserved)
+            .put("themeObservedByUser", themeObserved)
             .put("raw", raw.takeLast(16000)).toString()
     }
 
-    @Synchronized fun start(source: ParcelFileDescriptor, parkedAssertion: Boolean): String {
+    @Synchronized fun start(source: ParcelFileDescriptor, parkedAssertion: Boolean,
+        requestedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
         initialize()
         try {
             val st = Os.fstat(source.fileDescriptor)
@@ -120,7 +129,9 @@ internal object ClusterThemeLiveTest {
         val thisGeneration = generation.incrementAndGet()
         restoreRequested.set(false); observationPending.set(0)
         mutated = false; uncertain = false; loadSettled = false; defaultQueried = false
-        markerObserved = false; oemObserved = false; carrierRemoved = false; raw = ""
+        markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false; raw = ""
+        variant = requestedVariant; phase = "renderer-discovery"
+        renderer = ""; identity = ""; root = "" // A completed experiment cannot pin the next renderer generation.
         createdDevice = -1; createdInode = -1
         filename = ClusterThemePolicy.PREFIX + UUID.randomUUID().toString().replace("-", "") + ".rcc"
         state = "PREFLIGHT"; detail = "User asserts parked. Checking actual renderer namespace and original artifacts."
@@ -132,12 +143,14 @@ internal object ClusterThemeLiveTest {
                     prepareJournalDirectory()
                     identifyRenderer()
                     checkDeadline()
+                    phase = "baseline-query"
                     val baseline = exchange("query")
                     check(!baseline.unknown && baseline.native == 0 && baseline.query?.isDefault() == true) {
-                        "Baseline query is missing, custom or incompatible; default/source=1 and exact UI version required"
+                        "Baseline query missing/custom/incompatible; default/source=1 and exact UI version required; native=${baseline.native}; ${baseline.error.orEmpty()}"
                     }
                     checkDeadline()
                     check(!restoreRequested.get()) { "Restore requested before staging; load cancelled" }
+                    phase = "carrier-staging"
                     persist("STAGING") // fsync BEFORE first created resource or OEM mutation.
                     val destination = ownedFile()
                     val fd = Os.open(destination.path, OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_EXCL or OsConstants.O_NOFOLLOW, 420)
@@ -153,25 +166,29 @@ internal object ClusterThemeLiveTest {
                                 total += n; check(total <= ClusterThemePolicy.MAX_CARRIER) { "Carrier exceeds size bound" }
                                 digest.update(buffer, 0, n); output.write(buffer, 0, n)
                             }
-                            check(total > 0 && hex(digest.digest()) == CARRIER_SHA) { "Carrier hash mismatch" }
+                            check(total > 0 && hex(digest.digest()) == variant.carrierSha256) { "Carrier hash mismatch for ${variant.id}" }
                         }
                         output.fd.sync()
                     }
-                    check(hash(destination, ClusterThemePolicy.MAX_CARRIER) == CARRIER_SHA)
+                    phase = "carrier-verification"
+                    check(hash(destination, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256)
                     checkRendererIdentity()
                     checkDeadline(); check(!restoreRequested.get()) { "Restore requested; load cancelled" }
+                    phase = "load"
                     mutated = true; persist("LOAD_STARTED") // unknown until child returns; never replay.
                     val load = exchange("load")
                     uncertain = load.unknown || load.native != 0
                     loadSettled = load.responses.any { ClusterThemePolicy.loadAckMatches(it, filename) }
                     state = if (uncertain) "QUARANTINE" else "AWAITING_OBSERVATION"
-                    detail = if (load.query?.selected(filename) == true) "Selection query names our carrier; pixels require your observation."
-                        else "Load attempted; selection is unconfirmed. Absence of marker is inconclusive."
+                    detail = if (uncertain) "${variant.id} load completion UNKNOWN; native=${load.native}; ${load.error.orEmpty()}. No replay; recovery remains separate."
+                        else if (load.query?.selected(filename) == true) "Selection query names ${variant.id}; pixels require your observation."
+                        else "Load attempted for ${variant.id}; selection unconfirmed; native=${load.native}; ${load.error.orEmpty()}. Missing test graphics are inconclusive."
+                    phase = "observation"
                     persist(state)
                     deadline = SystemClock.elapsedRealtime() + 30000
                     if (restoreRequested.get() || uncertain) enqueueRestore(thisGeneration)
                 } catch (t: Throwable) {
-                    detail = "${t.javaClass.simpleName}: ${t.message}".take(2000)
+                    detail = "$phase: ${t.javaClass.simpleName}: ${t.message}".take(2000)
                     if (mutated) { uncertain = true; state = "QUARANTINE"; persistQuietly(); enqueueRestore(thisGeneration) }
                     else if (helperUnreaped) {
                         uncertain = true; state = "QUARANTINE"; deadline = 0
@@ -220,10 +237,11 @@ internal object ClusterThemeLiveTest {
                     return@execute
                 }
                 state = "RESTORING"; detail = "One default-selection request; no physical recovery claim."
+                phase = "restore-query"
                 persistQuietly()
                 if (root.isEmpty()) identifyRenderer() else checkRendererIdentity()
                 val selection = exchange("query")
-                check(!selection.unknown && selection.native == 0 && selection.query != null) { "Recovery pre-query unavailable; no overwrite of unknown selection" }
+                check(!selection.unknown && selection.native == 0 && selection.query != null) { "Recovery pre-query unavailable; no overwrite of unknown selection; ${selection.error.orEmpty()}" }
                 check(selection.query.isDefault() || selection.query.selected(filename)) { "Another selection is active; no overwrite" }
                 val restored = if (selection.query.isDefault()) selection else exchange("restore")
                 uncertain = uncertain || restored.unknown || restored.native != 0
@@ -240,15 +258,16 @@ internal object ClusterThemeLiveTest {
         }
     }
 
-    fun observe(which: Int, expectedFilename: String): String {
+    fun observe(which: Int, expectedFilename: String, expectedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
         initialize()
+        if (which == 1 && variant != expectedVariant) return status()
         // These are tester statements, never inferred from a callback or selection query.
         if (active.get() && mutated && expectedFilename == filename && ClusterThemePolicy.ownedName(expectedFilename)) {
             if (which == 2 && !defaultQueried) return status() // Observation must follow the default query, not just a queued restore.
             val observedFilename = filename
             val observedGeneration = generation.get()
             val bit = if (which == 1) 1 else if (which == 2) 2 else return status()
-            if ((which == 1 && markerObserved) || (which == 2 && oemObserved)) return status()
+            if ((which == 1 && (markerObserved || themeObserved)) || (which == 2 && oemObserved)) return status()
             while (true) {
                 val before = observationPending.get()
                 if (before and bit != 0) return status()
@@ -256,7 +275,10 @@ internal object ClusterThemeLiveTest {
             }
             worker.execute {
                 if (filename == observedFilename && active.get()) {
-                    if (which == 1 && !restoreRequested.get()) { markerObserved = true; loadSettled = true }
+                    if (which == 1 && variant == expectedVariant && !restoreRequested.get()) {
+                        if (variant == ClusterThemeVariant.MARKER) markerObserved = true else themeObserved = true
+                        loadSettled = true
+                    }
                     if (which == 2 && defaultQueried) oemObserved = true
                     persistQuietly(); maybeCleanup()
                 }
@@ -288,7 +310,8 @@ internal object ClusterThemeLiveTest {
     }
 
     private fun persist(newState: String) {
-        val j = JSONObject().put("schema", 1).put("state", newState).put("filename", filename)
+        val j = JSONObject().put("schema", 2).put("state", newState).put("filename", filename)
+            .put("variant", variant.id).put("carrierSha256", variant.carrierSha256)
             .put("renderer", renderer).put("identity", identity).put("mutated", mutated)
             .put("uncertain", uncertain).put("defaultQueried", defaultQueried)
             .put("createdDevice", createdDevice).put("createdInode", createdInode)
@@ -312,19 +335,26 @@ internal object ClusterThemeLiveTest {
     }
     private fun identifyRenderer() {
         hashDeadline = SystemClock.elapsedRealtime() + 60000
+        phase = "renderer-discovery"
         val candidates = File("/proc").listFiles()?.filter { it.name.matches(Regex("[1-9][0-9]{0,8}")) }.orEmpty()
             .filter { runCatching { File(it, "cmdline").readText().split('\u0000').first().substringAfterLast('/') == "qtandroidnative" }.getOrDefault(false) }
         check(candidates.size == 1) { "Expected one readable qtandroidnative renderer; found ${candidates.size}. No UID/namespace fallback." }
         val pid = candidates.single().name
         if (renderer.isNotEmpty()) check(renderer == pid && identity == processIdentity(pid)) { "Renderer changed since journal; recovery must be inspected" }
         renderer = pid; identity = processIdentity(pid); root = "/proc/$pid/root"
+        phase = "renderer-maps"
         checkMappedArtifacts()
         for ((path, expected) in ClusterThemePolicy.originalHashes) {
             checkDeadline(allowRecovery = true)
-            check(hash(File(root + path), ClusterThemePolicy.MAX_ARTIFACT) == expected) { "Live original hash differs/unreadable: $path" }
+            phase = "renderer-artifact"
+            detail = "Hashing original $path through pinned renderer namespace."
+            val actual = try { hash(File(root + path), ClusterThemePolicy.MAX_ARTIFACT) }
+                catch (error: Throwable) { throw IllegalStateException("Cannot hash $path via $root: ${error.message}", error) }
+            check(actual == expected) { "Live original hash differs: $path; expected=$expected; actual=$actual" }
         }
         checkRendererIdentity()
         checkMappedArtifacts()
+        phase = "renderer-carrier-directory"
         val parent = File(root + ClusterThemePolicy.HOST_DIRECTORY)
         check(parent.isDirectory && parent.canWrite()) { "Verified renderer carrier directory unavailable/unwritable; no alias/permission fallback" }
     }
@@ -357,7 +387,7 @@ internal object ClusterThemeLiveTest {
         if (!f.exists()) return true
         val st = Os.lstat(f.path)
         check(ClusterThemePolicy.ownsObject(st.st_mode, st.st_uid, st.st_dev, st.st_ino, Process.myUid(), createdDevice, createdInode)) { "Owned carrier identity/type changed; retained" }
-        check(allowPartial || hash(f, ClusterThemePolicy.MAX_CARRIER) == CARRIER_SHA) { "Owned carrier hash changed; retained" }
+        check(allowPartial || hash(f, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256) { "Owned carrier hash changed; retained" }
         check(f.delete()) { "Owned carrier cleanup failed" }
         return true
     }
@@ -378,7 +408,8 @@ internal object ClusterThemeLiveTest {
     }
     private fun hex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
 
-    private data class Exchange(val native: Int?, val query: ClusterThemeProtocol.Response?, val responses: List<ClusterThemeProtocol.Response>, val unknown: Boolean)
+    private data class Exchange(val native: Int?, val query: ClusterThemeProtocol.Response?, val responses: List<ClusterThemeProtocol.Response>,
+        val unknown: Boolean, val error: String? = null)
     private fun reapRecoveredHelper() {
         if (helperPid <= 0) { check(helperToken.isEmpty() || journalTrusted); return }
         val proc = File("/proc/$helperPid")
@@ -455,7 +486,8 @@ internal object ClusterThemeLiveTest {
             }
             val queryOk = operation == "query" || j.optInt("queryNative", Int.MIN_VALUE) == 0
             return Exchange(if (j.has("native")) j.getInt("native") else null,
-                if (queryOk) queries.lastOrNull { it.cmd == 1001 && it.sub == 4 } else null, responses, j.has("error"))
+                if (queryOk) queries.lastOrNull { it.cmd == 1001 && it.sub == 4 } else null, responses, j.has("error"),
+                if (j.has("error")) j.getString("error").take(1024) else null)
         } finally {
             if (!terminated) {
                 child.destroyForcibly()

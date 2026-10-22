@@ -2,6 +2,10 @@
 
 DIAG now contains **Change physical cluster — passive TEST marker (experimental)**, separate from the existing local fixture verification. This sends a real type-8 OEM RCC selection request when every gate passes. It does not implement the supplied concept dashboard or establish total/exclusive cluster control. No vehicle test, deployment or hardware validation was performed during development.
 
+The separate [native full-surface test theme](CLUSTER_FULL_SURFACE_TEST.md) uses
+the same recovery lane with a distinct compiled profile and hash at protocol 32.
+The marker asset and its protocol-31 start/observation wire format remain unchanged.
+
 Use the existing controls to explicitly connect the current ProxyDaemon first (protocol 31). The primary mechanism is that pinned daemon and an owned `app_process64` helper under its existing UID, normally shell 2000. There is no automatic daemon bootstrap/reconnect, UID switch, namespace fallback, permission alteration, generic shell mutation, replay or SurfaceDaemon modification. The OEM Java/native permission checks remain effective. Before every helper operation the installed Java APK is hashed through its running process namespace, its PackageManager UID/source path and mapped APK device/inode are bound, and PID/start/mount identity is pinned. Callback delivery requires UID 1000 and the exact callback descriptor. A positive Binder caller PID must match the pinned process; PID 0 is accepted only for the researched oneway callback ABI, while that process remains identified. Unknown/inaccessible Java identity refuses admission.
 
 The load dialog requires the tester's parked assertion; this is not movement detection. Restore remains above the scrolling controls, outside the shared diagnostic busy gate, and uses a separate UI request lane. Its action cancels a not-yet-transmitted local start and requests serialized server restoration after an already-begun operation. A dialog, cancellation, timeout or missing marker is never evidence that physical pixels were restored.
