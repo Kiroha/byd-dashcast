@@ -58,8 +58,10 @@ import java.lang.ref.WeakReference
  */
 class DiagActivity : Activity() {
 
+    private var liveThemeControls: ClusterThemeLiveControls? = null
     private lateinit var logView: TextView
     private lateinit var runBtn: Button
+    private lateinit var experimentalThemeBtn: Button
     private lateinit var probeBtn: Button
     private lateinit var fissionRegistryBtn: Button
     private lateinit var armCallbackBtn: Button
@@ -88,7 +90,7 @@ class DiagActivity : Activity() {
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn, adasTargetsBtn)
+    private fun allDiagButtons() = listOf(runBtn, experimentalThemeBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn, adasTargetsBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -150,6 +152,9 @@ class DiagActivity : Activity() {
         val controls = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(ScrollView(this).apply { addView(controls) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        liveThemeControls = ClusterThemeLiveControls(this, root, controls,
+            claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
+            releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) })
         fullExportBtn = Button(this).apply {
             text = "Export complet accessible"
             setOnClickListener { chooseSystemExport() }
@@ -197,6 +202,16 @@ class DiagActivity : Activity() {
             }
         }
         controls.addView(navIconCaptureBtn)
+
+        experimentalThemeBtn = Button(this).apply {
+            text = "Verify experimental theme (local only)"
+            setOnClickListener { verifyExperimentalTheme() }
+        }
+        controls.addView(experimentalThemeBtn)
+        controls.addView(TextView(this).apply {
+            text = "Checks bundled files only. Does not load a cluster theme."
+            textSize = 14f
+        })
 
         probeBtn = Button(this).apply {
             text = "OEM cluster probes (read-only)"
@@ -911,6 +926,42 @@ class DiagActivity : Activity() {
         }, "projection-trace").start()
     }
 
+    override fun onDestroy() {
+        liveThemeControls?.close()
+        super.onDestroy()
+    }
+
+    private fun verifyExperimentalTheme() {
+        if (!claimBusyOrWarn()) return
+        allDiagButtons().forEach { it.isEnabled = false }
+        val app = applicationContext
+        val owner = WeakReference(this)
+        Thread({
+            try {
+                val result = ExperimentalThemeDiagnostics.verify { name ->
+                    app.assets.open("experimental_theme/$name")
+                }
+                val report = result.report() + "\nAndroid API: ${Build.VERSION.SDK_INT}; build: ${Build.DISPLAY}" +
+                    "\nPositive DiLink 3 detection: ${Platform.get().isAutoDetectedDiLink3()} (not proof of cluster access)." +
+                    "\n" + ExperimentalThemeDiagnostics.passiveAccessContext(app)
+                logExtraction(owner, report)
+                owner.get()?.runOnUiThread {
+                    val activity = owner.get() ?: return@runOnUiThread
+                    if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                    AlertDialog.Builder(activity)
+                        .setTitle("Experimental theme — local verification")
+                        .setMessage(report)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                logExtraction(owner, "Experimental theme local verification failed (${e.javaClass.simpleName}). No theme loaded.")
+            } finally {
+                completeThemeVerification(owner)
+            }
+        }, "experimental-theme-check").start()
+    }
+
     private fun captureNavigationIcons() {
         if (!claimBusyOrWarn()) return
         allDiagButtons().forEach { it.isEnabled = false }
@@ -1000,6 +1051,18 @@ class DiagActivity : Activity() {
             activity.runOnUiThread {
                 if (!activity.isFinishing && !activity.isDestroyed && activity::logView.isInitialized) {
                     activity.logView.append(line + "\n")
+                }
+            }
+        }
+
+        private fun completeThemeVerification(owner: WeakReference<DiagActivity>) {
+            sBusy.set(false)
+            val activity = owner.get() ?: return
+            activity.runOnUiThread {
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    val idle = !sBusy.get()
+                    activity.allDiagButtons().forEach { it.isEnabled = idle }
+                    activity.reportingPairBtn.isEnabled = idle && !activity.reportingPairInFlight
                 }
             }
         }

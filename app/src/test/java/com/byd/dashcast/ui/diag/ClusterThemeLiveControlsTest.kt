@@ -1,0 +1,106 @@
+package com.byd.dashcast.ui.diag
+
+import android.app.AlertDialog
+import android.os.Binder
+import android.os.Parcel
+import android.view.View
+import org.json.JSONObject
+import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.ScrollView
+import android.widget.TextView
+import com.byd.dashcast.proxy.ProxyClient
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowAlertDialog
+import org.robolectric.shadows.ShadowLooper
+import org.robolectric.annotation.Config
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [29])
+class ClusterThemeLiveControlsTest {
+    private fun views(g: ViewGroup): List<android.view.View> = (0 until g.childCount).flatMap { i ->
+        val v = g.getChildAt(i); listOf(v) + if (v is ViewGroup) views(v) else emptyList()
+    }
+    private val busy = DiagActivity::class.java.getDeclaredField("sBusy").apply { isAccessible = true }.get(null) as AtomicBoolean
+    @Test fun `restore stays above controls and is not part of diagnostic busy disabling`() {
+        val c = Robolectric.buildActivity(DiagActivity::class.java).create()
+        try {
+            val all = views(c.get().findViewById(android.R.id.content))
+            val restore = all.filterIsInstance<Button>().single { it.text == "Restore original cluster selection" }
+            val parent = restore.parent as ViewGroup
+            val scroll = (0 until parent.childCount).map(parent::getChildAt).first { it is ScrollView }
+            assertTrue(parent.indexOfChild(restore) < parent.indexOfChild(scroll))
+            val method = DiagActivity::class.java.getDeclaredMethod("allDiagButtons").apply { isAccessible = true }
+            assertFalse((method.invoke(c.get()) as List<*>).contains(restore))
+            assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
+        } finally { c.destroy(); busy.set(false) }
+    }
+    @Test fun `parked assertion mandatory and missing daemon releases claim before any load`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        bf.set(null, null); vf.set(null, null); busy.set(false)
+        val c = Robolectric.buildActivity(DiagActivity::class.java).create()
+        try {
+            val all = views(c.get().findViewById(android.R.id.content))
+            val load = all.filterIsInstance<Button>().single { it.text.toString().startsWith("Change physical cluster") }
+            busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
+            busy.set(false); load.performClick(); ShadowLooper.idleMainLooper()
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            assertNotNull(dialog); assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().single().isChecked = true
+            assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            while (busy.get() && System.nanoTime() < until) Thread.sleep(5)
+            assertFalse("Definite pre-transmission refusal must release Diag gate", busy.get())
+            ShadowLooper.idleMainLooper()
+            assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("REFUSED before start transmission") })
+            assertTrue(all.filterIsInstance<Button>().single { it.text == "Verify experimental theme (local only)" }.isEnabled)
+        } finally { c.destroy(); busy.set(false); bf.set(null, previous); vf.set(null, version) }
+    }
+    @Test @Config(qualifiers = "w640dp-h360dp-land")
+    fun `recreated short landscape keeps Restore visible and re-queries active daemon without loading`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        var loads = 0
+        val status = JSONObject().put("state", "AWAITING_OBSERVATION").put("detail", "Selection queried; pixels unconfirmed")
+            .put("filename", "Di3F_DynastyOceanTranslate_V0001_TranslateDashCast_" + "a".repeat(32) + ".rcc")
+            .put("daemonUid", 2000).put("defaultQueried", false).put("markerObservedByUser", false).put("oemObservedByUser", false).put("raw", "").toString()
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST, code)
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                if (data.readInt() == 1) loads++
+                reply!!.writeNoException(); reply.writeString(status); return true
+            }
+        }); vf.set(null, "31"); busy.set(false)
+        var c = Robolectric.buildActivity(DiagActivity::class.java).setup()
+        try {
+            c.pause().stop().destroy(); c = Robolectric.buildActivity(DiagActivity::class.java).setup()
+            val all = views(c.get().findViewById(android.R.id.content))
+            assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.performClick()
+            val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+            while (!busy.get() && System.nanoTime() < until) { Thread.sleep(5); ShadowLooper.idleMainLooper() }
+            assertTrue(busy.get()); assertEquals(0, loads)
+            val restore = all.filterIsInstance<Button>().single { it.text == "Restore original cluster selection" }
+            val decor = c.get().window.decorView
+            decor.measure(View.MeasureSpec.makeMeasureSpec(640, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY))
+            decor.layout(0, 0, 640, 360)
+            val location = IntArray(2); restore.getLocationOnScreen(location)
+            assertTrue("Restore must remain enabled", restore.isEnabled); assertTrue("Restore must have measured height; decor=${decor.measuredHeight} parent=${(restore.parent as ViewGroup).measuredHeight}", restore.height > 0)
+            assertTrue("Restore must fit short landscape: y=${location[1]} h=${restore.height}", location[1] >= 0 && location[1] + restore.height <= 360)
+        } finally { c.pause().stop().destroy(); busy.set(false); bf.set(null, previous); vf.set(null, version) }
+    }
+
+}

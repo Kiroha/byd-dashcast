@@ -65,6 +65,7 @@ class BydApkExtractionCleanupTest {
 
         assertFalse(source.contains("lastWork"))
         assertFalse(source.substringAfter("override fun onDestroy", "")
+            .substringBefore("\n    }")
             .contains("BydApkExtractionBundle.cleanup"))
         assertTrue(extraction.substringAfter("BydApkExtractionBundle.materialize")
             .contains("BydApkExtractionBundle.cleanup(workDir)"))
