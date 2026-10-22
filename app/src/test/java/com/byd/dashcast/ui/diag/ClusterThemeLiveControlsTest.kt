@@ -48,18 +48,25 @@ class ClusterThemeLiveControlsTest {
         (ClusterThemeLiveControls::class.java.getDeclaredField("diagClaimed").apply { isAccessible = true }.get(null) as AtomicBoolean).set(false)
         busy.set(false)
     }
-    @Test fun `restore stays above controls and is not part of diagnostic busy disabling`() {
-        val c = Robolectric.buildActivity(DiagActivity::class.java).create()
+    @Test fun `restore stays pinned outside pages and is not part of diagnostic busy disabling`() {
+        val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
             val restore = all.filterIsInstance<Button>().single { it.text == "Restore original cluster selection" }
-            val parent = restore.parent as ViewGroup
-            val scroll = (0 until parent.childCount).map(parent::getChildAt).first { it is ScrollView }
-            assertTrue(parent.indexOfChild(restore) < parent.indexOfChild(scroll))
+            val root = restore.rootView.findViewById<View>(android.R.id.content).let { it as ViewGroup }.getChildAt(0) as ViewGroup
+            val scroll = views(root).filterIsInstance<ScrollView>().first()
+            assertTrue(root.indexOfChild(restore.parent as View) < root.indexOfChild(scroll.parent as View))
             val method = DiagActivity::class.java.getDeclaredMethod("allDiagButtons").apply { isAccessible = true }
             assertFalse((method.invoke(c.get()) as List<*>).contains(restore))
+            assertEquals(7, all.filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
+            assertTrue(restore.isEnabled && restore.visibility == View.VISIBLE)
+            assertTrue(all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
+            c.get().onBackPressed()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Exports & OEM collection\n") }.performClick()
+            assertTrue(all.filterIsInstance<Button>().single { it.text == "Export complet accessible" }.isShown)
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
-        } finally { c.destroy(); busy.set(false) }
+        } finally { c.pause().stop().destroy(); busy.set(false) }
     }
     @Test fun `parked assertion mandatory and missing daemon releases claim before any load`() {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
@@ -69,6 +76,7 @@ class ClusterThemeLiveControlsTest {
         val c = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
             val load = all.filterIsInstance<Button>().single { it.text.toString().startsWith("Change physical cluster") }
             busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
             assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("start-busy"))
@@ -108,6 +116,7 @@ class ClusterThemeLiveControlsTest {
         try {
             c.pause().stop().destroy(); c = Robolectric.buildActivity(DiagActivity::class.java).setup()
             val all = views(c.get().findViewById(android.R.id.content))
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
             all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.performClick()
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
