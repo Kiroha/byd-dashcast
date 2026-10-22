@@ -2,6 +2,11 @@
 
 DIAG now contains **Change physical cluster — passive TEST marker (experimental)**, separate from the existing local fixture verification. This sends a real type-8 OEM RCC selection request when every gate passes. It does not implement the supplied concept dashboard or establish total/exclusive cluster control. No vehicle test, deployment or hardware validation was performed during development.
 
+Protocol 33 also provides a [separate read-only OEM selection query](CLUSTER_READ_ONLY_RCC_QUERY.md)
+which needs no host Qt/Java process visibility. It does not relax any runtime
+identity, loading or recovery requirement described below. Its receipt is
+independent of the physical-test state and is included in normal reports.
+
 The separate [native full-surface test theme](CLUSTER_FULL_SURFACE_TEST.md) uses
 the same recovery lane with a distinct compiled profile and hash at protocol 32.
 The marker asset and its protocol-31 start/observation wire format remain unchanged.

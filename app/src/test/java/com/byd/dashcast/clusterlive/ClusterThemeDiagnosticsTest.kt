@@ -34,6 +34,18 @@ class ClusterThemeDiagnosticsTest {
         assertTrue(report.contains("current physical cluster state=UNKNOWN")); assertTrue(report.contains("receivedEpochMs"))
         assertFalse(report.contains("\"raw\""))
     }
+    @Test fun `read only query receipt keeps separate native results local time and unknown renderer identity`() {
+        val query = JSONObject().put("state", "RECEIVED").put("phase", "complete").put("detail", "selection observation only")
+            .put("registration", 0).put("native", -1).put("selection", "default").put("nativeIdentity", "UNKNOWN")
+            .put("receivedEpochMs", 123456789L)
+        ClusterThemeDiagnostics.received(app, "oem-selection-query", "connection1", status().put("oemQuery", query).toString())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        assertTrue(report.contains("oemQueryRegistration")); assertTrue(report.contains("oemQueryNative\":-1"))
+        assertTrue(report.contains("oemQueryReceivedEpochMs\":123456789"))
+        assertTrue(report.contains("oemQueryNativeIdentity\":\"UNKNOWN"))
+        assertTrue(report.contains("selection observation only")); assertTrue(report.contains("REFUSED"))
+    }
 
     @Test fun `unchanged polls ignore countdown and operation but changed detail state or raw are retained`() {
         val first = status().put("remainingMs", 30000)

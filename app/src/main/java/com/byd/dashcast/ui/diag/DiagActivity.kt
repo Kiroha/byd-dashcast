@@ -35,6 +35,7 @@ import com.byd.dashcast.report.AzureBlobUploader
 import com.byd.dashcast.report.ReportChannel
 import com.byd.dashcast.report.ReportStore
 import com.byd.dashcast.report.TelegramBugReporter
+import com.byd.dashcast.report.BugWizardActivity
 import com.byd.dashcast.util.AppLogger
 import java.io.File
 import java.lang.ref.WeakReference
@@ -220,7 +221,8 @@ class DiagActivity : Activity() {
         liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
-            statusContainer = clusterBody)
+            statusContainer = clusterBody, reportShortcut = ::addDiagnosticReportShortcut)
+        addDiagnosticReportShortcut(reportingBody)
         exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."
             textSize = 14f
@@ -412,6 +414,19 @@ class DiagActivity : Activity() {
         log("Ready. Choose a diagnostic or Export complet accessible.")
         FullApkExportSession.inspectPrevious(applicationContext)
         renderFullExport()
+    }
+
+    private fun addDiagnosticReportShortcut(container: LinearLayout) {
+        container.addView(Button(this).apply {
+            text = getString(R.string.diag_send_report)
+            isAllCaps = false
+            minHeight = (48 * resources.displayMetrics.density).toInt()
+            setOnClickListener { startActivity(Intent(this@DiagActivity, BugWizardActivity::class.java)) }
+        })
+        container.addView(TextView(this).apply {
+            text = getString(R.string.diag_send_report_help)
+            textSize = 14f
+        })
     }
 
     override fun onStart() {

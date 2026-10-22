@@ -708,4 +708,11 @@
     <string name="native_adas_projection_help">Пасля пацверджання праграмы выконваецца поўная паслядоўнасць, уключаючы схаванне папярэджанняў панэлі. Выключэнне запытвае аднаўленне OEM. Праверце экран.</string>
     <string name="native_adas_projection_restore">Аднавіць поўнай паслядоўнасцю</string>
     <string name="native_adas_preference_failed">Не ўдалося захаваць наладу. Папярэдняе значэнне захавана.</string>
+    <!-- Closed read-only OEM RCC selection query. -->
+    <string name="diag_cluster_oem_query_button">Прачытаць выбар RCC OEM (толькі чытанне)</string>
+    <string name="diag_cluster_oem_query_explanation">Запытвае службу BYD без пошуку працэсу Qt. Тэма не загружаецца, не аднаўляецца і не выдаляецца. Патрэбны падключаны дэман з пратаколам 33. Адказ апісвае выбар, але не пацвярджае загрузку нашай тэмы.</string>
+    <string name="diag_cluster_oem_query_busy">Выконваецца іншая аперацыя. Дачакайцеся яе заканчэння перад запытам.</string>
+    <string name="diag_cluster_oem_query_result">Даныя RCC OEM: %1$s\n%2$s\nРэгістрацыя callback: %3$s; натыўны вынік: %4$s\n%5$s\nШырокавяшчальны callback без ідэнтыфікатара запыту: толькі назіранне выбару. Натыўная ідэнтычнасць і выява на экране невядомыя.</string>
+    <string name="diag_send_report">Адправіць дыягнастычную справаздачу</string>
+    <string name="diag_send_report_help">Уключае вынікі панэлі прыбораў і журнал. Адпраўка праз наладжаны канал або абагульванне файла.</string>
 </resources>

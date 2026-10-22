@@ -13,6 +13,7 @@ import com.byd.dashcast.clusterlive.ClusterThemePolicy
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.proxy.ClusterThemeSession
+import com.byd.dashcast.R
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong
 internal class ClusterThemeLiveControls(private val activity: Activity, header: LinearLayout, controls: LinearLayout,
     private val claimDiag: () -> Boolean, private val releaseDiag: () -> Unit,
     private val otherBusy: () -> Boolean, private val transcript: (String) -> Unit,
-    statusContainer: LinearLayout = header) {
+    statusContainer: LinearLayout = header, reportShortcut: (LinearLayout) -> Unit = {}) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-restore-ui").apply { isDaemon = true } }
@@ -40,6 +41,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     @Volatile private var session: ClusterThemeSession? = null
     private var confirmation: AlertDialog? = null
     private var lastSummary = ""
+    @Volatile private var queryPending = false
     private val status = TextView(activity).apply {
         textSize = 14f
         text = "Physical cluster state UNKNOWN. Read the current connected daemon status before drawing conclusions."
@@ -76,16 +78,31 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             }
         }, headerIndex)
         controls.addView(Button(activity).apply {
+            text = activity.getString(R.string.diag_cluster_oem_query_button)
+            isAllCaps = false
+            minHeight = (48 * activity.resources.displayMetrics.density).toInt()
+            setOnClickListener {
+                if (!queryPending && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) {
+                    submit("oem-selection-query") { ClusterThemeSession.pin(app).also { session = it }.querySelection() }
+                } else show(activity.getString(R.string.diag_cluster_oem_query_busy), "oem-query-busy")
+            }
+        })
+        controls.addView(TextView(activity).apply {
+            text = activity.getString(R.string.diag_cluster_oem_query_explanation)
+            textSize = 14f
+        })
+        reportShortcut(controls)
+        controls.addView(Button(activity).apply {
             text = "Change physical cluster — passive TEST marker (experimental)"
             setOnClickListener {
-                if (!busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) confirm(ClusterThemeVariant.MARKER)
+                if (!queryPending && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) confirm(ClusterThemeVariant.MARKER)
                 else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
             }
         })
         controls.addView(Button(activity).apply {
             text = "Test full cluster theme — night + Full (experimental)"
             setOnClickListener {
-                if (!busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) confirm(ClusterThemeVariant.FULL_SURFACE_TEST)
+                if (!queryPending && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) confirm(ClusterThemeVariant.FULL_SURFACE_TEST)
                 else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
             }
         })
@@ -184,7 +201,12 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private fun render(text: String, expectedLease: Long) {
         val j = JSONObject(text)
         if (j.getString("state") in setOf("IDLE", "CLEAN", "REFUSED")) releaseClaim(expectedLease)
-        val summary = "${j.getString("state")}: ${j.getString("detail")}\nProfile ${j.optString("variant", "legacy marker")}; phase ${j.optString("phase", "unrecorded")}; daemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/theme/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.optBoolean("themeObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
+        val query = j.optJSONObject("oemQuery")
+        queryPending = query?.optString("state") == "PENDING"
+        val queryText = if (query == null || query.length() == 0) "" else activity.getString(R.string.diag_cluster_oem_query_result,
+            query.optString("state"), query.optString("detail"), query.opt("registration")?.toString() ?: "UNKNOWN",
+            query.opt("native")?.toString() ?: "UNKNOWN", query.optString("selection")) + "\n\n"
+        val summary = queryText + "${j.getString("state")}: ${j.getString("detail")}\nProfile ${j.optString("variant", "legacy marker")}; phase ${j.optString("phase", "unrecorded")}; daemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/theme/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.optBoolean("themeObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
         handler.post {
             if (!closed) {
                 if (j.getString("state") !in setOf("IDLE", "CLEAN", "REFUSED") && lease.get() == expectedLease && !diagClaimed.get() && !otherBusy() && claimDiag()) {

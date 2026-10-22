@@ -34,6 +34,34 @@ class ClusterThemeSessionTest {
         versionField.set(null, "30"); binderField.set(null, Binder())
         assertThrows(IllegalStateException::class.java) { ClusterThemeSession.pin() }
     }
+    @Test fun `read only OEM query requires protocol 33 and sends only closed operation 7`() {
+        val calls = AtomicInteger()
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST, code)
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                assertEquals(7, data.readInt()); assertEquals(0, data.dataAvail()); calls.incrementAndGet()
+                reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","filename":"","oemQuery":{"state":"PENDING"}}""")
+                return true
+            }
+        }); versionField.set(null, "32")
+        val session = ClusterThemeSession.pin()
+        assertThrows(IllegalStateException::class.java) { session.querySelection() }
+        assertEquals(0, calls.get())
+        versionField.set(null, "33")
+        assertTrue(session.querySelection().contains("PENDING")); assertEquals(1, calls.get())
+    }
+    @Test fun `lost OEM query reply is never replayed`() {
+        val calls = AtomicInteger()
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(7, data.readInt())
+                calls.incrementAndGet(); throw DeadObjectException()
+            }
+        }); versionField.set(null, "33")
+        assertThrows(DeadObjectException::class.java) { ClusterThemeSession.pin().querySelection() }
+        assertEquals(1, calls.get())
+    }
     @Test fun `full surface start and observation refuse protocol 31 before any transaction`() {
         val calls = AtomicInteger()
         val binder = object : Binder() {

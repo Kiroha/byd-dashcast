@@ -21,6 +21,10 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         }
     }
     fun status(): String = call(0)
+    fun querySelection(): String {
+        check(ProxyClient.supportsProtocol(33)) { "Connected ProxyDaemon protocol 33 required for read-only OEM query. No reconnect/replay." }
+        return call(7)
+    }
     fun start(source: ParcelFileDescriptor, beforeTransaction: () -> Unit): String = call(1, source, beforeTransaction)
     fun start(source: ParcelFileDescriptor, variant: ClusterThemeVariant, beforeTransaction: () -> Unit): String {
         check(ProxyClient.supportsProtocol(variant.minimumProtocol)) {
@@ -36,7 +40,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun observedOem(): String = call(4)
     private fun call(operation: Int, source: ParcelFileDescriptor? = null, beforeTransaction: () -> Unit = {}): String {
-        val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface")[operation]
+        val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {

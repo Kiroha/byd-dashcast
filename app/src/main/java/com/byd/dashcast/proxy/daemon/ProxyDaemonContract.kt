@@ -259,7 +259,8 @@ object ProxyDaemonContract {
 
     /** Closed identity-bound experiments. int op: 0 status, 1 marker start(PFD,int assertion),
      * 2 restore, 3/4 marker/OEM observations (protocol 31). 5 full-surface start(PFD,int assertion),
-     * 6 full-surface observation require protocol 32. Prompt JSON; never generic/replayed. */
+     * 6 full-surface observation require protocol 32; 7 read-only OEM query requires 33.
+     * Prompt JSON; never generic/replayed. */
     const val TXN_CLUSTER_LIVE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43 // 44
 
 }

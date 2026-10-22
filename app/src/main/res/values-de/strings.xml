@@ -708,4 +708,11 @@
     <string name="native_adas_projection_help">Nach Bestätigung der projizierten App wird die vollständige Sequenz einschließlich der Bereichswarnungen angewendet. Deaktivieren fordert die OEM-Wiederherstellung an. Anzeige prüfen.</string>
     <string name="native_adas_projection_restore">Mit vollständiger Sequenz wiederherstellen</string>
     <string name="native_adas_preference_failed">Einstellung konnte nicht gespeichert werden. Der bisherige Wert bleibt erhalten.</string>
+    <!-- Closed read-only OEM RCC selection query. -->
+    <string name="diag_cluster_oem_query_button">OEM-RCC-Auswahl abfragen (nur lesen)</string>
+    <string name="diag_cluster_oem_query_explanation">Fragt den BYD-Dienst ohne Suche nach dem Qt-Prozess ab. Kein Theme wird geladen, wiederhergestellt oder gelöscht. Erfordert den verbundenen Daemon mit Protokoll 33. Die Antwort beschreibt die Auswahl, bestätigt aber nicht das Laden unseres Themes.</string>
+    <string name="diag_cluster_oem_query_busy">Ein anderer Vorgang läuft. Warte vor der Abfrage auf dessen Abschluss.</string>
+    <string name="diag_cluster_oem_query_result">OEM-RCC-Beleg: %1$s\n%2$s\nCallback-Registrierung: %3$s; native Rückgabe: %4$s\n%5$s\nBroadcast-Callback ohne Anfragekennung: nur Beobachtung der Auswahl. Native Identität und physische Bildausgabe unbekannt.</string>
+    <string name="diag_send_report">Diagnosebericht senden</string>
+    <string name="diag_send_report_help">Enthält Cluster-Ergebnisse und Protokoll. Über den eingerichteten Kanal senden oder eine Datei teilen.</string>
 </resources>

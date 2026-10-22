@@ -708,4 +708,11 @@
     <string name="native_adas_projection_help">Yansıtılan uygulama doğrulandıktan sonra panel uyarıları dahil tam sıra uygulanır. Kapatmak OEM geri yüklemesini ister. Ekrandaki sonucu kontrol edin.</string>
     <string name="native_adas_projection_restore">Tam sırayla geri yükle</string>
     <string name="native_adas_preference_failed">Ayar kaydedilemedi. Önceki değer korundu.</string>
+    <!-- Closed read-only OEM RCC selection query. -->
+    <string name="diag_cluster_oem_query_button">OEM RCC seçimini oku (salt okunur)</string>
+    <string name="diag_cluster_oem_query_explanation">Qt işlemini aramadan BYD hizmetini sorgular. Tema yüklenmez, geri yüklenmez veya silinmez. Bağlı protokol 33 daemon gerektirir. Yanıt seçimi açıklar; temamızın yüklenmesini doğrulamaz.</string>
+    <string name="diag_cluster_oem_query_busy">Başka bir işlem etkin. Sorgulamadan önce bitmesini bekleyin.</string>
+    <string name="diag_cluster_oem_query_result">OEM RCC kaydı: %1$s\n%2$s\nCallback kaydı: %3$s; yerel dönüş: %4$s\n%5$s\nİstek kimliği olmayan yayın callback: yalnızca seçim gözlemi. Yerel kimlik ve fiziksel ekran görüntüsü bilinmiyor.</string>
+    <string name="diag_send_report">Tanılama raporu gönder</string>
+    <string name="diag_send_report_help">Gösterge paneli sonuçlarını ve günlüğü içerir. Yapılandırılan kanaldan gönderin veya dosya paylaşın.</string>
 </resources>
