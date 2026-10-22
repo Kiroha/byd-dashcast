@@ -257,4 +257,8 @@ object ProxyDaemonContract {
      * No logging activation, shell, device nodes, subscriptions, writes or persistent file handles. */
     const val TXN_ADAS_LOG_PROBE = IBinder.FIRST_CALL_TRANSACTION + 42 // 43, protocol 30
 
+    /** Fixed identity-bound marker experiment. int op: 0 status, 1 start(PFD,int assertion),
+     * 2 restore, 3/4 user observations. Prompt JSON reply; never generic/replayed. Protocol 31. */
+    const val TXN_CLUSTER_LIVE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43 // 44
+
 }

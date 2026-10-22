@@ -2081,8 +2081,11 @@ android {
         // 693 = 1.9.54-beta: finish Stop only after the final native size command, cancel ADAS
         // hiding before eviction and reject stale restore tails after a newer projection starts.
         // Preserve protocol 30 and passive ADAS log diagnostics; parked validation is pending.
-        versionCode 693
-        versionName "1.9.54-beta"
+        // 694 = 1.9.55-beta: manual, firmware-bound OEM root QML marker experiment in Diag.
+        // Refresh daemons to protocol 31; selection/recovery and physical visibility stay distinct.
+        // No vehicle validation or concept-dashboard replacement is claimed.
+        versionCode 694
+        versionName "1.9.55-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

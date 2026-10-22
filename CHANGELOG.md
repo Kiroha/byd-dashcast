@@ -15,6 +15,21 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.55-beta (versionCode 694)
+
+**Test loading a passive QML marker on the physical cluster from Diag.** The new
+experimental action uses the explicitly connected protocol-31 ProxyDaemon and the
+researched OEM RCC selection path on matching firmware 13.1.33.2602030.1. The carrier
+retains stock root code and translations with a passive **DASHCAST TEST** insertion;
+physical visibility and compatibility remain unvalidated. This does not implement
+the concept dashboard or establish exclusive cluster control.
+
+Keep manual restoration accessible, request default selection after 30 seconds while
+the daemon remains alive, and retain uncertain sessions for recovery. BYD persists the
+selection, so reboot alone is not assured rollback. Local fixture verification remains
+separate. DashSat 0.9.9-dev remains compatible; 1.9.0 remains stable.
+[Release notes](docs/releases/1.9.55-beta.md).
+
 ### 1.9.54-beta (versionCode 693)
 
 **Finish Stop after the last native cluster-size command.** Cancel pending ADAS hiding
