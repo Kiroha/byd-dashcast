@@ -1,6 +1,7 @@
 package com.byd.dashcast.ui.diag
 
 import android.app.AlertDialog
+import android.app.Activity
 import android.os.Binder
 import android.os.Parcel
 import android.view.View
@@ -11,8 +12,11 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.LinearLayout
+import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.proxy.ProxyClient
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -21,7 +25,9 @@ import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.annotation.Config
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -30,6 +36,14 @@ class ClusterThemeLiveControlsTest {
         val v = g.getChildAt(i); listOf(v) + if (v is ViewGroup) views(v) else emptyList()
     }
     private val busy = DiagActivity::class.java.getDeclaredField("sBusy").apply { isAccessible = true }.get(null) as AtomicBoolean
+    @Before fun resetCompletedTestLease() {
+        val localBusy = ClusterThemeLiveControls::class.java.getDeclaredField("busy").apply { isAccessible = true }.get(null) as AtomicBoolean
+        val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+        while (localBusy.get() && System.nanoTime() < until) Thread.sleep(5)
+        assertFalse("Previous physical-call fixture must have returned", localBusy.get())
+        (ClusterThemeLiveControls::class.java.getDeclaredField("diagClaimed").apply { isAccessible = true }.get(null) as AtomicBoolean).set(false)
+        busy.set(false)
+    }
     @Test fun `restore stays above controls and is not part of diagnostic busy disabling`() {
         val c = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
@@ -53,6 +67,7 @@ class ClusterThemeLiveControlsTest {
             val all = views(c.get().findViewById(android.R.id.content))
             val load = all.filterIsInstance<Button>().single { it.text.toString().startsWith("Change physical cluster") }
             busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
+            assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("start-busy"))
             busy.set(false); load.performClick(); ShadowLooper.idleMainLooper()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertNotNull(dialog); assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
@@ -64,6 +79,7 @@ class ClusterThemeLiveControlsTest {
             assertFalse("Definite pre-transmission refusal must release Diag gate", busy.get())
             ShadowLooper.idleMainLooper()
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("REFUSED before start transmission") })
+            assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("REFUSED before start transmission"))
             assertTrue(all.filterIsInstance<Button>().single { it.text == "Verify experimental theme (local only)" }.isEnabled)
         } finally { c.destroy(); busy.set(false); bf.set(null, previous); vf.set(null, version) }
     }
@@ -101,6 +117,68 @@ class ClusterThemeLiveControlsTest {
             assertTrue("Restore must remain enabled", restore.isEnabled); assertTrue("Restore must have measured height; decor=${decor.measuredHeight} parent=${(restore.parent as ViewGroup).measuredHeight}", restore.height > 0)
             assertTrue("Restore must fit short landscape: y=${location[1]} h=${restore.height}", location[1] >= 0 && location[1] + restore.height <= 360)
         } finally { c.pause().stop().destroy(); busy.set(false); bf.set(null, previous); vf.set(null, version) }
+    }
+
+    @Test fun `empty raw daemon refusal is captured even when Activity closes before reply`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        val admitted = CountDownLatch(1); val finish = CountDownLatch(1)
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(0, data.readInt())
+                admitted.countDown(); check(finish.await(5, TimeUnit.SECONDS))
+                reply!!.writeNoException()
+                reply.writeString("""{"state":"REFUSED","detail":"Renderer preflight refused before OEM exchange","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
+                return true
+            }
+        }); vf.set(null, "31")
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
+        try {
+            views(panel).filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected") }.performClick()
+            assertTrue(admitted.await(3, TimeUnit.SECONDS))
+            controls.close(); activity.pause().stop().destroy(); finish.countDown()
+            awaitHistory(activity.get(), "Renderer preflight refused before OEM exchange")
+        } finally { finish.countDown(); controls.close(); bf.set(null, previous); vf.set(null, version) }
+    }
+
+    class UnavailableSourceActivity : Activity() {
+        val entered = CountDownLatch(1); val finish = CountDownLatch(1)
+        override fun getExternalFilesDir(type: String?): File? {
+            entered.countDown(); check(finish.await(5, TimeUnit.SECONDS)); return null
+        }
+    }
+
+    @Test fun `local source failure remains recorded after Activity destruction without start IPC`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        var ipc = 0
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { ipc++; error("No start IPC expected") }
+        }); vf.set(null, "31")
+        val activity = Robolectric.buildActivity(UnavailableSourceActivity::class.java).setup()
+        val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
+        try {
+            views(panel).filterIsInstance<Button>().single { it.text.toString().startsWith("Change physical") }.performClick()
+            ShadowLooper.idleMainLooper()
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().single().isChecked = true
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            assertTrue(activity.get().entered.await(3, TimeUnit.SECONDS))
+            controls.close(); activity.pause().stop().destroy(); activity.get().finish.countDown()
+            awaitHistory(activity.get(), "Own external files unavailable")
+            assertEquals(0, ipc)
+        } finally { activity.get().finish.countDown(); controls.close(); bf.set(null, previous); vf.set(null, version) }
+    }
+
+    private fun awaitHistory(activity: Activity, text: String) {
+        val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+        while (!ClusterThemeDiagnostics.snapshot(activity).contains(text) && System.nanoTime() < until) Thread.sleep(5)
+        assertTrue(ClusterThemeDiagnostics.snapshot(activity).contains(text))
     }
 
 }

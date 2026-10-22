@@ -15,6 +15,19 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.56-beta (versionCode 695)
+
+**Keep cluster-test refusals and failures in bug reports.** Retain bounded historical
+status receipts, including early refusals with empty raw output, local preparation/IPC
+failures and valid late replies after Diag closes or its daemon reference changes. Normal
+and fallback reports read the app-private cache without requesting new cluster status.
+Unchanged polling does not refresh evidence timestamps; absent evidence remains unknown.
+
+This improves diagnosis, without changing OEM admission, load/recovery behavior, protocol
+31 or the SX326 firmware gate. It adds no SX361 support or full-theme replacement.
+DashSat 0.9.9-dev remains compatible; 1.9.0 remains stable.
+[Release notes](docs/releases/1.9.56-beta.md).
+
 ### 1.9.55-beta (versionCode 694)
 
 **Test loading a passive QML marker on the physical cluster from Diag.** The new

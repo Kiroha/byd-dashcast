@@ -10,6 +10,7 @@ import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
+import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.proxy.ClusterThemeSession
 import org.json.JSONObject
 import java.io.File
@@ -32,10 +33,11 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         private val abortBeforeSend = AtomicBoolean(false)
     }
     private val handler = Handler(Looper.getMainLooper())
+    private val app = activity.applicationContext
     @Volatile private var closed = false
     @Volatile private var session: ClusterThemeSession? = null
     private var confirmation: AlertDialog? = null
-    private var lastRaw = ""
+    private var lastSummary = ""
     private val status = TextView(activity).apply {
         textSize = 14f; maxLines = 4
         text = "Physical cluster state UNKNOWN. Read the current connected daemon status before drawing conclusions."
@@ -44,7 +46,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         override fun run() {
             if (closed) return
             val s = session
-            if (s != null) submit { s.status() }
+            if (s != null) submit("status", automatic = true) { s.status() }
             handler.postDelayed(this, 1500)
         }
     }
@@ -62,20 +64,20 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     val requestedLease = lease.get()
                     recovery.execute {
                         try {
-                            val s = session ?: ClusterThemeSession.pin().also { session = it }
+                            val s = session ?: ClusterThemeSession.pin(app).also { session = it }
                             render(s.restore(), requestedLease)
-                        } catch (t: Throwable) { show("Restore UNKNOWN/refused: ${t.message}. No reconnect/replay. Read current connected daemon status for recovery.") }
+                        } catch (t: Throwable) { show("Restore UNKNOWN/refused: ${ClusterThemeDiagnostics.failure(t)}. No reconnect/replay. Read current connected daemon status for recovery.", "restore") }
                         finally { recoveryBusy.set(false) }
                     }
-                    handler.postDelayed({ if (recoveryBusy.get()) show("Restore pending: remote completion UNKNOWN. No second request is replayed.") }, 3000)
-                }
+                    handler.postDelayed({ if (recoveryBusy.get()) show("Restore pending: remote completion UNKNOWN. No second request is replayed.", "restore-pending") }, 3000)
+                } else show("Restore already pending; no second request replayed.", "restore-busy")
             }
         }, headerIndex)
         controls.addView(Button(activity).apply {
             text = "Change physical cluster — passive TEST marker (experimental)"
             setOnClickListener {
                 if (!busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) confirm()
-                else show("Another request/diagnostic is active. Restore remains available.")
+                else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
             }
         })
         controls.addView(TextView(activity).apply {
@@ -84,15 +86,15 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         })
         controls.addView(Button(activity).apply {
             text = "Read current connected daemon test status (no load)"
-            setOnClickListener { submit { ClusterThemeSession.pin().also { session = it }.status() } }
+            setOnClickListener { submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() } }
         })
         controls.addView(Button(activity).apply {
             text = "I can see DASHCAST TEST on the physical cluster"
-            setOnClickListener { submit { checkNotNull(session) { "Read existing session status first" }.observedMarker() } }
+            setOnClickListener { submit("observe-marker") { checkNotNull(session) { "Read existing session status first" }.observedMarker() } }
         })
         controls.addView(Button(activity).apply {
             text = "I can see the original OEM cluster again"
-            setOnClickListener { submit { checkNotNull(session) { "Read existing session status first" }.observedOem() } }
+            setOnClickListener { submit("observe-oem") { checkNotNull(session) { "Read existing session status first" }.observedOem() } }
         })
         handler.post(poll)
     }
@@ -113,23 +115,24 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     }
     private fun begin() {
         // Reserve request lane BEFORE global busy ownership. Polling cannot strand the claim.
-        if (!busy.compareAndSet(false, true)) return
-        if (recoveryBusy.get() || diagClaimed.get() || !claimDiag()) { busy.set(false); return }
+        if (!busy.compareAndSet(false, true)) { show("Another request is active. No start submitted.", "start-busy"); return }
+        if (recoveryBusy.get() || diagClaimed.get() || !claimDiag()) { busy.set(false); show("Diagnostic lane unavailable. No start submitted.", "start-refused"); return }
         diagClaimed.set(true); val myLease = lease.incrementAndGet(); abortBeforeSend.set(false)
-        show("Preflight pending. Parked is your assertion, not a detected vehicle state.")
+        show("Preflight pending. Parked is your assertion, not a detected vehicle state.", "start-preflight")
         work.execute {
             var ipcBegan = false
             try { render(start { check(!abortBeforeSend.get()) { "Cancelled before start transmission" }; ipcBegan = true }, myLease) }
             catch (t: Throwable) {
                 if (!ipcBegan) releaseClaim(myLease)
-                show(if (ipcBegan) "UNKNOWN after start transmission: ${t.message}. No replay; use Restore."
-                    else "REFUSED before start transmission: ${t.message}. No cluster load requested.")
+                show(if (ipcBegan) "UNKNOWN after start transmission: ${ClusterThemeDiagnostics.failure(t)}. No replay; use Restore."
+                    else "REFUSED before start transmission: ${ClusterThemeDiagnostics.failure(t)}. No cluster load requested.", "start-failed")
             } finally { busy.set(false) }
         }
         pendingNotice()
     }
     private fun start(beforeTransaction: () -> Unit): String {
-        val s = session ?: ClusterThemeSession.pin().also { session = it }
+        val s = session ?: ClusterThemeSession.pin(app).also { session = it }
+        ClusterThemeDiagnostics.local(app, "prepare-source", "LOCAL", "Preparing bounded app-owned carrier source; no cluster load requested yet.")
         val parent = File(activity.getExternalFilesDir(null) ?: error("Own external files unavailable"), "cluster-live-source")
         check(parent.isDirectory || parent.mkdirs()) { "Own external files unavailable" }
         val source = File.createTempFile("marker-", ".rcc", parent)
@@ -143,31 +146,37 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             return ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { s.start(it, beforeTransaction) }
         } finally { source.delete() } // Only this app's source; daemon owns the carrier.
     }
-    private fun submit(action: () -> String) {
-        if (!busy.compareAndSet(false, true)) return
+    private fun submit(operation: String, automatic: Boolean = false, action: () -> String) {
+        if (!busy.compareAndSet(false, true)) {
+            if (!automatic) show("Another request is active. No request submitted.", "$operation-busy")
+            return
+        }
         val myLease = lease.get()
         work.execute {
-            try { render(action(), myLease) } catch (t: Throwable) { show("REFUSED/UNKNOWN: ${t.message}. No request replayed.") }
+            try { render(action(), myLease) } catch (t: Throwable) { show("REFUSED/UNKNOWN: ${ClusterThemeDiagnostics.failure(t)}. No request replayed.", "$operation-failed") }
             finally { busy.set(false) }
         }
         pendingNotice()
     }
-    private fun pendingNotice() { handler.postDelayed({ if (busy.get()) show("Request pending: remote completion UNKNOWN. Restore remains available.") }, 3000) }
+    private fun pendingNotice() { handler.postDelayed({ if (busy.get()) show("Request pending: remote completion UNKNOWN. Restore remains available.", "request-pending") }, 3000) }
     private fun releaseClaim(expected: Long) { if (lease.get() == expected && diagClaimed.compareAndSet(true, false)) releaseDiag() }
     private fun render(text: String, expectedLease: Long) {
         val j = JSONObject(text)
         if (j.getString("state") in setOf("IDLE", "CLEAN", "REFUSED")) releaseClaim(expectedLease)
-        val event = j.optString("raw")
+        val summary = "${j.getString("state")}: ${j.getString("detail")}\nDaemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
         handler.post {
             if (!closed) {
                 if (j.getString("state") !in setOf("IDLE", "CLEAN", "REFUSED") && lease.get() == expectedLease && !diagClaimed.get() && !otherBusy() && claimDiag()) {
                     diagClaimed.set(true); lease.incrementAndGet()
                 }
-                if (event != lastRaw) { lastRaw = event; transcript("Physical cluster test stages: $text") }
+                if (summary != lastSummary) { lastSummary = summary; transcript("Physical cluster test status receipt (historical; pixels UNKNOWN): $summary") }
             }
         }
-        show("${j.getString("state")}: ${j.getString("detail")}\nDaemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.getBoolean("oemObservedByUser")}")
+        show(summary)
     }
-    private fun show(text: String) { handler.post { if (!closed && !activity.isDestroyed) status.text = text } }
+    private fun show(text: String, operation: String? = null) {
+        if (operation != null) ClusterThemeDiagnostics.local(app, operation, "LOCAL", text)
+        handler.post { if (!closed && !activity.isDestroyed) status.text = text }
+    }
     fun close() { closed = true; confirmation?.dismiss(); confirmation = null; handler.removeCallbacksAndMessages(null) }
 }
