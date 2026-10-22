@@ -2084,8 +2084,11 @@ android {
         // 694 = 1.9.55-beta: manual, firmware-bound OEM root QML marker experiment in Diag.
         // Refresh daemons to protocol 31; selection/recovery and physical visibility stay distinct.
         // No vehicle validation or concept-dashboard replacement is claimed.
-        versionCode 694
-        versionName "1.9.55-beta"
+        // 695 = 1.9.56-beta: retain bounded historical cluster-test receipts and local failures
+        // in app-private storage and include them in normal/fallback bug reports without IPC.
+        // Preserve protocol 31, the firmware gate and all OEM load/recovery behavior.
+        versionCode 695
+        versionName "1.9.56-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

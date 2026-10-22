@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 
 import com.byd.dashcast.BuildConfig
+import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.hud.NavigationListenerKeeper
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.proxy.ProxyClient
@@ -492,6 +493,7 @@ object BugReportCapture {
     // rules as a pure function, and would all still pass if the redact() call below were deleted.
     internal fun finish(app: Context, outFile: File, metaHeader: String?,
                         cb: Callback, shellError: String?, preReadShellBody: String?) {
+        val clusterThemeHistory = ClusterThemeDiagnostics.snapshot(app)
         // Build the body first. This must NEVER sink the report — on any failure fall back
         // to a journal-only body so the tester still gets something to send.
         var content: String
@@ -502,6 +504,8 @@ object BugReportCapture {
             sb.append(metaHeader ?: "").append("\n\n")
             sb.append("Device: ").append(deviceLine()).append('\n')
             sb.append("Version: ").append(versionLine()).append('\n')
+            sb.append("\n════════ CLUSTER THEME TEST (historical app cache; current state UNKNOWN) ════════\n")
+                .append(clusterThemeHistory)
             sb.append("\n════════ HUD STATE (push-feedback) ════════\n").append(hudStateSnapshot())
             sb.append("\n════════ NAVIGATION LISTENER (local supervision) ════════\n")
                 .append(NavigationListenerKeeper.summary()).append('\n')
@@ -532,6 +536,8 @@ object BugReportCapture {
                     "\n\nDevice: " + deviceLine() +
                     "\nVersion: " + versionLine() +
                     "\n[report body build failed: " + t + "]\n" +
+                    "\n════════ CLUSTER THEME TEST (historical app cache; current state UNKNOWN) ════════\n" +
+                    clusterThemeHistory +
                     "\n════════ INTERNAL STORAGE EXPORT (recent in-memory metadata; no payload) ════════\n" +
                     com.byd.dashcast.ui.diag.FirmwareDiagnostics.snapshot() +
                     "\n════════ ADAS TARGET DIAGNOSTIC (historical manual cache snapshot) ════════\n" +
