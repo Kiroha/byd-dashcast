@@ -117,4 +117,15 @@ class ClusterThemeDiagnosticsTest {
         ClusterThemeDiagnostics.local(app, "status", "UNKNOWN", "Pinned daemon lost", connectionToken = "connection2")
         assertEquals(4, savedEvents().length())
     }
+
+    @Test fun `profile hash stage and separate theme observation survive historical cache reload`() {
+        val profile = ClusterThemeVariant.FULL_SURFACE_TEST
+        ClusterThemeDiagnostics.received(app, "start-full-surface", "connection1", status()
+            .put("variant", profile.id).put("carrierSha256", profile.carrierSha256)
+            .put("phase", "renderer-artifact").put("themeObservedByUser", false).toString())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        assertTrue(report.contains(profile.id)); assertTrue(report.contains(profile.carrierSha256))
+        assertTrue(report.contains("renderer-artifact")); assertTrue(report.contains("themeObservedByUser"))
+    }
 }

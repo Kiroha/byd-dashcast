@@ -18,9 +18,9 @@ internal object ClusterThemeDiagnostics {
     private const val MAX_EVENTS = 24
     private val stringFields = mapOf("state" to 64, "detail" to 768, "error" to 384,
         "filename" to 160, "renderer" to 32, "rendererIdentity" to 256, "connectionToken" to 96,
-        "operation" to 64, "kind" to 16, "rawSha256" to 64)
+        "operation" to 64, "kind" to 16, "rawSha256" to 64, "variant" to 64, "carrierSha256" to 64, "phase" to 64)
     private val booleanFields = listOf("mutated", "uncertain", "defaultQueried", "carrierRemoved",
-        "markerObservedByUser", "oemObservedByUser")
+        "markerObservedByUser", "themeObservedByUser", "oemObservedByUser")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
     private var cacheIssue = ""
@@ -36,7 +36,7 @@ internal object ClusterThemeDiagnostics {
             val reply = JSONObject(text)
             val event = JSONObject().put("kind", "STATUS").put("operation", operation)
                 .put("connectionToken", connectionToken)
-            for (field in listOf("state", "detail", "error", "filename", "renderer"))
+            for (field in listOf("state", "detail", "error", "filename", "renderer", "variant", "carrierSha256", "phase"))
                 if (reply.has(field)) event.put(field, reply.get(field))
             if (reply.has("identity")) event.put("rendererIdentity", reply.get("identity"))
             if (reply.has("daemonUid")) event.put("daemonUid", reply.get("daemonUid"))

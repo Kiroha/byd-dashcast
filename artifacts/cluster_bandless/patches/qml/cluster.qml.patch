@@ -1,0 +1,26 @@
+--- original/qml/cluster.qml
++++ patched/qml/cluster.qml
+@@ -682,6 +682,7 @@
+     //背景
+     Item{
+         id: bgImageContainerId
++        opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN ? 0 : 1
+         //visible: DataSource.presentationTestMode === 0?true:false
+         anchors.fill: parent
+         z:CustomStyle.bgZ
+@@ -793,6 +794,7 @@
+         }
+         Image {
+             id: headLineId
++            opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN ? 0 : 1
+             y:124
+             anchors.horizontalCenter: parent.horizontalCenter
+             source: "qrc:/images/display_always/headLine.png"
+@@ -1277,6 +1279,7 @@
+ 
+             Image {
+                 id:driveRangeInfoBgId
++                opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN ? 0 : 1
+                 anchors.horizontalCenter: parent.horizontalCenter
+                 cache: false
+                 y:DataSource.themeIndex === 0x02 ?-12:0

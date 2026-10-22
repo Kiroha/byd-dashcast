@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "31"
+    private const val PROTOCOL_VERSION = "32"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -798,9 +798,16 @@ object ProxyDaemonMain {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
                                 ClusterThemeLiveTest.start(source, data.readInt() == 1)
                             }
+                            5 -> {
+                                val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
+                                ClusterThemeLiveTest.start(source, data.readInt() == 1,
+                                    com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST)
+                            }
                             2 -> ClusterThemeLiveTest.requestRestore(data.readString() ?: "")
                             3 -> ClusterThemeLiveTest.observe(1, data.readString() ?: "")
                             4 -> ClusterThemeLiveTest.observe(2, data.readString() ?: "")
+                            6 -> ClusterThemeLiveTest.observe(1, data.readString() ?: "",
+                                com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST)
                             else -> throw IllegalArgumentException("Unsupported cluster test operation")
                         }
                         reply?.writeNoException(); reply?.writeString(result)

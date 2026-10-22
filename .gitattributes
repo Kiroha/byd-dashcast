@@ -1,1 +1,5 @@
 graphify-out/graph.json merge=graphify
+
+# Preserve byte-pinned OEM CRLF and literal patch content; source hashes depend on it.
+artifacts/cluster_*/patched/** -text -whitespace
+artifacts/cluster_*/patches/** -text -whitespace

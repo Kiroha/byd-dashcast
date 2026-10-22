@@ -14,6 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.LinearLayout
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
+import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.proxy.ProxyClient
 import org.junit.Assert.*
 import org.junit.Before
@@ -21,6 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.annotation.Config
@@ -28,6 +30,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.io.File
+import java.security.MessageDigest
+import android.os.ParcelFileDescriptor
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -179,6 +183,51 @@ class ClusterThemeLiveControlsTest {
         val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
         while (!ClusterThemeDiagnostics.snapshot(activity).contains(text) && System.nanoTime() < until) Thread.sleep(5)
         assertTrue(ClusterThemeDiagnostics.snapshot(activity).contains(text))
+    }
+
+    @Test fun `full theme confirmation sends its exact asset through operation five without marker substitution`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        val received = CountDownLatch(1)
+        var failure: Throwable? = null
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                try {
+                    data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                    assertEquals(5, data.readInt())
+                    ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
+                    // Robolectric cannot read a parcelled FD while its original remains open.
+                    val source = File(RuntimeEnvironment.getApplication().getExternalFilesDir(null), "cluster-live-source")
+                        .listFiles().orEmpty().single { it.name.startsWith("full-surface-test-") }
+                    val bytes = source.readBytes()
+                    val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
+                    assertEquals(ClusterThemeVariant.FULL_SURFACE_TEST.carrierSha256, digest)
+                    assertEquals(1, data.readInt()); assertEquals(0, data.dataAvail())
+                    reply!!.writeNoException()
+                    reply.writeString("""{"state":"REFUSED","detail":"Fixture no native load","filename":"","variant":"full-surface-test","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"themeObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
+                    return true
+                } catch (error: Throwable) { failure = error; throw error }
+                finally { received.countDown() }
+            }
+        }); vf.set(null, "32")
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
+        try {
+            views(panel).filterIsInstance<Button>().single { it.text.toString().startsWith("Test full cluster theme") }.performClick()
+            ShadowLooper.idleMainLooper()
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            assertTrue(views(dialog.window!!.decorView as ViewGroup).filterIsInstance<TextView>().any {
+                it.text.toString().contains("Full navigation and night mode manually")
+            })
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().single().isChecked = true
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            assertTrue(received.await(5, TimeUnit.SECONDS))
+            failure?.let { throw it }
+            awaitHistory(activity.get(), "Fixture no native load")
+        } finally { controls.close(); activity.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
     }
 
 }

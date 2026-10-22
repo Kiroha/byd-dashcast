@@ -1,0 +1,49 @@
+--- original/qml/cluster.qml
++++ patched/qml/cluster.qml
+@@ -11,6 +11,22 @@
+ import "./adas3d"
+ Item {
+     id:rootItemId
++
++    // DASHCAST_FULL_SURFACE_TEST_BEGIN
++    Rectangle {
++        id: dashCastFullSurfaceTestId
++        anchors.fill: parent
++        z: CustomStyle.bgZ
++        visible: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN && DataSource.dayNightMode === 0x02
++        color: "#061018"
++        border.color: "#00cddd"; border.width: 6
++        Rectangle { x: 0; y: 0; width: 120; height: 12; color: "#00cddd" }
++        Rectangle { x: parent.width - width; y: 0; width: 120; height: 12; color: "#00cddd" }
++        Rectangle { x: 0; y: parent.height - height; width: 120; height: 12; color: "#00cddd" }
++        Rectangle { x: parent.width - width; y: parent.height - height; width: 120; height: 12; color: "#00cddd" }
++        Text { x: 24; y: 318; text: "DASHCAST TEST"; color: "#00cddd"; font.pixelSize: 28 }
++    }
++    // DASHCAST_FULL_SURFACE_TEST_END
+     width: 1920
+     height: 720
+ 
+@@ -682,6 +698,7 @@
+     //背景
+     Item{
+         id: bgImageContainerId
++        opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN && DataSource.dayNightMode === 0x02 ? 0 : 1
+         //visible: DataSource.presentationTestMode === 0?true:false
+         anchors.fill: parent
+         z:CustomStyle.bgZ
+@@ -793,6 +810,7 @@
+         }
+         Image {
+             id: headLineId
++            opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN && DataSource.dayNightMode === 0x02 ? 0 : 1
+             y:124
+             anchors.horizontalCenter: parent.horizontalCenter
+             source: "qrc:/images/display_always/headLine.png"
+@@ -1277,6 +1295,7 @@
+ 
+             Image {
+                 id:driveRangeInfoBgId
++                opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN && DataSource.dayNightMode === 0x02 ? 0 : 1
+                 anchors.horizontalCenter: parent.horizontalCenter
+                 cache: false
+                 y:DataSource.themeIndex === 0x02 ?-12:0

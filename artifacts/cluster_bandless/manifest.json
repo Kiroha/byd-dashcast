@@ -1,0 +1,646 @@
+{
+  "schema": 1,
+  "purpose": "offline-oem-band-decoration-proof",
+  "vehicle_validated": false,
+  "diag_loadable": false,
+  "stock_sha256": "5a0f1c39d0921752e863978d85a9f5bc0e0e75f5bd8b5fefa0b0af10624669c8",
+  "opacity_condition": "opacity: DataSource.powerGear === DataSource.POWER_GEAR_ON && DataSource.naviType === DataSource.NAVI_TYPE_FULL_SCREEN ? 0 : 1",
+  "modified_ids": [
+    "bgImageContainerId",
+    "headLineId",
+    "driveRangeInfoBgId"
+  ],
+  "resources": {
+    "common/language/lang.ko_KR.qm": {
+      "sha256": "78266ed6897bdb86ef7fb1b780069572a2e91fed4904c3408ea64a17d22115fd",
+      "stored_sha256": "78266ed6897bdb86ef7fb1b780069572a2e91fed4904c3408ea64a17d22115fd",
+      "country": 0,
+      "language": 1,
+      "flags": 0
+    },
+    "common/language/lang.ko_KR.ts": {
+      "sha256": "baa051b0333116503082e051a5148d045c87075508294297fc420f89b41dc9ca",
+      "stored_sha256": "8c9141d56d3976dfadfda33717bb8a22ee6145bafc1634a8ed9ce40b6b9832b4",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ro_RO.ts": {
+      "sha256": "802bfdc6d17e9927c9fb45145451e4f07305ce0e249799bff1e64165414e7aee",
+      "stored_sha256": "6c14ec90dfc2f19cbec57a82b67a8bae74b50e1eb283997db488870966c48bf4",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ro_RO.qm": {
+      "sha256": "8be39a4d2ccdcb34b04746fa906c312586452607308e58baf51158d340f073b9",
+      "stored_sha256": "0979542e5d5855d3cc177fe83c68220d1c2a611df1082b71dae0bf9e8895e131",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.da_DK.ts": {
+      "sha256": "6123aad1c874a3786d9fab9a756c73bc577681899dfd138a66f74d0b1f209d9d",
+      "stored_sha256": "479b5d079501105be22c72a3bb54fed0f161f2ed7249cab12495dcf9cab75992",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.da_DK.qm": {
+      "sha256": "36da2839ee86ccbe4a48c1167221038b01adf441ec5b03ddc7d5b88aef9f8a4c",
+      "stored_sha256": "c77ae8e1f0197805f3ba3b28e0dd5f24a2403eab7b9214b6a8c92fb13318f62b",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ja_JP.ts": {
+      "sha256": "f295fe665007e62ac4a2070940925db0239030b2a52098717a1875aac9160341",
+      "stored_sha256": "74dddf5ce41a703f4d6dcf30f96b4f13cd7a309a508126696b758d283b031db0",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ja_JP.qm": {
+      "sha256": "b55f46c76c9757effcc3d9ba5449a5149220e278c743eeaa311f1a30df67ba8b",
+      "stored_sha256": "b55f46c76c9757effcc3d9ba5449a5149220e278c743eeaa311f1a30df67ba8b",
+      "country": 0,
+      "language": 1,
+      "flags": 0
+    },
+    "common/language/lang.ca_AD.ts": {
+      "sha256": "428c4549272e6ec9da7e452df85bddb886732d46ae686db599979b01afd18e7b",
+      "stored_sha256": "ce738e9db1ad46768c19062eb324e1317f40d456bc2be8d0e4234f172e37213e",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ca_AD.qm": {
+      "sha256": "bb7d32b36d796fae9a8e26978f758f51b80f49a9d58f968a3fbedec121240eb2",
+      "stored_sha256": "626708962bf60838aed06602379a9eae45ef41300681ea80b4a393c6bba39dce",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.uk_UA.ts": {
+      "sha256": "d5efed13f760f3d0928c489af0f746d65a60e6b50b4a0d0f270a794e35b70f6d",
+      "stored_sha256": "b154480ffa98b6582b3b2ad676ba46fb50c270d0eba0a2b7fc7efa1abdeff15d",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.uk_UA.qm": {
+      "sha256": "cad6db0179d767d69a02ed553c44bb38b50cd55689471265eaa24f116006b605",
+      "stored_sha256": "28d2b55dc08deec5ab5cd191b9b6ac6b8cd8a9991e2fe0d17bf45b5aa3773109",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.kk_KZ.qm": {
+      "sha256": "446d087e10ed939d13fa12f5dc4ba17c470cf94b9de32f777d8e3ed40825c8be",
+      "stored_sha256": "b7c9d728212db5dfcd29515fcb55a2ff81ef026426d5cdbb9146cc29ef85c30a",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.kk_KZ.ts": {
+      "sha256": "0de8ef9c9bcee023ce8a231b40ef50d2572176794251af960a133939781ded98",
+      "stored_sha256": "c17a57bef3058fb5d4aaf60a888902df9d672bc389e2d469e627fcc66b28b28e",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sk_SK.qm": {
+      "sha256": "5a7fc3c83f4cb86f54596eb8bd31ff38025abdc075984f768ff8ee3dff93bd67",
+      "stored_sha256": "73fa0b06301dc9f1be5300842a08938cac24c2969a0a052ac244f441440e4069",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sk_SK.ts": {
+      "sha256": "5da1b8fd2bb2f8a7e8ad36456571e861456f624c3eace752fb3a2bb9c32e4455",
+      "stored_sha256": "6ea5e93767bbaf5c3784b14345d220e95888055ed18bc07685d1fcc81ddaea46",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.fr_FR.qm": {
+      "sha256": "6580048015615cb69d3eb6129e33439e810469ab8cd904c7a6a442efe3875f76",
+      "stored_sha256": "6a6e77a618f6b98d7b1d5e0cd914d1d3343ed16483acf57e46bdba0dd8449fc5",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.fr_FR.ts": {
+      "sha256": "8ecefa5f543dfd24abd51ac76c6ac222ec7ca8e037e99b7d823cb48c9bda3b5d",
+      "stored_sha256": "d314a6ef76f97677078b1c3441a4e6bb3b89f4281a563d79fa01f43a40989d2d",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.hr_HR.qm": {
+      "sha256": "00c7d401cdb3d9c4c630b955dd14e091dc5d1f74c4383aa1f59a40b729a57468",
+      "stored_sha256": "bb364e7b12d12ceb4503b6c51678ddc688864d5e2c5fc4b1508186b4da007d66",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.hr_HR.ts": {
+      "sha256": "94b53b3f937503a49c56d4f3915ae750dc1130b68092c7fffc78ba34cc3bd4ae",
+      "stored_sha256": "3fd89b23e7bb5dee786ca37ea49e439562df526ca49cf3823a830c5cd0a2d407",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.fr_CA.qm": {
+      "sha256": "10b1cd8eb1ade2c8446dbb55f36efc84a06e151e54be8d0a5b26ff68dd4f438b",
+      "stored_sha256": "996657bd7f4bc30282ec712461eb1542556975f28c8be2de548a999dfb4f27ac",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.fr_CA.ts": {
+      "sha256": "1023254a25291197accdc80ae982433d90d7de51cc4c344550b152732dbbcb1b",
+      "stored_sha256": "8d19eb68311896c9f881daee7b36a627caad31464953aa03b75900f4467d55bb",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.tr_TR.ts": {
+      "sha256": "6cc500a0eb25f7df37a515d1b10c50d5d48693c980e28b16fa284296f71ce26b",
+      "stored_sha256": "b042f35e00976e36a40777e3b129b383cd2598d6d8c64ddad6dac80999a14cb9",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.tr_TR.qm": {
+      "sha256": "cb72210b02c4f6e028f5c98bcbf1b20604bfad991a40d46d18e89afe1e51697f",
+      "stored_sha256": "3a92ca30f4500d5059724442f66366592b0fd1802e7b8950153bc31a61bfbf49",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.nb_NO.qm": {
+      "sha256": "c0a58e98bb5da268229ab4160e401e075826e3b4fe8c1115ffc065508b4dceac",
+      "stored_sha256": "8a1029b9e4fa36b0e041495f01069c65f186a92c3db0c9d3fa7be10e1734e3ff",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.nb_NO.ts": {
+      "sha256": "ca13991d086686b92466d4c3fcec91a72045d756364600e3f00f8231a9746dcf",
+      "stored_sha256": "f2de7677deec8b95db262c6a01c2fcdc2ac2c9d0b6df7d2cc8528b452f37ef31",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.el_GR.ts": {
+      "sha256": "b1c8683e2a913a5db06eefecb7c4dad501f974aaa1fe4acaa86ae6a8ecab41af",
+      "stored_sha256": "83ad134d0991f2553eba2e6040b8aeb77b4e21f72015e8aa885efefb33197b5b",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.el_GR.qm": {
+      "sha256": "58226f50458cf90f9b2112778190c052f73d79682fb033bd05f5ce1e50aa0e2e",
+      "stored_sha256": "71863b0ead809e814d74783c470c952f4c672a2ba63a27892e559c91558ccb60",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.nl_NL.qm": {
+      "sha256": "dcd031eb3390f2aba46fffb6ccc6b3da927954b5a8c920ca936a0ae114fb5afb",
+      "stored_sha256": "077d4b05b10fadc9c355acf3be0d6d230f8fabb387ba5bbd17071613012397e9",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.nl_NL.ts": {
+      "sha256": "a3cb26d22ace75e1dff694ae1185e72489951f6b4e5cea2d7465914440c920ad",
+      "stored_sha256": "9db2c349c002fd5e0fbb5727ae84a9b481d4b332b0906ee490a46fb68ff0e6af",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.pl_PL.qm": {
+      "sha256": "a8dcc90bd4e5fe9c669a06aaa7e61dc048aad8815a6abcc77195661da8e04bbf",
+      "stored_sha256": "1fdbfee99fc51071cc42d41417a0af37f3414bb532ce16c56dba86e6184b28ed",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.pl_PL.ts": {
+      "sha256": "a10e259b601bd328dc040eb0b4d88357587a6b24ab1ba59d09f3abff678834ec",
+      "stored_sha256": "8e698d3037d7a380bd172e0e46af133ff56df48adce01f519822b70b61833bb5",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sl_SI.qm": {
+      "sha256": "4849a10fd4fe027166555e230009165de3b77be59b0f35db40d4ecd6a0629b22",
+      "stored_sha256": "e1df4722242038989578591cb8a12706a10d0eefa099aa79b13a974b2150da3c",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sl_SI.ts": {
+      "sha256": "fe174abc4f41da3b58fbc6120a43df021a771df963e8428b708ad5e76e4fe85e",
+      "stored_sha256": "a61261329adb399facbfcf4cc98c5572966a2db56ca2a35917432f10ac06eb98",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.bg_BG.ts": {
+      "sha256": "177b8df5af817e2c9caebfdd1563d5f404e2a9f3acd9c0203b31db8d38e14379",
+      "stored_sha256": "4f40228165465a1e46904cd3393af5547c1c25e052c6b8a2efa91e51ac534022",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.bg_BG.qm": {
+      "sha256": "8ab0b2dc5c424cc5e2b794ca456d012f4fe52a42b4cab31069286ba6a60a16e1",
+      "stored_sha256": "f662d4ba3f137e575cad51323dd9c28a9b2cffe920c4586d1076ddc2c6911da6",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.in_ID.qm": {
+      "sha256": "a948a4d38cbeabed811aadef059f13464783ff113504b3403d7dc7e4cc3b682d",
+      "stored_sha256": "651c48846df30f0ac1dc6bc1ad01a83a1118f60faa1d3113dc139e2fa0e2ffbf",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.in_ID.ts": {
+      "sha256": "5bf2d221fc902aa2be854dd81f269430e5dccc94e6faa0d597f1b35b5bf27d77",
+      "stored_sha256": "8b1baee24b07d4bc6d155371e45a27c53767c744022b7646847e7f13fb92db4e",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.en_AU.ts": {
+      "sha256": "4f3e53829703d59894d6c1baff807bae443a961aeaf1cce6a863397d9a98bff5",
+      "stored_sha256": "97b632b502f7cdf84b3fd076cd62f03c574a7816900024ba0fb098b0a27d47a7",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.en_AU.qm": {
+      "sha256": "4202c9ffe7f73bda53da6ffc86a2952351f7237e9c600e6904ae18dea0fd5c5a",
+      "stored_sha256": "808f7e112bcd33df9a36259c9a7ebbb288313c7780030428b09f7038e5c9f52f",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.en_US.ts": {
+      "sha256": "ba8c1ec115ec938c839ebe0b571d052727d8e27e7f4b2c0279ecde15f1c89fce",
+      "stored_sha256": "b3046e422e37ad1f3dc48f3d49b75940c5590601a20be5afd8e34e85f86a0a0b",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.en_US.qm": {
+      "sha256": "e569de7c026f2e3f8e83e4fb723ca8a5fd5eefba14244433fc8d8a5180aeb736",
+      "stored_sha256": "851ef73d724b342f6697ab226bd8420ff1a9d81f2772757e4290dfd768ed2916",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.fi_FI.qm": {
+      "sha256": "ce0bee31da88bba52a1229a0bd1c1678be1f6517ad479076457b89d3636820aa",
+      "stored_sha256": "b342ded5d939060e6d619115d3cd61cccab95ee9907ea418b5ddc96a3893a4c7",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.fi_FI.ts": {
+      "sha256": "bb1ed7d1b966836e38ac5385cb8180bb615f99bffb3aba978c15edc3d140ca89",
+      "stored_sha256": "682552c98affeeee707f8c55e74a3b677f69a0749e62e67bb5505c6619b94e4c",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.hi_IN.qm": {
+      "sha256": "7f98879f082b1258d33790657ad244bb7b061d149c0a1303ec8d275e34e25a43",
+      "stored_sha256": "2fd9ca3166b759903ca48da08425a1a7d561c0337edbfadebd8bac18040f8bfa",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.hi_IN.ts": {
+      "sha256": "bc85f8d08f5fe13546fa9c1386e14886eae3ea7c6b7dd0394d8aa7ee213c3b94",
+      "stored_sha256": "f58584eb3447c0a721b9015dc56ddce1aa9f41593da127db3e099c1181dfcf78",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.vi_VN.qm": {
+      "sha256": "41d2796cdb1d97eade9c83b86e958f114bbef1caa5d96822a2d0841708109bb1",
+      "stored_sha256": "84368d2cad68b385f4cfe3ea1201410ad299a6982f7ed83fb865396f5d7f25d0",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.vi_VN.ts": {
+      "sha256": "d44dddf2f3ac6558396f2400920e91ac2c49dc0e3aef0e8ef948ea6330423fe8",
+      "stored_sha256": "4998c51769f268006eb84f7daeaffe02272f443845f616a1d2b21941be935d61",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ar.ts": {
+      "sha256": "9c38fa04b6b3225fe8bdb721275990e0dcd1657e6d642fa95d9dca28bbb6708a",
+      "stored_sha256": "af939b5a33affd6bf9a93a177d2dbd4e913e5f33e7e5ff218825fda97e53959e",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ar.qm": {
+      "sha256": "062e453f61cde0d3f3c0c0abb722960d380937e5d73722aab5374a0b743a0bc1",
+      "stored_sha256": "d006ce6d3962be4b4e6f88ff95d67745c728d247817c7031bcb15eb7b0944f2d",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sv.ts": {
+      "sha256": "9c4a1928b470715750af73804152dde7748c6d5319ae97d246170a13e92d7ade",
+      "stored_sha256": "336f19aec65c22a4ffede9855d4ec7b7ae5fe9b29898ca62e4eb946dd3a794ac",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sv.qm": {
+      "sha256": "897d371e7386b23c0a777c9351f7c88fe4db4a101a9c5b9b00d740a223c565b9",
+      "stored_sha256": "9db5af7fca04e3096d17dc094cf12a6963f96dac7d40b360c26b21be4f3b408f",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.zh_TW.ts": {
+      "sha256": "32d312b11239e1b9c2f7029198ad093c04ad76e815b35050e5c29dbb94544e9a",
+      "stored_sha256": "28930b84b5a26b097827445c3e1bc047c73b366f6ec08c2a774f42bce0b800c8",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.zh_TW.qm": {
+      "sha256": "02341bef97772dd48ab57acbfed729bd69f764a9010956ba4d9fc836c97e996c",
+      "stored_sha256": "02341bef97772dd48ab57acbfed729bd69f764a9010956ba4d9fc836c97e996c",
+      "country": 0,
+      "language": 1,
+      "flags": 0
+    },
+    "common/language/lang.zh_CN.ts": {
+      "sha256": "fcb735f5911207360ed93fe65efc9e73ae1b8297d35bb3dbab47dc5ed387d44a",
+      "stored_sha256": "3a46682e4f59640afd095b3521a93ce66dc587f25a0ebfc132ec4274923fc2c0",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.zh_CN.qm": {
+      "sha256": "2534e3021f8740fb013e6991f9e60d3fbcbd028906ffd783d9959e27075a6944",
+      "stored_sha256": "2534e3021f8740fb013e6991f9e60d3fbcbd028906ffd783d9959e27075a6944",
+      "country": 0,
+      "language": 1,
+      "flags": 0
+    },
+    "common/language/lang.th_TH.ts": {
+      "sha256": "65e17d529d8bfe0a82fa77037f68565bae9a5d4d37f3d7b663a90a6b81c9ab09",
+      "stored_sha256": "d0bb4bf51c8b28f47f2ba80c8f5d45052cbe4a7a227319095a6dcbb70637e976",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.th_TH.qm": {
+      "sha256": "b077ac07d0f3418cf24644d73548d1e0a7d5486bc67a6ad26e4da8d937459271",
+      "stored_sha256": "d210ad40ae4189edd96ef1892a0798cdccc45fd754594c04f9454cc047647a4b",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sr@latin.qm": {
+      "sha256": "d937e38b107705731d3e62a3824fe85ea7bb26ad653c1aded8fb84ee053d6f1f",
+      "stored_sha256": "a9be05c38d7f1dd95855b181bbead1f1a03aaf90e7ad76b4e504a0eefb9af77c",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.sr@latin.ts": {
+      "sha256": "3ec78ac3b4ef80b9012a8b757b32a071e0b409d0e0f9c3d0f516a703a031a0a5",
+      "stored_sha256": "ed2edd8f4f291296b9aec16b8d17047d869d75af3f0062785ab64966099a32b1",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.cs_CZ.ts": {
+      "sha256": "14660106672d29e831b7d622fae502d2db202a9e056c1644a881481e44cbe026",
+      "stored_sha256": "54f0e877000830ea8b60d630902675c5f990852d14caaa5db4f6746c7e606aed",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.cs_CZ.qm": {
+      "sha256": "de0fa780dc1181166a8510fd969d6845d1e5423270a570be15cbde99dec169be",
+      "stored_sha256": "656c7b8530c60b7f278c4457c9467ca2ffa4b4c4697b8689b3a60b77094eee7b",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.es_ES.qm": {
+      "sha256": "972f74f125a9c3572fab28fc6eaf8827372ac9e5783444e4ae504553afadcc8c",
+      "stored_sha256": "6529869b655aa24862ed3666e36f069dd850288d0cf2c63092e219efbc91f4b0",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.es_ES.ts": {
+      "sha256": "59236bd3d91db890f43fb14a0566abde114ba330918dac9ed354589ba581ce75",
+      "stored_sha256": "828446fee24e2fba9d2e785e6656fd48dab321978172cc1e74613cb1dc9c678b",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.es_US.qm": {
+      "sha256": "10dafcf23bf46ec5aab8c82753841c7213f9bded8b81d89cf05f468fc2f05dc3",
+      "stored_sha256": "82605ed5b830807d4463463dd7516232cc59b9196d90244cb8a35a362a027d3d",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.es_US.ts": {
+      "sha256": "66091f16f52af299ee84f1c05c9749cac981b406e212fc970c1e6d9a0249b1fd",
+      "stored_sha256": "8428a1e0a6116f147da848546a8e4fe61c7d45f680ac88187fc55a7737c36016",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ms_MY.qm": {
+      "sha256": "3ecf6a2e141d30a97eb4f4916b6de5de79eb50402932af11d16ed46664a84d00",
+      "stored_sha256": "e884cdafaf36ad90adf19992521b5d651d9dce45f3c26fa67f503e4697cdad71",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ms_MY.ts": {
+      "sha256": "96d7964dfb2c5b2af1ed6b558d0c12f6243ad79b38e633e9f2f6d0723bdd4a25",
+      "stored_sha256": "a4d0d8ac708bfdc6947470521f63f9b15639882ef321e15c4e8cd139ddcb658c",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.uz_UZ.qm": {
+      "sha256": "7ed81823f226740adbc27830d5a654f782994115adb9961502f5edc350d52b9c",
+      "stored_sha256": "6e695185240293742da8626c5906c8e35f7551fc4ba578e329242331ef2a830e",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.uz_UZ.ts": {
+      "sha256": "de502f6eba3bdf8e60f7a55cb047f62d092ead6f54b4288400135725716ff992",
+      "stored_sha256": "4f061492863191184405d71189c863a19719d46c2b0cc09462459f9d43a12868",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.de_DE.ts": {
+      "sha256": "ccf8c7481c9535e2338e43c562208440fb9e12416f405bc8e49845e04f424daa",
+      "stored_sha256": "5d27011f792d8ab1d1e9aee4299f683c65cccc4a57d201e331a8209af7d70ae3",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.de_DE.qm": {
+      "sha256": "5feaf81a10faef6db3ddeab914aed80cdb0141fb721e5987836885ad3fc77b04",
+      "stored_sha256": "f512d968d9e658dcc90f97e26272ba4a763de4997968da0f8e9ab7943e5bf756",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.hu_HU.qm": {
+      "sha256": "d8a4b6e38e2b2e04619bd0779e0a5f97de3120a96d9b3a2cc9c4c27c229175cc",
+      "stored_sha256": "bf1d35a236288f949b892f4afd21df35cc0e5e76bb924c6128c0b16bf0f5a12e",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.hu_HU.ts": {
+      "sha256": "0529e9e48bd082c53e09be2b9b20edc822c36bd1ec54d4d14b35b12a1adf2533",
+      "stored_sha256": "4ff8b524d7ff2794e5cf1c5632888c0575b09d76ea546abdd221a2d2a4b926be",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.he_IL.qm": {
+      "sha256": "9adf723bfaa251e44699573e6161141cd21b164df8321500391853e848808bb1",
+      "stored_sha256": "9cf338eb03d40921946bfb4f175073bae0f0597c20cca37b11bf56e1d10e838f",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.he_IL.ts": {
+      "sha256": "fea4583bb527a05146a416480f4217a4dacf428bdd3fbed7642a160392fdf20b",
+      "stored_sha256": "2affe058c34d35937135c54ec830fddbab767b95a9daf5c133c9aacdc987dc3d",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ru_RU.ts": {
+      "sha256": "41f37d9817fdadc27c0b5c0dbff0251142466cf56baad0ac7b8293d410139fec",
+      "stored_sha256": "6d017216a063fe27fe15452d15643602d07e0cb0f80c602bd424fb615f3b6a11",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.ru_RU.qm": {
+      "sha256": "80252675eed8edae624321683962cd8fe8e6722198270453dd7edcff2bc016f6",
+      "stored_sha256": "0d393d3f62a77ec24cba7247ecefaedc183ceb18deae027c3a41d7e490fa11cd",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.it_IT.ts": {
+      "sha256": "54d41390c0e0e68bc724ad50e7f887555baab8cb2ecd16cd017c982eb06ff318",
+      "stored_sha256": "7559d89229f791672287d450ab2da4ce111f9ca1c0d20627649acb1456294cc4",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.it_IT.qm": {
+      "sha256": "a0e26584ccc676237c90289192d359fc63a914f59e2fbdf78224e9673e5b54e5",
+      "stored_sha256": "35759ccd43c686e9bea2515096e5d0c174e4f4bf606d951e344fa0d5080d9bd9",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.pt_BR.qm": {
+      "sha256": "98dd2f46f00b1f5525da749569ccd4fb7585b8a08f9dcc255e111f7545eff89c",
+      "stored_sha256": "686a148e9e200a86afd56ff33a128f865c9bb74924f257c8382b2bcf70964c04",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.pt_BR.ts": {
+      "sha256": "ade245dc06bd0baf3966a9b4a6fc66998cad43174a66b744112e2d8cc9476b47",
+      "stored_sha256": "0e14a325e067e0628577d95b8d87cf66cf375bdb4d4dc64d4eb2a6734ca4dabf",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.pt_PT.qm": {
+      "sha256": "328f522ad433dbda602a7b1c0c4caac36a489e83b8680f0ddbbb7e1eae625962",
+      "stored_sha256": "e78024e1dbefecb3df284cfdf0beb9ab58b31ec7cfafb55a8635bcb70a8263d2",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    },
+    "common/language/lang.pt_PT.ts": {
+      "sha256": "7a897816742a3e10cccf7b8a870f336883065faceed9bbfcdb1202aec397606b",
+      "stored_sha256": "cdc626a430f3708b5a084baa0e9734ab50baf93ba6796ff60e6a4acee024d46f",
+      "country": 0,
+      "language": 1,
+      "flags": 1
+    }
+  },
+  "roots": {
+    "qml/cluster.qml": {
+      "original_sha256": "0fd1a95f4ec754aa29f53aad5ec540a87c07a4e6a725f09471433502284f6fdb",
+      "original_size": 118420,
+      "patched_sha256": "3715149cec9cc4df908b5a0522ab73b72c88116649112734391e1535c64b5109",
+      "patched_size": 118840,
+      "patch_sha256": "135eff05b8c38919a39d4a09ecfdc99b6f475001f7da07e861c0c65a790593c9",
+      "added_lines": 3
+    },
+    "qml10_25/cluster.qml": {
+      "original_sha256": "62edd3cbdc59196614c6c69bb7dd4463b9f4bea2539e2a5361be443dbefdc82f",
+      "original_size": 114307,
+      "patched_sha256": "c97b1182a97b1b2f89c93ccdfaa3c5045d75ff38a5a3f626a543c440bb1c517a",
+      "patched_size": 114727,
+      "patch_sha256": "b1a9bbc4de33c6aecf3d99a6ea4b58e118616a3ed93cb58edb6fcfc3c95d6cd4",
+      "added_lines": 3
+    }
+  },
+  "preservation": {
+    "common_main_included": false,
+    "handshake_modified": false,
+    "functional_items_modified": false,
+    "native_calls_added": false,
+    "runtime_admission_modified": false,
+    "notes": [
+      "ON + Full removes all bgImageContainerId decoration, including terrainImageId.",
+      "All OEM indicators, warning objects, their parents and bindings remain.",
+      "Outside ON + Full, each added opacity evaluates to the stock default 1.",
+      "Readability, projection loss and physical display composition are unvalidated."
+    ]
+  },
+  "evidence": {
+    "firmware_label": "13.1.33.2602030.1",
+    "identity_basis": "hash-pinned disk corpus; user confirms same cluster",
+    "runtime_identity_remeasured": false,
+    "source_analysis": [
+      "REA-Cluster-FullSurface-20261020/rea-fullsurface-reused-native-evidence.json",
+      "REA-Cluster-FullSurface-20261020/current_background_mask_evidence.json",
+      "analysis-rea-20261022/assets-investigation/ADDENDUM_TOP_BOTTOM_OEM_BANDS.txt"
+    ]
+  },
+  "carrier_sha256": "5f0eaf3db514a51e18ac13a9ce0115b40a20a185465b2abc4879a27d61a95a08",
+  "carrier_size": 2141103
+}

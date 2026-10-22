@@ -1,6 +1,7 @@
 package com.byd.dashcast.proxy.daemon
 
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
+import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.*
@@ -30,6 +31,7 @@ class ClusterThemeLiveTestLifecycleTest {
         drain(); set("initialized", true); set("journalTrusted", true); set("state", "PREFLIGHT")
         set("filename", name); set("mutated", false); set("uncertain", false); set("root", "")
         set("renderer", ""); set("deadline", 0L); set("markerObserved", false); set("oemObserved", false); set("carrierRemoved", false); set("createdInode", -1L); set("createdDevice", -1L)
+        set("themeObserved", false); set("variant", ClusterThemeVariant.MARKER)
         flag("active").set(true); flag("restoreRequested").set(false)
         count("generation").set(10); count("restoring").set(-1)
         (field("observationPending").get(null) as AtomicInteger).set(0)
@@ -84,6 +86,16 @@ class ClusterThemeLiveTestLifecycleTest {
         set("defaultQueried", true)
         release.countDown(); drain()
         assertFalse(field("oemObserved").getBoolean(null))
+    }
+
+    @Test fun `marker observation cannot settle full surface load and theme observation stays distinct`() {
+        set("mutated", true); set("loadSettled", false); set("variant", ClusterThemeVariant.FULL_SURFACE_TEST)
+        ClusterThemeLiveTest.observe(1, name); drain()
+        assertFalse(field("markerObserved").getBoolean(null)); assertFalse(field("themeObserved").getBoolean(null))
+        assertFalse(field("loadSettled").getBoolean(null))
+        ClusterThemeLiveTest.observe(1, name, ClusterThemeVariant.FULL_SURFACE_TEST); drain()
+        assertFalse(field("markerObserved").getBoolean(null)); assertTrue(field("themeObserved").getBoolean(null))
+        assertTrue(field("loadSettled").getBoolean(null))
     }
 
 }
