@@ -74,7 +74,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return call(16, expectedFilename = expectedFilename, payload = { it.writeString(round) })
     }
     fun verifyCorners(validity: IBinder): String {
-        check(ProxyClient.supportsProtocol(38)) { "Connected ProxyDaemon protocol 38 required for read-only corner verification" }
+        check(ProxyClient.supportsProtocol(41)) { "Connected ProxyDaemon protocol 41 required for source-independent read-only corner observation; no reconnect/replay" }
         val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) }
             ?: error("No Android RCC session recorded")
         return call(17, payload = { it.writeString(nonce); it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity) })

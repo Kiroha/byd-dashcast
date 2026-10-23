@@ -348,7 +348,7 @@ internal object ClusterThemeLiveTest {
                     loadSettled = load.responses.any { ClusterThemePolicy.loadAckMatches(it, filename) }
                     state = if (uncertain) "QUARANTINE" else if (variant.isCorner) "SELECTION_PENDING_OEM_APPLY" else "AWAITING_OBSERVATION"
                     detail = if (uncertain) "${variant.id} load completion UNKNOWN; native=${load.native}; ${load.error.orEmpty()}. No replay; recovery remains separate."
-                        else if (variant.isCorner) "RCC selected; physical display unconfirmed. Firmware selection persists configuration but does not directly apply QML. After genuine OEM cluster reinitialization, explicitly Verify RCC corner markers. No restart action/duration guarantee; no automatic reload."
+                        else if (variant.isCorner) "Owned IVI selection reported; source=${load.query?.ints?.get(3)}; physical display unconfirmed. Selection/configuration and ACK4 do not establish Qt registration or QML application. Use Verify RCC corner markers for a fresh read-only visual question. Recovery remains separate; no automatic reload or established manual reset procedure."
                         else if (load.query?.selected(filename) == true) "Selection query names ${variant.id}; pixels require your observation."
                         else "Load attempted for ${variant.id}; selection unconfirmed; native=${load.native}; ${load.error.orEmpty()}. Missing test graphics are inconclusive."
                     phase = "observation"
@@ -452,8 +452,8 @@ internal object ClusterThemeLiveTest {
                 check(generation.get() == expected && !restoreRequested.get() && validProjection() && !helperUnreaped && helperPid == 0)
                 cornerVerification = ClusterCornerVerification.issue(filename, expected, UUID.randomUUID().toString().replace("-", ""),
                     SystemClock.elapsedRealtime(), selected.query)
-                step("corner-verification-ready", "round=${cornerVerification?.round} source=0 selectionOnly=true pixels=UNKNOWN")
-                detail = "Fresh persisted own RCC selection; file identity/hash rechecked. Observe physical corner markers now. Selection is not Qt/pixel proof; all recovery debt and historical uncertainty remain."
+                step("corner-verification-ready", "round=${cornerVerification?.round} source=${selected.query.ints[3]} selectionOnly=true nativePropertyEmpty=${selected.query.ints[3] == 1} pixels=UNKNOWN")
+                detail = "Fresh exact owned IVI selection; source=${selected.query.ints[3]}; file identity/hash rechecked. Source 1 means the separate native RCC property is empty, not default IVI selection or applied QML. Observe physical corner markers now; this only records your observation. All recovery debt, load settlement and historical uncertainty remain unchanged."
             } catch (error: Throwable) {
                 cornerVerification = null
                 detail = "Read-only corner verification refused: ${error.message}; no reload or recovery."
@@ -484,7 +484,7 @@ internal object ClusterThemeLiveTest {
             transport == ClusterThemeTransport.ANDROID_IVI && filename == ClusterThemePolicy.PREFIX + nonce + ".rcc")
         check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped)
         check(retirement != null || retirementEligibleUntil > SystemClock.elapsedRealtime()) { "First request Restore: a fresh ACK3 RESOURCE_IS_SAME and exact own selection are required" }
-        check(retirement?.moved != true) { "Already retired: manually reinitialize OEM cluster, then use Restore for read-only verification" }
+        check(retirement?.moved != true) { "Already retired: use Verify BYD return for a read-only check; no further move or OEM command" }
         projectionValidity = validity; check(validProjection()) { "Projection reservation expired" }
         val expected = generation.get()
         check(restoring.compareAndSet(-1, expected)) { "Recovery worker already active" }
@@ -509,7 +509,7 @@ internal object ClusterThemeLiveTest {
                 }
                 retirementEligibleUntil = 0; uncertain = true
                 state = "WAITING_OEM_REINITIALIZATION"; phase = "carrier-retired"
-                detail = "Only our RCC moved and preserved. Active graphics may remain. Manually reinitialize the OEM cluster, then Restore performs read-only verification. Android/daemon reconnect is not an OEM restart."
+                detail = "Only our RCC moved and preserved. Active graphics may remain. Use Verify BYD return for a fresh read-only check. No specific manual cluster reset procedure is established; Android/daemon reconnect does not prove native reinitialization. If the check is still pending, export a report."
                 persist(state)
             } catch (error: Throwable) {
                 uncertain = true; state = "QUARANTINE"; detail = "RCC retirement unconfirmed: ${error.message}".take(2000); persistQuietly()
@@ -541,7 +541,9 @@ internal object ClusterThemeLiveTest {
                 }
                 val priorRecoveryProof = iviRecoverySettled
                 defaultQueried = false; oemObserved = false
-                state = "RESTORING"; detail = "One default-selection request; no physical recovery claim."
+                state = "RESTORING"; detail = if (retirement?.moved == true)
+                    "Read-only retired-carrier and selection verification pending; no default request, reload or restart will be sent."
+                    else "Recovery pre-query pending; a default request is sent only if our RCC is selected. No physical recovery claim."
                 phase = "restore-query"
                 persist(state)
                 retirement?.let { retired ->
@@ -614,7 +616,7 @@ internal object ClusterThemeLiveTest {
         iviRecoverySettled = defaultQueried
         state = if (defaultQueried) "DEFAULT_QUERIED" else "WAITING_OEM_REINITIALIZATION"
         detail = if (defaultQueried) "Retired inode/hash and absent original verified around fresh default query. Fresh physical OEM confirmation is still required. Preserved RCC will not be deleted."
-            else "Original RCC absent and preserved. OEM selection is not default; manually reinitialize the OEM cluster and verify again. ${queried.error.orEmpty()}"
+            else "Original RCC absent and preserved; fresh default selection is not confirmed. No established manual reset procedure or automatic retry. Export a report; no additional RCC load or recovery command was sent. ${queried.error.orEmpty()}"
         step("retired-default-query", "native=${queried.native} unknown=${queried.unknown} default=$defaultQueried")
     }
     internal fun acceptOemObservation(expectedFilename: String): Boolean {

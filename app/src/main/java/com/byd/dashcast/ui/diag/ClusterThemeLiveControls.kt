@@ -128,22 +128,6 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             visibility = android.view.View.GONE
             setOnClickListener { confirmation?.dismiss(); confirmIviRestore(verifyCorners = true) }
         })
-        controls.addView(Button(activity).apply {
-            text = activity.getString(R.string.diag_cluster_rcc_marker_button)
-            isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
-            setOnClickListener {
-                if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.MARKER)
-                else showBusy()
-            }
-        })
-        controls.addView(Button(activity).apply {
-            text = activity.getString(R.string.diag_cluster_rcc_theme_button)
-            isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
-            setOnClickListener {
-                if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.FULL_SURFACE_TEST)
-                else showBusy()
-            }
-        })
         controls.addView(TextView(activity).apply {
             text = activity.getString(R.string.diag_cluster_rcc_ivi_help) + "\n\n" + activity.getString(R.string.diag_cluster_rcc_cohort_help)
             textSize = 14f
@@ -243,7 +227,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         recovery.execute {
             var outcome: (() -> Unit)? = null
             try {
-                check(com.byd.dashcast.proxy.ProxyClient.supportsProtocol(40)) {
+                check(com.byd.dashcast.proxy.ProxyClient.supportsProtocol(41)) {
                     activity.getString(R.string.diag_cluster_rcc_restore_protocol)
                 }
                 val pinned = ClusterThemeSession.pin(app).also { session = it }
@@ -294,8 +278,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private fun showRecoveryGuidance(j: JSONObject, pinned: ClusterThemeSession, force: Boolean = false) {
         if (recoveryGuidanceCurrent?.invoke() == false) { recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null }
         if (!closed && active && pinned.isCurrent() && j.optBoolean("rccDebt") && j.optString("transport") == "android-ivi" &&
-            !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(40)) {
-            if (shownRecoveryGuidance.add("protocol40-required")) recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_protocol))
+            !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(41)) {
+            if (shownRecoveryGuidance.add("protocol41-required")) recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_protocol))
             return
         }
         if (closed || !active || !pinned.isCurrent() || recoveryBusy.get() || j.optBoolean("recoveryPending") || confirmation?.isShowing == true ||
@@ -431,6 +415,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     }
     private fun start(variant: ClusterThemeVariant, reserved: ProjectionCommandSequencer.Session, beforeTransaction: () -> Unit): String {
         val s = session ?: ClusterThemeSession.pin(app).also { session = it }
+        check(com.byd.dashcast.proxy.ProxyClient.supportsProtocol(41)) { activity.getString(R.string.diag_cluster_rcc_restore_protocol) }
         ClusterThemeDiagnostics.local(app, "prepare-source", "LOCAL", "Preparing ${variant.id} bounded app-owned carrier; no cluster load requested yet.")
         val parent = File(activity.getExternalFilesDir(null) ?: error("Own external files unavailable"), "cluster-live-source")
         check(parent.isDirectory || parent.mkdirs()) { "Own external files unavailable" }
@@ -540,7 +525,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val j = displayed
         val s = displayedSession
         if (!active || closed || busy.get() && !statusPending || observationPending.get() || recoveryBusy.get() || j == null || s == null || !s.isCurrent() ||
-            j.optString("transport") == "android-ivi" && !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(40) ||
+            j.optString("transport") == "android-ivi" && !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(41) ||
             j.optBoolean("recoveryPending") || !j.optBoolean("mutated") || !ClusterThemePolicy.ownedName(j.optString("filename"))) {
             prompts.update("rcc", null); return
         }

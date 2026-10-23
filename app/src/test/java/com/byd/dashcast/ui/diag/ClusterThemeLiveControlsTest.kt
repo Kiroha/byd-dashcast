@@ -99,6 +99,45 @@ class ClusterThemeLiveControlsTest {
             assertTrue(all.filterIsInstance<Button>().any { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) })
         } finally { c.pause().stop().destroy(); busy.set(false) }
     }
+    @Test fun `current diagnostic offers only matched corner load and explains unavailable full replacement`() {
+        val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
+        try {
+            val all = views(c.get().findViewById(android.R.id.content))
+            val buttons = all.filterIsInstance<Button>()
+            assertEquals(1, buttons.count { it.text == c.get().getString(R.string.diag_cluster_rcc_corners_button) })
+            assertFalse(buttons.any { it.text == c.get().getString(R.string.diag_cluster_rcc_marker_button) })
+            assertFalse(buttons.any { it.text == c.get().getString(R.string.diag_cluster_rcc_theme_button) })
+            assertTrue(all.filterIsInstance<TextView>().any { it.text.contains(c.get().getString(R.string.diag_cluster_rcc_cohort_help)) })
+        } finally { c.pause().stop().destroy() }
+    }
+    @Test fun `reused protocol40 daemon refuses current corner start before source staging or durable debt`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        var mutations = 0
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                if (data.readInt() != 0) { mutations++; error("No start with old daemon") }
+                reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","detail":"Old daemon fixture","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false}""")
+                return true
+            }
+        }); vf.set(null, "40")
+        val c = Robolectric.buildActivity(UnavailableSourceActivity::class.java).setup()
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), LinearLayout(c.get()), { true }, {}, { false }, {})
+        val confirm = ClusterThemeLiveControls::class.java.getDeclaredMethod("confirm", ClusterThemeVariant::class.java).apply { isAccessible = true }
+        try {
+            confirm.invoke(controls, ClusterThemeVariant.CORNER_MARKER_21F7735C); ShadowLooper.idleMainLooper()
+            val popup = ShadowAlertDialog.getLatestAlertDialog()
+            views(popup.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().forEach { it.isChecked = true }
+            popup.getButton(-1).performClick()
+            awaitHistory(c.get(), c.get().getString(R.string.diag_cluster_rcc_restore_protocol))
+            assertEquals(0, mutations); assertEquals(1L, c.get().entered.count)
+            assertFalse(ClusterThemeProjectionDebt.blocked(c.get()))
+        } finally {
+            c.get().finish.countDown(); controls.close(); c.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version)
+        }
+    }
     @Test fun `parked assertion mandatory and missing daemon releases claim before any load`() {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
@@ -108,7 +147,7 @@ class ClusterThemeLiveControlsTest {
         try {
             val all = views(c.get().findViewById(android.R.id.content))
             all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
-            val load = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_marker_button) }
+            val load = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_corners_button) }
             busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
             assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("start-busy"))
             busy.set(false); load.performClick(); ShadowLooper.idleMainLooper()
@@ -209,12 +248,12 @@ class ClusterThemeLiveControlsTest {
                 if (data.readInt() != 0) { ipc++; error("No start IPC expected") }
                 reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","detail":"Read only preflight","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false}"""); return true
             }
-        }); vf.set(null, "31")
+        }); vf.set(null, "41")
         val activity = Robolectric.buildActivity(UnavailableSourceActivity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
         try {
-            views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(R.string.diag_cluster_rcc_marker_button) }.performClick()
+            views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(R.string.diag_cluster_rcc_corners_button) }.performClick()
             ShadowLooper.idleMainLooper()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().let { checks ->
@@ -234,9 +273,6 @@ class ClusterThemeLiveControlsTest {
         while (!ClusterThemeDiagnostics.snapshot(activity).contains(text) && System.nanoTime() < until) Thread.sleep(5)
         assertTrue(ClusterThemeDiagnostics.snapshot(activity).contains(text))
     }
-
-    @Test fun `full theme confirmation sends exact asset through IVI operation12 and durable nonce`() =
-        assertFixedAssetLoad(ClusterThemeVariant.FULL_SURFACE_TEST, 12, R.string.diag_cluster_rcc_theme_button, R.string.diag_cluster_rcc_ivi_theme_confirm)
 
     @Test fun `corner confirmation sends exact observed cohort asset through operation18 with both assertions`() =
         assertFixedAssetLoad(ClusterThemeVariant.CORNER_MARKER_21F7735C, 18, R.string.diag_cluster_rcc_corners_button, R.string.diag_cluster_rcc_corners_confirm)
@@ -276,7 +312,7 @@ class ClusterThemeLiveControlsTest {
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "39")
+        }); vf.set(null, "41")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
@@ -303,7 +339,7 @@ class ClusterThemeLiveControlsTest {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previous = bf.get(null); val version = vf.get(null)
-        bf.set(null, Binder()); vf.set(null, "40")
+        bf.set(null, Binder()); vf.set(null, "41")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { false }, {}, { false }, {})

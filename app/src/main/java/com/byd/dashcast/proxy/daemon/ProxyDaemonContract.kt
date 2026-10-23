@@ -265,11 +265,13 @@ object ProxyDaemonContract {
      * 11/12 fixed Android-IVI RCC starts and 13 recovery require 37 in this client.
      * 14 explicit preserved-carrier retirement requires 37; schema4 retired recovery 13 is read-only.
      * 15 fixed Android-IVI corner start, 16 original-filename/round visual answer,
-     * 17 nonce/parked/firmware/validity read-only corner verification require 38.
+     * 17 nonce/parked/firmware/validity read-only corner verification started at 38; this client requires 41.
      * 18 fixed 21f7735c-cohort Android-IVI corner start (same fields as 15) requires 39.
      * All new Android-IVI loads verify the complete installed artifact cohort twice; recovery stays independent.
      * Protocol 40 status adds recoveryPending: true from recovery/verification queue admission until
      * its worker finishes. It never establishes OEM recovery or clears RCC debt. Op fields are unchanged.
+     * Protocol 41 permits a fresh bounded corner observation with source 0 or 1 and an exact owned IVI
+     * selection. It is never application, registration or recovery proof; operation fields stay unchanged.
      * Prompt JSON; never generic/replayed. */
     const val TXN_CLUSTER_LIVE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43 // 44
 

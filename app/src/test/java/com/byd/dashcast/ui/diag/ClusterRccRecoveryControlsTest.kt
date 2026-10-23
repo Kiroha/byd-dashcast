@@ -66,7 +66,7 @@ class ClusterRccRecoveryControlsTest {
         app.getSharedPreferences("rcc_cluster_operational_debt", 0).edit().clear().commit()
         app.getSharedPreferences("native_cluster_operational_debt", 0).edit().clear().commit()
     }
-    private inner class Fixture(initial: JSONObject = receipt(), protocol: String = "40") : AutoCloseable {
+    private inner class Fixture(initial: JSONObject = receipt(), protocol: String = "41") : AutoCloseable {
         private val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         private val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         private val previous = bf.get(null); private val version = vf.get(null)
@@ -152,7 +152,7 @@ class ClusterRccRecoveryControlsTest {
             f.clickHeader()
             assertTrue(f.operations.isNotEmpty()); assertTrue(f.operations.all { it == 0 })
             assertTrue(f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
-            f.confirm(); f.waitFor { 13 in f.operations }
+            f.confirm(); f.waitFor { 13 in f.operations && !flag("recoveryBusy").get() }
             assertFalse(2 in f.operations); assertFalse(14 in f.operations)
             f.checkLease()
             assertNull(RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", 0).getString("nonce", null))
@@ -235,14 +235,14 @@ class ClusterRccRecoveryControlsTest {
         }
     }
     @Test fun `older daemon refuses the new recovery flow visibly without sending legacy restore`() {
-        Fixture(protocol = "39").use { f ->
+        Fixture(protocol = "40").use { f ->
             f.clickHeader()
-            assertTrue(f.dialog()!!.findViewById<TextView>(android.R.id.message).text.contains("40"))
+            assertTrue(f.dialog()!!.findViewById<TextView>(android.R.id.message).text.contains("41"))
             assertTrue(f.operations.all { it == 0 })
         }
     }
     @Test fun `old protocol eligible SAME page entry offers reconnect guidance rather than preparation`() {
-        Fixture(receipt(true), protocol = "39").use { f ->
+        Fixture(receipt(true), protocol = "40").use { f ->
             f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
             f.waitFor { f.dialog() != null }
             assertEquals(f.app.getString(android.R.string.ok), f.dialog()!!.getButton(-1).text)
