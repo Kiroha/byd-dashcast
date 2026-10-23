@@ -731,4 +731,23 @@
     <string name="diag_cluster_native_seen_normal">BYD oddiy ko‘rinishini yana ko‘ryapman</string>
     <string name="diag_cluster_rcc_theme_button">RCC sinov mavzusini yuklash (Full + tun)</string>
     <string name="diag_cluster_rcc_restore">Asl RCC tanlovini tiklash</string>
+
+    <!-- Guided physical cluster visual observations. -->
+    <string name="diag_cluster_observation_no">Yo‘q / hali emas</string>
+    <string name="diag_cluster_observation_unknown">Bilmayman</string>
+    <string name="diag_cluster_observation_again">Ekranni qayta tekshirish</string>
+    <string name="diag_cluster_observation_yes">Ha, ko‘ryapman</string>
+    <string name="diag_cluster_observe_normal_title">Oddiy BYD ekrani qaytdimi?</string>
+    <string name="diag_cluster_observe_normal_message">Qaytarish so‘rovi tugadi. Oddiy BYD ekrani va indikatorlari yana ko‘rinyaptimi? Faqat ko‘rganingizni tasdiqlang. Tasdiqsiz boshqa sinovlar bloklanadi. RCC avtomatik yuklanmaydi.</string>
+    <string name="diag_cluster_observe_full_title">Qaysi ekran ko‘rinyapti?</string>
+    <string name="diag_cluster_observe_full_message">Mahalliy so‘rov tugadi. Yuqori va pastki chiziqlari bor BYD proyeksiyasi ko‘rinyaptimi? Bu rejim BYD elementlarini saqlaydi. Javob QML tasdig‘i emas, sizning kuzatuvingizdir.</string>
+    <string name="diag_cluster_observe_full_yes">Chiziqli proyeksiya</string>
+    <string name="diag_cluster_rcc_blocked_title">RCC sinovi bloklangan</string>
+    <string name="diag_cluster_rcc_blocked_message">Mahalliy sinov hali qaytarish va ko‘z bilan tasdiqlashni kutmoqda. Oddiy BYD ekrani qaytgan bo‘lsa, savolga javob bering. Aks holda «BYD qaytarishini so‘rash» tugmasini bosing va ekranni tekshiring. Keyin RCC yuklashni qo‘lda qayta boshlang.</string>
+    <string name="diag_cluster_observe_oem_title">Asl RCC ekrani qaytdimi?</string>
+    <string name="diag_cluster_observe_oem_message">Asl RCC tanlovi so‘raldi. Asbob va indikatorlari bor asl BYD paneli yana ko‘rinyaptimi? Javobdan oldin panelga qarang. Yo‘q yoki noma’lum javobi blokni saqlaydi.</string>
+    <string name="diag_cluster_observe_rcc_title">Paneldagi mavzuni tekshirish</string>
+    <string name="diag_cluster_observe_marker_message">Haqiqiy panelda «DASHCAST TEST», o‘qiladigan BYD asboblari va indikatorlari ko‘rinyaptimi?</string>
+    <string name="diag_cluster_observe_theme_message">«DASHCAST TEST», to‘rtta havorang burchak va o‘qiladigan BYD asboblari hamda indikatorlari ko‘rinyaptimi? Javob faqat ko‘z bilan kuzatuvingizni tasdiqlaydi.</string>
+    <string name="diag_cluster_observe_normal_yes">Ha, oddiy ekran</string>
 </resources>

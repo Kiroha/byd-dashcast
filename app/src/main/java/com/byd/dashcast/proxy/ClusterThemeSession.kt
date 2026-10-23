@@ -21,6 +21,9 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             return ClusterThemeSession(ProxyClient.getProxyDaemonBinder() ?: error("Connect ProxyDaemon explicitly first"), context?.applicationContext)
         }
     }
+    /** App-local Binder continuity only; this does not establish daemon-process identity. */
+    fun isCurrent(): Boolean = ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive
+    fun sharesConnection(other: ClusterThemeSession): Boolean = binder === other.binder
     fun status(): String = call(0)
     fun querySelection(): String {
         check(ProxyClient.supportsProtocol(33)) { "Connected ProxyDaemon protocol 33 required for read-only OEM query. No reconnect/replay." }
@@ -34,12 +37,12 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return call(variant.startOperation, source, beforeTransaction)
     }
     fun restore(): String { if (filename.isEmpty()) status(); return call(2) }
-    fun observedMarker(): String = call(3)
-    fun observedFullSurface(): String {
+    fun observedMarker(expectedFilename: String? = null): String = call(3, expectedFilename = expectedFilename)
+    fun observedFullSurface(expectedFilename: String? = null): String {
         check(ProxyClient.supportsProtocol(32)) { "Connected ProxyDaemon protocol 32 required. No reconnect/replay." }
-        return call(6)
+        return call(6, expectedFilename = expectedFilename)
     }
-    fun observedOem(): String = call(4)
+    fun observedOem(expectedFilename: String? = null): String = call(4, expectedFilename = expectedFilename)
     fun nativeFull(validity: IBinder): String = nativeRequest(true, java.util.UUID.randomUUID().toString().replace("-", ""), validity)
     fun nativeNormal(nonce: String, validity: IBinder): String = nativeRequest(false, nonce, validity)
     fun nativeNormalObserved(nonce: String): String {
@@ -70,6 +73,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return receipt
     }
     private fun call(operation: Int, source: ParcelFileDescriptor? = null, beforeTransaction: () -> Unit = {},
+        expectedFilename: String? = null,
         payload: (Parcel) -> Unit = {}): String {
         val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query",
             "native-full-request", "native-normal-request", "native-normal-user-observation")[operation]
@@ -78,7 +82,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         try {
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Pinned daemon changed/died. No replay; recovery state is UNKNOWN." }
             d.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR); d.writeInt(operation)
-            if (operation in 2..4 || operation == 6) d.writeString(filename)
+            if (operation in 2..4 || operation == 6) d.writeString(expectedFilename ?: filename)
             if (source != null) { source.writeToParcel(d, 0); d.writeInt(1) }
             payload(d)
             beforeTransaction()

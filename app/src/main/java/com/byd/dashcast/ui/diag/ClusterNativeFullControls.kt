@@ -27,7 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Manual native mode test, distinct from RCC loading and its restoration controls. */
 internal class ClusterNativeFullControls(private val activity: Activity, header: LinearLayout, body: LinearLayout,
     private val claimDiag: () -> Boolean, private val releaseDiag: () -> Unit,
-    private val transcript: (String) -> Unit) {
+    private val transcript: (String) -> Unit,
+    private val prompts: ClusterObservationPrompts = ClusterObservationPrompts(activity)) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { Thread(it, "native-full-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { Thread(it, "native-return-ui").apply { isDaemon = true } }
@@ -42,6 +43,9 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
     @Volatile private var closed = false
     private var confirmation: AlertDialog? = null
     private var displayedNative: JSONObject? = null
+    private var displayedSession: ClusterThemeSession? = null
+    @Volatile private var active = false
+    @Volatile private var activation = 0L
     private lateinit var returnButton: Button
     private val status = TextView(activity).apply { textSize = 14f; text = activity.getString(R.string.diag_cluster_native_idle) }
     init {
@@ -49,32 +53,7 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
         body.addView(button(R.string.diag_cluster_native_full) { confirm(true) })
         body.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_native_help); textSize = 14f })
         body.addView(status)
-        body.addView(button(R.string.diag_cluster_native_seen_full) {
-            val shown = displayedNative
-            if (busy.get() || returning.get() || shown == null || shown.optBoolean("pending") || shown.optInt("command") != 16 || shown.optLong("admittedElapsedMs") <= 0) {
-                show(activity.getString(R.string.diag_cluster_native_busy)); return@button
-            }
-            val text = "User reports native Full layout; displayed nonce=${shown.optString("nonce")} state=${shown.optString("state")}; unverified observation only; QML ACK and physical pixels UNKNOWN."
-            ClusterThemeDiagnostics.local(app, "native-full-user-observation", "USER_OBSERVATION", text); show(text)
-        })
-        body.addView(button(R.string.diag_cluster_native_seen_normal) {
-            val displayed = displayedNative
-            if (busy.get() || returning.get() || displayed == null || displayed.optBoolean("pending") ||
-                !displayed.optBoolean("normalSettled") && !(displayed.optString("state") == "CLOSED" && ClusterNativeProjectionDebt.nonce(app) == displayed.optString("nonce"))) {
-                show(activity.getString(R.string.diag_cluster_native_busy)); return@button
-            }
-            if (!observing.compareAndSet(false, true)) return@button
-            val nonce = displayed.optString("nonce")
-            work.execute {
-                try {
-                    val s = ClusterThemeSession.pin(app)
-                    val receipt = s.nativeNormalObserved(nonce)
-                    showNative(receipt)
-                    if (!JSONObject(receipt).getJSONObject("nativeMode").optBoolean("debt")) releaseReservation()
-                } catch (error: Throwable) { failed("native-normal-user-observation", error) }
-                finally { observing.set(false) }
-            }
-        })
+        body.addView(button(R.string.diag_cluster_observation_again) { prompts.reopen() })
         returnButton = button(R.string.diag_cluster_native_normal) { confirm(false) }.apply {
             visibility = if (ClusterNativeProjectionDebt.blocked(app)) View.VISIBLE else View.GONE
         }
@@ -119,11 +98,12 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
         if (lease == null) {
             slot.set(false); if (claimed) releaseDiag(); show(activity.getString(R.string.diag_cluster_native_busy)); return
         }
+        val requestedActivation = activation
         val validity = object : Binder() {
             override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
                 if (code != 1) return false
                 data.enforceInterface("com.byd.dashcast.NativeModeReservation")
-                reply?.writeNoException(); reply?.writeInt(if (!closed && ProjectionCommandBus.isCurrent(lease)) 1 else 0)
+                reply?.writeNoException(); reply?.writeInt(if (!closed && activation == requestedActivation && ProjectionCommandBus.isCurrent(lease)) 1 else 0)
                 return true
             }
         }
@@ -147,13 +127,13 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
                     val nonce = if (debt) current.getString("nonce") else checkNotNull(saved)
                     attempted = true; s.nativeNormal(nonce, validity)
                 }
-                showNative(response)
+                showNative(response, s, requestedActivation)
                 var mode = JSONObject(response).getJSONObject("nativeMode")
                 val until = SystemClock.elapsedRealtime() + 30000
                 while (mode.optBoolean("pending") && SystemClock.elapsedRealtime() < until) {
                     Thread.sleep(250)
                     val text = s.status(); mode = JSONObject(text).getJSONObject("nativeMode")
-                    showNative(text)
+                    showNative(text, s, requestedActivation)
                 }
                 settled = !mode.optBoolean("pending")
                 debt = mode.optBoolean("debt")
@@ -162,12 +142,13 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
                 if (!attempted) { settled = true; debt = false }
                 else runCatching { session?.status()?.let { text ->
                     val mode = JSONObject(text).getJSONObject("nativeMode")
-                    settled = !mode.optBoolean("pending"); debt = mode.optBoolean("debt"); showNative(text)
+                    settled = !mode.optBoolean("pending"); debt = mode.optBoolean("debt"); session?.let { showNative(text, it, requestedActivation) }
                 } }
                 failed(operation, error)
             }
             finally {
                 slot.set(false); if (claimed) releaseDiag()
+                handler.post { refreshPrompts() }
                 synchronized(leaseLock) {
                     if (settled && !debt && !busy.get() && !returning.get() && reservation === lease) {
                         ProjectionCommandBus.endSession(lease); reservation = null
@@ -182,28 +163,81 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
         }
     }
     private var last = ""
-    fun receivedStatus(text: String) = showNative(text)
-    private fun showNative(text: String) {
+    fun receivedStatus(text: String, session: ClusterThemeSession) = showNative(text, session)
+    private fun showNative(text: String, session: ClusterThemeSession, requestedActivation: Long = activation) {
         val mode = JSONObject(text).optJSONObject("nativeMode") ?: return
         val summary = JSONObject(mode.toString()).apply { remove("quietRemainingMs"); remove("trace") }.toString()
         show("Native BYD mode receipt (historical; pixels/QML ACK/debounce UNKNOWN): $summary" +
-            JSONObject(text).optString("nativeRefusal").takeIf { it.isNotEmpty() }?.let { "\nREFUSED: $it" }.orEmpty(), mode)
+            JSONObject(text).optString("nativeRefusal").takeIf { it.isNotEmpty() }?.let { "\nREFUSED: $it" }.orEmpty(), mode, session, requestedActivation)
     }
     private fun failed(operation: String, error: Throwable) {
         val message = "${ClusterThemeDiagnostics.failure(error)}; physical mode UNKNOWN; no reconnect/replay."
         ClusterThemeDiagnostics.local(app, operation, "UNKNOWN", message)
         show(message)
     }
-    private fun show(text: String, native: JSONObject? = null) {
+    private fun show(text: String, native: JSONObject? = null, session: ClusterThemeSession? = null, requestedActivation: Long = activation) {
         handler.post {
             if (!closed) {
-                if (native != null) {
+                if (native != null && active && requestedActivation == activation && session?.isCurrent() == true) {
                     displayedNative = native
+                    displayedSession = displayedSession?.takeIf { it.isCurrent() && it.sharesConnection(session) } ?: session
                     returnButton.visibility = if (native.optBoolean("debt") || native.optBoolean("pending") || ClusterNativeProjectionDebt.blocked(app)) View.VISIBLE else View.GONE
                 }
                 status.text = text; if (last != text) { last = text; transcript(text) }
+                refreshPrompts()
             }
         }
     }
-    fun close() { closed = true; confirmation?.dismiss(); confirmation = null; handler.removeCallbacksAndMessages(null) }
+    fun setActive(value: Boolean) {
+        active = value
+        activation++
+        displayedNative = null; displayedSession = null
+        if (!value) { confirmation?.dismiss(); confirmation = null; displayedNative = null; displayedSession = null }
+        refreshPrompts()
+    }
+    private fun nativeKey(mode: JSONObject): String = listOf("nonce", "command", "state", "pending", "normalSettled", "admittedElapsedMs").joinToString(":") { (mode.opt(it) ?: JSONObject.NULL).toString() }
+    private fun refreshPrompts() {
+        val mode = displayedNative
+        val s = displayedSession
+        val ready = active && !closed && !busy.get() && !returning.get() && !observing.get() && mode != null && s != null && s.isCurrent() && !mode.optBoolean("pending")
+        val normal = ready && normalEligible(checkNotNull(mode))
+        val full = ready && !normal && mode!!.optBoolean("debt") && mode.optInt("command") == 16 && mode.optLong("admittedElapsedMs") > 0
+        if (!normal && !full) { prompts.update("native", null); return }
+        val shown = checkNotNull(mode)
+        val pinned = checkNotNull(s)
+        val snapshot = nativeKey(shown)
+        val nonce = shown.optString("nonce")
+        prompts.update("native", ClusterObservationPrompts.Question("native:$snapshot", if (normal) 100 else 30, pinned,
+            if (normal) R.string.diag_cluster_observe_normal_title else R.string.diag_cluster_observe_full_title,
+            if (normal) R.string.diag_cluster_observe_normal_message else R.string.diag_cluster_observe_full_message,
+            if (normal) R.string.diag_cluster_observe_normal_yes else R.string.diag_cluster_observe_full_yes,
+            current = { active && !closed && !busy.get() && !returning.get() && !observing.get() && displayedSession === pinned && displayedNative?.let(::nativeKey) == snapshot },
+            answer = {
+                if (normal) observeNormal(pinned, nonce, snapshot)
+                else {
+                    val text = "User reports native projection layout with OEM bands; nonce=$nonce; physical pixels and QML ACK UNKNOWN."
+                    ClusterThemeDiagnostics.local(app, "native-full-user-observation", "USER_OBSERVATION", text); show(text)
+                }
+            }))
+    }
+    private fun normalEligible(mode: JSONObject): Boolean = mode.optBoolean("debt") && mode.optBoolean("normalSettled") ||
+        mode.optString("state") == "CLOSED" && ClusterNativeProjectionDebt.nonce(app) == mode.optString("nonce")
+    fun statusUnavailable() { displayedNative = null; displayedSession = null; refreshPrompts() }
+    private fun observeNormal(pinned: ClusterThemeSession, nonce: String, snapshot: String) {
+        if (!observing.compareAndSet(false, true)) return
+        prompts.update("native", null)
+        val requestedActivation = activation
+        work.execute {
+            try {
+                check(active && !closed && activation == requestedActivation) { "Visual confirmation screen changed" }
+                val current = JSONObject(pinned.status()).getJSONObject("nativeMode")
+                check(active && !closed && activation == requestedActivation && nativeKey(current) == snapshot && normalEligible(current) && !current.optBoolean("pending")) { "Visual confirmation expired; inspect the current cluster again" }
+                val receipt = pinned.nativeNormalObserved(nonce)
+                showNative(receipt, pinned, requestedActivation)
+                if (!JSONObject(receipt).getJSONObject("nativeMode").optBoolean("debt")) releaseReservation()
+            } catch (error: Throwable) { failed("native-normal-user-observation", error) }
+            finally { observing.set(false); handler.post { refreshPrompts() } }
+        }
+    }
+    fun close() { setActive(false); closed = true; confirmation?.dismiss(); confirmation = null; handler.removeCallbacksAndMessages(null) }
 }

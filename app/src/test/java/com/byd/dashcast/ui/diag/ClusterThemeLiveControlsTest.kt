@@ -188,7 +188,11 @@ class ClusterThemeLiveControlsTest {
         val previous = bf.get(null); val version = vf.get(null)
         var ipc = 0
         bf.set(null, object : Binder() {
-            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { ipc++; error("No start IPC expected") }
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                if (data.readInt() != 0) { ipc++; error("No start IPC expected") }
+                reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","detail":"Read only preflight","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false}"""); return true
+            }
         }); vf.set(null, "31")
         val activity = Robolectric.buildActivity(UnavailableSourceActivity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
@@ -217,12 +221,19 @@ class ClusterThemeLiveControlsTest {
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previous = bf.get(null); val version = vf.get(null)
         val received = CountDownLatch(1)
+        var assetReceived = false
         var failure: Throwable? = null
         bf.set(null, object : Binder() {
             override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
                 try {
                     data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
-                    assertEquals(5, data.readInt())
+                    val op = data.readInt()
+                    if (op == 0) {
+                        reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","detail":"Read only preflight","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false}""")
+                        return true
+                    }
+                    assertEquals(5, op)
+                    assetReceived = true
                     ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
                     // Robolectric cannot read a parcelled FD while its original remains open.
                     val source = File(RuntimeEnvironment.getApplication().getExternalFilesDir(null), "cluster-live-source")
@@ -235,7 +246,7 @@ class ClusterThemeLiveControlsTest {
                     reply.writeString("""{"state":"REFUSED","detail":"Fixture no native load","filename":"","variant":"full-surface-test","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"themeObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
                     return true
                 } catch (error: Throwable) { failure = error; throw error }
-                finally { received.countDown() }
+                finally { if (assetReceived || failure != null) received.countDown() }
             }
         }); vf.set(null, "32")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()

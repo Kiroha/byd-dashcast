@@ -731,4 +731,23 @@
     <string name="diag_cluster_native_seen_normal">Ich sehe wieder die normale BYD-Anzeige</string>
     <string name="diag_cluster_rcc_theme_button">RCC-Testdesign laden (Vollbild + Nacht)</string>
     <string name="diag_cluster_rcc_restore">Ursprüngliche RCC-Auswahl wiederherstellen</string>
+
+    <!-- Guided physical cluster visual observations. -->
+    <string name="diag_cluster_observation_no">Nein / noch nicht</string>
+    <string name="diag_cluster_observation_unknown">Ich weiß es nicht</string>
+    <string name="diag_cluster_observation_again">Anzeige erneut prüfen</string>
+    <string name="diag_cluster_observation_yes">Ja, ich sehe es</string>
+    <string name="diag_cluster_observe_normal_title">Ist das BYD-Kombiinstrument zurück?</string>
+    <string name="diag_cluster_observe_normal_message">Die Rückkehranfrage ist beendet. Siehst du wieder die normale BYD-Anzeige mit ihren Kontrollleuchten? Bestätige nur, was du siehst. Ohne Bestätigung bleiben andere Tests gesperrt. Keine RCC wird automatisch geladen.</string>
+    <string name="diag_cluster_observe_full_title">Welche Anzeige siehst du?</string>
+    <string name="diag_cluster_observe_full_message">Die native Anfrage ist beendet. Siehst du die BYD-Projektion mit oberem und unterem Balken? Dieser Modus behält BYD-Elemente. Die Antwort ist deine Beobachtung, keine QML-Bestätigung.</string>
+    <string name="diag_cluster_observe_full_yes">Projektion mit Balken</string>
+    <string name="diag_cluster_rcc_blocked_title">RCC-Test gesperrt</string>
+    <string name="diag_cluster_rcc_blocked_message">Der native Test benötigt noch die Rückkehr und deine Sichtbestätigung. Wenn die normale BYD-Anzeige zurück ist, beantworte die Frage. Sonst nutze „BYD-Rückkehr anfordern“ und prüfe danach die Anzeige. Starte den RCC-Test anschließend erneut von Hand.</string>
+    <string name="diag_cluster_observe_oem_title">Ist die ursprüngliche RCC-Anzeige zurück?</string>
+    <string name="diag_cluster_observe_oem_message">Die ursprüngliche RCC-Auswahl wurde angefordert. Siehst du wieder das ursprüngliche BYD-Kombiinstrument mit Instrumenten und Kontrollleuchten? Prüfe es vor der Antwort. Nein oder unbekannt behält die Sperre.</string>
+    <string name="diag_cluster_observe_rcc_title">Design am Kombiinstrument prüfen</string>
+    <string name="diag_cluster_observe_marker_message">Siehst du „DASHCAST TEST“ am realen Kombiinstrument mit lesbaren BYD-Instrumenten und Kontrollleuchten?</string>
+    <string name="diag_cluster_observe_theme_message">Siehst du „DASHCAST TEST“, alle vier cyanfarbenen Ecken sowie lesbare BYD-Instrumente und Kontrollleuchten? Die Antwort bestätigt nur deine Sichtbeobachtung.</string>
+    <string name="diag_cluster_observe_normal_yes">Ja, normale Anzeige</string>
 </resources>

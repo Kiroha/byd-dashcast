@@ -740,4 +740,23 @@
     <string name="diag_cluster_native_seen_normal">Znów widzę normalny widok BYD</string>
     <string name="diag_cluster_rcc_theme_button">Załaduj testowy motyw RCC (Full + noc)</string>
     <string name="diag_cluster_rcc_restore">Przywróć oryginalny wybór RCC</string>
+
+    <!-- Guided physical cluster visual observations. -->
+    <string name="diag_cluster_observation_no">Nie / jeszcze nie</string>
+    <string name="diag_cluster_observation_unknown">Nie wiem</string>
+    <string name="diag_cluster_observation_again">Sprawdź ekran ponownie</string>
+    <string name="diag_cluster_observation_yes">Tak, widzę</string>
+    <string name="diag_cluster_observe_normal_title">Czy wrócił widok BYD?</string>
+    <string name="diag_cluster_observe_normal_message">Żądanie powrotu zostało zakończone. Czy ponownie widzisz zwykły widok BYD i kontrolki? Potwierdź tylko to, co widzisz. Bez potwierdzenia inne testy pozostają zablokowane. Żaden RCC nie załaduje się automatycznie.</string>
+    <string name="diag_cluster_observe_full_title">Jaki widok widzisz?</string>
+    <string name="diag_cluster_observe_full_message">Żądanie natywne zostało zakończone. Czy widzisz projekcję BYD z górnym i dolnym paskiem? Ten tryb zachowuje elementy BYD. Odpowiedź zapisuje obserwację, nie potwierdzenie QML.</string>
+    <string name="diag_cluster_observe_full_yes">Projekcja z paskami</string>
+    <string name="diag_cluster_rcc_blocked_title">Test RCC zablokowany</string>
+    <string name="diag_cluster_rcc_blocked_message">Test natywny nadal wymaga powrotu i potwierdzenia wzrokowego. Jeśli wrócił zwykły widok BYD, odpowiedz na pytanie. W przeciwnym razie użyj „Poproś o powrót BYD” i sprawdź ekran. Ładowanie RCC uruchom ponownie ręcznie.</string>
+    <string name="diag_cluster_observe_oem_title">Czy wrócił oryginalny widok RCC?</string>
+    <string name="diag_cluster_observe_oem_message">Zażądano oryginalnego wyboru RCC. Czy ponownie widzisz oryginalny zestaw BYD z przyrządami i kontrolkami? Spójrz na zestaw przed odpowiedzią. Nie lub nieznane pozostawia blokadę.</string>
+    <string name="diag_cluster_observe_rcc_title">Sprawdź motyw na zestawie</string>
+    <string name="diag_cluster_observe_marker_message">Czy na rzeczywistym zestawie widzisz „DASHCAST TEST” oraz czytelne przyrządy i kontrolki BYD?</string>
+    <string name="diag_cluster_observe_theme_message">Czy widzisz „DASHCAST TEST”, cztery turkusowe narożniki oraz czytelne przyrządy i kontrolki BYD? Odpowiedź potwierdza tylko Twoją obserwację.</string>
+    <string name="diag_cluster_observe_normal_yes">Tak, zwykły widok</string>
 </resources>
