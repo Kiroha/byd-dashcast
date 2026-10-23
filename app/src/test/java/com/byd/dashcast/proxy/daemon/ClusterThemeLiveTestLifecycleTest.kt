@@ -150,7 +150,8 @@ class ClusterThemeLiveTestLifecycleTest {
         assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
         release.countDown(); drain()
         val after = JSONObject(ClusterThemeLiveTest.status())
-        for (key in before.keys()) if (key != "oemQuery" && key != "remainingMs") assertEquals(key, before.get(key), after.get(key))
+        for (key in before.keys()) if (key != "oemQuery" && key != "remainingMs" && key != "nativeMode") assertEquals(key, before.get(key), after.get(key))
+        assertEquals(before.getJSONObject("nativeMode").toString(), after.getJSONObject("nativeMode").toString())
         assertFalse(flag("active").get()); assertFalse(flag("restoreRequested").get()); assertFalse(flag("queryActive").get())
         assertTrue(field("loadSettled").getBoolean(null)); assertTrue(field("defaultQueried").getBoolean(null))
     }
@@ -165,6 +166,17 @@ class ClusterThemeLiveTestLifecycleTest {
         assertTrue(flag("queryActive").get())
         assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
         assertFalse(field("mutated").getBoolean(null)); assertFalse(flag("restoreRequested").get())
+    }
+
+    @Test fun `native admission refuses a production1000 call already admitted without waiting for its IPC`() {
+        flag("active").set(false)
+        ClusterThemeLiveTest.beginProductionModeCommand()
+        try {
+            val result = JSONObject(ClusterThemeLiveTest.nativeModeRequest(true, "d".repeat(32), true, true, android.os.Binder()))
+            assertEquals("d".repeat(32), result.getString("nativeRejectedNonce"))
+            assertTrue(result.getString("nativeRefusal").contains("Production mode command in flight"))
+            assertFalse(result.getJSONObject("nativeMode").getBoolean("debt"))
+        } finally { ClusterThemeLiveTest.endProductionModeCommand() }
     }
 
 }

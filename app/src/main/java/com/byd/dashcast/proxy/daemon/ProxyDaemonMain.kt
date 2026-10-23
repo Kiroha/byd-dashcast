@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "33"
+    private const val PROTOCOL_VERSION = "34"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -792,7 +792,8 @@ object ProxyDaemonMain {
                 ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST -> {
                     data.enforceInterface(DESCRIPTOR)
                     try {
-                        val result = when (data.readInt()) {
+                        val operation = data.readInt()
+                        val result = when (operation) {
                             0 -> ClusterThemeLiveTest.status()
                             1 -> {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
@@ -809,6 +810,21 @@ object ProxyDaemonMain {
                             6 -> ClusterThemeLiveTest.observe(1, data.readString() ?: "",
                                 com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST)
                             7 -> ClusterThemeLiveTest.querySelection()
+                            8, 9 -> {
+                                val fixedCommand = data.readInt()
+                                check(fixedCommand == if (operation == 8) 16 else 18) { "Unsupported native command" }
+                                val full = operation == 8
+                                val nonce = data.readString() ?: ""
+                                val parked = data.readInt() == 1; val firmware = data.readInt() == 1
+                                val validity = data.readStrongBinder() ?: error("Missing projection reservation")
+                                check(data.dataAvail() == 0) { "Unsupported native mode request" }
+                                ClusterThemeLiveTest.nativeModeRequest(full, nonce, parked, firmware, validity)
+                            }
+                            10 -> {
+                                val nonce = data.readString() ?: ""
+                                check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.nativeNormalObserved(nonce)
+                            }
                             else -> throw IllegalArgumentException("Unsupported cluster test operation")
                         }
                         reply?.writeNoException(); reply?.writeString(result)

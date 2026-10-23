@@ -50,7 +50,8 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
 
     /** Triggers the cluster activation sequence. */
     fun start() {
-        val session = ProjectionCommandBus.beginSession()
+        val session = ProjectionCommandBus.tryBeginSession()
+        if (session == null) { mListener.onDashboardDisplayDisconnected(); return }
         mProjectionSession = session
         mKnownClusterDisplayId = -1
         mDisplayManager.registerDisplayListener(mDisconnectListener, null)

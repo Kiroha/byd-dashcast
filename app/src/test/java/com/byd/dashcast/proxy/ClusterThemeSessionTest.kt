@@ -9,6 +9,7 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
+import com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import org.junit.After
 import org.junit.Assert.*
@@ -27,7 +28,81 @@ class ClusterThemeSessionTest {
     private val versionField = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
     private val old = binderField.get(null)
     private val oldVersion = versionField.get(null)
-    @After fun restore() { binderField.set(null, old); versionField.set(null, oldVersion) }
+    @After fun restore() {
+        binderField.set(null, old); versionField.set(null, oldVersion)
+        RuntimeEnvironment.getApplication().getSharedPreferences("native_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+    @Test fun `native full requires34 and commits negative debt before one fixed16 transaction`() {
+        val app = RuntimeEnvironment.getApplication(); var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                assertEquals(8, data.readInt()); assertEquals(16, data.readInt())
+                val nonce = data.readString()!!; assertTrue(nonce.matches(Regex("[0-9a-f]{32}")))
+                assertEquals(nonce, ClusterNativeProjectionDebt.nonce(app))
+                assertEquals(1, data.readInt()); assertEquals(1, data.readInt()); assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail())
+                calls++; reply!!.writeNoException()
+                reply.writeString("""{"state":"IDLE","filename":"","nativeMode":{"state":"FULL_QUEUED","nonce":"$nonce","debt":true,"pending":true}}""")
+                return true
+            }
+        }); versionField.set(null, "33")
+        val session = ClusterThemeSession.pin(app)
+        assertThrows(IllegalStateException::class.java) { session.nativeFull(Binder()) }; assertEquals(0, calls)
+        versionField.set(null, "34"); session.nativeFull(Binder()); assertEquals(1, calls)
+    }
+    @Test fun `native lost reply retains app debt and never retries16`() {
+        val app = RuntimeEnvironment.getApplication(); var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                calls++; throw DeadObjectException()
+            }
+        }); versionField.set(null, "34")
+        assertThrows(DeadObjectException::class.java) { ClusterThemeSession.pin(app).nativeFull(Binder()) }
+        assertEquals(1, calls); assertTrue(ClusterNativeProjectionDebt.blocked(app))
+    }
+    @Test fun `durable debt failure refuses before native transaction`() {
+        val base = RuntimeEnvironment.getApplication(); var calls = 0
+        val app = object : ContextWrapper(base) {
+            override fun getApplicationContext(): Context = this
+            override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
+                val original = base.getSharedPreferences(name, mode)
+                if (name != "native_cluster_operational_debt") return original
+                return object : SharedPreferences by original {
+                    override fun edit(): SharedPreferences.Editor {
+                        val editor = original.edit()
+                        return object : SharedPreferences.Editor by editor {
+                            override fun putString(key: String?, value: String?): SharedPreferences.Editor { editor.putString(key, value); return this }
+                            override fun commit(): Boolean { editor.commit(); return false }
+                        }
+                    }
+                }
+            }
+        }
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { calls++; return false }
+        }); versionField.set(null, "34")
+        assertThrows(IllegalStateException::class.java) { ClusterThemeSession.pin(app).nativeFull(Binder()) }
+        assertEquals(0, calls)
+    }
+    @Test fun `native normal uses18 only and closed nonce observation clears app debt`() {
+        val app = RuntimeEnvironment.getApplication(); val nonce = "d".repeat(32); val operations = ArrayList<Int>()
+        ClusterNativeProjectionDebt.begin(app, nonce)
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); val op = data.readInt(); operations.add(op)
+                if (op == 9) {
+                    assertEquals(18, data.readInt()); assertEquals(nonce, data.readString())
+                    assertEquals(1, data.readInt()); assertEquals(1, data.readInt()); assertNotNull(data.readStrongBinder())
+                } else { assertEquals(10, op); assertEquals(nonce, data.readString()) }
+                assertEquals(0, data.dataAvail())
+                reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","filename":"","nativeMode":{"state":"${if (op == 10) "CLOSED" else "RETURNED"}","nonce":"$nonce","debt":${op != 10},"pending":false}}""")
+                return true
+            }
+        }); versionField.set(null, "34")
+        val session = ClusterThemeSession.pin(app); session.nativeNormal(nonce, Binder())
+        assertTrue(ClusterNativeProjectionDebt.blocked(app)); session.nativeNormalObserved(nonce)
+        assertFalse(ClusterNativeProjectionDebt.blocked(app)); assertEquals(listOf(9, 10), operations)
+    }
     @Test fun `missing or old existing daemon refuses without any bootstrap`() {
         binderField.set(null, null); versionField.set(null, null)
         assertThrows(IllegalStateException::class.java) { ClusterThemeSession.pin() }

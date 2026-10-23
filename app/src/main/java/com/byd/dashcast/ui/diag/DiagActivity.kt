@@ -63,6 +63,7 @@ import java.lang.ref.WeakReference
 class DiagActivity : Activity() {
 
     private var liveThemeControls: ClusterThemeLiveControls? = null
+    private var nativeFullControls: ClusterNativeFullControls? = null
     private lateinit var logView: TextView
     private lateinit var runBtn: Button
     private lateinit var experimentalThemeBtn: Button
@@ -218,10 +219,14 @@ class DiagActivity : Activity() {
         val reportingBody = page(Page.REPORTING)
         val activityLogBody = page(Page.LOG)
 
+        addDiagnosticReportShortcut(clusterBody)
+        nativeFullControls = ClusterNativeFullControls(this, recoveryBar, clusterBody,
+            claimDiag = { claimBusyOrWarn() }, releaseDiag = { releaseBusy() }, transcript = { log(it) })
+        clusterBody.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_section); textSize = 19f })
         liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
-            statusContainer = clusterBody, reportShortcut = ::addDiagnosticReportShortcut)
+            statusContainer = clusterBody, nativeStatus = { nativeFullControls?.receivedStatus(it) })
         addDiagnosticReportShortcut(reportingBody)
         exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."
@@ -1051,6 +1056,7 @@ class DiagActivity : Activity() {
     }
 
     override fun onDestroy() {
+        nativeFullControls?.close()
         liveThemeControls?.close()
         super.onDestroy()
     }

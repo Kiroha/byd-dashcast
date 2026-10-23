@@ -67,7 +67,7 @@ class DiagPagesTest {
             assertEquals(7, all(activity).filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
             val tools = mapOf(
                 "ADAS" to "ADAS targets (read-only snapshot)",
-                "Cluster Full Screen" to "Test full cluster theme",
+                "Cluster Full Screen" to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button),
                 "HUD & navigation" to "HUD bench (DL3)",
                 "Projection & displays" to "OEM cluster probes (read-only)",
                 "Exports & OEM collection" to "Export complet accessible",
@@ -78,8 +78,8 @@ class DiagPagesTest {
                 assertFalse(visible(menu(activity, title)))
                 assertEquals(1, all(activity).filterIsInstance<ScrollView>().count(::visible))
                 tools.forEach { (page, prefix) -> assertEquals("Tool $prefix belongs only to $page", page == title, visible(tool(activity, prefix))) }
-                assertTrue(visible(tool(activity, "Restore original cluster selection")))
-                assertTrue(tool(activity, "Restore original cluster selection").isEnabled)
+                assertTrue(visible(tool(activity, activity.getString(com.byd.dashcast.R.string.diag_cluster_rcc_restore))))
+                assertTrue(tool(activity, activity.getString(com.byd.dashcast.R.string.diag_cluster_rcc_restore)).isEnabled)
                 assertSame("Navigation must retain live controls and polling session", controls, controlsField.get(activity))
                 if (title == "Diagnostic log") {
                     val log = all(activity).filterIsInstance<TextView>().single { it.text.toString().startsWith("Ready.") }
@@ -110,7 +110,7 @@ class DiagPagesTest {
             val saved = save(controller.get())
             controller.destroy()
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
-            assertTrue(visible(tool(controller.get(), "Test full cluster theme")))
+            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button))))
             assertFalse(visible(menu(controller.get(), "Cluster Full Screen")))
             tool(controller.get(), "Back").performClick()
             assertTrue(visible(menu(controller.get(), "ADAS")))
@@ -118,7 +118,7 @@ class DiagPagesTest {
             saved.putString("diag.page", "unrecognized-destination")
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
             assertTrue(visible(menu(controller.get(), "ADAS")))
-            assertFalse(visible(tool(controller.get(), "Test full cluster theme")))
+            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button))))
         } finally { controller.destroy() }
     }
 
@@ -139,7 +139,7 @@ class DiagPagesTest {
             snapshotField.set(FullApkExportSession, active)
             busy.set(true)
             renderExport(activity)
-            val restore = tool(activity, "Restore original cluster selection")
+            val restore = tool(activity, activity.getString(com.byd.dashcast.R.string.diag_cluster_rcc_restore))
             val cancel = tool(activity, "Cancel export")
             val summary = all(activity).filterIsInstance<TextView>().single { it.text.toString().contains("No progress for 5s") }
             for (title in titles) {

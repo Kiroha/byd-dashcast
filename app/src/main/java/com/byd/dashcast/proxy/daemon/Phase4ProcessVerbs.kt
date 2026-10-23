@@ -238,6 +238,8 @@ object Phase4ProcessVerbs {
     @Throws(Throwable::class)
     private fun transactAutoContainerSendInfo(type: Int, info: Int, str: String?,
                                               readResult: Boolean): Int {
+        if (type == 1000) ClusterThemeLiveTest.beginProductionModeCommand()
+        try {
         val c = autoContainer()
         val b = c.binder
         val data = Parcel.obtain()
@@ -260,6 +262,7 @@ object Phase4ProcessVerbs {
             reply.recycle()
             data.recycle()
         }
+        } finally { if (type == 1000) ClusterThemeLiveTest.endProductionModeCommand() }
     }
 
     /**

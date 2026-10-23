@@ -782,4 +782,20 @@
     <string name="diag_cluster_oem_query_result">Relevé RCC OEM : %1$s\n%2$s\nEnregistrement du callback : %3$s ; retour natif : %4$s\n%5$s\nCallback diffusé sans identifiant de requête : observation de sélection uniquement. Identité native et pixels physiques inconnus.</string>
     <string name="diag_send_report">Envoyer un rapport de diagnostic</string>
     <string name="diag_send_report_help">Inclut les résultats cluster et le journal. Envoi via le canal configuré ou partage d’un fichier.</string>
+
+    <string name="diag_cluster_native_section">Mode Full natif BYD</string>
+    <string name="diag_cluster_rcc_section">Ressources RCC</string>
+    <string name="diag_cluster_native_full">Tester le mode Full natif BYD</string>
+    <string name="diag_cluster_native_normal">Demander le retour BYD</string>
+    <string name="diag_cluster_native_help">Demande le mode Full prévu par BYD, avec ses voyants. Aucun thème RCC chargé. Une seule commande 16 ; le retour natif ne prouve ni réception Qt ni affichage. Le bouton de retour demande le mode normal (18), sans restaurer précisément le mode précédent.</string>
+    <string name="diag_cluster_native_idle">État physique du cluster inconnu. Les résultats sont joints au rapport de diagnostic.</string>
+    <string name="diag_cluster_native_busy">Projection, ADAS ou diagnostic actif : terminer la demande en cours avant ce test. Le retour reste disponible.</string>
+    <string name="diag_cluster_native_parked">Je confirme que le véhicule est stationné dans un lieu adapté au test.</string>
+    <string name="diag_cluster_native_firmware">Je confirme que le firmware du cluster est 13.1.33.2602030.1.</string>
+    <string name="diag_cluster_native_confirm">Ce test modifie réellement le mode du cluster. Garder l’écran central disponible. Le mouvement n’est pas détecté. Le retour BYD est une demande manuelle ; sa réussite visuelle reste à vérifier. Aucun acquittement QML n’est forcé.</string>
+    <string name="diag_cluster_native_send">Envoyer une seule demande</string>
+    <string name="diag_cluster_native_seen_full">Je vois le mode Full natif BYD</string>
+    <string name="diag_cluster_native_seen_normal">Je vois de nouveau l’affichage BYD normal</string>
+    <string name="diag_cluster_rcc_theme_button">Charger le thème RCC de test (Full + nuit)</string>
+    <string name="diag_cluster_rcc_restore">Restaurer la sélection RCC d’origine</string>
 </resources>

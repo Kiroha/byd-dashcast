@@ -7,6 +7,7 @@ import android.os.ParcelFileDescriptor
 import android.os.Process
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
+import com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt
 import org.json.JSONObject
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 
@@ -39,8 +40,39 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return call(6)
     }
     fun observedOem(): String = call(4)
-    private fun call(operation: Int, source: ParcelFileDescriptor? = null, beforeTransaction: () -> Unit = {}): String {
-        val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query")[operation]
+    fun nativeFull(validity: IBinder): String = nativeRequest(true, java.util.UUID.randomUUID().toString().replace("-", ""), validity)
+    fun nativeNormal(nonce: String, validity: IBinder): String = nativeRequest(false, nonce, validity)
+    fun nativeNormalObserved(nonce: String): String {
+        requireNativeProtocol()
+        require(nonce.matches(Regex("[0-9a-f]{32}")))
+        val receipt = call(10, payload = { it.writeString(nonce) })
+        val mode = JSONObject(receipt).getJSONObject("nativeMode")
+        check(mode.getString("nonce") == nonce && mode.getString("state") == "CLOSED" && !mode.getBoolean("debt") && !mode.getBoolean("pending"))
+        app?.let { ClusterNativeProjectionDebt.clear(it, nonce) }
+        return receipt
+    }
+    private fun requireNativeProtocol() = check(ProxyClient.supportsProtocol(34)) {
+        "Connected ProxyDaemon protocol 34 required for native Full-mode diagnostic. No reconnect/replay."
+    }
+    private fun nativeRequest(full: Boolean, nonce: String, validity: IBinder): String {
+        requireNativeProtocol()
+        require(nonce.matches(Regex("[0-9a-f]{32}")))
+        val receipt = call(if (full) 8 else 9, beforeTransaction = {
+            if (full) ClusterNativeProjectionDebt.begin(checkNotNull(app) { "App context required for durable native-mode debt" }, nonce)
+        }, payload = {
+            it.writeInt(if (full) 16 else 18); it.writeString(nonce)
+            it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity)
+        })
+        if (full && JSONObject(receipt).optString("nativeRejectedNonce") == nonce) {
+            app?.let { ClusterNativeProjectionDebt.clear(it, nonce) }
+            ClusterThemeDiagnostics.local(app, "native-full-request", "REFUSED", JSONObject(receipt).optString("nativeRefusal").take(768))
+        }
+        return receipt
+    }
+    private fun call(operation: Int, source: ParcelFileDescriptor? = null, beforeTransaction: () -> Unit = {},
+        payload: (Parcel) -> Unit = {}): String {
+        val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query",
+            "native-full-request", "native-normal-request", "native-normal-user-observation")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
@@ -48,6 +80,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             d.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR); d.writeInt(operation)
             if (operation in 2..4 || operation == 6) d.writeString(filename)
             if (source != null) { source.writeToParcel(d, 0); d.writeInt(1) }
+            payload(d)
             beforeTransaction()
             attempted = true
             check(binder.transact(ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST, d, r, 0)) { "Live-test API unavailable" }

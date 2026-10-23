@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicLong
 internal class ClusterThemeLiveControls(private val activity: Activity, header: LinearLayout, controls: LinearLayout,
     private val claimDiag: () -> Boolean, private val releaseDiag: () -> Unit,
     private val otherBusy: () -> Boolean, private val transcript: (String) -> Unit,
-    statusContainer: LinearLayout = header, reportShortcut: (LinearLayout) -> Unit = {}) {
+    statusContainer: LinearLayout = header, reportShortcut: (LinearLayout) -> Unit = {},
+    private val nativeStatus: (String) -> Unit = {}) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-restore-ui").apply { isDaemon = true } }
@@ -59,8 +60,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val headerIndex = 0
         statusContainer.addView(status)
         header.addView(Button(activity).apply {
-            text = "Restore original cluster selection"
-            contentDescription = "Restore original cluster selection, always available"
+            text = activity.getString(R.string.diag_cluster_rcc_restore)
+            contentDescription = activity.getString(R.string.diag_cluster_rcc_restore)
             setOnClickListener {
                 confirmation?.dismiss(); confirmation = null
                 abortBeforeSend.set(true)
@@ -100,7 +101,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             }
         })
         controls.addView(Button(activity).apply {
-            text = "Test full cluster theme — night + Full (experimental)"
+            text = activity.getString(R.string.diag_cluster_rcc_theme_button)
             setOnClickListener {
                 if (!queryPending && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) confirm(ClusterThemeVariant.FULL_SURFACE_TEST)
                 else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
@@ -200,6 +201,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private fun releaseClaim(expected: Long) { if (lease.get() == expected && diagClaimed.compareAndSet(true, false)) releaseDiag() }
     private fun render(text: String, expectedLease: Long) {
         val j = JSONObject(text)
+        if (j.has("nativeMode")) nativeStatus(text)
         if (j.getString("state") in setOf("IDLE", "CLEAN", "REFUSED")) releaseClaim(expectedLease)
         val query = j.optJSONObject("oemQuery")
         queryPending = query?.optString("state") == "PENDING"

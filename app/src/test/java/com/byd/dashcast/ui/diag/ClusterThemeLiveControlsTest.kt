@@ -55,7 +55,7 @@ class ClusterThemeLiveControlsTest {
         val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
-            val restore = all.filterIsInstance<Button>().single { it.text == "Restore original cluster selection" }
+            val restore = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_restore) }
             val root = restore.rootView.findViewById<View>(android.R.id.content).let { it as ViewGroup }.getChildAt(0) as ViewGroup
             val scroll = views(root).filterIsInstance<ScrollView>().first()
             assertTrue(root.indexOfChild(restore.parent as View) < root.indexOfChild(scroll.parent as View))
@@ -140,7 +140,7 @@ class ClusterThemeLiveControlsTest {
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
             while (!busy.get() && System.nanoTime() < until) { Thread.sleep(5); ShadowLooper.idleMainLooper() }
             assertTrue(busy.get()); assertEquals(0, loads)
-            val restore = all.filterIsInstance<Button>().single { it.text == "Restore original cluster selection" }
+            val restore = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_restore) }
             val decor = c.get().window.decorView
             decor.measure(View.MeasureSpec.makeMeasureSpec(640, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY))
             decor.layout(0, 0, 640, 360)
@@ -242,7 +242,7 @@ class ClusterThemeLiveControlsTest {
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
         try {
-            views(panel).filterIsInstance<Button>().single { it.text.toString().startsWith("Test full cluster theme") }.performClick()
+            views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(R.string.diag_cluster_rcc_theme_button) }.performClick()
             ShadowLooper.idleMainLooper()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)

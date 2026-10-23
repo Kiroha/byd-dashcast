@@ -715,4 +715,20 @@
     <string name="diag_cluster_oem_query_result">OEM RCC дерегі: %1$s\n%2$s\nCallback тіркеу: %3$s; нативті нәтиже: %4$s\n%5$s\nСұрау идентификаторы жоқ таратылатын callback: тек таңдауды бақылау. Нативті сәйкестік пен экрандағы кескін белгісіз.</string>
     <string name="diag_send_report">Диагностикалық есепті жіберу</string>
     <string name="diag_send_report_help">Аспаптар панелінің нәтижелері мен журналды қамтиды. Бапталған арна арқылы жіберу немесе файлмен бөлісу.</string>
+
+    <string name="diag_cluster_native_section">BYD штаттық Full режимі</string>
+    <string name="diag_cluster_rcc_section">RCC ресурстары</string>
+    <string name="diag_cluster_native_full">BYD штаттық Full режимін сынау</string>
+    <string name="diag_cluster_native_normal">BYD көрінісіне қайтуды сұрау</string>
+    <string name="diag_cluster_native_help">BYD штаттық Full көрінісін индикаторларымен сұрайды. RCC тақырыбы жүктелмейді. Бір ғана 16 пәрмені; жауап Qt-ке жеткенін не көрсетілгенін дәлелдемейді. Қайту қалыпты режимді (18) сұрайды, алдыңғы режимді дәл қалпына келтірмейді.</string>
+    <string name="diag_cluster_native_idle">Аспаптар панелінің нақты күйі белгісіз. Нәтижелер диагностика есебіне қосылады.</string>
+    <string name="diag_cluster_native_busy">Проекция, ADAS немесе диагностика белсенді: сынақ алдында ағымдағы сұрауды аяқтаңыз. Қайту қолжетімді.</string>
+    <string name="diag_cluster_native_parked">Көліктің сынауға жарамды жерде тұрақта тұрғанын растаймын.</string>
+    <string name="diag_cluster_native_firmware">Аспаптар панелінің микробағдарламасы 13.1.33.2602030.1 екенін растаймын.</string>
+    <string name="diag_cluster_native_confirm">Сынақ аспаптар панелінің нақты режимін өзгертеді. Орталық экранды қолжетімді ұстаңыз. Қозғалыс анықталмайды. BYD көрінісіне қайту — қолмен берілетін сұрау; көрінетін нәтижені тексеріңіз. QML растауы мәжбүрленбейді.</string>
+    <string name="diag_cluster_native_send">Бір сұрау жіберу</string>
+    <string name="diag_cluster_native_seen_full">BYD штаттық Full көрінісін көріп тұрмын</string>
+    <string name="diag_cluster_native_seen_normal">BYD қалыпты көрінісін қайта көріп тұрмын</string>
+    <string name="diag_cluster_rcc_theme_button">RCC сынақ тақырыбын жүктеу (Full + түн)</string>
+    <string name="diag_cluster_rcc_restore">Бастапқы RCC таңдауын қалпына келтіру</string>
 </resources>

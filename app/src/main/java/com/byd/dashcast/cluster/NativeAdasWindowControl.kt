@@ -60,6 +60,9 @@ internal class NativeAdasWindowControl(
             request.complete(Result.BUSY)
             return request
         }
+        if (com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) {
+            active.compareAndSet(request, null); request.complete(Result.BUSY); return request
+        }
         try {
             // A blocked SDK read occupies only the bounded probe lane. Cancelling that request
             // retires it, so a saved-value restore can still use the independent dispatch lane.
@@ -104,7 +107,8 @@ internal class NativeAdasWindowControl(
         const val HIDE_FRAME = "23,50,00,08,01,00"
         const val RESTORE_FRAME = "23,50,00,08,01,01"
         val RECEIVER = ComponentName("com.byd.clusterdebug", "com.byd.clusterdebug.BroadcastReceiverCAN")
-        private var instance: NativeAdasWindowControl? = null
+        @Volatile private var instance: NativeAdasWindowControl? = null
+        fun isBusy(): Boolean = instance?.active?.get() != null
 
         fun cancelPending(): Boolean {
             val owner = instance ?: return true
@@ -133,6 +137,8 @@ internal class AndroidDevice(
     },
 ) : NativeAdasWindowControl.Device {
     override fun available(): Boolean {
+        if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) return false
         if (!platformSupported()) return false
         return try {
             val receiver = context.packageManager.getReceiverInfo(NativeAdasWindowControl.RECEIVER, 0)

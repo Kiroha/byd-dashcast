@@ -137,7 +137,9 @@ class ClusterManager(context: Context) {
      * [scheduleDaemonDisplayPoll].
      */
     fun activateClusterDisplay(callback: DisplayReadyCallback) {
-        activateClusterDisplay(ProjectionCommandBus.beginSession(), callback)
+        val session = ProjectionCommandBus.tryBeginSession()
+        if (session == null) { callback.onDisplayTimeout(); return }
+        activateClusterDisplay(session, callback)
     }
 
     internal fun activateClusterDisplay(

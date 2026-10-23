@@ -34,6 +34,13 @@ internal object ClusterThemeLiveTest {
     private val directory = File("/data/local/tmp/dashcast-cluster-live")
     private val journal = File(directory, "journal.json")
     private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-live-command").apply { isDaemon = true } }
+    private val nativeMode = ClusterNativeModeTest(worker)
+    private var productionModeCommands = 0
+    @Synchronized fun beginProductionModeCommand() {
+        check(!nativeMode.blocked()) { "NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: manual native return and observation required" }
+        productionModeCommands++
+    }
+    @Synchronized fun endProductionModeCommand() { check(productionModeCommands > 0); productionModeCommands-- }
     private val watchdog = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "cluster-live-deadline").apply { isDaemon = true } }
     private val generation = AtomicLong(0)
     private val restoring = AtomicLong(-1)
@@ -120,12 +127,32 @@ internal object ClusterThemeLiveTest {
             .put("mutated", mutated).put("uncertain", uncertain).put("defaultQueried", defaultQueried)
             .put("carrierRemoved", carrierRemoved).put("markerObservedByUser", markerObserved).put("oemObservedByUser", oemObserved)
             .put("themeObservedByUser", themeObserved)
-            .put("raw", raw.takeLast(16000)).put("oemQuery", oemQuery).toString()
+            .put("raw", raw.takeLast(16000)).put("oemQuery", oemQuery).put("nativeMode", nativeMode.status()).toString()
+    }
+
+    @Synchronized fun nativeModeRequest(full: Boolean, nonce: String, parked: Boolean, firmware: Boolean,
+        validity: android.os.IBinder): String {
+        initialize()
+        try {
+            check(journalTrusted && !active.get() && !queryActive.get() && !helperUnreaped) { "RCC test/query/recovery active; native mode request refused" }
+            check(productionModeCommands == 0) { "Production mode command in flight; native request refused" }
+            nativeMode.request(full, nonce, parked, firmware, validity)
+        } catch (error: Exception) {
+            if (full && !nativeMode.blocked()) return JSONObject(status()).put("nativeRejectedNonce", nonce)
+                .put("nativeRefusal", "${error.javaClass.simpleName}: ${error.message}".take(768)).toString()
+            throw error
+        }
+        return status()
+    }
+    fun nativeBlocksProjection(): Boolean = nativeMode.blocked()
+    @Synchronized fun nativeNormalObserved(nonce: String): String {
+        nativeMode.observedNormal(nonce)
+        return status()
     }
 
     @Synchronized fun querySelection(run: () -> ClusterThemeQueryRunner.Result = ClusterThemeQueryRunner::run): String {
         initialize()
-        check(journalTrusted && !active.get() && !helperUnreaped) { "Live test/recovery/quarantine active; read-only query refused" }
+        check(journalTrusted && !active.get() && !helperUnreaped && !nativeMode.blocked()) { "Native or RCC test/recovery/quarantine active; read-only query refused" }
         check(queryActive.compareAndSet(false, true)) { "Read-only query already active or helper not reaped; no replay" }
         oemQuery = JSONObject().put("state", "PENDING").put("phase", "queued")
             .put("detail", "One read-only OEM selection query; no renderer discovery, carrier, load or restore.")
@@ -152,7 +179,7 @@ internal object ClusterThemeLiveTest {
             val st = Os.fstat(source.fileDescriptor)
             check(ClusterThemePolicy.permitsCarrierSource(st.st_mode, st.st_size)) { "Source must be a bounded regular file (pipes/devices refused)" }
         } catch (t: Throwable) { source.close(); throw t }
-        if (!parkedAssertion || queryActive.get() || !active.compareAndSet(false, true)) {
+        if (!parkedAssertion || queryActive.get() || nativeMode.blocked() || !active.compareAndSet(false, true)) {
             source.close(); return status()
         }
         val thisGeneration = generation.incrementAndGet()
@@ -238,6 +265,7 @@ internal object ClusterThemeLiveTest {
 
     @Synchronized fun requestRestore(expectedFilename: String? = null): String {
         initialize()
+        if (nativeMode.blocked()) return status()
         if (expectedFilename != null && expectedFilename != filename) return status()
         restoreRequested.set(true)
         if (active.get()) enqueueRestore()

@@ -715,4 +715,20 @@
     <string name="diag_cluster_oem_query_result">Даныя RCC OEM: %1$s\n%2$s\nРэгістрацыя callback: %3$s; натыўны вынік: %4$s\n%5$s\nШырокавяшчальны callback без ідэнтыфікатара запыту: толькі назіранне выбару. Натыўная ідэнтычнасць і выява на экране невядомыя.</string>
     <string name="diag_send_report">Адправіць дыягнастычную справаздачу</string>
     <string name="diag_send_report_help">Уключае вынікі панэлі прыбораў і журнал. Адпраўка праз наладжаны канал або абагульванне файла.</string>
+
+    <string name="diag_cluster_native_section">Штатны рэжым Full BYD</string>
+    <string name="diag_cluster_rcc_section">Рэсурсы RCC</string>
+    <string name="diag_cluster_native_full">Праверыць штатны рэжым Full BYD</string>
+    <string name="diag_cluster_native_normal">Запытаць вяртанне BYD</string>
+    <string name="diag_cluster_native_help">Запытвае штатны выгляд Full BYD з індыкатарамі. Тэма RCC не загружаецца. Адна каманда 16; адказ не даказвае дастаўку ў Qt ці адлюстраванне. Вяртанне запытвае звычайны рэжым (18), без дакладнага аднаўлення папярэдняга рэжыму.</string>
+    <string name="diag_cluster_native_idle">Фізічны стан панэлі прыбораў невядомы. Вынікі ўваходзяць у дыягнастычную справаздачу.</string>
+    <string name="diag_cluster_native_busy">Актыўная праекцыя, ADAS ці дыягностыка: завяршыце бягучы запыт перад тэстам. Вяртанне застаецца даступным.</string>
+    <string name="diag_cluster_native_parked">Пацвярджаю, што аўтамабіль прыпаркаваны ў прыдатным для тэсту месцы.</string>
+    <string name="diag_cluster_native_firmware">Пацвярджаю прашыўку панэлі прыбораў 13.1.33.2602030.1.</string>
+    <string name="diag_cluster_native_confirm">Тэст змяняе рэальны рэжым панэлі прыбораў. Захоўвайце доступ да цэнтральнага экрана. Рух не вызначаецца. Вяртанне BYD — ручны запыт; праверце бачны вынік. Пацвярджэнне QML не падрабляецца.</string>
+    <string name="diag_cluster_native_send">Адправіць адзін запыт</string>
+    <string name="diag_cluster_native_seen_full">Бачу штатны выгляд Full BYD</string>
+    <string name="diag_cluster_native_seen_normal">Зноў бачу звычайны экран BYD</string>
+    <string name="diag_cluster_rcc_theme_button">Загрузіць тэставую тэму RCC (Full + ноч)</string>
+    <string name="diag_cluster_rcc_restore">Аднавіць зыходны выбар RCC</string>
 </resources>

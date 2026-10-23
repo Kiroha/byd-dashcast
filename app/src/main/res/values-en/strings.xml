@@ -731,4 +731,20 @@
     <string name="diag_cluster_oem_query_result">OEM RCC receipt: %1$s\n%2$s\nCallback registration: %3$s; native return: %4$s\n%5$s\nBroadcast callback without a request identifier: selection observation only. Native identity and physical pixels unknown.</string>
     <string name="diag_send_report">Send a diagnostic report</string>
     <string name="diag_send_report_help">Includes cluster results and the log. Send through the configured channel or share a file.</string>
+
+    <string name="diag_cluster_native_section">Native BYD Full mode</string>
+    <string name="diag_cluster_rcc_section">RCC resources</string>
+    <string name="diag_cluster_native_full">Test native BYD Full mode</string>
+    <string name="diag_cluster_native_normal">Request BYD return</string>
+    <string name="diag_cluster_native_help">Requests BYD’s native Full layout, retaining its telltales. No RCC theme is loaded. One command 16; the native return does not prove Qt delivery or rendering. Return requests normal mode (18), without restoring the exact previous mode.</string>
+    <string name="diag_cluster_native_idle">Physical cluster state unknown. Results are included in the diagnostic report.</string>
+    <string name="diag_cluster_native_busy">Projection, ADAS or a diagnostic is active: finish the pending request before testing. Return remains available.</string>
+    <string name="diag_cluster_native_parked">I confirm the vehicle is parked in a suitable test location.</string>
+    <string name="diag_cluster_native_firmware">I confirm the cluster firmware is 13.1.33.2602030.1.</string>
+    <string name="diag_cluster_native_confirm">This test changes the physical cluster mode. Keep the central display available. Movement is not detected. BYD return is a manual request; visual success needs checking. No QML acknowledgment is forced.</string>
+    <string name="diag_cluster_native_send">Send one request</string>
+    <string name="diag_cluster_native_seen_full">I see the native BYD Full layout</string>
+    <string name="diag_cluster_native_seen_normal">I see the normal BYD layout again</string>
+    <string name="diag_cluster_rcc_theme_button">Load the test RCC theme (Full + night)</string>
+    <string name="diag_cluster_rcc_restore">Restore original RCC selection</string>
 </resources>

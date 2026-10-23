@@ -330,7 +330,8 @@ class FissionOrchestrator(
     private fun ensureClusterProjectionThen(next: Runnable, onFailure: Runnable?) {
         if (ClusterManager.isQtInProjectionMode()) {
             if (com.byd.dashcast.cluster.display.ProjectionCommandBus.currentSession() == null) {
-                reusedProjectionSession = com.byd.dashcast.cluster.display.ProjectionCommandBus.beginSession()
+                reusedProjectionSession = com.byd.dashcast.cluster.display.ProjectionCommandBus.tryBeginSession()
+                if (reusedProjectionSession == null) { onFailure?.run(); return }
             }
             next.run()
             return
