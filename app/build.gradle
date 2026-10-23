@@ -2104,8 +2104,9 @@ android {
         // Protocol 36; translated cluster/projection names and visible RCC refusal guidance.
         // 704 = 1.9.65-beta: exact ACK3 errors, bounded post-query and explicit preserved-carrier OEM recovery.
         // 705 = 1.9.66-beta: separate guarded corner RCC proof and timestamped resource evidence.
-        versionCode 705
-        versionName "1.9.66-beta"
+        // 706 = 1.9.67-beta: serialize ADAS masking after projection activation and initialize OEM recovery.
+        versionCode 706
+        versionName "1.9.67-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
