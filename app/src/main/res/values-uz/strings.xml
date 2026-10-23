@@ -754,14 +754,18 @@
     <string name="diag_cluster_rcc_marker_button">RCC belgisini sinash (tavsiya etiladi)</string>
     <string name="diag_cluster_rcc_ivi_title">RCC resurslari — tajribaviy IVI sinovi</string>
     <string name="diag_cluster_rcc_ivi_help">Belgidan boshlang. Mavzu uchun Full va tun rejimini qo‘lda tanlang. Hech bir rejim avtomatik o‘zgarmaydi.</string>
-    <string name="diag_cluster_rcc_ivi_identity">E’lon qilingan 13.1.33.2602030.1 proshivkasi, Android 10, aniq aniqlangan DiLink 3 va daemon 36 kerak. O‘rnatilgan Java ko‘prigi tekshirildi; mahalliy panel identifikatsiyasi noma’lum.</string>
+    <string name="diag_cluster_rcc_ivi_identity">E’lon qilingan 13.1.33.2602030.1 proshivkasi, Android 10, aniq aniqlangan DiLink 3 va daemon 37 kerak. O‘rnatilgan Java ko‘prigi tekshirildi; mahalliy panel identifikatsiyasi noma’lum.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Asboblar va ogohlantirishlar kodini saqlab, BYD resurslarini passiv belgi bilan qayta yuklaydi. Tasvir va tiklash avtomobilda tekshirilishi kerak. Bu ekran ochiq qolsin. Seans mavjud bo‘lsa, 30 soniyadan so‘ng standart resurslar so‘raladi. Tiklanishni ko‘z bilan tasdiqlang; qayta ishga tushirish bunga kafolat emas.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sinovdan oldin Full va tun rejimini tanlang. RCC asboblar va ogohlantirishlar kodini saqlaydi va fonni o‘zgartiradi. O‘qilish va tiklanishni avtomobilda tekshiring. Ekran ochiq qolsin. Seans mavjud bo‘lsa, 30 soniyadan so‘ng standart resurslar so‘raladi. Keyin ko‘rganingizni tasdiqlang. Qayta ishga tushirish tiklashni kafolatlamaydi.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC sinovini yuborish</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Proyeksiya rejimini o‘zgartirmasdan standart RCC resurslarini so‘raydi. OEM javobi va ko‘rinadigan tiklanish alohida tekshiriladi; keyin ko‘rganingizni tasdiqlang. Qayta ishga tushirish yoki avtomatik yangi sinov yo‘q.</string>
-    <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. “BYD RCC resurslarini tiklash” tugmasini bosing, panelni ko‘rib, qalqib chiquvchi oynaga javob bering.</string>
+    <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. “BYD RCC resurslarini tiklash / BYD qaytishini tekshirish” tugmasini bosing, panelni ko‘rib, qalqib chiquvchi oynaga javob bering.</string>
     <string name="diag_cluster_rcc_ivi_platform">Sinov rad etildi: Android 10 va aniq DiLink 3 aniqlanishi kerak. RCC yuborilmadi.</string>
     <string name="diag_cluster_page_title">Asboblar: proyeksiya va RCC</string>
     <string name="diag_cluster_page_description">BYD tasmali proyeksiyasi, RCC belgisi va mavzusi</string>
     <string name="diag_cluster_native_rcc_blocked">RCC sinovi BYD proyeksiyasini blokladi</string>
+    <string name="diag_cluster_rcc_retire_button">RCC xatosidan keyin BYD qaytishini tayyorlash</string>
+    <string name="diag_cluster_rcc_retire_confirm">Faqat sinov RCC faylimizni yangi jildga ko‘chiradi va baytlarini saqlaydi. Yuklash yoki OEM qayta ishga tushirish buyrug‘ini yubormaydi. BYD panelni haqiqatan qayta boshlamaguncha tasvir o‘zgarmasligi mumkin. Android daemonini qayta ulash yetmaydi. Keyin «BYD qaytishini tekshirish» tugmasini bosib asl ekranni tasdiqlang. Boshqa sinovlar shu paytgacha bloklanadi.</string>
+    <string name="diag_cluster_rcc_retired_waiting">BYD qaytishi tayyor — panel kutilmoqda. OEM panelni qo‘lda qayta boshlang, keyin «BYD qaytishini tekshirish» tugmasini bosing. Tekshiruv faqat tanlov va saqlangan faylimizni o‘qiydi. Android yoki daemonni qayta ulash panel qayta boshlanganini isbotlamaydi. So‘ng BYD asboblari va ogohlantirish chiroqlarini ko‘z bilan tasdiqlang.</string>
+    <string name="diag_cluster_rcc_verify_return">BYD qaytishini tekshirish</string>
 </resources>

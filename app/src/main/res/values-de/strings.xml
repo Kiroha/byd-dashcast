@@ -754,14 +754,18 @@
     <string name="diag_cluster_rcc_marker_button">RCC-Marker testen (empfohlen)</string>
     <string name="diag_cluster_rcc_ivi_title">RCC-Ressourcen — experimenteller IVI-Test</string>
     <string name="diag_cluster_rcc_ivi_help">Beginne mit dem Marker. Für das Design Full und Nacht manuell wählen. Kein Modus wird automatisch geändert.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Bestätigte Firmware 13.1.33.2602030.1, Android 10, eindeutig erkanntes DiLink 3 und Daemon 36 erforderlich. Installierte Java-Brücke geprüft; native Cluster-Identität unbekannt.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Bestätigte Firmware 13.1.33.2602030.1, Android 10, eindeutig erkanntes DiLink 3 und Daemon 37 erforderlich. Installierte Java-Brücke geprüft; native Cluster-Identität unbekannt.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Die BYD-Ressourcen werden mit einem passiven Marker neu geladen. Instrumenten- und Warncode bleibt erhalten. Anzeige und Wiederherstellung müssen am Fahrzeug geprüft werden. Diesen Bildschirm verfügbar halten. Nach 30 Sekunden werden Standardressourcen angefordert, sofern die Sitzung verfügbar bleibt. Wiederherstellung visuell bestätigen; Neustart garantiert sie nicht.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Vor dem Test Full und Nacht wählen. Das RCC behält Instrumenten- und Warncode und ändert den Hintergrund. Lesbarkeit und Wiederherstellung am Fahrzeug prüfen. Bildschirm verfügbar halten. Nach 30 Sekunden werden bei verfügbarer Sitzung Standardressourcen angefordert. Danach die Anzeige bestätigen. Neustart garantiert keine Wiederherstellung.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC-Test senden</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Fordert die Standard-RCC-Ressourcen an und ändert den Projektionsmodus nicht. OEM-Antwort und sichtbare Wiederherstellung werden getrennt geprüft. Danach die Anzeige bestätigen. Kein Neustart oder automatischer neuer Test.</string>
-    <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. „BYD-RCC-Ressourcen wiederherstellen“ verwenden und nach Sichtprüfung des Clusters das Popup beantworten.</string>
+    <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. „BYD-RCC-Ressourcen wiederherstellen / BYD-Rückkehr prüfen“ verwenden und nach Sichtprüfung des Clusters das Popup beantworten.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test verweigert: Android 10 und eindeutige DiLink-3-Erkennung erforderlich. Kein RCC gesendet.</string>
     <string name="diag_cluster_page_title">Kombiinstrument: Projektion und RCC</string>
     <string name="diag_cluster_page_description">BYD-Projektion mit Balken, RCC-Markierung und Design</string>
     <string name="diag_cluster_native_rcc_blocked">RCC-Test blockiert die BYD-Projektion</string>
+    <string name="diag_cluster_rcc_retire_button">BYD-Rückkehr nach RCC-Fehler vorbereiten</string>
+    <string name="diag_cluster_rcc_retire_confirm">Verschiebt nur unsere RCC-Testdatei in einen neuen Ordner und erhält ihre Daten. Sendet weder Laden noch OEM-Neustart. Die Anzeige kann bis zur echten BYD-Neuinitialisierung des Kombiinstruments unverändert bleiben. Den Android-Daemon neu zu verbinden genügt nicht. Danach „BYD-Rückkehr prüfen“ drücken und die Originalanzeige bestätigen. Andere Tests bleiben bis dahin gesperrt.</string>
+    <string name="diag_cluster_rcc_retired_waiting">BYD-Rückkehr vorbereitet — auf Kombiinstrument warten. Das OEM-Kombiinstrument manuell neu initialisieren, danach „BYD-Rückkehr prüfen“ drücken. Die Prüfung liest nur Auswahl und erhaltene Datei. Eine neue Android- oder Daemon-Verbindung beweist keinen Cluster-Neustart. Danach BYD-Instrumente und Warnleuchten visuell bestätigen.</string>
+    <string name="diag_cluster_rcc_verify_return">BYD-Rückkehr prüfen</string>
 </resources>

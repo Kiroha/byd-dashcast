@@ -12,6 +12,7 @@ import com.byd.dashcast.clusterlive.ClusterThemeProtocol
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.clusterlive.ClusterThemeTransport
 import com.byd.dashcast.clusterlive.ClusterThemeJournal
+import com.byd.dashcast.clusterlive.ClusterThemeRetirement
 import com.byd.dashcast.clusterlive.ClusterRendererDiscovery
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -82,6 +83,8 @@ internal object ClusterThemeLiveTest {
     @Volatile private var hashDeadline = Long.MAX_VALUE
     @Volatile private var transport = ClusterThemeTransport.STRICT_RENDERER
     @Volatile private var projectionValidity: android.os.IBinder? = null
+    @Volatile private var retirement: ClusterThemeRetirement? = null
+    @Volatile private var retirementEligibleUntil = 0L
     private val trace = ArrayDeque<String>()
     @Synchronized private fun step(stage: String, extra: String = "") {
         val line = "epochMs=${System.currentTimeMillis()} elapsedMs=${SystemClock.elapsedRealtime()} transport=${transport.id} nonce=${filename.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc")} stage=$stage ${extra.take(320)}"
@@ -132,6 +135,7 @@ internal object ClusterThemeLiveTest {
         defaultQueried = false; loadSettled = false; oemObserved = false
         markerObserved = false; themeObserved = false; carrierRemoved = false; deadline = 0
         transport = saved.transport; variant = saved.variant
+        retirement = saved.retirement; retirementEligibleUntil = 0
         iviRecoverySettled = saved.iviRecoverySettled
         if (transport == ClusterThemeTransport.ANDROID_IVI) {
             filename = saved.filename; root = saved.root; identity = saved.identity
@@ -156,6 +160,9 @@ internal object ClusterThemeLiveTest {
             .put("carrierSha256", if (journalTrusted) variant.carrierSha256 else "").put("phase", phase)
             .put("transport", transport.id).put("nativeIdentity", if (transport == ClusterThemeTransport.ANDROID_IVI) "UNKNOWN" else "STRICT_PROFILE")
             .put("trace", synchronized(this) { trace.joinToString("\n") }).put("rccDebt", active.get())
+            .put("retirement", retirement?.json()).put("retirementAvailable", retirement == null && retirementEligibleUntil > SystemClock.elapsedRealtime())
+            .put("journalSchema", if (retirement != null) "4" else if (transport == ClusterThemeTransport.ANDROID_IVI) "3" else "2")
+            .put("carrierIdentity", "device=$createdDevice inode=$createdInode")
             .put("rccSafeNonce", if (transport == ClusterThemeTransport.ANDROID_IVI && journalTrusted && !active.get() &&
                 state in setOf("CLEAN", "REFUSED") && ClusterThemePolicy.ownedName(filename)) filename.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc") else "")
             .put("daemonUid", Process.myUid()).put("renderer", renderer).put("identity", identity)
@@ -225,6 +232,7 @@ internal object ClusterThemeLiveTest {
         val thisGeneration = generation.incrementAndGet()
         restoreRequested.set(false); observationPending.set(0)
         mutated = false; uncertain = false; loadSettled = false; iviRecoverySettled = false; defaultQueried = false
+        retirement = null; retirementEligibleUntil = 0
         markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false; raw = ""
         variant = requestedVariant; transport = requestedTransport; projectionValidity = validity
         phase = if (transport == ClusterThemeTransport.ANDROID_IVI) "android-ivi-preflight" else "renderer-discovery"
@@ -357,6 +365,7 @@ internal object ClusterThemeLiveTest {
             check(!helperUnreaped && helperPid == 0)
             transport = ClusterThemeTransport.ANDROID_IVI; filename = expected; renderer = ""; root = ""; identity = ""
             mutated = false; uncertain = false; defaultQueried = false; loadSettled = false; iviRecoverySettled = false
+            retirement = null; retirementEligibleUntil = 0
             markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false
             createdDevice = -1; createdInode = -1; variant = ClusterThemeVariant.MARKER
             state = "CLEAN"; phase = "no-admission-reconciliation"
@@ -379,6 +388,46 @@ internal object ClusterThemeLiveTest {
         if (expectedFilename != null && expectedFilename != filename) return status()
         restoreRequested.set(true)
         if (active.get()) enqueueRestore()
+        return status()
+    }
+
+    @Synchronized fun requestAndroidRetirement(nonce: String, parked: Boolean, firmware: Boolean, validity: android.os.IBinder): String {
+        initialize()
+        check(parked && firmware && nonce.matches(Regex("[0-9a-f]{32}")) && journalTrusted && active.get() && mutated &&
+            transport == ClusterThemeTransport.ANDROID_IVI && filename == ClusterThemePolicy.PREFIX + nonce + ".rcc")
+        check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped)
+        check(retirement != null || retirementEligibleUntil > SystemClock.elapsedRealtime()) { "First request Restore: a fresh ACK3 RESOURCE_IS_SAME and exact own selection are required" }
+        check(retirement?.moved != true) { "Already retired: manually reinitialize OEM cluster, then use Restore for read-only verification" }
+        projectionValidity = validity; check(validProjection()) { "Projection reservation expired" }
+        val expected = generation.get()
+        check(restoring.compareAndSet(-1, expected)) { "Recovery worker already active" }
+        restoreRequested.set(true); deadline = 0
+        state = "RETIRING"; phase = "retirement-preflight"; defaultQueried = false; oemObserved = false; iviRecoverySettled = false
+        worker.execute {
+            try {
+                check(generation.get() == expected && validProjection())
+                reapRecoveredHelper(); hashDeadline = SystemClock.elapsedRealtime() + 60000
+                if (retirement == null || !ClusterThemeRetiredStorage.originalAbsent(filename, identity)) {
+                    if (retirement == null) check(retirementEligibleUntil > SystemClock.elapsedRealtime()) { "ACK3 eligibility expired; request Restore again" }
+                    val selection = exchange("query")
+                    check(!selection.unknown && selection.native == 0 && selection.query?.selected(filename) == true && selection.query.ints[3] == 0) { "Own persisted selection changed; no retirement" }
+                }
+                check(validProjection())
+                retirement = ClusterThemeRetiredStorage.move(filename, identity, createdDevice, createdInode, variant.carrierSha256,
+                    retirement, { hash(it, ClusterThemePolicy.MAX_CARRIER) }) { checkpoint ->
+                    check(validProjection()) { "Projection reservation expired during preparation" }
+                    retirement = checkpoint; phase = if (checkpoint.moved) "carrier-retired" else "retirement-intent"
+                    persist(state); check(validProjection()) { "Projection reservation expired after durable checkpoint" }
+                    step(phase, "directory=${checkpoint.directory} device=${checkpoint.device} inode=${checkpoint.inode} fsync=PASS")
+                }
+                retirementEligibleUntil = 0; uncertain = true
+                state = "WAITING_OEM_REINITIALIZATION"; phase = "carrier-retired"
+                detail = "Only our RCC moved and preserved. Active graphics may remain. Manually reinitialize the OEM cluster, then Restore performs read-only verification. Android/daemon reconnect is not an OEM restart."
+                persist(state)
+            } catch (error: Throwable) {
+                uncertain = true; state = "QUARANTINE"; detail = "RCC retirement unconfirmed: ${error.message}".take(2000); persistQuietly()
+            } finally { restoring.compareAndSet(expected, -1) }
+        }
         return status()
     }
 
@@ -408,6 +457,18 @@ internal object ClusterThemeLiveTest {
                 state = "RESTORING"; detail = "One default-selection request; no physical recovery claim."
                 phase = "restore-query"
                 persist(state)
+                retirement?.let { retired ->
+                    check(transport == ClusterThemeTransport.ANDROID_IVI && retired.moved && validProjection()) { "Retirement incomplete; use explicit preparation" }
+                    hashDeadline = SystemClock.elapsedRealtime() + 60000
+                    fun verifyRetired() = ClusterThemeRetiredStorage.verify(filename, identity, createdDevice, createdInode,
+                        variant.carrierSha256, retired) { hash(it, ClusterThemePolicy.MAX_CARRIER) }
+                    verifyRetired(); phase = "retired-read-only-query"
+                    val queried = exchange("query") // Never load, restore or restart an OEM process after retirement.
+                    verifyRetired(); check(validProjection())
+                    recordRetiredQuery(queried)
+                    persist(state); maybeCleanup()
+                    return@execute
+                }
                 if (transport == ClusterThemeTransport.ANDROID_IVI) {
                     check(validProjection()) { "Explicit live projection reservation required for Android recovery" }
                     hashDeadline = SystemClock.elapsedRealtime() + 60000
@@ -428,7 +489,7 @@ internal object ClusterThemeLiveTest {
                     persist(state) // Revoke an older proof before a new mutating recovery attempt.
                 }
                 val restored = if (selection.query.isDefault()) selection else exchange("restore")
-                step("restore-result", "native=${restored.native} unknown=${restored.unknown} default=${restored.query?.isDefault()}")
+                step("restore-result", "native=${restored.native} unknown=${restored.unknown} default=${restored.query?.isDefault()} ${restored.error.orEmpty()}")
                 recordRestoreResult(selection.query, restored, priorRecoveryProof)
                 if (transport == ClusterThemeTransport.ANDROID_IVI) {
                     ownedFile(); check(validProjection()) { "Projection reservation expired after recovery" }
@@ -443,6 +504,9 @@ internal object ClusterThemeLiveTest {
     }
 
     internal fun recordRestoreResult(before: ClusterThemeProtocol.Response, restored: Exchange, priorRecoveryProof: Boolean) {
+        retirementEligibleUntil = if (transport == ClusterThemeTransport.ANDROID_IVI && retirement == null && restored.retirementEligible &&
+            ClusterThemeRetirement.eligible(filename, restored.query, restored.responses, restored.native, restored.attempted))
+            SystemClock.elapsedRealtime() + 120000 else 0
         uncertain = uncertain || restored.unknown || restored.native != 0
         defaultQueried = !restored.unknown && restored.native == 0 && restored.query?.isDefault() == true
         if (transport == ClusterThemeTransport.ANDROID_IVI) {
@@ -455,7 +519,16 @@ internal object ClusterThemeLiveTest {
         state = if (recovered) "DEFAULT_QUERIED" else "QUARANTINE"
         detail = if (recovered) "OEM query reports default after ordered recovery. Historical load uncertainty retained; physical OEM recovery requires your fresh confirmation."
             else if (defaultQueried) "Default queried while load is unresolved; late load remains possible. No restoration established. Carrier retained; no new test."
-            else "Default recovery is unconfirmed. No new test; keep parked and inspect the cluster."
+            else "Default recovery is unconfirmed. ${restored.error.orEmpty()} No new test; keep parked and inspect the cluster.".take(2000)
+    }
+    internal fun recordRetiredQuery(queried: Exchange) {
+        check(retirement?.moved == true && transport == ClusterThemeTransport.ANDROID_IVI)
+        defaultQueried = !queried.unknown && queried.native == 0 && queried.query?.isDefault() == true
+        iviRecoverySettled = defaultQueried
+        state = if (defaultQueried) "DEFAULT_QUERIED" else "WAITING_OEM_REINITIALIZATION"
+        detail = if (defaultQueried) "Retired inode/hash and absent original verified around fresh default query. Fresh physical OEM confirmation is still required. Preserved RCC will not be deleted."
+            else "Original RCC absent and preserved. OEM selection is not default; manually reinitialize the OEM cluster and verify again. ${queried.error.orEmpty()}"
+        step("retired-default-query", "native=${queried.native} unknown=${queried.unknown} default=$defaultQueried")
     }
     internal fun acceptOemObservation(expectedFilename: String): Boolean {
         if (!active.get() || !mutated || !defaultQueried || filename != expectedFilename || !ClusterThemePolicy.ownedName(expectedFilename)) return false
@@ -507,11 +580,13 @@ internal object ClusterThemeLiveTest {
             if (!carrierRemoved && oemObserved && (ClusterThemePolicy.canDeleteCarrier(defaultQueried, loadSettled, uncertain) || recoveredIvi && defaultQueried)) {
                 check(cleanup()) { "Owned carrier cleanup identity unavailable; retained" }
                 carrierRemoved = true
-                detail = "Default selection queried; only our verified carrier removed. Confirm OEM pixels; a new test remains blocked."
+                detail = if (retirement != null) "Default queried; retired bytes preserved. A new test remains blocked until visual confirmation."
+                    else "Default selection queried; only our verified carrier removed. Confirm OEM pixels; a new test remains blocked."
                 write(state)
             }
             if (carrierRemoved && oemObserved && (!uncertain || recoveredIvi) && defaultQueried) {
-                state = "CLEAN"; detail = "Default queried; tester confirmed OEM display. Only our carrier deleted. No reboot guarantee."
+                state = "CLEAN"; detail = if (retirement != null) "Default queried; tester confirmed OEM display. Retired RCC preserved unchanged. No reboot guarantee."
+                    else "Default queried; tester confirmed OEM display. Only our carrier deleted. No reboot guarantee."
                 write(state); deadline = 0; active.set(false)
             }
         } catch (error: Throwable) {
@@ -534,7 +609,8 @@ internal object ClusterThemeLiveTest {
             check(!helperUnreaped && helperPid == 0) { "Cannot close journal with an unreaped helper" }
             helperStart = ""; helperToken = ""
         }
-        val j = JSONObject().put("schema", if (transport == ClusterThemeTransport.ANDROID_IVI) 3 else 2).put("state", newState).put("filename", filename)
+        val j = JSONObject().put("schema", if (retirement != null) 4 else if (transport == ClusterThemeTransport.ANDROID_IVI) 3 else 2).put("state", newState).put("filename", filename)
+            .apply { retirement?.let { put("retirement", it.json()) } }
             .apply { if (transport == ClusterThemeTransport.ANDROID_IVI) put("transport", transport.id).put("root", root) }
             .put("variant", variant.id).put("carrierSha256", variant.carrierSha256)
             .put("renderer", renderer).put("identity", identity).put("mutated", mutated)
@@ -646,6 +722,11 @@ internal object ClusterThemeLiveTest {
     }
     private fun cleanupOwned(allowPartial: Boolean): Boolean {
         if (root.isEmpty() || !ClusterThemePolicy.ownedName(filename) || createdInode < 0 || createdDevice < 0) return false
+        retirement?.let {
+            ClusterThemeRetiredStorage.verify(filename, identity, createdDevice, createdInode, variant.carrierSha256, it) { f -> hash(f, ClusterThemePolicy.MAX_CARRIER) }
+            step("retired-carrier-preserved", "directory=${it.directory}")
+            return true
+        }
         return withOwnedFile { f ->
             val st = try { Os.lstat(f.path) } catch (error: ErrnoException) {
                 if (error.errno == OsConstants.ENOENT) return@withOwnedFile true else throw error
@@ -680,7 +761,7 @@ internal object ClusterThemeLiveTest {
     private fun hex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
 
     internal data class Exchange(val native: Int?, val query: ClusterThemeProtocol.Response?, val responses: List<ClusterThemeProtocol.Response>,
-        val unknown: Boolean, val error: String? = null, val attempted: Boolean = false)
+        val unknown: Boolean, val error: String? = null, val attempted: Boolean = false, val retirementEligible: Boolean = false)
     internal fun recoveredGenerationPresent(probe: () -> Unit = { Os.lstat("/proc/$helperPid"); Unit },
         readStart: () -> String = { procStart(helperPid) }): Boolean {
         try { probe() } catch (error: ErrnoException) {
@@ -802,7 +883,7 @@ internal object ClusterThemeLiveTest {
             val queryOk = operation == "query" || j.optInt("queryNative", Int.MIN_VALUE) == 0
             return Exchange(if (j.has("native")) j.getInt("native") else null,
                 if (queryOk) queries.lastOrNull { it.cmd == 1001 && it.sub == 4 } else null, responses, j.has("error"),
-                if (j.has("error")) j.getString("error").take(1024) else null, j.optBoolean("attempted"))
+                if (j.has("error")) j.getString("error").take(1024) else null, j.optBoolean("attempted"), j.optBoolean("retirementEligible"))
         } finally {
             if (!traceCaptured && transport == ClusterThemeTransport.ANDROID_IVI) {
                 val partial = synchronized(capture) { capture.toString("UTF-8") }

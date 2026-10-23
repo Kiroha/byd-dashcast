@@ -32,6 +32,12 @@ object ClusterThemeProtocol {
         fun selected(name: String): Boolean = ClusterThemePolicy.ownedName(name) && cmd == 1001 && sub == 4 && ints[0] == 1 &&
             ints[3] in 0..1 && strings[0] == UI_VERSION && strings[2] == ClusterThemePolicy.HOST_DIRECTORY + name
         fun summary(): String = "cmd=$cmd sub=$sub ints=$ints strings=$strings"
+        fun resourceFailureSummary(): String {
+            val labels = mapOf(0x232c to "NOT_RCC", 0x232d to "UI_VERSION_MISMATCH",
+                0x232e to "RESOURCE_REGISTER_FAILED", 0x2330 to "RESOURCE_IS_SAME", 0x2331 to "RESOURCE_NOT_FOUND")
+            return "ACK3 ints=$ints hex=${ints.map { "0x${it.toUInt().toString(16)}" }}" +
+                " codes=${ints.mapNotNull { labels[it] }} strings=${strings.map { it.replace(Regex("[\\p{Cntrl}]"), " ").take(64) }}"
+        }
     }
 
     /** Validate every offset before accessing an unsolicited OEM message. */

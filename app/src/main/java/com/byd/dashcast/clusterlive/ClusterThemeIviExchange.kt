@@ -10,7 +10,8 @@ internal object ClusterThemeIviExchange {
         fun verifyCarrier()
     }
     data class Receipt(val native: Int?, val queryNative: Int?, val responses: List<ByteArray>,
-        val postQueryResponses: List<ByteArray>, val attempted: Boolean, val error: String?, val trace: List<String>)
+        val postQueryResponses: List<ByteArray>, val attempted: Boolean, val error: String?, val trace: List<String>,
+        val retirementEligible: Boolean = false)
 
     fun execute(operation: String, name: String, transport: Transport, deadline: Long,
         clock: () -> Long, pause: () -> Unit, log: (String) -> Unit = {}): Receipt {
@@ -22,18 +23,23 @@ internal object ClusterThemeIviExchange {
         var mutationWindow = false
         var ended = false
         var invalid = ""
+        var resourceFailure = ""
         var native: Int? = null
         var queryNative: Int? = null
         var attempted = false
+        var retirementEligible = false
         var post = emptyList<ByteArray>()
         fun step(message: String) {
             val line = "elapsedMs=${clock()} ${message.take(256)}"
             if (trace.size < 24) trace.add(line)
             log(line)
         }
-        fun current() {
+        fun current(readAfterFailure: Boolean = false) {
             check(clock() < deadline && transport.alive()) { "Pinned Binder/deadline expired; no reconnect/replay" }
-            synchronized(lock) { check(invalid.isEmpty()) { invalid } }
+            synchronized(lock) {
+                check(invalid.isEmpty()) { invalid }
+                check(readAfterFailure || resourceFailure.isEmpty()) { resourceFailure }
+            }
         }
         fun collectFrom(floor: Int): List<ByteArray> = synchronized(lock) { events.drop(floor) }
         fun selection(bytes: List<ByteArray>): ClusterThemeProtocol.Response? {
@@ -41,15 +47,15 @@ internal object ClusterThemeIviExchange {
             check(choices.distinct().size <= 1) { "Conflicting broadcast selection responses; uncorrelated evidence" }
             return choices.lastOrNull()
         }
-        fun query(): Pair<ClusterThemeProtocol.Response, List<ByteArray>> {
-            current()
+        fun query(readAfterFailure: Boolean = false): Pair<ClusterThemeProtocol.Response, List<ByteArray>> {
+            current(readAfterFailure)
             val floor = synchronized(lock) { events.size }
             queryNative = transport.send(ClusterThemeProtocol.query())
             step("selection-query native=$queryNative callbackCorrelation=UNAVAILABLE")
             check(queryNative == 0) { "Selection query native=$queryNative" }
             val until = minOf(deadline, clock() + 800)
-            while (clock() < until) { current(); pause() }
-            current()
+            while (clock() < until) { current(readAfterFailure); pause() }
+            current(readAfterFailure)
             val bytes = collectFrom(floor)
             val selected = selection(bytes) ?: error("No supported fresh selection response")
             step("selection-received UI=${selected.strings[0]} source=${selected.ints[3]} path=${selected.strings[2]} resource=${selected.strings[4]}")
@@ -68,7 +74,8 @@ internal object ClusterThemeIviExchange {
                             val decoded = runCatching { ClusterThemeProtocol.decode(bytes) }.getOrNull()
                             if (decoded == null) invalid = "Malformed broadcast response"
                             else if (decoded.cmd == 1005 && decoded.sub == 0 && decoded.ints[0] == 3) {
-                                events.add(bytes.copyOf()); invalid = "OEM resource ACK3 failure; completion ambiguous"
+                                events.add(bytes.copyOf())
+                                if (resourceFailure.isEmpty()) resourceFailure = "OEM resource ${decoded.resourceFailureSummary()}; completion ambiguous"
                             }
                             else if (decoded.cmd == 1005 && decoded.sub == 0 && decoded.ints[0] == 2 &&
                                 (operation == "load" && (!mutationWindow || !ClusterThemePolicy.loadAckMatches(decoded, name)) ||
@@ -101,13 +108,29 @@ internal object ClusterThemeIviExchange {
                 check(native == 0) { "Mutation native=$native; remote completion UNKNOWN" }
                 val settle = minOf(deadline, clock() + if (operation == "load") 2500 else 500)
                 while (clock() < settle) {
-                    current()
+                    current(readAfterFailure = true)
+                    if (synchronized(lock) { resourceFailure.isNotEmpty() }) break
                     if (operation == "load" && collectFrom(mutationFloor).map { ClusterThemeProtocol.decode(it) }
                             .any { ClusterThemePolicy.loadAckMatches(it, name) }) break
                     pause()
                 }
-                val selected = query()
+                // ACK3 is a failed mutation, but the same pinned bridge can still report its selection.
+                val selected = query(readAfterFailure = true)
                 post = selected.second
+                if (synchronized(lock) { resourceFailure.isNotEmpty() }) {
+                    transport.verifyIdentity(); current(readAfterFailure = true)
+                    synchronized(lock) {
+                        accepting = false; ended = true
+                        check(clock() < deadline && transport.alive()) { "Pinned Binder/deadline expired before negative-response seal" }
+                        check(invalid.isEmpty()) { invalid }
+                        // Include any selection/ACK that arrived during the final identity check.
+                        val finalSelection = selection(events.drop(mutationFloor))
+                        retirementEligible = operation == "restore" && ClusterThemeRetirement.eligible(name, finalSelection,
+                            events.drop(mutationFloor).map { ClusterThemeProtocol.decode(it) }, native, attempted)
+                    }
+                    step("negative-response-validated retirementEligible=$retirementEligible nativeIdentity=UNKNOWN")
+                }
+                synchronized(lock) { check(resourceFailure.isEmpty()) { resourceFailure } }
                 check(if (operation == "load") selected.first.selected(name) else selected.first.isDefault()) {
                     "Post-query selection does not match requested target"
                 }
@@ -119,12 +142,17 @@ internal object ClusterThemeIviExchange {
             transport.verifyIdentity(); current()
             step("identity-rechecked callbackCorrelation=UNAVAILABLE pixels=UNKNOWN")
         } catch (error: Exception) {
-            failure = "${error.javaClass.simpleName}: ${error.message}".take(768)
+            val negative = synchronized(lock) { resourceFailure }
+            val message = "${error.javaClass.simpleName}: ${error.message}"
+            failure = (if (negative.isNotEmpty() && !message.contains(negative)) "$negative; $message" else message).take(768)
             step("exchange-failed attempted=$attempted $failure")
         } finally {
             synchronized(lock) { accepting = false; ended = true }
+            synchronized(lock) { events.map { ClusterThemeProtocol.decode(it) }
+                .filter { it.cmd == 1005 && it.sub == 0 && it.ints[0] == 3 }.take(4) }
+                .forEach { step("resource-response ${it.resourceFailureSummary()}") }
             transport.close()
         }
-        return Receipt(native, queryNative, synchronized(lock) { events.toList() }, post, attempted, failure, trace)
+        return Receipt(native, queryNative, synchronized(lock) { events.toList() }, post, attempted, failure, trace, retirementEligible)
     }
 }

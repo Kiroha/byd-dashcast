@@ -51,4 +51,21 @@ class ClusterThemeJournalTest {
         assertThrows(Exception::class.java) { ClusterThemeJournal.recover(journal().put("mutated", true)) }
         assertTrue(ClusterThemeJournal.recover(journal().put("mutated", true).put("createdDevice", 1).put("createdInode", 9)).mutated)
     }
+    @Test fun `schema4 requires explicit retirement metadata and cannot leak into legacy profiles`() {
+        val retirement = ClusterThemeRetirement(".dashcast-retired-" + "b".repeat(32), 1, 15, false)
+        val j = journal().put("schema", 4).put("mutated", true).put("createdDevice", 1).put("createdInode", 9)
+            .put("retirement", retirement.json())
+        assertEquals(retirement, ClusterThemeJournal.recover(j).retirement)
+        for (schema in listOf(1, 2, 3)) assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put("schema", schema)) }
+        for ((key, value) in listOf("directory" to "../foreign", "directory" to "user.rcc", "device" to 2,
+            "inode" to 9, "inode" to "15", "moved" to "false")) {
+            val bad = JSONObject(j.toString()).put("retirement", JSONObject(retirement.json().toString()).put(key, value))
+            assertThrows(Exception::class.java) { ClusterThemeJournal.recover(bad) }
+        }
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put("iviRecoverySettled", true)) }
+        val complete = JSONObject(j.toString()).put("retirement", retirement.copy(moved = true).json())
+            .put("iviRecoverySettled", true).put("state", "CLEAN")
+        assertTrue(ClusterThemeJournal.recover(complete).clean)
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(complete.put("iviRecoverySettled", false)) }
+    }
 }

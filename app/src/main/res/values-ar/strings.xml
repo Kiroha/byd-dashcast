@@ -759,14 +759,18 @@
     <string name="diag_cluster_rcc_marker_button">اختبار علامة RCC (موصى به)</string>
     <string name="diag_cluster_rcc_ivi_title">موارد RCC — اختبار IVI تجريبي</string>
     <string name="diag_cluster_rcc_ivi_help">ابدأ بالعلامة. للسمة، اختر Full والوضع الليلي يدوياً. لا يتغير أي وضع تلقائياً.</string>
-    <string name="diag_cluster_rcc_ivi_identity">يلزم تأكيد البرنامج 13.1.33.2602030.1 وAndroid 10 واكتشاف DiLink 3 مؤكداً وdaemon 36. تم التحقق من جسر Java المثبت؛ هوية لوحة العدادات الأصلية غير معروفة.</string>
+    <string name="diag_cluster_rcc_ivi_identity">يلزم تأكيد البرنامج 13.1.33.2602030.1 وAndroid 10 واكتشاف DiLink 3 مؤكداً وdaemon 37. تم التحقق من جسر Java المثبت؛ هوية لوحة العدادات الأصلية غير معروفة.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">يعيد تحميل موارد BYD بعلامة ثابتة مع الاحتفاظ بكود العدادات والتحذيرات. يجب التحقق من العرض والاستعادة في السيارة. أبقِ هذه الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. أكد الاستعادة بصرياً؛ إعادة التشغيل لا تضمنها.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">اختر Full والوضع الليلي قبل الاختبار. يحتفظ RCC بكود العدادات والتحذيرات ويغير الخلفية. تحقق من الوضوح والاستعادة في السيارة. أبقِ الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. ثم أكد ما تراه. إعادة التشغيل لا تضمن الاستعادة.</string>
     <string name="diag_cluster_rcc_ivi_send">إرسال اختبار RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">يطلب موارد RCC الافتراضية دون تغيير وضع العرض. يتم التحقق من رد OEM والاستعادة المرئية بشكل منفصل؛ ثم أكد ما تراه. لا إعادة تشغيل أو اختبار جديد تلقائي.</string>
-    <string name="diag_cluster_rcc_debt">لا يزال اختبار RCC مفتوحاً. استخدم «استعادة موارد RCC الخاصة بـBYD»، ثم أجب عن النافذة بعد فحص لوحة العدادات.</string>
+    <string name="diag_cluster_rcc_debt">لا يزال اختبار RCC مفتوحاً. استخدم «استعادة موارد RCC الخاصة بـBYD / التحقق من عودة BYD»، ثم أجب عن النافذة بعد فحص لوحة العدادات.</string>
     <string name="diag_cluster_rcc_ivi_platform">رُفض الاختبار: يلزم Android 10 واكتشاف DiLink 3 مؤكداً. لم يُرسل أي RCC.</string>
     <string name="diag_cluster_page_title">لوحة العدادات: الإسقاط وRCC</string>
     <string name="diag_cluster_page_description">إسقاط BYD بالشريطين وعلامة وسمة RCC</string>
     <string name="diag_cluster_native_rcc_blocked">اختبار RCC يمنع إسقاط BYD</string>
+    <string name="diag_cluster_rcc_retire_button">تهيئة عودة BYD بعد خطأ RCC</string>
+    <string name="diag_cluster_rcc_retire_confirm">ينقل ملف RCC التجريبي الخاص بنا فقط إلى مجلد جديد ويحافظ على بايتاته. لا يرسل تحميلًا أو إعادة تشغيل OEM. قد تبقى الصورة كما هي حتى تعيد BYD تهيئة لوحة العدادات فعليًا. إعادة توصيل daemon Android لا تكفي. بعد ذلك اضغط «التحقق من عودة BYD» وأكد الشاشة الأصلية. تبقى الاختبارات الأخرى محظورة حتى ذلك الحين.</string>
+    <string name="diag_cluster_rcc_retired_waiting">تمت تهيئة عودة BYD — بانتظار لوحة العدادات. أعد تهيئة لوحة OEM يدويًا، ثم اضغط «التحقق من عودة BYD». التحقق يقرأ الاختيار وملفنا المحفوظ فقط. إعادة توصيل Android أو daemon لا تثبت إعادة تشغيل اللوحة. ثم أكد بصريًا عدادات BYD ومصابيح التحذير.</string>
+    <string name="diag_cluster_rcc_verify_return">التحقق من عودة BYD</string>
 </resources>

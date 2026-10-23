@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.proxy.ClusterThemeSession
 import com.byd.dashcast.R
 import com.byd.dashcast.report.BugWizardActivity
 import org.robolectric.Shadows.shadowOf
@@ -269,7 +270,7 @@ class ClusterThemeLiveControlsTest {
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "36")
+        }); vf.set(null, "37")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
@@ -292,4 +293,48 @@ class ClusterThemeLiveControlsTest {
         } finally { controls.close(); activity.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
     }
 
+    @Test fun `incomplete retirement has no prepared claim and completed retirement names the visible verification button`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        bf.set(null, Binder()); vf.set(null, "37")
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { false }, {}, { false }, {})
+        val activeField = ClusterThemeLiveControls::class.java.getDeclaredField("active").apply { isAccessible = true }
+        activeField.setBoolean(controls, true)
+        val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("render", String::class.java,
+            Long::class.javaPrimitiveType, ClusterThemeSession::class.java, Long::class.javaPrimitiveType).apply { isAccessible = true }
+        val session = ClusterThemeSession.pin(activity.get())
+        val state = JSONObject().put("state", "QUARANTINE").put("detail", "rename failed; retained debt")
+            .put("filename", "Di3F_DynastyOceanTranslate_V0001_TranslateDashCast_" + "a".repeat(32) + ".rcc")
+            .put("daemonUid", 2000).put("defaultQueried", false).put("markerObservedByUser", false).put("oemObservedByUser", false)
+            .put("transport", "android-ivi").put("rccDebt", true).put("retirement", JSONObject().put("moved", false))
+        try {
+            render.invoke(controls, state.toString(), 0L, session, 0L); ShadowLooper.idleMainLooper()
+            assertEquals(activity.get().getString(R.string.diag_cluster_rcc_restore), views(header).filterIsInstance<Button>().single().text)
+            val prepare = views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(R.string.diag_cluster_rcc_retire_button) }
+            assertEquals(View.VISIBLE, prepare.visibility)
+            assertFalse(views(header).filterIsInstance<TextView>().any { it.text.toString().contains(activity.get().getString(R.string.diag_cluster_rcc_retired_waiting)) })
+            prepare.performClick()
+            ShadowLooper.idleMainLooper()
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            assertTrue(views(dialog.window!!.decorView as ViewGroup).filterIsInstance<TextView>().any {
+                it.text == activity.get().getString(R.string.diag_cluster_rcc_retire_confirm)
+            })
+            dialog.dismiss()
+            state.getJSONObject("retirement").put("moved", true)
+            state.put("state", "WAITING_OEM_REINITIALIZATION").put("detail", "File retained")
+            render.invoke(controls, state.toString(), 0L, session, 0L); ShadowLooper.idleMainLooper()
+            assertEquals(activity.get().getString(R.string.diag_cluster_rcc_verify_return), views(header).filterIsInstance<Button>().single().text)
+            assertEquals(View.GONE, prepare.visibility)
+            assertTrue(views(header).filterIsInstance<TextView>().any { it.text.toString().contains(activity.get().getString(R.string.diag_cluster_rcc_retired_waiting)) })
+            assertTrue(activity.get().getString(R.string.diag_cluster_rcc_debt).contains(activity.get().getString(R.string.diag_cluster_rcc_verify_return)))
+            state.put("state", "CLEAN").put("rccDebt", false)
+            render.invoke(controls, state.toString(), 0L, session, 0L); ShadowLooper.idleMainLooper()
+            assertEquals(activity.get().getString(R.string.diag_cluster_rcc_restore), views(header).filterIsInstance<Button>().single().text)
+            assertFalse(views(header).filterIsInstance<TextView>().any { it.text.toString().contains(activity.get().getString(R.string.diag_cluster_rcc_retired_waiting)) })
+        } finally { controls.close(); activity.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
+    }
 }

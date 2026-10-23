@@ -7,7 +7,7 @@ internal object ClusterThemeJournal {
     data class Recovery(val transport: ClusterThemeTransport, val variant: ClusterThemeVariant,
         val clean: Boolean, val filename: String, val root: String, val renderer: String, val identity: String,
         val mutated: Boolean, val helperPid: Int, val helperStart: String, val helperToken: String,
-        val device: Long, val inode: Long, val iviRecoverySettled: Boolean)
+        val device: Long, val inode: Long, val iviRecoverySettled: Boolean, val retirement: ClusterThemeRetirement?)
 
     fun recover(j: JSONObject): Recovery {
         val schema = j.get("schema")
@@ -39,7 +39,15 @@ internal object ClusterThemeJournal {
         require(!recoverySettled || transport == ClusterThemeTransport.ANDROID_IVI && j.getBoolean("mutated")) {
             "Recovery proof requires an admitted Android IVI load"
         }
+        val retirement = if ((schema as Number).toLong() == 4L) {
+            require(transport == ClusterThemeTransport.ANDROID_IVI && j.getBoolean("mutated"))
+            ClusterThemeRetirement.parse(j.getJSONObject("retirement")).also {
+                require(!recoverySettled && !clean || it.moved) { "Recovery requires completed retirement" }
+                require(it.device == device && it.inode != inode) { "Retirement must remain on the carrier filesystem" }
+                require(!clean || recoverySettled) { "Retired CLEAN journal requires recovery proof" }
+            }
+        } else { require(!j.has("retirement")); null }
         return Recovery(transport, variant, clean, filename, root, j.optString("renderer"), identity,
-            j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled)
+            j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled, retirement)
     }
 }

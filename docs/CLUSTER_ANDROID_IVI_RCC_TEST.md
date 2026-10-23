@@ -12,6 +12,103 @@ transport and its schema 1/2 recovery remain separate; no failed strict check
 silently selects a different transport. Schema 3 requires the exact transport,
 compiled variant and carrier hash. Unknown/corrupt journals block admission.
 
+## Build 704: negative ACK diagnosis and explicit recovery preparation
+
+**1.9.65-beta / build 704 requires ProxyDaemon 37** for Android-IVI operations.
+The 16:45 reports show native result zero followed by ACK3, with the owned
+persistent selection still active. Build 703 aborted before its final query and
+exported only a generic failure, so **the runtime numeric code is unknown in
+those reports**. It is not evidence that every ACK3 is `RESOURCE_IS_SAME`.
+
+ACK3 now retains all five decimal/hex integers, bounded sanitized strings and
+known error names. One bounded read-only postquery uses the same pinned bridge;
+ACK3 remains a failed mutation even if that query reports default. There is no
+retry, second load, reconnect or debt clearing. Eligibility is a separate helper
+receipt, sealed only after final Java identity/Binder/deadline checks, callback
+validation and selection-conflict checks. A malformed, foreign-UID, conflicting,
+expired or dead-identity exchange cannot authorize preparation.
+
+For the existing blocked session, with the vehicle parked:
+
+1. Install build 704 and explicitly reconnect the daemon (protocol 37).
+2. Open **Diag → Cluster : projection et RCC** and press
+   **Restaurer les ressources RCC BYD**. This obtains a fresh decoded result.
+3. Only if the OEM actually reports clean `RESOURCE_IS_SAME` and the exact own
+   persisted path, **Préparer le retour BYD après erreur RCC** appears for two
+   minutes. Read its popup and confirm parked/firmware assertions.
+4. Preparation moves **only the recorded DashCast carrier** into a fresh
+   `.dashcast-retired-<nonce>/` directory beside it. The original filename,
+   variant, bytes, SHA and inode remain recorded. This is **not restoration**:
+   active graphics can stay unchanged. The file is preserved permanently.
+5. Manually reinitialize the OEM cluster. No OEM restart is sent by this app;
+   reconnecting Android or the daemon does not establish native reinitialization.
+   No particular vehicle action or restart duration is proven by static analysis.
+6. Press the fixed header action, now **Vérifier le retour BYD**. For a retired
+   session it only reads the OEM selection and verifies both absent original
+   lookup name and preserved archive identity/hash. A nondefault response keeps
+   the session pending. No load/default request is sent in this branch.
+7. Only after a fresh default response, answer the automatic OEM observation popup
+   from the physical cluster. A new matching positive answer, verified preserved
+   file and durable CLEAN journal release the original nonce's operational debt.
+   Export the normal diagnostic report after each result.
+
+The native **Tester la projection BYD (avec bandeaux)** control is separate and
+remains blocked while RCC recovery is unresolved. Preparation is explicit and
+never started by a watchdog, app startup, daemon restart or popup answer.
+
+The manual preparation requires a fresh validated negative receipt with exact
+ACK integers **[3, 0, 0x2330, 0, 0]** (error in `ints[2]`, not `ints[1]`),
+source **0**, the exact UI contract and own persistent host path. A fresh own-path
+query repeats that source/path check before a possible rename, including resumed
+intent with an original file still present. Foreign selections are never replaced.
+
+Schema **4** is separate from schema 3 and requires strict retirement directory
+metadata, same-filesystem device, distinct directory inode, moved state and the
+original carrier generation/hash. Schema 1/2 never becomes an IVI lease; schema 3
+cannot carry retirement metadata. Fresh unique directory creation refuses an
+existing name; parents/directories are pinned with nonblocking, no-follow FDs.
+Directory fsync support is checked before changing a carrier. Every possible
+rename is preceded by a successful durable intent checkpoint, then fresh source,
+target-absence and reservation checks. Post-rename identity/hash/absence and
+both parent fsyncs precede the completion checkpoint. Failed intent, rename,
+fsync or completion retains debt. An explicit retry can reconcile a moved inode
+without moving twice; startup performs no replay. Incomplete intent cannot use
+the verification route to mint recovery proof.
+
+Android's guarded rename is **not an atomic source-generation comparison or
+no-overwrite guarantee against another process racing these checks**. Directory
+substitution, symlinks, changed inode/hash, reappearing original, unsupported
+fsync or unreadable state fail closed; simultaneous writers remain a material
+shared-storage limitation. This diagnostic has no new native filesystem helper.
+The preserved RCC is never automatically moved back, deleted or reloaded.
+
+REA firmware **13.1.33.2602030.1** supports this conditional preparation:
+
+- RCC handler mode1 can report SAME when the transient IVI field is empty while
+  XML-backed native selection remains custom. `sendIviSetRccRes` DWARF signature
+  and its handler caller establish the exact error slot
+  (`ev_35665c433f9da36aa9d540692aa5df51bde421280252531360fb64867281a21a`).
+- `updateTranslateRccFromXml` clears config key 0x38 and publishes the default
+  translation when the selected lookup file is absent
+  (`ev_7118ee57e6543755206b6dc0cd793050828313ddb2229173714e6d211aee6fe2`).
+  `updateThemeRcc` invokes it before early returns
+  (`ev_5d82f7b83d0b07e0ca7acf52fbbff870e4bc16ca508273cb12fe1254193717ee`);
+  native self-study completion invokes that update
+  (`ev_df74c7983f7115f617e3fa9ebcfdb4f49010fd5741fbef584135339c347c3bbb`).
+- Exact QtCore SHA `3b9abb05e6800fc3785f5f2b08d64afbaf0fae197aa700c6b370e806647fbe46`
+  retains a private mapping or complete heap data and closes the file after
+  registration (`ev_4db25f16b278fc0eb4ff383e138b6510df96062676bddd5fc3cd60208d3ef9ff`).
+  Buffer roots retain pointers (`ev_18384f0ff558894ce7edcae4e40c15992b69b56e2ca44c21fb9a5bb55cb30ace`);
+  destruction frees/unmaps (`ev_6db2d5e1e51c0a5d7a662c8246caa0455fb69fe3df0bed1396e1ea3ea6da1d59`),
+  and unregister matches retained names/roots without reopening the original
+  (`ev_a7f7c3ab8f252624237a7e7708e7e034b19698eb813213f76aa8f8534765d391`).
+
+These are static shipped-artifact proofs. Runtime native identity, actual OEM
+initialization, graphics, telltales and physical recovery remain unverified.
+Reports include schema, exact carrier/archive identity, eligibility, durable
+phases, decoded errors, query and observation outcomes without raw-payload
+exports or extra IPC during report generation.
+
 ## Build 703 regression correction
 
 **1.9.64-beta / build 703 requires ProxyDaemon 36**, using the same operations.
@@ -92,7 +189,7 @@ These are static filename/dispatch proofs, not evidence of runtime loading.
 ## Closed test and recovery
 
 The app requires parked/firmware assertions, API 29, positive DL3 detection,
-explicitly connected protocol 36 and an idle projection/ADAS reservation. It
+explicitly connected protocol 37 and an idle projection/ADAS reservation. It
 durably writes a negative-only app RCC debt before IPC. The daemon checks mutual
 exclusion with native tests, queries, RCC recovery and production mode commands.
 No generic command fallback, reconnect, 16/18, CAN frame or automatic test load

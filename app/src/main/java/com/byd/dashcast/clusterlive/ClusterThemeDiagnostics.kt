@@ -19,7 +19,7 @@ internal object ClusterThemeDiagnostics {
     private val stringFields = mapOf("state" to 64, "detail" to 768, "error" to 384,
         "filename" to 160, "renderer" to 32, "rendererIdentity" to 256, "connectionToken" to 96,
         "operation" to 64, "kind" to 16, "rawSha256" to 64, "variant" to 64, "carrierSha256" to 64, "phase" to 64,
-        "transport" to 32, "nativeIdentity" to 32, "rccTrace" to 8192,
+        "transport" to 32, "nativeIdentity" to 32, "rccTrace" to 8192, "retirement" to 512, "journalSchema" to 8, "carrierIdentity" to 128,
         "oemQueryState" to 32, "oemQueryPhase" to 64, "oemQueryDetail" to 768,
         "oemQuerySelection" to 1536, "oemQueryNativeIdentity" to 16,
         "nativeModeState" to 32, "nativeModeNonce" to 32, "nativeModeDetail" to 768,
@@ -29,7 +29,7 @@ internal object ClusterThemeDiagnostics {
         "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs")
     private val booleanFields = listOf("mutated", "uncertain", "iviRecoverySettled", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
-        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser")
+        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
     private var cacheIssue = ""
@@ -45,9 +45,10 @@ internal object ClusterThemeDiagnostics {
             val reply = JSONObject(text)
             val event = JSONObject().put("kind", "STATUS").put("operation", operation)
                 .put("connectionToken", connectionToken)
-            for (field in listOf("state", "detail", "error", "filename", "renderer", "variant", "carrierSha256", "phase", "transport", "nativeIdentity"))
+            for (field in listOf("state", "detail", "error", "filename", "renderer", "variant", "carrierSha256", "phase", "transport", "nativeIdentity", "journalSchema", "carrierIdentity"))
                 if (reply.has(field)) event.put(field, reply.get(field))
             if (reply.has("trace")) event.put("rccTrace", reply.getString("trace"))
+            reply.optJSONObject("retirement")?.let { event.put("retirement", it.toString()) }
             if (reply.has("identity")) event.put("rendererIdentity", reply.get("identity"))
             if (reply.has("daemonUid")) event.put("daemonUid", reply.get("daemonUid"))
             for (field in booleanFields) if (reply.has(field)) event.put(field, reply.get(field))

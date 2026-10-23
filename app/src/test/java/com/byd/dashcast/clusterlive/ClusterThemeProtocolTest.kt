@@ -57,6 +57,14 @@ class ClusterThemeProtocolTest {
         }
         assertTrue(ClusterThemePolicy.originalHashes.containsKey("/system/lib64/libwindowsurface_android.so"))
     }
+    @Test fun `negative resource diagnostic bounds strings and preserves unknown signed codes`() {
+        val response = ClusterThemeProtocol.Response(1005, 0, listOf(3, -9, 0x2330, 0, 0),
+            List(5) { "\n" + "x".repeat(4096) })
+        val summary = response.resourceFailureSummary()
+        assertTrue(summary.contains("-9")); assertTrue(summary.contains("0xfffffff7"))
+        assertTrue(summary.contains("0x2330")); assertTrue(summary.contains("RESOURCE_IS_SAME"))
+        assertFalse(summary.contains('\n')); assertTrue(summary.length < 768)
+    }
     @Test fun `malformed unsolicited FlatBuffers fail closed`() {
         for (bad in listOf(ByteArray(7), ByteArray(70000), ByteArray(12) { -1 }, ByteArray(16)))
             assertThrows(IllegalArgumentException::class.java) { ClusterThemeProtocol.decode(bad) }
