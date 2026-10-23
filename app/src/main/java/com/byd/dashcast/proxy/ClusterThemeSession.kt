@@ -39,7 +39,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun startIvi(source: ParcelFileDescriptor, variant: ClusterThemeVariant, validity: IBinder,
         beforeTransaction: () -> Unit): String {
-        check(ProxyClient.supportsProtocol(35)) { "Connected ProxyDaemon protocol 35 required for Android IVI RCC loading; no renderer fallback" }
+        check(ProxyClient.supportsProtocol(36)) { "Connected ProxyDaemon protocol 36 required for Android IVI RCC loading; no renderer fallback" }
         val nonce = java.util.UUID.randomUUID().toString().replace("-", "")
         val receipt = call(if (variant == ClusterThemeVariant.MARKER) 11 else 12, source, {
             beforeTransaction()
@@ -51,7 +51,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return receipt
     }
     fun restoreIvi(validity: IBinder): String {
-        check(ProxyClient.supportsProtocol(35)) { "Connected ProxyDaemon protocol 35 required for IVI recovery" }
+        check(ProxyClient.supportsProtocol(36)) { "Connected ProxyDaemon protocol 36 required for IVI recovery" }
         val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) }
             ?: filename.takeIf { com.byd.dashcast.clusterlive.ClusterThemePolicy.ownedName(it) }
                 ?.removePrefix(com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX)?.removeSuffix(".rcc")

@@ -716,11 +716,11 @@
     <string name="diag_send_report">Diagnosebericht senden</string>
     <string name="diag_send_report_help">Enthält Cluster-Ergebnisse und Protokoll. Über den eingerichteten Kanal senden oder eine Datei teilen.</string>
 
-    <string name="diag_cluster_native_section">Nativer BYD-Vollbildmodus</string>
+    <string name="diag_cluster_native_section">BYD-Projektion (mit Balken)</string>
     <string name="diag_cluster_rcc_section">RCC-Ressourcen</string>
-    <string name="diag_cluster_native_full">Nativen BYD-Vollbildmodus testen</string>
+    <string name="diag_cluster_native_full">BYD-Projektion testen (mit Balken)</string>
     <string name="diag_cluster_native_normal">BYD-Rückkehr anfordern</string>
-    <string name="diag_cluster_native_help">Fordert das native BYD-Vollbild mit Kontrollleuchten an. Kein RCC-Design wird geladen. Einmal Befehl 16; der Rückgabewert beweist weder Qt-Zustellung noch Darstellung. Rückkehr fordert Normalmodus (18) an, nicht den exakten vorherigen Modus.</string>
+    <string name="diag_cluster_native_help">Fordert die native BYD-Projektion mit oberem und unterem Balken an. Kein RCC-Design wird geladen. Ein Befehl 16; die Antwort bestätigt keine Darstellung. Rückkehr fordert den normalen BYD-Modus an (18).</string>
     <string name="diag_cluster_native_idle">Physischer Clusterzustand unbekannt. Ergebnisse stehen im Diagnosebericht.</string>
     <string name="diag_cluster_native_busy">Projektion, ADAS oder Diagnose aktiv: laufende Anfrage zuerst beenden. Rückkehr bleibt verfügbar.</string>
     <string name="diag_cluster_native_parked">Ich bestätige, dass das Fahrzeug an einem geeigneten Testort geparkt ist.</string>
@@ -754,11 +754,14 @@
     <string name="diag_cluster_rcc_marker_button">RCC-Marker testen (empfohlen)</string>
     <string name="diag_cluster_rcc_ivi_title">RCC-Ressourcen — experimenteller IVI-Test</string>
     <string name="diag_cluster_rcc_ivi_help">Beginne mit dem Marker. Für das Design Full und Nacht manuell wählen. Kein Modus wird automatisch geändert.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Bestätigte Firmware 13.1.33.2602030.1, Android 10, eindeutig erkanntes DiLink 3 und Daemon 35 erforderlich. Installierte Java-Brücke geprüft; native Cluster-Identität unbekannt.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Bestätigte Firmware 13.1.33.2602030.1, Android 10, eindeutig erkanntes DiLink 3 und Daemon 36 erforderlich. Installierte Java-Brücke geprüft; native Cluster-Identität unbekannt.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Die BYD-Ressourcen werden mit einem passiven Marker neu geladen. Instrumenten- und Warncode bleibt erhalten. Anzeige und Wiederherstellung müssen am Fahrzeug geprüft werden. Diesen Bildschirm verfügbar halten. Nach 30 Sekunden werden Standardressourcen angefordert, sofern die Sitzung verfügbar bleibt. Wiederherstellung visuell bestätigen; Neustart garantiert sie nicht.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Vor dem Test Full und Nacht wählen. Das RCC behält Instrumenten- und Warncode und ändert den Hintergrund. Lesbarkeit und Wiederherstellung am Fahrzeug prüfen. Bildschirm verfügbar halten. Nach 30 Sekunden werden bei verfügbarer Sitzung Standardressourcen angefordert. Danach die Anzeige bestätigen. Neustart garantiert keine Wiederherstellung.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC-Test senden</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Fordert die Standard-RCC-Ressourcen an und ändert den Projektionsmodus nicht. OEM-Antwort und sichtbare Wiederherstellung werden getrennt geprüft. Danach die Anzeige bestätigen. Kein Neustart oder automatischer neuer Test.</string>
     <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. „BYD-RCC-Ressourcen wiederherstellen“ verwenden und nach Sichtprüfung des Clusters das Popup beantworten.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test verweigert: Android 10 und eindeutige DiLink-3-Erkennung erforderlich. Kein RCC gesendet.</string>
+    <string name="diag_cluster_page_title">Kombiinstrument: Projektion und RCC</string>
+    <string name="diag_cluster_page_description">BYD-Projektion mit Balken, RCC-Markierung und Design</string>
+    <string name="diag_cluster_native_rcc_blocked">RCC-Test blockiert die BYD-Projektion</string>
 </resources>

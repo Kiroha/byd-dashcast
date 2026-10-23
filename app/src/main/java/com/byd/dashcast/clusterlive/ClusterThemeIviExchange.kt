@@ -90,7 +90,7 @@ internal object ClusterThemeIviExchange {
                 check(if (operation == "load") baseline.first.isDefault()
                     else baseline.first.isDefault() || baseline.first.selected(name)) { "Baseline is custom/incompatible; no overwrite" }
                 transport.verifyIdentity(); current()
-                if (operation == "load") transport.verifyCarrier()
+                transport.verifyCarrier()
                 current()
                 // The daemon durably recorded its debt/helper identity before this helper received GO.
                 val mutationFloor = synchronized(lock) { mutationWindow = true; events.size }

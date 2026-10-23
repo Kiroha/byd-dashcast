@@ -783,11 +783,11 @@
     <string name="diag_send_report">Envoyer un rapport de diagnostic</string>
     <string name="diag_send_report_help">Inclut les résultats cluster et le journal. Envoi via le canal configuré ou partage d’un fichier.</string>
 
-    <string name="diag_cluster_native_section">Mode Full natif BYD</string>
+    <string name="diag_cluster_native_section">Projection BYD (avec bandeaux)</string>
     <string name="diag_cluster_rcc_section">Ressources RCC</string>
-    <string name="diag_cluster_native_full">Tester le mode Full natif BYD</string>
+    <string name="diag_cluster_native_full">Tester la projection BYD (avec bandeaux)</string>
     <string name="diag_cluster_native_normal">Demander le retour BYD</string>
-    <string name="diag_cluster_native_help">Demande le mode Full prévu par BYD, avec ses voyants. Aucun thème RCC chargé. Une seule commande 16 ; le retour natif ne prouve ni réception Qt ni affichage. Le bouton de retour demande le mode normal (18), sans restaurer précisément le mode précédent.</string>
+    <string name="diag_cluster_native_help">Ce bouton demande la projection native BYD et conserve les bandeaux supérieur et inférieur. Il ne charge aucun thème RCC. Une seule commande 16 ; sa réponse ne prouve pas l’affichage. Le retour BYD demande le mode normal (18).</string>
     <string name="diag_cluster_native_idle">État physique du cluster inconnu. Les résultats sont joints au rapport de diagnostic.</string>
     <string name="diag_cluster_native_busy">Projection, ADAS ou diagnostic actif : terminer la demande en cours avant ce test. Le retour reste disponible.</string>
     <string name="diag_cluster_native_parked">Je confirme que le véhicule est stationné dans un lieu adapté au test.</string>
@@ -821,11 +821,14 @@
     <string name="diag_cluster_rcc_marker_button">Tester le marqueur RCC (recommandé)</string>
     <string name="diag_cluster_rcc_ivi_title">Ressources RCC — essai IVI expérimental</string>
     <string name="diag_cluster_rcc_ivi_help">Commence par le marqueur. Pour le thème, sélectionne Full et nuit manuellement. Aucun mode ne change automatiquement.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Firmware 13.1.33.2602030.1 déclaré, Android 10, DiLink 3 détecté et daemon 35 requis. Le service Java installé est vérifié ; identité du cluster natif inconnue.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Firmware 13.1.33.2602030.1 déclaré, Android 10, DiLink 3 détecté et daemon 36 requis. Le service Java installé est vérifié ; identité du cluster natif inconnue.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Ce test recharge réellement les ressources BYD avec un marqueur passif en conservant le code des instruments et voyants. Leur affichage et la récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; sa réussite doit être confirmée visuellement. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sélectionne Full et nuit avant cet essai. Le RCC conserve le code des instruments et voyants et change leur fond. Lisibilité et récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; confirme ensuite ce que tu vois. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_send">Envoyer le test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Ce bouton demande le retour aux ressources RCC par défaut. Il ne change pas le mode de projection. La réponse OEM et la restauration visible sont vérifiées séparément ; confirme ensuite ce que tu vois. Aucun redémarrage ni nouvel essai automatique.</string>
     <string name="diag_cluster_rcc_debt">Un essai RCC reste à clôturer. Utilise « Restaurer les ressources RCC BYD », puis réponds à la popup après avoir inspecté le cluster.</string>
     <string name="diag_cluster_rcc_ivi_platform">Essai refusé : Android 10 et détection positive de DiLink 3 requis. Aucun RCC envoyé.</string>
+    <string name="diag_cluster_page_title">Cluster : projection et RCC</string>
+    <string name="diag_cluster_page_description">Projection BYD avec bandeaux, marqueur et thème RCC</string>
+    <string name="diag_cluster_native_rcc_blocked">Projection BYD bloquée par un essai RCC</string>
 </resources>

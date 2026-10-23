@@ -716,11 +716,11 @@
     <string name="diag_send_report">Tanılama raporu gönder</string>
     <string name="diag_send_report_help">Gösterge paneli sonuçlarını ve günlüğü içerir. Yapılandırılan kanaldan gönderin veya dosya paylaşın.</string>
 
-    <string name="diag_cluster_native_section">BYD yerel Full modu</string>
+    <string name="diag_cluster_native_section">BYD yansıtması (şeritlerle)</string>
     <string name="diag_cluster_rcc_section">RCC kaynakları</string>
-    <string name="diag_cluster_native_full">BYD yerel Full modunu dene</string>
+    <string name="diag_cluster_native_full">BYD yansıtmasını dene (şeritlerle)</string>
     <string name="diag_cluster_native_normal">BYD görünümüne dönüş iste</string>
-    <string name="diag_cluster_native_help">BYD yerel Full görünümünü uyarı göstergeleriyle ister. RCC teması yüklenmez. Tek bir 16 komutu; dönüş değeri Qt teslimini veya görüntüyü kanıtlamaz. Dönüş, önceki modu tam geri yüklemeden normal modu (18) ister.</string>
+    <string name="diag_cluster_native_help">Üst ve alt şeritlerle yerel BYD yansıtmasını ister. RCC teması yüklemez. Tek komut 16; yanıt görüntüyü doğrulamaz. Dönüş normal BYD modunu ister (18).</string>
     <string name="diag_cluster_native_idle">Fiziksel gösterge durumu bilinmiyor. Sonuçlar tanılama raporuna eklenir.</string>
     <string name="diag_cluster_native_busy">Yansıtma, ADAS veya tanılama etkin: testten önce mevcut isteği bitirin. Dönüş kullanılabilir.</string>
     <string name="diag_cluster_native_parked">Aracın test için uygun bir yerde park edildiğini onaylıyorum.</string>
@@ -754,11 +754,14 @@
     <string name="diag_cluster_rcc_marker_button">RCC işaretini test et (önerilen)</string>
     <string name="diag_cluster_rcc_ivi_title">RCC kaynakları — deneysel IVI testi</string>
     <string name="diag_cluster_rcc_ivi_help">İşaretle başlayın. Tema için Full ve geceyi elle seçin. Hiçbir mod otomatik değişmez.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Beyan edilen 13.1.33.2602030.1 yazılımı, Android 10, kesin DiLink 3 algılaması ve daemon 35 gerekir. Kurulu Java köprüsü doğrulandı; yerel gösterge kimliği bilinmiyor.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Beyan edilen 13.1.33.2602030.1 yazılımı, Android 10, kesin DiLink 3 algılaması ve daemon 36 gerekir. Kurulu Java köprüsü doğrulandı; yerel gösterge kimliği bilinmiyor.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Gösterge ve uyarı kodunu koruyarak BYD kaynaklarını pasif bir işaretle yeniden yükler. Görüntü ve geri dönüş araçta doğrulanmalıdır. Bu ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Geri dönüşü gözle onaylayın; yeniden başlatma bunu garanti etmez.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Testten önce Full ve geceyi seçin. RCC gösterge ve uyarı kodunu korur, arka planı değiştirir. Okunabilirlik ve geri dönüşü araçta doğrulayın. Ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Ardından gördüğünüzü onaylayın. Yeniden başlatma geri dönüşü garanti etmez.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC testini gönder</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Projeksiyon modunu değiştirmeden varsayılan RCC kaynaklarını ister. OEM yanıtı ve görünür geri dönüş ayrı doğrulanır; ardından gördüğünüzü onaylayın. Yeniden başlatma veya otomatik yeni test yok.</string>
     <string name="diag_cluster_rcc_debt">Bir RCC testi hâlâ açık. “BYD RCC kaynaklarını geri yükle” seçeneğini kullanın, göstergeyi inceleyip açılan pencereyi yanıtlayın.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test reddedildi: Android 10 ve kesin DiLink 3 algılaması gerekir. RCC gönderilmedi.</string>
+    <string name="diag_cluster_page_title">Gösterge: yansıtma ve RCC</string>
+    <string name="diag_cluster_page_description">Şeritli BYD yansıtması, RCC işareti ve teması</string>
+    <string name="diag_cluster_native_rcc_blocked">RCC testi BYD yansıtmasını engelliyor</string>
 </resources>

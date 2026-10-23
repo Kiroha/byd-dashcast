@@ -27,7 +27,7 @@ internal object ClusterThemeDiagnostics {
         "nativeModeTrace" to 6144, "nativeModeFullReceipt" to 1536, "nativeModeNormalReceipt" to 1536)
     private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs",
         "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs")
-    private val booleanFields = listOf("mutated", "uncertain", "defaultQueried", "carrierRemoved",
+    private val booleanFields = listOf("mutated", "uncertain", "iviRecoverySettled", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
         "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser")
     private var store: Context? = null

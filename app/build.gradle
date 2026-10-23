@@ -2099,8 +2099,11 @@ android {
         // 702 = 1.9.63-beta: explicit Android IVI RCC transport with installed-Java identity,
         // user-0 anchored staging, separate durable recovery admission and bounded report traces.
         // Protocol 35; no host renderer identity or physical compatibility claim.
-        versionCode 702
-        versionName "1.9.63-beta"
+        // 703 = 1.9.64-beta: correct independent native-source/IVI-selection fields and
+        // recover existing RCC debt with ordered default proof, fresh OEM observation and owned cleanup.
+        // Protocol 36; translated cluster/projection names and visible RCC refusal guidance.
+        versionCode 703
+        versionName "1.9.64-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

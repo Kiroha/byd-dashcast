@@ -30,7 +30,7 @@ class ClusterThemeIviExchangeTest {
         var checks = 0
         var baseline = selection()
         var queryCount = 0
-        var afterLoad = selection(0, ClusterThemePolicy.HOST_DIRECTORY + name)
+        var afterLoad = selection(1, ClusterThemePolicy.HOST_DIRECTORY + name)
         var emitAck = true
         var ackKind = 2
         var ackPath = ClusterThemePolicy.HOST_DIRECTORY + name
@@ -120,12 +120,18 @@ class ClusterThemeIviExchangeTest {
         f.receiver!!(1000, selection()); assertEquals(1, result.responses.size)
     }
     @Test fun `restore uses mode one then fresh default query`() {
-        val f = Fixture(); f.baseline = selection(0, ClusterThemePolicy.HOST_DIRECTORY + name)
+        val f = Fixture(); f.baseline = selection(1, ClusterThemePolicy.HOST_DIRECTORY + name)
         val result = f.run("restore"); assertNull(result.error); assertTrue(result.attempted)
-        val change = f.sent.single { it.cmd == 5 }; assertEquals(1, change.ints[0]); assertEquals("", change.strings[0]); assertEquals(0, f.checks)
+        val change = f.sent.single { it.cmd == 5 }; assertEquals(1, change.ints[0]); assertEquals("", change.strings[0]); assertEquals(1, f.checks)
+    }
+    @Test fun `restore refuses a replaced carrier before any mutation despite exact own selection`() {
+        val f = Fixture(); f.baseline = selection(1, ClusterThemePolicy.HOST_DIRECTORY + name); f.carrierValid = false
+        val result = f.run("restore")
+        assertNotNull(result.error); assertFalse(result.attempted); assertEquals(listOf(1), f.sent.map { it.cmd })
+        assertEquals(1, f.checks)
     }
     @Test fun `restore SAME without default selection does not count as recovery`() {
-        val f = Fixture(); f.baseline = selection(0, ClusterThemePolicy.HOST_DIRECTORY + name)
+        val f = Fixture(); f.baseline = selection(1, ClusterThemePolicy.HOST_DIRECTORY + name)
         f.customSend = { request -> if (request.cmd == 1) f.receiver!!(1000, f.baseline) }
         val result = f.run("restore"); assertNotNull(result.error); assertTrue(result.error!!.contains("Post-query"))
         assertEquals(1, f.sent.count { it.cmd == 5 })

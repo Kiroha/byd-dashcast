@@ -16,6 +16,9 @@ object ClusterThemePolicy {
         createdDev >= 0 && createdInode >= 0 && mode and 0xf000 == 0x8000 && uid == ownerUid && dev == createdDev && inode == createdInode
     fun canDeleteCarrier(defaultQueried: Boolean, loadSettled: Boolean, uncertain: Boolean): Boolean =
         defaultQueried && loadSettled && !uncertain
+    fun iviRecoveryProven(name: String, before: ClusterThemeProtocol.Response, after: ClusterThemeProtocol.Response?,
+        native: Int?, unknown: Boolean, attempted: Boolean): Boolean =
+        before.selected(name) && attempted && !unknown && native == 0 && after?.isDefault() == true
     fun loadAckMatches(response: ClusterThemeProtocol.Response, name: String): Boolean = ownedName(name) &&
         response.cmd == 1005 && response.sub == 0 && response.ints == listOf(2, 0, 0, 0, 0) &&
         response.strings[0] == HOST_DIRECTORY + name

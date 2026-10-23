@@ -716,11 +716,11 @@
     <string name="diag_send_report">Отправить диагностический отчёт</string>
     <string name="diag_send_report_help">Включает результаты приборной панели и журнал. Отправка через настроенный канал или передача файла.</string>
 
-    <string name="diag_cluster_native_section">Штатный режим Full BYD</string>
+    <string name="diag_cluster_native_section">Проекция BYD (с полосами)</string>
     <string name="diag_cluster_rcc_section">Ресурсы RCC</string>
-    <string name="diag_cluster_native_full">Проверить штатный режим Full BYD</string>
+    <string name="diag_cluster_native_full">Проверить проекцию BYD (с полосами)</string>
     <string name="diag_cluster_native_normal">Запросить возврат BYD</string>
-    <string name="diag_cluster_native_help">Запрашивает штатный вид Full BYD с индикаторами. Тема RCC не загружается. Одна команда 16; ответ не доказывает доставку в Qt или отображение. Возврат запрашивает обычный режим (18), без точного восстановления предыдущего режима.</string>
+    <string name="diag_cluster_native_help">Запрашивает штатную проекцию BYD с верхней и нижней полосами. Тема RCC не загружается. Одна команда 16; ответ не подтверждает изображение. Возврат запрашивает обычный режим BYD (18).</string>
     <string name="diag_cluster_native_idle">Физическое состояние приборной панели неизвестно. Результаты включаются в диагностический отчёт.</string>
     <string name="diag_cluster_native_busy">Активна проекция, ADAS или диагностика: завершите текущий запрос перед тестом. Возврат остаётся доступным.</string>
     <string name="diag_cluster_native_parked">Подтверждаю, что автомобиль припаркован в подходящем для теста месте.</string>
@@ -754,11 +754,14 @@
     <string name="diag_cluster_rcc_marker_button">Проверить маркер RCC (рекомендуется)</string>
     <string name="diag_cluster_rcc_ivi_title">Ресурсы RCC — экспериментальный тест IVI</string>
     <string name="diag_cluster_rcc_ivi_help">Начните с маркера. Для темы вручную выберите Full и ночной режим. Режимы автоматически не меняются.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Нужны заявленная прошивка 13.1.33.2602030.1, Android 10, подтверждённый DiLink 3 и демон 35. Установленный Java-мост проверен; идентичность нативной панели неизвестна.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Нужны заявленная прошивка 13.1.33.2602030.1, Android 10, подтверждённый DiLink 3 и демон 36. Установленный Java-мост проверен; идентичность нативной панели неизвестна.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Перезагружает ресурсы BYD с пассивным маркером, сохраняя код приборов и предупреждений. Изображение и восстановление нужно проверить в машине. Сохраняйте доступ к этому экрану. Через 30 секунд запрашиваются стандартные ресурсы, если сеанс доступен. Подтвердите восстановление визуально; перезапуск его не гарантирует.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Перед тестом выберите Full и ночной режим. RCC сохраняет код приборов и предупреждений и меняет фон. Читаемость и восстановление проверьте в машине. Сохраняйте доступ к экрану. Через 30 секунд запрашиваются стандартные ресурсы, если сеанс доступен. Затем подтвердите видимый результат. Перезапуск не гарантирует восстановление.</string>
     <string name="diag_cluster_rcc_ivi_send">Отправить тест RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Запрашивает стандартные ресурсы RCC, не меняя режим проекции. Ответ OEM и видимое восстановление проверяются отдельно; затем подтвердите увиденное. Без перезапуска и автоматического нового теста.</string>
     <string name="diag_cluster_rcc_debt">Тест RCC ещё не закрыт. Нажмите «Восстановить ресурсы RCC BYD», осмотрите панель и ответьте во всплывающем окне.</string>
     <string name="diag_cluster_rcc_ivi_platform">Тест отклонён: нужны Android 10 и подтверждённое обнаружение DiLink 3. RCC не отправлен.</string>
+    <string name="diag_cluster_page_title">Приборная панель: проекция и RCC</string>
+    <string name="diag_cluster_page_description">Проекция BYD с полосами, маркер и тема RCC</string>
+    <string name="diag_cluster_native_rcc_blocked">Тест RCC блокирует проекцию BYD</string>
 </resources>

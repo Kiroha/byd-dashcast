@@ -49,8 +49,10 @@ class ClusterVisualConfirmationTest {
         val header = LinearLayout(app)
         val body = LinearLayout(app)
         val prompts = ClusterObservationPrompts(app)
-        val ops = Collections.synchronizedList(mutableListOf<Int>())
-        val filenames = Collections.synchronizedList(mutableListOf<String>())
+        private val recordedOps = Collections.synchronizedList(mutableListOf<Int>())
+        private val recordedFilenames = Collections.synchronizedList(mutableListOf<String>())
+        val ops: List<Int> get() = synchronized(recordedOps) { recordedOps.toList() }
+        val filenames: List<String> get() = synchronized(recordedFilenames) { recordedFilenames.toList() }
         @Volatile var receipt = initial
         @Volatile var holdStatus: CountDownLatch? = null
         val statusEntered = CountDownLatch(1)
@@ -62,7 +64,7 @@ class ClusterVisualConfirmationTest {
             override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
                 check(code == ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST)
                 data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
-                val op = data.readInt(); ops.add(op)
+                val op = data.readInt(); recordedOps.add(op)
                 if (op == 0) { statusEntered.countDown(); holdStatus?.await(5, TimeUnit.SECONDS) }
                 else if (op == 10) {
                     check(data.readString() == receipt.getJSONObject("nativeMode").getString("nonce"))
@@ -70,7 +72,7 @@ class ClusterVisualConfirmationTest {
                         getJSONObject("nativeMode").put("state", "CLOSED").put("debt", false).put("pending", false)
                     }
                 } else if (op in listOf(3, 4, 6)) {
-                    filenames.add(data.readString().orEmpty())
+                    recordedFilenames.add(data.readString().orEmpty())
                     receipt = JSONObject(receipt.toString()).apply { put(when (op) { 3 -> "markerObservedByUser"; 4 -> "oemObservedByUser"; else -> "themeObservedByUser" }, true) }
                 } else error("Unexpected effect $op")
                 check(data.dataAvail() == 0)

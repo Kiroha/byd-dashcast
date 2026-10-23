@@ -39,6 +39,17 @@ class ClusterThemeProtocolTest {
         assertTrue(ClusterThemeProtocol.decode(response(0, ClusterThemePolicy.HOST_DIRECTORY + name)).selected(name))
         assertFalse(ClusterThemeProtocol.decode(response(0, ClusterThemePolicy.HOST_DIRECTORY + name)).selected(name.replace("0123", "4567")))
     }
+    @Test fun `reported IVI path is independent of native translation source as in the 1551 report`() {
+        for (source in listOf(0, 1)) {
+            val decoded = ClusterThemeProtocol.decode(response(source, ClusterThemePolicy.HOST_DIRECTORY + name))
+            assertTrue(decoded.selected(name)); assertFalse(decoded.isDefault())
+        }
+        for (source in listOf(-1, 2, Int.MAX_VALUE))
+            assertFalse(ClusterThemeProtocol.decode(response(source, ClusterThemePolicy.HOST_DIRECTORY + name)).selected(name))
+        assertFalse(ClusterThemeProtocol.decode(response(1, ClusterThemePolicy.HOST_DIRECTORY + name, "other")).selected(name))
+        assertFalse(ClusterThemeProtocol.decode(response(1, ClusterThemePolicy.ANDROID_DIRECTORY + name)).selected(name))
+        assertFalse(ClusterThemeProtocol.decode(response(1, ClusterThemePolicy.HOST_DIRECTORY + "foreign.rcc")).selected("foreign.rcc"))
+    }
     @Test fun `only owned bounded filenames can produce a load`() {
         for (bad in listOf("", "../$name", "/$name", name + ".rcc", name.uppercase(), "user.rcc")) {
             assertFalse(ClusterThemePolicy.ownedName(bad))

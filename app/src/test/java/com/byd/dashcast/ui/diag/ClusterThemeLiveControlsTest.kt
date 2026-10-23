@@ -74,7 +74,7 @@ class ClusterThemeLiveControlsTest {
             val method = DiagActivity::class.java.getDeclaredMethod("allDiagButtons").apply { isAccessible = true }
             assertFalse((method.invoke(c.get()) as List<*>).contains(restore))
             assertEquals(7, all.filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
-            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
             assertTrue(restore.isEnabled && restore.visibility == View.VISIBLE)
             assertTrue(all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
             c.get().onBackPressed()
@@ -106,7 +106,7 @@ class ClusterThemeLiveControlsTest {
         val c = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
-            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
             val load = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_marker_button) }
             busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
             assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("start-busy"))
@@ -149,7 +149,7 @@ class ClusterThemeLiveControlsTest {
         try {
             c.pause().stop().destroy(); c = Robolectric.buildActivity(DiagActivity::class.java).setup()
             val all = views(c.get().findViewById(android.R.id.content))
-            all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
             all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.performClick()
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
@@ -269,7 +269,7 @@ class ClusterThemeLiveControlsTest {
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "35")
+        }); vf.set(null, "36")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})

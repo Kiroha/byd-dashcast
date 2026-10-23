@@ -92,7 +92,9 @@ class DiagActivity : Activity() {
         PROJECTION("Projection & displays", "OEM probes, registry, callbacks and traces"),
         EXPORTS("Exports & OEM collection", "Local firmware files, OEM reports and manual sharing"),
         REPORTING("Reporting", "Pair the reporting channel"),
-        LOG("Diagnostic log", "Read and select diagnostic results")
+        LOG("Diagnostic log", "Read and select diagnostic results");
+        fun title(activity: DiagActivity): String = if (this == CLUSTER) activity.getString(R.string.diag_cluster_page_title) else title
+        fun description(activity: DiagActivity): String = if (this == CLUSTER) activity.getString(R.string.diag_cluster_page_description) else description
     }
     private var currentPage: Page? = null
     private lateinit var pageTitle: TextView
@@ -188,6 +190,8 @@ class DiagActivity : Activity() {
         homePage = ScrollView(this).apply { addView(menu) }
         pageHost.addView(homePage)
         fun page(destination: Page): LinearLayout {
+            val title = destination.title(this)
+            val description = destination.description(this)
             val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             val scroll = ScrollView(this).apply {
                 addView(body)
@@ -197,18 +201,18 @@ class DiagActivity : Activity() {
             pages[destination] = scroll
             pageHost.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT))
             menu.addView(Button(this).apply {
-                text = SpannableString("${destination.title}\n${destination.description}").apply {
-                    setSpan(RelativeSizeSpan(0.82f), destination.title.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                text = SpannableString("$title\n$description").apply {
+                    setSpan(RelativeSizeSpan(0.82f), title.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 textSize = 16f
                 isAllCaps = false
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 minHeight = (64 * density).toInt()
-                contentDescription = "${destination.title}. ${destination.description}. Open page"
+                contentDescription = "${title}. ${description}. Open page"
                 setOnClickListener { showPage(destination) }
             })
             body.addView(TextView(this).apply {
-                text = destination.description
+                text = description
                 textSize = 14f
             })
             return body
@@ -475,7 +479,7 @@ class DiagActivity : Activity() {
 
     private fun showPage(page: Page?) {
         currentPage = page
-        pageTitle.text = page?.title ?: "Diagnostics"
+        pageTitle.text = page?.title(this) ?: "Diagnostics"
         backBtn.visibility = if (page == null) View.GONE else View.VISIBLE
         homePage.visibility = if (page == null) View.VISIBLE else View.GONE
         pages.forEach { (destination, view) -> view.visibility = if (page == destination) View.VISIBLE else View.GONE }
