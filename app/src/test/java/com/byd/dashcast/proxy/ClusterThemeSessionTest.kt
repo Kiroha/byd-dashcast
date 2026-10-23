@@ -132,8 +132,11 @@ class ClusterThemeSessionTest {
             }
         }); versionField.set(null, "37")
         val session = ClusterThemeSession.pin(app)
-        assertThrows(IllegalStateException::class.java) { session.verifyCorners(Binder()) }; assertEquals(0, calls)
-        versionField.set(null, "38"); session.verifyCorners(Binder())
+        for (old in listOf("37", "38", "39", "40")) {
+            versionField.set(null, old)
+            assertThrows(IllegalStateException::class.java) { session.verifyCorners(Binder()) }; assertEquals(0, calls)
+        }
+        versionField.set(null, "41"); session.verifyCorners(Binder())
         assertEquals(1, calls); assertEquals(nonce, ClusterThemeProjectionDebt.nonce(app))
     }
     @Test fun `explicit orphan debt reconciliation is operation13 and only current exact safe nonce clears it`() {

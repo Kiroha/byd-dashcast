@@ -67,7 +67,7 @@ class DiagPagesTest {
             assertEquals(7, all(activity).filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
             val tools = mapOf(
                 "ADAS" to "ADAS targets (read-only snapshot)",
-                RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title) to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button),
+                RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title) to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_corners_button),
                 "HUD & navigation" to "HUD bench (DL3)",
                 "Projection & displays" to "OEM cluster probes (read-only)",
                 "Exports & OEM collection" to "Export complet accessible",
@@ -110,7 +110,7 @@ class DiagPagesTest {
             val saved = save(controller.get())
             controller.destroy()
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
-            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button))))
+            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_corners_button))))
             assertFalse(visible(menu(controller.get(), RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title))))
             tool(controller.get(), "Back").performClick()
             assertTrue(visible(menu(controller.get(), "ADAS")))
@@ -118,7 +118,7 @@ class DiagPagesTest {
             saved.putString("diag.page", "unrecognized-destination")
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
             assertTrue(visible(menu(controller.get(), "ADAS")))
-            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button))))
+            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_corners_button))))
         } finally { controller.destroy() }
     }
 

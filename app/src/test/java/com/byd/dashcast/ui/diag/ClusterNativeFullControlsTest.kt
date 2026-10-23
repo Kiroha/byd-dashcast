@@ -39,7 +39,7 @@ class ClusterNativeFullControlsTest {
             val report = views(full.parent as ViewGroup).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_send_report) }
             val parent = full.parent as ViewGroup
             assertTrue(parent.indexOfChild(report) < parent.indexOfChild(full))
-            assertTrue(all.filterIsInstance<Button>().any { it.text == c.get().getString(R.string.diag_cluster_rcc_theme_button) })
+            assertTrue(all.filterIsInstance<Button>().any { it.text == c.get().getString(R.string.diag_cluster_rcc_corners_button) })
             assertTrue(all.filterIsInstance<Button>().any { it.text == c.get().getString(R.string.diag_cluster_native_normal) })
             full.performClick()
             org.robolectric.shadows.ShadowLooper.idleMainLooper()

@@ -12,6 +12,65 @@ transport and its schema 1/2 recovery remain separate; no failed strict check
 silently selects a different transport. Schema 3 requires the exact transport,
 compiled variant and carrier hash. Unknown/corrupt journals block admission.
 
+## Build 709: ask for the actual corner observation
+
+**1.9.70-beta / build 709, ProxyDaemon 41** corrects the 22:11 report's
+`source=1` plus exact owned IVI path without treating it as a default selection.
+The IVI path is independent of the native `m_translateRccPath` field. A source-1
+response means that native field is empty; it can still name our file through
+the separate IVI property. The previous source-0-only visual-round check rejected
+this legitimate combination with the unhelpful `Failed requirement` message.
+
+An explicit **Vérifier les repères RCC** now permits sources 0 and 1 after one
+fresh read-only query and both existing owned carrier identity/hash checks. The
+exact filename, generation, random round, 60-second expiry, projection lease,
+trusted journal, helper and no-conflict checks remain mandatory. A positive
+answer changes only the user observation. It does not establish Qt registration,
+settle the load, mark default recovery, clear uncertainty or release RCC debt.
+Diagnostics retain the actual source. Unsupported source, path and round errors
+give specific reasons. An absent ACK2 remains absence of registration evidence,
+not proof that registration failed.
+
+REA on exact Manager SHA `21f7735c…`, `handlePluginMsgRecevied` at `0x17f280`,
+also closes the hidden-wrapper question: message ID `0x10` only passes the integer
+to `setRccResMsgFromDsHandler` (`0x181b20`). Its ACK4 value does not secretly invoke
+the XML reread or QML reload. Selection/configuration and a render observation
+therefore remain separate. This release introduces no new native command,
+resource-application transport, cluster restart or full-surface RCC.
+
+The current page offers **Tester le chargement RCC (repères aux coins)** followed
+by **Vérifier les repères RCC**. The incompatible historical marker/full-surface
+launch buttons are removed. Their compiled profiles, RCC bytes, journal parsing,
+endpoints and recovery controls remain unchanged. Full-screen replacement is
+explicitly unavailable pending physical marker proof. Do not relabel old RCC
+bytes as compatible with the current native/resource cohort.
+
+The vague mandatory manual reset instruction is removed in all 13 locales.
+After file retirement, **Vérifier le retour BYD** performs a fresh read-only check;
+only a confirmed default selection permits the subsequent OEM visual question.
+An unresolved check directs the tester to **Envoyer un rapport de diagnostic**;
+no unestablished reset gesture or delay is prescribed. Pending retired recovery
+now states that no default request is sent. Existing restoration/debt proof gates
+are preserved. A positive visual answer is detached synchronously before the
+shared prompt callback updates its lane, preventing the same intermediate
+`DEFAULT_QUERIED` receipt from asking twice. New receipt keys and explicit manual
+reopening remain supported.
+
+Protocol 41 is required for this guided flow, current-page loads and the corrected
+corner verification. A still-live protocol-40 Binder can bypass the normal
+build-version bootstrap check; merely reconnecting is not proof of replacement.
+The diagnostic never automatically restarts the daemon or retries a command.
+Installing the APK normally starts a fresh app process and runs the existing
+version-file bootstrap replacement. If an old Binder remains, force-stop only
+the **DashCast app** in Android settings, reopen it and reconnect; this clears
+the app's in-memory connection cache and is not an OEM cluster reset. If the
+protocol is still old, export a report. Historical recovery APIs keep their
+previous minimum protocols.
+
+No vehicle command, installation or physical marker/application validation was
+performed for these source changes. Five RCC assets and their metadata retain
+their published bytes.
+
 ## Build 708: make recovery outcomes actionable
 
 **1.9.69-beta / build 708, ProxyDaemon 40** preserves all five RCC files, profile

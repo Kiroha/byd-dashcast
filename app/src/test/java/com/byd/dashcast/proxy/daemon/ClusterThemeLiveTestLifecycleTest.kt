@@ -70,7 +70,7 @@ class ClusterThemeLiveTestLifecycleTest {
         com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, source, 0),
             listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", path, "", "DashCast_a"))
     @Test fun `recovered corner read only query creates fresh visual round and yes never settles load or recovery debt`() {
-        for (profile in listOf(ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C)) {
+        for (profile in listOf(ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C)) for (source in listOf(0, 1)) {
             reset()
             val saved = JSONObject().put("schema", 3).put("state", "SELECTION_PENDING_OEM_APPLY")
                 .put("transport", "android-ivi").put("variant", profile.id).put("carrierSha256", profile.carrierSha256)
@@ -80,11 +80,12 @@ class ClusterThemeLiveTestLifecycleTest {
             assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
             var queries = 0; var carrierChecks = 0
             ClusterThemeLiveTest.requestCornerVerification("a".repeat(32), true, true, reservation(), { carrierChecks++ }) {
-                queries++; ClusterThemeLiveTest.Exchange(0, cornerSelection(), emptyList(), false)
+                queries++; ClusterThemeLiveTest.Exchange(0, cornerSelection(source), emptyList(), false)
             }; drain()
             val before = JSONObject(ClusterThemeLiveTest.status())
             val round = before.getJSONObject("cornerVerification").getString("round")
             assertTrue(before.getJSONObject("cornerVerification").getBoolean("available")); assertEquals(1, queries); assertEquals(2, carrierChecks)
+            assertTrue(before.getString("trace").contains("source=$source selectionOnly=true nativePropertyEmpty=${source == 1} pixels=UNKNOWN"))
             ClusterThemeLiveTest.observeCorners(name, round)
             val after = JSONObject(ClusterThemeLiveTest.status())
             assertTrue(after.getBoolean("markerObservedByUser")); assertTrue(after.getBoolean("uncertain")); assertTrue(after.getBoolean("rccDebt"))
@@ -121,7 +122,7 @@ class ClusterThemeLiveTestLifecycleTest {
             assertEquals(next, receipt.getString("rccRejectedNonce"))
         } finally { file.delete() }
     }
-    @Test fun `corner verification refuses foreign transient missing and changed carriers without mutation`() {
+    @Test fun `corner verification refuses unsupported source foreign transient missing and changed carriers without mutation`() {
         for (bad in 0..3) {
             cornerSession(); var queries = 0; var checks = 0
             ClusterThemeLiveTest.requestCornerVerification("a".repeat(32), true, true, reservation(), {
@@ -129,12 +130,35 @@ class ClusterThemeLiveTestLifecycleTest {
             }) {
                 queries++
                 ClusterThemeLiveTest.Exchange(if (bad == 2) null else 0,
-                    cornerSelection(if (bad == 0) 1 else 0, if (bad == 1) "default" else ClusterThemePolicy.HOST_DIRECTORY + name), emptyList(), bad == 2)
+                    cornerSelection(if (bad == 0) 2 else 0, if (bad == 1) "default" else ClusterThemePolicy.HOST_DIRECTORY + name), emptyList(), bad == 2)
             }; drain()
             val status = JSONObject(ClusterThemeLiveTest.status())
             assertTrue(status.isNull("cornerVerification")); assertTrue(status.getBoolean("rccDebt")); assertTrue(status.getBoolean("uncertain"))
             assertEquals(1, queries); assertFalse(field("loadSettled").getBoolean(null))
         }
+    }
+    @Test fun `real source1 own selection with ACK4 and no ACK2 permits only user observation and keeps all debts`() {
+        cornerSession()
+        val configAck = com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1005, 0, listOf(4, 0, 0, 0, 0), List(5) { "" })
+        ClusterThemeLiveTest.recordLoadEvidence(ClusterThemeLiveTest.Exchange(0, cornerSelection(1), listOf(configAck), false, attempted = true))
+        val prior = JSONObject(ClusterThemeLiveTest.status())
+        assertEquals("OWN_PATH_REPORTED", prior.getJSONObject("loadEvidence").getString("selection"))
+        assertEquals("NOT_RECEIVED", prior.getJSONObject("loadEvidence").getString("ack2"))
+        var queries = 0
+        ClusterThemeLiveTest.requestCornerVerification("a".repeat(32), true, true, reservation(), {}) {
+            queries++; ClusterThemeLiveTest.Exchange(0, cornerSelection(1), emptyList(), false)
+        }; drain()
+        val verified = JSONObject(ClusterThemeLiveTest.status())
+        assertTrue(verified.getJSONObject("cornerVerification").getBoolean("available"))
+        assertFalse(verified.getBoolean("defaultQueried")); assertEquals(1, queries)
+        ClusterThemeLiveTest.observeCorners(name, verified.getJSONObject("cornerVerification").getString("round"))
+        val after = JSONObject(ClusterThemeLiveTest.status())
+        assertTrue(after.getBoolean("markerObservedByUser"))
+        for (key in listOf("state", "uncertain", "rccDebt", "defaultQueried", "iviRecoverySettled", "retirementAvailable", "oemObservedByUser"))
+            assertEquals(key, prior.get(key), after.get(key))
+        assertFalse(field("loadSettled").getBoolean(null))
+        assertEquals("NOT_RECEIVED", after.getJSONObject("loadEvidence").getString("ack2"))
+        assertEquals("USER_REPORTED", after.getJSONObject("loadEvidence").getString("pixels"))
     }
     @Test fun `existing recovery proofs and unreaped helper refuse corner query before worker`() {
         for (proof in listOf("defaultQueried", "iviRecoverySettled", "oemObserved", "carrierRemoved", "helperUnreaped")) {
