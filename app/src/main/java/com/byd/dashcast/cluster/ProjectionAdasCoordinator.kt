@@ -60,9 +60,10 @@ internal class ProjectionAdasCoordinator(
         override fun now() = SystemClock.uptimeMillis()
         override fun valid(): Boolean = permitted && pinnedBinder != null &&
             hideRequest?.cancelled != true &&
-            pinnedBinder === ProxyClient.getProxyDaemonBinder() && pinnedBinder?.isBinderAlive == true && (restoring ||
+            pinnedBinder === ProxyClient.getProxyDaemonBinder() && pinnedBinder?.isBinderAlive == true && (if (restoring)
+            recoveryTicket?.let(ProjectionCommandBus::cleanupCurrent) == true else
             (target?.let { ProjectionCommandBus.isCurrent(it.session) } == true &&
-                SystemClock.uptimeMillis() - proofAt <= 3_000))
+                SystemClock.uptimeMillis() - proofAt < PROOF_LIFETIME_MS))
         override fun journal(done: (Boolean) -> Unit) {
             val e = epoch
             transport.call({ e == epoch && permitted }, work = {
@@ -164,7 +165,7 @@ internal class ProjectionAdasCoordinator(
             } else {
                 proofAt = SystemClock.uptimeMillis()
                 main.removeCallbacks(proofExpiry)
-                main.postDelayed(proofExpiry, 3_000)
+                main.postDelayed(proofExpiry, PROOF_LIFETIME_MS)
                 if (platformDue) { platform = result.platform; platformAt = proofAt }
                 if (!started && result.typedPower == 2) {
                     started = true
@@ -280,6 +281,8 @@ internal class ProjectionAdasCoordinator(
     }
 
     companion object {
+        // The 1-second poll gap plus a bounded 2.5-second read leaves 500 ms of scheduling margin.
+        private const val PROOF_LIFETIME_MS = 4_000L
         @Volatile private var instance: ProjectionAdasCoordinator? = null
         fun idleForDiagnostic(): Boolean = instance?.let {
             it.target == null && it.retryTarget == null && !it.recoveryDebt && !it.restoring &&

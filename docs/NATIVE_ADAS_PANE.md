@@ -111,7 +111,10 @@ The recovered Electro 1.14.0-lab-80 path starts only after an app is resumed on 
 projection display. DashCast records a requested target before asynchronous launch work, then
 independently checks the resumed activity on that exact display. Task placement, a launch callback,
 a saved profile, and foreground activity on display 0 are insufficient. Ambiguous/truncated dumps
-are refused. Proof expires after three seconds. A replacement session, manual recovery, display
+are refused. Proof expires after four seconds: the nominal one-second polling gap plus the bounded
+2,500-ms read leaves 500 ms of scheduling margin. This is one additional second of maximum
+staleness compared with the earlier lease; every negative result or read timeout still invalidates
+immediately, and each write checks the monotonic deadline. A replacement session, manual recovery, display
 loss, source loss or daemon replacement invalidates queued frames and commands.
 
 The typed power gate and raw maintenance monitor are **different SDK channels** on SX361:
@@ -129,10 +132,14 @@ Before the first mutating command, commit a firmware-bound recovery journal. The
 3. Ordered phases: 60 × `26,F0,00,28,01,06`; 50 × `43,20,00,00,01,01`;
    50 × `43,20,00,21,01,01`; 40 × `26,F0,00,28,01,06`; 60 × `23,50,00,08,01,00`.
    Each batch contains at most ten frames. One complete pass contains 263 frames.
-4. One guarded additional pass 12 seconds after completion/failure. It cannot recursively retry.
-5. Post-launch layout commands 18/0/16/35 nominally begin at 0.5/1/2/3 seconds, followed by a new
-   masking pass. Each superseded pass loses its frame/retry authority. The OEM global one-second
-   debug debounce is preserved; DashCast does not add extra delay to force otherwise ignored commands.
+4. One guarded confirmation pass starts five seconds after the complete initial pass succeeds.
+   Failure or uncertain delivery does not schedule a replay. There is no recursive confirmation.
+   A later, newly observed qualified power transition may request a new pass; it is not a retry of
+   the failed batch, and still requires the current projection proof and owner.
+5. The masking plan sends no layout commands. The existing projection activation owns 16/35 and
+   teardown owns 18/0; masking cannot close and reopen its own verified projection. Slow passes run
+   to completion without being superseded by confirmation or raw-power callbacks. Pending full
+   passes coalesce; a transition during initial confirmation joins that confirmation.
 6. A raw power transition to 3 schedules a guarded full pass after four seconds. While qualified
    and not busy, maintenance sends three hide frames every three polling ticks. Service initialization
    refresh is limited to once per 60 seconds. Initial raw state does not manufacture a transition.
@@ -143,8 +150,11 @@ SDK/MCU/display acknowledgement. Only a `SecurityException` before the first cal
 compatibility shell path. Partial security failures, runtime errors, timeout and interruption never
 replay an uncertain prefix. Every batch has a five-second deadline and checks cancellation per frame.
 
-Disable, explicit full recovery, or known projection teardown requests 40 restore frames in batches
-of ten, command 12, a 1,200 ms wait, then command 53. Repeated teardown coalesces an ongoing recovery.
+Disable, explicit full recovery, or known projection teardown first initializes
+`ClusterDebugService` on the independent recovery lane and waits 1,000 ms, then requests 40 restore
+frames in batches of ten, command 12, a 1,200 ms wait, then command 53. Initialization, the readiness
+delay, every frame and both commands retain the cleanup ticket and pinned-daemon guard; a newer
+projection owner cancels the entire old recovery before it can emit another write. Repeated teardown coalesces an ongoing recovery.
 Manual fallback recovery remains available if the service or proxy is unavailable. No software result
 is described as proof the pane is visible. The recovery journal is retained even after delivery.
 
@@ -175,7 +185,8 @@ full restoration, without changing the recovered sequence's internal delays.
 **Stop projection** immediately revokes hide authority and remembers whether this projection used
 the masking workflow, including after a manual full restore. It captures the old cleanup ticket
 before asynchronous teardown, then waits for the final native-close command completion (success or
-error) and a one-second quiet period before running the full 40-frame / 12 / 1,200-ms / 53 restoration.
+error) and a one-second quiet period before starting service initialization and its 1,000-ms readiness delay, followed by the full
+40-frame / 12 / 1,200-ms / 53 restoration.
 Classic, Fission and service teardown share this boundary; duplicate stops coalesce. An explicit
 full restore during that wait joins the same recovery. One-frame hiding is refused while recovery
 is pending, but saved-value one-frame restoration remains available on its independent lane without
@@ -195,6 +206,24 @@ Stop revokes masking before asynchronous eviction. Final-size error or interrupt
 still completes cleanup once, retaining the journal and manual recovery. Old delayed
 native writes and old UI teardown are rejected after a new projection owner begins.
 An already admitted Binder/ADB operation cannot be recalled atomically.
+
+### BYDcontrol orchestration alignment (2026-10-23)
+
+The source comparison uses BYDcontrol commit `0a1237f5217963893187b6f8abad397a0888712a`,
+`ClusterController.hideAdas()` / `showAdas()` and `AutoStartService` automatic activation. Its own
+comments identify the 263-frame core as the DashCast sequence. DashCast now follows its useful
+orchestration differences: finish verifying the existing projection first, complete each masking
+pass, confirm once after five seconds, and initialize the OEM service before restoration. Tests
+cover a pass lasting beyond the old layout timer, queued power transitions, failed initialization,
+source/read timeout and owner replacement during the restore readiness delay.
+
+This is deliberately not a byte-for-byte transport clone. DashCast retains its 263 ordered frames
+and five-second bounded batch deadline, without BYDcontrol's additional explicit manifest-receiver
+hide or `FLAG_INCLUDE_STOPPED_PACKAGES` on every phase. It does not continue after an uncertain
+250-ms callback timeout, switch transports after partial delivery, or report rendered success from
+software dispatch. The existing one-frame manual fallback retains its separately researched
+manifest-receiver contract. No firmware allowlist, automatic opt-in, movement assumptions or
+vehicle command allowlist is broadened.
 
 ### Evidence and deliberate host adaptations
 
