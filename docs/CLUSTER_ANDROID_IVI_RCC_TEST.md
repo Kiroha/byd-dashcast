@@ -12,6 +12,80 @@ transport and its schema 1/2 recovery remain separate; no failed strict check
 silently selects a different transport. Schema 3 requires the exact transport,
 compiled variant and carrier hash. Unknown/corrupt journals block admission.
 
+## Build 707: use the observed installed resource cohort
+
+**1.9.68-beta / build 707, ProxyDaemon 39** adds the separate immutable profile
+`corner-marker-21f7735c` through operation **18**. The existing corner button now
+uses this profile. The old four packaged RCCs, profile IDs, journal schemas and
+recovery commands retain their bytes and interpretation.
+
+The 23 October ADB inspection established that the car has a different native and
+resource cohort from the previous disk corpus, despite the same user-reported
+firmware label. Its complete roots include ADAS messages `0x5B`–`0x5E` missing
+from the old roots; all 84 stock translation payloads also differ. Build 705 is
+withdrawn as a public prerelease. A matching firmware string or UI prefix is not
+sufficient compatibility evidence.
+
+The new carrier preserves all 84 resources from the observed stock RCC, including
+stored bytes, compression flags and language metadata, and both complete observed
+roots. It adds only the same guarded thin corner strokes described below. It does
+not override Common/main or remove instruments, warnings, ADAS messages or their
+bindings. Its SHA-256 is
+`fe069081f1d5c8374276aad2513b8862de61008f67fe6162fb2a4a351e00b734`.
+The roots before that insertion are:
+
+- `qml/cluster.qml`: `76a2ad22efe281a6d73362d3a3c4e5f998d33e9dff210934f11e4e6071336fb3`.
+- `qml10_25/cluster.qml`: `8c9cb017658a904dd34e5b2b1ff0654576031ff4f31d0a0dedd259da52a09631`.
+
+Every new Android-IVI load, including historical profiles, now checks its closed
+five-file cohort before staging and again inside the admitted helper before the
+load send. Each bounded regular root-owned file is hashed through a pinned
+`O_NOFOLLOW` FD; all FDs and named identities are rechecked before completion.
+Missing, unreadable, changed or mixed-cohort files refuse the load. No caller can
+supply hashes, paths or a compatibility override. Existing Java APK, API, positive
+DiLink detection, nonce, default-selection and projection-reservation checks stay
+in force.
+
+The new profile requires this entire installed map:
+
+| Fixed path | SHA-256 |
+| --- | --- |
+| `/system/lib64/libBydCluster.so` | `21f7735cad4408f7baf7086b0e0d7b4ed3d1d2818a35bea6b8ad026102d9f4b1` |
+| `/system/lib64/libBydDataSource.so` | `02dfc7f5aa046167a3d829c69ef8ee97fd301cf9081450b86366319566c10ae8` |
+| `/system/lib64/cluster_theme1.rcc` | `83dcdb5bf80aa1b0641622b913cb4f0dc13d3bf7a1fe510f0d10603446faee5d` |
+| `/system/lib64/cluster_theme2.rcc` | `0041e6b81f5f2b57c9ee112f4f196a16563345214e1e9d6d7bc75625383812b8` |
+| `/system/lib64/commonTranslate.rcc` | `1dfee5a0ad746166cb28d79bddfe9352dc510df6cbcd0001f4751af1a6dbf5e4` |
+
+The five observed files total about 291 MB. Hashing runs on the existing worker
+with 64 KiB buffers and five pinned FDs; the helper retains its complete eight-second
+deadline. Hardware hash timing is unvalidated. A deadline before send refuses the
+load; expiry after send retains uncertainty/debt and never replays the mutation.
+
+This verifies installed artifacts in the Android namespace. It does **not** verify
+the running native renderer or Qt mapping, resource registration, created QML or
+physical pixels; `nativeIdentity=UNKNOWN` remains explicit. Recovery, retirement
+and read-only queries do not depend on the new-load cohort, so old trusted sessions
+retain their recovery controls without authorizing another load.
+
+REA on the observed Cluster `21f7735c…` and DataSource `02dfc7f5…` confirms the
+configuration-only path: Cluster `handleIviRccReqMsg` (`0x187f20`) validates and
+sends plugin message `0x2d`; DataSource `updateTranslateRccFromIvi` (`0x21c8d0`)
+saves config key `0x38` and emits `SendIntMsg(0x10,0xc)` without publishing
+translation data items 5/7. Cluster's ACK handler (`0x181b20`) sends ACK4 and
+clears its request flag. XML application (`0x21c068`) publishes the resource later;
+`translateRccChanged` (`0x189a98`) registers/unregisters only when invoked. ACK2,
+ACK4 and fresh source-0 own-path selection remain separate evidence, none proving
+pixels. The bounded filename validator has no signature check within that
+function; this is not a claim about every firmware or permission boundary.
+
+The current read-only ADB query still reports the old full-surface selection and
+its unresolved quarantine. **Resolve that existing trusted session before a new
+test.** Do not replace its journal or reinterpret it as the new profile. Then use
+protocol **39** and the corner button. The manual pending/verification/visual
+round flow below applies to both corner profiles; no load replay, forced OEM
+restart or automatic restoration is added. All real vehicle loading and return
+to OEM remain unvalidated.
+
 ## Build 705: separate selection from actual QML application
 
 **1.9.66-beta / build 705, ProxyDaemon 38** adds a separate fixed
@@ -20,7 +94,7 @@ remain unchanged. Operations 15/16/17 are explicit corner start, nonce/round-bou
 user observation, and read-only verification; old operations retain their format.
 The new profile is Android-IVI only, including recovered schema-3/4 journals.
 
-REA on the exact firmware explains why a selected file can leave the display
+REA on the previous hash-pinned disk corpus explains why a selected file can leave the display
 unchanged. `msgDataUpdate(0x2d)` calls `updateTranslateRccFromIvi`, which saves
 configuration key `0x38` and emits configuration ACK4; it does not directly publish
 translation data item 5 (`ev_ffebc743b6936ef3aad0619d083299c1c5b8d7dcaa088a87ae0ed671bbf3807c`,
@@ -45,7 +119,8 @@ uncorrelated registration broadcast, not component-creation or pixel proof;
 ACK4 can clear the request flag before registration replies. The older theory
 that missing ACK2 alone establishes a hot reload is withdrawn.
 
-For a parked vehicle, first resolve any earlier test debt through its existing
+Historical build-705 flow (new tests use build 707 and protocol 39 above):
+for a parked vehicle, first resolve any earlier test debt through its existing
 recovery flow. Then:
 
 1. Connect protocol 38 explicitly and choose **Tester le chargement RCC (repères

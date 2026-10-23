@@ -32,7 +32,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun start(source: ParcelFileDescriptor, beforeTransaction: () -> Unit): String = call(1, source, beforeTransaction)
     fun start(source: ParcelFileDescriptor, variant: ClusterThemeVariant, beforeTransaction: () -> Unit): String {
-        require(variant != ClusterThemeVariant.CORNER_MARKER) { "Corner marker requires the explicit Android IVI operation" }
+        require(!variant.isCorner) { "Corner marker requires the explicit Android IVI operation" }
         check(ProxyClient.supportsProtocol(variant.minimumProtocol)) {
             "Connected ProxyDaemon protocol ${variant.minimumProtocol} required for ${variant.id}. No reconnect/replay."
         }
@@ -47,6 +47,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             ClusterThemeVariant.MARKER -> 11
             ClusterThemeVariant.FULL_SURFACE_TEST -> 12
             ClusterThemeVariant.CORNER_MARKER -> 15
+            ClusterThemeVariant.CORNER_MARKER_21F7735C -> 18
         }
         val receipt = call(operation, source, {
             beforeTransaction()
@@ -118,7 +119,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query",
             "native-full-request", "native-normal-request", "native-normal-user-observation",
             "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier",
-            "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only")[operation]
+            "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only", "android-ivi-corner-marker-21f7735c")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
@@ -136,7 +137,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             check(text.length <= 32768 && r.dataAvail() == 0) { "Oversized/malformed live-test status" }
             ClusterThemeDiagnostics.received(app, name, connectionToken, text)
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Daemon lost after call; remote completion UNKNOWN. No replay." }
-            if (operation in 0..1 || operation == 5 || operation in 11..15) filename = JSONObject(text).getString("filename")
+            if (operation in 0..1 || operation == 5 || operation in 11..15 || operation == 18) filename = JSONObject(text).getString("filename")
             val state = JSONObject(text)
             val safe = state.optString("rccSafeNonce")
             if (safe.matches(Regex("[0-9a-f]{32}")) && app != null && ClusterThemeProjectionDebt.nonce(app) == safe &&

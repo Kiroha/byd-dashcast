@@ -775,4 +775,5 @@
     <string name="diag_cluster_rcc_corners_verify_button">RCC-Eckmarkierungen prüfen</string>
     <string name="diag_cluster_rcc_corners_verify_confirm">Prüft unsere bereits ausgewählte RCC-Datei nur lesend. Nach einer echten BYD-Cluster-Neuinitialisierung durch normalen Fahrzeugbetrieb diese Taste nutzen und anhand der sichtbaren Markierungen antworten. Eine Daemon-Neuverbindung initialisiert den Cluster nicht neu. Diese Aktion lädt nichts neu und startet nichts neu. Ein Ja schließt die Sitzung nicht; BYD-Wiederherstellung bleibt separat.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC ausgewählt — Anzeige unbestätigt</string>
+    <string name="diag_cluster_rcc_cohort_help">Die Eckmarkierungen verwenden Ressourcen der analysierten Kombiinstrumentversion. Der Test prüft installierte Dateien und lehnt andere Versionen ab. Ältere Tests bleiben auf ihre ursprüngliche Version beschränkt. Die Wiederherstellungsbefehle für frühere Sitzungen bleiben verfügbar; die Rückkehr zur BYD-Anzeige muss bestätigt werden.</string>
 </resources>

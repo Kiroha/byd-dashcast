@@ -775,4 +775,5 @@
     <string name="diag_cluster_rcc_corners_verify_button">RCC köşe işaretlerini doğrula</string>
     <string name="diag_cluster_rcc_corners_verify_confirm">Seçili RCC dosyamızı yalnızca okur. Aracın normal kullanımıyla gerçek BYD gösterge yeniden başlatmasından sonra bu düğmeyi kullanıp fiziksel işaretlere göre yanıtlayın. Daemon bağlantısını yenilemek göstergeyi yeniden başlatmaz. Bu işlem hiçbir şeyi yeniden yüklemez veya başlatmaz. Evet yanıtı oturumu kapatmaz; BYD geri dönüşü ayrıdır.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC seçildi — görüntü doğrulanmadı</string>
+    <string name="diag_cluster_rcc_cohort_help">Köşe işaretleri, incelenen gösterge paneli sürümünün kaynaklarını kullanır. Test yüklü dosyaları denetler ve farklı bir sürümü reddeder. Eski testler kendi ilk sürümleriyle sınırlı kalır. Önceki oturumların kurtarma kontrolleri kullanılabilir; BYD ekranına dönüş doğrulanmalıdır.</string>
 </resources>

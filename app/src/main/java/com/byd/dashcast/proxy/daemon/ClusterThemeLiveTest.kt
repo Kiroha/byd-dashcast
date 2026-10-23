@@ -136,14 +136,14 @@ internal object ClusterThemeLiveTest {
     }
 
     @Synchronized internal fun watchdogTick(now: Long = SystemClock.elapsedRealtime()) {
-        if (active.get() && deadline > 0 && now >= deadline && !(variant == ClusterThemeVariant.CORNER_MARKER && mutated))
+        if (active.get() && deadline > 0 && now >= deadline && !(variant.isCorner && mutated))
             requestRestore(filename)
     }
 
     @Synchronized internal fun markLoadStarted(write: (String) -> Unit = ::persist) {
         checkDeadline(); check(!restoreRequested.get()) { "Restore requested before load admission" }
         mutated = true
-        if (variant == ClusterThemeVariant.CORNER_MARKER) deadline = 0
+        if (variant.isCorner) deadline = 0
         write("LOAD_STARTED")
         step("load-durable-before-helper-GO") // Unknown until child returns; never replay.
     }
@@ -287,6 +287,9 @@ internal object ClusterThemeLiveTest {
                     if (transport == ClusterThemeTransport.ANDROID_IVI) {
                         check(validProjection()) { "Idle projection reservation expired" }
                         hashDeadline = SystemClock.elapsedRealtime() + 90000
+                        phase = "installed-artifact-cohort"
+                        val cohort = ClusterThemeCohortVerifier.verify(variant, hashDeadline) { step("cohort-artifact", it) }
+                        step("cohort-verified", "id=$cohort installedFilesOnly=true loadedNativeIdentity=UNKNOWN")
                     } else identifyRenderer()
                     checkDeadline()
                     phase = "baseline-query"
@@ -342,21 +345,21 @@ internal object ClusterThemeLiveTest {
                     uncertain = load.unknown || load.native != 0
                     step("load-result", "native=${load.native} unknown=${load.unknown} selectionOwned=${load.query?.selected(filename)}")
                     loadSettled = load.responses.any { ClusterThemePolicy.loadAckMatches(it, filename) }
-                    state = if (uncertain) "QUARANTINE" else if (variant == ClusterThemeVariant.CORNER_MARKER) "SELECTION_PENDING_OEM_APPLY" else "AWAITING_OBSERVATION"
+                    state = if (uncertain) "QUARANTINE" else if (variant.isCorner) "SELECTION_PENDING_OEM_APPLY" else "AWAITING_OBSERVATION"
                     detail = if (uncertain) "${variant.id} load completion UNKNOWN; native=${load.native}; ${load.error.orEmpty()}. No replay; recovery remains separate."
-                        else if (variant == ClusterThemeVariant.CORNER_MARKER) "RCC selected; physical display unconfirmed. Firmware selection persists configuration but does not directly apply QML. After genuine OEM cluster reinitialization, explicitly Verify RCC corner markers. No restart action/duration guarantee; no automatic reload."
+                        else if (variant.isCorner) "RCC selected; physical display unconfirmed. Firmware selection persists configuration but does not directly apply QML. After genuine OEM cluster reinitialization, explicitly Verify RCC corner markers. No restart action/duration guarantee; no automatic reload."
                         else if (load.query?.selected(filename) == true) "Selection query names ${variant.id}; pixels require your observation."
                         else "Load attempted for ${variant.id}; selection unconfirmed; native=${load.native}; ${load.error.orEmpty()}. Missing test graphics are inconclusive."
                     phase = "observation"
                     persist(state)
-                    deadline = if (variant == ClusterThemeVariant.CORNER_MARKER) 0 else SystemClock.elapsedRealtime() + 30000
-                    if (restoreRequested.get() || uncertain && variant != ClusterThemeVariant.CORNER_MARKER) enqueueRestore(thisGeneration)
+                    deadline = if (variant.isCorner) 0 else SystemClock.elapsedRealtime() + 30000
+                    if (restoreRequested.get() || uncertain && !variant.isCorner) enqueueRestore(thisGeneration)
                 } catch (t: Throwable) {
                     detail = "$phase: ${t.javaClass.simpleName}: ${t.message}".take(2000)
                     if (mutated) {
                         uncertain = true; state = "QUARANTINE"; persistQuietly()
-                        if (variant == ClusterThemeVariant.CORNER_MARKER) deadline = 0
-                        if (variant != ClusterThemeVariant.CORNER_MARKER || restoreRequested.get()) enqueueRestore(thisGeneration)
+                        if (variant.isCorner) deadline = 0
+                        if (!variant.isCorner || restoreRequested.get()) enqueueRestore(thisGeneration)
                     }
                     else if (helperUnreaped) {
                         uncertain = true; state = "QUARANTINE"; deadline = 0
@@ -428,7 +431,7 @@ internal object ClusterThemeLiveTest {
         verifyCarrier: () -> Unit = { ownedFile() }, query: () -> Exchange = { exchange("query") }): String {
         initialize()
         check(parked && firmware && nonce.matches(Regex("[0-9a-f]{32}")) && journalTrusted && active.get() && mutated &&
-            transport == ClusterThemeTransport.ANDROID_IVI && variant == ClusterThemeVariant.CORNER_MARKER && retirement == null &&
+            transport == ClusterThemeTransport.ANDROID_IVI && variant.isCorner && retirement == null &&
             !defaultQueried && !iviRecoverySettled && !carrierRemoved && !oemObserved &&
             filename == ClusterThemePolicy.PREFIX + nonce + ".rcc") { "Trusted active corner RCC session required" }
         check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped && helperPid == 0)
@@ -465,7 +468,7 @@ internal object ClusterThemeLiveTest {
     @Synchronized fun observeCorners(expectedFilename: String, round: String): String {
         initialize()
         val verified = cornerVerification ?: return status()
-        check(journalTrusted && active.get() && mutated && variant == ClusterThemeVariant.CORNER_MARKER &&
+        check(journalTrusted && active.get() && mutated && variant.isCorner &&
             transport == ClusterThemeTransport.ANDROID_IVI && retirement == null && !restoreRequested.get() &&
             restoring.get() == -1L && !queryActive.get() && !helperUnreaped && helperPid == 0 && validProjection() &&
             verified.matches(expectedFilename, round, generation.get(), SystemClock.elapsedRealtime())) { "Corner visual question expired or changed" }
@@ -621,7 +624,7 @@ internal object ClusterThemeLiveTest {
 
     fun observe(which: Int, expectedFilename: String, expectedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
         initialize()
-        if (which == 1 && variant == ClusterThemeVariant.CORNER_MARKER) return status()
+        if (which == 1 && variant.isCorner) return status()
         if (which == 1 && (variant != expectedVariant || state != "AWAITING_OBSERVATION" || uncertain || restoreRequested.get())) return status()
         // These are tester statements, never inferred from a callback or selection query.
         if (active.get() && mutated && expectedFilename == filename && ClusterThemePolicy.ownedName(expectedFilename)) {
