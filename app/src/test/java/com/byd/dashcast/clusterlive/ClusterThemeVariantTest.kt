@@ -28,7 +28,10 @@ class ClusterThemeVariantTest {
         assertEquals(5, full.startOperation); assertEquals(32, full.minimumProtocol)
         assertNotEquals(marker.asset, full.asset); assertNotEquals(marker.carrierSha256, full.carrierSha256)
         assertEquals(ClusterThemePolicy.ASSET, marker.asset)
-        assertEquals(2, ClusterThemeVariant.values().size)
+        assertEquals(15, ClusterThemeVariant.CORNER_MARKER.startOperation)
+        assertEquals(38, ClusterThemeVariant.CORNER_MARKER.minimumProtocol)
+        assertTrue(ClusterThemeVariant.CORNER_MARKER.isMarker); assertFalse(full.isMarker)
+        assertEquals(3, ClusterThemeVariant.values().size)
     }
 
     @Test fun `journal schema types cannot be coerced from fractional or string values`() {

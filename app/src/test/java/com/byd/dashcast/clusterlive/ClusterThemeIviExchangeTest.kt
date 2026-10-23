@@ -84,6 +84,42 @@ class ClusterThemeIviExchangeTest {
         assertFalse(result.responses.map { ClusterThemeProtocol.decode(it) }.any { ClusterThemePolicy.loadAckMatches(it, name) })
         assertTrue(result.trace.any { "load-not-settled" in it }); assertEquals(1, f.sent.count { it.cmd == 5 })
     }
+    @Test fun `callback receipts preserve actual arrival order time and meaning after sealing`() {
+        val f = Fixture()
+        f.customSend = { request ->
+            if (request.cmd == 1) f.receiver!!(1000, if (++f.queryCount == 1) selection() else f.afterLoad)
+            else {
+                f.receiver!!(1000, ack(kind = 4))
+                f.time += 25
+                f.receiver!!(1000, ack())
+            }
+        }
+        val result = f.run(); assertNull(result.error)
+        val callbacks = result.trace.filter { "callback-receipt" in it }
+        assertEquals(4, callbacks.size)
+        assertTrue(callbacks[0].contains("stage=baseline SELECTION_ONLY"))
+        assertTrue(callbacks[1].contains("receivedElapsedMs=800") && callbacks[1].contains("ACK4_CONFIG_ONLY"))
+        assertTrue(callbacks[2].contains("receivedElapsedMs=825") && callbacks[2].contains("ACK2_REGISTRATION_BROADCAST_UNCORRELATED ownPath=true"))
+        assertTrue(callbacks[3].contains("SELECTION_ONLY"))
+        assertTrue(result.trace.indexOfFirst { "callback-receipt" in it } > result.trace.indexOfFirst { "identity-rechecked" in it })
+        assertTrue(result.trace.size <= 64)
+    }
+    @Test fun `success seal rejects faults and conflicting broadcasts arriving after final identity check`() {
+        for (fault in 0..4) {
+            val f = Fixture()
+            val result = ClusterThemeIviExchange.execute("query", name, f, 7000, { f.time }, { f.time += 25 }) { line ->
+                if ("identity-rechecked" in line) when (fault) {
+                    0 -> f.receiver!!(2000, ByteArray(9))
+                    1 -> f.receiver!!(1000, ByteArray(9))
+                    2 -> f.receiver!!(1000, selection(0, ClusterThemePolicy.HOST_DIRECTORY + name))
+                    3 -> f.alive = false
+                    4 -> f.time = 7000
+                }
+            }
+            assertNotNull("fault=$fault", result.error); assertFalse(result.attempted)
+            assertEquals(listOf(1), f.sent.map { it.cmd }); assertFalse(result.retirementEligible)
+        }
+    }
     @Test fun `wrong owned filename ack is conflicting evidence and never retried`() {
         val f = Fixture(); f.ackPath = ClusterThemePolicy.HOST_DIRECTORY + name.replace("aaaa", "bbbb")
         val result = f.run(); assertNotNull(result.error); assertTrue(result.error!!.contains("Conflicting"))

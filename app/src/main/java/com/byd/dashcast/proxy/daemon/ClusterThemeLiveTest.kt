@@ -10,6 +10,7 @@ import android.util.Base64
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
 import com.byd.dashcast.clusterlive.ClusterThemeProtocol
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
+import com.byd.dashcast.clusterlive.ClusterCornerVerification
 import com.byd.dashcast.clusterlive.ClusterThemeTransport
 import com.byd.dashcast.clusterlive.ClusterThemeJournal
 import com.byd.dashcast.clusterlive.ClusterThemeRetirement
@@ -85,6 +86,10 @@ internal object ClusterThemeLiveTest {
     @Volatile private var projectionValidity: android.os.IBinder? = null
     @Volatile private var retirement: ClusterThemeRetirement? = null
     @Volatile private var retirementEligibleUntil = 0L
+    @Volatile private var loadRequestReceipt = "NOT_RECORDED"
+    @Volatile private var loadSelectionReceipt = "NOT_RECORDED"
+    @Volatile private var loadRegistrationReceipt = "NOT_RECORDED"
+    @Volatile private var cornerVerification: ClusterCornerVerification? = null
     private val trace = ArrayDeque<String>()
     @Synchronized private fun step(stage: String, extra: String = "") {
         val line = "epochMs=${System.currentTimeMillis()} elapsedMs=${SystemClock.elapsedRealtime()} transport=${transport.id} nonce=${filename.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc")} stage=$stage ${extra.take(320)}"
@@ -125,13 +130,27 @@ internal object ClusterThemeLiveTest {
             }
             initialized = true
             watchdog.scheduleWithFixedDelay({
-                val name = filename
-                if (active.get() && deadline > 0 && SystemClock.elapsedRealtime() >= deadline) requestRestore(name)
+                watchdogTick()
             }, 1, 1, TimeUnit.SECONDS)
         }
     }
 
+    @Synchronized internal fun watchdogTick(now: Long = SystemClock.elapsedRealtime()) {
+        if (active.get() && deadline > 0 && now >= deadline && !(variant == ClusterThemeVariant.CORNER_MARKER && mutated))
+            requestRestore(filename)
+    }
+
+    @Synchronized internal fun markLoadStarted(write: (String) -> Unit = ::persist) {
+        checkDeadline(); check(!restoreRequested.get()) { "Restore requested before load admission" }
+        mutated = true
+        if (variant == ClusterThemeVariant.CORNER_MARKER) deadline = 0
+        write("LOAD_STARTED")
+        step("load-durable-before-helper-GO") // Unknown until child returns; never replay.
+    }
+
     internal fun applyRecoveredJournal(saved: ClusterThemeJournal.Recovery) {
+        cornerVerification = null
+        loadRequestReceipt = "NOT_RECORDED"; loadSelectionReceipt = "NOT_RECORDED"; loadRegistrationReceipt = "NOT_RECORDED"
         defaultQueried = false; loadSettled = false; oemObserved = false
         markerObserved = false; themeObserved = false; carrierRemoved = false; deadline = 0
         transport = saved.transport; variant = saved.variant
@@ -170,6 +189,11 @@ internal object ClusterThemeLiveTest {
             .put("mutated", mutated).put("uncertain", uncertain).put("iviRecoverySettled", iviRecoverySettled).put("defaultQueried", defaultQueried)
             .put("carrierRemoved", carrierRemoved).put("markerObservedByUser", markerObserved).put("oemObservedByUser", oemObserved)
             .put("themeObservedByUser", themeObserved)
+            .put("loadEvidence", JSONObject().put("send", loadRequestReceipt).put("selection", loadSelectionReceipt)
+                .put("ack2", loadRegistrationReceipt).put("pixels", if (markerObserved || themeObserved) "USER_REPORTED" else "UNKNOWN"))
+            .put("cornerVerification", cornerVerification?.let { JSONObject().put("round", it.round).put("observed", it.observed)
+                .put("remainingMs", (it.expiresElapsedMs - SystemClock.elapsedRealtime()).coerceAtLeast(0))
+                .put("available", it.matches(filename, it.round, generation.get(), SystemClock.elapsedRealtime()) && !restoreRequested.get() && restoring.get() == -1L) })
             .put("raw", raw.takeLast(if (transport == ClusterThemeTransport.ANDROID_IVI) 3000 else 16000)).put("oemQuery", oemQuery).put("nativeMode", nativeMode.status()).toString()
     }
 
@@ -233,7 +257,9 @@ internal object ClusterThemeLiveTest {
         restoreRequested.set(false); observationPending.set(0)
         mutated = false; uncertain = false; loadSettled = false; iviRecoverySettled = false; defaultQueried = false
         retirement = null; retirementEligibleUntil = 0
+        cornerVerification = null
         markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false; raw = ""
+        loadRequestReceipt = "NOT_RECORDED"; loadSelectionReceipt = "NOT_RECORDED"; loadRegistrationReceipt = "NOT_RECORDED"
         variant = requestedVariant; transport = requestedTransport; projectionValidity = validity
         phase = if (transport == ClusterThemeTransport.ANDROID_IVI) "android-ivi-preflight" else "renderer-discovery"
         synchronized(this) { trace.clear() }
@@ -310,22 +336,28 @@ internal object ClusterThemeLiveTest {
                     } else checkRendererIdentity()
                     checkDeadline(); check(!restoreRequested.get()) { "Restore requested; load cancelled" }
                     phase = "load"
-                    mutated = true; persist("LOAD_STARTED"); step("load-durable-before-helper-GO") // unknown until child returns; never replay.
+                    markLoadStarted()
                     val load = exchange("load")
+                    recordLoadEvidence(load)
                     uncertain = load.unknown || load.native != 0
                     step("load-result", "native=${load.native} unknown=${load.unknown} selectionOwned=${load.query?.selected(filename)}")
                     loadSettled = load.responses.any { ClusterThemePolicy.loadAckMatches(it, filename) }
-                    state = if (uncertain) "QUARANTINE" else "AWAITING_OBSERVATION"
+                    state = if (uncertain) "QUARANTINE" else if (variant == ClusterThemeVariant.CORNER_MARKER) "SELECTION_PENDING_OEM_APPLY" else "AWAITING_OBSERVATION"
                     detail = if (uncertain) "${variant.id} load completion UNKNOWN; native=${load.native}; ${load.error.orEmpty()}. No replay; recovery remains separate."
+                        else if (variant == ClusterThemeVariant.CORNER_MARKER) "RCC selected; physical display unconfirmed. Firmware selection persists configuration but does not directly apply QML. After genuine OEM cluster reinitialization, explicitly Verify RCC corner markers. No restart action/duration guarantee; no automatic reload."
                         else if (load.query?.selected(filename) == true) "Selection query names ${variant.id}; pixels require your observation."
                         else "Load attempted for ${variant.id}; selection unconfirmed; native=${load.native}; ${load.error.orEmpty()}. Missing test graphics are inconclusive."
                     phase = "observation"
                     persist(state)
-                    deadline = SystemClock.elapsedRealtime() + 30000
-                    if (restoreRequested.get() || uncertain) enqueueRestore(thisGeneration)
+                    deadline = if (variant == ClusterThemeVariant.CORNER_MARKER) 0 else SystemClock.elapsedRealtime() + 30000
+                    if (restoreRequested.get() || uncertain && variant != ClusterThemeVariant.CORNER_MARKER) enqueueRestore(thisGeneration)
                 } catch (t: Throwable) {
                     detail = "$phase: ${t.javaClass.simpleName}: ${t.message}".take(2000)
-                    if (mutated) { uncertain = true; state = "QUARANTINE"; persistQuietly(); enqueueRestore(thisGeneration) }
+                    if (mutated) {
+                        uncertain = true; state = "QUARANTINE"; persistQuietly()
+                        if (variant == ClusterThemeVariant.CORNER_MARKER) deadline = 0
+                        if (variant != ClusterThemeVariant.CORNER_MARKER || restoreRequested.get()) enqueueRestore(thisGeneration)
+                    }
                     else if (helperUnreaped) {
                         uncertain = true; state = "QUARANTINE"; deadline = 0
                         detail += "; previous owned helper not reaped; no new test"
@@ -386,8 +418,59 @@ internal object ClusterThemeLiveTest {
         initialize()
         if (nativeMode.blocked()) return status()
         if (expectedFilename != null && expectedFilename != filename) return status()
+        cornerVerification = null
         restoreRequested.set(true)
         if (active.get()) enqueueRestore()
+        return status()
+    }
+
+    @Synchronized fun requestCornerVerification(nonce: String, parked: Boolean, firmware: Boolean, validity: android.os.IBinder,
+        verifyCarrier: () -> Unit = { ownedFile() }, query: () -> Exchange = { exchange("query") }): String {
+        initialize()
+        check(parked && firmware && nonce.matches(Regex("[0-9a-f]{32}")) && journalTrusted && active.get() && mutated &&
+            transport == ClusterThemeTransport.ANDROID_IVI && variant == ClusterThemeVariant.CORNER_MARKER && retirement == null &&
+            !defaultQueried && !iviRecoverySettled && !carrierRemoved && !oemObserved &&
+            filename == ClusterThemePolicy.PREFIX + nonce + ".rcc") { "Trusted active corner RCC session required" }
+        check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped && helperPid == 0)
+        projectionValidity = validity; check(validProjection()) { "Projection reservation expired" }
+        val expected = generation.get()
+        check(restoring.compareAndSet(-1, expected)) { "Recovery or verification worker already active" }
+        cornerVerification = null; markerObserved = false; restoreRequested.set(false)
+        deadline = 0; phase = "corner-read-only-verification"
+        worker.execute {
+            try {
+                check(generation.get() == expected && !restoreRequested.get() && validProjection())
+                hashDeadline = SystemClock.elapsedRealtime() + 60000
+                verifyCarrier()
+                val selected = query() // Exactly one read-only selection query; never load/restore/restart.
+                check(!selected.unknown && selected.native == 0 && selected.query != null) { "Fresh selection unavailable" }
+                verifyCarrier()
+                check(generation.get() == expected && !restoreRequested.get() && validProjection() && !helperUnreaped && helperPid == 0)
+                cornerVerification = ClusterCornerVerification.issue(filename, expected, UUID.randomUUID().toString().replace("-", ""),
+                    SystemClock.elapsedRealtime(), selected.query)
+                step("corner-verification-ready", "round=${cornerVerification?.round} source=0 selectionOnly=true pixels=UNKNOWN")
+                detail = "Fresh persisted own RCC selection; file identity/hash rechecked. Observe physical corner markers now. Selection is not Qt/pixel proof; all recovery debt and historical uncertainty remain."
+            } catch (error: Throwable) {
+                cornerVerification = null
+                detail = "Read-only corner verification refused: ${error.message}; no reload or recovery."
+                step("corner-verification-refused", detail)
+            } finally {
+                restoring.compareAndSet(expected, -1)
+                if (restoreRequested.get()) enqueueRestore(expected)
+            }
+        }
+        return status()
+    }
+
+    @Synchronized fun observeCorners(expectedFilename: String, round: String): String {
+        initialize()
+        val verified = cornerVerification ?: return status()
+        check(journalTrusted && active.get() && mutated && variant == ClusterThemeVariant.CORNER_MARKER &&
+            transport == ClusterThemeTransport.ANDROID_IVI && retirement == null && !restoreRequested.get() &&
+            restoring.get() == -1L && !queryActive.get() && !helperUnreaped && helperPid == 0 && validProjection() &&
+            verified.matches(expectedFilename, round, generation.get(), SystemClock.elapsedRealtime())) { "Corner visual question expired or changed" }
+        markerObserved = true; cornerVerification = verified.copy(observed = true)
+        step("corner-observed-by-user", "round=$round recoveryDebtUnchanged=true loadSettlementUnchanged=true")
         return status()
     }
 
@@ -538,6 +621,7 @@ internal object ClusterThemeLiveTest {
 
     fun observe(which: Int, expectedFilename: String, expectedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
         initialize()
+        if (which == 1 && variant == ClusterThemeVariant.CORNER_MARKER) return status()
         if (which == 1 && (variant != expectedVariant || state != "AWAITING_OBSERVATION" || uncertain || restoreRequested.get())) return status()
         // These are tester statements, never inferred from a callback or selection query.
         if (active.get() && mutated && expectedFilename == filename && ClusterThemePolicy.ownedName(expectedFilename)) {
@@ -555,7 +639,7 @@ internal object ClusterThemeLiveTest {
                 try {
                     if (filename == observedFilename && active.get()) {
                         if (which == 1 && variant == expectedVariant && state == "AWAITING_OBSERVATION" && !uncertain && !restoreRequested.get()) {
-                            if (variant == ClusterThemeVariant.MARKER) markerObserved = true else themeObserved = true
+                            if (variant.isMarker) markerObserved = true else themeObserved = true
                             loadSettled = true
                         }
                         if (which == 2) acceptOemObservation(observedFilename)
@@ -762,6 +846,11 @@ internal object ClusterThemeLiveTest {
 
     internal data class Exchange(val native: Int?, val query: ClusterThemeProtocol.Response?, val responses: List<ClusterThemeProtocol.Response>,
         val unknown: Boolean, val error: String? = null, val attempted: Boolean = false, val retirementEligible: Boolean = false)
+    internal fun recordLoadEvidence(load: Exchange) {
+        loadRequestReceipt = "attempted=${load.attempted} native=${load.native ?: "UNKNOWN"} uncertain=${load.unknown}"
+        loadSelectionReceipt = if (load.query?.selected(filename) == true) "OWN_PATH_REPORTED" else "NOT_CONFIRMED"
+        loadRegistrationReceipt = if (load.responses.any { ClusterThemePolicy.loadAckMatches(it, filename) }) "RECEIVED_UNCORRELATED" else "NOT_RECEIVED"
+    }
     internal fun recoveredGenerationPresent(probe: () -> Unit = { Os.lstat("/proc/$helperPid"); Unit },
         readStart: () -> String = { procStart(helperPid) }): Boolean {
         try { probe() } catch (error: ErrnoException) {
@@ -853,7 +942,7 @@ internal object ClusterThemeLiveTest {
                 uncertain = true
                 val partial = synchronized(capture) { capture.toString("UTF-8") }.takeLast(12000)
                 raw = (raw + "\n$operation: helper deadline; remote completion UNKNOWN; reaped=$terminated\n" + partial).takeLast(16000)
-                partial.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=") }.take(24).forEach { step("helper-partial", it.removePrefix("DASHCAST_IVI_STEP=")) }
+                partial.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=") }.take(64).forEach { step("helper-partial", it.removePrefix("DASHCAST_IVI_STEP=")) }
                 step("helper-timeout", "operation=$operation reaped=$terminated remoteCompletion=UNKNOWN")
                 traceCaptured = true
                 return Exchange(null, null, emptyList(), true)
@@ -868,7 +957,7 @@ internal object ClusterThemeLiveTest {
                 check(j.getString("transport") == transport.id && j.getString("nativeIdentity") == "UNKNOWN")
                 text.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=javaIdentityVerified=") }.take(1)
                     .forEach { step("Java-identity", it.removePrefix("DASHCAST_IVI_STEP=")) }
-                j.optJSONArray("trace")?.let { for (i in 0 until minOf(it.length(), 24)) step("helper", it.optString(i)) }
+                j.optJSONArray("trace")?.let { for (i in 0 until minOf(it.length(), 64)) step("helper", it.optString(i)) }
                 traceCaptured = true
             }
             val responses = ArrayList<ClusterThemeProtocol.Response>()
@@ -887,7 +976,7 @@ internal object ClusterThemeLiveTest {
         } finally {
             if (!traceCaptured && transport == ClusterThemeTransport.ANDROID_IVI) {
                 val partial = synchronized(capture) { capture.toString("UTF-8") }
-                partial.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=") }.take(24)
+                partial.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=") }.take(64)
                     .forEach { step("helper-partial", it.removePrefix("DASHCAST_IVI_STEP=")) }
                 step("helper-result-incomplete", "operation=$operation nativeCompletion=UNKNOWN")
             }
