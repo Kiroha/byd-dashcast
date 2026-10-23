@@ -20,7 +20,16 @@ import com.byd.dashcast.util.AppLogger
  *
  *   The DisplayListener remains registered to detect disconnections.
  */
-class DashboardDisplayHelper(context: Context, private val mListener: Listener) {
+class DashboardDisplayHelper internal constructor(
+    context: Context,
+    private val mListener: Listener,
+    private val activateDisplay: (ProjectionCommandSequencer.Session, ClusterManager.DisplayReadyCallback) -> Unit,
+    private val cancelActivation: () -> Unit,
+) {
+    constructor(context: Context, listener: Listener) : this(context, listener, ClusterManager(context))
+
+    private constructor(context: Context, listener: Listener, manager: ClusterManager) :
+        this(context, listener, manager::activateClusterDisplay, manager::cancel)
 
     interface Listener {
         fun onDashboardDisplayConnected(display: Display?, displayId: Int)
@@ -29,47 +38,51 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
 
     private val mContext: Context = context.applicationContext
     private val mDisplayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-    private val mClusterManager = ClusterManager(context)
 
     // Known cluster display ID — -1 if not connected
     private var mKnownClusterDisplayId = -1
     private var mProjectionSession: ProjectionCommandSequencer.Session? = null
 
-    private val mDisconnectListener = object : DisplayManager.DisplayListener {
-        override fun onDisplayAdded(displayId: Int) {}
+    private var mDisconnectListener: DisplayManager.DisplayListener? = null
 
-        override fun onDisplayRemoved(displayId: Int) {
-            if (displayId != mKnownClusterDisplayId) return
-            AppLogger.i(TAG, "Dashboard display removed: id=$displayId")
-            mKnownClusterDisplayId = -1
-            mListener.onDashboardDisplayDisconnected()
-        }
+    private fun owns(session: ProjectionCommandSequencer.Session): Boolean =
+        mProjectionSession === session && ProjectionCommandBus.isCurrent(session)
 
-        override fun onDisplayChanged(displayId: Int) {}
+    private fun unregisterDisconnectListener() {
+        mDisconnectListener?.let(mDisplayManager::unregisterDisplayListener)
+        mDisconnectListener = null
     }
 
     /** Triggers the cluster activation sequence. */
     fun start() {
         val session = ProjectionCommandBus.tryBeginSession()
         if (session == null) { mListener.onDashboardDisplayDisconnected(); return }
+        unregisterDisconnectListener()
         mProjectionSession = session
         mKnownClusterDisplayId = -1
-        mDisplayManager.registerDisplayListener(mDisconnectListener, null)
-        mClusterManager.activateClusterDisplay(session, object : ClusterManager.DisplayReadyCallback {
+        val disconnectListener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {}
+            override fun onDisplayChanged(displayId: Int) {}
+            override fun onDisplayRemoved(displayId: Int) {
+                if (!owns(session) || displayId != mKnownClusterDisplayId) return
+                AppLogger.i(TAG, "Dashboard display removed: id=$displayId")
+                mKnownClusterDisplayId = -1
+                ClusterManager.notifyProjectionStopped()
+                mListener.onDashboardDisplayDisconnected()
+            }
+        }
+        mDisconnectListener = disconnectListener
+        mDisplayManager.registerDisplayListener(disconnectListener, null)
+        activateDisplay(session, object : ClusterManager.DisplayReadyCallback {
             override fun onDisplayReady(display: Display?, displayId: Int) {
-                // Guard: if stop() was already called, discard this callback
-                if (mKnownClusterDisplayId == -2) return
+                if (!owns(session) || mKnownClusterDisplayId > 0) return
                 mKnownClusterDisplayId = displayId
                 AppLogger.i(TAG, "Dashboard display ready: id=$displayId name=" + (display?.name ?: "null"))
                 mListener.onDashboardDisplayConnected(display, displayId)
             }
 
             override fun onDisplayTimeout() {
-                // Guard: if stop() was already called, discard orphan callback
-                if (mKnownClusterDisplayId == -2) {
-                    AppLogger.d(TAG, "onDisplayTimeout ignored — stop() already called")
-                    return
-                }
+                if (!owns(session) || mKnownClusterDisplayId > 0) return
                 // VirtualDisplay not created after the full sequence (30→6s→16→6s→35).
                 // No fallback to hardcoded displayId=1 — report failure to the caller.
                 // ClusterManager keeps watching via armLateArrivalWatch(); if the VD appears
@@ -80,11 +93,7 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
             }
 
             override fun onDisplayLateReady(display: Display?, displayId: Int) {
-                // Ignore if stop() was already called (sentinel -2).
-                if (mKnownClusterDisplayId == -2) {
-                    AppLogger.d(TAG, "onDisplayLateReady: stop() called — ignoring")
-                    return
-                }
+                if (!owns(session)) return
                 // Ignore if the normal path already succeeded (shouldn't happen but guard).
                 if (mKnownClusterDisplayId > 0) {
                     AppLogger.d(TAG, "onDisplayLateReady: already connected (id=$mKnownClusterDisplayId) — ignoring")
@@ -99,18 +108,17 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
 
     fun stop() {
         val session = mProjectionSession
-        val completeAdasStop = session?.let {
-            com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mContext, it)
-        } ?: Runnable {}
+        val completeAdasStop = if (session != null) prepareAdasStop() else Runnable {}
+        session?.let { ProjectionCommandBus.runIfCurrent(it, ClusterManager::notifyProjectionStopped) }
         mProjectionSession = null
         // Sentinel: any orphan ClusterManager callback (handler postDelayed) will be ignored
         mKnownClusterDisplayId = -2
 
         // Cancel ALL pending Handler callbacks (polls + timeout) in ClusterManager.
         // Without this, the 3s timeout fires after stop() and calls onDashboardDisplayConnected(null,1) → NPE.
-        mClusterManager.cancel()
+        cancelActivation()
 
-        mDisplayManager.unregisterDisplayListener(mDisconnectListener)
+        unregisterDisconnectListener()
 
         // DO NOT call stopService(AutoDisplayService):
         // That system service is started at BOOT and manages the cluster VirtualDisplay.
@@ -127,7 +135,7 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
             completeAdasStop.run()
             return
         }
-        ProjectionCommandBus.sendBarrier(
+        ProjectionCommandBus.sendInfo(
             mContext, session, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",
             object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
@@ -165,18 +173,47 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
      * to avoid double-sending sendInfo(18+0).
      */
     fun stopWithoutAdb() {
-        mProjectionSession?.let(ProjectionCommandBus::endSession)
+        val session = mProjectionSession
+        session?.let { ProjectionCommandBus.runIfCurrent(it, ClusterManager::notifyProjectionStopped) }
         mProjectionSession = null
         mKnownClusterDisplayId = -2
-        mClusterManager.cancel()
-        mDisplayManager.unregisterDisplayListener(mDisconnectListener)
+        cancelActivation()
+        session?.let(ProjectionCommandBus::endSession)
+        unregisterDisconnectListener()
         AppLogger.i(TAG, "stopWithoutAdb — ADB already sent upstream")
     }
 
     fun getKnownClusterDisplayId(): Int {
         // -2 is an internal sentinel (stop() already called); expose as -1 to callers so
         // they treat it as "not connected" rather than a raw magic value.
-        return if (mKnownClusterDisplayId == -2) -1 else mKnownClusterDisplayId
+        val session = mProjectionSession ?: return -1
+        return if (!owns(session) || mKnownClusterDisplayId == -2) -1 else mKnownClusterDisplayId
+    }
+
+    internal fun clearOwnedGeometry() {
+        mProjectionSession?.let { ProjectionCommandBus.runIfCurrent(it, ClusterDisplayRegistry::clear) }
+    }
+
+    internal fun prepareAdasStop(): Runnable {
+        val session = mProjectionSession
+        var complete = Runnable {}
+        if (session != null) {
+            ProjectionCommandBus.runIfCurrent(session) {
+                complete = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mContext, session)
+            }
+        } else {
+            ProjectionCommandBus.runIfIdle {
+                complete = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mContext)
+            }
+        }
+        return complete
+    }
+
+    internal fun stopAdasIfOwned() {
+        val session = mProjectionSession
+        val stop = { com.byd.dashcast.cluster.ProjectionAdasCoordinator.stop(mContext) }
+        if (session != null) ProjectionCommandBus.runIfCurrent(session, stop)
+        else ProjectionCommandBus.runIfIdle(stop)
     }
 
     companion object {

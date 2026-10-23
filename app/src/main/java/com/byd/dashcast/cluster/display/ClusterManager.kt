@@ -42,7 +42,13 @@ import com.byd.dashcast.util.AppLogger
  *   infoInt= 1  → disconnects Qt ENTIRELY → display 1 DISAPPEARS → DO NOT USE to launch apps.
  *   infoInt=12/13 → show/hide Adas — NO EFFECT on the 2D cluster Seal EU.
  */
-class ClusterManager(context: Context) {
+class ClusterManager internal constructor(
+    context: Context,
+    private val sendCommand: (Context, ProjectionCommandSequencer.Session, Int, AdbLocalClient.Callback) -> Unit,
+) {
+    constructor(context: Context) : this(context, { app, session, command, callback ->
+        ProjectionCommandBus.sendInfo(app, session, CLUSTER_TYPE, command, "", callback)
+    })
 
     /** Notified when the cluster VirtualDisplay becomes available (or on timeout). */
     interface DisplayReadyCallback {
@@ -97,6 +103,10 @@ class ClusterManager(context: Context) {
      */
     @Volatile private var mActivationCmd16Dispatched = false
 
+    // DL3 can expose a persistent VD while Qt still renders natively. Dispatch alone is insufficient.
+    private var mRequireCmd16Success = false
+    @Volatile private var mActivationCmd16Succeeded = false
+
     /** Guards against overlapping shell round-trips. Main thread only. */
     private var mDl4ProbeInFlight = false
 
@@ -150,7 +160,9 @@ class ClusterManager(context: Context) {
         // without unregistering the old, leaking listeners and double-launching on the cluster.
         cancel()
         mProjectionSession = session
+        ProjectionCommandBus.runIfCurrent(session, ClusterDisplayRegistry::clear)
         val gen = mActivationGeneration
+        mRequireCmd16Success = Platform.get().isDiLink3(mContext)
         // A fresh attempt invalidates any previous DL4 "unsupported firmware" verdict. Reset
         // here rather than in cancel(): the verdict must survive from the timeout that produced
         // it until the UI/notification has had a chance to read it.
@@ -240,6 +252,7 @@ class ClusterManager(context: Context) {
         if (found != null) latchPanelGeometry(found)
 
         if (found != null && sQtInProjectionMode) {
+            mActivationCmd16Succeeded = true
             // True fast path: VD up AND Qt already projecting — just hand the display back.
             AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id=${found.displayId})")
             mHandler.post {
@@ -637,8 +650,7 @@ class ClusterManager(context: Context) {
                 if (pollCount[0] * POLL_INTERVAL_MS >= CLUSTER_DISPLAY_TIMEOUT_MS) return
 
                 val found = findClusterDisplay(dm)
-                if (found != null) {
-                    if (!claimDisplayReady(gen)) return
+                if (found != null && claimDisplayReady(gen)) {
                     dm.unregisterDisplayListener(listenerHolder[0])
                     mActiveDisplayListener = null
                     mActiveDisplayManager = null
@@ -686,7 +698,7 @@ class ClusterManager(context: Context) {
         val holder = arrayOfNulls<DisplayManager.DisplayListener>(1)
         holder[0] = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
-                if (consumed[0] || !isCurrentActivation(gen)) return
+                if (consumed[0] || !canResolveDisplay(gen)) return
                 val d = dm.getDisplay(displayId)
                 if (!isClusterDisplay(d)) return
                 consumed[0] = true
@@ -719,7 +731,7 @@ class ClusterManager(context: Context) {
             override fun run() {
                 if (consumed[0] || !isCurrentActivation(gen)) return
                 val found = findClusterDisplay(dm)
-                if (found != null) {
+                if (found != null && canResolveDisplay(gen)) {
                     consumed[0] = true
                     mHandler.removeCallbacks(expiry)
                     val mgr = mLateArrivalManager
@@ -751,6 +763,8 @@ class ClusterManager(context: Context) {
                     if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "warm path ADB(cmd=16): $out")
                     mHandler.post {
+                        if (!isCurrentActivation(gen)) return@post
+                        mActivationCmd16Succeeded = true
                         if (!claimDisplayReady(gen)) return@post
                         notifyProjectionActive()
                         if (isCurrentActivation(gen)) {
@@ -895,10 +909,14 @@ class ClusterManager(context: Context) {
                 override fun onSuccess(out: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "activation ADB(cmd=16): $out")
-                    markCmd16Dispatched(gen)
-                    mHandler.postDelayed({
-                        if (gen == mActivationGeneration) sendActivationCmd35(gen)
-                    }, 3000)
+                    mHandler.post {
+                        if (!isCurrentActivation(gen)) return@post
+                        mActivationCmd16Succeeded = true
+                        markCmd16Dispatched(gen)
+                        mHandler.postDelayed({
+                            if (gen == mActivationGeneration) sendActivationCmd35(gen)
+                        }, 3000)
+                    }
                 }
 
                 override fun onError(err: String?) {
@@ -943,19 +961,12 @@ class ClusterManager(context: Context) {
     }
 
     private fun sendProjectionInfo(info: Int, callback: AdbLocalClient.Callback) {
-        ProjectionCommandBus.sendInfo(
-            mContext,
-            mProjectionSession,
-            CLUSTER_TYPE,
-            info,
-            "",
-            callback,
-        )
+        sendCommand(mContext, mProjectionSession, info, callback)
     }
 
     @Synchronized
     private fun claimDisplayReady(gen: Int): Boolean {
-        if (!isCurrentActivation(gen) || mReadyGeneration == gen) return false
+        if (!canResolveDisplay(gen) || mReadyGeneration == gen) return false
         mReadyGeneration = gen
         return true
     }
@@ -964,6 +975,9 @@ class ClusterManager(context: Context) {
         gen == mActivationGeneration &&
             this::mProjectionSession.isInitialized &&
             ProjectionCommandBus.isCurrent(mProjectionSession)
+
+    private fun canResolveDisplay(gen: Int): Boolean =
+        isCurrentActivation(gen) && (!mRequireCmd16Success || mActivationCmd16Succeeded)
 
     // ── Cluster display detection ─────────────────────────────────────────
 
@@ -1107,6 +1121,7 @@ class ClusterManager(context: Context) {
         mActivationGeneration++
         mReadyGeneration = -1
         mActivationCmd16Dispatched = false
+        mActivationCmd16Succeeded = false
         mDl4ProbeInFlight = false
         mDl4ProbeStartedAt = 0L
         mDl4ProbeSeq++
@@ -1118,7 +1133,9 @@ class ClusterManager(context: Context) {
         // DashboardDisplayHelper.stop()/stopWithoutAdb() and from a fresh activateClusterDisplay).
         // Leaving it populated let a later mirror attempt composite a stopped projection's
         // layerStack and arm touch injection on it. No-op on DL3/DL5 — never populated there.
-        ClusterDisplayRegistry.clear()
+        if (this::mProjectionSession.isInitialized) {
+            ProjectionCommandBus.runIfCurrent(mProjectionSession, ClusterDisplayRegistry::clear)
+        }
         val activeMgr = mActiveDisplayManager
         val activeLst = mActiveDisplayListener
         if (activeMgr != null && activeLst != null) {

@@ -334,11 +334,8 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
             mMirrorManager!!.release()
             if (mProjectionActive) {
                 mDisplayHelper.stop()
-            } else ProjectionAdasCoordinator.stop(this)
-            // Same reason as stopProjectionNoAdb: the registry is process-wide and outlives this
-            // service, so a geometry left behind here would be picked up by the next mirror attempt
-            // even though no projection is running. No-op on DL3/DL5.
-            ClusterDisplayRegistry.clear()
+            } else mDisplayHelper.stopAdasIfOwned()
+            // The display helper clears only this owner's geometry; a newer layout may own it now.
             AppLogger.log(TAG, "ClusterService destroyed")
         } finally {
             releaseTaskMoveOwnership()
@@ -1493,7 +1490,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     fun stopProjectionNoAdb() {
         cancelPendingLaunchRecovery()
         mRecoveredPlacement.clear()
-        val completeAdasStop = ProjectionAdasCoordinator.prepareStop(this)
+        val completeAdasStop = mDisplayHelper.prepareAdasStop()
         AppLogger.log(TAG, "stopProjectionNoAdb requested")
         // v1.8.2 — was hardcoded "-d 1". The fission VirtualDisplay is display 1 on most DiLink 3
         // units but not all (INC-20260721 saw it come up as display 3), and resetting the wrong
@@ -1510,12 +1507,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
         }
         mProjectionActive = false
         mDisplayHelper.stopWithoutAdb()
-        // The projection session is over: drop the daemon-resolved geometry so nothing downstream
-        // can start a mirror / inject touch on a display that is no longer projected. This used to
-        // be cleared ONLY from onDashboardDisplayDisconnected, which on DL4 essentially never
-        // fires (its producers need the app process to observe the display — the very thing the
-        // OEM whitelist forbids). No-op on DL3/DL5, where the registry is never populated.
-        ClusterDisplayRegistry.clear()
+        // stopWithoutAdb cleared this owner's geometry before retiring its session.
         // Tear down the mirror NOW (local token + daemon SurfaceControl via stopPreview) so
         // SurfaceFlinger stops compositing the cluster immediately on a real stop, instead of
         // waiting for the async stopSelf()→onDestroy()→release(). Background keepalive is not
@@ -1606,7 +1598,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
         // (defensive: the consume-once in MainActivity is the primary clear).
         sBootLaunchedPkg = null
         // Nothing downstream may keep using a dead display's geometry. No-op on DL3/DL5.
-        ClusterDisplayRegistry.clear()
+        mDisplayHelper.clearOwnedGeometry()
 
         // The mirror was compositing onto the display that just went away, and nothing here used to
         // tell it so. stopProjectionNoAdb tears it down; this path did not, so mMirrorActive stayed
