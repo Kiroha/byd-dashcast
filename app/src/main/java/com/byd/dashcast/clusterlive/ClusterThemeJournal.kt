@@ -15,6 +15,7 @@ internal object ClusterThemeJournal {
         val variant = ClusterThemeVariant.recover(if (transport == ClusterThemeTransport.ANDROID_IVI) 2 else schema,
             if (j.has("variant")) j.getString("variant") else null,
             if (j.has("carrierSha256")) j.getString("carrierSha256") else null)
+        require(variant != ClusterThemeVariant.CORNER_MARKER || transport == ClusterThemeTransport.ANDROID_IVI) { "Corner marker is Android IVI only" }
         val clean = j.getString("state") == "CLEAN"
         val filename = j.getString("filename"); require(ClusterThemePolicy.ownedName(filename))
         require(j.get("mutated") is Boolean)

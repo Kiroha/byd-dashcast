@@ -18,6 +18,7 @@ internal object ClusterThemeIviExchange {
         require(operation in setOf("query", "load", "restore") && ClusterThemePolicy.ownedName(name))
         val lock = Any()
         val events = ArrayList<ByteArray>()
+        val callbackReceipts = ArrayList<String>()
         val trace = ArrayList<String>()
         var accepting = false
         var mutationWindow = false
@@ -29,9 +30,10 @@ internal object ClusterThemeIviExchange {
         var attempted = false
         var retirementEligible = false
         var post = emptyList<ByteArray>()
+        var lastQueryFloor = 0
         fun step(message: String) {
-            val line = "elapsedMs=${clock()} ${message.take(256)}"
-            if (trace.size < 24) trace.add(line)
+            val line = "elapsedMs=${clock()} ${message.take(384)}"
+            if (trace.size < 64) trace.add(line)
             log(line)
         }
         fun current(readAfterFailure: Boolean = false) {
@@ -50,6 +52,7 @@ internal object ClusterThemeIviExchange {
         fun query(readAfterFailure: Boolean = false): Pair<ClusterThemeProtocol.Response, List<ByteArray>> {
             current(readAfterFailure)
             val floor = synchronized(lock) { events.size }
+            lastQueryFloor = floor
             queryNative = transport.send(ClusterThemeProtocol.query())
             step("selection-query native=$queryNative callbackCorrelation=UNAVAILABLE")
             check(queryNative == 0) { "Selection query native=$queryNative" }
@@ -72,6 +75,17 @@ internal object ClusterThemeIviExchange {
                         events.size >= 32 -> invalid = "Callback bound exceeded; evidence incomplete"
                         else -> {
                             val decoded = runCatching { ClusterThemeProtocol.decode(bytes) }.getOrNull()
+                            if (decoded != null && callbackReceipts.size < 32) {
+                                val meaning = when {
+                                    decoded.cmd == 1005 && decoded.ints[0] == 2 -> "ACK2_REGISTRATION_BROADCAST_UNCORRELATED ownPath=${ClusterThemePolicy.loadAckMatches(decoded, name)}"
+                                    decoded.cmd == 1005 && decoded.ints[0] == 4 -> "ACK4_CONFIG_ONLY"
+                                    decoded.cmd == 1005 && decoded.ints[0] == 3 -> "ACK3_FAILURE"
+                                    decoded.cmd == 1001 && decoded.sub == 4 -> "SELECTION_ONLY"
+                                    else -> "BROADCAST"
+                                }
+                                val path = decoded.strings[if (decoded.cmd == 1001) 2 else 0].replace(Regex("[\\p{Cntrl}]"), " ").take(190)
+                                callbackReceipts.add("receivedElapsedMs=${clock()} stage=${if (mutationWindow) "mutation-or-postquery" else "baseline"} $meaning cmd=${decoded.cmd} sub=${decoded.sub} ints=${decoded.ints} path=$path")
+                            }
                             if (decoded == null) invalid = "Malformed broadcast response"
                             else if (decoded.cmd == 1005 && decoded.sub == 0 && decoded.ints[0] == 3) {
                                 events.add(bytes.copyOf())
@@ -137,10 +151,22 @@ internal object ClusterThemeIviExchange {
                 val decoded = synchronized(lock) { events.drop(mutationFloor).map { ClusterThemeProtocol.decode(it) } }
                 val ownAck = decoded.any { ClusterThemePolicy.loadAckMatches(it, name) }
                 step("resource-acks ownAck2Matched=$ownAck ACK4=${decoded.any { it.cmd == 1005 && it.sub == 0 && it.ints[0] == 4 }} expectedHostPath=${ClusterThemePolicy.HOST_DIRECTORY}$name")
-                if (operation == "load" && !ownAck) step("load-not-settled: hot reload may omit ACK2; fresh owned selection received; explicit visual observation required")
+                if (operation == "load" && !ownAck) step("load-not-settled: ACK2 absent; Qt registration and QML creation not established; fresh owned selection only")
             }
             transport.verifyIdentity(); current()
             step("identity-rechecked callbackCorrelation=UNAVAILABLE pixels=UNKNOWN")
+            synchronized(lock) {
+                accepting = false; ended = true
+                check(clock() < deadline && transport.alive()) { "Pinned Binder/deadline expired before success seal" }
+                check(invalid.isEmpty()) { invalid }
+                check(resourceFailure.isEmpty()) { resourceFailure }
+                val finalBytes = events.drop(lastQueryFloor)
+                val finalSelection = selection(finalBytes) ?: error("Fresh selection missing at success seal")
+                check(operation == "query" || if (operation == "load") finalSelection.selected(name) else finalSelection.isDefault()) {
+                    "Final broadcast selection conflicts with requested target"
+                }
+                post = finalBytes
+            }
         } catch (error: Exception) {
             val negative = synchronized(lock) { resourceFailure }
             val message = "${error.javaClass.simpleName}: ${error.message}"
@@ -148,6 +174,8 @@ internal object ClusterThemeIviExchange {
             step("exchange-failed attempted=$attempted $failure")
         } finally {
             synchronized(lock) { accepting = false; ended = true }
+            // Emit only after sealing: logging must never block the Binder callback while holding its lock.
+            synchronized(lock) { callbackReceipts.toList() }.forEach { step("callback-receipt $it") }
             synchronized(lock) { events.map { ClusterThemeProtocol.decode(it) }
                 .filter { it.cmd == 1005 && it.sub == 0 && it.ints[0] == 3 }.take(4) }
                 .forEach { step("resource-response ${it.resourceFailureSummary()}") }

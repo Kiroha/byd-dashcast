@@ -32,6 +32,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun start(source: ParcelFileDescriptor, beforeTransaction: () -> Unit): String = call(1, source, beforeTransaction)
     fun start(source: ParcelFileDescriptor, variant: ClusterThemeVariant, beforeTransaction: () -> Unit): String {
+        require(variant != ClusterThemeVariant.CORNER_MARKER) { "Corner marker requires the explicit Android IVI operation" }
         check(ProxyClient.supportsProtocol(variant.minimumProtocol)) {
             "Connected ProxyDaemon protocol ${variant.minimumProtocol} required for ${variant.id}. No reconnect/replay."
         }
@@ -40,8 +41,14 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     fun startIvi(source: ParcelFileDescriptor, variant: ClusterThemeVariant, validity: IBinder,
         beforeTransaction: () -> Unit): String {
         check(ProxyClient.supportsProtocol(37)) { "Connected ProxyDaemon protocol 37 required for Android IVI RCC loading; no renderer fallback" }
+        check(ProxyClient.supportsProtocol(variant.minimumProtocol)) { "Connected ProxyDaemon protocol ${variant.minimumProtocol} required for ${variant.id}; no fallback" }
         val nonce = java.util.UUID.randomUUID().toString().replace("-", "")
-        val receipt = call(if (variant == ClusterThemeVariant.MARKER) 11 else 12, source, {
+        val operation = when (variant) {
+            ClusterThemeVariant.MARKER -> 11
+            ClusterThemeVariant.FULL_SURFACE_TEST -> 12
+            ClusterThemeVariant.CORNER_MARKER -> 15
+        }
+        val receipt = call(operation, source, {
             beforeTransaction()
             ClusterThemeProjectionDebt.begin(checkNotNull(app), nonce)
         }, payload = {
@@ -60,6 +67,17 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun restore(): String { if (filename.isEmpty()) status(); return call(2) }
     fun observedMarker(expectedFilename: String? = null): String = call(3, expectedFilename = expectedFilename)
+    fun observedCorners(expectedFilename: String, round: String): String {
+        check(ProxyClient.supportsProtocol(38)) { "Connected ProxyDaemon protocol 38 required for corner observation" }
+        require(round.matches(Regex("[0-9a-f]{32}")))
+        return call(16, expectedFilename = expectedFilename, payload = { it.writeString(round) })
+    }
+    fun verifyCorners(validity: IBinder): String {
+        check(ProxyClient.supportsProtocol(38)) { "Connected ProxyDaemon protocol 38 required for read-only corner verification" }
+        val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) }
+            ?: error("No Android RCC session recorded")
+        return call(17, payload = { it.writeString(nonce); it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity) })
+    }
     fun observedFullSurface(expectedFilename: String? = null): String {
         check(ProxyClient.supportsProtocol(32)) { "Connected ProxyDaemon protocol 32 required. No reconnect/replay." }
         return call(6, expectedFilename = expectedFilename)
@@ -99,13 +117,14 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         payload: (Parcel) -> Unit = {}): String {
         val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query",
             "native-full-request", "native-normal-request", "native-normal-user-observation",
-            "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier")[operation]
+            "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier",
+            "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Pinned daemon changed/died. No replay; recovery state is UNKNOWN." }
             d.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR); d.writeInt(operation)
-            if (operation in 2..4 || operation == 6) d.writeString(expectedFilename ?: filename)
+            if (operation in 2..4 || operation == 6 || operation == 16) d.writeString(expectedFilename ?: filename)
             if (source != null) { source.writeToParcel(d, 0); d.writeInt(1) }
             payload(d)
             beforeTransaction()
@@ -117,7 +136,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             check(text.length <= 32768 && r.dataAvail() == 0) { "Oversized/malformed live-test status" }
             ClusterThemeDiagnostics.received(app, name, connectionToken, text)
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Daemon lost after call; remote completion UNKNOWN. No replay." }
-            if (operation in 0..1 || operation == 5 || operation in 11..14) filename = JSONObject(text).getString("filename")
+            if (operation in 0..1 || operation == 5 || operation in 11..15) filename = JSONObject(text).getString("filename")
             val state = JSONObject(text)
             val safe = state.optString("rccSafeNonce")
             if (safe.matches(Regex("[0-9a-f]{32}")) && app != null && ClusterThemeProjectionDebt.nonce(app) == safe &&

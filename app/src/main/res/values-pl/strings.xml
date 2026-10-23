@@ -738,7 +738,7 @@
     <string name="diag_cluster_native_send">Wyślij jedno żądanie</string>
     <string name="diag_cluster_native_seen_full">Widzę natywny widok Full BYD</string>
     <string name="diag_cluster_native_seen_normal">Znów widzę normalny widok BYD</string>
-    <string name="diag_cluster_rcc_theme_button">Załaduj testowy motyw RCC (Full + noc)</string>
+    <string name="diag_cluster_rcc_theme_button">Eksperymentalny motyw RCC — Full + noc</string>
     <string name="diag_cluster_rcc_restore">Przywróć zasoby RCC BYD</string>
 
     <!-- Guided physical cluster visual observations. -->
@@ -760,11 +760,11 @@
     <string name="diag_cluster_observe_theme_message">Czy widzisz „DASHCAST TEST”, cztery turkusowe narożniki oraz czytelne przyrządy i kontrolki BYD? Odpowiedź potwierdza tylko Twoją obserwację.</string>
     <string name="diag_cluster_observe_normal_yes">Tak, zwykły widok</string>
 
-    <string name="diag_cluster_rcc_marker_button">Test znacznika RCC (zalecany)</string>
+    <string name="diag_cluster_rcc_marker_button">Stary znacznik RCC — DASHCAST TEST</string>
     <string name="diag_cluster_rcc_ivi_title">Zasoby RCC — eksperymentalny test IVI</string>
-    <string name="diag_cluster_rcc_ivi_help">Zacznij od znacznika. Dla motywu wybierz ręcznie Full i tryb nocny. Tryby nie zmieniają się automatycznie.</string>
+    <string name="diag_cluster_rcc_ivi_help">Zacznij od znaczników w rogach: P, prędkość zero, ON i zakończony rozruch. Full i noc nie są wymagane. Dla osobnego motywu wybierz Full i noc ręcznie. Tryby nie zmieniają się automatycznie.</string>
     <string name="diag_cluster_rcc_ivi_identity">Wymagane zadeklarowane oprogramowanie 13.1.33.2602030.1, Android 10, potwierdzone DiLink 3 i demon 37. Zainstalowany most Java zweryfikowany; tożsamość natywnego zestawu wskaźników nieznana.</string>
-    <string name="diag_cluster_rcc_ivi_marker_confirm">Ponownie ładuje zasoby BYD z pasywnym znacznikiem, zachowując kod wskaźników i ostrzeżeń. Obraz i przywracanie wymagają sprawdzenia w samochodzie. Zachowaj dostęp do tego ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź przywrócenie wzrokowo; restart go nie gwarantuje.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Żąda wyboru zasobów BYD z pasywnym znacznikiem, zachowując kod wskaźników i ostrzeżeń. Obraz i przywracanie wymagają sprawdzenia w samochodzie. Zachowaj dostęp do tego ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź przywrócenie wzrokowo; restart go nie gwarantuje.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Przed testem wybierz Full i tryb nocny. RCC zachowuje kod wskaźników i ostrzeżeń, zmieniając tło. Czytelność i przywracanie sprawdź w samochodzie. Zachowaj dostęp do ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź widoczny wynik. Restart nie gwarantuje przywrócenia.</string>
     <string name="diag_cluster_rcc_ivi_send">Wyślij test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Żąda domyślnych zasobów RCC bez zmiany trybu projekcji. Odpowiedź OEM i widoczne przywrócenie sprawdzane są oddzielnie. Następnie potwierdź to, co widzisz. Bez restartu i automatycznego nowego testu.</string>
@@ -777,4 +777,11 @@
     <string name="diag_cluster_rcc_retire_confirm">Przenosi tylko nasz testowy RCC do nowego folderu i zachowuje jego bajty. Nie wysyła ładowania ani restartu OEM. Obraz może pozostać bez zmian do rzeczywistej ponownej inicjalizacji licznika przez BYD. Ponowne połączenie demona Androida nie wystarczy. Następnie naciśnij „Sprawdź powrót BYD” i potwierdź oryginalny ekran. Inne testy pozostają zablokowane.</string>
     <string name="diag_cluster_rcc_retired_waiting">Powrót BYD przygotowany — oczekiwanie na licznik. Ręcznie zainicjalizuj ponownie licznik OEM, następnie naciśnij „Sprawdź powrót BYD”. Weryfikacja tylko odczytuje wybór i zachowany plik. Ponowne połączenie Androida lub demona nie dowodzi restartu licznika. Następnie wzrokowo potwierdź wskaźniki i kontrolki BYD.</string>
     <string name="diag_cluster_rcc_verify_return">Sprawdź powrót BYD</string>
+    <string name="diag_cluster_rcc_corners_button">Test ładowania RCC (znaczniki w rogach)</string>
+    <string name="diag_cluster_rcc_corners_confirm">Żąda wyboru RCC z cienkimi turkusowymi i purpurowymi znacznikami w rogach, zachowując kod wskaźników i ostrzeżeń. Są widoczne tylko przy ON, zakończonym rozruchu, P i prędkości zero; nie wykrywa to bezpiecznego parkowania. Full i tryb nocny nie są wymagane. Wybór nie dowodzi załadowania przez Qt. Wybór jest trwały. Ten test nie wraca automatycznie po 30 sekundach. Może być potrzebna rzeczywista ponowna inicjalizacja zestawu BYD; brak gwarancji konkretnej czynności lub czasu. Połączenie z daemonem nie inicjalizuje zestawu ponownie. Następnie użyj „Sprawdź znaczniki RCC”, aby otworzyć pytanie wzrokowe. Przywracanie BYD jest osobne.</string>
+    <string name="diag_cluster_observe_corners_message">Czy widzisz turkusowe i purpurowe znaczniki w rogach fizycznego zestawu wskaźników, a przyrządy i kontrolki BYD są czytelne?</string>
+    <string name="diag_cluster_rcc_load_receipts">Wysłanie: %1$s\nWybór: %2$s\nACK2 (nieskorelowana odpowiedź): %3$s\nEkran: %4$s</string>
+    <string name="diag_cluster_rcc_corners_verify_button">Sprawdź znaczniki RCC</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Sprawdza tylko do odczytu nasz już wybrany RCC. Po rzeczywistej ponownej inicjalizacji zestawu wskaźników BYD podczas normalnej obsługi samochodu użyj tego przycisku i odpowiedz według fizycznych znaczników. Połączenie z daemonem nie inicjalizuje zestawu ponownie. Ta czynność niczego nie przeładowuje ani nie restartuje. Odpowiedź tak nie zamyka sesji; przywracanie BYD jest osobne.</string>
+    <string name="diag_cluster_rcc_corners_pending">RCC wybrany — obraz niepotwierdzony</string>
 </resources>

@@ -729,7 +729,7 @@
     <string name="diag_cluster_native_send">Eine Anfrage senden</string>
     <string name="diag_cluster_native_seen_full">Ich sehe das native BYD-Vollbild</string>
     <string name="diag_cluster_native_seen_normal">Ich sehe wieder die normale BYD-Anzeige</string>
-    <string name="diag_cluster_rcc_theme_button">RCC-Testdesign laden (Vollbild + Nacht)</string>
+    <string name="diag_cluster_rcc_theme_button">Experimentelles RCC-Design — Full + Nacht</string>
     <string name="diag_cluster_rcc_restore">BYD-RCC-Ressourcen wiederherstellen</string>
 
     <!-- Guided physical cluster visual observations. -->
@@ -751,11 +751,11 @@
     <string name="diag_cluster_observe_theme_message">Siehst du „DASHCAST TEST“, alle vier cyanfarbenen Ecken sowie lesbare BYD-Instrumente und Kontrollleuchten? Die Antwort bestätigt nur deine Sichtbeobachtung.</string>
     <string name="diag_cluster_observe_normal_yes">Ja, normale Anzeige</string>
 
-    <string name="diag_cluster_rcc_marker_button">RCC-Marker testen (empfohlen)</string>
+    <string name="diag_cluster_rcc_marker_button">Alter RCC-Marker — DASHCAST TEST</string>
     <string name="diag_cluster_rcc_ivi_title">RCC-Ressourcen — experimenteller IVI-Test</string>
-    <string name="diag_cluster_rcc_ivi_help">Beginne mit dem Marker. Für das Design Full und Nacht manuell wählen. Kein Modus wird automatisch geändert.</string>
+    <string name="diag_cluster_rcc_ivi_help">Mit Eckmarkierungen beginnen: P, Tempo null, ON und Start abgeschlossen. Full und Nacht sind nicht nötig. Für das separate Design Full und Nacht manuell wählen. Kein Modus ändert sich automatisch.</string>
     <string name="diag_cluster_rcc_ivi_identity">Bestätigte Firmware 13.1.33.2602030.1, Android 10, eindeutig erkanntes DiLink 3 und Daemon 37 erforderlich. Installierte Java-Brücke geprüft; native Cluster-Identität unbekannt.</string>
-    <string name="diag_cluster_rcc_ivi_marker_confirm">Die BYD-Ressourcen werden mit einem passiven Marker neu geladen. Instrumenten- und Warncode bleibt erhalten. Anzeige und Wiederherstellung müssen am Fahrzeug geprüft werden. Diesen Bildschirm verfügbar halten. Nach 30 Sekunden werden Standardressourcen angefordert, sofern die Sitzung verfügbar bleibt. Wiederherstellung visuell bestätigen; Neustart garantiert sie nicht.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Fordert die Auswahl von BYD-Ressourcen mit einem passiven Marker an; Instrumenten- und Warncode bleiben erhalten. Anzeige und Wiederherstellung müssen am Fahrzeug geprüft werden. Diesen Bildschirm verfügbar halten. Nach 30 Sekunden werden Standardressourcen angefordert, sofern die Sitzung verfügbar bleibt. Wiederherstellung visuell bestätigen; Neustart garantiert sie nicht.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Vor dem Test Full und Nacht wählen. Das RCC behält Instrumenten- und Warncode und ändert den Hintergrund. Lesbarkeit und Wiederherstellung am Fahrzeug prüfen. Bildschirm verfügbar halten. Nach 30 Sekunden werden bei verfügbarer Sitzung Standardressourcen angefordert. Danach die Anzeige bestätigen. Neustart garantiert keine Wiederherstellung.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC-Test senden</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Fordert die Standard-RCC-Ressourcen an und ändert den Projektionsmodus nicht. OEM-Antwort und sichtbare Wiederherstellung werden getrennt geprüft. Danach die Anzeige bestätigen. Kein Neustart oder automatischer neuer Test.</string>
@@ -768,4 +768,11 @@
     <string name="diag_cluster_rcc_retire_confirm">Verschiebt nur unsere RCC-Testdatei in einen neuen Ordner und erhält ihre Daten. Sendet weder Laden noch OEM-Neustart. Die Anzeige kann bis zur echten BYD-Neuinitialisierung des Kombiinstruments unverändert bleiben. Den Android-Daemon neu zu verbinden genügt nicht. Danach „BYD-Rückkehr prüfen“ drücken und die Originalanzeige bestätigen. Andere Tests bleiben bis dahin gesperrt.</string>
     <string name="diag_cluster_rcc_retired_waiting">BYD-Rückkehr vorbereitet — auf Kombiinstrument warten. Das OEM-Kombiinstrument manuell neu initialisieren, danach „BYD-Rückkehr prüfen“ drücken. Die Prüfung liest nur Auswahl und erhaltene Datei. Eine neue Android- oder Daemon-Verbindung beweist keinen Cluster-Neustart. Danach BYD-Instrumente und Warnleuchten visuell bestätigen.</string>
     <string name="diag_cluster_rcc_verify_return">BYD-Rückkehr prüfen</string>
+    <string name="diag_cluster_rcc_corners_button">RCC-Laden testen (Eckmarkierungen)</string>
+    <string name="diag_cluster_rcc_corners_confirm">Fordert die Auswahl einer RCC-Datei mit dünnen cyanfarbenen und magentafarbenen Eckmarkierungen an. Instrumenten- und Warncode bleiben erhalten. Die Markierungen erscheinen nur bei ON, abgeschlossenem Start, P und Tempo null; sicheres Parken wird damit nicht erkannt. Full und Nacht sind nicht nötig. Auswahl beweist kein Qt-Laden. Die Auswahl bleibt gespeichert. Dieser Test kehrt nach 30 Sekunden nicht automatisch zurück. Eine echte BYD-Cluster-Neuinitialisierung kann nötig sein; bestimmte Aktion oder Dauer sind nicht garantiert. Eine Daemon-Neuverbindung initialisiert den Cluster nicht neu. Danach „RCC-Eckmarkierungen prüfen“ für die Sichtfrage nutzen. BYD-Wiederherstellung bleibt separat.</string>
+    <string name="diag_cluster_observe_corners_message">Sind die cyanfarbenen und magentafarbenen Eckmarkierungen sichtbar und die BYD-Instrumente und Warnanzeigen lesbar?</string>
+    <string name="diag_cluster_rcc_load_receipts">Senden: %1$s\nAuswahl: %2$s\nACK2 (nicht zugeordnete Antwort): %3$s\nAnzeige: %4$s</string>
+    <string name="diag_cluster_rcc_corners_verify_button">RCC-Eckmarkierungen prüfen</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Prüft unsere bereits ausgewählte RCC-Datei nur lesend. Nach einer echten BYD-Cluster-Neuinitialisierung durch normalen Fahrzeugbetrieb diese Taste nutzen und anhand der sichtbaren Markierungen antworten. Eine Daemon-Neuverbindung initialisiert den Cluster nicht neu. Diese Aktion lädt nichts neu und startet nichts neu. Ein Ja schließt die Sitzung nicht; BYD-Wiederherstellung bleibt separat.</string>
+    <string name="diag_cluster_rcc_corners_pending">RCC ausgewählt — Anzeige unbestätigt</string>
 </resources>

@@ -1,5 +1,7 @@
 # Physical full-surface test theme
 
+Build 705 adds the separately compiled [corner loading proof](CLUSTER_ANDROID_IVI_RCC_TEST.md#build-705-separate-selection-from-actual-qml-application). The legacy profile below keeps its bytes and behavior; selection alone does not prove Qt loading.
+
 Since build 702, the Diag load buttons use the separate [Android IVI RCC transport](CLUSTER_ANDROID_IVI_RCC_TEST.md) at protocol 35. The renderer-first contract below describes the preserved legacy path; it is not silently relaxed or selected after an IVI failure.
 
 Diag contains **Test full cluster theme — night + Full (experimental)**. This

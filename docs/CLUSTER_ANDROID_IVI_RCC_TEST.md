@@ -12,6 +12,96 @@ transport and its schema 1/2 recovery remain separate; no failed strict check
 silently selects a different transport. Schema 3 requires the exact transport,
 compiled variant and carrier hash. Unknown/corrupt journals block admission.
 
+## Build 705: separate selection from actual QML application
+
+**1.9.66-beta / build 705, ProxyDaemon 38** adds a separate fixed
+`corner-marker` profile. The previous three packaged RCC files and their hashes
+remain unchanged. Operations 15/16/17 are explicit corner start, nonce/round-bound
+user observation, and read-only verification; old operations retain their format.
+The new profile is Android-IVI only, including recovered schema-3/4 journals.
+
+REA on the exact firmware explains why a selected file can leave the display
+unchanged. `msgDataUpdate(0x2d)` calls `updateTranslateRccFromIvi`, which saves
+configuration key `0x38` and emits configuration ACK4; it does not directly publish
+translation data item 5 (`ev_ffebc743b6936ef3aad0619d083299c1c5b8d7dcaa088a87ae0ed671bbf3807c`,
+`ev_62bbb1764331613feb5441c9e3ac6da54372c5d43af45b9e3029f6bc2396256d`).
+The complete `SetConfig_STRING` chain saves XML without a renderer callback
+(`ev_53eefec58956fc5451986fcf8f5abcb684e15a3e0e1500f1e5c6bb860f75e2a2`,
+`ev_505c9bcc2a0d2f654d2f1fe09acf85cf027d7c91acd8766c3d66f91f7e781d28`,
+`ev_dac169ea47527fa39847ed5089190aa4a11059fba85424b741de02390ee4c7a3`).
+XML publication occurs through `updateThemeRcc` during native initialization or
+specific model/debug paths. Those paths do not authorize an arbitrary apply
+command. No vehicle action or restart duration is guaranteed here.
+
+Common `main.qml` destroys the old theme, unregisters its resources, registers
+translation before the stock theme, then creates the fixed root alias. Native
+unregister clears both filenames and the QML component cache
+(`ev_07d90cc364d529c6f31e9ccdf73d04b381b4d939f9d654d059e2901cf9c3bc00`,
+`ev_cd037c3e5185b2aaa74fa749ff9ccb9b39cce7edffb7b2a73be2140cbec71457`).
+Qt appends registered roots and lookup checks the first matching resource. Thus
+our two root aliases can be selected in that researched reload sequence; merely
+selecting the file does not establish that the sequence ran. ACK2 is an
+uncorrelated registration broadcast, not component-creation or pixel proof;
+ACK4 can clear the request flag before registration replies. The older theory
+that missing ACK2 alone establishes a hot reload is withdrawn.
+
+For a parked vehicle, first resolve any earlier test debt through its existing
+recovery flow. Then:
+
+1. Connect protocol 38 explicitly and choose **Tester le chargement RCC (repères
+   aux coins)**. Confirm parked/firmware assertions. This sends one existing
+   cmd5/mode0 selection request; it does not send an OEM restart or force Full.
+2. Read **RCC sélectionné — affichage non confirmé**. Selection persists. This
+   new profile has **no automatic 30-second return after load admission**.
+   Preflight, copying, hashing, the helper deadline and helper reaping remain
+   bounded; errors preserve the journal, carrier and recovery debt without an
+   automatic second OEM mutation. Existing profiles retain their recovery timer.
+3. A genuine OEM cluster reinitialization through normal vehicle operation may
+   be needed to read the stored selection. The app triggers none and guarantees
+   no particular action/duration. Reconnecting the daemon does not reinitialize
+   the cluster. After any daemon restart reconnect explicitly; no load is replayed.
+4. Use **Vérifier les repères RCC**, a separate read-only action. It requires the
+   original trusted nonce/profile/hash, unchanged file/inode/parents, a live
+   projection reservation, no recovery proof or other helper, and one fresh
+   source-0 exact-own-path query. File identity and reservation are checked again
+   afterward. Source 1, a foreign/default response, uncertainty or changed file
+   cannot open the visual question. No load/default/restart is sent.
+5. A successful check offers a 60-second nonce/generation/round-bound popup:
+   inspect cyan and magenta corner brackets and readable OEM instruments on the
+   physical cluster. No/Unknown sends no observation. Yes records only this
+   tester statement; it does not settle a load, erase uncertainty, mark default,
+   close recovery debt or admit projection/new tests. Expiry, changed connection,
+   an explicit Restore, or daemon restart invalidates the question. A restarted
+   daemon requires a new manual verification.
+6. Export the normal diagnostic report. Use **Restaurer les ressources RCC BYD**
+   separately when returning to OEM resources; **Vérifier le retour BYD** belongs
+   only to the preserved-carrier recovery flow.
+
+The corner carrier SHA-256 is
+`3f3052c4d79f5c14ed3b708921127ac07f91ac4b03e68c94ea176505b66eb6bb`.
+It preserves all 84 stock locale resources and both complete OEM roots apart
+from one inserted transparent Item. Eight static 4-pixel outer-edge strokes
+have 96/80-pixel arms, z=1, below the researched Center/ADAS/warning/boot layers.
+They appear only for strict native ON=3, completed startup `playAnim===true`,
+P=1 and speed===0. Unknown values hide them; these conditions do not establish
+safe parking. Full/night are not required. No filled panel, text, simulated
+values, input handler, timer, alert modification or Common/main override is added.
+The original root geometry/scale is preserved; physical crop and legibility
+still need vehicle validation.
+
+Reports distinguish send/native receipt, exact selected path, exact-path ACK2
+broadcast, and tester-observed graphics. Every bounded valid callback records
+arrival elapsed time/stage and ACK2/ACK3/ACK4/selection meaning; output occurs
+after sealing the callback lease. Both successful and negative exchanges seal
+and recheck final Binder/deadline/invalid/conflicting responses atomically. ACK4
+means configuration only. Historical receipts never become admission proof.
+
+Local validation includes deterministic carrier preservation tests and an
+optional existing-PyQt5 offscreen check of **only the new owned fragment** with
+mock data and a synthetic foreground. It checks both aliases, two dimensions,
+corner pixel colors, higher-layer precedence and strict guard failures. It does
+not execute OEM QML/imports/plugins or establish vehicle loading/recovery.
+
 ## Build 704: negative ACK diagnosis and explicit recovery preparation
 
 **1.9.65-beta / build 704 requires ProxyDaemon 37** for Android-IVI operations.
@@ -193,7 +283,8 @@ explicitly connected protocol 37 and an idle projection/ADAS reservation. It
 durably writes a negative-only app RCC debt before IPC. The daemon checks mutual
 exclusion with native tests, queries, RCC recovery and production mode commands.
 No generic command fallback, reconnect, 16/18, CAN frame or automatic test load
-is used. The two existing compiled RCC files remain byte-identical.
+is used. The two historical compiled RCC files remain byte-identical; build 705 adds a
+separate corner profile.
 
 One bounded child verifies the installed system Java bridge's actual APK, UID
 1000, source/splits and exact SHA, pins `AutoContainer` /
@@ -221,9 +312,9 @@ evidence**; time windows, conflicts, malformed input and overflow are checked.
 Native zero or ACK4 alone cannot admit the observation-ready state. A successful
 native call plus a fresh exact own-path query and no conflicting/error evidence
 can ask for visual observation even without ACK2; `loadSettled` stays false until
-an exact ACK2 or a fresh positive marker/theme observation. REA shows that the
-hot-reload branch of `translateRccChanged` can omit ACK2. Missing/negative visual
-confirmation does not settle the load or permit deletion.
+an exact ACK2 or a fresh positive marker/theme observation. Missing ACK2 does not identify the apply path; the build-705 native-chain
+analysis above supersedes the earlier hot-reload explanation. Missing/negative
+visual confirmation does not settle the load or permit deletion.
 
 The preload confirmation authorizes one watchdog recovery request after the
 observation interval, if the existing session is available. It is a request,

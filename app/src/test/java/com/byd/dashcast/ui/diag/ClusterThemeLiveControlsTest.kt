@@ -235,7 +235,13 @@ class ClusterThemeLiveControlsTest {
         assertTrue(ClusterThemeDiagnostics.snapshot(activity).contains(text))
     }
 
-    @Test fun `full theme confirmation sends exact asset through IVI operation12 and durable nonce`() {
+    @Test fun `full theme confirmation sends exact asset through IVI operation12 and durable nonce`() =
+        assertFixedAssetLoad(ClusterThemeVariant.FULL_SURFACE_TEST, 12, R.string.diag_cluster_rcc_theme_button, R.string.diag_cluster_rcc_ivi_theme_confirm)
+
+    @Test fun `corner confirmation sends exact separate asset through operation15 with both assertions`() =
+        assertFixedAssetLoad(ClusterThemeVariant.CORNER_MARKER, 15, R.string.diag_cluster_rcc_corners_button, R.string.diag_cluster_rcc_corners_confirm)
+
+    private fun assertFixedAssetLoad(variant: ClusterThemeVariant, operation: Int, button: Int, confirmation: Int) {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previous = bf.get(null); val version = vf.get(null)
@@ -251,36 +257,36 @@ class ClusterThemeLiveControlsTest {
                         reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","detail":"Read only preflight","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false}""")
                         return true
                     }
-                    assertEquals(12, op)
+                    assertEquals(operation, op)
                     assetReceived = true
                     ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
                     // Robolectric cannot read a parcelled FD while its original remains open.
                     val source = File(RuntimeEnvironment.getApplication().getExternalFilesDir(null), "cluster-live-source")
-                        .listFiles().orEmpty().single { it.name.startsWith("full-surface-test-") }
+                        .listFiles().orEmpty().single { it.name.startsWith(variant.id + "-") }
                     val bytes = source.readBytes()
                     val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
-                    assertEquals(ClusterThemeVariant.FULL_SURFACE_TEST.carrierSha256, digest)
+                    assertEquals(variant.carrierSha256, digest)
                     assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
                     val nonce = data.readString()!!
                     assertEquals(nonce, ClusterThemeProjectionDebt.nonce(RuntimeEnvironment.getApplication()))
                     assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail())
                     reply!!.writeNoException()
-                    reply.writeString("""{"rccRejectedNonce":"$nonce","state":"REFUSED","detail":"Fixture no native load","filename":"","variant":"full-surface-test","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"themeObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
+                    reply.writeString("""{"rccRejectedNonce":"$nonce","state":"REFUSED","detail":"Fixture no native load","filename":"","variant":"${variant.id}","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"themeObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
                     return true
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "37")
+        }); vf.set(null, "38")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
         try {
-            views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(R.string.diag_cluster_rcc_theme_button) }.performClick()
+            views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(button) }.performClick()
             ShadowLooper.idleMainLooper()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
             assertTrue(views(dialog.window!!.decorView as ViewGroup).filterIsInstance<TextView>().any {
-                it.text == activity.get().getString(R.string.diag_cluster_rcc_ivi_theme_confirm)
+                it.text == activity.get().getString(confirmation)
             })
             views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().let { checks ->
                 assertEquals(2, checks.size); checks[0].isChecked = true
@@ -335,6 +341,35 @@ class ClusterThemeLiveControlsTest {
             render.invoke(controls, state.toString(), 0L, session, 0L); ShadowLooper.idleMainLooper()
             assertEquals(activity.get().getString(R.string.diag_cluster_rcc_restore), views(header).filterIsInstance<Button>().single().text)
             assertFalse(views(header).filterIsInstance<TextView>().any { it.text.toString().contains(activity.get().getString(R.string.diag_cluster_rcc_retired_waiting)) })
+        } finally { controls.close(); activity.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
+    }
+
+    @Test fun `historical own path cannot claim corner selection after uncertainty or another verification`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null)
+        bf.set(null, Binder()); vf.set(null, "38")
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { false }, {}, { false }, {})
+        val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("render", String::class.java,
+            Long::class.javaPrimitiveType, ClusterThemeSession::class.java, Long::class.javaPrimitiveType).apply { isAccessible = true }
+        val session = ClusterThemeSession.pin(activity.get())
+        val state = JSONObject().put("state", "QUARANTINE").put("phase", "observation").put("uncertain", true)
+            .put("variant", "corner-marker").put("rccDebt", true).put("mutated", true).put("filename", "")
+            .put("detail", "Unknown exchange fixture").put("daemonUid", 2000).put("defaultQueried", false)
+            .put("markerObservedByUser", false).put("oemObservedByUser", false)
+            .put("loadEvidence", JSONObject().put("selection", "OWN_PATH_REPORTED"))
+        val positive = activity.get().getString(R.string.diag_cluster_rcc_corners_pending)
+        val neutral = activity.get().getString(R.string.diag_cluster_rcc_corners_verify_confirm)
+        fun shown(): String = views(header).filterIsInstance<TextView>().joinToString("\n") { it.text.toString() }
+        fun show() { render.invoke(controls, state.toString(), 0L, session, 0L); ShadowLooper.idleMainLooper() }
+        try {
+            show(); assertFalse(shown().contains(positive)); assertTrue(shown().contains(neutral))
+            state.put("state", "SELECTION_PENDING_OEM_APPLY").put("uncertain", false)
+            show(); assertTrue(shown().contains(positive))
+            state.put("phase", "corner-read-only-verification")
+            show(); assertFalse(shown().contains(positive)); assertTrue(shown().contains(neutral))
         } finally { controls.close(); activity.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
     }
 }

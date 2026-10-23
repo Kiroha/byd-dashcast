@@ -734,7 +734,7 @@
     <string name="diag_cluster_native_send">إرسال طلب واحد</string>
     <string name="diag_cluster_native_seen_full">أرى عرض Full الأصلي من BYD</string>
     <string name="diag_cluster_native_seen_normal">أرى عرض BYD العادي مجددًا</string>
-    <string name="diag_cluster_rcc_theme_button">تحميل سمة RCC التجريبية (Full + ليل)</string>
+    <string name="diag_cluster_rcc_theme_button">سمة RCC تجريبية — Full + ليلي</string>
     <string name="diag_cluster_rcc_restore">استعادة موارد RCC الخاصة بـBYD</string>
 
     <!-- Guided physical cluster visual observations. -->
@@ -756,11 +756,11 @@
     <string name="diag_cluster_observe_theme_message">هل ترى «DASHCAST TEST» والزوايا السماوية الأربع وأجهزة ومؤشرات BYD المقروءة؟ تؤكد الإجابة ملاحظتك المرئية فقط.</string>
     <string name="diag_cluster_observe_normal_yes">نعم، العرض العادي</string>
 
-    <string name="diag_cluster_rcc_marker_button">اختبار علامة RCC (موصى به)</string>
+    <string name="diag_cluster_rcc_marker_button">علامة RCC القديمة — DASHCAST TEST</string>
     <string name="diag_cluster_rcc_ivi_title">موارد RCC — اختبار IVI تجريبي</string>
-    <string name="diag_cluster_rcc_ivi_help">ابدأ بالعلامة. للسمة، اختر Full والوضع الليلي يدوياً. لا يتغير أي وضع تلقائياً.</string>
+    <string name="diag_cluster_rcc_ivi_help">ابدأ بعلامات الزوايا: وضع P وسرعة صفر وON واكتمال البدء. لا يلزم Full أو الوضع الليلي. للسمة المنفصلة اختر Full والليلي يدوياً. لا يتغير أي وضع تلقائياً.</string>
     <string name="diag_cluster_rcc_ivi_identity">يلزم تأكيد البرنامج 13.1.33.2602030.1 وAndroid 10 واكتشاف DiLink 3 مؤكداً وdaemon 37. تم التحقق من جسر Java المثبت؛ هوية لوحة العدادات الأصلية غير معروفة.</string>
-    <string name="diag_cluster_rcc_ivi_marker_confirm">يعيد تحميل موارد BYD بعلامة ثابتة مع الاحتفاظ بكود العدادات والتحذيرات. يجب التحقق من العرض والاستعادة في السيارة. أبقِ هذه الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. أكد الاستعادة بصرياً؛ إعادة التشغيل لا تضمنها.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">يطلب اختيار موارد BYD بعلامة ثابتة مع الحفاظ على كود العدادات والتحذيرات. يجب التحقق من العرض والاستعادة في السيارة. أبقِ هذه الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. أكد الاستعادة بصرياً؛ إعادة التشغيل لا تضمنها.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">اختر Full والوضع الليلي قبل الاختبار. يحتفظ RCC بكود العدادات والتحذيرات ويغير الخلفية. تحقق من الوضوح والاستعادة في السيارة. أبقِ الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. ثم أكد ما تراه. إعادة التشغيل لا تضمن الاستعادة.</string>
     <string name="diag_cluster_rcc_ivi_send">إرسال اختبار RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">يطلب موارد RCC الافتراضية دون تغيير وضع العرض. يتم التحقق من رد OEM والاستعادة المرئية بشكل منفصل؛ ثم أكد ما تراه. لا إعادة تشغيل أو اختبار جديد تلقائي.</string>
@@ -773,4 +773,11 @@
     <string name="diag_cluster_rcc_retire_confirm">ينقل ملف RCC التجريبي الخاص بنا فقط إلى مجلد جديد ويحافظ على بايتاته. لا يرسل تحميلًا أو إعادة تشغيل OEM. قد تبقى الصورة كما هي حتى تعيد BYD تهيئة لوحة العدادات فعليًا. إعادة توصيل daemon Android لا تكفي. بعد ذلك اضغط «التحقق من عودة BYD» وأكد الشاشة الأصلية. تبقى الاختبارات الأخرى محظورة حتى ذلك الحين.</string>
     <string name="diag_cluster_rcc_retired_waiting">تمت تهيئة عودة BYD — بانتظار لوحة العدادات. أعد تهيئة لوحة OEM يدويًا، ثم اضغط «التحقق من عودة BYD». التحقق يقرأ الاختيار وملفنا المحفوظ فقط. إعادة توصيل Android أو daemon لا تثبت إعادة تشغيل اللوحة. ثم أكد بصريًا عدادات BYD ومصابيح التحذير.</string>
     <string name="diag_cluster_rcc_verify_return">التحقق من عودة BYD</string>
+    <string name="diag_cluster_rcc_corners_button">اختبار تحميل RCC (علامات الزوايا)</string>
+    <string name="diag_cluster_rcc_corners_confirm">يطلب اختيار ملف RCC بعلامات سماوية وأرجوانية رفيعة في الزوايا مع الحفاظ على كود العدادات والتحذيرات. تظهر العلامات فقط مع ON واكتمال البدء ووضع P وسرعة صفر؛ لا يكتشف ذلك الوقوف الآمن. لا يلزم Full أو الوضع الليلي. الاختيار لا يثبت تحميل Qt. يبقى الاختيار محفوظاً. لا يعود هذا الاختبار تلقائياً بعد 30 ثانية. قد تلزم إعادة تهيئة فعلية للوحة BYD؛ لا يوجد ضمان لإجراء أو مدة محددة. إعادة توصيل daemon لا تعيد تهيئة اللوحة. ثم استخدم «التحقق من علامات زوايا RCC» لفتح السؤال البصري. استعادة BYD إجراء منفصل.</string>
+    <string name="diag_cluster_observe_corners_message">هل ترى العلامات السماوية والأرجوانية في زوايا لوحة العدادات الفعلية مع وضوح عدادات BYD ومؤشرات التحذير؟</string>
+    <string name="diag_cluster_rcc_load_receipts">الإرسال: %1$s\nالاختيار: %2$s\nACK2 (رد غير مرتبط): %3$s\nالعرض: %4$s</string>
+    <string name="diag_cluster_rcc_corners_verify_button">التحقق من علامات زوايا RCC</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">يتحقق للقراءة فقط من ملف RCC المحدد مسبقاً. بعد إعادة تهيئة فعلية للوحة BYD عبر التشغيل الطبيعي للسيارة، استخدم هذا الزر وأجب حسب العلامات الفعلية. إعادة توصيل daemon لا تعيد تهيئة اللوحة. لا يعيد هذا الإجراء تحميل أي شيء أو تشغيله. الإجابة بنعم لا تغلق الجلسة؛ استعادة BYD منفصلة.</string>
+    <string name="diag_cluster_rcc_corners_pending">تم اختيار RCC — العرض غير مؤكد</string>
 </resources>

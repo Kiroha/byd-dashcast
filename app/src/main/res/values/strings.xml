@@ -796,7 +796,7 @@
     <string name="diag_cluster_native_send">Envoyer une seule demande</string>
     <string name="diag_cluster_native_seen_full">Je vois le mode Full natif BYD</string>
     <string name="diag_cluster_native_seen_normal">Je vois de nouveau l’affichage BYD normal</string>
-    <string name="diag_cluster_rcc_theme_button">Charger le thème RCC de test (Full + nuit)</string>
+    <string name="diag_cluster_rcc_theme_button">Thème RCC expérimental — Full + nuit</string>
     <string name="diag_cluster_rcc_restore">Restaurer les ressources RCC BYD</string>
 
     <!-- Guided physical cluster visual observations. -->
@@ -818,11 +818,11 @@
     <string name="diag_cluster_observe_theme_message">Vois-tu « DASHCAST TEST », les quatre coins cyan et les instruments et voyants BYD lisibles ? La réponse confirme seulement ton observation visuelle.</string>
     <string name="diag_cluster_observe_normal_yes">Oui, affichage normal</string>
 
-    <string name="diag_cluster_rcc_marker_button">Tester le marqueur RCC (recommandé)</string>
+    <string name="diag_cluster_rcc_marker_button">Ancien marqueur RCC — DASHCAST TEST</string>
     <string name="diag_cluster_rcc_ivi_title">Ressources RCC — essai IVI expérimental</string>
-    <string name="diag_cluster_rcc_ivi_help">Commence par le marqueur. Pour le thème, sélectionne Full et nuit manuellement. Aucun mode ne change automatiquement.</string>
+    <string name="diag_cluster_rcc_ivi_help">Commence par les repères aux coins, en P, à vitesse nulle, en ON et après le démarrage. Full et nuit ne sont pas nécessaires. Le thème séparé demande Full et nuit manuellement. Aucun mode ne change automatiquement.</string>
     <string name="diag_cluster_rcc_ivi_identity">Firmware 13.1.33.2602030.1 déclaré, Android 10, DiLink 3 détecté et daemon 37 requis. Le service Java installé est vérifié ; identité du cluster natif inconnue.</string>
-    <string name="diag_cluster_rcc_ivi_marker_confirm">Ce test recharge réellement les ressources BYD avec un marqueur passif en conservant le code des instruments et voyants. Leur affichage et la récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; sa réussite doit être confirmée visuellement. Redémarrer ne garantit pas la restauration.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Ce test demande la sélection des ressources BYD avec un marqueur passif en conservant le code des instruments et voyants. Leur affichage et la récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; sa réussite doit être confirmée visuellement. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sélectionne Full et nuit avant cet essai. Le RCC conserve le code des instruments et voyants et change leur fond. Lisibilité et récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; confirme ensuite ce que tu vois. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_send">Envoyer le test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Ce bouton demande le retour aux ressources RCC par défaut. Il ne change pas le mode de projection. La réponse OEM et la restauration visible sont vérifiées séparément ; confirme ensuite ce que tu vois. Aucun redémarrage ni nouvel essai automatique.</string>
@@ -835,4 +835,11 @@
     <string name="diag_cluster_rcc_retire_confirm">Déplace uniquement notre RCC de test dans un nouveau dossier et conserve ses octets. Aucun chargement ni redémarrage OEM ne sera envoyé. L’affichage peut rester identique jusqu’à une véritable réinitialisation du cluster par BYD. Reconnecter le daemon Android ne suffit pas. Ensuite, appuie sur « Vérifier le retour BYD » et confirme l’affichage d’origine. Les autres essais restent bloqués jusque-là.</string>
     <string name="diag_cluster_rcc_retired_waiting">Retour BYD préparé — en attente du cluster. Réinitialise manuellement le cluster OEM, puis appuie sur « Vérifier le retour BYD ». Cette vérification consulte uniquement la sélection et notre fichier conservé. Reconnecter Android ou le daemon ne prouve pas un redémarrage du cluster. Confirme ensuite visuellement les instruments et témoins BYD.</string>
     <string name="diag_cluster_rcc_verify_return">Vérifier le retour BYD</string>
+    <string name="diag_cluster_rcc_corners_button">Tester le chargement RCC (repères aux coins)</string>
+    <string name="diag_cluster_rcc_corners_confirm">Demande la sélection d’un RCC avec de fins repères cyan et magenta aux coins, sans modifier le code des instruments ni des voyants. Les repères sont visibles seulement en ON, démarrage terminé, en P et à vitesse nulle ; cela ne détecte pas un stationnement sûr. Full et nuit ne sont pas nécessaires. La sélection ne prouve pas le chargement Qt. La sélection est persistante. Aucun retour automatique après 30 secondes pour ce test. Une réinitialisation réelle du cluster BYD peut être nécessaire ; aucune action ni durée précise n’est garantie. Reconnecter le daemon ne réinitialise pas le cluster. Ensuite, utilise « Vérifier les repères RCC » pour ouvrir la question visuelle. La restauration BYD reste une action séparée.</string>
+    <string name="diag_cluster_observe_corners_message">Vois-tu les repères cyan et magenta aux coins du cluster, avec les instruments et voyants BYD lisibles ?</string>
+    <string name="diag_cluster_rcc_load_receipts">Envoi : %1$s\nSélection : %2$s\nACK2 (réponse non corrélée) : %3$s\nAffichage : %4$s</string>
+    <string name="diag_cluster_rcc_corners_verify_button">Vérifier les repères RCC</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Vérification en lecture seule de notre RCC déjà sélectionné. Après une réinitialisation réelle du cluster BYD par le fonctionnement normal de la voiture, utilise ce bouton puis réponds à la popup selon les repères physiques. Reconnecter le daemon ne réinitialise pas le cluster. Cette action ne recharge rien et ne déclenche aucun redémarrage. Une réponse positive ne clôture pas la session ; la restauration BYD reste séparée.</string>
+    <string name="diag_cluster_rcc_corners_pending">RCC sélectionné — affichage non confirmé</string>
 </resources>

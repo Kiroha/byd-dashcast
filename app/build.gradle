@@ -2103,8 +2103,9 @@ android {
         // recover existing RCC debt with ordered default proof, fresh OEM observation and owned cleanup.
         // Protocol 36; translated cluster/projection names and visible RCC refusal guidance.
         // 704 = 1.9.65-beta: exact ACK3 errors, bounded post-query and explicit preserved-carrier OEM recovery.
-        versionCode 704
-        versionName "1.9.65-beta"
+        // 705 = 1.9.66-beta: separate guarded corner RCC proof and timestamped resource evidence.
+        versionCode 705
+        versionName "1.9.66-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

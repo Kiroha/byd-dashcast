@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "37"
+    private const val PROTOCOL_VERSION = "38"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -820,7 +820,7 @@ object ProxyDaemonMain {
                                 check(data.dataAvail() == 0) { "Unsupported native mode request" }
                                 ClusterThemeLiveTest.nativeModeRequest(full, nonce, parked, firmware, validity)
                             }
-                            11, 12 -> {
+                            11, 12, 15 -> {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
                                 try {
                                     val parked = data.readInt() == 1; val firmware = data.readInt() == 1
@@ -828,8 +828,11 @@ object ProxyDaemonMain {
                                     val validity = data.readStrongBinder() ?: error("Missing RCC projection reservation")
                                     check(data.dataAvail() == 0)
                                     ClusterThemeLiveTest.startAndroid(source, parked, firmware, nonce, validity,
-                                        if (operation == 11) com.byd.dashcast.clusterlive.ClusterThemeVariant.MARKER
-                                        else com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST)
+                                        when (operation) {
+                                            11 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.MARKER
+                                            12 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST
+                                            else -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER
+                                        })
                                 } catch (error: Throwable) { runCatching { source.close() }; throw error }
                             }
                             13, 14 -> {
@@ -844,6 +847,19 @@ object ProxyDaemonMain {
                                 val nonce = data.readString() ?: ""
                                 check(data.dataAvail() == 0)
                                 ClusterThemeLiveTest.nativeNormalObserved(nonce)
+                            }
+                            16 -> {
+                                val filename = data.readString() ?: ""
+                                val round = data.readString() ?: ""
+                                check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.observeCorners(filename, round)
+                            }
+                            17 -> {
+                                val nonce = data.readString() ?: ""
+                                val parked = data.readInt() == 1; val firmware = data.readInt() == 1
+                                val validity = data.readStrongBinder() ?: error("Missing corner verification reservation")
+                                check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.requestCornerVerification(nonce, parked, firmware, validity)
                             }
                             else -> throw IllegalArgumentException("Unsupported cluster test operation")
                         }

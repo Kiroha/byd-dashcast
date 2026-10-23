@@ -66,6 +66,53 @@ class ClusterThemeSessionTest {
             assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
         } } finally { file.delete() }
     }
+    @Test fun `corner profile refuses37 before debt and uses distinct15 and16 at38`() {
+        val app = RuntimeEnvironment.getApplication(); val operations = ArrayList<Int>()
+        val expected = com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX + "f".repeat(32) + ".rcc"
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                val op = data.readInt(); operations.add(op)
+                if (op == 15) {
+                    ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
+                    assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                    assertEquals(data.readString(), ClusterThemeProjectionDebt.nonce(app)); assertNotNull(data.readStrongBinder())
+                } else { assertEquals(16, op); assertEquals(expected, data.readString()); assertEquals("b".repeat(32), data.readString()) }
+                assertEquals(0, data.dataAvail())
+                reply!!.writeNoException(); reply.writeString("""{"state":"AWAITING_OBSERVATION","filename":"$expected","variant":"corner-marker","rccDebt":true}""")
+                return true
+            }
+        }); versionField.set(null, "37")
+        val file = File.createTempFile("rcc-corners", ".rcc").apply { writeText("fixture") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { source ->
+            val session = ClusterThemeSession.pin(app)
+            assertThrows(IllegalStateException::class.java) { session.startIvi(source, ClusterThemeVariant.CORNER_MARKER, Binder()) {} }
+            assertTrue(operations.isEmpty()); assertFalse(ClusterThemeProjectionDebt.blocked(app))
+            assertThrows(IllegalArgumentException::class.java) { session.start(source, ClusterThemeVariant.CORNER_MARKER) {} }
+            assertThrows(IllegalStateException::class.java) { session.observedCorners(expected, "b".repeat(32)) }
+            versionField.set(null, "38")
+            session.startIvi(source, ClusterThemeVariant.CORNER_MARKER, Binder()) {}
+            session.observedCorners(expected, "b".repeat(32))
+            assertEquals(listOf(15, 16), operations); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } } finally { file.delete() }
+    }
+    @Test fun `corner read only verification sends original nonce operation17 and preserves debt`() {
+        val app = RuntimeEnvironment.getApplication(); val nonce = "a".repeat(32); var calls = 0
+        ClusterThemeProjectionDebt.begin(app, nonce)
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(17, data.readInt())
+                assertEquals(nonce, data.readString()); assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"QUARANTINE","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","variant":"corner-marker","rccDebt":true}""")
+                return true
+            }
+        }); versionField.set(null, "37")
+        val session = ClusterThemeSession.pin(app)
+        assertThrows(IllegalStateException::class.java) { session.verifyCorners(Binder()) }; assertEquals(0, calls)
+        versionField.set(null, "38"); session.verifyCorners(Binder())
+        assertEquals(1, calls); assertEquals(nonce, ClusterThemeProjectionDebt.nonce(app))
+    }
     @Test fun `explicit orphan debt reconciliation is operation13 and only current exact safe nonce clears it`() {
         val app = RuntimeEnvironment.getApplication(); val nonce = "e".repeat(32)
         ClusterThemeProjectionDebt.begin(app, nonce)

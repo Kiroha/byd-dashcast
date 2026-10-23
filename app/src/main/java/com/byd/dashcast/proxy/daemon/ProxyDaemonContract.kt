@@ -264,6 +264,8 @@ object ProxyDaemonContract {
      * 10 nonce-bound normal user observation require protocol 34. No arbitrary debug payload.
      * 11/12 fixed Android-IVI RCC starts and 13 recovery require 37 in this client.
      * 14 explicit preserved-carrier retirement requires 37; schema4 retired recovery 13 is read-only.
+     * 15 fixed Android-IVI corner start, 16 original-filename/round visual answer,
+     * 17 nonce/parked/firmware/validity read-only corner verification require 38.
      * Prompt JSON; never generic/replayed. */
     const val TXN_CLUSTER_LIVE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43 // 44
 

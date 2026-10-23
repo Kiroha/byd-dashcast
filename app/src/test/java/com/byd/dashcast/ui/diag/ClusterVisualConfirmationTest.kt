@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.TextView
 import com.byd.dashcast.R
 import com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
@@ -71,9 +72,10 @@ class ClusterVisualConfirmationTest {
                     receipt = JSONObject(receipt.toString()).apply {
                         getJSONObject("nativeMode").put("state", "CLOSED").put("debt", false).put("pending", false)
                     }
-                } else if (op in listOf(3, 4, 6)) {
+                } else if (op in listOf(3, 4, 6, 16)) {
                     recordedFilenames.add(data.readString().orEmpty())
-                    receipt = JSONObject(receipt.toString()).apply { put(when (op) { 3 -> "markerObservedByUser"; 4 -> "oemObservedByUser"; else -> "themeObservedByUser" }, true) }
+                    if (op == 16) assertEquals(receipt.getJSONObject("cornerVerification").getString("round"), data.readString())
+                    receipt = JSONObject(receipt.toString()).apply { put(when (op) { 3, 16 -> "markerObservedByUser"; 4 -> "oemObservedByUser"; else -> "themeObservedByUser" }, true) }
                 } else error("Unexpected effect $op")
                 check(data.dataAvail() == 0)
                 reply!!.writeNoException(); reply.writeString(receipt.toString()); return true
@@ -82,7 +84,7 @@ class ClusterVisualConfirmationTest {
         val native: ClusterNativeFullControls
         val rcc: ClusterThemeLiveControls
         init {
-            bf.set(null, binder); vf.set(null, "34")
+            bf.set(null, binder); vf.set(null, "38")
             app.getSharedPreferences("native_cluster_operational_debt", 0).edit().clear().commit()
             native = ClusterNativeFullControls(app, header, body, { true }, {}, {}, prompts)
             rcc = ClusterThemeLiveControls(app, header, body, { true }, {}, { false }, {}, nativeStatus = { text, s -> native.receivedStatus(text, s) }, prompts = prompts)
@@ -191,6 +193,33 @@ class ClusterVisualConfirmationTest {
             f.currentDialog()!!.getButton(-1).performClick()
             f.waitFor { ClusterThemeDiagnostics.snapshot(f.app).contains("Visual confirmation expired") }
             assertTrue(f.ops.all { it == 0 })
+        }
+    }
+    @Test fun `corner popup describes corners and positive sends only exact local operation16`() {
+        Fixture(status(rcc = true, variant = "corner-marker").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
+            f.activate(); f.waitFor { f.currentDialog() != null }
+            assertEquals(f.app.getString(R.string.diag_cluster_observe_corners_message),
+                f.currentDialog()!!.findViewById<TextView>(android.R.id.message).text)
+            f.currentDialog()!!.getButton(-1).performClick(); f.waitFor { f.ops.contains(16) }
+            assertEquals(listOf(16), f.ops.filter { it != 0 }); assertEquals(listOf(filename), f.filenames)
+            assertTrue(f.receipt.getBoolean("markerObservedByUser")); assertFalse(f.receipt.getBoolean("themeObservedByUser"))
+        }
+    }
+    @Test fun `initial corner selection alone never opens a visual popup or sends a new operation`() {
+        Fixture(status(rcc = true, variant = "corner-marker").put("state", "SELECTION_PENDING_OEM_APPLY")).use { f ->
+            f.activate(); f.waitFor { f.ops.isNotEmpty() }; shadowOf(Looper.getMainLooper()).idle()
+            assertNull(f.currentDialog()); assertTrue(f.ops.all { it == 0 })
+            assertFalse(f.receipt.getBoolean("markerObservedByUser"))
+        }
+    }
+    @Test fun `corner no unknown and stale filename never send an observation or load`() {
+        for (answer in listOf(-2, -3, -1)) Fixture(status(rcc = true, variant = "corner-marker").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
+            f.activate(); f.waitFor { f.currentDialog() != null }
+            if (answer == -1) f.receipt = status(rcc = true, variant = "corner-marker").put("filename", filename.replace("cccc", "dddd"))
+            f.currentDialog()!!.getButton(answer).performClick()
+            if (answer == -1) f.waitFor { ClusterThemeDiagnostics.snapshot(f.app).contains("Visual confirmation expired") }
+            else shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(f.ops.all { it == 0 }); assertFalse(f.receipt.getBoolean("markerObservedByUser"))
         }
     }
     @Test fun `local native debt explains blocked RCC click even without a status receipt`() {

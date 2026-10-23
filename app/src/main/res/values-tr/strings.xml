@@ -729,7 +729,7 @@
     <string name="diag_cluster_native_send">Tek istek gönder</string>
     <string name="diag_cluster_native_seen_full">BYD yerel Full görünümünü görüyorum</string>
     <string name="diag_cluster_native_seen_normal">Normal BYD görünümünü yeniden görüyorum</string>
-    <string name="diag_cluster_rcc_theme_button">Test RCC temasını yükle (Full + gece)</string>
+    <string name="diag_cluster_rcc_theme_button">Deneysel RCC teması — Full + gece</string>
     <string name="diag_cluster_rcc_restore">BYD RCC kaynaklarını geri yükle</string>
 
     <!-- Guided physical cluster visual observations. -->
@@ -751,11 +751,11 @@
     <string name="diag_cluster_observe_theme_message">“DASHCAST TEST”, dört camgöbeği köşe ve okunabilir BYD araçları ile göstergeleri görünüyor mu? Yanıt yalnızca görsel gözleminizi onaylar.</string>
     <string name="diag_cluster_observe_normal_yes">Evet, normal ekran</string>
 
-    <string name="diag_cluster_rcc_marker_button">RCC işaretini test et (önerilen)</string>
+    <string name="diag_cluster_rcc_marker_button">Eski RCC işareti — DASHCAST TEST</string>
     <string name="diag_cluster_rcc_ivi_title">RCC kaynakları — deneysel IVI testi</string>
-    <string name="diag_cluster_rcc_ivi_help">İşaretle başlayın. Tema için Full ve geceyi elle seçin. Hiçbir mod otomatik değişmez.</string>
+    <string name="diag_cluster_rcc_ivi_help">Köşe işaretleriyle başlayın: P, sıfır hız, ON ve açılış tamamlanmış olmalı. Full ve gece gerekmez. Ayrı tema için Full ve geceyi elle seçin. Modlar otomatik değişmez.</string>
     <string name="diag_cluster_rcc_ivi_identity">Beyan edilen 13.1.33.2602030.1 yazılımı, Android 10, kesin DiLink 3 algılaması ve daemon 37 gerekir. Kurulu Java köprüsü doğrulandı; yerel gösterge kimliği bilinmiyor.</string>
-    <string name="diag_cluster_rcc_ivi_marker_confirm">Gösterge ve uyarı kodunu koruyarak BYD kaynaklarını pasif bir işaretle yeniden yükler. Görüntü ve geri dönüş araçta doğrulanmalıdır. Bu ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Geri dönüşü gözle onaylayın; yeniden başlatma bunu garanti etmez.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Gösterge ve uyarı kodunu koruyarak pasif işaretli BYD kaynaklarının seçimini ister. Görüntü ve geri dönüş araçta doğrulanmalıdır. Bu ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Geri dönüşü gözle onaylayın; yeniden başlatma bunu garanti etmez.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Testten önce Full ve geceyi seçin. RCC gösterge ve uyarı kodunu korur, arka planı değiştirir. Okunabilirlik ve geri dönüşü araçta doğrulayın. Ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Ardından gördüğünüzü onaylayın. Yeniden başlatma geri dönüşü garanti etmez.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC testini gönder</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Projeksiyon modunu değiştirmeden varsayılan RCC kaynaklarını ister. OEM yanıtı ve görünür geri dönüş ayrı doğrulanır; ardından gördüğünüzü onaylayın. Yeniden başlatma veya otomatik yeni test yok.</string>
@@ -768,4 +768,11 @@
     <string name="diag_cluster_rcc_retire_confirm">Yalnızca test RCC dosyamızı yeni bir klasöre taşır ve baytlarını korur. Yükleme veya OEM yeniden başlatma göndermez. BYD göstergeyi gerçekten yeniden başlatana kadar görüntü aynı kalabilir. Android daemon bağlantısını yenilemek yeterli değildir. Ardından “BYD dönüşünü doğrula” düğmesine basıp özgün ekranı onaylayın. Diğer testler o zamana kadar engellenir.</string>
     <string name="diag_cluster_rcc_retired_waiting">BYD dönüşü hazır — gösterge bekleniyor. OEM göstergeyi elle yeniden başlatın, ardından “BYD dönüşünü doğrula” düğmesine basın. Doğrulama yalnızca seçimi ve korunan dosyamızı okur. Android veya daemon bağlantısını yenilemek gösterge yeniden başlatmasını kanıtlamaz. Ardından BYD göstergelerini ve uyarı lambalarını gözle onaylayın.</string>
     <string name="diag_cluster_rcc_verify_return">BYD dönüşünü doğrula</string>
+    <string name="diag_cluster_rcc_corners_button">RCC yüklemeyi test et (köşe işaretleri)</string>
+    <string name="diag_cluster_rcc_corners_confirm">Gösterge ve uyarı kodunu koruyan, köşelerinde ince camgöbeği ve macenta işaretler bulunan bir RCC seçimini ister. İşaretler yalnızca ON, açılış tamamlanmış, P ve sıfır hız koşullarında görünür; bu güvenli parkı algılamaz. Full ve gece gerekmez. Seçim, Qt yüklemesini kanıtlamaz. Seçim kalıcıdır. Bu test 30 saniye sonra otomatik geri dönmez. Gerçek BYD gösterge yeniden başlatması gerekebilir; belirli bir işlem veya süre garanti edilmez. Daemon bağlantısını yenilemek göstergeyi yeniden başlatmaz. Sonra görsel soru için “RCC köşe işaretlerini doğrula” düğmesini kullanın. BYD geri dönüşü ayrıdır.</string>
+    <string name="diag_cluster_observe_corners_message">Fiziksel göstergenin köşelerinde camgöbeği ve macenta işaretleri, BYD gösterge ve uyarıları okunabilir olarak görüyor musunuz?</string>
+    <string name="diag_cluster_rcc_load_receipts">Gönderim: %1$s\nSeçim: %2$s\nACK2 (ilişkilendirilmemiş yanıt): %3$s\nEkran: %4$s</string>
+    <string name="diag_cluster_rcc_corners_verify_button">RCC köşe işaretlerini doğrula</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Seçili RCC dosyamızı yalnızca okur. Aracın normal kullanımıyla gerçek BYD gösterge yeniden başlatmasından sonra bu düğmeyi kullanıp fiziksel işaretlere göre yanıtlayın. Daemon bağlantısını yenilemek göstergeyi yeniden başlatmaz. Bu işlem hiçbir şeyi yeniden yüklemez veya başlatmaz. Evet yanıtı oturumu kapatmaz; BYD geri dönüşü ayrıdır.</string>
+    <string name="diag_cluster_rcc_corners_pending">RCC seçildi — görüntü doğrulanmadı</string>
 </resources>
