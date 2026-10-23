@@ -19,6 +19,7 @@ internal object ClusterThemeDiagnostics {
     private val stringFields = mapOf("state" to 64, "detail" to 768, "error" to 384,
         "filename" to 160, "renderer" to 32, "rendererIdentity" to 256, "connectionToken" to 96,
         "operation" to 64, "kind" to 16, "rawSha256" to 64, "variant" to 64, "carrierSha256" to 64, "phase" to 64,
+        "transport" to 32, "nativeIdentity" to 32, "rccTrace" to 8192,
         "oemQueryState" to 32, "oemQueryPhase" to 64, "oemQueryDetail" to 768,
         "oemQuerySelection" to 1536, "oemQueryNativeIdentity" to 16,
         "nativeModeState" to 32, "nativeModeNonce" to 32, "nativeModeDetail" to 768,
@@ -27,7 +28,7 @@ internal object ClusterThemeDiagnostics {
     private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs",
         "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs")
     private val booleanFields = listOf("mutated", "uncertain", "defaultQueried", "carrierRemoved",
-        "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "nativeModeDebt", "nativeModePending",
+        "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
         "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
@@ -44,8 +45,9 @@ internal object ClusterThemeDiagnostics {
             val reply = JSONObject(text)
             val event = JSONObject().put("kind", "STATUS").put("operation", operation)
                 .put("connectionToken", connectionToken)
-            for (field in listOf("state", "detail", "error", "filename", "renderer", "variant", "carrierSha256", "phase"))
+            for (field in listOf("state", "detail", "error", "filename", "renderer", "variant", "carrierSha256", "phase", "transport", "nativeIdentity"))
                 if (reply.has(field)) event.put(field, reply.get(field))
+            if (reply.has("trace")) event.put("rccTrace", reply.getString("trace"))
             if (reply.has("identity")) event.put("rendererIdentity", reply.get("identity"))
             if (reply.has("daemonUid")) event.put("daemonUid", reply.get("daemonUid"))
             for (field in booleanFields) if (reply.has(field)) event.put(field, reply.get(field))
@@ -83,6 +85,8 @@ internal object ClusterThemeDiagnostics {
         safely { load(context) }
         return buildString {
             append("Historical app-private cache; current physical cluster state=UNKNOWN; movement=UNKNOWN.\n")
+            append("Dedicated RCC operational projection block nonce=").append(ClusterThemeProjectionDebt.nonce(context) ?: "NONE")
+                .append(" blocked=").append(ClusterThemeProjectionDebt.blocked(context)).append("; negative-only gate, never native/render identity proof.\n")
             append("Dedicated native operational projection block nonce=").append(ClusterNativeProjectionDebt.nonce(context) ?: "NONE")
                 .append(" blocked=").append(ClusterNativeProjectionDebt.blocked(context)).append("; negative-only admission gate, never mode/render proof.\n")
             append("Receipt time is not source freshness or render/recovery proof. No cluster IPC/OEM reads by this section.\n")

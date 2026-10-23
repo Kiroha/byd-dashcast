@@ -1,5 +1,7 @@
 # Physical full-surface test theme
 
+Since build 702, the Diag load buttons use the separate [Android IVI RCC transport](CLUSTER_ANDROID_IVI_RCC_TEST.md) at protocol 35. The renderer-first contract below describes the preserved legacy path; it is not silently relaxed or selected after an IVI failure.
+
 Diag contains **Test full cluster theme — night + Full (experimental)**. This
 requests an actual OEM root-QML reload through the existing ProxyDaemon and RCC
 transport. It installs a native dark background and cyan frame in the top and

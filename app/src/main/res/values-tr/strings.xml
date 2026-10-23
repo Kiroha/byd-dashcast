@@ -730,7 +730,7 @@
     <string name="diag_cluster_native_seen_full">BYD yerel Full görünümünü görüyorum</string>
     <string name="diag_cluster_native_seen_normal">Normal BYD görünümünü yeniden görüyorum</string>
     <string name="diag_cluster_rcc_theme_button">Test RCC temasını yükle (Full + gece)</string>
-    <string name="diag_cluster_rcc_restore">Özgün RCC seçimini geri yükle</string>
+    <string name="diag_cluster_rcc_restore">BYD RCC kaynaklarını geri yükle</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Hayır / henüz değil</string>
@@ -750,4 +750,15 @@
     <string name="diag_cluster_observe_marker_message">Fiziksel panelde “DASHCAST TEST” ve okunabilir BYD araçları ile göstergeleri görünüyor mu?</string>
     <string name="diag_cluster_observe_theme_message">“DASHCAST TEST”, dört camgöbeği köşe ve okunabilir BYD araçları ile göstergeleri görünüyor mu? Yanıt yalnızca görsel gözleminizi onaylar.</string>
     <string name="diag_cluster_observe_normal_yes">Evet, normal ekran</string>
+
+    <string name="diag_cluster_rcc_marker_button">RCC işaretini test et (önerilen)</string>
+    <string name="diag_cluster_rcc_ivi_title">RCC kaynakları — deneysel IVI testi</string>
+    <string name="diag_cluster_rcc_ivi_help">İşaretle başlayın. Tema için Full ve geceyi elle seçin. Hiçbir mod otomatik değişmez.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Beyan edilen 13.1.33.2602030.1 yazılımı, Android 10, kesin DiLink 3 algılaması ve daemon 35 gerekir. Kurulu Java köprüsü doğrulandı; yerel gösterge kimliği bilinmiyor.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Gösterge ve uyarı kodunu koruyarak BYD kaynaklarını pasif bir işaretle yeniden yükler. Görüntü ve geri dönüş araçta doğrulanmalıdır. Bu ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Geri dönüşü gözle onaylayın; yeniden başlatma bunu garanti etmez.</string>
+    <string name="diag_cluster_rcc_ivi_theme_confirm">Testten önce Full ve geceyi seçin. RCC gösterge ve uyarı kodunu korur, arka planı değiştirir. Okunabilirlik ve geri dönüşü araçta doğrulayın. Ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Ardından gördüğünüzü onaylayın. Yeniden başlatma geri dönüşü garanti etmez.</string>
+    <string name="diag_cluster_rcc_ivi_send">RCC testini gönder</string>
+    <string name="diag_cluster_rcc_ivi_restore_confirm">Projeksiyon modunu değiştirmeden varsayılan RCC kaynaklarını ister. OEM yanıtı ve görünür geri dönüş ayrı doğrulanır; ardından gördüğünüzü onaylayın. Yeniden başlatma veya otomatik yeni test yok.</string>
+    <string name="diag_cluster_rcc_debt">Bir RCC testi hâlâ açık. “BYD RCC kaynaklarını geri yükle” seçeneğini kullanın, göstergeyi inceleyip açılan pencereyi yanıtlayın.</string>
+    <string name="diag_cluster_rcc_ivi_platform">Test reddedildi: Android 10 ve kesin DiLink 3 algılaması gerekir. RCC gönderilmedi.</string>
 </resources>

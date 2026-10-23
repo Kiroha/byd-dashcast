@@ -906,6 +906,7 @@ object AdbLocalClient {
      */
     fun restoreBydOnCluster(context: Context, targetPackage: String?, callback: Callback) {
         if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(context.applicationContext) ||
             com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) {
             callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: use manual native BYD return"); return
         }
@@ -1021,6 +1022,7 @@ object AdbLocalClient {
                              targetPackage: String?, callback: Callback,
                              valid: () -> Boolean = { true }) {
         if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(context.applicationContext) ||
             com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) {
             callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: use manual native BYD return"); return
         }
@@ -1339,10 +1341,13 @@ object AdbLocalClient {
     /** Private daemon status only. A known native debt must never select legacy/in-process egress. */
     private fun nativeCommandsBlocked(context: Context): Boolean {
         if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(context.applicationContext) ||
             com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) return true
         return if (ProxyClient.supportsProtocol(34) && ProxyClient.isConnected()) runCatching {
-            org.json.JSONObject(com.byd.dashcast.proxy.ClusterThemeSession.pin(context).status()).getJSONObject("nativeMode")
-                .let { it.getBoolean("debt") || it.getBoolean("pending") }
+            org.json.JSONObject(com.byd.dashcast.proxy.ClusterThemeSession.pin(context).status()).let { receipt ->
+                val native = receipt.getJSONObject("nativeMode")
+                native.getBoolean("debt") || native.getBoolean("pending") || receipt.optBoolean("rccDebt")
+            }
         }.getOrDefault(true) else false
     }
 

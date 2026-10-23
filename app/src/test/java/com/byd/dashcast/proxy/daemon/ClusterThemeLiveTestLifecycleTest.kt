@@ -37,6 +37,7 @@ class ClusterThemeLiveTestLifecycleTest {
         set("filename", name); set("mutated", false); set("uncertain", false); set("root", "")
         set("renderer", ""); set("deadline", 0L); set("markerObserved", false); set("oemObserved", false); set("carrierRemoved", false); set("createdInode", -1L); set("createdDevice", -1L)
         set("themeObserved", false); set("variant", ClusterThemeVariant.MARKER)
+        set("transport", com.byd.dashcast.clusterlive.ClusterThemeTransport.STRICT_RENDERER)
         flag("active").set(true); flag("queryActive").set(false); flag("restoreRequested").set(false)
         set("oemQuery", JSONObject()); set("helperUnreaped", false)
         count("generation").set(10); count("restoring").set(-1)
@@ -63,7 +64,7 @@ class ClusterThemeLiveTestLifecycleTest {
         assertEquals("QUARANTINE", JSONObject(ClusterThemeLiveTest.status()).getString("state"))
     }
     @Test fun `late wrong nonce observations do nothing and duplicate callbacks are bounded`() {
-        set("mutated", true)
+        set("mutated", true); set("state", "AWAITING_OBSERVATION")
         ClusterThemeLiveTest.observe(1, name.replace("aaaa", "bbbb")); drain()
         assertFalse(field("markerObserved").getBoolean(null))
         val entered = CountDownLatch(1); val release = CountDownLatch(1)
@@ -95,7 +96,7 @@ class ClusterThemeLiveTestLifecycleTest {
     }
 
     @Test fun `marker observation cannot settle full surface load and theme observation stays distinct`() {
-        set("mutated", true); set("loadSettled", false); set("variant", ClusterThemeVariant.FULL_SURFACE_TEST)
+        set("mutated", true); set("loadSettled", false); set("variant", ClusterThemeVariant.FULL_SURFACE_TEST); set("state", "AWAITING_OBSERVATION")
         ClusterThemeLiveTest.observe(1, name); drain()
         assertFalse(field("markerObserved").getBoolean(null)); assertFalse(field("themeObserved").getBoolean(null))
         assertFalse(field("loadSettled").getBoolean(null))
@@ -166,6 +167,39 @@ class ClusterThemeLiveTestLifecycleTest {
         assertTrue(flag("queryActive").get())
         assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
         assertFalse(field("mutated").getBoolean(null)); assertFalse(flag("restoreRequested").get())
+    }
+
+    @Test fun `missing ACK permits only fresh fault-free visual settlement before restore`() {
+        for ((phase, uncertain) in listOf("QUARANTINE" to true, "RESTORING" to false, "AWAITING_OBSERVATION" to true)) {
+            set("mutated", true); set("state", phase); set("uncertain", uncertain); set("loadSettled", false)
+            ClusterThemeLiveTest.observe(1, name); drain()
+            assertFalse(field("loadSettled").getBoolean(null)); assertFalse(field("markerObserved").getBoolean(null))
+        }
+        set("state", "AWAITING_OBSERVATION"); set("uncertain", false); flag("restoreRequested").set(true)
+        ClusterThemeLiveTest.observe(1, name); drain(); assertFalse(field("loadSettled").getBoolean(null))
+        flag("restoreRequested").set(false); ClusterThemeLiveTest.observe(1, name); drain()
+        assertTrue(field("loadSettled").getBoolean(null)); assertTrue(field("markerObserved").getBoolean(null))
+    }
+
+    @Test fun `recovered helper access errors never prove the child absent`() {
+        set("helperStart", "123")
+        val denied = ErrnoException("lstat", OsConstants.EACCES)
+        assertThrows(ErrnoException::class.java) {
+            ClusterThemeLiveTest.recoveredGenerationPresent({ throw denied }, { error("No read permitted") })
+        }
+        assertThrows(java.io.IOException::class.java) {
+            ClusterThemeLiveTest.recoveredGenerationPresent({}, { throw java.io.IOException("unreadable proc stat") })
+        }
+        assertTrue(ClusterThemeLiveTest.recoveredGenerationPresent({}, { "123" }))
+        assertFalse(ClusterThemeLiveTest.recoveredGenerationPresent({}, { "456" }))
+    }
+    @Test fun `only explicit ENOENT proves a missing recovered helper including read races`() {
+        set("helperStart", "123")
+        assertFalse(ClusterThemeLiveTest.recoveredGenerationPresent({ throw ErrnoException("lstat", OsConstants.ENOENT) }, { error("Gone") }))
+        var probes = 0
+        assertFalse(ClusterThemeLiveTest.recoveredGenerationPresent({ if (++probes == 2) throw ErrnoException("lstat", OsConstants.ENOENT) },
+            { throw java.io.IOException("raced exit") }))
+        assertEquals(2, probes)
     }
 
     @Test fun `native admission refuses a production1000 call already admitted without waiting for its IPC`() {

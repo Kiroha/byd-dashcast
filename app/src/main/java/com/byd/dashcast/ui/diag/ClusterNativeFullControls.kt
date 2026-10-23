@@ -83,6 +83,9 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
         dialog.show()
     }
     private fun request(full: Boolean) {
+        if (com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(app)) {
+            show(activity.getString(R.string.diag_cluster_rcc_debt)); return
+        }
         if (observing.get() || full && returning.get()) { show(activity.getString(R.string.diag_cluster_native_busy)); return }
         if (Build.VERSION.SDK_INT != 29 || !Platform.get().isAutoDetectedDiLink3()) {
             failed("native-mode-preflight", IllegalStateException("Positive DiLink 3 and API 29 required; fallback/override is insufficient")); return

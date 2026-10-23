@@ -1,5 +1,7 @@
 # Physical cluster marker experiment
 
+Since build 702, the Diag load buttons use the separate [Android IVI RCC transport](CLUSTER_ANDROID_IVI_RCC_TEST.md) at protocol 35. The renderer-first contract below describes the preserved legacy path; it is not silently relaxed or selected after an IVI failure.
+
 DIAG now contains **Change physical cluster — passive TEST marker (experimental)**, separate from the existing local fixture verification. This sends a real type-8 OEM RCC selection request when every gate passes. It does not implement the supplied concept dashboard or establish total/exclusive cluster control. No vehicle test, deployment or hardware validation was performed during development.
 
 Protocol 33 also provides a [separate read-only OEM selection query](CLUSTER_READ_ONLY_RCC_QUERY.md)

@@ -739,7 +739,7 @@
     <string name="diag_cluster_native_seen_full">Widzę natywny widok Full BYD</string>
     <string name="diag_cluster_native_seen_normal">Znów widzę normalny widok BYD</string>
     <string name="diag_cluster_rcc_theme_button">Załaduj testowy motyw RCC (Full + noc)</string>
-    <string name="diag_cluster_rcc_restore">Przywróć oryginalny wybór RCC</string>
+    <string name="diag_cluster_rcc_restore">Przywróć zasoby RCC BYD</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Nie / jeszcze nie</string>
@@ -759,4 +759,15 @@
     <string name="diag_cluster_observe_marker_message">Czy na rzeczywistym zestawie widzisz „DASHCAST TEST” oraz czytelne przyrządy i kontrolki BYD?</string>
     <string name="diag_cluster_observe_theme_message">Czy widzisz „DASHCAST TEST”, cztery turkusowe narożniki oraz czytelne przyrządy i kontrolki BYD? Odpowiedź potwierdza tylko Twoją obserwację.</string>
     <string name="diag_cluster_observe_normal_yes">Tak, zwykły widok</string>
+
+    <string name="diag_cluster_rcc_marker_button">Test znacznika RCC (zalecany)</string>
+    <string name="diag_cluster_rcc_ivi_title">Zasoby RCC — eksperymentalny test IVI</string>
+    <string name="diag_cluster_rcc_ivi_help">Zacznij od znacznika. Dla motywu wybierz ręcznie Full i tryb nocny. Tryby nie zmieniają się automatycznie.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Wymagane zadeklarowane oprogramowanie 13.1.33.2602030.1, Android 10, potwierdzone DiLink 3 i demon 35. Zainstalowany most Java zweryfikowany; tożsamość natywnego zestawu wskaźników nieznana.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Ponownie ładuje zasoby BYD z pasywnym znacznikiem, zachowując kod wskaźników i ostrzeżeń. Obraz i przywracanie wymagają sprawdzenia w samochodzie. Zachowaj dostęp do tego ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź przywrócenie wzrokowo; restart go nie gwarantuje.</string>
+    <string name="diag_cluster_rcc_ivi_theme_confirm">Przed testem wybierz Full i tryb nocny. RCC zachowuje kod wskaźników i ostrzeżeń, zmieniając tło. Czytelność i przywracanie sprawdź w samochodzie. Zachowaj dostęp do ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź widoczny wynik. Restart nie gwarantuje przywrócenia.</string>
+    <string name="diag_cluster_rcc_ivi_send">Wyślij test RCC</string>
+    <string name="diag_cluster_rcc_ivi_restore_confirm">Żąda domyślnych zasobów RCC bez zmiany trybu projekcji. Odpowiedź OEM i widoczne przywrócenie sprawdzane są oddzielnie. Następnie potwierdź to, co widzisz. Bez restartu i automatycznego nowego testu.</string>
+    <string name="diag_cluster_rcc_debt">Test RCC wymaga zamknięcia. Użyj „Przywróć zasoby RCC BYD”, a następnie odpowiedz w oknie po sprawdzeniu zestawu wskaźników.</string>
+    <string name="diag_cluster_rcc_ivi_platform">Test odrzucony: wymagane Android 10 i potwierdzone wykrycie DiLink 3. Nie wysłano RCC.</string>
 </resources>

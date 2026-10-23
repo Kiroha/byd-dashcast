@@ -730,7 +730,7 @@
     <string name="diag_cluster_native_seen_full">Бачу штатний вигляд Full BYD</string>
     <string name="diag_cluster_native_seen_normal">Знову бачу звичайний екран BYD</string>
     <string name="diag_cluster_rcc_theme_button">Завантажити тестову тему RCC (Full + ніч)</string>
-    <string name="diag_cluster_rcc_restore">Відновити початковий вибір RCC</string>
+    <string name="diag_cluster_rcc_restore">Відновити ресурси RCC BYD</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Ні / ще ні</string>
@@ -750,4 +750,15 @@
     <string name="diag_cluster_observe_marker_message">Видно «DASHCAST TEST» на фізичній панелі та читабельні прилади й індикатори BYD?</string>
     <string name="diag_cluster_observe_theme_message">Видно «DASHCAST TEST», усі чотири блакитні кути та читабельні прилади й індикатори BYD? Відповідь підтверджує лише ваше візуальне спостереження.</string>
     <string name="diag_cluster_observe_normal_yes">Так, звичайний екран</string>
+
+    <string name="diag_cluster_rcc_marker_button">Перевірити маркер RCC (рекомендовано)</string>
+    <string name="diag_cluster_rcc_ivi_title">Ресурси RCC — експериментальний тест IVI</string>
+    <string name="diag_cluster_rcc_ivi_help">Почніть із маркера. Для теми вручну виберіть Full і нічний режим. Режими автоматично не змінюються.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Потрібні заявлена прошивка 13.1.33.2602030.1, Android 10, підтверджений DiLink 3 і демон 35. Установлений Java-міст перевірено; ідентичність нативної панелі невідома.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Перезавантажує ресурси BYD із пасивним маркером, зберігаючи код приладів і попереджень. Зображення та відновлення слід перевірити в машині. Зберігайте доступ до цього екрана. Через 30 секунд запитуються стандартні ресурси, якщо сеанс доступний. Підтвердьте відновлення візуально; перезапуск його не гарантує.</string>
+    <string name="diag_cluster_rcc_ivi_theme_confirm">Перед тестом виберіть Full і нічний режим. RCC зберігає код приладів і попереджень та змінює тло. Читабельність і відновлення перевірте в машині. Зберігайте доступ до екрана. Через 30 секунд запитуються стандартні ресурси, якщо сеанс доступний. Потім підтвердьте видимий результат. Перезапуск не гарантує відновлення.</string>
+    <string name="diag_cluster_rcc_ivi_send">Надіслати тест RCC</string>
+    <string name="diag_cluster_rcc_ivi_restore_confirm">Запитує стандартні ресурси RCC без зміни режиму проєкції. Відповідь OEM і видиме відновлення перевіряються окремо; потім підтвердьте побачене. Без перезапуску та автоматичного нового тесту.</string>
+    <string name="diag_cluster_rcc_debt">Тест RCC ще не закрито. Натисніть «Відновити ресурси RCC BYD», огляньте панель і дайте відповідь у вікні.</string>
+    <string name="diag_cluster_rcc_ivi_platform">Тест відхилено: потрібні Android 10 і підтверджене виявлення DiLink 3. RCC не надіслано.</string>
 </resources>
