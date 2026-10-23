@@ -731,4 +731,23 @@
     <string name="diag_cluster_native_seen_normal">Зноў бачу звычайны экран BYD</string>
     <string name="diag_cluster_rcc_theme_button">Загрузіць тэставую тэму RCC (Full + ноч)</string>
     <string name="diag_cluster_rcc_restore">Аднавіць зыходны выбар RCC</string>
+
+    <!-- Guided physical cluster visual observations. -->
+    <string name="diag_cluster_observation_no">Не / яшчэ не</string>
+    <string name="diag_cluster_observation_unknown">Не ведаю</string>
+    <string name="diag_cluster_observation_again">Праверыць экран зноў</string>
+    <string name="diag_cluster_observation_yes">Так, бачу</string>
+    <string name="diag_cluster_observe_normal_title">Звычайны экран BYD вярнуўся?</string>
+    <string name="diag_cluster_observe_normal_message">Запыт вяртання завершаны. Зноў бачны звычайны экран BYD і яго індыкатары? Пацвярджайце толькі тое, што бачыце. Без пацвярджэння іншыя тэсты застаюцца заблакаваныя. RCC аўтаматычна не загрузіцца.</string>
+    <string name="diag_cluster_observe_full_title">Які экран вы бачыце?</string>
+    <string name="diag_cluster_observe_full_message">Штатны запыт завершаны. Бачная праекцыя BYD з верхняй і ніжняй палосамі? Гэты рэжым захоўвае элементы BYD. Адказ запісвае ваша назіранне, а не пацвярджэнне QML.</string>
+    <string name="diag_cluster_observe_full_yes">Праекцыя з палосамі</string>
+    <string name="diag_cluster_rcc_blocked_title">Тэст RCC заблакаваны</string>
+    <string name="diag_cluster_rcc_blocked_message">Штатнаму тэсту яшчэ патрэбныя вяртанне і візуальнае пацвярджэнне. Калі звычайны экран BYD вярнуўся, адкажыце на пытанне. Інакш націсніце «Запытаць вяртанне BYD» і праверце экран. Загрузку RCC потым запусціце зноў уручную.</string>
+    <string name="diag_cluster_observe_oem_title">Зыходны экран RCC вярнуўся?</string>
+    <string name="diag_cluster_observe_oem_message">Запытаны зыходны выбар RCC. Зноў бачная зыходная панэль BYD з прыборамі і індыкатарамі? Перад адказам паглядзіце на панэль. Не або невядома захоўвае блакаванне.</string>
+    <string name="diag_cluster_observe_rcc_title">Праверыць тэму на панэлі</string>
+    <string name="diag_cluster_observe_marker_message">Бачныя «DASHCAST TEST» на фізічнай панэлі і чытэльныя прыборы ды індыкатары BYD?</string>
+    <string name="diag_cluster_observe_theme_message">Бачныя «DASHCAST TEST», усе чатыры блакітныя куты і чытэльныя прыборы ды індыкатары BYD? Адказ пацвярджае толькі ваша візуальнае назіранне.</string>
+    <string name="diag_cluster_observe_normal_yes">Так, звычайны экран</string>
 </resources>

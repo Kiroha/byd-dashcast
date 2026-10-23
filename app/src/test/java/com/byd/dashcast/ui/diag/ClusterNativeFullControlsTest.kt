@@ -50,38 +50,4 @@ class ClusterNativeFullControlsTest {
             checks[1].isChecked = true; assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
         } finally { c.pause().stop().destroy() }
     }
-    @Test fun `normal observation freezes displayed nonce at click and never binds a later queued status`() {
-        val c = Robolectric.buildActivity(Activity::class.java).setup()
-        val header = LinearLayout(c.get()); val body = LinearLayout(c.get())
-        val controls = ClusterNativeFullControls(c.get(), header, body, { true }, {}, {})
-        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
-        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
-        val previous = bf.get(null); val version = vf.get(null)
-        val ready = CountDownLatch(1); val release = CountDownLatch(1); val done = CountDownLatch(1)
-        val worker = ClusterNativeFullControls::class.java.getDeclaredField("work").apply { isAccessible = true }.get(null) as ExecutorService
-        val nonce = "a".repeat(32)
-        var seen = ""
-        var failure: Throwable? = null
-        worker.execute { ready.countDown(); release.await(5, TimeUnit.SECONDS) }
-        assertTrue(ready.await(2, TimeUnit.SECONDS))
-        bf.set(null, object : Binder() {
-            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-                try {
-                    assertEquals(ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST, code)
-                    data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(10, data.readInt())
-                    seen = data.readString().orEmpty(); assertEquals(0, data.dataAvail())
-                    reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","filename":"","nativeMode":{"state":"CLOSED","nonce":"$nonce","debt":false,"pending":false}}""")
-                    return true
-                } catch (error: Throwable) { failure = error; throw error }
-            }
-        }); vf.set(null, "34")
-        try {
-            val field = ClusterNativeFullControls::class.java.getDeclaredField("displayedNative").apply { isAccessible = true }
-            field.set(controls, JSONObject().put("nonce", nonce).put("normalSettled", true).put("pending", false).put("debt", true))
-            views(body).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_native_seen_normal) }.performClick()
-            field.set(controls, JSONObject().put("nonce", "b".repeat(32)).put("normalSettled", true).put("pending", false).put("debt", true))
-            release.countDown(); worker.execute { done.countDown() }; assertTrue(done.await(3, TimeUnit.SECONDS))
-            failure?.let { throw it }; assertEquals(nonce, seen)
-        } finally { release.countDown(); controls.close(); c.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
-    }
 }

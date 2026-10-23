@@ -731,4 +731,23 @@
     <string name="diag_cluster_native_seen_normal">Vedo di nuovo la vista BYD normale</string>
     <string name="diag_cluster_rcc_theme_button">Carica il tema RCC di prova (Full + notte)</string>
     <string name="diag_cluster_rcc_restore">Ripristina la selezione RCC originale</string>
+
+    <!-- Guided physical cluster visual observations. -->
+    <string name="diag_cluster_observation_no">No / non ancora</string>
+    <string name="diag_cluster_observation_unknown">Non lo so</string>
+    <string name="diag_cluster_observation_again">Verifica di nuovo lo schermo</string>
+    <string name="diag_cluster_observation_yes">Sì, lo vedo</string>
+    <string name="diag_cluster_observe_normal_title">Il quadro BYD è tornato?</string>
+    <string name="diag_cluster_observe_normal_message">La richiesta di ritorno è terminata. Vedi di nuovo il quadro BYD normale e le sue spie? Conferma solo ciò che vedi. Senza conferma le altre prove restano bloccate. Nessun RCC verrà caricato automaticamente.</string>
+    <string name="diag_cluster_observe_full_title">Quale vista vedi?</string>
+    <string name="diag_cluster_observe_full_message">La richiesta nativa è terminata. Vedi la proiezione BYD con le fasce superiore e inferiore? Questa modalità conserva elementi BYD. La risposta è una tua osservazione, non una conferma QML.</string>
+    <string name="diag_cluster_observe_full_yes">Proiezione con fasce</string>
+    <string name="diag_cluster_rcc_blocked_title">Prova RCC bloccata</string>
+    <string name="diag_cluster_rcc_blocked_message">La prova nativa richiede ancora il ritorno e la tua conferma visiva. Se la vista BYD normale è tornata, rispondi alla domanda. Altrimenti usa «Richiedi il ritorno a BYD», poi controlla lo schermo. Riavvia poi il caricamento RCC manualmente.</string>
+    <string name="diag_cluster_observe_oem_title">È tornata la vista RCC originale?</string>
+    <string name="diag_cluster_observe_oem_message">È stata richiesta la selezione RCC originale. Vedi di nuovo il quadro BYD originale con strumenti e spie? Guarda il quadro prima di rispondere. No o sconosciuto mantiene il blocco.</string>
+    <string name="diag_cluster_observe_rcc_title">Verifica il tema sul quadro</string>
+    <string name="diag_cluster_observe_marker_message">Vedi «DASHCAST TEST» sul quadro fisico, con strumenti e spie BYD leggibili?</string>
+    <string name="diag_cluster_observe_theme_message">Vedi «DASHCAST TEST», i quattro angoli ciano e strumenti e spie BYD leggibili? La risposta conferma solo la tua osservazione visiva.</string>
+    <string name="diag_cluster_observe_normal_yes">Sì, vista normale</string>
 </resources>

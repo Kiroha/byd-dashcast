@@ -64,6 +64,8 @@ class DiagActivity : Activity() {
 
     private var liveThemeControls: ClusterThemeLiveControls? = null
     private var nativeFullControls: ClusterNativeFullControls? = null
+    private var observationPrompts: ClusterObservationPrompts? = null
+    private var diagnosticsResumed = false
     private lateinit var logView: TextView
     private lateinit var runBtn: Button
     private lateinit var experimentalThemeBtn: Button
@@ -220,13 +222,15 @@ class DiagActivity : Activity() {
         val activityLogBody = page(Page.LOG)
 
         addDiagnosticReportShortcut(clusterBody)
+        observationPrompts = ClusterObservationPrompts(this)
         nativeFullControls = ClusterNativeFullControls(this, recoveryBar, clusterBody,
-            claimDiag = { claimBusyOrWarn() }, releaseDiag = { releaseBusy() }, transcript = { log(it) })
+            claimDiag = { claimBusyOrWarn() }, releaseDiag = { releaseBusy() }, transcript = { log(it) }, prompts = observationPrompts!!)
         clusterBody.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_section); textSize = 19f })
         liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
-            statusContainer = clusterBody, nativeStatus = { nativeFullControls?.receivedStatus(it) })
+            statusContainer = clusterBody, nativeStatus = { text, pinned -> nativeFullControls?.receivedStatus(text, pinned) },
+            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeFullControls?.statusUnavailable() })
         addDiagnosticReportShortcut(reportingBody)
         exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."
@@ -445,6 +449,25 @@ class DiagActivity : Activity() {
         super.onStop()
     }
 
+    override fun onResume() {
+        super.onResume()
+        diagnosticsResumed = true
+        updateClusterVisibility()
+    }
+
+    override fun onPause() {
+        diagnosticsResumed = false
+        updateClusterVisibility()
+        super.onPause()
+    }
+
+    private fun updateClusterVisibility() {
+        val visible = diagnosticsResumed && currentPage == Page.CLUSTER
+        observationPrompts?.setVisible(visible)
+        nativeFullControls?.setActive(visible)
+        liveThemeControls?.setActive(visible)
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("diag.page", currentPage?.name)
         super.onSaveInstanceState(outState)
@@ -456,6 +479,7 @@ class DiagActivity : Activity() {
         backBtn.visibility = if (page == null) View.GONE else View.VISIBLE
         homePage.visibility = if (page == null) View.VISIBLE else View.GONE
         pages.forEach { (destination, view) -> view.visibility = if (page == destination) View.VISIBLE else View.GONE }
+        updateClusterVisibility()
     }
 
     @Suppress("DEPRECATION")

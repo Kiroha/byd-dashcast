@@ -79,8 +79,28 @@ or daemon never automatically sends either command or discards outstanding debt.
 ## Logs and tester path
 
 Open **Diag → Cluster Full Screen → Tester le mode Full natif BYD** while parked.
-The distinct pinned **Demander le retour BYD** requests normal mode. Use the
-observation buttons only after inspecting the physical cluster.
+The distinct pinned **Demander le retour BYD** requests normal mode. Once a request
+has finished, a popup asks what is visible on the physical cluster. The native Full
+question explicitly describes projection with the OEM top and bottom bands. After
+18 finishes and the local helpers are reaped, the normal-layout question appears
+automatically; only its positive answer submits the existing nonce-bound operation
+10. No / not yet, unknown, Back or dismissal preserve the operational debt. A fresh
+CLOSED daemon receipt with the same remaining app nonce can also reconcile an
+interrupted local flag clear through the existing idempotent operation 10.
+
+The cluster page shows at most one visual question, prioritizing normal-mode return.
+Repeated passive status polls do not repeat answered questions or dismiss an open
+one. **Vérifier de nouveau l’affichage** reopens an unanswered/negative observation.
+Leaving the page or pausing dismisses questions; returning reads only status from an
+already connected daemon, then offers any currently eligible observation. A new
+nonce, phase, profile, filename or replaced Binder invalidates stale acceptance.
+Positive answers are rechecked against fresh status on the exact pinned connection.
+
+RCC marker, test-theme and original-layout observations are guided in the same way.
+An RCC attempt blocked by native recovery explains the required normal return or
+visual confirmation in a popup. Confirmation never automatically starts another
+RCC load or sends 16/18. Prompt context, shown/cancel/negative/unknown/positive and
+invalidation events are retained in the bounded diagnostic history.
 
 **Envoyer un rapport de diagnostic** is at the top of the cluster page and opens
 the existing report wizard. No copy/paste or automatic send is required. Results

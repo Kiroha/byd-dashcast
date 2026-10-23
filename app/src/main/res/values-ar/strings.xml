@@ -736,4 +736,23 @@
     <string name="diag_cluster_native_seen_normal">أرى عرض BYD العادي مجددًا</string>
     <string name="diag_cluster_rcc_theme_button">تحميل سمة RCC التجريبية (Full + ليل)</string>
     <string name="diag_cluster_rcc_restore">استعادة اختيار RCC الأصلي</string>
+
+    <!-- Guided physical cluster visual observations. -->
+    <string name="diag_cluster_observation_no">لا / ليس بعد</string>
+    <string name="diag_cluster_observation_unknown">لا أعرف</string>
+    <string name="diag_cluster_observation_again">تحقق من الشاشة مجددًا</string>
+    <string name="diag_cluster_observation_yes">نعم، أراه</string>
+    <string name="diag_cluster_observe_normal_title">هل عادت شاشة BYD العادية؟</string>
+    <string name="diag_cluster_observe_normal_message">انتهى طلب العودة. هل ترى شاشة BYD العادية ومؤشراتها مجددًا؟ أكد ما تراه فقط. تبقى الاختبارات الأخرى محظورة دون تأكيد. لن يتم تحميل RCC تلقائيًا.</string>
+    <string name="diag_cluster_observe_full_title">أي عرض تراه؟</string>
+    <string name="diag_cluster_observe_full_message">انتهى الطلب الأصلي. هل ترى عرض إسقاط BYD مع الشريطين العلوي والسفلي؟ يحتفظ هذا الوضع بعناصر BYD. تسجل الإجابة ملاحظتك ولا تؤكد استلام QML.</string>
+    <string name="diag_cluster_observe_full_yes">إسقاط مع الشريطين</string>
+    <string name="diag_cluster_rcc_blocked_title">اختبار RCC محظور</string>
+    <string name="diag_cluster_rcc_blocked_message">ما زال الاختبار الأصلي يحتاج إلى العودة وتأكيدك المرئي. إذا عادت شاشة BYD العادية فأجب عن السؤال. وإلا استخدم «طلب العودة إلى BYD» ثم تحقق من الشاشة. يجب بدء تحميل RCC مجددًا يدويًا.</string>
+    <string name="diag_cluster_observe_oem_title">هل عاد عرض RCC الأصلي؟</string>
+    <string name="diag_cluster_observe_oem_message">تم طلب اختيار RCC الأصلي. هل ترى لوحة BYD الأصلية بأجهزتها ومؤشراتها مجددًا؟ انظر إلى اللوحة قبل الإجابة. تبقي الإجابة بلا أو لا أعرف الحظر قائمًا.</string>
+    <string name="diag_cluster_observe_rcc_title">تحقق من المظهر على اللوحة</string>
+    <string name="diag_cluster_observe_marker_message">هل ترى «DASHCAST TEST» على اللوحة الفعلية مع أجهزة ومؤشرات BYD المقروءة؟</string>
+    <string name="diag_cluster_observe_theme_message">هل ترى «DASHCAST TEST» والزوايا السماوية الأربع وأجهزة ومؤشرات BYD المقروءة؟ تؤكد الإجابة ملاحظتك المرئية فقط.</string>
+    <string name="diag_cluster_observe_normal_yes">نعم، العرض العادي</string>
 </resources>

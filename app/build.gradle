@@ -2096,8 +2096,8 @@ android {
         // Protocol 33; native renderer identity still required by unchanged load/restore paths.
         // 700 = 1.9.61-beta: closed manual native Full/normal diagnostic with separate operational debt.
         // Protocol 34; native 16/18 receipts remain distinct from QML/render observations.
-        versionCode 700
-        versionName "1.9.61-beta"
+        versionCode 701
+        versionName "1.9.62-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
