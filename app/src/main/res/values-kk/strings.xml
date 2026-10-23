@@ -730,7 +730,7 @@
     <string name="diag_cluster_native_seen_full">BYD штаттық Full көрінісін көріп тұрмын</string>
     <string name="diag_cluster_native_seen_normal">BYD қалыпты көрінісін қайта көріп тұрмын</string>
     <string name="diag_cluster_rcc_theme_button">RCC сынақ тақырыбын жүктеу (Full + түн)</string>
-    <string name="diag_cluster_rcc_restore">Бастапқы RCC таңдауын қалпына келтіру</string>
+    <string name="diag_cluster_rcc_restore">BYD RCC ресурстарын қалпына келтіру</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Жоқ / әлі емес</string>
@@ -750,4 +750,15 @@
     <string name="diag_cluster_observe_marker_message">Нақты панельде «DASHCAST TEST» және оқылатын BYD аспаптары мен индикаторлары көріне ме?</string>
     <string name="diag_cluster_observe_theme_message">«DASHCAST TEST», төрт көгілдір бұрыш және оқылатын BYD аспаптары мен индикаторлары көріне ме? Жауап тек көзбен бақылауыңызды растайды.</string>
     <string name="diag_cluster_observe_normal_yes">Иә, қалыпты экран</string>
+
+    <string name="diag_cluster_rcc_marker_button">RCC маркерін тексеру (ұсынылады)</string>
+    <string name="diag_cluster_rcc_ivi_title">RCC ресурстары — тәжірибелік IVI сынағы</string>
+    <string name="diag_cluster_rcc_ivi_help">Маркерден бастаңыз. Тақырып үшін Full және түнгі режимді қолмен таңдаңыз. Режимдер автоматты өзгермейді.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Мәлімделген 13.1.33.2602030.1 микробағдарламасы, Android 10, нақты анықталған DiLink 3 және daemon 35 қажет. Орнатылған Java көпірі тексерілді; жергілікті панель сәйкестігі белгісіз.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">Аспаптар мен ескертулер кодын сақтап, BYD ресурстарын пассивті маркермен қайта жүктейді. Көрініс пен қалпына келтіруді көлікте тексеру керек. Бұл экран қолжетімді болсын. Сеанс қолжетімді болса, 30 секундтан кейін әдепкі ресурстар сұратылады. Қалпына келуді көзбен растаңыз; қайта іске қосу оған кепіл емес.</string>
+    <string name="diag_cluster_rcc_ivi_theme_confirm">Сынақ алдында Full және түнгі режимді таңдаңыз. RCC аспаптар мен ескертулер кодын сақтап, фонды өзгертеді. Оқылымдылық пен қалпына келуді көлікте тексеріңіз. Экран қолжетімді болсын. Сеанс қолжетімді болса, 30 секундтан кейін әдепкі ресурстар сұратылады. Кейін көргеніңізді растаңыз. Қайта іске қосу қалпына келуге кепіл емес.</string>
+    <string name="diag_cluster_rcc_ivi_send">RCC сынағын жіберу</string>
+    <string name="diag_cluster_rcc_ivi_restore_confirm">Проекция режимін өзгертпей, әдепкі RCC ресурстарын сұратады. OEM жауабы мен көрінетін қалпына келу бөлек тексеріледі; кейін көргеніңізді растаңыз. Қайта іске қосу не автоматты жаңа сынақ жоқ.</string>
+    <string name="diag_cluster_rcc_debt">RCC сынағы әлі жабылған жоқ. «BYD RCC ресурстарын қалпына келтіру» түймесін басып, панельді қарап, қалқымалы терезеге жауап беріңіз.</string>
+    <string name="diag_cluster_rcc_ivi_platform">Сынақ қабылданбады: Android 10 және нақты DiLink 3 анықталуы қажет. RCC жіберілген жоқ.</string>
 </resources>

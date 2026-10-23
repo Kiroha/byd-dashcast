@@ -2,6 +2,7 @@ package com.byd.dashcast.clusterlive
 
 /** Fixed experiment, firmware 13.1.33.2602030.1. Runtime hashes are mandatory; build text is not identity. */
 object ClusterThemePolicy {
+    const val ANDROID_DIRECTORY = "/sdcard/.cluster/translate/"
     const val HOST_DIRECTORY = "/data/cells/cell2-rw/data/media/0/.cluster/translate/"
     const val JAVA_PACKAGE = "com.xdja.containerservice"
     const val JAVA_APK_SHA = "1b9eef499db47d19a847b77aeaebf823f47449e9d0bc047793aa4433da9a0be9"

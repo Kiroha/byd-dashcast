@@ -735,7 +735,7 @@
     <string name="diag_cluster_native_seen_full">أرى عرض Full الأصلي من BYD</string>
     <string name="diag_cluster_native_seen_normal">أرى عرض BYD العادي مجددًا</string>
     <string name="diag_cluster_rcc_theme_button">تحميل سمة RCC التجريبية (Full + ليل)</string>
-    <string name="diag_cluster_rcc_restore">استعادة اختيار RCC الأصلي</string>
+    <string name="diag_cluster_rcc_restore">استعادة موارد RCC الخاصة بـBYD</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">لا / ليس بعد</string>
@@ -755,4 +755,15 @@
     <string name="diag_cluster_observe_marker_message">هل ترى «DASHCAST TEST» على اللوحة الفعلية مع أجهزة ومؤشرات BYD المقروءة؟</string>
     <string name="diag_cluster_observe_theme_message">هل ترى «DASHCAST TEST» والزوايا السماوية الأربع وأجهزة ومؤشرات BYD المقروءة؟ تؤكد الإجابة ملاحظتك المرئية فقط.</string>
     <string name="diag_cluster_observe_normal_yes">نعم، العرض العادي</string>
+
+    <string name="diag_cluster_rcc_marker_button">اختبار علامة RCC (موصى به)</string>
+    <string name="diag_cluster_rcc_ivi_title">موارد RCC — اختبار IVI تجريبي</string>
+    <string name="diag_cluster_rcc_ivi_help">ابدأ بالعلامة. للسمة، اختر Full والوضع الليلي يدوياً. لا يتغير أي وضع تلقائياً.</string>
+    <string name="diag_cluster_rcc_ivi_identity">يلزم تأكيد البرنامج 13.1.33.2602030.1 وAndroid 10 واكتشاف DiLink 3 مؤكداً وdaemon 35. تم التحقق من جسر Java المثبت؛ هوية لوحة العدادات الأصلية غير معروفة.</string>
+    <string name="diag_cluster_rcc_ivi_marker_confirm">يعيد تحميل موارد BYD بعلامة ثابتة مع الاحتفاظ بكود العدادات والتحذيرات. يجب التحقق من العرض والاستعادة في السيارة. أبقِ هذه الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. أكد الاستعادة بصرياً؛ إعادة التشغيل لا تضمنها.</string>
+    <string name="diag_cluster_rcc_ivi_theme_confirm">اختر Full والوضع الليلي قبل الاختبار. يحتفظ RCC بكود العدادات والتحذيرات ويغير الخلفية. تحقق من الوضوح والاستعادة في السيارة. أبقِ الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. ثم أكد ما تراه. إعادة التشغيل لا تضمن الاستعادة.</string>
+    <string name="diag_cluster_rcc_ivi_send">إرسال اختبار RCC</string>
+    <string name="diag_cluster_rcc_ivi_restore_confirm">يطلب موارد RCC الافتراضية دون تغيير وضع العرض. يتم التحقق من رد OEM والاستعادة المرئية بشكل منفصل؛ ثم أكد ما تراه. لا إعادة تشغيل أو اختبار جديد تلقائي.</string>
+    <string name="diag_cluster_rcc_debt">لا يزال اختبار RCC مفتوحاً. استخدم «استعادة موارد RCC الخاصة بـBYD»، ثم أجب عن النافذة بعد فحص لوحة العدادات.</string>
+    <string name="diag_cluster_rcc_ivi_platform">رُفض الاختبار: يلزم Android 10 واكتشاف DiLink 3 مؤكداً. لم يُرسل أي RCC.</string>
 </resources>

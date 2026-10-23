@@ -10,6 +10,7 @@ import android.content.SharedPreferences
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt
+import com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 import org.junit.After
 import org.junit.Assert.*
@@ -31,6 +32,56 @@ class ClusterThemeSessionTest {
     @After fun restore() {
         binderField.set(null, old); versionField.set(null, oldVersion)
         RuntimeEnvironment.getApplication().getSharedPreferences("native_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
+        RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+    @Test fun `Android RCC operation35 commits exact debt before fixed marker request`() {
+        val app = RuntimeEnvironment.getApplication(); var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(11, data.readInt())
+                ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
+                assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                val nonce = data.readString()!!; assertEquals(nonce, ClusterThemeProjectionDebt.nonce(app))
+                assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"PREFLIGHT","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","transport":"android-ivi","rccDebt":true}""")
+                return true
+            }
+        }); versionField.set(null, "34")
+        val session = ClusterThemeSession.pin(app); val file = File.createTempFile("rcc-ivi", ".rcc").apply { writeText("fixture") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
+            assertThrows(IllegalStateException::class.java) { session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {} }
+            assertEquals(0, calls); assertFalse(ClusterThemeProjectionDebt.blocked(app))
+            versionField.set(null, "35"); session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {}
+            assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } } finally { file.delete() }
+    }
+    @Test fun `RCC lost reply retains debt and one request without retry`() {
+        val app = RuntimeEnvironment.getApplication(); var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { calls++; throw DeadObjectException() }
+        }); versionField.set(null, "35")
+        val file = File.createTempFile("rcc-ivi", ".rcc").apply { writeText("fixture") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
+            assertThrows(DeadObjectException::class.java) { ClusterThemeSession.pin(app).startIvi(it, ClusterThemeVariant.FULL_SURFACE_TEST, Binder()) {} }
+            assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } } finally { file.delete() }
+    }
+    @Test fun `explicit orphan debt reconciliation is operation13 and only current exact safe nonce clears it`() {
+        val app = RuntimeEnvironment.getApplication(); val nonce = "e".repeat(32)
+        ClusterThemeProjectionDebt.begin(app, nonce)
+        var calls = 0; var safe = "a".repeat(32)
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(13, data.readInt())
+                assertEquals(nonce, data.readString()); assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"CLEAN","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","transport":"android-ivi","rccDebt":false,"rccSafeNonce":"$safe"}""")
+                return true
+            }
+        }); versionField.set(null, "35")
+        val session = ClusterThemeSession.pin(app); session.restoreIvi(Binder())
+        assertTrue(ClusterThemeProjectionDebt.blocked(app)); safe = nonce; session.restoreIvi(Binder())
+        assertFalse(ClusterThemeProjectionDebt.blocked(app)); assertEquals(2, calls)
     }
     @Test fun `native full requires34 and commits negative debt before one fixed16 transaction`() {
         val app = RuntimeEnvironment.getApplication(); var calls = 0

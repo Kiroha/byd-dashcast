@@ -138,6 +138,7 @@ internal class AndroidDevice(
 ) : NativeAdasWindowControl.Device {
     override fun available(): Boolean {
         if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(context.applicationContext) ||
             com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) return false
         if (!platformSupported()) return false
         return try {

@@ -21,6 +21,10 @@ import com.byd.dashcast.report.BugWizardActivity
 import org.robolectric.Shadows.shadowOf
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.After
+import com.byd.dashcast.platform.Platform
+import com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt
+import android.content.Context
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -43,13 +47,21 @@ class ClusterThemeLiveControlsTest {
         val v = g.getChildAt(i); listOf(v) + if (v is ViewGroup) views(v) else emptyList()
     }
     private val busy = DiagActivity::class.java.getDeclaredField("sBusy").apply { isAccessible = true }.get(null) as AtomicBoolean
+    private val detected = Platform::class.java.getDeclaredField("autoDiLink3").apply { isAccessible = true }
+    private var oldDetected = false
     @Before fun resetCompletedTestLease() {
+        oldDetected = detected.getBoolean(Platform.get()); detected.setBoolean(Platform.get(), true)
+        RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
         val localBusy = ClusterThemeLiveControls::class.java.getDeclaredField("busy").apply { isAccessible = true }.get(null) as AtomicBoolean
         val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
         while (localBusy.get() && System.nanoTime() < until) Thread.sleep(5)
         assertFalse("Previous physical-call fixture must have returned", localBusy.get())
         (ClusterThemeLiveControls::class.java.getDeclaredField("diagClaimed").apply { isAccessible = true }.get(null) as AtomicBoolean).set(false)
         busy.set(false)
+    }
+    @After fun restorePlatform() {
+        detected.setBoolean(Platform.get(), oldDetected)
+        RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
     @Test fun `restore stays pinned outside pages and is not part of diagnostic busy disabling`() {
         val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
@@ -95,13 +107,16 @@ class ClusterThemeLiveControlsTest {
         try {
             val all = views(c.get().findViewById(android.R.id.content))
             all.filterIsInstance<Button>().single { it.text.toString().startsWith("Cluster Full Screen\n") }.performClick()
-            val load = all.filterIsInstance<Button>().single { it.text.toString().startsWith("Change physical cluster") }
+            val load = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_marker_button) }
             busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
             assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("start-busy"))
             busy.set(false); load.performClick(); ShadowLooper.idleMainLooper()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertNotNull(dialog); assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
-            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().single().isChecked = true
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().let { checks ->
+                assertEquals(2, checks.size); checks[0].isChecked = true
+                assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled); checks[1].isChecked = true
+            }
             assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
@@ -198,10 +213,13 @@ class ClusterThemeLiveControlsTest {
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
         try {
-            views(panel).filterIsInstance<Button>().single { it.text.toString().startsWith("Change physical") }.performClick()
+            views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(R.string.diag_cluster_rcc_marker_button) }.performClick()
             ShadowLooper.idleMainLooper()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
-            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().single().isChecked = true
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().let { checks ->
+                assertEquals(2, checks.size); checks[0].isChecked = true
+                assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled); checks[1].isChecked = true
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
             assertTrue(activity.get().entered.await(3, TimeUnit.SECONDS))
             controls.close(); activity.pause().stop().destroy(); activity.get().finish.countDown()
@@ -216,7 +234,7 @@ class ClusterThemeLiveControlsTest {
         assertTrue(ClusterThemeDiagnostics.snapshot(activity).contains(text))
     }
 
-    @Test fun `full theme confirmation sends its exact asset through operation five without marker substitution`() {
+    @Test fun `full theme confirmation sends exact asset through IVI operation12 and durable nonce`() {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previous = bf.get(null); val version = vf.get(null)
@@ -232,7 +250,7 @@ class ClusterThemeLiveControlsTest {
                         reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","detail":"Read only preflight","filename":"","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"oemObservedByUser":false}""")
                         return true
                     }
-                    assertEquals(5, op)
+                    assertEquals(12, op)
                     assetReceived = true
                     ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
                     // Robolectric cannot read a parcelled FD while its original remains open.
@@ -241,14 +259,17 @@ class ClusterThemeLiveControlsTest {
                     val bytes = source.readBytes()
                     val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
                     assertEquals(ClusterThemeVariant.FULL_SURFACE_TEST.carrierSha256, digest)
-                    assertEquals(1, data.readInt()); assertEquals(0, data.dataAvail())
+                    assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                    val nonce = data.readString()!!
+                    assertEquals(nonce, ClusterThemeProjectionDebt.nonce(RuntimeEnvironment.getApplication()))
+                    assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail())
                     reply!!.writeNoException()
-                    reply.writeString("""{"state":"REFUSED","detail":"Fixture no native load","filename":"","variant":"full-surface-test","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"themeObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
+                    reply.writeString("""{"rccRejectedNonce":"$nonce","state":"REFUSED","detail":"Fixture no native load","filename":"","variant":"full-surface-test","daemonUid":2000,"defaultQueried":false,"markerObservedByUser":false,"themeObservedByUser":false,"oemObservedByUser":false,"raw":""}""")
                     return true
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "32")
+        }); vf.set(null, "35")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
@@ -258,9 +279,12 @@ class ClusterThemeLiveControlsTest {
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
             assertTrue(views(dialog.window!!.decorView as ViewGroup).filterIsInstance<TextView>().any {
-                it.text.toString().contains("Full navigation and night mode manually")
+                it.text == activity.get().getString(R.string.diag_cluster_rcc_ivi_theme_confirm)
             })
-            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().single().isChecked = true
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().let { checks ->
+                assertEquals(2, checks.size); checks[0].isChecked = true
+                assertFalse(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled); checks[1].isChecked = true
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
             assertTrue(received.await(5, TimeUnit.SECONDS))
             failure?.let { throw it }

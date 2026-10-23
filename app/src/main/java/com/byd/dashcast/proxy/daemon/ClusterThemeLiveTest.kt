@@ -10,6 +10,8 @@ import android.util.Base64
 import com.byd.dashcast.clusterlive.ClusterThemePolicy
 import com.byd.dashcast.clusterlive.ClusterThemeProtocol
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
+import com.byd.dashcast.clusterlive.ClusterThemeTransport
+import com.byd.dashcast.clusterlive.ClusterThemeJournal
 import com.byd.dashcast.clusterlive.ClusterRendererDiscovery
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -37,7 +39,8 @@ internal object ClusterThemeLiveTest {
     private val nativeMode = ClusterNativeModeTest(worker)
     private var productionModeCommands = 0
     @Synchronized fun beginProductionModeCommand() {
-        check(!nativeMode.blocked()) { "NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: manual native return and observation required" }
+        initialize()
+        check(!nativeMode.blocked() && !active.get() && !queryActive.get()) { "NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: native/RCC diagnostic recovery required" }
         productionModeCommands++
     }
     @Synchronized fun endProductionModeCommand() { check(productionModeCommands > 0); productionModeCommands-- }
@@ -76,12 +79,30 @@ internal object ClusterThemeLiveTest {
     @Volatile private var helperStart = ""
     @Volatile private var helperToken = ""
     @Volatile private var hashDeadline = Long.MAX_VALUE
+    @Volatile private var transport = ClusterThemeTransport.STRICT_RENDERER
+    @Volatile private var projectionValidity: android.os.IBinder? = null
+    private val trace = ArrayDeque<String>()
+    @Synchronized private fun step(stage: String, extra: String = "") {
+        val line = "epochMs=${System.currentTimeMillis()} elapsedMs=${SystemClock.elapsedRealtime()} transport=${transport.id} nonce=${filename.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc")} stage=$stage ${extra.take(320)}"
+        trace.addLast(line)
+        while (trace.size > 48 || trace.sumOf { it.length } > 8192) trace.removeFirst()
+        ProxyDaemonMain.log("ClusterRcc $line")
+    }
+    private fun validProjection(): Boolean {
+        val binder = projectionValidity ?: return false
+        if (!binder.isBinderAlive) return false
+        val d = android.os.Parcel.obtain(); val r = android.os.Parcel.obtain()
+        return try {
+            d.writeInterfaceToken("com.byd.dashcast.RccReservation")
+            binder.transact(1, d, r, 0) && run { r.readException(); r.dataAvail() == 4 && r.readInt() == 1 }
+        } catch (_: Exception) { false } finally { r.recycle(); d.recycle() }
+    }
 
     private fun initialize() {
         if (initialized) return
         synchronized(this) {
             if (initialized) return
-            if (journal.exists()) {
+            if (runCatching { Os.lstat(journal.path); true }.getOrElse { if (it is ErrnoException && it.errno == OsConstants.ENOENT) false else throw it }) {
                 // Never execute anything from a recovered journal. Only the fixed owned name is accepted.
                 runCatching {
                     check(journal.length() <= 32768)
@@ -91,18 +112,21 @@ internal object ClusterThemeLiveTest {
                         check(OsConstants.S_ISREG(st.st_mode) && st.st_uid == Process.myUid() && st.st_size in 1..32768)
                         JSONObject(input.readBytes().toString(Charsets.UTF_8))
                     }
-                    variant = ClusterThemeVariant.recover(j.get("schema"),
-                        if (j.has("variant")) j.getString("variant") else null,
-                        if (j.has("carrierSha256")) j.getString("carrierSha256") else null)
-                    val recordedMutation = j.getBoolean("mutated")
-                    if (j.getString("state") != "CLEAN") {
-                        filename = j.getString("filename"); check(ClusterThemePolicy.ownedName(filename))
-                        renderer = j.optString("renderer"); identity = j.optString("identity")
-                        mutated = recordedMutation; uncertain = mutated
-                        helperPid = j.getInt("helperPid"); helperStart = j.getString("helperStart"); helperToken = j.getString("helperToken")
-                        createdDevice = j.optLong("createdDevice", -1); createdInode = j.optLong("createdInode", -1)
+                    val saved = ClusterThemeJournal.recover(j)
+                    transport = saved.transport; variant = saved.variant
+                    if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                        filename = saved.filename; root = saved.root; identity = saved.identity
+                    }
+                    if (!saved.clean) {
+                        filename = saved.filename; renderer = saved.renderer; identity = saved.identity
+                        mutated = saved.mutated; uncertain = mutated
+                        helperPid = saved.helperPid; helperStart = saved.helperStart; helperToken = saved.helperToken
+                        createdDevice = saved.device; createdInode = saved.inode
                         state = "QUARANTINE"; detail = "Previous daemon stopped. No replay. Recovery requires manual Restore; remote completion remains unknown."
                         active.set(true)
+                    } else if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                        state = "CLEAN"; phase = "recovered-clean"
+                        detail = "Durable completed RCC receipt recovered; no commands replayed; current pixels UNKNOWN."
                     }
                 }.onFailure {
                     journalTrusted = false; active.set(true); uncertain = true; state = "QUARANTINE"
@@ -122,12 +146,16 @@ internal object ClusterThemeLiveTest {
         return JSONObject().put("state", state).put("detail", detail).put("filename", filename)
             .put("variant", if (journalTrusted) variant.id else "UNKNOWN")
             .put("carrierSha256", if (journalTrusted) variant.carrierSha256 else "").put("phase", phase)
+            .put("transport", transport.id).put("nativeIdentity", if (transport == ClusterThemeTransport.ANDROID_IVI) "UNKNOWN" else "STRICT_PROFILE")
+            .put("trace", synchronized(this) { trace.joinToString("\n") }).put("rccDebt", active.get())
+            .put("rccSafeNonce", if (transport == ClusterThemeTransport.ANDROID_IVI && journalTrusted && !active.get() &&
+                state in setOf("CLEAN", "REFUSED") && ClusterThemePolicy.ownedName(filename)) filename.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc") else "")
             .put("daemonUid", Process.myUid()).put("renderer", renderer).put("identity", identity)
             .put("remainingMs", (deadline - SystemClock.elapsedRealtime()).coerceAtLeast(0))
             .put("mutated", mutated).put("uncertain", uncertain).put("defaultQueried", defaultQueried)
             .put("carrierRemoved", carrierRemoved).put("markerObservedByUser", markerObserved).put("oemObservedByUser", oemObserved)
             .put("themeObservedByUser", themeObserved)
-            .put("raw", raw.takeLast(16000)).put("oemQuery", oemQuery).put("nativeMode", nativeMode.status()).toString()
+            .put("raw", raw.takeLast(if (transport == ClusterThemeTransport.ANDROID_IVI) 3000 else 16000)).put("oemQuery", oemQuery).put("nativeMode", nativeMode.status()).toString()
     }
 
     @Synchronized fun nativeModeRequest(full: Boolean, nonce: String, parked: Boolean, firmware: Boolean,
@@ -144,7 +172,7 @@ internal object ClusterThemeLiveTest {
         }
         return status()
     }
-    fun nativeBlocksProjection(): Boolean = nativeMode.blocked()
+    fun nativeBlocksProjection(): Boolean { initialize(); return nativeMode.blocked() || active.get() || queryActive.get() }
     @Synchronized fun nativeNormalObserved(nonce: String): String {
         nativeMode.observedNormal(nonce)
         return status()
@@ -173,42 +201,69 @@ internal object ClusterThemeLiveTest {
     }
 
     @Synchronized fun start(source: ParcelFileDescriptor, parkedAssertion: Boolean,
-        requestedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
+        requestedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER,
+        requestedTransport: ClusterThemeTransport = ClusterThemeTransport.STRICT_RENDERER,
+        requestedNonce: String? = null, validity: android.os.IBinder? = null): String {
         initialize()
         try {
             val st = Os.fstat(source.fileDescriptor)
             check(ClusterThemePolicy.permitsCarrierSource(st.st_mode, st.st_size)) { "Source must be a bounded regular file (pipes/devices refused)" }
         } catch (t: Throwable) { source.close(); throw t }
-        if (!parkedAssertion || queryActive.get() || nativeMode.blocked() || !active.compareAndSet(false, true)) {
-            source.close(); return status()
+        if (!parkedAssertion || !journalTrusted || helperUnreaped || productionModeCommands != 0 ||
+            queryActive.get() || nativeMode.blocked() || !active.compareAndSet(false, true)) {
+            source.close()
+            return if (requestedTransport == ClusterThemeTransport.ANDROID_IVI) JSONObject(status()).put("rccRejectedNonce", requestedNonce).toString() else status()
         }
         val thisGeneration = generation.incrementAndGet()
         restoreRequested.set(false); observationPending.set(0)
         mutated = false; uncertain = false; loadSettled = false; defaultQueried = false
         markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false; raw = ""
-        variant = requestedVariant; phase = "renderer-discovery"
+        variant = requestedVariant; transport = requestedTransport; projectionValidity = validity
+        phase = if (transport == ClusterThemeTransport.ANDROID_IVI) "android-ivi-preflight" else "renderer-discovery"
+        synchronized(this) { trace.clear() }
         renderer = ""; identity = ""; root = "" // A completed experiment cannot pin the next renderer generation.
         createdDevice = -1; createdInode = -1
-        filename = ClusterThemePolicy.PREFIX + UUID.randomUUID().toString().replace("-", "") + ".rcc"
-        state = "PREFLIGHT"; detail = "User asserts parked. Checking actual renderer namespace and original artifacts."
+        filename = ClusterThemePolicy.PREFIX + (requestedNonce ?: UUID.randomUUID().toString().replace("-", "")) + ".rcc"
+        state = "PREFLIGHT"; detail = if (transport == ClusterThemeTransport.ANDROID_IVI)
+            "User asserts parked and firmware. Android IVI profile: exact installed Java bridge/UI contract; native host identity UNKNOWN."
+            else "User asserts parked. Checking actual renderer namespace and original artifacts."
+        if (transport == ClusterThemeTransport.ANDROID_IVI) try {
+            check(requestedNonce?.matches(Regex("[0-9a-f]{32}")) == true && validProjection()) { "Idle projection reservation expired" }
+            prepareJournalDirectory(); persist("QUEUED")
+            step("queued-durable", "mutation=false")
+        } catch (error: Throwable) {
+            source.close(); state = "REFUSED"; detail = "Admission refused before worker: ${error.message}".take(768)
+            active.set(false)
+            return JSONObject(status()).put("rccRejectedNonce", requestedNonce).toString()
+        }
         deadline = SystemClock.elapsedRealtime() + 90000
         worker.execute {
             if (generation.get() != thisGeneration) { source.close(); return@execute }
             source.use { descriptor ->
                 try {
                     prepareJournalDirectory()
-                    identifyRenderer()
+                    if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                        check(validProjection()) { "Idle projection reservation expired" }
+                        hashDeadline = SystemClock.elapsedRealtime() + 90000
+                    } else identifyRenderer()
                     checkDeadline()
                     phase = "baseline-query"
                     val baseline = exchange("query")
                     check(!baseline.unknown && baseline.native == 0 && baseline.query?.isDefault() == true) {
                         "Baseline query missing/custom/incompatible; default/source=1 and exact UI version required; native=${baseline.native}; ${baseline.error.orEmpty()}"
                     }
+                    step("baseline-default-received", "UI=${ClusterThemeProtocol.UI_VERSION} source=1 native=${baseline.native} nativeIdentity=${if (transport == ClusterThemeTransport.ANDROID_IVI) "UNKNOWN" else "strict-profile"}")
                     checkDeadline()
                     check(!restoreRequested.get()) { "Restore requested before staging; load cancelled" }
                     phase = "carrier-staging"
+                    if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                        check(validProjection()) { "Projection reservation expired before staging" }
+                        val storage = ClusterThemeAndroidStorage.directory(true)
+                        root = storage.path; identity = storage.identity
+                        step("android-storage-pinned", "path=$root directoryIdentity=$identity nativeIdentity=UNKNOWN")
+                    }
                     persist("STAGING") // fsync BEFORE first created resource or OEM mutation.
-                    val destination = ownedFile()
+                    withOwnedFile { destination ->
                     val fd = Os.open(destination.path, OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_EXCL or OsConstants.O_NOFOLLOW, 420)
                     val created = Os.fstat(fd)
                     createdDevice = created.st_dev; createdInode = created.st_ino
@@ -226,14 +281,23 @@ internal object ClusterThemeLiveTest {
                         }
                         output.fd.sync()
                     }
+                    }
                     phase = "carrier-verification"
-                    check(hash(destination, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256)
-                    checkRendererIdentity()
+                    withOwnedFile {
+                        val named = Os.lstat(it.path)
+                        check(OsConstants.S_ISREG(named.st_mode) && named.st_dev == createdDevice && named.st_ino == createdInode) { "Staged carrier generation changed" }
+                        check(hash(it, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256)
+                    }
+                    step("carrier-hash-verified", "variant=${variant.id} SHA256=${variant.carrierSha256} device=$createdDevice inode=$createdInode")
+                    if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                        ownedFile(); check(validProjection()) { "Projection reservation expired before load" }
+                    } else checkRendererIdentity()
                     checkDeadline(); check(!restoreRequested.get()) { "Restore requested; load cancelled" }
                     phase = "load"
-                    mutated = true; persist("LOAD_STARTED") // unknown until child returns; never replay.
+                    mutated = true; persist("LOAD_STARTED"); step("load-durable-before-helper-GO") // unknown until child returns; never replay.
                     val load = exchange("load")
                     uncertain = load.unknown || load.native != 0
+                    step("load-result", "native=${load.native} unknown=${load.unknown} selectionOwned=${load.query?.selected(filename)}")
                     loadSettled = load.responses.any { ClusterThemePolicy.loadAckMatches(it, filename) }
                     state = if (uncertain) "QUARANTINE" else "AWAITING_OBSERVATION"
                     detail = if (uncertain) "${variant.id} load completion UNKNOWN; native=${load.native}; ${load.error.orEmpty()}. No replay; recovery remains separate."
@@ -252,15 +316,53 @@ internal object ClusterThemeLiveTest {
                         persistQuietly()
                     } else {
                         // No OEM mutation began. Delete only an exclusively created, recorded own file.
-                        runCatching { cleanupOwned(allowPartial = true) }
-                        state = "REFUSED"; deadline = 0
-                        runCatching { persist("CLEAN") }
-                        active.set(false)
+                        try {
+                            if (createdInode >= 0) check(cleanupOwned(allowPartial = true)) { "Owned partial cleanup unavailable" }
+                            state = "REFUSED"; deadline = 0
+                            persist("CLEAN"); active.set(false)
+                        } catch (cleanup: Throwable) {
+                            uncertain = true; state = "QUARANTINE"; deadline = 0
+                            detail += "; pre-load cleanup/journal failed: ${cleanup.message}"; persistQuietly()
+                        }
                     }
                 }
             }
         }
         return status()
+    }
+
+    @Synchronized fun startAndroid(source: ParcelFileDescriptor, parked: Boolean, firmware: Boolean,
+        nonce: String, validity: android.os.IBinder, variant: ClusterThemeVariant): String {
+        if (!firmware || !nonce.matches(Regex("[0-9a-f]{32}"))) { source.close(); error("Explicit firmware assertion and fixed nonce required") }
+        return start(source, parked, variant, ClusterThemeTransport.ANDROID_IVI, nonce, validity)
+    }
+
+    @Synchronized fun requestAndroidRestore(nonce: String, parked: Boolean, firmware: Boolean, validity: android.os.IBinder): String {
+        initialize()
+        require(nonce.matches(Regex("[0-9a-f]{32}")))
+        check(parked && firmware && journalTrusted && !queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0)
+        projectionValidity = validity
+        check(validProjection()) { "Idle projection reservation expired; no recovery request sent" }
+        val expected = ClusterThemePolicy.PREFIX + nonce + ".rcc"
+        if (!active.get()) {
+            // QUEUED is durable before a start can fork. Idle trusted state proves no outstanding load.
+            check(!helperUnreaped && helperPid == 0)
+            transport = ClusterThemeTransport.ANDROID_IVI; filename = expected; renderer = ""; root = ""; identity = ""
+            mutated = false; uncertain = false; defaultQueried = false; loadSettled = false
+            markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false
+            createdDevice = -1; createdInode = -1; variant = ClusterThemeVariant.MARKER
+            state = "CLEAN"; phase = "no-admission-reconciliation"
+            try { prepareJournalDirectory(); persist("CLEAN") } catch (error: Throwable) {
+                journalTrusted = false; active.set(true); uncertain = true; state = "QUARANTINE"
+                detail = "No-admission reconciliation could not persist; RCC admission remains blocked"
+                throw error
+            }
+            detail = "No outstanding daemon load; durable pre-IPC app debt reconciled. No OEM command sent; pixels UNKNOWN."
+            step("no-admission-reconciled")
+            return status()
+        }
+        check(transport == ClusterThemeTransport.ANDROID_IVI && filename == expected) { "Active RCC transport/nonce differs; no overwrite" }
+        return requestRestore(expected)
     }
 
     @Synchronized fun requestRestore(expectedFilename: String? = null): String {
@@ -288,19 +390,25 @@ internal object ClusterThemeLiveTest {
                 if (!mutated) {
                     // Journal proves no native mutation began (LOAD_STARTED is fsynced first).
                     if (root.isEmpty() && renderer.isNotEmpty()) identifyRenderer()
-                    cleanupOwned(true)
+                    if (createdInode >= 0) check(cleanupOwned(true)) { "Owned partial cleanup unavailable; retained" }
                     state = "CLEAN"; detail = "Cancelled before native load; only a positively owned partial carrier was removed."
                     persist(state); active.set(false)
                     return@execute
                 }
                 state = "RESTORING"; detail = "One default-selection request; no physical recovery claim."
                 phase = "restore-query"
-                persistQuietly()
-                if (root.isEmpty()) identifyRenderer() else checkRendererIdentity()
+                persist(state)
+                if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                    check(validProjection()) { "Explicit live projection reservation required for Android recovery" }
+                    hashDeadline = SystemClock.elapsedRealtime() + 60000
+                    ownedFile()
+                } else if (root.isEmpty()) identifyRenderer() else checkRendererIdentity()
                 val selection = exchange("query")
                 check(!selection.unknown && selection.native == 0 && selection.query != null) { "Recovery pre-query unavailable; no overwrite of unknown selection; ${selection.error.orEmpty()}" }
                 check(selection.query.isDefault() || selection.query.selected(filename)) { "Another selection is active; no overwrite" }
+                step("restore-prequery", "default=${selection.query.isDefault()} own=${selection.query.selected(filename)}")
                 val restored = if (selection.query.isDefault()) selection else exchange("restore")
+                step("restore-result", "native=${restored.native} unknown=${restored.unknown} default=${restored.query?.isDefault()}")
                 uncertain = uncertain || restored.unknown || restored.native != 0
                 defaultQueried = restored.query?.isDefault() == true
                 state = if (uncertain || !defaultQueried || !loadSettled) "QUARANTINE" else "DEFAULT_QUERIED"
@@ -317,7 +425,7 @@ internal object ClusterThemeLiveTest {
 
     fun observe(which: Int, expectedFilename: String, expectedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
         initialize()
-        if (which == 1 && variant != expectedVariant) return status()
+        if (which == 1 && (variant != expectedVariant || state != "AWAITING_OBSERVATION" || uncertain || restoreRequested.get())) return status()
         // These are tester statements, never inferred from a callback or selection query.
         if (active.get() && mutated && expectedFilename == filename && ClusterThemePolicy.ownedName(expectedFilename)) {
             if (which == 2 && !defaultQueried) return status() // Observation must follow the default query, not just a queued restore.
@@ -332,7 +440,7 @@ internal object ClusterThemeLiveTest {
             }
             worker.execute {
                 if (filename == observedFilename && active.get()) {
-                    if (which == 1 && variant == expectedVariant && !restoreRequested.get()) {
+                    if (which == 1 && variant == expectedVariant && state == "AWAITING_OBSERVATION" && !uncertain && !restoreRequested.get()) {
                         if (variant == ClusterThemeVariant.MARKER) markerObserved = true else themeObserved = true
                         loadSettled = true
                     }
@@ -346,7 +454,7 @@ internal object ClusterThemeLiveTest {
     }
 
     private fun maybeCleanup() {
-        if (!carrierRemoved && ClusterThemePolicy.canDeleteCarrier(defaultQueried, loadSettled, uncertain)) {
+        if (!carrierRemoved && oemObserved && ClusterThemePolicy.canDeleteCarrier(defaultQueried, loadSettled, uncertain)) {
             check(cleanupOwned(false)) { "Owned carrier cleanup identity unavailable; retained" }
             carrierRemoved = true
             detail = "Default selection queried; only our verified carrier removed. Confirm OEM pixels; a new test remains blocked."
@@ -367,7 +475,12 @@ internal object ClusterThemeLiveTest {
     }
 
     private fun persist(newState: String) {
-        val j = JSONObject().put("schema", 2).put("state", newState).put("filename", filename)
+        if (newState == "CLEAN") {
+            check(!helperUnreaped && helperPid == 0) { "Cannot close journal with an unreaped helper" }
+            helperStart = ""; helperToken = ""
+        }
+        val j = JSONObject().put("schema", if (transport == ClusterThemeTransport.ANDROID_IVI) 3 else 2).put("state", newState).put("filename", filename)
+            .apply { if (transport == ClusterThemeTransport.ANDROID_IVI) put("transport", transport.id).put("root", root) }
             .put("variant", variant.id).put("carrierSha256", variant.carrierSha256)
             .put("renderer", renderer).put("identity", identity).put("mutated", mutated)
             .put("uncertain", uncertain).put("defaultQueried", defaultQueried)
@@ -458,20 +571,42 @@ internal object ClusterThemeLiveTest {
         check(executable.st_dev == expected.st_dev && executable.st_ino == expected.st_ino) { "Renderer executable identity mismatch" }
     }
     private fun ownedFile(): File {
+        if (transport == ClusterThemeTransport.ANDROID_IVI) {
+            check(ClusterThemePolicy.ownedName(filename))
+            val storage = ClusterThemeAndroidStorage.directory(false)
+            check(root == storage.path && identity == storage.identity) { "Android carrier directory generation changed" }
+            return File(root, filename)
+        }
         check(ClusterThemePolicy.ownedName(filename) && root == "/proc/$renderer/root")
         checkRendererIdentity()
         return File(root + ClusterThemePolicy.HOST_DIRECTORY + filename)
     }
+    private fun <T> withOwnedFile(action: (File) -> T): T {
+        if (transport != ClusterThemeTransport.ANDROID_IVI) return action(ownedFile())
+        check(ClusterThemePolicy.ownedName(filename))
+        return ClusterThemeAndroidStorage.withDirectory { anchor, directory ->
+            check(root == directory.path && identity == directory.identity) { "Android carrier parent identity changed" }
+            action(File(anchor, filename))
+        }
+    }
     private fun cleanupOwned(allowPartial: Boolean): Boolean {
         if (root.isEmpty() || !ClusterThemePolicy.ownedName(filename) || createdInode < 0 || createdDevice < 0) return false
-        val f = ownedFile()
-        if (!f.exists()) return true
-        val st = Os.lstat(f.path)
-        check(ClusterThemePolicy.ownsObject(st.st_mode, st.st_uid, st.st_dev, st.st_ino, Process.myUid(), createdDevice, createdInode)) { "Owned carrier identity/type changed; retained" }
-        check(allowPartial || hash(f, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256) { "Owned carrier hash changed; retained" }
-        check(f.delete()) { "Owned carrier cleanup failed" }
-        return true
+        return withOwnedFile { f ->
+            val st = try { Os.lstat(f.path) } catch (error: ErrnoException) {
+                if (error.errno == OsConstants.ENOENT) return@withOwnedFile true else throw error
+            }
+            check(if (transport == ClusterThemeTransport.ANDROID_IVI)
+                OsConstants.S_ISREG(st.st_mode) && st.st_dev == createdDevice && st.st_ino == createdInode
+                else ClusterThemePolicy.ownsObject(st.st_mode, st.st_uid, st.st_dev, st.st_ino, Process.myUid(), createdDevice, createdInode)) { "Owned carrier identity/type changed; retained" }
+            check(allowPartial || hash(f, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256) { "Owned carrier hash changed; retained" }
+            val latest = Os.lstat(f.path)
+            check(OsConstants.S_ISREG(latest.st_mode) && latest.st_dev == createdDevice && latest.st_ino == createdInode) { "Carrier name replaced before deletion; retained" }
+            check(f.delete()) { "Owned carrier removal failed" }
+            step("owned-carrier-removed", "device=$createdDevice inode=$createdInode")
+            true
+        }
     }
+
     private fun checkDeadline(allowRecovery: Boolean = false) {
         if (!allowRecovery || deadline > 0) check(deadline == 0L || SystemClock.elapsedRealtime() < deadline) { "Preflight deadline exceeded" }
     }
@@ -491,23 +626,43 @@ internal object ClusterThemeLiveTest {
 
     private data class Exchange(val native: Int?, val query: ClusterThemeProtocol.Response?, val responses: List<ClusterThemeProtocol.Response>,
         val unknown: Boolean, val error: String? = null)
+    internal fun recoveredGenerationPresent(probe: () -> Unit = { Os.lstat("/proc/$helperPid"); Unit },
+        readStart: () -> String = { procStart(helperPid) }): Boolean {
+        try { probe() } catch (error: ErrnoException) {
+            if (error.errno == OsConstants.ENOENT) return false else throw error
+        }
+        val start = try { readStart() } catch (error: Exception) {
+            // A read failure is not evidence of exit; only an explicit second ENOENT is.
+            try { probe() } catch (missing: ErrnoException) {
+                if (missing.errno == OsConstants.ENOENT) return false else throw missing
+            }
+            throw error
+        }
+        return start == helperStart
+    }
     private fun reapRecoveredHelper() {
         if (helperPid <= 0) { check(helperToken.isEmpty() || journalTrusted); return }
-        val proc = File("/proc/$helperPid")
-        if (proc.exists()) {
-            val start = procStart(helperPid)
-            if (start == helperStart) {
-                val args = File(proc, "cmdline").readText().split('\u0000')
-                check(Os.stat(proc.path).st_uid == Process.myUid() &&
-                    args.contains("com.byd.dashcast.proxy.daemon.ClusterThemeHelper") && args.contains(helperToken) && args.contains(filename)) { "Recovered helper identity mismatch; no kill or native call" }
-                Process.killProcess(helperPid)
-                val until = SystemClock.elapsedRealtime() + 1500
-                while (proc.exists() && runCatching { procStart(helperPid) == helperStart }.getOrDefault(false) && SystemClock.elapsedRealtime() < until) Thread.sleep(25)
-                check(!proc.exists() || runCatching { procStart(helperPid) != helperStart }.getOrDefault(true)) { "Recovered helper remains alive" }
+        helperUnreaped = true
+        if (recoveredGenerationPresent()) {
+            val path = File("/proc/$helperPid")
+            val argv = File(path, "cmdline").inputStream().use { input ->
+                val bytes = ByteArray(4097); var size = 0
+                while (size < bytes.size) { val n = input.read(bytes, size, bytes.size - size); if (n < 0) break; size += n }
+                check(size in 1..4096) { "Recorded helper argv unsupported" }
+                bytes.copyOf(size).toString(Charsets.UTF_8).split('\u0000')
             }
+            check(Os.lstat(path.path).st_uid == Process.myUid() &&
+                argv.contains(if (transport == ClusterThemeTransport.ANDROID_IVI) "com.byd.dashcast.proxy.daemon.ClusterThemeIviHelper" else "com.byd.dashcast.proxy.daemon.ClusterThemeHelper") &&
+                argv.contains(helperToken) && argv.contains(filename) && recoveredGenerationPresent()) { "Recovered helper identity mismatch; no kill or native call" }
+            Process.killProcess(helperPid)
+            val until = SystemClock.elapsedRealtime() + 1500
+            while (recoveredGenerationPresent() && SystemClock.elapsedRealtime() < until) Thread.sleep(25)
+            check(!recoveredGenerationPresent()) { "Recovered helper remains alive or unreadable" }
         }
+        step("recovered-helper-gone", "pid=$helperPid start=$helperStart")
         helperPid = 0; helperStart = ""; helperToken = ""; helperUnreaped = false
     }
+
     private fun procStart(pid: Int): String = File("/proc/$pid/stat").readText().substringAfterLast(')').trim().split(Regex("\\s+"))[19]
     private fun exchange(operation: String): Exchange {
         check(!helperUnreaped) { "Previous helper was not reaped; no further native IPC" }
@@ -517,8 +672,15 @@ internal object ClusterThemeLiveTest {
         helperPid = 0; helperStart = ""
         persist(state) // ARMING is durable before fork; helper cannot call OEM before GO.
         val record = File(directory, "helper-$helperToken.json")
-        val args = mutableListOf("/system/bin/app_process64", "-Xnoimage-dex2oat", "/system/bin", "com.byd.dashcast.proxy.daemon.ClusterThemeHelper", operation, filename, helperToken)
-        val child = ProcessBuilder(args).redirectErrorStream(true).apply { environment()["CLASSPATH"] = apk }.start()
+        val args = mutableListOf("/system/bin/app_process64", "-Xnoimage-dex2oat", "/system/bin",
+            if (transport == ClusterThemeTransport.ANDROID_IVI) "com.byd.dashcast.proxy.daemon.ClusterThemeIviHelper" else "com.byd.dashcast.proxy.daemon.ClusterThemeHelper",
+            operation, filename, helperToken)
+        if (transport == ClusterThemeTransport.ANDROID_IVI) {
+            args.add(variant.id); args.add(createdDevice.toString()); args.add(createdInode.toString()); args.add(identity)
+        }
+        val child = try {
+            ProcessBuilder(args).redirectErrorStream(true).apply { environment()["CLASSPATH"] = apk }.start().also { helperUnreaped = true }
+        } catch (error: Throwable) { helperToken = ""; throw error }
         val capture = ByteArrayOutputStream()
         val overflow = AtomicBoolean(false)
         val reader = Thread({
@@ -532,6 +694,7 @@ internal object ClusterThemeLiveTest {
             }
         }, "cluster-live-result").apply { isDaemon = true; start() }
         var terminated = false
+        var traceCaptured = false
         try {
             val readyUntil = SystemClock.elapsedRealtime() + 3000
             while (!record.exists() && child.isAlive && SystemClock.elapsedRealtime() < readyUntil) Thread.sleep(25)
@@ -540,14 +703,23 @@ internal object ClusterThemeLiveTest {
             check(ready.getString("token") == helperToken && ready.getString("filename") == filename)
             helperPid = ready.getInt("pid"); helperStart = ready.getString("start")
             check(helperPid > 0 && procStart(helperPid) == helperStart && Os.stat("/proc/$helperPid").st_uid == Process.myUid())
+            if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                check(validProjection()) { "Projection reservation expired before helper GO" }
+                if (operation == "load") check(!restoreRequested.get()) { "Restore requested before load GO" }
+            }
             persist(state) // PID/start identity fsynced BEFORE permitting any OEM call.
+            step("helper-GO", "operation=$operation pid=$helperPid start=$helperStart token=$helperToken")
             child.outputStream.write("GO\n".toByteArray()); child.outputStream.flush()
             val until = SystemClock.elapsedRealtime() + 8000
             while (SystemClock.elapsedRealtime() < until && !child.waitFor(100, TimeUnit.MILLISECONDS)) { /* owned bounded child */ }
             if (child.isAlive) {
                 child.destroyForcibly(); terminated = child.waitFor(1000, TimeUnit.MILLISECONDS)
                 uncertain = true
-                raw = (raw + "\n$operation: helper deadline; remote completion UNKNOWN; reaped=$terminated").takeLast(16000)
+                val partial = synchronized(capture) { capture.toString("UTF-8") }.takeLast(12000)
+                raw = (raw + "\n$operation: helper deadline; remote completion UNKNOWN; reaped=$terminated\n" + partial).takeLast(16000)
+                partial.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=") }.take(24).forEach { step("helper-partial", it.removePrefix("DASHCAST_IVI_STEP=")) }
+                step("helper-timeout", "operation=$operation reaped=$terminated remoteCompletion=UNKNOWN")
+                traceCaptured = true
                 return Exchange(null, null, emptyList(), true)
             }
             terminated = true; reader.join(500)
@@ -556,6 +728,13 @@ internal object ClusterThemeLiveTest {
             raw = (raw + "\n$operation: " + text.takeLast(12000)).takeLast(16000)
             val line = text.lineSequence().lastOrNull { it.startsWith("DASHCAST_RESULT=") } ?: error("Missing helper result")
             val j = JSONObject(line.removePrefix("DASHCAST_RESULT="))
+            if (transport == ClusterThemeTransport.ANDROID_IVI) {
+                check(j.getString("transport") == transport.id && j.getString("nativeIdentity") == "UNKNOWN")
+                text.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=javaIdentityVerified=") }.take(1)
+                    .forEach { step("Java-identity", it.removePrefix("DASHCAST_IVI_STEP=")) }
+                j.optJSONArray("trace")?.let { for (i in 0 until minOf(it.length(), 24)) step("helper", it.optString(i)) }
+                traceCaptured = true
+            }
             val responses = ArrayList<ClusterThemeProtocol.Response>()
             val array = j.optJSONArray("raw")
             if (array != null) for (i in 0 until array.length().coerceAtMost(32)) {
@@ -570,6 +749,12 @@ internal object ClusterThemeLiveTest {
                 if (queryOk) queries.lastOrNull { it.cmd == 1001 && it.sub == 4 } else null, responses, j.has("error"),
                 if (j.has("error")) j.getString("error").take(1024) else null)
         } finally {
+            if (!traceCaptured && transport == ClusterThemeTransport.ANDROID_IVI) {
+                val partial = synchronized(capture) { capture.toString("UTF-8") }
+                partial.lineSequence().filter { it.startsWith("DASHCAST_IVI_STEP=") }.take(24)
+                    .forEach { step("helper-partial", it.removePrefix("DASHCAST_IVI_STEP=")) }
+                step("helper-result-incomplete", "operation=$operation nativeCompletion=UNKNOWN")
+            }
             if (!terminated) {
                 child.destroyForcibly()
                 if (!child.waitFor(1000, TimeUnit.MILLISECONDS)) {
@@ -579,6 +764,7 @@ internal object ClusterThemeLiveTest {
                 terminated = true
             }
             runCatching { child.inputStream.close() }; runCatching { child.outputStream.close() }; reader.join(200)
+            if (terminated) helperUnreaped = false
             if (terminated && !helperUnreaped) {
                 record.delete(); helperPid = 0; helperStart = ""; helperToken = ""; persistQuietly()
             }

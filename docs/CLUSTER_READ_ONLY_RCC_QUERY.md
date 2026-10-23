@@ -1,5 +1,7 @@
 # Read the OEM RCC selection across the host boundary
 
+Since build 702, the Diag load buttons use the separate [Android IVI RCC transport](CLUSTER_ANDROID_IVI_RCC_TEST.md) at protocol 35. The renderer-first contract below describes the preserved legacy path; it is not silently relaxed or selected after an IVI failure.
+
 The instrument renderer runs in the firmware's host environment; the Android
 head unit can have a different process namespace. A working cluster therefore
 does not imply that the shell daemon can enumerate `qtandroidnative` or read its

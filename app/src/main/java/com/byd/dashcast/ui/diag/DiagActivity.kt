@@ -225,7 +225,7 @@ class DiagActivity : Activity() {
         observationPrompts = ClusterObservationPrompts(this)
         nativeFullControls = ClusterNativeFullControls(this, recoveryBar, clusterBody,
             claimDiag = { claimBusyOrWarn() }, releaseDiag = { releaseBusy() }, transcript = { log(it) }, prompts = observationPrompts!!)
-        clusterBody.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_section); textSize = 19f })
+        clusterBody.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_ivi_title); textSize = 19f })
         liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },

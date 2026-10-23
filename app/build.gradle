@@ -2096,8 +2096,11 @@ android {
         // Protocol 33; native renderer identity still required by unchanged load/restore paths.
         // 700 = 1.9.61-beta: closed manual native Full/normal diagnostic with separate operational debt.
         // Protocol 34; native 16/18 receipts remain distinct from QML/render observations.
-        versionCode 701
-        versionName "1.9.62-beta"
+        // 702 = 1.9.63-beta: explicit Android IVI RCC transport with installed-Java identity,
+        // user-0 anchored staging, separate durable recovery admission and bounded report traces.
+        // Protocol 35; no host renderer identity or physical compatibility claim.
+        versionCode 702
+        versionName "1.9.63-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale

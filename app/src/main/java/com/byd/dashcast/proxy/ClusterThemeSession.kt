@@ -8,6 +8,7 @@ import android.os.Process
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
 import com.byd.dashcast.clusterlive.ClusterThemeVariant
 import com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt
+import com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt
 import org.json.JSONObject
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
 
@@ -35,6 +36,27 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             "Connected ProxyDaemon protocol ${variant.minimumProtocol} required for ${variant.id}. No reconnect/replay."
         }
         return call(variant.startOperation, source, beforeTransaction)
+    }
+    fun startIvi(source: ParcelFileDescriptor, variant: ClusterThemeVariant, validity: IBinder,
+        beforeTransaction: () -> Unit): String {
+        check(ProxyClient.supportsProtocol(35)) { "Connected ProxyDaemon protocol 35 required for Android IVI RCC loading; no renderer fallback" }
+        val nonce = java.util.UUID.randomUUID().toString().replace("-", "")
+        val receipt = call(if (variant == ClusterThemeVariant.MARKER) 11 else 12, source, {
+            beforeTransaction()
+            ClusterThemeProjectionDebt.begin(checkNotNull(app), nonce)
+        }, payload = {
+            it.writeInt(1); it.writeString(nonce); it.writeStrongBinder(validity)
+        })
+        if (JSONObject(receipt).optString("rccRejectedNonce") == nonce) app?.let { ClusterThemeProjectionDebt.clear(it, nonce) }
+        return receipt
+    }
+    fun restoreIvi(validity: IBinder): String {
+        check(ProxyClient.supportsProtocol(35)) { "Connected ProxyDaemon protocol 35 required for IVI recovery" }
+        val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) }
+            ?: filename.takeIf { com.byd.dashcast.clusterlive.ClusterThemePolicy.ownedName(it) }
+                ?.removePrefix(com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX)?.removeSuffix(".rcc")
+            ?: error("No Android RCC recovery nonce recorded")
+        return call(13, payload = { it.writeString(nonce); it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity) })
     }
     fun restore(): String { if (filename.isEmpty()) status(); return call(2) }
     fun observedMarker(expectedFilename: String? = null): String = call(3, expectedFilename = expectedFilename)
@@ -76,7 +98,8 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         expectedFilename: String? = null,
         payload: (Parcel) -> Unit = {}): String {
         val name = listOf("status", "start", "restore", "observe-marker", "observe-oem", "start-full-surface", "observe-full-surface", "oem-selection-query",
-            "native-full-request", "native-normal-request", "native-normal-user-observation")[operation]
+            "native-full-request", "native-normal-request", "native-normal-user-observation",
+            "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
@@ -94,7 +117,14 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             check(text.length <= 32768 && r.dataAvail() == 0) { "Oversized/malformed live-test status" }
             ClusterThemeDiagnostics.received(app, name, connectionToken, text)
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Daemon lost after call; remote completion UNKNOWN. No replay." }
-            if (operation in 0..1 || operation == 5) filename = JSONObject(text).getString("filename")
+            if (operation in 0..1 || operation == 5 || operation in 11..13) filename = JSONObject(text).getString("filename")
+            val state = JSONObject(text)
+            val safe = state.optString("rccSafeNonce")
+            if (safe.matches(Regex("[0-9a-f]{32}")) && app != null && ClusterThemeProjectionDebt.nonce(app) == safe &&
+                state.optString("transport") == "android-ivi" && state.optString("state") in setOf("CLEAN", "REFUSED") &&
+                state.has("rccDebt") && !state.getBoolean("rccDebt") &&
+                state.optString("filename") == com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX + safe + ".rcc")
+                ClusterThemeProjectionDebt.clear(app, safe)
             return text
         } catch (error: Throwable) {
             ClusterThemeDiagnostics.local(app, name, "UNKNOWN", "Call failed; transactionAttempted=$attempted. No replay; physical completion UNKNOWN.",
