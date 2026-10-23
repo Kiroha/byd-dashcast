@@ -5,6 +5,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class ProjectionCommandSequencerTest {
     @Test fun `diagnostic refuses existing ownership queued cleanup and in flight work`() {
@@ -101,7 +103,7 @@ class ProjectionCommandSequencerTest {
     }
 
     @Test
-    fun `queued stop barrier survives restart but its stale restore does not`() {
+    fun `new activation discards queued old stop and its restore`() {
         val sequencer = ProjectionCommandSequencer()
         val launched = mutableListOf<Int>()
         val pending = mutableMapOf<Int, ProjectionCommandSequencer.Completion>()
@@ -109,7 +111,6 @@ class ProjectionCommandSequencerTest {
         fun submit(
             session: ProjectionCommandSequencer.Session,
             command: Int,
-            barrier: Boolean = false,
             onResult: (ProjectionCommandSequencer.Result) -> Unit = {},
         ) {
             sequencer.submit(
@@ -119,24 +120,113 @@ class ProjectionCommandSequencerTest {
                     pending[command] = completion
                 },
                 completion = ProjectionCommandSequencer.Completion(onResult),
-                dispatchIfSuperseded = barrier,
             )
         }
 
         val old = sequencer.beginSession()
         submit(old, 16)
-        submit(old, 18, barrier = true) { result ->
+        submit(old, 18) { result ->
             if (result is ProjectionCommandSequencer.Result.Success) submit(old, 0)
         }
         val current = sequencer.beginSession()
-        submit(current, 116)
+        submit(current, 16)
+
+        assertEquals("a new owner cannot overtake an entered transaction", listOf(16), launched)
 
         pending.remove(16)!!.complete(ProjectionCommandSequencer.Result.Success("old done"))
-        assertEquals(listOf(16, 18), launched)
-
-        pending.remove(18)!!.complete(ProjectionCommandSequencer.Result.Success("stopped"))
-        assertEquals(listOf(16, 18, 116), launched)
+        assertEquals(listOf(16, 16), launched)
+        assertFalse("an obsolete close must never reach the transport", launched.contains(18))
         assertFalse("stale restore must remain suppressed", launched.contains(0))
+    }
+
+    @Test fun `current stop still sends close then refresh exactly once`() {
+        val queue = ProjectionCommandSequencer()
+        val owner = queue.beginSession()
+        val launched = mutableListOf<Int>()
+        var close: ProjectionCommandSequencer.Completion? = null
+        var refresh: ProjectionCommandSequencer.Completion? = null
+        queue.submit(owner, { launched += 18; close = it }, {
+            queue.submit(owner, { launched += 0; refresh = it }, { queue.endSession(owner) })
+        })
+        assertEquals(listOf(18), launched)
+        close!!.complete(ProjectionCommandSequencer.Result.Success(null))
+        close!!.complete(ProjectionCommandSequencer.Result.Success(null))
+        assertEquals(listOf(18, 0), launched)
+        refresh!!.complete(ProjectionCommandSequencer.Result.Success(null))
+        assertEquals(null, queue.currentSession())
+    }
+
+    @Test fun `replacement between dequeue and dispatch cannot launch the old command`() {
+        val queue = ProjectionCommandSequencer()
+        val old = queue.beginSession()
+        var writes = 0
+        // Model the exact gap between takeNextLocked and dispatch without a timing-sensitive race.
+        val pendingType = Class.forName("${ProjectionCommandSequencer::class.java.name}\$Pending")
+        val constructor = pendingType.declaredConstructors.single { it.parameterCount == 5 }
+            .apply { isAccessible = true }
+        val pending = constructor.newInstance(old,
+            { _: ProjectionCommandSequencer.Completion -> writes++ },
+            ProjectionCommandSequencer.Completion {}, null, null)
+        queue.beginSession()
+        val dispatch = ProjectionCommandSequencer::class.java.getDeclaredMethod("dispatch", pendingType)
+            .apply { isAccessible = true }
+        dispatch.invoke(queue, pending)
+        assertEquals(0, writes)
+    }
+
+    @Test fun `local owner state update is atomic with replacement and retired action is ignored`() {
+        val queue = ProjectionCommandSequencer()
+        val old = queue.beginSession()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val attempted = CountDownLatch(1)
+        val replaced = CountDownLatch(1)
+        var value = "old"
+        val clearing = Thread {
+            queue.runIfCurrent(old) {
+                entered.countDown()
+                check(release.await(5, TimeUnit.SECONDS))
+                value = "cleared"
+            }
+        }
+        val replacing = Thread {
+            attempted.countDown()
+            queue.beginSession()
+            value = "new"
+            replaced.countDown()
+        }
+        try {
+            clearing.start()
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            replacing.start()
+            assertTrue(attempted.await(5, TimeUnit.SECONDS))
+            assertEquals(1L, replaced.count)
+        } finally {
+            release.countDown()
+            clearing.join(5000)
+            replacing.join(5000)
+        }
+        assertFalse(clearing.isAlive)
+        assertFalse(replacing.isAlive)
+        assertEquals("new", value)
+        queue.runIfCurrent(old) { value = "stale" }
+        assertEquals("new", value)
+    }
+
+    @Test fun `idle recovery admission cannot act on a projection or diagnostic owner`() {
+        val queue = ProjectionCommandSequencer()
+        var calls = 0
+        queue.runIfIdle { calls++ }
+        val owner = queue.beginSession()
+        queue.runIfIdle { calls++ }
+        assertEquals(1, calls)
+        queue.endSession(owner)
+        queue.runIfIdle { calls++ }
+        assertEquals(2, calls)
+        val diagnostic = queue.reserveDiagnostic()!!
+        queue.runIfIdle { calls++ }
+        assertEquals(2, calls)
+        queue.endSession(diagnostic)
     }
 
     @Test fun `retired cleanup waits for in flight owner and completes only once`() {

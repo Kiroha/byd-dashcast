@@ -26,7 +26,6 @@ internal class ProjectionCommandSequencer {
         val session: Session,
         val launch: (Completion) -> Unit,
         val completion: Completion,
-        val dispatchIfSuperseded: Boolean,
         val cleanup: CleanupTicket? = null,
         val cleanupValid: (() -> Boolean)? = null,
     ) {
@@ -67,6 +66,17 @@ internal class ProjectionCommandSequencer {
     @Synchronized
     fun isCurrent(session: Session): Boolean = session.generation == generation
 
+    /** Only bounded local state updates belong here; never hold ownership across I/O. */
+    @Synchronized
+    fun runIfCurrent(session: Session, action: () -> Unit) {
+        if (isCurrent(session)) action()
+    }
+
+    @Synchronized
+    fun runIfIdle(action: () -> Unit) {
+        if (ownerSession == null && !diagnostic) action()
+    }
+
     fun endSession(session: Session) {
         val next = synchronized(this) {
             if (session.generation == generation) { retiredGeneration = generation; generation++; ownerSession = null; diagnostic = false }
@@ -79,10 +89,9 @@ internal class ProjectionCommandSequencer {
         session: Session,
         launch: (Completion) -> Unit,
         completion: Completion,
-        dispatchIfSuperseded: Boolean = false,
     ) {
         val next = synchronized(this) {
-            queue.addLast(Pending(session, launch, completion, dispatchIfSuperseded))
+            queue.addLast(Pending(session, launch, completion))
             takeNextLocked()
         }
         dispatch(next)
@@ -92,7 +101,7 @@ internal class ProjectionCommandSequencer {
     fun submitCleanup(ticket: CleanupTicket, valid: () -> Boolean,
                       launch: (Completion) -> Unit, completion: Completion) {
         val next = synchronized(this) {
-            queue.addLast(Pending(Session(ticket.generation), launch, completion, false, ticket, valid))
+            queue.addLast(Pending(Session(ticket.generation), launch, completion, ticket, valid))
             takeNextLocked()
         }
         dispatch(next)
@@ -107,7 +116,7 @@ internal class ProjectionCommandSequencer {
                     pending.completion.complete(Result.Error("cleanup retired"))
                     continue
                 }
-            } else if (pending.session.generation != generation && !pending.dispatchIfSuperseded) continue
+            } else if (pending.session.generation != generation) continue
             inFlight = true
             return pending
         }
@@ -122,7 +131,14 @@ internal class ProjectionCommandSequencer {
             return
         }
         try {
-            pending.launch(Completion { result -> complete(pending, result) })
+            synchronized(this) {
+                // A new owner may have arrived after dequeue but before the asynchronous starter.
+                if (pending.cleanup == null && !isCurrent(pending.session)) {
+                    complete(pending, Result.Error("projection retired"))
+                    return
+                }
+                pending.launch(Completion { result -> complete(pending, result) })
+            }
         } catch (t: Throwable) {
             complete(pending, Result.Error("${t.javaClass.simpleName}: ${t.message}"))
         }
@@ -185,6 +201,11 @@ internal object ProjectionCommandBus {
     fun isCurrent(session: ProjectionCommandSequencer.Session): Boolean =
         sequencer.isCurrent(session)
 
+    fun runIfCurrent(session: ProjectionCommandSequencer.Session, action: () -> Unit) =
+        sequencer.runIfCurrent(session, action)
+
+    fun runIfIdle(action: () -> Unit) = sequencer.runIfIdle(action)
+
     fun endSession(session: ProjectionCommandSequencer.Session) {
         com.byd.dashcast.cluster.ProjectionAdasCoordinator.sessionEnded(session)
         sequencer.endSession(session)
@@ -221,7 +242,6 @@ internal object ProjectionCommandBus {
         info: Int,
         value: String,
         callback: AdbLocalClient.Callback,
-        dispatchIfSuperseded: Boolean = false,
     ) {
         sequencer.submit(
             session,
@@ -261,19 +281,8 @@ internal object ProjectionCommandBus {
                     is ProjectionCommandSequencer.Result.Error -> callback.onError(result.message)
                 }
             },
-            dispatchIfSuperseded = dispatchIfSuperseded,
         )
         AppLogger.d(TAG, "queued session=${session.generation} command=$type/$info")
     }
 
-    fun sendBarrier(
-        context: Context,
-        session: ProjectionCommandSequencer.Session,
-        type: Int,
-        info: Int,
-        value: String,
-        callback: AdbLocalClient.Callback,
-    ) {
-        sendInfo(context, session, type, info, value, callback, dispatchIfSuperseded = true)
-    }
 }
