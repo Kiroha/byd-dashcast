@@ -168,11 +168,13 @@ class ClusterThemeLiveTestLifecycleTest {
             ClusterThemeLiveTest.Exchange(0, cornerSelection(), emptyList(), false)
         }
         assertTrue(entered.await(1, TimeUnit.SECONDS))
+        assertTrue(JSONObject(ClusterThemeLiveTest.status()).getBoolean("recoveryPending"))
         ClusterThemeLiveTest.requestRestore(name)
         assertTrue(flag("restoreRequested").get()); assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
         set("journalTrusted", false) // Bound this fixture before any real storage/helper operation.
         release.countDown(); drain(); drain()
         assertEquals(-1L, count("restoring").get()); assertTrue(flag("restoreRequested").get())
+        assertFalse(JSONObject(ClusterThemeLiveTest.status()).getBoolean("recoveryPending"))
         assertTrue(JSONObject(ClusterThemeLiveTest.status()).getString("detail").contains("Journal identity/mutation state unknown"))
         assertTrue(flag("active").get()); assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
     }

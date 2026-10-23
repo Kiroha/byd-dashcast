@@ -764,7 +764,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">اختر Full والوضع الليلي قبل الاختبار. يحتفظ RCC بكود العدادات والتحذيرات ويغير الخلفية. تحقق من الوضوح والاستعادة في السيارة. أبقِ الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. ثم أكد ما تراه. إعادة التشغيل لا تضمن الاستعادة.</string>
     <string name="diag_cluster_rcc_ivi_send">إرسال اختبار RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">يطلب موارد RCC الافتراضية دون تغيير وضع العرض. يتم التحقق من رد OEM والاستعادة المرئية بشكل منفصل؛ ثم أكد ما تراه. لا إعادة تشغيل أو اختبار جديد تلقائي.</string>
-    <string name="diag_cluster_rcc_debt">لا يزال اختبار RCC مفتوحاً. استخدم «استعادة موارد RCC الخاصة بـBYD / التحقق من عودة BYD»، ثم أجب عن النافذة بعد فحص لوحة العدادات.</string>
+    <string name="diag_cluster_rcc_debt">ما زال اختبار RCC مفتوحًا. استخدم «استعادة موارد RCC الخاصة بـBYD» أو «التحقق من عودة BYD»، ثم اتبع النتيجة والخطوة المقترحة. لا يظهر السؤال المرئي إلا بعد التحقق من اختيار BYD الافتراضي.</string>
     <string name="diag_cluster_rcc_ivi_platform">رُفض الاختبار: يلزم Android 10 واكتشاف DiLink 3 مؤكداً. لم يُرسل أي RCC.</string>
     <string name="diag_cluster_page_title">لوحة العدادات: الإسقاط وRCC</string>
     <string name="diag_cluster_page_description">إسقاط BYD بالشريطين وعلامة وسمة RCC</string>
@@ -781,4 +781,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">يتحقق للقراءة فقط من ملف RCC المحدد مسبقاً. بعد إعادة تهيئة فعلية للوحة BYD عبر التشغيل الطبيعي للسيارة، استخدم هذا الزر وأجب حسب العلامات الفعلية. إعادة توصيل daemon لا تعيد تهيئة اللوحة. لا يعيد هذا الإجراء تحميل أي شيء أو تشغيله. الإجابة بنعم لا تغلق الجلسة؛ استعادة BYD منفصلة.</string>
     <string name="diag_cluster_rcc_corners_pending">تم اختيار RCC — العرض غير مؤكد</string>
     <string name="diag_cluster_rcc_cohort_help">تستخدم علامات الزوايا موارد إصدار لوحة العدادات الذي تم تحليله. يفحص الاختبار الملفات المثبتة ويرفض أي إصدار مختلف. تبقى الاختبارات القديمة مقيدة بإصدارها الأصلي. تبقى أدوات استعادة الجلسات السابقة متاحة؛ ويجب تأكيد عودة عرض BYD.</string>
+    <string name="diag_cluster_rcc_restore_reading">جارٍ قراءة جلسة RCC للـ daemon المتصل… لم يُرسل أي أمر إلى BYD.</string>
+    <string name="diag_cluster_rcc_restore_protocol">أعد توصيل daemon هذا الإصدار (البروتوكول 40)، ثم حاول مجددًا. لم يُرسل أي أمر إلى BYD.</string>
+    <string name="diag_cluster_rcc_restore_pending">الاستعادة جارية. انتظر النتيجة؛ الرد الحالي لا يؤكد عودة BYD بعد.</string>
+    <string name="diag_cluster_rcc_restore_none">لا توجد استعادة RCC معلّقة في هذه الجلسة. ما زالت الشاشة الفعلية تحتاج إلى فحص.</string>
+    <string name="diag_cluster_rcc_restore_failed">عودة BYD غير مؤكدة. اقرأ التفاصيل أدناه؛ لم يبدأ اختبار جديد.</string>
+    <string name="diag_cluster_rcc_restore_result">استعادة RCC — النتيجة والخطوة التالية</string>
+    <string name="diag_cluster_rcc_restore_same">رفضت BYD الاستعادة بالخطأ RESOURCE_IS_SAME (0x2330)، وما زال ملف RCC الخاص بنا محددًا. يمكنك تهيئة العودة: سيؤدي تأكيد منفصل إلى نقل ملف الاختبار الخاص بنا فقط مع الحفاظ على بايتاته. لا ضمان لإعادة التشغيل أو العودة المرئية.</string>
+    <string name="diag_cluster_rcc_restore_blocked">يظل العرض والاختبارات الجديدة محظورين حتى إغلاق جلسة RCC هذه. اتبع خطوات عودة BYD أدناه؛ إعادة توصيل daemon وحدها لا تكفي.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">جلستا RCC في التطبيق وdaemon مختلفتان. لم يُرسل أي أمر؛ تبقى الملفات والحظر محفوظة.</string>
+    <string name="diag_cluster_rcc_restore_expired">تغيّرت الحالة أو انتهت صلاحية التأكيد. لم يُرسل أي أمر. افحص الجلسة مجددًا.</string>
 </resources>

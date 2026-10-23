@@ -826,7 +826,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sélectionne Full et nuit avant cet essai. Le RCC conserve le code des instruments et voyants et change leur fond. Lisibilité et récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; confirme ensuite ce que tu vois. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_send">Envoyer le test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Ce bouton demande le retour aux ressources RCC par défaut. Il ne change pas le mode de projection. La réponse OEM et la restauration visible sont vérifiées séparément ; confirme ensuite ce que tu vois. Aucun redémarrage ni nouvel essai automatique.</string>
-    <string name="diag_cluster_rcc_debt">Un essai RCC reste à clôturer. Utilise « Restaurer les ressources RCC BYD / Vérifier le retour BYD », puis réponds à la popup après avoir inspecté le cluster.</string>
+    <string name="diag_cluster_rcc_debt">Un essai RCC reste à clôturer. Utilise « Restaurer les ressources RCC BYD » ou « Vérifier le retour BYD », puis suis le résultat et l’étape proposée. La question visuelle apparaît seulement après vérification de la sélection BYD par défaut.</string>
     <string name="diag_cluster_rcc_ivi_platform">Essai refusé : Android 10 et détection positive de DiLink 3 requis. Aucun RCC envoyé.</string>
     <string name="diag_cluster_page_title">Cluster : projection et RCC</string>
     <string name="diag_cluster_page_description">Projection BYD avec bandeaux, marqueur et thème RCC</string>
@@ -843,4 +843,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Vérification en lecture seule de notre RCC déjà sélectionné. Après une réinitialisation réelle du cluster BYD par le fonctionnement normal de la voiture, utilise ce bouton puis réponds à la popup selon les repères physiques. Reconnecter le daemon ne réinitialise pas le cluster. Cette action ne recharge rien et ne déclenche aucun redémarrage. Une réponse positive ne clôture pas la session ; la restauration BYD reste séparée.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC sélectionné — affichage non confirmé</string>
     <string name="diag_cluster_rcc_cohort_help">Les repères aux coins utilisent les ressources de la version du cluster analysée. Le test vérifie les fichiers installés et refuse toute version différente. Les tests historiques restent réservés à leur version. Les commandes de récupération des anciennes sessions restent disponibles ; le retour BYD doit être confirmé.</string>
+    <string name="diag_cluster_rcc_restore_reading">Lecture de la session RCC du daemon connecté… Aucun ordre BYD envoyé.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Reconnecte le daemon de cette version (protocole 40), puis réessaie. Aucun ordre BYD envoyé.</string>
+    <string name="diag_cluster_rcc_restore_pending">Restauration en cours. Attends le résultat ; la réponse actuelle ne confirme pas encore le retour BYD.</string>
+    <string name="diag_cluster_rcc_restore_none">Aucune restauration RCC en attente dans cette session. L’affichage physique reste à vérifier.</string>
+    <string name="diag_cluster_rcc_restore_failed">Le retour BYD n’est pas confirmé. Consulte le détail ci-dessous ; aucun nouvel essai n’a été lancé.</string>
+    <string name="diag_cluster_rcc_restore_result">Restauration RCC — résultat et suite</string>
+    <string name="diag_cluster_rcc_restore_same">BYD a refusé le retour avec RESOURCE_IS_SAME (0x2330) et conserve notre sélection RCC. Tu peux préparer le retour : une confirmation séparée déplacera uniquement notre fichier de test en conservant ses octets. Aucun redémarrage ni retour visible n’est garanti.</string>
+    <string name="diag_cluster_rcc_restore_blocked">La projection et les nouveaux tests restent bloqués tant que cette session RCC n’est pas clôturée. Suis les étapes de retour BYD ci-dessous ; une simple reconnexion du daemon ne suffit pas.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">Les sessions RCC de l’application et du daemon ne correspondent pas. Aucun ordre envoyé ; les fichiers et le blocage sont conservés.</string>
+    <string name="diag_cluster_rcc_restore_expired">L’état a changé ou cette confirmation a expiré. Aucun ordre envoyé. Relance la vérification de la session.</string>
 </resources>

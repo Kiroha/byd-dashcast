@@ -234,7 +234,8 @@ class DiagActivity : Activity() {
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
             statusContainer = clusterBody, nativeStatus = { text, pinned -> nativeFullControls?.receivedStatus(text, pinned) },
-            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeFullControls?.statusUnavailable() })
+            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeFullControls?.statusUnavailable() },
+            openClusterPage = { showPage(Page.CLUSTER) })
         addDiagnosticReportShortcut(reportingBody)
         exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."

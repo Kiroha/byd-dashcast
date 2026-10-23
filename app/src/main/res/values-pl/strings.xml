@@ -768,7 +768,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Przed testem wybierz Full i tryb nocny. RCC zachowuje kod wskaźników i ostrzeżeń, zmieniając tło. Czytelność i przywracanie sprawdź w samochodzie. Zachowaj dostęp do ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź widoczny wynik. Restart nie gwarantuje przywrócenia.</string>
     <string name="diag_cluster_rcc_ivi_send">Wyślij test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Żąda domyślnych zasobów RCC bez zmiany trybu projekcji. Odpowiedź OEM i widoczne przywrócenie sprawdzane są oddzielnie. Następnie potwierdź to, co widzisz. Bez restartu i automatycznego nowego testu.</string>
-    <string name="diag_cluster_rcc_debt">Test RCC wymaga zamknięcia. Użyj „Przywróć zasoby RCC BYD / Sprawdź powrót BYD”, a następnie odpowiedz w oknie po sprawdzeniu zestawu wskaźników.</string>
+    <string name="diag_cluster_rcc_debt">Test RCC pozostaje otwarty. Użyj „Przywróć zasoby RCC BYD” lub „Sprawdź powrót BYD”, a następnie postępuj zgodnie z wynikiem i proponowanym krokiem. Pytanie o ekran pojawi się dopiero po sprawdzeniu domyślnego wyboru BYD.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test odrzucony: wymagane Android 10 i potwierdzone wykrycie DiLink 3. Nie wysłano RCC.</string>
     <string name="diag_cluster_page_title">Zestaw wskaźników: projekcja i RCC</string>
     <string name="diag_cluster_page_description">Projekcja BYD z paskami, znacznik i motyw RCC</string>
@@ -785,4 +785,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Sprawdza tylko do odczytu nasz już wybrany RCC. Po rzeczywistej ponownej inicjalizacji zestawu wskaźników BYD podczas normalnej obsługi samochodu użyj tego przycisku i odpowiedz według fizycznych znaczników. Połączenie z daemonem nie inicjalizuje zestawu ponownie. Ta czynność niczego nie przeładowuje ani nie restartuje. Odpowiedź tak nie zamyka sesji; przywracanie BYD jest osobne.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC wybrany — obraz niepotwierdzony</string>
     <string name="diag_cluster_rcc_cohort_help">Znaczniki narożników używają zasobów przeanalizowanej wersji zestawu wskaźników. Test sprawdza zainstalowane pliki i odrzuca inną wersję. Starsze testy pozostają ograniczone do swojej pierwotnej wersji. Polecenia odzyskiwania poprzednich sesji pozostają dostępne; powrót widoku BYD wymaga potwierdzenia.</string>
+    <string name="diag_cluster_rcc_restore_reading">Odczytywanie sesji RCC połączonego demona… Nie wysłano polecenia BYD.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Połącz ponownie demona tej wersji (protokół 40), a następnie spróbuj ponownie. Nie wysłano polecenia BYD.</string>
+    <string name="diag_cluster_rcc_restore_pending">Przywracanie trwa. Poczekaj na wynik; obecna odpowiedź nie potwierdza jeszcze powrotu BYD.</string>
+    <string name="diag_cluster_rcc_restore_none">W tej sesji nie ma oczekującego przywracania RCC. Fizyczny ekran nadal wymaga sprawdzenia.</string>
+    <string name="diag_cluster_rcc_restore_failed">Powrót BYD nie został potwierdzony. Przeczytaj szczegóły poniżej; nie rozpoczęto nowego testu.</string>
+    <string name="diag_cluster_rcc_restore_result">Przywracanie RCC — wynik i następny krok</string>
+    <string name="diag_cluster_rcc_restore_same">BYD odrzucił przywracanie z RESOURCE_IS_SAME (0x2330) i nadal wybiera nasz RCC. Możesz przygotować powrót: osobne potwierdzenie przeniesie tylko nasz plik testowy, zachowując jego bajty. Restart ani widoczny powrót nie są gwarantowane.</string>
+    <string name="diag_cluster_rcc_restore_blocked">Projekcja i nowe testy pozostają zablokowane do zamknięcia tej sesji RCC. Wykonaj poniższe kroki powrotu BYD; samo ponowne połączenie demona nie wystarczy.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">Sesje RCC aplikacji i demona różnią się. Nie wysłano polecenia; pliki i blokada pozostają.</string>
+    <string name="diag_cluster_rcc_restore_expired">Stan się zmienił lub potwierdzenie wygasło. Nie wysłano polecenia. Sprawdź sesję ponownie.</string>
 </resources>

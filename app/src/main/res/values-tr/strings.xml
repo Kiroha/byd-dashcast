@@ -759,7 +759,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Testten önce Full ve geceyi seçin. RCC gösterge ve uyarı kodunu korur, arka planı değiştirir. Okunabilirlik ve geri dönüşü araçta doğrulayın. Ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Ardından gördüğünüzü onaylayın. Yeniden başlatma geri dönüşü garanti etmez.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC testini gönder</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Projeksiyon modunu değiştirmeden varsayılan RCC kaynaklarını ister. OEM yanıtı ve görünür geri dönüş ayrı doğrulanır; ardından gördüğünüzü onaylayın. Yeniden başlatma veya otomatik yeni test yok.</string>
-    <string name="diag_cluster_rcc_debt">Bir RCC testi hâlâ açık. “BYD RCC kaynaklarını geri yükle / BYD dönüşünü doğrula” seçeneğini kullanın, göstergeyi inceleyip açılan pencereyi yanıtlayın.</string>
+    <string name="diag_cluster_rcc_debt">Bir RCC testi açık kaldı. “BYD RCC kaynaklarını geri yükle” veya “BYD dönüşünü doğrula” düğmesini kullan, ardından sonucu ve önerilen adımı izle. Görsel soru yalnızca BYD varsayılan seçimi kontrol edildikten sonra görünür.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test reddedildi: Android 10 ve kesin DiLink 3 algılaması gerekir. RCC gönderilmedi.</string>
     <string name="diag_cluster_page_title">Gösterge: yansıtma ve RCC</string>
     <string name="diag_cluster_page_description">Şeritli BYD yansıtması, RCC işareti ve teması</string>
@@ -776,4 +776,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Seçili RCC dosyamızı yalnızca okur. Aracın normal kullanımıyla gerçek BYD gösterge yeniden başlatmasından sonra bu düğmeyi kullanıp fiziksel işaretlere göre yanıtlayın. Daemon bağlantısını yenilemek göstergeyi yeniden başlatmaz. Bu işlem hiçbir şeyi yeniden yüklemez veya başlatmaz. Evet yanıtı oturumu kapatmaz; BYD geri dönüşü ayrıdır.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC seçildi — görüntü doğrulanmadı</string>
     <string name="diag_cluster_rcc_cohort_help">Köşe işaretleri, incelenen gösterge paneli sürümünün kaynaklarını kullanır. Test yüklü dosyaları denetler ve farklı bir sürümü reddeder. Eski testler kendi ilk sürümleriyle sınırlı kalır. Önceki oturumların kurtarma kontrolleri kullanılabilir; BYD ekranına dönüş doğrulanmalıdır.</string>
+    <string name="diag_cluster_rcc_restore_reading">Bağlı daemonun RCC oturumu okunuyor… BYD komutu gönderilmedi.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Bu sürümün daemonunu yeniden bağla (protokol 40), sonra tekrar dene. BYD komutu gönderilmedi.</string>
+    <string name="diag_cluster_rcc_restore_pending">Geri yükleme sürüyor. Sonucu bekle; mevcut yanıt BYD dönüşünü henüz doğrulamıyor.</string>
+    <string name="diag_cluster_rcc_restore_none">Bu oturumda bekleyen RCC geri yüklemesi yok. Fiziksel ekran yine de kontrol edilmeli.</string>
+    <string name="diag_cluster_rcc_restore_failed">BYD dönüşü doğrulanmadı. Aşağıdaki ayrıntıyı oku; yeni test başlatılmadı.</string>
+    <string name="diag_cluster_rcc_restore_result">RCC geri yükleme — sonuç ve sonraki adım</string>
+    <string name="diag_cluster_rcc_restore_same">BYD, RESOURCE_IS_SAME (0x2330) ile geri yüklemeyi reddetti ve RCC dosyamız seçili kaldı. Dönüşü hazırlayabilirsin: ayrı bir onay yalnızca test dosyamızı taşır ve baytlarını korur. Yeniden başlatma veya ekranda dönüş garanti edilmez.</string>
+    <string name="diag_cluster_rcc_restore_blocked">Bu RCC oturumu kapanana kadar projeksiyon ve yeni testler engelli kalır. Aşağıdaki BYD dönüş adımlarını izle; yalnızca daemonu yeniden bağlamak yetmez.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">Uygulama ve daemon RCC oturumları farklı. Komut gönderilmedi; dosyalar ve engel korundu.</string>
+    <string name="diag_cluster_rcc_restore_expired">Durum değişti veya bu onay sona erdi. Komut gönderilmedi. Oturumu yeniden kontrol et.</string>
 </resources>

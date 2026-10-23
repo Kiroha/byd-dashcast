@@ -759,7 +759,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Vor dem Test Full und Nacht wählen. Das RCC behält Instrumenten- und Warncode und ändert den Hintergrund. Lesbarkeit und Wiederherstellung am Fahrzeug prüfen. Bildschirm verfügbar halten. Nach 30 Sekunden werden bei verfügbarer Sitzung Standardressourcen angefordert. Danach die Anzeige bestätigen. Neustart garantiert keine Wiederherstellung.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC-Test senden</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Fordert die Standard-RCC-Ressourcen an und ändert den Projektionsmodus nicht. OEM-Antwort und sichtbare Wiederherstellung werden getrennt geprüft. Danach die Anzeige bestätigen. Kein Neustart oder automatischer neuer Test.</string>
-    <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. „BYD-RCC-Ressourcen wiederherstellen / BYD-Rückkehr prüfen“ verwenden und nach Sichtprüfung des Clusters das Popup beantworten.</string>
+    <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. Nutze „BYD-RCC-Ressourcen wiederherstellen“ oder „BYD-Rückkehr prüfen“ und folge dem Ergebnis und dem vorgeschlagenen nächsten Schritt. Die Sichtprüfung erscheint erst nach Prüfung der BYD-Standardauswahl.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test verweigert: Android 10 und eindeutige DiLink-3-Erkennung erforderlich. Kein RCC gesendet.</string>
     <string name="diag_cluster_page_title">Kombiinstrument: Projektion und RCC</string>
     <string name="diag_cluster_page_description">BYD-Projektion mit Balken, RCC-Markierung und Design</string>
@@ -776,4 +776,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Prüft unsere bereits ausgewählte RCC-Datei nur lesend. Nach einer echten BYD-Cluster-Neuinitialisierung durch normalen Fahrzeugbetrieb diese Taste nutzen und anhand der sichtbaren Markierungen antworten. Eine Daemon-Neuverbindung initialisiert den Cluster nicht neu. Diese Aktion lädt nichts neu und startet nichts neu. Ein Ja schließt die Sitzung nicht; BYD-Wiederherstellung bleibt separat.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC ausgewählt — Anzeige unbestätigt</string>
     <string name="diag_cluster_rcc_cohort_help">Die Eckmarkierungen verwenden Ressourcen der analysierten Kombiinstrumentversion. Der Test prüft installierte Dateien und lehnt andere Versionen ab. Ältere Tests bleiben auf ihre ursprüngliche Version beschränkt. Die Wiederherstellungsbefehle für frühere Sitzungen bleiben verfügbar; die Rückkehr zur BYD-Anzeige muss bestätigt werden.</string>
+    <string name="diag_cluster_rcc_restore_reading">RCC-Sitzung des verbundenen Daemons wird gelesen… Kein BYD-Befehl gesendet.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Daemon dieser Version neu verbinden (Protokoll 40), dann erneut versuchen. Kein BYD-Befehl gesendet.</string>
+    <string name="diag_cluster_rcc_restore_pending">Wiederherstellung läuft. Ergebnis abwarten; die aktuelle Antwort bestätigt die BYD-Rückkehr noch nicht.</string>
+    <string name="diag_cluster_rcc_restore_none">Keine offene RCC-Wiederherstellung in dieser Sitzung. Die physische Anzeige muss noch geprüft werden.</string>
+    <string name="diag_cluster_rcc_restore_failed">BYD-Rückkehr unbestätigt. Details unten lesen; kein neuer Test gestartet.</string>
+    <string name="diag_cluster_rcc_restore_result">RCC-Wiederherstellung — Ergebnis und nächster Schritt</string>
+    <string name="diag_cluster_rcc_restore_same">BYD hat die Rückkehr mit RESOURCE_IS_SAME (0x2330) abgelehnt und wählt weiterhin unsere RCC. Du kannst die Rückkehr vorbereiten: Eine separate Bestätigung verschiebt nur unsere Testdatei und erhält ihre Daten. Weder Neustart noch sichtbare Rückkehr sind garantiert.</string>
+    <string name="diag_cluster_rcc_restore_blocked">Projektion und neue Tests bleiben bis zum Abschluss dieser RCC-Sitzung gesperrt. Folge den Schritten zur BYD-Rückkehr unten; den Daemon allein neu zu verbinden genügt nicht.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">RCC-Sitzungen von App und Daemon stimmen nicht überein. Kein Befehl gesendet; Dateien und Sperre bleiben erhalten.</string>
+    <string name="diag_cluster_rcc_restore_expired">Status geändert oder Bestätigung abgelaufen. Kein Befehl gesendet. Sitzung erneut prüfen.</string>
 </resources>

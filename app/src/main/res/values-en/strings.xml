@@ -775,7 +775,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Select Full and night before testing. The RCC retains instrument and warning code and changes the background. Legibility and recovery require vehicle verification. Keep this screen available. Default resources are requested after 30 seconds if the session remains available; then confirm what you see. Restarting does not guarantee restoration.</string>
     <string name="diag_cluster_rcc_ivi_send">Send RCC test</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">This requests the default RCC resources. It does not change projection mode. The OEM reply and visible recovery are checked separately; then confirm what you see. No restart or automatic new test.</string>
-    <string name="diag_cluster_rcc_debt">An RCC test still needs closing. Use “Restore BYD RCC resources / Verify BYD return”, then answer the popup after inspecting the cluster.</string>
+    <string name="diag_cluster_rcc_debt">An RCC test remains open. Use “Restore BYD RCC resources” or “Verify BYD return”, then follow the result and proposed next step. The visual question appears only after BYD default selection has been checked.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test refused: Android 10 and positive DiLink 3 detection required. No RCC sent.</string>
     <string name="diag_cluster_page_title">Cluster: projection and RCC</string>
     <string name="diag_cluster_page_description">BYD projection with bars, RCC marker and theme</string>
@@ -792,4 +792,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Read-only verification of our already selected RCC. After genuine BYD cluster reinitialization through normal vehicle operation, use this button and answer the popup from the physical markers. Reconnecting the daemon does not reinitialize the cluster. This action does not reload or restart anything. A positive answer does not close the session; BYD restoration remains separate.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC selected — display unconfirmed</string>
     <string name="diag_cluster_rcc_cohort_help">Corner markers use resources from the analyzed cluster version. The test checks installed files and refuses a different version. Historical tests remain restricted to their original version. Recovery controls for previous sessions remain available; OEM return must be confirmed.</string>
+    <string name="diag_cluster_rcc_restore_reading">Reading the connected daemon’s RCC session… No BYD command sent.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Reconnect this version’s daemon (protocol 40), then try again. No BYD command sent.</string>
+    <string name="diag_cluster_rcc_restore_pending">Recovery is running. Wait for its result; the current response does not yet confirm BYD recovery.</string>
+    <string name="diag_cluster_rcc_restore_none">No RCC recovery is outstanding in this session. The physical display still needs checking.</string>
+    <string name="diag_cluster_rcc_restore_failed">BYD recovery is unconfirmed. Read the detail below; no new test was started.</string>
+    <string name="diag_cluster_rcc_restore_result">RCC recovery — result and next step</string>
+    <string name="diag_cluster_rcc_restore_same">BYD refused recovery with RESOURCE_IS_SAME (0x2330) and still selects our RCC. You can prepare recovery: a separate confirmation will move only our test file and preserve its bytes. Neither restart nor visible recovery is guaranteed.</string>
+    <string name="diag_cluster_rcc_restore_blocked">Projection and new tests remain blocked until this RCC session is closed. Follow the BYD recovery steps below; reconnecting the daemon alone is insufficient.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">The app and daemon RCC sessions differ. No command sent; files and the block are retained.</string>
+    <string name="diag_cluster_rcc_restore_expired">The state changed or this confirmation expired. No command sent. Check the session again.</string>
 </resources>
