@@ -78,7 +78,7 @@ or daemon never automatically sends either command or discards outstanding debt.
 
 ## Logs and tester path
 
-Open **Diag → Cluster Full Screen → Tester le mode Full natif BYD** while parked.
+Open **Diag → Cluster : projection et RCC → Tester la projection BYD (avec bandeaux)** while parked.
 The distinct pinned **Demander le retour BYD** requests normal mode. Once a request
 has finished, a popup asks what is visible on the physical cluster. The native Full
 question explicitly describes projection with the OEM top and bottom bands. After
@@ -121,3 +121,10 @@ physical pixels remain UNKNOWN unless independent runtime evidence establishes t
 
 No vehicle execution was performed during development. Static/JVM checks cannot
 establish cluster compatibility, telltale legibility or successful physical return.
+
+Build 703 localizes the cluster category and names this action explicitly as
+projection **with BYD bars**. Outstanding RCC recovery blocks both native mode
+requests; a popup names **Restaurer les ressources RCC BYD** and logs the refusal.
+It does not send command 16 or 18. Restore RCC and confirm the OEM display before
+starting a new native projection test. This is separate from requesting native
+normal mode 18.

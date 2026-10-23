@@ -51,7 +51,7 @@ class ClusterThemeSessionTest {
         try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
             assertThrows(IllegalStateException::class.java) { session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {} }
             assertEquals(0, calls); assertFalse(ClusterThemeProjectionDebt.blocked(app))
-            versionField.set(null, "35"); session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {}
+            versionField.set(null, "36"); session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {}
             assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
         } } finally { file.delete() }
     }
@@ -59,7 +59,7 @@ class ClusterThemeSessionTest {
         val app = RuntimeEnvironment.getApplication(); var calls = 0
         binderField.set(null, object : Binder() {
             override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { calls++; throw DeadObjectException() }
-        }); versionField.set(null, "35")
+        }); versionField.set(null, "36")
         val file = File.createTempFile("rcc-ivi", ".rcc").apply { writeText("fixture") }
         try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
             assertThrows(DeadObjectException::class.java) { ClusterThemeSession.pin(app).startIvi(it, ClusterThemeVariant.FULL_SURFACE_TEST, Binder()) {} }
@@ -78,7 +78,7 @@ class ClusterThemeSessionTest {
                 reply!!.writeNoException(); reply.writeString("""{"state":"CLEAN","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","transport":"android-ivi","rccDebt":false,"rccSafeNonce":"$safe"}""")
                 return true
             }
-        }); versionField.set(null, "35")
+        }); versionField.set(null, "36")
         val session = ClusterThemeSession.pin(app); session.restoreIvi(Binder())
         assertTrue(ClusterThemeProjectionDebt.blocked(app)); safe = nonce; session.restoreIvi(Binder())
         assertFalse(ClusterThemeProjectionDebt.blocked(app)); assertEquals(2, calls)

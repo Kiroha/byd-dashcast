@@ -64,7 +64,18 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
         minHeight = (48 * activity.resources.displayMetrics.density).toInt()
         setOnClickListener { action() }
     }
+    private fun explainRccBlock(): Boolean {
+        if (!com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(app)) return false
+        val message = activity.getString(R.string.diag_cluster_rcc_debt)
+        ClusterThemeDiagnostics.local(app, "native-request-rcc-blocked", "REFUSED", "RCC recovery pending; no native 16/18 command sent. $message")
+        show(message)
+        confirmation?.dismiss()
+        confirmation = AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_native_rcc_blocked)
+            .setMessage(R.string.diag_cluster_rcc_debt).setPositiveButton(android.R.string.ok, null).show()
+        return true
+    }
     private fun confirm(full: Boolean) {
+        if (explainRccBlock()) return
         if (full && busy.get() || !full && returning.get()) { show(activity.getString(R.string.diag_cluster_native_busy)); return }
         val checks = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val parked = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_parked) }
@@ -83,9 +94,7 @@ internal class ClusterNativeFullControls(private val activity: Activity, header:
         dialog.show()
     }
     private fun request(full: Boolean) {
-        if (com.byd.dashcast.clusterlive.ClusterThemeProjectionDebt.blocked(app)) {
-            show(activity.getString(R.string.diag_cluster_rcc_debt)); return
-        }
+        if (explainRccBlock()) return
         if (observing.get() || full && returning.get()) { show(activity.getString(R.string.diag_cluster_native_busy)); return }
         if (Build.VERSION.SDK_INT != 29 || !Platform.get().isAutoDetectedDiLink3()) {
             failed("native-mode-preflight", IllegalStateException("Positive DiLink 3 and API 29 required; fallback/override is insufficient")); return

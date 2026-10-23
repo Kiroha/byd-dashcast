@@ -28,8 +28,9 @@ object ClusterThemeProtocol {
     data class Response(val cmd: Int, val sub: Int, val ints: List<Int>, val strings: List<String>) {
         fun isDefault(): Boolean = cmd == 1001 && sub == 4 && ints[0] == 1 &&
             ints[3] == 1 && strings[0] == UI_VERSION && strings[2] == "default" && strings[4] == "default"
-        fun selected(name: String): Boolean = cmd == 1001 && sub == 4 && ints[0] == 1 &&
-            ints[3] == 0 && strings[0] == UI_VERSION && strings[2] == ClusterThemePolicy.HOST_DIRECTORY + name
+        // getTranslateSource reports the native RCC field independently of the IVI selection path.
+        fun selected(name: String): Boolean = ClusterThemePolicy.ownedName(name) && cmd == 1001 && sub == 4 && ints[0] == 1 &&
+            ints[3] in 0..1 && strings[0] == UI_VERSION && strings[2] == ClusterThemePolicy.HOST_DIRECTORY + name
         fun summary(): String = "cmd=$cmd sub=$sub ints=$ints strings=$strings"
     }
 

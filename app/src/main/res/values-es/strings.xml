@@ -716,11 +716,11 @@
     <string name="diag_send_report">Enviar un informe de diagnóstico</string>
     <string name="diag_send_report_help">Incluye los resultados del cuadro y el registro. Envía por el canal configurado o comparte un archivo.</string>
 
-    <string name="diag_cluster_native_section">Modo Full nativo de BYD</string>
+    <string name="diag_cluster_native_section">Proyección BYD (con franjas)</string>
     <string name="diag_cluster_rcc_section">Recursos RCC</string>
-    <string name="diag_cluster_native_full">Probar el modo Full nativo de BYD</string>
+    <string name="diag_cluster_native_full">Probar proyección BYD (con franjas)</string>
     <string name="diag_cluster_native_normal">Solicitar volver a BYD</string>
-    <string name="diag_cluster_native_help">Solicita la vista Full nativa de BYD con sus testigos. No carga un tema RCC. Un solo comando 16; el retorno no demuestra recepción Qt ni visualización. Volver solicita el modo normal (18), sin restaurar exactamente el modo anterior.</string>
+    <string name="diag_cluster_native_help">Solicita la proyección nativa BYD con las franjas superior e inferior. No carga ningún tema RCC. Un comando 16; la respuesta no confirma la imagen. El retorno solicita el modo normal BYD (18).</string>
     <string name="diag_cluster_native_idle">Estado físico del cuadro desconocido. Los resultados se incluyen en el informe de diagnóstico.</string>
     <string name="diag_cluster_native_busy">Proyección, ADAS o diagnóstico activo: termina la solicitud pendiente antes de probar. Volver sigue disponible.</string>
     <string name="diag_cluster_native_parked">Confirmo que el vehículo está estacionado en un lugar adecuado para la prueba.</string>
@@ -754,11 +754,14 @@
     <string name="diag_cluster_rcc_marker_button">Probar marcador RCC (recomendado)</string>
     <string name="diag_cluster_rcc_ivi_title">Recursos RCC — prueba IVI experimental</string>
     <string name="diag_cluster_rcc_ivi_help">Empieza por el marcador. Para el tema, selecciona Full y noche manualmente. Ningún modo cambia automáticamente.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Se requieren firmware declarado 13.1.33.2602030.1, Android 10, DiLink 3 detectado positivamente y daemon 35. Puente Java instalado verificado; identidad nativa del cuadro desconocida.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Se requieren firmware declarado 13.1.33.2602030.1, Android 10, DiLink 3 detectado positivamente y daemon 36. Puente Java instalado verificado; identidad nativa del cuadro desconocida.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Recarga los recursos BYD con un marcador pasivo conservando el código de instrumentos y avisos. La imagen y la recuperación deben verificarse en el vehículo. Mantén esta pantalla disponible. Tras 30 segundos se solicitan recursos predeterminados si la sesión sigue disponible. Confirma visualmente la recuperación; reiniciar no la garantiza.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Selecciona Full y noche antes de probar. El RCC conserva el código de instrumentos y avisos y cambia el fondo. Verifica legibilidad y recuperación en el vehículo. Mantén esta pantalla disponible. Tras 30 segundos se solicitan recursos predeterminados si la sesión sigue disponible. Confirma lo que ves. Reiniciar no garantiza la restauración.</string>
     <string name="diag_cluster_rcc_ivi_send">Enviar prueba RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Solicita los recursos RCC predeterminados sin cambiar el modo de proyección. La respuesta OEM y la recuperación visible se comprueban por separado; confirma después lo que ves. Sin reinicios ni nueva prueba automática.</string>
     <string name="diag_cluster_rcc_debt">Queda una prueba RCC pendiente. Usa «Restaurar recursos RCC BYD» y responde a la ventana tras inspeccionar el cuadro.</string>
     <string name="diag_cluster_rcc_ivi_platform">Prueba rechazada: requiere Android 10 y detección positiva de DiLink 3. No se envió ningún RCC.</string>
+    <string name="diag_cluster_page_title">Cuadro: proyección y RCC</string>
+    <string name="diag_cluster_page_description">Proyección BYD con franjas, marcador y tema RCC</string>
+    <string name="diag_cluster_native_rcc_blocked">Una prueba RCC bloquea la proyección BYD</string>
 </resources>

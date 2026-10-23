@@ -7,7 +7,7 @@ internal object ClusterThemeJournal {
     data class Recovery(val transport: ClusterThemeTransport, val variant: ClusterThemeVariant,
         val clean: Boolean, val filename: String, val root: String, val renderer: String, val identity: String,
         val mutated: Boolean, val helperPid: Int, val helperStart: String, val helperToken: String,
-        val device: Long, val inode: Long)
+        val device: Long, val inode: Long, val iviRecoverySettled: Boolean)
 
     fun recover(j: JSONObject): Recovery {
         val schema = j.get("schema")
@@ -34,7 +34,12 @@ internal object ClusterThemeJournal {
             require(device == -1L && inode == -1L || device >= 0 && inode >= 0) { "Incomplete staged object identity" }
             require(!j.getBoolean("mutated") || device >= 0 && inode >= 0) { "Mutated IVI journal has no staged object identity" }
         }
+        require(!j.has("iviRecoverySettled") || j.get("iviRecoverySettled") is Boolean)
+        val recoverySettled = j.optBoolean("iviRecoverySettled")
+        require(!recoverySettled || transport == ClusterThemeTransport.ANDROID_IVI && j.getBoolean("mutated")) {
+            "Recovery proof requires an admitted Android IVI load"
+        }
         return Recovery(transport, variant, clean, filename, root, j.optString("renderer"), identity,
-            j.getBoolean("mutated"), pid.toInt(), start, token, device, inode)
+            j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled)
     }
 }

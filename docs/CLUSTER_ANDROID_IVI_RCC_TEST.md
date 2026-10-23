@@ -12,6 +12,47 @@ transport and its schema 1/2 recovery remain separate; no failed strict check
 silently selects a different transport. Schema 3 requires the exact transport,
 compiled variant and carrier hash. Unknown/corrupt journals block admission.
 
+## Build 703 regression correction
+
+**1.9.64-beta / build 703 requires ProxyDaemon 36**, using the same operations.
+The 15:51, 15:54 and 15:55 reports show one load sent at 15:49:24. Its fresh
+query returned source **1**, the exact owned IVI host path, and resource
+`DashCast_a`. Build 702 incorrectly required source 0, then rejected the same
+owned path during recovery as foreign. Persistent RCC debt consequently blocked
+native projection. The native command was not shown to have failed: it was not
+sent again in these reports.
+
+REA `getTranslateSource` at `0x188cc0`
+(`ev_ec8ea4a138af5ddd4dc19efedd574db39c7bb251149007edfe08ccd61c8fd438`)
+sets the source from the native `m_translateRccPath`. The query path is chosen
+independently from `m_translatePathFromIvi` when that field is set
+(`ev_96c25d56ea8d291732657097204f0a652adde66e8153a40e13e57a8075da1d43`).
+Thus source 0 or 1 can accompany our exact IVI path. The matcher still requires
+the exact UI version, supported source value and owned host path. This query
+proves an IVI selection field, **not registration or rendering**.
+
+For the existing build-702 session, first install build 703 and reconnect the
+daemon, then use **Diag → Cluster : projection et RCC → Restaurer les ressources
+RCC BYD**. Observe the cluster and answer the OEM restoration popup. Start another
+test only after that recovery closes. **Tester la projection BYD (avec bandeaux)**
+is the separate native command 16; it retains the top and bottom BYD bars and
+does not load an RCC. A blocked request now explains the exact restoration action
+in a popup and is included in the diagnostic report. These names are localized
+in all 13 app languages.
+
+A recovered trusted schema-3 journal keeps its original nonce, variant, hash,
+file device/inode and pinned parent identities. After positive helper reaping,
+an exact own-path prequery permits one default request; the mutating helper
+checks the unchanged carrier and compiled hash before sending it. A successful
+fresh default postquery records an independent **ordered IVI recovery proof**.
+Historical load uncertainty remains recorded. Only a fresh positive OEM visual
+answer, verified owned cleanup and durable CLEAN journal release operational
+debt. A foreign selection, failed/ambiguous response or identity change cannot
+mint this proof. An already-default query without a prior proof cannot settle
+an unresolved load. A durable proof survives restart and non-OEM cleanup or
+journal failures, but still requires a fresh default query and visual answer on
+recovery. No load is replayed. Strict-renderer recovery is unchanged.
+
 ## Evidence and limits
 
 REA on firmware **13.1.33.2602030.1**, without vehicle execution, establishes:
@@ -51,7 +92,7 @@ These are static filename/dispatch proofs, not evidence of runtime loading.
 ## Closed test and recovery
 
 The app requires parked/firmware assertions, API 29, positive DL3 detection,
-explicitly connected protocol 35 and an idle projection/ADAS reservation. It
+explicitly connected protocol 36 and an idle projection/ADAS reservation. It
 durably writes a negative-only app RCC debt before IPC. The daemon checks mutual
 exclusion with native tests, queries, RCC recovery and production mode commands.
 No generic command fallback, reconnect, 16/18, CAN frame or automatic test load
@@ -100,8 +141,9 @@ after an OEM cold restart it can return `RESOURCE_IS_SAME` while the custom
 selection persists. Without a fresh default query, recovery stays unresolved.
 Reboot alone is not a rollback guarantee.
 
-Deletion requires the own filename/inode/hash, settled load, fresh default
-selection, visible OEM recovery and no unresolved IPC uncertainty. OEM recovery is confirmed
+Deletion requires the own filename/inode/hash, fresh default selection and visible
+OEM recovery, plus either settled load without IPC uncertainty or the separate
+ordered Android IVI recovery proof described above. OEM recovery is confirmed
 in a separate popup before closing debt and releasing projection admission.
 Timeouts, missing ACK, changed identities, failed journal persistence, failed
 cleanup and an unreaped child retain recovery/quarantine. Restart never replays
