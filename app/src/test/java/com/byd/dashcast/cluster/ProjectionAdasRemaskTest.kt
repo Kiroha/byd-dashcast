@@ -42,6 +42,9 @@ class ProjectionAdasRemaskTest {
     @Volatile private var typedPower = 2
     @Volatile private var rawPower = 3
     private var supported = true
+    private var holdNextRead = false
+    private var heldRead: Runnable? = null
+    private val shellCommands = mutableListOf<String>()
     private var oldBinder: Any? = null
     private var oldVersion: Any? = null
     private var dialog: NativeAdasWindowDialog? = null
@@ -64,6 +67,7 @@ class ProjectionAdasRemaskTest {
             when (code) {
                 ProxyDaemonContract.TXN_EXEC -> {
                     val command = data.readString()!!
+                    shellCommands += command
                     reply.writeInt(0)
                     if (command == "dumpsys activity activities") {
                         reads++
@@ -106,7 +110,10 @@ class ProjectionAdasRemaskTest {
             ProjectionAdasTransport::class.java.getDeclaredField(lane).apply { isAccessible = true }
                 .set(transport, object : java.util.concurrent.ThreadPoolExecutor(0, 1, 30,
                     java.util.concurrent.TimeUnit.SECONDS, java.util.concurrent.ArrayBlockingQueue(1)) {
-                    override fun execute(command: Runnable) = command.run()
+                    override fun execute(command: Runnable) {
+                        if (lane == "reads" && holdNextRead) { holdNextRead = false; heldRead = command }
+                        else command.run()
+                    }
                 })
         }
         instance.set(null, owner)
@@ -144,7 +151,7 @@ class ProjectionAdasRemaskTest {
         assertEquals(263 + 40, restoredCount)
         ProjectionAdasCoordinator.targetRequested(context, "com.maps", 9)
         advance(30000); idle()
-        assertEquals("old polls, layout and retries must not re-hide", restoredCount, frames.size)
+        assertEquals("old polls and confirmation must not re-hide", restoredCount, frames.size)
         val oldReads = reads
         val results = mutableListOf<NativeAdasWindowControl.Result>()
         val request = ProjectionAdasCoordinator.requestHide(context, results::add)
@@ -154,8 +161,8 @@ class ProjectionAdasRemaskTest {
         await("remask emits all 263 frames") { frames.size == restoredCount + 263 }
         assertEquals(listOf(NativeAdasWindowControl.Result.HIDE_SENT), results)
         request.close()
-        advance(2000)
-        await("closing a completed request leaves its follow-up layout alive") { commands.lastOrNull() == 13 }
+        advance(5000)
+        await("closing a completed request leaves its bounded confirmation alive") { commands.lastOrNull() == 13 }
         assertTrue(ClusterPrefs.isProjectionAdasEnabled(context))
     }
     @Test fun `the settings hide button routes restored projection through Electro instead of the SDK cache`() {
@@ -208,7 +215,7 @@ class ProjectionAdasRemaskTest {
         assertEquals(listOf(NativeAdasWindowControl.Result.UNAVAILABLE), results)
         assertEquals(before, frames.size)
     }
-    @Test fun `cancel before first delivery prevents late layout retry and hide`() {
+    @Test fun `cancel before first delivery prevents confirmation and hide`() {
         launch(); restore()
         val before = frames.size
         val results = mutableListOf<NativeAdasWindowControl.Result>()
@@ -228,7 +235,7 @@ class ProjectionAdasRemaskTest {
         completeStop.run(); completeStop.run()
         advance(999)
         assertEquals(before, frames.size)
-        advance(1)
+        advance(1_001)
         await("stop sends command 12 after all forty restore frames") { commands.lastOrNull() == 12 }
         assertEquals(List(40) { ProjectionAdasPlan.RESTORE }, frames.drop(before))
         ProjectionAdasCoordinator.stop(context)
@@ -245,7 +252,7 @@ class ProjectionAdasRemaskTest {
         await("remask initialization") { commands.lastOrNull() == 13 }
         val completeStop = ProjectionAdasCoordinator.prepareStop(context)
         completeStop.run()
-        advance(1000)
+        advance(2000)
         await("stop reaches its recovery debug command") { commands.lastOrNull() == 12 }
         advance(1200)
         await("stop finishes restoration") { commands.lastOrNull() == 53 }
@@ -280,7 +287,7 @@ class ProjectionAdasRemaskTest {
             ProjectionAdasCoordinator.prepareManualRequest(NativeAdasWindowControl.Action.HIDE))
         advance(30000)
         assertEquals(before, frames.size); assertTrue(results.isEmpty())
-        completeStop.run(); advance(1000)
+        completeStop.run(); advance(2000)
         await("deferred recovery reaches 12") { commands.lastOrNull() == 12 }
         advance(1200)
         await("joined manual result is completed once") { results.isNotEmpty() }
@@ -317,7 +324,7 @@ class ProjectionAdasRemaskTest {
         ProjectionAdasCoordinator.targetRequested(context, "com.maps", 9)
         await("replacement owner has attempted fresh proof") { reads >= 2 }
         val completeStop = ProjectionAdasCoordinator.prepareStop(context)
-        completeStop.run(); advance(1000)
+        completeStop.run(); advance(2000)
         await("replacement stop recovers known outstanding mutation") { commands.lastOrNull() == 12 }
         advance(1200)
         await("full debt recovery completes") { commands.lastOrNull() == 53 }
@@ -341,10 +348,122 @@ class ProjectionAdasRemaskTest {
         assertEquals(listOf(ProjectionAdasPlan.RESTORE), frames.drop(before))
         advance(30000)
         assertEquals(before + 1, frames.size)
-        completeStop.run(); advance(1000)
+        completeStop.run(); advance(2000)
         await("late native completion still runs full recovery") { commands.lastOrNull() == 12 }
         advance(1200)
         await("fallback did not invalidate the full recovery's final command") { commands.lastOrNull() == 53 }
         assertEquals(List(41) { ProjectionAdasPlan.RESTORE }, frames.drop(before))
     }
+    @Test fun `a bounded slow refresh after the poll gap does not restart an intact masking pass`() {
+        launch()
+        val before = commands.count { it == 13 }
+        holdNextRead = true
+        advance(1_000)
+        assertNotNull(heldRead)
+        advance(2_499)
+        heldRead!!.run(); idle()
+        assertEquals(before, commands.count { it == 13 })
+        advance(500)
+        assertEquals(before, commands.count { it == 13 })
+    }
+    @Test fun `a timed out refresh cannot be revived by its late success`() {
+        launch()
+        holdNextRead = true
+        advance(1_000)
+        assertNotNull(heldRead)
+        advance(2_500)
+        val beforeReads = reads
+        val beforeFrames = frames.size
+        val beforeCommands = commands.size
+        heldRead!!.run(); idle()
+        assertEquals(beforeReads, reads)
+        assertEquals(beforeFrames, frames.size)
+        assertEquals(beforeCommands, commands.size)
+    }
+    @Test fun `the proof lease closes at four seconds even before a delayed expiry callback`() {
+        launch()
+        val validity = ProjectionAdasCoordinator::class.java.getDeclaredField("plan")
+            .apply { isAccessible = true }.get(owner).let { plan ->
+                ProjectionAdasPlan::class.java.getDeclaredField("io").apply { isAccessible = true }
+                    .get(plan) as ProjectionAdasPlan.Io
+            }
+        val proofAt = ProjectionAdasCoordinator::class.java.getDeclaredField("proofAt")
+            .apply { isAccessible = true }
+        proofAt.setLong(owner, SystemClock.uptimeMillis() - 3_999)
+        assertTrue(validity.valid())
+        proofAt.setLong(owner, SystemClock.uptimeMillis() - 4_000)
+        assertFalse(validity.valid())
+        proofAt.setLong(owner, SystemClock.uptimeMillis() - 4_001)
+        assertFalse(validity.valid())
+    }
+    @Test fun `new projection owner during restore service readiness prevents every old restore write`() {
+        launch()
+        val before = frames.size
+        var restored: Boolean? = null
+        ProjectionAdasCoordinator.restore(context) { restored = it }
+        idle()
+        assertTrue(shellCommands.last().contains("am startservice"))
+        assertEquals(before, frames.size)
+        ProjectionCommandBus.beginSession()
+        advance(2_200)
+        assertEquals(false, restored)
+        assertEquals(before, frames.size)
+        assertFalse(commands.contains(12)); assertFalse(commands.contains(53))
+    }
+    @Test fun `full restore cancels confirmation and ignores an outstanding proof refresh`() {
+        launch()
+        holdNextRead = true
+        advance(1_000)
+        assertNotNull(heldRead)
+        val beforeReads = reads
+        restore()
+        val beforeFrames = frames.size
+        val beforeCommands = commands.size
+        heldRead!!.run(); advance(30_000)
+        assertEquals(beforeReads, reads)
+        assertEquals(beforeFrames, frames.size)
+        assertEquals(beforeCommands, commands.size)
+    }
+
+    @Test fun `late old proof work cannot renew a replacement projection owner`() {
+        launch()
+        holdNextRead = true
+        advance(1_000)
+        assertNotNull(heldRead)
+        val late = heldRead!!
+        ProjectionCommandBus.beginSession()
+        ProjectionAdasCoordinator.targetRequested(context, "com.maps", 9)
+        await("replacement obtains its own proof") { commands.count { it == 13 } == 2 }
+        val beforeReads = reads
+        val beforeCommands = commands.size
+        late.run(); idle()
+        assertEquals(beforeReads, reads)
+        assertEquals(beforeCommands, commands.size)
+    }
+    @Test fun `stop restores independently while an earlier proof refresh is outstanding`() {
+        launch()
+        holdNextRead = true
+        advance(1_000)
+        assertNotNull(heldRead)
+        val beforeReads = reads
+        val before = frames.size
+        ProjectionAdasCoordinator.prepareStop(context).run()
+        advance(2_000)
+        await("stop initialized the service before its restore frames") { commands.lastOrNull() == 12 }
+        advance(1_200)
+        await("stop recovery completes despite the old refresh") { commands.lastOrNull() == 53 }
+        heldRead!!.run(); advance(30_000)
+        assertEquals(beforeReads, reads)
+        assertEquals(List(40) { ProjectionAdasPlan.RESTORE }, frames.drop(before))
+        assertEquals(listOf(12, 53), commands.takeLast(2))
+    }
+    @Test fun `negative resumed evidence cancels the outstanding automatic confirmation`() {
+        launch()
+        val before = frames.size
+        resumed = false
+        advance(30_000)
+        assertEquals(before, frames.size)
+        assertEquals(listOf(13), commands)
+    }
+
 }
