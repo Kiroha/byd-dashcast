@@ -77,6 +77,17 @@ class ClusterThemeDiagnosticsTest {
         assertTrue(events.getJSONObject(3).has("rawSha256"))
         assertFalse(ClusterThemeDiagnostics.snapshot(app).contains("secretParcelBase64"))
     }
+    @Test fun `queued recovery and terminal failure remain distinct in exported history without clearing debt`() {
+        val pending = status("QUARANTINE", "Recovered previous session").put("rccDebt", true).put("recoveryPending", true)
+        ClusterThemeDiagnostics.received(app, "android-ivi-restore", "connection1", pending.toString())
+        ClusterThemeDiagnostics.received(app, "status", "connection1", JSONObject(pending.toString()).put("recoveryPending", false)
+            .put("detail", "Helper readiness unavailable before admission; no GO sent").toString())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        assertTrue(report.contains("recoveryPending\":true")); assertTrue(report.contains("recoveryPending\":false"))
+        assertTrue(report.contains("rccDebt\":true")); assertTrue(report.contains("Helper readiness unavailable"))
+        assertEquals(2, savedEvents().length())
+    }
 
     @Test fun `local failures do not hide or refresh previous status and remain historical after restart`() {
         ClusterThemeDiagnostics.received(app, "status", "connection1", status(state = "CLEAN").toString())

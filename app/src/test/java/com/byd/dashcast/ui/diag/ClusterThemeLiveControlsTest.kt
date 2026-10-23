@@ -303,7 +303,7 @@ class ClusterThemeLiveControlsTest {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previous = bf.get(null); val version = vf.get(null)
-        bf.set(null, Binder()); vf.set(null, "37")
+        bf.set(null, Binder()); vf.set(null, "40")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { false }, {}, { false }, {})
@@ -336,7 +336,8 @@ class ClusterThemeLiveControlsTest {
             assertEquals(activity.get().getString(R.string.diag_cluster_rcc_verify_return), views(header).filterIsInstance<Button>().single().text)
             assertEquals(View.GONE, prepare.visibility)
             assertTrue(views(header).filterIsInstance<TextView>().any { it.text.toString().contains(activity.get().getString(R.string.diag_cluster_rcc_retired_waiting)) })
-            assertTrue(activity.get().getString(R.string.diag_cluster_rcc_debt).contains(activity.get().getString(R.string.diag_cluster_rcc_verify_return)))
+            assertTrue(ShadowAlertDialog.getLatestAlertDialog().findViewById<TextView>(android.R.id.message).text.toString()
+                .contains(activity.get().getString(R.string.diag_cluster_rcc_retired_waiting)))
             state.put("state", "CLEAN").put("rccDebt", false)
             render.invoke(controls, state.toString(), 0L, session, 0L); ShadowLooper.idleMainLooper()
             assertEquals(activity.get().getString(R.string.diag_cluster_rcc_restore), views(header).filterIsInstance<Button>().single().text)

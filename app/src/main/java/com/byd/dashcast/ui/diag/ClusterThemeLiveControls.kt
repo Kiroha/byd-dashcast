@@ -36,7 +36,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     statusContainer: LinearLayout = header, reportShortcut: (LinearLayout) -> Unit = {},
     private val nativeStatus: (String, ClusterThemeSession) -> Unit = { _, _ -> },
     private val prompts: ClusterObservationPrompts = ClusterObservationPrompts(activity),
-    private val nativeStatusUnavailable: () -> Unit = {}) {
+    private val nativeStatusUnavailable: () -> Unit = {},
+    private val openClusterPage: () -> Unit = {}) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-restore-ui").apply { isDaemon = true } }
@@ -47,12 +48,18 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         private val abortBeforeSend = AtomicBoolean(false)
         private val reservationLock = Any()
         private var reservation: ProjectionCommandSequencer.Session? = null
+        private var reservationFilename = ""
+        private var reservationDebt = false
     }
     private val handler = Handler(Looper.getMainLooper())
     private val app = activity.applicationContext
     @Volatile private var closed = false
     @Volatile private var session: ClusterThemeSession? = null
     private var confirmation: AlertDialog? = null
+    private var recoveryGuidance: AlertDialog? = null
+    private var recoveryGuidanceKey = ""
+    private var recoveryGuidanceCurrent: (() -> Boolean)? = null
+    private val shownRecoveryGuidance = linkedSetOf<String>()
     private var lastSummary = ""
     @Volatile private var active = false
     @Volatile private var activation = 0L
@@ -87,10 +94,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             setOnClickListener {
                 confirmation?.dismiss(); confirmation = null
                 abortBeforeSend.set(true)
-                val shown = displayed
-                if (shown?.optString("transport") == "strict-renderer" && shown.optString("state") !in setOf("IDLE", "CLEAN", "REFUSED")) restore(false)
-                else if (shown?.optString("transport") == "android-ivi" || ClusterThemeProjectionDebt.blocked(app)) confirmIviRestore()
-                else restore(false)
+                ClusterThemeDiagnostics.local(app, "restore-button", "LOCAL", "Opening Cluster page and reading current pinned daemon status before choosing recovery; no OEM request yet.")
+                openClusterPage()
+                requestRecoveryAction()
             }
         }, headerIndex)
         controls.addView(Button(activity).apply {
@@ -113,7 +119,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
             setOnClickListener {
                 if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.CORNER_MARKER_21F7735C)
-                else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
+                else showBusy()
             }
         })
         controls.addView(cornerVerifyButton.apply {
@@ -127,7 +133,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
             setOnClickListener {
                 if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.MARKER)
-                else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
+                else showBusy()
             }
         })
         controls.addView(Button(activity).apply {
@@ -135,7 +141,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
             setOnClickListener {
                 if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.FULL_SURFACE_TEST)
-                else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
+                else showBusy()
             }
         })
         controls.addView(TextView(activity).apply {
@@ -201,7 +207,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     }
     private fun reserve(): ProjectionCommandSequencer.Session? = synchronized(reservationLock) {
         reservation?.takeIf { ProjectionCommandBus.isCurrent(it) }
-            ?: ProjectionCommandBus.reserveDiagnostic()?.also { reservation = it }
+            ?: ProjectionCommandBus.reserveDiagnostic()?.also {
+                reservation = it; reservationFilename = ""; reservationDebt = false
+            }
     }
     private fun validity(lease: ProjectionCommandSequencer.Session) = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
@@ -212,9 +220,137 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         }
     }
     private fun releaseReservation() = synchronized(reservationLock) {
-        if (!ClusterThemeProjectionDebt.blocked(app)) reservation?.let { ProjectionCommandBus.endSession(it); reservation = null }
+        if (!ClusterThemeProjectionDebt.blocked(app) && !reservationDebt) reservation?.let {
+            ProjectionCommandBus.endSession(it); reservation = null; reservationFilename = ""
+        }
+    }
+    private fun rememberReservationDebt(j: JSONObject, pinned: ClusterThemeSession) = synchronized(reservationLock) {
+        if (!pinned.isCurrent() || reservation?.let(ProjectionCommandBus::isCurrent) != true || j.optString("transport") != "android-ivi") return@synchronized
+        val name = j.optString("filename")
+        if (!ClusterThemePolicy.ownedName(name)) return@synchronized
+        if (reservationFilename.isEmpty() && j.optBoolean("rccDebt")) reservationFilename = name
+        if (reservationFilename != name) return@synchronized
+        if (j.optBoolean("rccDebt") || j.optBoolean("recoveryPending")) reservationDebt = true
+        else if (j.has("rccDebt") && j.optString("state") in setOf("CLEAN", "REFUSED") &&
+            j.optString("rccSafeNonce") == name.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc")) reservationDebt = false
+    }
+    private fun requestRecoveryAction() {
+        if (!recoveryBusy.compareAndSet(false, true)) {
+            recoveryMessage(activity.getString(R.string.diag_cluster_native_busy)); return
+        }
+        show(activity.getString(R.string.diag_cluster_rcc_restore_reading), "restore-status-pending")
+        val requestedActivation = activation
+        recovery.execute {
+            var outcome: (() -> Unit)? = null
+            try {
+                check(com.byd.dashcast.proxy.ProxyClient.supportsProtocol(40)) {
+                    activity.getString(R.string.diag_cluster_rcc_restore_protocol)
+                }
+                val pinned = ClusterThemeSession.pin(app).also { session = it }
+                val text = pinned.status()
+                val current = JSONObject(text)
+                render(text, lease.get(), pinned, requestedActivation)
+                outcome = {
+                    if (!closed && active && activation == requestedActivation && pinned.isCurrent()) {
+                        val local = ClusterThemeProjectionDebt.nonce(app)
+                        val remoteName = current.optString("filename")
+                        when {
+                            current.optBoolean("recoveryPending") -> recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_pending)) {
+                                active && pinned.isCurrent() && displayed?.optBoolean("recoveryPending") == true
+                            }
+                            current.optBoolean("rccDebt") && current.optString("variant") == "UNKNOWN" -> recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_mismatch))
+                            current.optString("transport") == "android-ivi" && current.optBoolean("rccDebt") -> {
+                                if (!ClusterThemePolicy.ownedName(remoteName) || local != null && remoteName != ClusterThemePolicy.PREFIX + local + ".rcc") {
+                                    recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_mismatch))
+                                } else if (current.optBoolean("retirementAvailable")) showRecoveryGuidance(current, pinned, force = true)
+                                else confirmIviRestore()
+                            }
+                            current.optString("transport") == "strict-renderer" && current.optBoolean("rccDebt") -> restore(false)
+                            current.optBoolean("rccDebt") -> recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_mismatch))
+                            local != null && !current.optBoolean("rccDebt") -> confirmIviRestore()
+                            else -> recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_none))
+                        }
+                    }
+                }
+            } catch (error: Throwable) {
+                show("Restore status unavailable: ${ClusterThemeDiagnostics.failure(error)}", "restore-status-failed")
+                outcome = { if (!closed && activation == requestedActivation) recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_failed) + "\n\n" + ClusterThemeDiagnostics.failure(error)) }
+            } finally { recoveryBusy.set(false); handler.post { outcome?.invoke(); refreshPrompt() } }
+        }
+    }
+    private fun recoveryMessage(message: String, current: (() -> Boolean)? = null) {
+        if (closed || activity.isFinishing || activity.isDestroyed) return
+        recoveryGuidance?.dismiss()
+        recoveryGuidanceCurrent = current
+        recoveryGuidance = AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_rcc_restore_result)
+            .setMessage(message).setPositiveButton(android.R.string.ok, null).show()
+        ClusterThemeDiagnostics.local(app, "restore-guidance", "LOCAL", message)
+    }
+    private fun showBusy() {
+        show("Another request/diagnostic is active. Restore remains available.", "start-busy")
+        if (displayed?.optBoolean("rccDebt") == true || ClusterThemeProjectionDebt.blocked(app))
+            recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_blocked))
+    }
+    private fun showRecoveryGuidance(j: JSONObject, pinned: ClusterThemeSession, force: Boolean = false) {
+        if (recoveryGuidanceCurrent?.invoke() == false) { recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null }
+        if (!closed && active && pinned.isCurrent() && j.optBoolean("rccDebt") && j.optString("transport") == "android-ivi" &&
+            !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(40)) {
+            if (shownRecoveryGuidance.add("protocol40-required")) recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_protocol))
+            return
+        }
+        if (closed || !active || !pinned.isCurrent() || recoveryBusy.get() || j.optBoolean("recoveryPending") || confirmation?.isShowing == true ||
+            !j.optBoolean("rccDebt") || j.optBoolean("defaultQueried") || j.optString("transport") != "android-ivi") return
+        val eligible = j.optBoolean("retirementAvailable")
+        val retired = j.optJSONObject("retirement")?.optBoolean("moved") == true
+        val failed = j.optString("state") == "QUARANTINE" && j.optString("phase") in setOf("restore-query", "retirement-preflight", "retired-read-only-query", "carrier-retired")
+        if (!eligible && !retired && !failed) return
+        val name = j.optString("filename")
+        if (!ClusterThemePolicy.ownedName(name)) return
+        val localNonce = ClusterThemeProjectionDebt.nonce(app)
+        val mismatch = localNonce != null && name != ClusterThemePolicy.PREFIX + localNonce + ".rcc"
+        val prepare = eligible && !mismatch
+        val key = listOf(name, j.optString("state"), j.optString("detail"), eligible, retired, localNonce).joinToString(":")
+        if (recoveryGuidance?.isShowing == true && recoveryGuidanceKey == key || !force && key in shownRecoveryGuidance) return
+        recoveryGuidance?.dismiss()
+        prompts.update("rcc", null)
+        val current = {
+            active && !closed && pinned.isCurrent() && ClusterThemeProjectionDebt.nonce(app) == localNonce && displayedSession?.sharesConnection(pinned) == true && displayed?.let {
+                it.optString("filename") == name && !it.optBoolean("recoveryPending") && it.optBoolean("rccDebt") && !it.optBoolean("defaultQueried") &&
+                    it.optBoolean("retirementAvailable") == eligible && (it.optJSONObject("retirement")?.optBoolean("moved") == true) == retired
+            } == true
+        }
+        val message = when {
+            mismatch -> activity.getString(R.string.diag_cluster_rcc_restore_mismatch)
+            eligible -> activity.getString(R.string.diag_cluster_rcc_restore_same)
+            retired -> activity.getString(R.string.diag_cluster_rcc_retired_waiting)
+            else -> activity.getString(R.string.diag_cluster_rcc_restore_failed)
+        } + "\n\n" + activity.getString(R.string.diag_cluster_rcc_restore_blocked) + if (failed) "\n\n" + j.optString("detail") else ""
+        val dialog = AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_rcc_restore_result).setMessage(message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(if (prepare) R.string.diag_cluster_rcc_retire_button else android.R.string.ok, null).create()
+        recoveryGuidance = dialog; recoveryGuidanceKey = key; recoveryGuidanceCurrent = current
+        shownRecoveryGuidance.add(key); while (shownRecoveryGuidance.size > 16) shownRecoveryGuidance.remove(shownRecoveryGuidance.first())
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                if (recoveryGuidance !== dialog || !current()) {
+                    dialog.dismiss(); ClusterThemeDiagnostics.local(app, "restore-guidance", "REFUSED", "Expired/replaced recovery guidance; no action sent")
+                    return@setOnClickListener
+                }
+                dialog.dismiss()
+                ClusterThemeDiagnostics.local(app, "restore-guidance", "LOCAL", "${if (prepare) "prepare-confirmation-requested" else "acknowledged"}; no OEM command or retirement sent by guidance")
+                if (prepare) confirmIviRestore(retire = true)
+            }
+        }
+        dialog.setOnCancelListener { ClusterThemeDiagnostics.local(app, "restore-guidance", "LOCAL", "cancel; recovery debt unchanged; no action sent") }
+        dialog.setOnDismissListener { if (recoveryGuidance === dialog) { recoveryGuidance = null; recoveryGuidanceCurrent = null } }
+        ClusterThemeDiagnostics.local(app, "restore-guidance", "LOCAL", "shown; eligible=$eligible retired=$retired state=${j.optString("state")} filename=$name; no automatic recovery/retirement/observation")
+        dialog.show()
     }
     private fun confirmIviRestore(retire: Boolean = false, verifyCorners: Boolean = false) {
+        recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null
+        val expectedActivation = activation
+        val expectedSession = displayedSession
+        val expectedFilename = displayed?.optString("filename")
         val checks = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val parked = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_parked) }
         val firmware = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_firmware) }
@@ -230,21 +366,37 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             val send = dialog.getButton(AlertDialog.BUTTON_POSITIVE); send.isEnabled = false
             parked.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked && firmware.isChecked }
             firmware.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked && firmware.isChecked }
-            send.setOnClickListener { if (parked.isChecked && firmware.isChecked) { dialog.dismiss(); confirmation = null; restore(true, retire, verifyCorners) } }
+            send.setOnClickListener { if (parked.isChecked && firmware.isChecked) {
+                dialog.dismiss(); confirmation = null
+                if (closed || activation != expectedActivation || expectedSession != null && (!expectedSession.isCurrent() || displayedSession?.sharesConnection(expectedSession) != true || displayed?.optString("filename") != expectedFilename) ||
+                    retire && displayed?.let { it.optBoolean("retirementAvailable") || it.optJSONObject("retirement")?.optBoolean("moved") == false } != true) {
+                    recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_expired))
+                } else restore(true, retire, verifyCorners)
+            } }
         }
         dialog.show()
     }
     private fun restore(ivi: Boolean, retire: Boolean = false, verifyCorners: Boolean = false) {
         if (!recoveryBusy.compareAndSet(false, true)) { show(activity.getString(R.string.diag_cluster_native_busy)); return }
+        if (!verifyCorners) shownRecoveryGuidance.clear()
         val reserved = if (ivi) reserve() else null
-        if (ivi && reserved == null) { recoveryBusy.set(false); show(activity.getString(R.string.diag_cluster_native_busy)); return }
+        if (ivi && reserved == null) {
+            recoveryBusy.set(false)
+            val message = activity.getString(R.string.diag_cluster_native_busy)
+            show(message, "restore-reservation-refused"); recoveryMessage(message); return
+        }
+        displayed?.let { j -> displayedSession?.let { rememberReservationDebt(j, it) } }
         val requestedLease = lease.get(); val requestedActivation = activation
         recovery.execute {
             try {
                 val s = session ?: ClusterThemeSession.pin(app).also { session = it }
                 render(if (verifyCorners) s.verifyCorners(validity(checkNotNull(reserved))) else if (ivi) s.restoreIvi(validity(checkNotNull(reserved)), retire) else s.restore(), requestedLease, s, requestedActivation)
-            } catch (error: Throwable) { show("${if (verifyCorners) "Read-only verification unavailable" else "Restore UNKNOWN/refused"}: ${ClusterThemeDiagnostics.failure(error)}. No reconnect/replay.", if (verifyCorners) "corner-verification" else "restore") }
-            finally { recoveryBusy.set(false); releaseReservation(); handler.post { refreshPrompt() } }
+            } catch (error: Throwable) {
+                val failure = ClusterThemeDiagnostics.failure(error)
+                show("${if (verifyCorners) "Read-only verification unavailable" else "Restore UNKNOWN/refused"}: $failure. No reconnect/replay.", if (verifyCorners) "corner-verification" else "restore")
+                handler.post { if (!closed && activation == requestedActivation) recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_failed) + "\n\n" + failure) }
+            }
+            finally { recoveryBusy.set(false); releaseReservation(); handler.post { refreshPrompt(); displayed?.let { j -> displayedSession?.let { showRecoveryGuidance(j, it) } } } }
         }
     }
     private fun begin(variant: ClusterThemeVariant) {
@@ -321,6 +473,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     }
     private fun render(text: String, expectedLease: Long, pinned: ClusterThemeSession, requestedActivation: Long) {
         val j = JSONObject(text)
+        rememberReservationDebt(j, pinned)
         if (j.getString("state") in setOf("IDLE", "CLEAN", "REFUSED")) releaseClaim(expectedLease)
         val query = j.optJSONObject("oemQuery")
         queryPending = query?.optString("state") == "PENDING"
@@ -338,17 +491,20 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                 activity.getString(R.string.diag_cluster_rcc_corners_pending) + "\n" else "") +
                 activity.getString(R.string.diag_cluster_rcc_corners_verify_confirm) + "\n\n"
         } else ""
-        val summary = guided + cornerGuide + evidenceText + queryText + "${j.getString("state")}: ${j.getString("detail")}\nProfile ${j.optString("variant", "legacy marker")}; transport=${j.optString("transport", "legacy strict renderer")}; native identity=${j.optString("nativeIdentity", "UNKNOWN")}; phase ${j.optString("phase", "unrecorded")}; daemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/theme/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.optBoolean("themeObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
+        val blocked = if (j.optBoolean("rccDebt")) activity.getString(R.string.diag_cluster_rcc_restore_blocked) + "\n\n" else ""
+        val pending = if (j.optBoolean("recoveryPending")) activity.getString(R.string.diag_cluster_rcc_restore_pending) + "\n\n" else ""
+        val summary = blocked + pending + guided + cornerGuide + evidenceText + queryText + "${j.getString("state")}: ${j.getString("detail")}\nProfile ${j.optString("variant", "legacy marker")}; transport=${j.optString("transport", "legacy strict renderer")}; native identity=${j.optString("nativeIdentity", "UNKNOWN")}; phase ${j.optString("phase", "unrecorded")}; daemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/theme/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.optBoolean("themeObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
         handler.post {
             if (!closed && pinned.isCurrent()) {
                 if (active && activation == requestedActivation) {
                     displayed = j; displayedSession = pinned
-                    restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else R.string.diag_cluster_rcc_restore)
+                    restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else if (j.optBoolean("retirementAvailable")) R.string.diag_cluster_rcc_retire_button else R.string.diag_cluster_rcc_restore)
                     restoreButton.contentDescription = restoreButton.text
                     retireButton.visibility = if (j.optBoolean("rccDebt") && (j.optBoolean("retirementAvailable") || retirement != null && !retirement.optBoolean("moved"))) android.view.View.VISIBLE else android.view.View.GONE
                     cornerVerifyButton.visibility = if (j.optBoolean("rccDebt") && j.optBoolean("mutated") && ClusterThemeVariant.isCornerId(j.optString("variant")) && retirement == null) android.view.View.VISIBLE else android.view.View.GONE
                     if (j.has("nativeMode")) nativeStatus(text, pinned)
                     refreshPrompt()
+                    showRecoveryGuidance(j, pinned)
                 }
                 if (j.getString("state") !in setOf("IDLE", "CLEAN", "REFUSED") && lease.get() == expectedLease && !diagClaimed.get() && !otherBusy() && claimDiag()) {
                     diagClaimed.set(true); lease.incrementAndGet()
@@ -369,6 +525,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         handler.removeCallbacks(poll)
         if (!value) {
             confirmation?.dismiss(); confirmation = null
+            recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null
             displayed = null; displayedSession = null
             prompts.update("rcc", null); prompts.update("blocked", null)
         } else {
@@ -383,7 +540,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val j = displayed
         val s = displayedSession
         if (!active || closed || busy.get() && !statusPending || observationPending.get() || recoveryBusy.get() || j == null || s == null || !s.isCurrent() ||
-            !j.optBoolean("mutated") || !ClusterThemePolicy.ownedName(j.optString("filename"))) {
+            j.optString("transport") == "android-ivi" && !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(40) ||
+            j.optBoolean("recoveryPending") || !j.optBoolean("mutated") || !ClusterThemePolicy.ownedName(j.optString("filename"))) {
             prompts.update("rcc", null); return
         }
         val restoring = j.optBoolean("defaultQueried") && !j.optBoolean("oemObservedByUser") && j.optString("state") in setOf("DEFAULT_QUERIED", "QUARANTINE")

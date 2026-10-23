@@ -759,7 +759,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sinovdan oldin Full va tun rejimini tanlang. RCC asboblar va ogohlantirishlar kodini saqlaydi va fonni o‘zgartiradi. O‘qilish va tiklanishni avtomobilda tekshiring. Ekran ochiq qolsin. Seans mavjud bo‘lsa, 30 soniyadan so‘ng standart resurslar so‘raladi. Keyin ko‘rganingizni tasdiqlang. Qayta ishga tushirish tiklashni kafolatlamaydi.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC sinovini yuborish</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Proyeksiya rejimini o‘zgartirmasdan standart RCC resurslarini so‘raydi. OEM javobi va ko‘rinadigan tiklanish alohida tekshiriladi; keyin ko‘rganingizni tasdiqlang. Qayta ishga tushirish yoki avtomatik yangi sinov yo‘q.</string>
-    <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. “BYD RCC resurslarini tiklash / BYD qaytishini tekshirish” tugmasini bosing, panelni ko‘rib, qalqib chiquvchi oynaga javob bering.</string>
+    <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. «BYD RCC resurslarini tiklash» yoki «BYD qaytishini tekshirish» tugmasini bosing, keyin natija va tavsiya etilgan bosqichga amal qiling. Ekran haqidagi savol faqat BYD standart tanlovi tekshirilgandan so‘ng chiqadi.</string>
     <string name="diag_cluster_rcc_ivi_platform">Sinov rad etildi: Android 10 va aniq DiLink 3 aniqlanishi kerak. RCC yuborilmadi.</string>
     <string name="diag_cluster_page_title">Asboblar: proyeksiya va RCC</string>
     <string name="diag_cluster_page_description">BYD tasmali proyeksiyasi, RCC belgisi va mavzusi</string>
@@ -776,4 +776,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Tanlangan RCC faylimizni faqat o‘qib tekshiradi. Avtomobilning odatiy ishlashi orqali BYD paneli haqiqatan qayta ishga tayyorlangach, bu tugmani bosing va haqiqiy belgilarga qarab javob bering. Daemonni qayta ulash panelni qayta tayyorlamaydi. Bu amal hech narsani qayta yuklamaydi yoki ishga tushirmaydi. Ha javobi seansni yopmaydi; BYD tiklash alohida.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC tanlandi — tasvir tasdiqlanmagan</string>
     <string name="diag_cluster_rcc_cohort_help">Burchak belgilari tahlil qilingan asboblar paneli versiyasi resurslaridan foydalanadi. Sinov oʻrnatilgan fayllarni tekshiradi va boshqa versiyani rad etadi. Eski sinovlar faqat dastlabki versiyasida ishlaydi. Oldingi seanslarni tiklash boshqaruvlari mavjud; BYD koʻrinishiga qaytish tasdiqlanishi kerak.</string>
+    <string name="diag_cluster_rcc_restore_reading">Ulangan daemonning RCC seansi o‘qilmoqda… BYD buyrug‘i yuborilmadi.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Shu versiya daemonini qayta ulang (40-protokol), keyin qayta urinib ko‘ring. BYD buyrug‘i yuborilmadi.</string>
+    <string name="diag_cluster_rcc_restore_pending">Tiklash davom etmoqda. Natijani kuting; joriy javob BYD qaytishini hali tasdiqlamaydi.</string>
+    <string name="diag_cluster_rcc_restore_none">Bu seansda tugallanmagan RCC tiklash yo‘q. Jismoniy ekranni hali tekshirish kerak.</string>
+    <string name="diag_cluster_rcc_restore_failed">BYD qaytishi tasdiqlanmadi. Quyidagi tafsilotni o‘qing; yangi sinov boshlanmadi.</string>
+    <string name="diag_cluster_rcc_restore_result">RCC tiklash — natija va keyingi qadam</string>
+    <string name="diag_cluster_rcc_restore_same">BYD tiklashni RESOURCE_IS_SAME (0x2330) bilan rad etdi va bizning RCC tanlanganicha qoldi. Qaytishni tayyorlash mumkin: alohida tasdiq faqat sinov faylimizni ko‘chiradi va baytlarini saqlaydi. Qayta ishga tushish yoki ekranning qaytishi kafolatlanmaydi.</string>
+    <string name="diag_cluster_rcc_restore_blocked">Bu RCC seansi yopilmaguncha proyeksiya va yangi sinovlar bloklanadi. Quyidagi BYD qaytish bosqichlarini bajaring; faqat daemonni qayta ulash yetarli emas.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">Ilova va daemon RCC seanslari mos kelmaydi. Buyruq yuborilmadi; fayllar va blok saqlanadi.</string>
+    <string name="diag_cluster_rcc_restore_expired">Holat o‘zgardi yoki bu tasdiq eskirdi. Buyruq yuborilmadi. Seansni qayta tekshiring.</string>
 </resources>

@@ -759,7 +759,7 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Selecciona Full y noche antes de probar. El RCC conserva el código de instrumentos y avisos y cambia el fondo. Verifica legibilidad y recuperación en el vehículo. Mantén esta pantalla disponible. Tras 30 segundos se solicitan recursos predeterminados si la sesión sigue disponible. Confirma lo que ves. Reiniciar no garantiza la restauración.</string>
     <string name="diag_cluster_rcc_ivi_send">Enviar prueba RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Solicita los recursos RCC predeterminados sin cambiar el modo de proyección. La respuesta OEM y la recuperación visible se comprueban por separado; confirma después lo que ves. Sin reinicios ni nueva prueba automática.</string>
-    <string name="diag_cluster_rcc_debt">Queda una prueba RCC pendiente. Usa «Restaurar recursos RCC BYD / Verificar vuelta a BYD» y responde a la ventana tras inspeccionar el cuadro.</string>
+    <string name="diag_cluster_rcc_debt">Hay una prueba RCC pendiente. Usa «Restaurar recursos RCC BYD» o «Verificar vuelta a BYD» y sigue el resultado y el siguiente paso propuesto. La pregunta visual aparece solo después de comprobar la selección BYD predeterminada.</string>
     <string name="diag_cluster_rcc_ivi_platform">Prueba rechazada: requiere Android 10 y detección positiva de DiLink 3. No se envió ningún RCC.</string>
     <string name="diag_cluster_page_title">Cuadro: proyección y RCC</string>
     <string name="diag_cluster_page_description">Proyección BYD con franjas, marcador y tema RCC</string>
@@ -776,4 +776,14 @@
     <string name="diag_cluster_rcc_corners_verify_confirm">Verifica en solo lectura nuestro RCC ya seleccionado. Tras una reinicialización real del cuadro BYD mediante el funcionamiento normal del vehículo, usa este botón y responde según las marcas físicas. Reconectar el daemon no reinicializa el cuadro. Esta acción no recarga ni reinicia nada. Una respuesta positiva no cierra la sesión; la restauración BYD es independiente.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC seleccionado — imagen sin confirmar</string>
     <string name="diag_cluster_rcc_cohort_help">Las marcas de las esquinas usan recursos de la versión analizada del cuadro. La prueba comprueba los archivos instalados y rechaza una versión diferente. Las pruebas anteriores siguen limitadas a su versión original. Los controles de recuperación de sesiones anteriores siguen disponibles; el regreso a BYD debe confirmarse.</string>
+    <string name="diag_cluster_rcc_restore_reading">Leyendo la sesión RCC del daemon conectado… No se envió ninguna orden a BYD.</string>
+    <string name="diag_cluster_rcc_restore_protocol">Reconecta el daemon de esta versión (protocolo 40) y vuelve a intentarlo. No se envió ninguna orden a BYD.</string>
+    <string name="diag_cluster_rcc_restore_pending">Restauración en curso. Espera el resultado; la respuesta actual aún no confirma la vuelta a BYD.</string>
+    <string name="diag_cluster_rcc_restore_none">No hay restauración RCC pendiente en esta sesión. Aún debes comprobar la pantalla física.</string>
+    <string name="diag_cluster_rcc_restore_failed">La vuelta a BYD no está confirmada. Lee el detalle de abajo; no se inició otra prueba.</string>
+    <string name="diag_cluster_rcc_restore_result">Restauración RCC — resultado y siguiente paso</string>
+    <string name="diag_cluster_rcc_restore_same">BYD rechazó la restauración con RESOURCE_IS_SAME (0x2330) y mantiene seleccionado nuestro RCC. Puedes preparar la vuelta: una confirmación aparte moverá solo nuestro archivo de prueba y conservará sus bytes. No se garantiza ningún reinicio ni recuperación visible.</string>
+    <string name="diag_cluster_rcc_restore_blocked">La proyección y las nuevas pruebas siguen bloqueadas hasta cerrar esta sesión RCC. Sigue los pasos de vuelta a BYD de abajo; reconectar solo el daemon no basta.</string>
+    <string name="diag_cluster_rcc_restore_mismatch">Las sesiones RCC de la aplicación y el daemon no coinciden. No se envió ninguna orden; los archivos y el bloqueo se conservan.</string>
+    <string name="diag_cluster_rcc_restore_expired">El estado cambió o esta confirmación caducó. No se envió ninguna orden. Comprueba otra vez la sesión.</string>
 </resources>

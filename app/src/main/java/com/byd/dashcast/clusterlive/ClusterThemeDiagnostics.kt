@@ -30,7 +30,7 @@ internal object ClusterThemeDiagnostics {
         "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs")
     private val booleanFields = listOf("mutated", "uncertain", "iviRecoverySettled", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
-        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable")
+        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable", "recoveryPending")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
     private var cacheIssue = ""

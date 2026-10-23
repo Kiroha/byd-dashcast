@@ -179,6 +179,7 @@ internal object ClusterThemeLiveTest {
             .put("carrierSha256", if (journalTrusted) variant.carrierSha256 else "").put("phase", phase)
             .put("transport", transport.id).put("nativeIdentity", if (transport == ClusterThemeTransport.ANDROID_IVI) "UNKNOWN" else "STRICT_PROFILE")
             .put("trace", synchronized(this) { trace.joinToString("\n") }).put("rccDebt", active.get())
+            .put("recoveryPending", restoring.get() >= 0)
             .put("retirement", retirement?.json()).put("retirementAvailable", retirement == null && retirementEligibleUntil > SystemClock.elapsedRealtime())
             .put("journalSchema", if (retirement != null) "4" else if (transport == ClusterThemeTransport.ANDROID_IVI) "3" else "2")
             .put("carrierIdentity", "device=$createdDevice inode=$createdInode")
@@ -923,14 +924,15 @@ internal object ClusterThemeLiveTest {
         }, "cluster-live-result").apply { isDaemon = true; start() }
         var terminated = false
         var traceCaptured = false
+        var helperStage = "readiness"
         try {
             val readyUntil = SystemClock.elapsedRealtime() + 3000
-            while (!record.exists() && child.isAlive && SystemClock.elapsedRealtime() < readyUntil) Thread.sleep(25)
-            check(record.isFile && record.length() in 1..1024) { "Helper failed to identify before admission" }
-            val ready = JSONObject(record.readText())
-            check(ready.getString("token") == helperToken && ready.getString("filename") == filename)
+            step("helper-readiness-wait", "operation=$operation deadlineMs=$readyUntil")
+            val ready = ClusterThemeHelperReadiness.await(helperToken, filename, readyUntil, child::isAlive,
+                { ClusterThemeHelperReadiness.read(record) }, SystemClock::elapsedRealtime, { Thread.sleep(25) })
             helperPid = ready.getInt("pid"); helperStart = ready.getString("start")
-            check(helperPid > 0 && procStart(helperPid) == helperStart && Os.stat("/proc/$helperPid").st_uid == Process.myUid())
+            check(helperPid > 0 && helperStart.matches(Regex("[0-9]+")) && procStart(helperPid) == helperStart && Os.stat("/proc/$helperPid").st_uid == Process.myUid())
+            helperStage = "admission"
             if (transport == ClusterThemeTransport.ANDROID_IVI) {
                 check(validProjection()) { "Projection reservation expired before helper GO" }
                 if (operation == "load") check(!restoreRequested.get()) { "Restore requested before load GO" }
@@ -938,6 +940,7 @@ internal object ClusterThemeLiveTest {
             persist(state) // PID/start identity fsynced BEFORE permitting any OEM call.
             step("helper-GO", "operation=$operation pid=$helperPid start=$helperStart token=$helperToken")
             child.outputStream.write("GO\n".toByteArray()); child.outputStream.flush()
+            helperStage = "result"
             val until = SystemClock.elapsedRealtime() + 8000
             while (SystemClock.elapsedRealtime() < until && !child.waitFor(100, TimeUnit.MILLISECONDS)) { /* owned bounded child */ }
             if (child.isAlive) {
@@ -976,6 +979,11 @@ internal object ClusterThemeLiveTest {
             return Exchange(if (j.has("native")) j.getInt("native") else null,
                 if (queryOk) queries.lastOrNull { it.cmd == 1001 && it.sub == 4 } else null, responses, j.has("error"),
                 if (j.has("error")) j.getString("error").take(1024) else null, j.optBoolean("attempted"), j.optBoolean("retirementEligible"))
+        } catch (error: Throwable) {
+            val partial = synchronized(capture) { capture.toString("UTF-8") }.takeLast(4000)
+            raw = (raw + "\n$operation: helper stage=$helperStage failure=${error.javaClass.simpleName}: ${error.message}\n" + partial).takeLast(16000)
+            step("helper-exchange-failed", "operation=$operation stage=$helperStage childAlive=${child.isAlive} outputBytes=${capture.size()} error=${error.javaClass.simpleName}: ${error.message}")
+            throw error
         } finally {
             if (!traceCaptured && transport == ClusterThemeTransport.ANDROID_IVI) {
                 val partial = synchronized(capture) { capture.toString("UTF-8") }

@@ -12,6 +12,53 @@ transport and its schema 1/2 recovery remain separate; no failed strict check
 silently selects a different transport. Schema 3 requires the exact transport,
 compiled variant and carrier hash. Unknown/corrupt journals block admission.
 
+## Build 708: make recovery outcomes actionable
+
+**1.9.69-beta / build 708, ProxyDaemon 40** preserves all five RCC files, profile
+identities, operation fields and journal schemas. Status adds `recoveryPending`,
+true from recovery/verification queue admission until its worker exits. It is a
+worker progress receipt, never proof that the native cluster restored its resources.
+
+The fixed Restore header opens the Cluster page and reads fresh status from the
+currently connected daemon before choosing recovery. Android IVI recovery still
+requires the separate parked/firmware confirmation. Unknown or mismatched
+app/daemon sessions refuse; older daemons receive a reconnect explanation. An
+outstanding same-filename daemon recovery keeps the projection reservation even
+when the app-local negative gate is missing. Only a fresh exact safe receipt can
+release that retained ownership.
+
+The 19:29/19:32 reports contain an actual default request accepted by the Java
+transport (`native=0`), followed by OEM ACK3 `[3,0,9008,0,0]`,
+`RESOURCE_IS_SAME (0x2330)`, and unchanged source-0 selection of our old RCC. This
+does not permit an OEM-success observation. A fresh sealed eligible result now
+automatically explains that failure and offers **Préparer le retour BYD après
+erreur RCC**. The first popup only opens the existing separate two-assertion
+confirmation; operation 14 is sent only after that confirmation. File retirement
+still preserves its bytes and never restarts the vehicle or native renderer.
+
+Pending recovery, a readiness failure, expired eligibility, a retired file waiting
+for native initialization and fresh default selection have distinct guidance.
+Unchanged polling does not repeat a dismissed popup. An explicit new recovery
+attempt can offer its fresh identical result again. Pause, connection replacement,
+selection/filename changes and eligibility expiry invalidate old preparation
+actions. Normal OEM visual confirmation requires the fresh default-selection
+receipt; outstanding recovery continues to block projection and new tests.
+
+The same reports also expose a helper readiness race: the final record exists
+before the child finishes writing and fsyncing it. The parent now waits within
+the existing three-second admission bound for complete JSON while the child is
+alive, with bounded `O_NOFOLLOW` reads, current-UID regular-file and stable inode
+checks. Wrong identity/type/owner/size or read errors refuse before GO. Every FD
+is explicitly closed using `Os.close`; an Android `FileInputStream(fd)` does not
+own an externally opened FD. The helper still reads GO only after fsync, and the
+parent still persists PID/start/token before GO. The eight-second child deadline,
+no-replay rule and owned-helper reaping remain intact. Failure stage and bounded
+child output are retained in diagnostics.
+
+No vehicle installation, RCC command, retirement or physical recovery was
+performed to validate these application changes. Use protocol **40** for the
+current guided recovery flow; the sections below retain historical build context.
+
 ## Build 707: use the observed installed resource cohort
 
 **1.9.68-beta / build 707, ProxyDaemon 39** adds the separate immutable profile
