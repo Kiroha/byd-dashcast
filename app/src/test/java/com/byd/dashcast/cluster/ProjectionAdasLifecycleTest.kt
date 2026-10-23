@@ -90,6 +90,7 @@ class ProjectionAdasLifecycleTest {
         val io = PausedIo(); field("plan").set(owner, ProjectionAdasPlan(io))
         field("sequenceRequested").setBoolean(owner, true)
         ProjectionAdasCoordinator.stop(app); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000))
         assertTrue(field("restoring").getBoolean(owner))
         ProjectionAdasCoordinator.stop(app); idle()
         repeat(4) { io.ack!!() }
