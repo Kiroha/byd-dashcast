@@ -791,4 +791,5 @@
     <string name="diag_cluster_rcc_corners_verify_button">Verify RCC corner markers</string>
     <string name="diag_cluster_rcc_corners_verify_confirm">Read-only verification of our already selected RCC. After genuine BYD cluster reinitialization through normal vehicle operation, use this button and answer the popup from the physical markers. Reconnecting the daemon does not reinitialize the cluster. This action does not reload or restart anything. A positive answer does not close the session; BYD restoration remains separate.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC selected — display unconfirmed</string>
+    <string name="diag_cluster_rcc_cohort_help">Corner markers use resources from the analyzed cluster version. The test checks installed files and refuses a different version. Historical tests remain restricted to their original version. Recovery controls for previous sessions remain available; OEM return must be confirmed.</string>
 </resources>

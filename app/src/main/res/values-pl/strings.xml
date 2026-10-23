@@ -784,4 +784,5 @@
     <string name="diag_cluster_rcc_corners_verify_button">Sprawdź znaczniki RCC</string>
     <string name="diag_cluster_rcc_corners_verify_confirm">Sprawdza tylko do odczytu nasz już wybrany RCC. Po rzeczywistej ponownej inicjalizacji zestawu wskaźników BYD podczas normalnej obsługi samochodu użyj tego przycisku i odpowiedz według fizycznych znaczników. Połączenie z daemonem nie inicjalizuje zestawu ponownie. Ta czynność niczego nie przeładowuje ani nie restartuje. Odpowiedź tak nie zamyka sesji; przywracanie BYD jest osobne.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC wybrany — obraz niepotwierdzony</string>
+    <string name="diag_cluster_rcc_cohort_help">Znaczniki narożników używają zasobów przeanalizowanej wersji zestawu wskaźników. Test sprawdza zainstalowane pliki i odrzuca inną wersję. Starsze testy pozostają ograniczone do swojej pierwotnej wersji. Polecenia odzyskiwania poprzednich sesji pozostają dostępne; powrót widoku BYD wymaga potwierdzenia.</string>
 </resources>

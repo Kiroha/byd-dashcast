@@ -842,4 +842,5 @@
     <string name="diag_cluster_rcc_corners_verify_button">Vérifier les repères RCC</string>
     <string name="diag_cluster_rcc_corners_verify_confirm">Vérification en lecture seule de notre RCC déjà sélectionné. Après une réinitialisation réelle du cluster BYD par le fonctionnement normal de la voiture, utilise ce bouton puis réponds à la popup selon les repères physiques. Reconnecter le daemon ne réinitialise pas le cluster. Cette action ne recharge rien et ne déclenche aucun redémarrage. Une réponse positive ne clôture pas la session ; la restauration BYD reste séparée.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC sélectionné — affichage non confirmé</string>
+    <string name="diag_cluster_rcc_cohort_help">Les repères aux coins utilisent les ressources de la version du cluster analysée. Le test vérifie les fichiers installés et refuse toute version différente. Les tests historiques restent réservés à leur version. Les commandes de récupération des anciennes sessions restent disponibles ; le retour BYD doit être confirmé.</string>
 </resources>

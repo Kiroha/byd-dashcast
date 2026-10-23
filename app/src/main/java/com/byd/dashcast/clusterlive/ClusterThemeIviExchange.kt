@@ -8,6 +8,7 @@ internal object ClusterThemeIviExchange {
         fun register(receiver: (Int, ByteArray) -> Unit): Int
         fun send(bytes: ByteArray): Int
         fun verifyCarrier()
+        fun verifyLoadCohort(): String
     }
     data class Receipt(val native: Int?, val queryNative: Int?, val responses: List<ByteArray>,
         val postQueryResponses: List<ByteArray>, val attempted: Boolean, val error: String?, val trace: List<String>,
@@ -111,6 +112,10 @@ internal object ClusterThemeIviExchange {
                 check(if (operation == "load") baseline.first.isDefault()
                     else baseline.first.isDefault() || baseline.first.selected(name)) { "Baseline is custom/incompatible; no overwrite" }
                 transport.verifyIdentity(); current()
+                if (operation == "load") {
+                    val cohort = transport.verifyLoadCohort(); current()
+                    step("installed-artifact-cohort-verified id=$cohort loadedNativeIdentity=UNKNOWN")
+                }
                 transport.verifyCarrier()
                 current()
                 // The daemon durably recorded its debt/helper identity before this helper received GO.

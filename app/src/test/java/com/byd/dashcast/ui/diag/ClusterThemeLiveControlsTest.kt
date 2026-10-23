@@ -238,8 +238,8 @@ class ClusterThemeLiveControlsTest {
     @Test fun `full theme confirmation sends exact asset through IVI operation12 and durable nonce`() =
         assertFixedAssetLoad(ClusterThemeVariant.FULL_SURFACE_TEST, 12, R.string.diag_cluster_rcc_theme_button, R.string.diag_cluster_rcc_ivi_theme_confirm)
 
-    @Test fun `corner confirmation sends exact separate asset through operation15 with both assertions`() =
-        assertFixedAssetLoad(ClusterThemeVariant.CORNER_MARKER, 15, R.string.diag_cluster_rcc_corners_button, R.string.diag_cluster_rcc_corners_confirm)
+    @Test fun `corner confirmation sends exact observed cohort asset through operation18 with both assertions`() =
+        assertFixedAssetLoad(ClusterThemeVariant.CORNER_MARKER_21F7735C, 18, R.string.diag_cluster_rcc_corners_button, R.string.diag_cluster_rcc_corners_confirm)
 
     private fun assertFixedAssetLoad(variant: ClusterThemeVariant, operation: Int, button: Int, confirmation: Int) {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
@@ -276,7 +276,7 @@ class ClusterThemeLiveControlsTest {
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "38")
+        }); vf.set(null, "39")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
         val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})

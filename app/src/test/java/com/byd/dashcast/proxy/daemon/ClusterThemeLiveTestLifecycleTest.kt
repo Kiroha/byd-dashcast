@@ -27,6 +27,14 @@ import java.lang.reflect.InvocationTargetException
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class ClusterThemeLiveTestLifecycleTest {
+    @org.robolectric.annotation.Implements(android.system.Os::class)
+    class AdmissionOs {
+        companion object {
+            @JvmStatic @org.robolectric.annotation.Implementation
+            fun fstat(fd: java.io.FileDescriptor) = android.system.StructStat(1L, 9L, OsConstants.S_IFREG or 420,
+                1L, 2000, 2000, 0L, 7L, 0L, 0L, 0L, 4096L, 1L)
+        }
+    }
     private fun field(name: String) = ClusterThemeLiveTest::class.java.getDeclaredField(name).apply { isAccessible = true }
     private fun set(name: String, value: Any) { field(name).set(null, value) }
     private fun flag(name: String) = field(name).get(null) as AtomicBoolean
@@ -62,29 +70,56 @@ class ClusterThemeLiveTestLifecycleTest {
         com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, source, 0),
             listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", path, "", "DashCast_a"))
     @Test fun `recovered corner read only query creates fresh visual round and yes never settles load or recovery debt`() {
-        val saved = JSONObject().put("schema", 3).put("state", "SELECTION_PENDING_OEM_APPLY")
-            .put("transport", "android-ivi").put("variant", "corner-marker").put("carrierSha256", ClusterThemeVariant.CORNER_MARKER.carrierSha256)
+        for (profile in listOf(ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C)) {
+            reset()
+            val saved = JSONObject().put("schema", 3).put("state", "SELECTION_PENDING_OEM_APPLY")
+                .put("transport", "android-ivi").put("variant", profile.id).put("carrierSha256", profile.carrierSha256)
+                .put("filename", name).put("mutated", true).put("helperPid", 0).put("helperStart", "").put("helperToken", "")
+                .put("root", "/storage/emulated/0/.cluster/translate/").put("identity", "1:2/1:3/1:4").put("createdDevice", 1).put("createdInode", 9)
+            ClusterThemeLiveTest.applyRecoveredJournal(com.byd.dashcast.clusterlive.ClusterThemeJournal.recover(saved))
+            assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
+            var queries = 0; var carrierChecks = 0
+            ClusterThemeLiveTest.requestCornerVerification("a".repeat(32), true, true, reservation(), { carrierChecks++ }) {
+                queries++; ClusterThemeLiveTest.Exchange(0, cornerSelection(), emptyList(), false)
+            }; drain()
+            val before = JSONObject(ClusterThemeLiveTest.status())
+            val round = before.getJSONObject("cornerVerification").getString("round")
+            assertTrue(before.getJSONObject("cornerVerification").getBoolean("available")); assertEquals(1, queries); assertEquals(2, carrierChecks)
+            ClusterThemeLiveTest.observeCorners(name, round)
+            val after = JSONObject(ClusterThemeLiveTest.status())
+            assertTrue(after.getBoolean("markerObservedByUser")); assertTrue(after.getBoolean("uncertain")); assertTrue(after.getBoolean("rccDebt"))
+            assertFalse(field("loadSettled").getBoolean(null)); assertFalse(after.getBoolean("iviRecoverySettled")); assertFalse(after.getBoolean("defaultQueried"))
+            assertEquals("QUARANTINE", after.getString("state")); assertFalse(after.getJSONObject("cornerVerification").getBoolean("available"))
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.beginProductionModeCommand() }
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.observeCorners(name, round) }
+            ClusterThemeLiveTest.applyRecoveredJournal(com.byd.dashcast.clusterlive.ClusterThemeJournal.recover(saved))
+            assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
+            assertFalse(JSONObject(ClusterThemeLiveTest.status()).getBoolean("markerObservedByUser"))
+        }
+    }
+    @Config(sdk = [29], shadows = [AdmissionOs::class])
+    @Test fun `recovered historical full surface quarantine rejects current cohort start before any worker or staging`() {
+        val old = ClusterThemeVariant.FULL_SURFACE_TEST
+        val saved = JSONObject().put("schema", 3).put("state", "QUARANTINE")
+            .put("transport", "android-ivi").put("variant", old.id).put("carrierSha256", old.carrierSha256)
             .put("filename", name).put("mutated", true).put("helperPid", 0).put("helperStart", "").put("helperToken", "")
-            .put("root", "/storage/emulated/0/.cluster/translate/").put("identity", "1:2/1:3/1:4").put("createdDevice", 1).put("createdInode", 9)
+            .put("root", "/storage/emulated/0/.cluster/translate/").put("identity", "1:2/1:3/1:4")
+            .put("createdDevice", 1).put("createdInode", 9)
         ClusterThemeLiveTest.applyRecoveredJournal(com.byd.dashcast.clusterlive.ClusterThemeJournal.recover(saved))
-        assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
-        var queries = 0; var carrierChecks = 0
-        ClusterThemeLiveTest.requestCornerVerification("a".repeat(32), true, true, reservation(), { carrierChecks++ }) {
-            queries++; ClusterThemeLiveTest.Exchange(0, cornerSelection(), emptyList(), false)
-        }; drain()
         val before = JSONObject(ClusterThemeLiveTest.status())
-        val round = before.getJSONObject("cornerVerification").getString("round")
-        assertTrue(before.getJSONObject("cornerVerification").getBoolean("available")); assertEquals(1, queries); assertEquals(2, carrierChecks)
-        ClusterThemeLiveTest.observeCorners(name, round)
-        val after = JSONObject(ClusterThemeLiveTest.status())
-        assertTrue(after.getBoolean("markerObservedByUser")); assertTrue(after.getBoolean("uncertain")); assertTrue(after.getBoolean("rccDebt"))
-        assertFalse(field("loadSettled").getBoolean(null)); assertFalse(after.getBoolean("iviRecoverySettled")); assertFalse(after.getBoolean("defaultQueried"))
-        assertEquals("QUARANTINE", after.getString("state")); assertFalse(after.getJSONObject("cornerVerification").getBoolean("available"))
-        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.beginProductionModeCommand() }
-        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.observeCorners(name, round) }
-        ClusterThemeLiveTest.applyRecoveredJournal(com.byd.dashcast.clusterlive.ClusterThemeJournal.recover(saved))
-        assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
-        assertFalse(JSONObject(ClusterThemeLiveTest.status()).getBoolean("markerObservedByUser"))
+        val next = "b".repeat(32)
+        val file = java.io.File.createTempFile("rcc-existing-debt", ".rcc").apply { writeText("fixture") }
+        try {
+            val source = android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+            val receipt = JSONObject(ClusterThemeLiveTest.startAndroid(source, true, true, next, reservation(), ClusterThemeVariant.CORNER_MARKER_21F7735C))
+            assertEquals(next, receipt.getString("rccRejectedNonce")); drain()
+            val after = JSONObject(ClusterThemeLiveTest.status())
+            for (key in listOf("state", "filename", "variant", "carrierSha256", "phase", "trace", "rccDebt", "mutated", "defaultQueried"))
+                assertEquals(key, before.get(key), after.get(key))
+            assertEquals("QUARANTINE", after.getString("state")); assertTrue(after.getBoolean("rccDebt"))
+            assertEquals(9L, field("createdInode").getLong(null)); assertEquals(0, field("helperPid").getInt(null))
+            assertEquals(next, receipt.getString("rccRejectedNonce"))
+        } finally { file.delete() }
     }
     @Test fun `corner verification refuses foreign transient missing and changed carriers without mutation`() {
         for (bad in 0..3) {
@@ -142,15 +177,18 @@ class ClusterThemeLiveTestLifecycleTest {
         assertTrue(flag("active").get()); assertTrue(JSONObject(ClusterThemeLiveTest.status()).isNull("cornerVerification"))
     }
     @Test fun `corner admitted load and failed durable journal suppress stale30and90second watchdog decisions`() {
-        set("variant", ClusterThemeVariant.CORNER_MARKER); set("deadline", Long.MAX_VALUE)
-        ClusterThemeLiveTest.markLoadStarted {}
-        set("deadline", 1L) // A stale timer observation cannot cause an automatic recovery after GO.
-        ClusterThemeLiveTest.watchdogTick(30000); ClusterThemeLiveTest.watchdogTick(90000)
-        assertFalse(flag("restoreRequested").get()); assertTrue(flag("active").get()); assertTrue(field("mutated").getBoolean(null))
-        set("mutated", false); set("deadline", Long.MAX_VALUE)
-        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.markLoadStarted { error("fsync failed") } }
-        ClusterThemeLiveTest.watchdogTick(Long.MAX_VALUE)
-        assertFalse(flag("restoreRequested").get()); assertTrue(flag("active").get())
+        for (profile in listOf(ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C)) {
+            reset()
+            set("variant", profile); set("deadline", Long.MAX_VALUE)
+            ClusterThemeLiveTest.markLoadStarted {}
+            set("deadline", 1L) // A stale timer observation cannot cause an automatic recovery after GO.
+            ClusterThemeLiveTest.watchdogTick(30000); ClusterThemeLiveTest.watchdogTick(90000)
+            assertFalse(flag("restoreRequested").get()); assertTrue(flag("active").get()); assertTrue(field("mutated").getBoolean(null))
+            set("mutated", false); set("deadline", Long.MAX_VALUE)
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.markLoadStarted { error("fsync failed") } }
+            ClusterThemeLiveTest.watchdogTick(Long.MAX_VALUE)
+            assertFalse(flag("restoreRequested").get()); assertTrue(flag("active").get())
+        }
     }
     @Test fun `load receipts distinguish selection config ack registration and user pixels without changing admission`() {
         val selection = com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4,

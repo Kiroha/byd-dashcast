@@ -775,4 +775,5 @@
     <string name="diag_cluster_rcc_corners_verify_button">Verificar marcas RCC</string>
     <string name="diag_cluster_rcc_corners_verify_confirm">Verifica en solo lectura nuestro RCC ya seleccionado. Tras una reinicialización real del cuadro BYD mediante el funcionamiento normal del vehículo, usa este botón y responde según las marcas físicas. Reconectar el daemon no reinicializa el cuadro. Esta acción no recarga ni reinicia nada. Una respuesta positiva no cierra la sesión; la restauración BYD es independiente.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC seleccionado — imagen sin confirmar</string>
+    <string name="diag_cluster_rcc_cohort_help">Las marcas de las esquinas usan recursos de la versión analizada del cuadro. La prueba comprueba los archivos instalados y rechaza una versión diferente. Las pruebas anteriores siguen limitadas a su versión original. Los controles de recuperación de sesiones anteriores siguen disponibles; el regreso a BYD debe confirmarse.</string>
 </resources>

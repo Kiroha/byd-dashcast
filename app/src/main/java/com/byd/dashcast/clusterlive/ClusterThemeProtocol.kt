@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /** Closed subset of SX326 PadToClusterReq / ClusterToPadRes, type 8. No arbitrary commands.
- * Slots are bound to libBydCluster 3197abee…: cmd/sub 4/6, ints 8..16, strings 18..26.
+ * Slots verified in libBydCluster 3197abee… and 21f7735c…: cmd/sub 4/6, ints 8..16, strings 18..26.
  */
 object ClusterThemeProtocol {
     const val UI_VERSION = "Di3F_DynastyOceanTranslate_V0001"

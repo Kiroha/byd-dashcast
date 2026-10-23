@@ -53,6 +53,7 @@ class ClusterThemeIviRecoveryTest {
             override fun verifyIdentity() = Unit
             override fun alive() = true
             override fun register(callback: (Int, ByteArray) -> Unit): Int { receiver = callback; return 0 }
+            override fun verifyLoadCohort(): String = error("Recovery must not require a new-load cohort")
             override fun verifyCarrier() { check(carrierValid) { "Carrier generation/hash differs" } }
             override fun send(data: ByteArray): Int {
                 val request = ClusterThemeProtocol.decode(data)

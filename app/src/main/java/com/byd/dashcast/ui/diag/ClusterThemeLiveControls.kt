@@ -112,7 +112,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             text = activity.getString(R.string.diag_cluster_rcc_corners_button)
             isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
             setOnClickListener {
-                if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.CORNER_MARKER)
+                if (!queryPending && !observationPending.get() && !busy.get() && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) requestStart(ClusterThemeVariant.CORNER_MARKER_21F7735C)
                 else show("Another request/diagnostic is active. Restore remains available.", "start-busy")
             }
         })
@@ -139,7 +139,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             }
         })
         controls.addView(TextView(activity).apply {
-            text = activity.getString(R.string.diag_cluster_rcc_ivi_help)
+            text = activity.getString(R.string.diag_cluster_rcc_ivi_help) + "\n\n" + activity.getString(R.string.diag_cluster_rcc_cohort_help)
             textSize = 14f
         })
         controls.addView(retireButton.apply {
@@ -182,7 +182,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         checks.addView(assertion); checks.addView(firmware)
         val dialog = AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_rcc_ivi_title)
             .setMessage(when (variant) {
-                ClusterThemeVariant.CORNER_MARKER -> R.string.diag_cluster_rcc_corners_confirm
+                ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C -> R.string.diag_cluster_rcc_corners_confirm
                 ClusterThemeVariant.MARKER -> R.string.diag_cluster_rcc_ivi_marker_confirm
                 ClusterThemeVariant.FULL_SURFACE_TEST -> R.string.diag_cluster_rcc_ivi_theme_confirm
             })
@@ -332,7 +332,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val guided = if (retiredPending && !j.optBoolean("defaultQueried")) activity.getString(R.string.diag_cluster_rcc_retired_waiting) + "\n\n" else ""
         val evidenceText = j.optJSONObject("loadEvidence")?.let { activity.getString(R.string.diag_cluster_rcc_load_receipts,
             it.optString("send", "UNKNOWN"), it.optString("selection", "UNKNOWN"), it.optString("ack2", "UNKNOWN"), it.optString("pixels", "UNKNOWN")) + "\n\n" }.orEmpty()
-        val cornerGuide = if (j.optString("variant") == "corner-marker" && j.optBoolean("rccDebt") && !j.optBoolean("defaultQueried") && retirement == null) {
+        val cornerGuide = if (ClusterThemeVariant.isCornerId(j.optString("variant")) && j.optBoolean("rccDebt") && !j.optBoolean("defaultQueried") && retirement == null) {
             (if (j.optString("state") == "SELECTION_PENDING_OEM_APPLY" && j.optString("phase") == "observation" &&
                 !j.optBoolean("uncertain", true) && j.optJSONObject("loadEvidence")?.optString("selection") == "OWN_PATH_REPORTED")
                 activity.getString(R.string.diag_cluster_rcc_corners_pending) + "\n" else "") +
@@ -346,7 +346,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else R.string.diag_cluster_rcc_restore)
                     restoreButton.contentDescription = restoreButton.text
                     retireButton.visibility = if (j.optBoolean("rccDebt") && (j.optBoolean("retirementAvailable") || retirement != null && !retirement.optBoolean("moved"))) android.view.View.VISIBLE else android.view.View.GONE
-                    cornerVerifyButton.visibility = if (j.optBoolean("rccDebt") && j.optBoolean("mutated") && j.optString("variant") == "corner-marker" && retirement == null) android.view.View.VISIBLE else android.view.View.GONE
+                    cornerVerifyButton.visibility = if (j.optBoolean("rccDebt") && j.optBoolean("mutated") && ClusterThemeVariant.isCornerId(j.optString("variant")) && retirement == null) android.view.View.VISIBLE else android.view.View.GONE
                     if (j.has("nativeMode")) nativeStatus(text, pinned)
                     refreshPrompt()
                 }
@@ -389,7 +389,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val restoring = j.optBoolean("defaultQueried") && !j.optBoolean("oemObservedByUser") && j.optString("state") in setOf("DEFAULT_QUERIED", "QUARANTINE")
         val variant = j.optString("variant")
         val loading = !j.optBoolean("defaultQueried") && when (variant) {
-            "corner-marker" -> j.optJSONObject("cornerVerification")?.optBoolean("available") == true && !j.optBoolean("markerObservedByUser")
+            "corner-marker", "corner-marker-21f7735c" -> j.optJSONObject("cornerVerification")?.optBoolean("available") == true && !j.optBoolean("markerObservedByUser")
             "marker", "full-surface-test" -> j.optString("state") == "AWAITING_OBSERVATION" && !j.optBoolean(if (variant == "marker") "markerObservedByUser" else "themeObservedByUser")
             else -> false
         }
@@ -398,7 +398,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val filename = j.optString("filename")
         prompts.update("rcc", ClusterObservationPrompts.Question("rcc:$snapshot", if (restoring) 90 else 50, s,
             if (restoring) R.string.diag_cluster_observe_oem_title else R.string.diag_cluster_observe_rcc_title,
-            when { restoring -> R.string.diag_cluster_observe_oem_message; variant == "marker" -> R.string.diag_cluster_observe_marker_message; variant == "corner-marker" -> R.string.diag_cluster_observe_corners_message; else -> R.string.diag_cluster_observe_theme_message },
+            when { restoring -> R.string.diag_cluster_observe_oem_message; variant == "marker" -> R.string.diag_cluster_observe_marker_message; ClusterThemeVariant.isCornerId(variant) -> R.string.diag_cluster_observe_corners_message; else -> R.string.diag_cluster_observe_theme_message },
             R.string.diag_cluster_observation_yes,
             current = { active && !closed && (!busy.get() || statusPending) && !observationPending.get() && !recoveryBusy.get() && displayedSession === s && displayed?.let(::rccKey) == snapshot },
             answer = {
@@ -408,7 +408,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     check(session === s && s.isCurrent()) { "Visual confirmation belongs to a replaced session" }
                     val current = JSONObject(s.status())
                     check(active && !closed && activation == expectedActivation && rccKey(current) == snapshot) { "Visual confirmation expired; inspect the current cluster again" }
-                    when { restoring -> s.observedOem(filename); variant == "marker" -> s.observedMarker(filename); variant == "corner-marker" -> s.observedCorners(filename, current.getJSONObject("cornerVerification").getString("round")); else -> s.observedFullSurface(filename) }
+                    when { restoring -> s.observedOem(filename); variant == "marker" -> s.observedMarker(filename); ClusterThemeVariant.isCornerId(variant) -> s.observedCorners(filename, current.getJSONObject("cornerVerification").getString("round")); else -> s.observedFullSurface(filename) }
                 }
             }))
     }

@@ -196,7 +196,7 @@ class ClusterVisualConfirmationTest {
         }
     }
     @Test fun `corner popup describes corners and positive sends only exact local operation16`() {
-        Fixture(status(rcc = true, variant = "corner-marker").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
+        Fixture(status(rcc = true, variant = "corner-marker-21f7735c").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
             f.activate(); f.waitFor { f.currentDialog() != null }
             assertEquals(f.app.getString(R.string.diag_cluster_observe_corners_message),
                 f.currentDialog()!!.findViewById<TextView>(android.R.id.message).text)

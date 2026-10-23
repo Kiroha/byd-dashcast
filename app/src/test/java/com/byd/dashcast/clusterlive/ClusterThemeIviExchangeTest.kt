@@ -28,6 +28,9 @@ class ClusterThemeIviExchangeTest {
         var onIdentity: ((Int) -> Unit)? = null
         var identityFailAt = Int.MAX_VALUE
         var carrierValid = true
+        var cohortValid = true
+        var cohortChecks = 0
+        var cohortTimeCost = 0L
         var checks = 0
         var baseline = selection()
         var queryCount = 0
@@ -46,6 +49,7 @@ class ClusterThemeIviExchangeTest {
             else if (emitAck) receiver!!(1000, ack(if (request.ints[0] == 1) "default" else ackPath, ackKind))
             return 0
         }
+        override fun verifyLoadCohort(): String { cohortChecks++; time += cohortTimeCost; check(cohortValid) { "Installed cohort differs" }; return "fixture" }
         override fun verifyCarrier() { checks++; check(carrierValid) { "Carrier changed" } }
         override fun close() { closed = true }
         fun run(operation: String = "load", deadline: Long = 7000) = ClusterThemeIviExchange.execute(operation, name, this,
@@ -57,6 +61,30 @@ class ClusterThemeIviExchangeTest {
         assertEquals(listOf(1, 5, 1), f.sent.map { it.cmd }); assertEquals(0, result.native)
         assertTrue(result.trace.any { "callbackCorrelation=UNAVAILABLE" in it })
         assertTrue(result.trace.any { "pixels=UNKNOWN" in it }); assertTrue(f.closed)
+    }
+    @Test fun `load cohort mismatch refuses mutation but query and recovery remain independent`() {
+        val load = Fixture().apply { cohortValid = false }; val refused = load.run()
+        assertFalse(refused.attempted); assertNotNull(refused.error); assertEquals(1, load.cohortChecks)
+        assertEquals(listOf(1), load.sent.map { it.cmd }); assertEquals(0, load.checks)
+        for (operation in listOf("query", "restore")) {
+            val recovery = Fixture().apply { cohortValid = false }; val result = recovery.run(operation)
+            assertNull(result.error); assertEquals(0, recovery.cohortChecks)
+            assertEquals(operation == "restore", result.attempted)
+        }
+    }
+    @Test fun `cohort deadline before send refuses mutation and a post send deadline never replays`() {
+        val before = Fixture().apply { cohortTimeCost = 7000 }; val refused = before.run()
+        assertNotNull(refused.error); assertFalse(refused.attempted)
+        assertEquals(listOf(1), before.sent.map { it.cmd }); assertTrue(before.closed)
+        val after = Fixture().apply {
+            customSend = { request ->
+                if (request.cmd == 1) receiver!!(1000, selection())
+                else { time = 7000; receiver!!(1000, ack()) }
+            }
+        }
+        val unknown = after.run()
+        assertNotNull(unknown.error); assertTrue(unknown.attempted); assertTrue(after.closed)
+        assertEquals(listOf(1, 5), after.sent.map { it.cmd })
     }
     @Test fun `custom selection wrong version and missing baseline never send a mutation`() {
         for (baseline in listOf(selection(0, "other.rcc"), selection(version = "other"))) {

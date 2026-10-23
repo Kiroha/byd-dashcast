@@ -26,11 +26,12 @@ class ClusterThemeJournalTest {
         assertEquals(ClusterThemeTransport.ANDROID_IVI, recovered.transport); assertFalse(recovered.clean)
     }
     @Test fun `new corner profile cannot select a legacy strict renderer recovery transport`() {
-        val profile = ClusterThemeVariant.CORNER_MARKER
-        for (schema in listOf(1, 2)) assertThrows(Exception::class.java) {
-            ClusterThemeJournal.recover(journal(schema).put("variant", profile.id).put("carrierSha256", profile.carrierSha256))
+        for (profile in listOf(ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C)) {
+            for (schema in listOf(1, 2)) assertThrows(Exception::class.java) {
+                ClusterThemeJournal.recover(journal(schema).put("variant", profile.id).put("carrierSha256", profile.carrierSha256))
+            }
+            assertEquals(profile, ClusterThemeJournal.recover(journal().put("variant", profile.id).put("carrierSha256", profile.carrierSha256)).variant)
         }
-        assertEquals(profile, ClusterThemeJournal.recover(journal().put("variant", profile.id).put("carrierSha256", profile.carrierSha256)).variant)
     }
     @Test fun `altered profile transport hash path or nonzero user journal cannot authorize recovery`() {
         for ((key, value) in listOf("transport" to "strict-renderer", "carrierSha256" to "0".repeat(64),

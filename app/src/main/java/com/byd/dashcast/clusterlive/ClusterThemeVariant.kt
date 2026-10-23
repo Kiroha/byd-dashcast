@@ -8,11 +8,15 @@ enum class ClusterThemeVariant(val id: String, val startOperation: Int, val asse
     FULL_SURFACE_TEST("full-surface-test", 5, "cluster_live/full_surface_test.rcc",
         "64a7a752b01e80a822610bf775eb656f79bd3378a6228b6e36c2490932049ddc", 32),
     CORNER_MARKER("corner-marker", 15, "cluster_live/corner_marker.rcc",
-        "3f3052c4d79f5c14ed3b708921127ac07f91ac4b03e68c94ea176505b66eb6bb", 38);
+        "3f3052c4d79f5c14ed3b708921127ac07f91ac4b03e68c94ea176505b66eb6bb", 38),
+    CORNER_MARKER_21F7735C("corner-marker-21f7735c", 18, "cluster_live/corner_marker_21f7735c.rcc",
+        "fe069081f1d5c8374276aad2513b8862de61008f67fe6162fb2a4a351e00b734", 39);
 
     val isMarker: Boolean get() = this != FULL_SURFACE_TEST
+    val isCorner: Boolean get() = this == CORNER_MARKER || this == CORNER_MARKER_21F7735C
 
     companion object {
+        fun isCornerId(id: String): Boolean = values().any { it.id == id && it.isCorner }
         fun recover(schema: Any?, id: String?, carrierSha256: String?): ClusterThemeVariant {
             require(schema is Int || schema is Long) { "Journal schema must be an integer" }
             return when ((schema as Number).toLong()) {
