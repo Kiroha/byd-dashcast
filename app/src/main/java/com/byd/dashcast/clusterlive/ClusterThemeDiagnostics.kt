@@ -20,10 +20,15 @@ internal object ClusterThemeDiagnostics {
         "filename" to 160, "renderer" to 32, "rendererIdentity" to 256, "connectionToken" to 96,
         "operation" to 64, "kind" to 16, "rawSha256" to 64, "variant" to 64, "carrierSha256" to 64, "phase" to 64,
         "oemQueryState" to 32, "oemQueryPhase" to 64, "oemQueryDetail" to 768,
-        "oemQuerySelection" to 1536, "oemQueryNativeIdentity" to 16)
-    private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs")
+        "oemQuerySelection" to 1536, "oemQueryNativeIdentity" to 16,
+        "nativeModeState" to 32, "nativeModeNonce" to 32, "nativeModeDetail" to 768,
+        "nativeModePhysicalPixels" to 16, "nativeModeQmlAck" to 16, "nativeModeDebounce" to 16, "nativeModeTransactionAttempted" to 16,
+        "nativeModeTrace" to 6144, "nativeModeFullReceipt" to 1536, "nativeModeNormalReceipt" to 1536)
+    private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs",
+        "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs")
     private val booleanFields = listOf("mutated", "uncertain", "defaultQueried", "carrierRemoved",
-        "markerObservedByUser", "themeObservedByUser", "oemObservedByUser")
+        "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "nativeModeDebt", "nativeModePending",
+        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
     private var cacheIssue = ""
@@ -49,6 +54,15 @@ internal object ClusterThemeDiagnostics {
                     if (query.has(field) && !query.isNull(field)) event.put("oemQuery" + field.replaceFirstChar { it.uppercase() }, query.get(field))
                 }
             }
+            reply.optJSONObject("nativeMode")?.let { mode ->
+                for (field in listOf("state", "nonce", "detail", "physicalPixels", "qmlAck", "debounce", "command", "native", "receivedEpochMs",
+                    "debt", "pending", "uncertain", "normalSettled", "observedByUser", "transactionAttempted", "queuedElapsedMs", "admittedElapsedMs", "trace")) {
+                    if (mode.has(field) && !mode.isNull(field)) event.put("nativeMode" + field.replaceFirstChar { it.uppercase() }, mode.get(field))
+                }
+                for (field in listOf("fullReceipt", "normalReceipt")) mode.optJSONObject(field)?.let {
+                    event.put("nativeMode" + field.replaceFirstChar { it.uppercase() }, it.toString())
+                }
+            }
             // Retain changes without storing Parcel/base64 payloads or unbounded helper output.
             val raw = reply.optString("raw").take(32768)
             if (raw.isNotEmpty()) event.put("rawSha256", MessageDigest.getInstance("SHA-256")
@@ -69,6 +83,8 @@ internal object ClusterThemeDiagnostics {
         safely { load(context) }
         return buildString {
             append("Historical app-private cache; current physical cluster state=UNKNOWN; movement=UNKNOWN.\n")
+            append("Dedicated native operational projection block nonce=").append(ClusterNativeProjectionDebt.nonce(context) ?: "NONE")
+                .append(" blocked=").append(ClusterNativeProjectionDebt.blocked(context)).append("; negative-only admission gate, never mode/render proof.\n")
             append("Receipt time is not source freshness or render/recovery proof. No cluster IPC/OEM reads by this section.\n")
             append("connectionToken is an app-local Binder reference, NOT daemon-process identity; daemon process identity=NOT_RECORDED.\n")
             append("SharedPreferences writes are asynchronous/best effort; immediate process death may lose recent events.\n")

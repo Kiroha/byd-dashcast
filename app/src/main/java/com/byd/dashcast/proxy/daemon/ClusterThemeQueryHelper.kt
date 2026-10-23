@@ -130,11 +130,12 @@ object ClusterThemeQueryHelper {
         }
     }
 
-    private data class InstallIdentity(val path: String, val uid: Int, val updated: Long,
+    internal data class InstallIdentity(val path: String, val uid: Int, val updated: Long,
         val device: Long, val inode: Long, val size: Long, val modified: Long)
 
     @Suppress("DEPRECATION")
-    private fun installedIdentity(context: Context, deadline: Long): InstallIdentity {
+    @JvmName("installedIdentity")
+    internal fun installedIdentity(context: Context, deadline: Long): InstallIdentity {
         val info = context.packageManager.getPackageInfo(ClusterThemePolicy.JAVA_PACKAGE, 0)
         val app = checkNotNull(info.applicationInfo)
         check(app.uid == 1000 && app.sourceDir.startsWith("/") && app.splitSourceDirs.isNullOrEmpty() &&

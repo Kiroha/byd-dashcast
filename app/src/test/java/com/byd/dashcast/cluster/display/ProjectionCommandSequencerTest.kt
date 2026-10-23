@@ -3,9 +3,42 @@ package com.byd.dashcast.cluster.display
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class ProjectionCommandSequencerTest {
+    @Test fun `diagnostic refuses existing ownership queued cleanup and in flight work`() {
+        val queue = ProjectionCommandSequencer()
+        val owner = queue.beginSession()
+        assertEquals(null, queue.reserveDiagnostic())
+        var completion: ProjectionCommandSequencer.Completion? = null
+        queue.submit(owner, { completion = it }, {})
+        queue.endSession(owner)
+        assertEquals(null, queue.reserveDiagnostic())
+        completion!!.complete(ProjectionCommandSequencer.Result.Success(null))
+        assertTrue(queue.reserveDiagnostic() != null)
+    }
+    @Test fun `diagnostic retires old cleanup tickets and blocks new projection until released`() {
+        val queue = ProjectionCommandSequencer(); val owner = queue.beginSession()
+        val old = queue.cleanupTicket(); queue.endSession(owner)
+        val diagnostic = queue.reserveDiagnostic()!!
+        assertFalse(queue.cleanupCurrent(old))
+        assertThrows(IllegalStateException::class.java) { queue.beginSession() }
+        var writes = 0
+        queue.submitCleanup(old, { true }, { writes++ }, {})
+        assertEquals(0, writes)
+        queue.endSession(diagnostic); assertTrue(queue.beginSession() != null)
+    }
+    @Test fun `external legacy command admission and diagnostic reservation exclude one another`() {
+        assertTrue(ProjectionCommandBus.claimExternalCommand())
+        try { assertEquals(null, ProjectionCommandBus.reserveDiagnostic()) }
+        finally { ProjectionCommandBus.releaseExternalCommand() }
+        val lease = ProjectionCommandBus.reserveDiagnostic()!!
+        try {
+            assertFalse(ProjectionCommandBus.claimExternalCommand())
+            assertEquals(null, ProjectionCommandBus.tryBeginSession())
+        } finally { ProjectionCommandBus.endSession(lease) }
+    }
 
     @Test fun `owner snapshot is published atomically and stale end cannot clear new owner`() {
         val sequencer = ProjectionCommandSequencer()

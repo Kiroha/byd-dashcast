@@ -715,4 +715,20 @@
     <string name="diag_cluster_oem_query_result">OEM RCC ma’lumoti: %1$s\n%2$s\nCallback ro‘yxati: %3$s; nativ natija: %4$s\n%5$s\nSo‘rov identifikatorisiz tarqatiladigan callback: faqat tanlov kuzatuvi. Nativ identifikatsiya va ekrandagi tasvir noma’lum.</string>
     <string name="diag_send_report">Diagnostika hisobotini yuborish</string>
     <string name="diag_send_report_help">Asboblar paneli natijalari va jurnalni o‘z ichiga oladi. Sozlangan kanal orqali yuboring yoki faylni ulashing.</string>
+
+    <string name="diag_cluster_native_section">BYD asl Full rejimi</string>
+    <string name="diag_cluster_rcc_section">RCC resurslari</string>
+    <string name="diag_cluster_native_full">BYD asl Full rejimini sinash</string>
+    <string name="diag_cluster_native_normal">BYD ko‘rinishiga qaytishni so‘rash</string>
+    <string name="diag_cluster_native_help">BYD asl Full ko‘rinishini indikatorlari bilan so‘raydi. RCC mavzusi yuklanmaydi. Bitta 16 buyrug‘i; javob Qt-ga yetib borganini yoki tasvirni isbotlamaydi. Qaytish oddiy rejimni (18) so‘raydi, avvalgi rejimni aynan tiklamaydi.</string>
+    <string name="diag_cluster_native_idle">Asboblar panelining haqiqiy holati noma’lum. Natijalar diagnostika hisobotiga qo‘shiladi.</string>
+    <string name="diag_cluster_native_busy">Proyeksiya, ADAS yoki diagnostika faol: sinovdan oldin joriy so‘rovni tugating. Qaytish mavjud.</string>
+    <string name="diag_cluster_native_parked">Avtomobil sinov uchun mos joyda to‘xtab turganini tasdiqlayman.</string>
+    <string name="diag_cluster_native_firmware">Asboblar paneli dasturiy ta’minoti 13.1.33.2602030.1 ekanini tasdiqlayman.</string>
+    <string name="diag_cluster_native_confirm">Sinov asboblar panelining haqiqiy rejimini o‘zgartiradi. Markaziy ekranni ochiq tuting. Harakat aniqlanmaydi. BYD ko‘rinishiga qaytish qo‘lda so‘raladi; ko‘rinadigan natijani tekshiring. QML tasdig‘i majburlanmaydi.</string>
+    <string name="diag_cluster_native_send">Bitta so‘rov yuborish</string>
+    <string name="diag_cluster_native_seen_full">BYD asl Full ko‘rinishini ko‘ryapman</string>
+    <string name="diag_cluster_native_seen_normal">BYD oddiy ko‘rinishini yana ko‘ryapman</string>
+    <string name="diag_cluster_rcc_theme_button">RCC sinov mavzusini yuklash (Full + tun)</string>
+    <string name="diag_cluster_rcc_restore">Asl RCC tanlovini tiklash</string>
 </resources>

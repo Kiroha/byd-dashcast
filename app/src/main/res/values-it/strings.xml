@@ -715,4 +715,20 @@
     <string name="diag_cluster_oem_query_result">Ricevuta RCC OEM: %1$s\n%2$s\nRegistrazione callback: %3$s; ritorno nativo: %4$s\n%5$s\nCallback trasmesso senza identificativo della richiesta: solo osservazione della selezione. Identità nativa e immagine fisica sconosciute.</string>
     <string name="diag_send_report">Invia un rapporto diagnostico</string>
     <string name="diag_send_report_help">Include i risultati del quadro strumenti e il registro. Invio tramite il canale configurato o condivisione di un file.</string>
+
+    <string name="diag_cluster_native_section">Modalità Full nativa BYD</string>
+    <string name="diag_cluster_rcc_section">Risorse RCC</string>
+    <string name="diag_cluster_native_full">Prova la modalità Full nativa BYD</string>
+    <string name="diag_cluster_native_normal">Richiedi il ritorno a BYD</string>
+    <string name="diag_cluster_native_help">Richiede la vista Full nativa BYD con le sue spie. Nessun tema RCC caricato. Un solo comando 16; il risultato non prova la ricezione Qt o la visualizzazione. Il ritorno richiede la modalità normale (18), senza ripristinare esattamente la precedente.</string>
+    <string name="diag_cluster_native_idle">Stato fisico del quadro sconosciuto. I risultati sono inclusi nel rapporto diagnostico.</string>
+    <string name="diag_cluster_native_busy">Proiezione, ADAS o diagnostica attiva: termina la richiesta in corso prima della prova. Il ritorno resta disponibile.</string>
+    <string name="diag_cluster_native_parked">Confermo che il veicolo è parcheggiato in un luogo adatto alla prova.</string>
+    <string name="diag_cluster_native_firmware">Confermo che il firmware del quadro è 13.1.33.2602030.1.</string>
+    <string name="diag_cluster_native_confirm">Questa prova modifica la modalità reale del quadro. Mantieni disponibile lo schermo centrale. Il movimento non viene rilevato. Il ritorno a BYD è una richiesta manuale; verifica il risultato visivo. Nessuna conferma QML viene forzata.</string>
+    <string name="diag_cluster_native_send">Invia una richiesta</string>
+    <string name="diag_cluster_native_seen_full">Vedo la vista Full nativa BYD</string>
+    <string name="diag_cluster_native_seen_normal">Vedo di nuovo la vista BYD normale</string>
+    <string name="diag_cluster_rcc_theme_button">Carica il tema RCC di prova (Full + notte)</string>
+    <string name="diag_cluster_rcc_restore">Ripristina la selezione RCC originale</string>
 </resources>

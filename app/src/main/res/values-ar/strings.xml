@@ -720,4 +720,20 @@
     <string name="diag_cluster_oem_query_result">سجل RCC الأصلي: %1$s\n%2$s\nتسجيل callback: %3$s؛ النتيجة الأصلية: %4$s\n%5$s\ncallback مبثوث بلا معرّف طلب: ملاحظة للاختيار فقط. هوية المحرك والصورة الفعلية غير معروفتين.</string>
     <string name="diag_send_report">إرسال تقرير تشخيصي</string>
     <string name="diag_send_report_help">يتضمن نتائج لوحة العدادات والسجل. الإرسال عبر القناة المهيأة أو مشاركة ملف.</string>
+
+    <string name="diag_cluster_native_section">وضع Full الأصلي من BYD</string>
+    <string name="diag_cluster_rcc_section">موارد RCC</string>
+    <string name="diag_cluster_native_full">اختبار وضع Full الأصلي من BYD</string>
+    <string name="diag_cluster_native_normal">طلب العودة إلى BYD</string>
+    <string name="diag_cluster_native_help">يطلب عرض Full الأصلي من BYD مع مؤشراته. لا يتم تحميل سمة RCC. أمر 16 واحد فقط؛ قيمة الإرجاع لا تثبت وصوله إلى Qt أو ظهوره. العودة تطلب الوضع العادي (18) دون استعادة الوضع السابق بدقة.</string>
+    <string name="diag_cluster_native_idle">حالة لوحة العدادات الفعلية غير معروفة. تُرفق النتائج بتقرير التشخيص.</string>
+    <string name="diag_cluster_native_busy">الإسقاط أو ADAS أو التشخيص نشط: أنهِ الطلب الجاري قبل الاختبار. تبقى العودة متاحة.</string>
+    <string name="diag_cluster_native_parked">أؤكد أن السيارة متوقفة في مكان مناسب للاختبار.</string>
+    <string name="diag_cluster_native_firmware">أؤكد أن إصدار برنامج لوحة العدادات هو 13.1.33.2602030.1.</string>
+    <string name="diag_cluster_native_confirm">يغير هذا الاختبار الوضع الفعلي للوحة العدادات. أبقِ الشاشة المركزية متاحة. لا يتم كشف الحركة. العودة إلى BYD طلب يدوي؛ يجب التحقق من النتيجة المرئية. لا يتم فرض إقرار QML.</string>
+    <string name="diag_cluster_native_send">إرسال طلب واحد</string>
+    <string name="diag_cluster_native_seen_full">أرى عرض Full الأصلي من BYD</string>
+    <string name="diag_cluster_native_seen_normal">أرى عرض BYD العادي مجددًا</string>
+    <string name="diag_cluster_rcc_theme_button">تحميل سمة RCC التجريبية (Full + ليل)</string>
+    <string name="diag_cluster_rcc_restore">استعادة اختيار RCC الأصلي</string>
 </resources>

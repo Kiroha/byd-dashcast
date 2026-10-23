@@ -281,9 +281,14 @@ internal class ProjectionAdasCoordinator(
 
     companion object {
         @Volatile private var instance: ProjectionAdasCoordinator? = null
+        fun idleForDiagnostic(): Boolean = instance?.let {
+            it.target == null && it.retryTarget == null && !it.recoveryDebt && !it.restoring &&
+                it.deferredStop == null && !it.sequenceRequested && it.hideRequest == null && it.recoverySession == null
+        } ?: true
         @Synchronized private fun get(context: Context): ProjectionAdasCoordinator =
             instance ?: ProjectionAdasCoordinator(context.applicationContext).also { instance = it }
         fun targetRequested(context: Context, pkg: String?, display: Int) {
+            if (ProjectionCommandBus.diagnosticReserved()) return
             val session = ProjectionCommandBus.currentSession() ?: return
             if (pkg.isNullOrBlank()) return
             val owner = get(context)
@@ -318,6 +323,7 @@ internal class ProjectionAdasCoordinator(
         /** Used before the retained one-shot recovery: it must not race an automatic hide. */
         fun cancelForManualRecovery() { instance?.let { it.retryTarget = null; it.invalidate() } }
         fun prepareManualRequest(action: NativeAdasWindowControl.Action): Boolean {
+            if (ProjectionCommandBus.diagnosticReserved()) return false
             val owner = instance ?: return true
             synchronized(owner) {
                 // Saved-value recovery must remain usable even if native teardown IPC is wedged.
@@ -362,6 +368,9 @@ internal class ProjectionAdasCoordinator(
 
         /** Explicit rearm reuses the projection owner, but none of its previous read proof. */
         fun requestHide(context: Context, done: (NativeAdasWindowControl.Result) -> Unit): Closeable {
+            if (ProjectionCommandBus.diagnosticReserved()) return HideRequest(done) {}.also {
+                it.complete(NativeAdasWindowControl.Result.BUSY)
+            }
             val owner = get(context)
             lateinit var request: HideRequest
             request = HideRequest(done) {
@@ -369,6 +378,9 @@ internal class ProjectionAdasCoordinator(
             }
             owner.main.post {
                 if (request.cancelled) return@post
+                if (ProjectionCommandBus.diagnosticReserved()) {
+                    request.complete(NativeAdasWindowControl.Result.BUSY); return@post
+                }
                 if (owner.restoring || owner.deferredStop != null || owner.hideRequest != null) {
                     request.complete(NativeAdasWindowControl.Result.BUSY)
                     return@post

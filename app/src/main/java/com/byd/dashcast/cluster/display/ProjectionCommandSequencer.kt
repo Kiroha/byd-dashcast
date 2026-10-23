@@ -38,9 +38,21 @@ internal class ProjectionCommandSequencer {
     private var ownerSession: Session? = null
     private var retiredGeneration: Long? = null
     private var inFlight = false
+    private var diagnostic = false
+
+    @Synchronized fun diagnosticReserved(): Boolean = diagnostic
+
+    /** Never retire projection ownership or queued cleanup merely to run a diagnostic. */
+    @Synchronized fun reserveDiagnostic(): Session? {
+        if (diagnostic || ownerSession != null || inFlight || queue.isNotEmpty()) return null
+        retiredGeneration = null
+        diagnostic = true
+        return Session(++generation)
+    }
 
     @Synchronized
     fun beginSession(): Session {
+        check(!diagnostic) { "Native cluster diagnostic owns the command lane" }
         retiredGeneration = null
         return Session(++generation).also { ownerSession = it }
     }
@@ -57,7 +69,7 @@ internal class ProjectionCommandSequencer {
 
     fun endSession(session: Session) {
         val next = synchronized(this) {
-            if (session.generation == generation) { retiredGeneration = generation; generation++; ownerSession = null }
+            if (session.generation == generation) { retiredGeneration = generation; generation++; ownerSession = null; diagnostic = false }
             takeNextLocked()
         }
         dispatch(next)
@@ -141,13 +153,33 @@ internal class ProjectionCommandSequencer {
 internal object ProjectionCommandBus {
     private const val TAG = "ProjectionCommandBus"
     private val sequencer = ProjectionCommandSequencer()
+    private var externalCommands = 0
+    fun claimExternalCommand(): Boolean = synchronized(sequencer) {
+        if (sequencer.diagnosticReserved()) return@synchronized false
+        externalCommands++; true
+    }
+    fun releaseExternalCommand() = synchronized(sequencer) { check(externalCommands > 0); externalCommands-- }
 
     fun currentSession(): ProjectionCommandSequencer.Session? =
         sequencer.currentSession()
 
-    fun beginSession(): ProjectionCommandSequencer.Session {
+    fun diagnosticReserved(): Boolean = sequencer.diagnosticReserved()
+
+    fun reserveDiagnostic(): ProjectionCommandSequencer.Session? = synchronized(sequencer) {
+        if (externalCommands > 0 || !com.byd.dashcast.cluster.ProjectionAdasCoordinator.idleForDiagnostic() ||
+            com.byd.dashcast.cluster.NativeAdasWindowControl.isBusy()) return@synchronized null
+        sequencer.reserveDiagnostic()
+    }
+
+    fun tryBeginSession(): ProjectionCommandSequencer.Session? = synchronized(sequencer) {
+        if (diagnosticReserved()) return@synchronized null
+        beginSession()
+    }
+
+    fun beginSession(): ProjectionCommandSequencer.Session = synchronized(sequencer) {
+        check(!diagnosticReserved()) { "Native cluster diagnostic owns the command lane" }
         com.byd.dashcast.cluster.ProjectionAdasCoordinator.projectionReplaced()
-        return sequencer.beginSession()
+        sequencer.beginSession()
     }
 
     fun isCurrent(session: ProjectionCommandSequencer.Session): Boolean =

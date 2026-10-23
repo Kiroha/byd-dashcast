@@ -905,12 +905,19 @@ object AdbLocalClient {
      * @param targetPackage nullable: package to force-stop before restore
      */
     fun restoreBydOnCluster(context: Context, targetPackage: String?, callback: Callback) {
+        if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) {
+            callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: use manual native BYD return"); return
+        }
         // v1.2.78 — invalidate ClusterManager's fast-path flag NOW (synchronously, before
         // the async dispatch). Qt will return to native mode as soon as sendInfo(18)
         // lands; the VirtualDisplay persists, so subsequent activate() calls must
         // take the warm path (30→6s→16) instead of the true fast path.
         ClusterManager.notifyProjectionStopped()
+        if (!ProjectionCommandBus.claimExternalCommand()) { callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE"); return }
         sExecutor.execute {
+            try {
+            if (nativeCommandsBlocked(context)) { callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: no restore/fallback"); return@execute }
             AppLogger.log(TAG, "Restoring BYD cluster" +
                 (if (targetPackage != null) " (target=$targetPackage)" else ""))
             // Phase 4d: try the typed daemon path for the whole sequence
@@ -947,6 +954,7 @@ object AdbLocalClient {
                     callback.onSuccess("BYD restored ✓ (typed)\n$sb")
                     return@execute
                 } catch (t: Throwable) {
+                    if (nativeDiagnosticRefusal(t)) { callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: no fallback"); return@execute }
                     if (t is InterruptedException) {
                         Thread.currentThread().interrupt()
                         callback.onError("interrupted")
@@ -993,6 +1001,7 @@ object AdbLocalClient {
                 AppLogger.e(TAG, "restoreBydOnCluster ERROR", e)
                 callback.onError(msg)
             }
+            } finally { ProjectionCommandBus.releaseExternalCommand() }
         } // adb-restore-thread
     }
 
@@ -1011,6 +1020,10 @@ object AdbLocalClient {
     fun restoreOriginCluster(context: Context, requestedScreenSizeCmd: Int,
                              targetPackage: String?, callback: Callback,
                              valid: () -> Boolean = { true }) {
+        if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) {
+            callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: use manual native BYD return"); return
+        }
         // This is the DEFAULT Stop flow and it passes the raw preference, whose default is 30
         // (12.3"). On an Atto 3 / Dolphin that never had its cluster size configured, every Stop
         // was therefore ordering a 1280x480 panel into the 12.3" shape — which drops it into its
@@ -1043,7 +1056,10 @@ object AdbLocalClient {
             if (completed.compareAndSet(false, true))
                 callback.onError("${error.javaClass.simpleName}: ${error.message}")
         }
+        if (!ProjectionCommandBus.claimExternalCommand()) { callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE"); return }
         sExecutor.execute {
+            try {
+            if (nativeCommandsBlocked(context)) { callback.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: no restore/fallback"); return@execute }
             AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd +
                 (if (targetPackage != null) " target=$targetPackage" else ""))
             // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
@@ -1086,6 +1102,7 @@ object AdbLocalClient {
                     return@execute
                 } catch (t: Throwable) {
                     // Never replay native close after refresh, owner retirement, or a callback failure.
+                    if (nativeDiagnosticRefusal(t)) { failure(t); return@execute }
                     if (completed.get()) return@execute
                     if (refreshed || t is InterruptedException || !ownerCurrent()) {
                         AppLogger.w(TAG, "restoreOriginCluster final delivery failed: " + t.message)
@@ -1140,6 +1157,7 @@ object AdbLocalClient {
                 AppLogger.e(TAG, "restoreOriginCluster ERROR", e)
                 failure(e)
             }
+            } finally { ProjectionCommandBus.releaseExternalCommand() }
         } // adb-origin-cluster-thread
     }
 
@@ -1191,7 +1209,16 @@ object AdbLocalClient {
             callback?.onSuccess("")
             return
         }
+        val trackedNativeCommand = type == 1000
+        if (trackedNativeCommand && !ProjectionCommandBus.claimExternalCommand()) { callback?.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE"); return }
         sExecutor.execute {
+            try {
+            if (type == 1000) {
+                if (nativeCommandsBlocked(context)) {
+                    val reason = "NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: manual native return and observation required; no fallback"
+                    AppLogger.w(TAG, reason); callback?.onError(reason); return@execute
+                }
+            }
             // v1.6.102 — daemon-free & ADB-free FIRST attempt, tried ONLY when the
             // uid-2000 daemon is not connected (so healthy DL3/DL5.0 keep their exact
             // proven path). Transacts the AutoContainer binder directly from THIS process:
@@ -1257,6 +1284,9 @@ object AdbLocalClient {
                     callback?.onSuccess("")
                     return@execute
                 } catch (t: Throwable) {
+                    if (nativeDiagnosticRefusal(t)) {
+                        callback?.onError("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE: no legacy fallback"); return@execute
+                    }
                     if (typedObserver != null && typedObserver.shouldAbortFallback()) {
                         AppLogger.e(TAG, "beta sendInfo typed timed out — fallback suppressed")
                         return@execute
@@ -1299,7 +1329,21 @@ object AdbLocalClient {
                 AppLogger.e(TAG, "sendInfo ADB ERREUR", e)
                 callback?.onError(e.javaClass.simpleName + ": " + e.message)
             }
+            } finally { if (trackedNativeCommand) ProjectionCommandBus.releaseExternalCommand() }
         } // adb-sendinfo-thread
+    }
+
+    private fun nativeDiagnosticRefusal(error: Throwable): Boolean = generateSequence(error) { it.cause }.take(16)
+        .any { it.message?.contains("NATIVE_CLUSTER_DIAGNOSTIC_ACTIVE") == true }
+
+    /** Private daemon status only. A known native debt must never select legacy/in-process egress. */
+    private fun nativeCommandsBlocked(context: Context): Boolean {
+        if (com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt.blocked(context.applicationContext) ||
+            com.byd.dashcast.cluster.display.ProjectionCommandBus.diagnosticReserved()) return true
+        return if (ProxyClient.supportsProtocol(34) && ProxyClient.isConnected()) runCatching {
+            org.json.JSONObject(com.byd.dashcast.proxy.ClusterThemeSession.pin(context).status()).getJSONObject("nativeMode")
+                .let { it.getBoolean("debt") || it.getBoolean("pending") }
+        }.getOrDefault(true) else false
     }
 
     /**

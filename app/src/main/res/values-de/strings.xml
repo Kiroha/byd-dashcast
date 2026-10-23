@@ -715,4 +715,20 @@
     <string name="diag_cluster_oem_query_result">OEM-RCC-Beleg: %1$s\n%2$s\nCallback-Registrierung: %3$s; native Rückgabe: %4$s\n%5$s\nBroadcast-Callback ohne Anfragekennung: nur Beobachtung der Auswahl. Native Identität und physische Bildausgabe unbekannt.</string>
     <string name="diag_send_report">Diagnosebericht senden</string>
     <string name="diag_send_report_help">Enthält Cluster-Ergebnisse und Protokoll. Über den eingerichteten Kanal senden oder eine Datei teilen.</string>
+
+    <string name="diag_cluster_native_section">Nativer BYD-Vollbildmodus</string>
+    <string name="diag_cluster_rcc_section">RCC-Ressourcen</string>
+    <string name="diag_cluster_native_full">Nativen BYD-Vollbildmodus testen</string>
+    <string name="diag_cluster_native_normal">BYD-Rückkehr anfordern</string>
+    <string name="diag_cluster_native_help">Fordert das native BYD-Vollbild mit Kontrollleuchten an. Kein RCC-Design wird geladen. Einmal Befehl 16; der Rückgabewert beweist weder Qt-Zustellung noch Darstellung. Rückkehr fordert Normalmodus (18) an, nicht den exakten vorherigen Modus.</string>
+    <string name="diag_cluster_native_idle">Physischer Clusterzustand unbekannt. Ergebnisse stehen im Diagnosebericht.</string>
+    <string name="diag_cluster_native_busy">Projektion, ADAS oder Diagnose aktiv: laufende Anfrage zuerst beenden. Rückkehr bleibt verfügbar.</string>
+    <string name="diag_cluster_native_parked">Ich bestätige, dass das Fahrzeug an einem geeigneten Testort geparkt ist.</string>
+    <string name="diag_cluster_native_firmware">Ich bestätige Cluster-Firmware 13.1.33.2602030.1.</string>
+    <string name="diag_cluster_native_confirm">Dieser Test ändert den tatsächlichen Clustermodus. Zentraldisplay verfügbar halten. Bewegung wird nicht erkannt. BYD-Rückkehr ist eine manuelle Anfrage; sichtbares Ergebnis prüfen. Keine erzwungene QML-Bestätigung.</string>
+    <string name="diag_cluster_native_send">Eine Anfrage senden</string>
+    <string name="diag_cluster_native_seen_full">Ich sehe das native BYD-Vollbild</string>
+    <string name="diag_cluster_native_seen_normal">Ich sehe wieder die normale BYD-Anzeige</string>
+    <string name="diag_cluster_rcc_theme_button">RCC-Testdesign laden (Vollbild + Nacht)</string>
+    <string name="diag_cluster_rcc_restore">Ursprüngliche RCC-Auswahl wiederherstellen</string>
 </resources>

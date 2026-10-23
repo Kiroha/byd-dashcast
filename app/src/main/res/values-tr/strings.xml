@@ -715,4 +715,20 @@
     <string name="diag_cluster_oem_query_result">OEM RCC kaydı: %1$s\n%2$s\nCallback kaydı: %3$s; yerel dönüş: %4$s\n%5$s\nİstek kimliği olmayan yayın callback: yalnızca seçim gözlemi. Yerel kimlik ve fiziksel ekran görüntüsü bilinmiyor.</string>
     <string name="diag_send_report">Tanılama raporu gönder</string>
     <string name="diag_send_report_help">Gösterge paneli sonuçlarını ve günlüğü içerir. Yapılandırılan kanaldan gönderin veya dosya paylaşın.</string>
+
+    <string name="diag_cluster_native_section">BYD yerel Full modu</string>
+    <string name="diag_cluster_rcc_section">RCC kaynakları</string>
+    <string name="diag_cluster_native_full">BYD yerel Full modunu dene</string>
+    <string name="diag_cluster_native_normal">BYD görünümüne dönüş iste</string>
+    <string name="diag_cluster_native_help">BYD yerel Full görünümünü uyarı göstergeleriyle ister. RCC teması yüklenmez. Tek bir 16 komutu; dönüş değeri Qt teslimini veya görüntüyü kanıtlamaz. Dönüş, önceki modu tam geri yüklemeden normal modu (18) ister.</string>
+    <string name="diag_cluster_native_idle">Fiziksel gösterge durumu bilinmiyor. Sonuçlar tanılama raporuna eklenir.</string>
+    <string name="diag_cluster_native_busy">Yansıtma, ADAS veya tanılama etkin: testten önce mevcut isteği bitirin. Dönüş kullanılabilir.</string>
+    <string name="diag_cluster_native_parked">Aracın test için uygun bir yerde park edildiğini onaylıyorum.</string>
+    <string name="diag_cluster_native_firmware">Gösterge yazılımının 13.1.33.2602030.1 olduğunu onaylıyorum.</string>
+    <string name="diag_cluster_native_confirm">Bu test gerçek gösterge modunu değiştirir. Merkez ekranı erişilebilir tutun. Hareket algılanmaz. BYD dönüşü elle yapılan bir istektir; görsel sonucu kontrol edin. QML onayı zorlanmaz.</string>
+    <string name="diag_cluster_native_send">Tek istek gönder</string>
+    <string name="diag_cluster_native_seen_full">BYD yerel Full görünümünü görüyorum</string>
+    <string name="diag_cluster_native_seen_normal">Normal BYD görünümünü yeniden görüyorum</string>
+    <string name="diag_cluster_rcc_theme_button">Test RCC temasını yükle (Full + gece)</string>
+    <string name="diag_cluster_rcc_restore">Özgün RCC seçimini geri yükle</string>
 </resources>
