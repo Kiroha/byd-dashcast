@@ -821,14 +821,18 @@
     <string name="diag_cluster_rcc_marker_button">Tester le marqueur RCC (recommandé)</string>
     <string name="diag_cluster_rcc_ivi_title">Ressources RCC — essai IVI expérimental</string>
     <string name="diag_cluster_rcc_ivi_help">Commence par le marqueur. Pour le thème, sélectionne Full et nuit manuellement. Aucun mode ne change automatiquement.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Firmware 13.1.33.2602030.1 déclaré, Android 10, DiLink 3 détecté et daemon 36 requis. Le service Java installé est vérifié ; identité du cluster natif inconnue.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Firmware 13.1.33.2602030.1 déclaré, Android 10, DiLink 3 détecté et daemon 37 requis. Le service Java installé est vérifié ; identité du cluster natif inconnue.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Ce test recharge réellement les ressources BYD avec un marqueur passif en conservant le code des instruments et voyants. Leur affichage et la récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; sa réussite doit être confirmée visuellement. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sélectionne Full et nuit avant cet essai. Le RCC conserve le code des instruments et voyants et change leur fond. Lisibilité et récupération restent à vérifier sur la voiture. Garde cet écran disponible. Un retour aux ressources par défaut est demandé après 30 secondes si la session reste disponible ; confirme ensuite ce que tu vois. Redémarrer ne garantit pas la restauration.</string>
     <string name="diag_cluster_rcc_ivi_send">Envoyer le test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Ce bouton demande le retour aux ressources RCC par défaut. Il ne change pas le mode de projection. La réponse OEM et la restauration visible sont vérifiées séparément ; confirme ensuite ce que tu vois. Aucun redémarrage ni nouvel essai automatique.</string>
-    <string name="diag_cluster_rcc_debt">Un essai RCC reste à clôturer. Utilise « Restaurer les ressources RCC BYD », puis réponds à la popup après avoir inspecté le cluster.</string>
+    <string name="diag_cluster_rcc_debt">Un essai RCC reste à clôturer. Utilise « Restaurer les ressources RCC BYD / Vérifier le retour BYD », puis réponds à la popup après avoir inspecté le cluster.</string>
     <string name="diag_cluster_rcc_ivi_platform">Essai refusé : Android 10 et détection positive de DiLink 3 requis. Aucun RCC envoyé.</string>
     <string name="diag_cluster_page_title">Cluster : projection et RCC</string>
     <string name="diag_cluster_page_description">Projection BYD avec bandeaux, marqueur et thème RCC</string>
     <string name="diag_cluster_native_rcc_blocked">Projection BYD bloquée par un essai RCC</string>
+    <string name="diag_cluster_rcc_retire_button">Préparer le retour BYD après erreur RCC</string>
+    <string name="diag_cluster_rcc_retire_confirm">Déplace uniquement notre RCC de test dans un nouveau dossier et conserve ses octets. Aucun chargement ni redémarrage OEM ne sera envoyé. L’affichage peut rester identique jusqu’à une véritable réinitialisation du cluster par BYD. Reconnecter le daemon Android ne suffit pas. Ensuite, appuie sur « Vérifier le retour BYD » et confirme l’affichage d’origine. Les autres essais restent bloqués jusque-là.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Retour BYD préparé — en attente du cluster. Réinitialise manuellement le cluster OEM, puis appuie sur « Vérifier le retour BYD ». Cette vérification consulte uniquement la sélection et notre fichier conservé. Reconnecter Android ou le daemon ne prouve pas un redémarrage du cluster. Confirme ensuite visuellement les instruments et témoins BYD.</string>
+    <string name="diag_cluster_rcc_verify_return">Vérifier le retour BYD</string>
 </resources>

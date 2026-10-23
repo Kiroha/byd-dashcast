@@ -60,6 +60,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private val observationPending = AtomicBoolean(false)
     private var displayed: JSONObject? = null
     private var displayedSession: ClusterThemeSession? = null
+    private val restoreButton = Button(activity)
+    private val retireButton = Button(activity)
     @Volatile private var queryPending = false
     private val status = TextView(activity).apply {
         textSize = 14f
@@ -77,7 +79,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         // Keep recovery in the fixed header; detailed status can live in the cluster page.
         val headerIndex = 0
         statusContainer.addView(status)
-        header.addView(Button(activity).apply {
+        header.addView(restoreButton.apply {
             text = activity.getString(R.string.diag_cluster_rcc_restore)
             isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
             contentDescription = activity.getString(R.string.diag_cluster_rcc_restore)
@@ -124,6 +126,12 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         controls.addView(TextView(activity).apply {
             text = activity.getString(R.string.diag_cluster_rcc_ivi_help)
             textSize = 14f
+        })
+        controls.addView(retireButton.apply {
+            text = activity.getString(R.string.diag_cluster_rcc_retire_button)
+            isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
+            visibility = android.view.View.GONE
+            setOnClickListener { confirmation?.dismiss(); abortBeforeSend.set(true); confirmIviRestore(retire = true) }
         })
         controls.addView(TextView(activity).apply {
             text = activity.getString(R.string.diag_cluster_rcc_ivi_identity)
@@ -187,24 +195,27 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private fun releaseReservation() = synchronized(reservationLock) {
         if (!ClusterThemeProjectionDebt.blocked(app)) reservation?.let { ProjectionCommandBus.endSession(it); reservation = null }
     }
-    private fun confirmIviRestore() {
+    private fun confirmIviRestore(retire: Boolean = false) {
         val checks = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val parked = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_parked) }
         val firmware = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_firmware) }
         checks.addView(parked); checks.addView(firmware)
-        val dialog = AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_rcc_restore)
-            .setMessage(R.string.diag_cluster_rcc_ivi_restore_confirm).setView(checks)
+        val retired = displayed?.let { it.optBoolean("rccDebt") && it.optJSONObject("retirement")?.optBoolean("moved") == true } == true
+        val dialog = AlertDialog.Builder(activity).setTitle(if (retire) R.string.diag_cluster_rcc_retire_button
+            else if (retired) R.string.diag_cluster_rcc_verify_return else R.string.diag_cluster_rcc_restore)
+            .setMessage(if (retire) R.string.diag_cluster_rcc_retire_confirm else if (retired) R.string.diag_cluster_rcc_retired_waiting
+                else R.string.diag_cluster_rcc_ivi_restore_confirm).setView(checks)
             .setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.diag_cluster_native_send, null).create()
         confirmation = dialog
         dialog.setOnShowListener {
             val send = dialog.getButton(AlertDialog.BUTTON_POSITIVE); send.isEnabled = false
             parked.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked && firmware.isChecked }
             firmware.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked && firmware.isChecked }
-            send.setOnClickListener { if (parked.isChecked && firmware.isChecked) { dialog.dismiss(); confirmation = null; restore(true) } }
+            send.setOnClickListener { if (parked.isChecked && firmware.isChecked) { dialog.dismiss(); confirmation = null; restore(true, retire) } }
         }
         dialog.show()
     }
-    private fun restore(ivi: Boolean) {
+    private fun restore(ivi: Boolean, retire: Boolean = false) {
         if (!recoveryBusy.compareAndSet(false, true)) { show(activity.getString(R.string.diag_cluster_native_busy)); return }
         val reserved = if (ivi) reserve() else null
         if (ivi && reserved == null) { recoveryBusy.set(false); show(activity.getString(R.string.diag_cluster_native_busy)); return }
@@ -212,7 +223,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         recovery.execute {
             try {
                 val s = session ?: ClusterThemeSession.pin(app).also { session = it }
-                render(if (ivi) s.restoreIvi(validity(checkNotNull(reserved))) else s.restore(), requestedLease, s, requestedActivation)
+                render(if (ivi) s.restoreIvi(validity(checkNotNull(reserved)), retire) else s.restore(), requestedLease, s, requestedActivation)
             } catch (error: Throwable) { show("Restore UNKNOWN/refused: ${ClusterThemeDiagnostics.failure(error)}. No reconnect/replay.", "restore") }
             finally { recoveryBusy.set(false); releaseReservation(); handler.post { refreshPrompt() } }
         }
@@ -297,11 +308,17 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val queryText = if (query == null || query.length() == 0) "" else activity.getString(R.string.diag_cluster_oem_query_result,
             query.optString("state"), query.optString("detail"), query.opt("registration")?.toString() ?: "UNKNOWN",
             query.opt("native")?.toString() ?: "UNKNOWN", query.optString("selection")) + "\n\n"
-        val summary = queryText + "${j.getString("state")}: ${j.getString("detail")}\nProfile ${j.optString("variant", "legacy marker")}; transport=${j.optString("transport", "legacy strict renderer")}; native identity=${j.optString("nativeIdentity", "UNKNOWN")}; phase ${j.optString("phase", "unrecorded")}; daemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/theme/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.optBoolean("themeObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
+        val retirement = j.optJSONObject("retirement")
+        val retiredPending = j.optBoolean("rccDebt") && retirement?.optBoolean("moved") == true
+        val guided = if (retiredPending && !j.optBoolean("defaultQueried")) activity.getString(R.string.diag_cluster_rcc_retired_waiting) + "\n\n" else ""
+        val summary = guided + queryText + "${j.getString("state")}: ${j.getString("detail")}\nProfile ${j.optString("variant", "legacy marker")}; transport=${j.optString("transport", "legacy strict renderer")}; native identity=${j.optString("nativeIdentity", "UNKNOWN")}; phase ${j.optString("phase", "unrecorded")}; daemon UID ${j.getInt("daemonUid")}; default queried=${j.getBoolean("defaultQueried")}; marker/theme/OEM observed by user=${j.getBoolean("markerObservedByUser")}/${j.optBoolean("themeObservedByUser")}/${j.getBoolean("oemObservedByUser")}"
         handler.post {
             if (!closed && pinned.isCurrent()) {
                 if (active && activation == requestedActivation) {
                     displayed = j; displayedSession = pinned
+                    restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else R.string.diag_cluster_rcc_restore)
+                    restoreButton.contentDescription = restoreButton.text
+                    retireButton.visibility = if (j.optBoolean("rccDebt") && (j.optBoolean("retirementAvailable") || retirement != null && !retirement.optBoolean("moved"))) android.view.View.VISIBLE else android.view.View.GONE
                     if (j.has("nativeMode")) nativeStatus(text, pinned)
                     refreshPrompt()
                 }

@@ -51,7 +51,7 @@ class ClusterThemeSessionTest {
         try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
             assertThrows(IllegalStateException::class.java) { session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {} }
             assertEquals(0, calls); assertFalse(ClusterThemeProjectionDebt.blocked(app))
-            versionField.set(null, "36"); session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {}
+            versionField.set(null, "37"); session.startIvi(it, ClusterThemeVariant.MARKER, Binder()) {}
             assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
         } } finally { file.delete() }
     }
@@ -59,7 +59,7 @@ class ClusterThemeSessionTest {
         val app = RuntimeEnvironment.getApplication(); var calls = 0
         binderField.set(null, object : Binder() {
             override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { calls++; throw DeadObjectException() }
-        }); versionField.set(null, "36")
+        }); versionField.set(null, "37")
         val file = File.createTempFile("rcc-ivi", ".rcc").apply { writeText("fixture") }
         try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use {
             assertThrows(DeadObjectException::class.java) { ClusterThemeSession.pin(app).startIvi(it, ClusterThemeVariant.FULL_SURFACE_TEST, Binder()) {} }
@@ -78,10 +78,28 @@ class ClusterThemeSessionTest {
                 reply!!.writeNoException(); reply.writeString("""{"state":"CLEAN","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","transport":"android-ivi","rccDebt":false,"rccSafeNonce":"$safe"}""")
                 return true
             }
-        }); versionField.set(null, "36")
+        }); versionField.set(null, "37")
         val session = ClusterThemeSession.pin(app); session.restoreIvi(Binder())
         assertTrue(ClusterThemeProjectionDebt.blocked(app)); safe = nonce; session.restoreIvi(Binder())
         assertFalse(ClusterThemeProjectionDebt.blocked(app)); assertEquals(2, calls)
+    }
+    @Test fun `explicit retirement uses operation14 requires37 and never clears operational debt`() {
+        val app = RuntimeEnvironment.getApplication(); val nonce = "e".repeat(32)
+        ClusterThemeProjectionDebt.begin(app, nonce); var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(14, data.readInt())
+                assertEquals(nonce, data.readString()); assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"WAITING_OEM_REINITIALIZATION","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","transport":"android-ivi","rccDebt":true}""")
+                return true
+            }
+        }); versionField.set(null, "36")
+        val session = ClusterThemeSession.pin(app)
+        assertThrows(IllegalStateException::class.java) { session.restoreIvi(Binder(), retire = true) }
+        assertEquals(0, calls); versionField.set(null, "37")
+        session.restoreIvi(Binder(), retire = true)
+        assertEquals(1, calls); assertEquals(nonce, ClusterThemeProjectionDebt.nonce(app))
     }
     @Test fun `native full requires34 and commits negative debt before one fixed16 transaction`() {
         val app = RuntimeEnvironment.getApplication(); var calls = 0

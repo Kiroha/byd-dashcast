@@ -13,9 +13,9 @@ class ClusterThemeIviExchangeTest {
         b.addOffset(7, ui, 0); b.addOffset(9, p, 0); b.addOffset(11, resource, 0)
         b.finish(b.endTable()); return b.sizedByteArray()
     }
-    private fun ack(path: String = ClusterThemePolicy.HOST_DIRECTORY + name, kind: Int = 2): ByteArray {
+    private fun ack(path: String = ClusterThemePolicy.HOST_DIRECTORY + name, kind: Int = 2, error: Int = 0): ByteArray {
         val b = FlatBufferBuilder(512); val p = b.createString(path)
-        b.startTable(13); b.addInt(0, 1005, 0); b.addInt(2, kind, 0); b.addOffset(7, p, 0)
+        b.startTable(13); b.addInt(0, 1005, 0); b.addInt(2, kind, 0); b.addInt(4, error, 0); b.addOffset(7, p, 0)
         b.finish(b.endTable()); return b.sizedByteArray()
     }
     private inner class Fixture : ClusterThemeIviExchange.Transport {
@@ -25,6 +25,7 @@ class ClusterThemeIviExchangeTest {
         var closed = false
         var alive = true
         var identityCount = 0
+        var onIdentity: ((Int) -> Unit)? = null
         var identityFailAt = Int.MAX_VALUE
         var carrierValid = true
         var checks = 0
@@ -35,7 +36,7 @@ class ClusterThemeIviExchangeTest {
         var ackKind = 2
         var ackPath = ClusterThemePolicy.HOST_DIRECTORY + name
         var customSend: ((ClusterThemeProtocol.Response) -> Unit)? = null
-        override fun verifyIdentity() { check(++identityCount < identityFailAt) { "Java APK changed" } }
+        override fun verifyIdentity() { identityCount++; onIdentity?.invoke(identityCount); check(identityCount < identityFailAt) { "Java APK changed" } }
         override fun alive() = alive
         override fun register(receiver: (Int, ByteArray) -> Unit): Int { this.receiver = receiver; return 0 }
         override fun send(bytes: ByteArray): Int {
@@ -96,6 +97,84 @@ class ClusterThemeIviExchangeTest {
         }
         val result = f.run(); assertNotNull(result.error); assertTrue(result.error!!.contains("ACK3"))
         assertEquals(1, f.sent.count { it.cmd == 5 }); assertTrue(result.attempted)
+    }
+    @Test fun `restore ACK3 SAME retains its code and one read only postquery without retrying mutation`() {
+        val f = Fixture(); f.baseline = f.afterLoad
+        f.customSend = { request ->
+            if (request.cmd == 1) { f.queryCount++; f.receiver!!(1000, f.baseline) }
+            else f.receiver!!(1000, ack(kind = 3, error = 0x2330))
+        }
+        val result = f.run("restore")
+        assertEquals(0, result.native); assertTrue(result.attempted)
+        assertTrue(result.error!!.contains("RESOURCE_IS_SAME")); assertTrue(result.error!!.contains("0x2330"))
+        assertTrue(result.error!!.contains("9008")); assertEquals(listOf(1, 5, 1), f.sent.map { it.cmd })
+        assertTrue(ClusterThemeProtocol.decode(result.postQueryResponses.last()).selected(name))
+        assertTrue(result.trace.any { "resource-response" in it && "0x2330" in it })
+        assertTrue(f.closed)
+    }
+    @Test fun `negative ACK followed by default selection is still a failed restore`() {
+        val f = Fixture(); f.baseline = f.afterLoad
+        f.customSend = { request ->
+            if (request.cmd == 1) f.receiver!!(1000, if (++f.queryCount == 1) f.baseline else selection())
+            else f.receiver!!(1000, ack(kind = 3, error = 0x232e))
+        }
+        val result = f.run("restore")
+        assertNotNull(result.error); assertTrue(result.error!!.contains("RESOURCE_REGISTER_FAILED"))
+        assertTrue(ClusterThemeProtocol.decode(result.postQueryResponses.last()).isDefault())
+        assertEquals(listOf(1, 5, 1), f.sent.map { it.cmd })
+    }
+    @Test fun `failed read after ACK3 preserves numeric error and never reconnects or retries`() {
+        for (malformed in listOf(false, true)) {
+            val f = Fixture(); f.baseline = f.afterLoad
+            f.customSend = { request ->
+                if (request.cmd == 1) {
+                    if (++f.queryCount == 1) f.receiver!!(1000, f.baseline)
+                    else if (malformed) f.receiver!!(1000, ByteArray(9))
+                } else f.receiver!!(1000, ack(kind = 3, error = 0x2330))
+            }
+            val result = f.run("restore")
+            assertTrue(result.error!!.contains("0x2330")); assertTrue(result.error!!.contains("RESOURCE_IS_SAME"))
+            assertTrue(result.postQueryResponses.isEmpty()); assertEquals(listOf(1, 5, 1), f.sent.map { it.cmd })
+        }
+    }
+    @Test fun `ACK3 before mutation still refuses admission`() {
+        val f = Fixture(); f.customSend = {
+            f.receiver!!(1000, selection()); f.receiver!!(1000, ack(kind = 3, error = 0x2331))
+        }
+        val result = f.run(); assertFalse(result.attempted)
+        assertTrue(result.error!!.contains("RESOURCE_NOT_FOUND")); assertEquals(listOf(1), f.sent.map { it.cmd })
+    }
+    @Test fun `only sealed validated SAME plus persisted own selection exposes retirement eligibility`() {
+        val f = Fixture(); f.baseline = selection(0, ClusterThemePolicy.HOST_DIRECTORY + name)
+        f.customSend = { request ->
+            if (request.cmd == 1) f.receiver!!(1000, f.baseline)
+            else f.receiver!!(1000, ack("", 3, 0x2330))
+        }
+        val result = f.run("restore")
+        assertTrue(result.retirementEligible); assertNotNull(result.error); assertEquals(3, f.identityCount)
+        assertEquals(listOf(1, 5, 1), f.sent.map { it.cmd })
+        // Callback lease is sealed; a callback after the receipt cannot reopen admission.
+        f.receiver!!(2000, ByteArray(9)); assertTrue(result.retirementEligible)
+    }
+    @Test fun `late callback conflicts bad UID malformed identity death and expiry deny SAME eligibility`() {
+        for (fault in 0..5) {
+            val f = Fixture(); f.baseline = selection(0, ClusterThemePolicy.HOST_DIRECTORY + name)
+            f.customSend = { request ->
+                if (request.cmd == 1) f.receiver!!(1000, f.baseline)
+                else f.receiver!!(1000, ack("", 3, 0x2330))
+            }
+            f.onIdentity = { count -> if (count == 3) when (fault) {
+                0 -> f.receiver!!(2000, ByteArray(9))
+                1 -> f.receiver!!(1000, ByteArray(9))
+                2 -> f.receiver!!(1000, selection())
+                3 -> f.alive = false
+                4 -> f.identityFailAt = 3
+                5 -> f.time = 7000
+            } }
+            val result = f.run("restore")
+            assertFalse("fault=$fault", result.retirementEligible); assertNotNull(result.error)
+            assertEquals(1, f.sent.count { it.cmd == 5 }); assertTrue(f.closed)
+        }
     }
     @Test fun `post-query must identify exact host path not Android alias`() {
         val f = Fixture(); f.afterLoad = selection(0, ClusterThemePolicy.ANDROID_DIRECTORY + name)

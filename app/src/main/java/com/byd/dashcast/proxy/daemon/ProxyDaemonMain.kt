@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "36"
+    private const val PROTOCOL_VERSION = "37"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -832,12 +832,13 @@ object ProxyDaemonMain {
                                         else com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST)
                                 } catch (error: Throwable) { runCatching { source.close() }; throw error }
                             }
-                            13 -> {
+                            13, 14 -> {
                                 val nonce = data.readString() ?: ""
                                 val parked = data.readInt() == 1; val firmware = data.readInt() == 1
                                 val validity = data.readStrongBinder() ?: error("Missing RCC recovery reservation")
                                 check(data.dataAvail() == 0)
-                                ClusterThemeLiveTest.requestAndroidRestore(nonce, parked, firmware, validity)
+                                if (operation == 14) ClusterThemeLiveTest.requestAndroidRetirement(nonce, parked, firmware, validity)
+                                else ClusterThemeLiveTest.requestAndroidRestore(nonce, parked, firmware, validity)
                             }
                             10 -> {
                                 val nonce = data.readString() ?: ""

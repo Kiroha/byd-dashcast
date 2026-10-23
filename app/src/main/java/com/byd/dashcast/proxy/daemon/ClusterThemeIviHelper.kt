@@ -62,6 +62,7 @@ object ClusterThemeIviHelper {
                 println("DASHCAST_IVI_STEP=epochMs=${System.currentTimeMillis()} $it"); System.out.flush()
             }
             result.put("native", receipt.native).put("queryNative", receipt.queryNative).put("attempted", receipt.attempted)
+                .put("retirementEligible", receipt.retirementEligible)
                 .put("raw", JSONArray(receipt.responses.map { Base64.encodeToString(it, Base64.NO_WRAP) }))
                 .put("postQueryRaw", JSONArray(receipt.postQueryResponses.map { Base64.encodeToString(it, Base64.NO_WRAP) }))
                 .put("trace", JSONArray(receipt.trace)).put("callbackCorrelation", "UNAVAILABLE")

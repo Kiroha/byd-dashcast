@@ -754,14 +754,18 @@
     <string name="diag_cluster_rcc_marker_button">Праверыць маркер RCC (рэкамендуецца)</string>
     <string name="diag_cluster_rcc_ivi_title">Рэсурсы RCC — эксперыментальны тэст IVI</string>
     <string name="diag_cluster_rcc_ivi_help">Пачніце з маркера. Для тэмы ўручную выберыце Full і начны рэжым. Рэжымы аўтаматычна не змяняюцца.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Патрэбныя заяўленая прашыўка 13.1.33.2602030.1, Android 10, пацверджаны DiLink 3 і дэман 36. Усталяваны Java-мост правераны; ідэнтычнасць натыўнай панэлі невядомая.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Патрэбныя заяўленая прашыўка 13.1.33.2602030.1, Android 10, пацверджаны DiLink 3 і дэман 37. Усталяваны Java-мост правераны; ідэнтычнасць натыўнай панэлі невядомая.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">Перазагружае рэсурсы BYD з пасіўным маркерам, захоўваючы код прыбораў і папярэджанняў. Выяву і аднаўленне трэба праверыць у машыне. Захоўвайце доступ да гэтага экрана. Праз 30 секунд запытваюцца стандартныя рэсурсы, калі сеанс даступны. Пацвердзіце аднаўленне візуальна; перазапуск яго не гарантуе.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Перад тэстам выберыце Full і начны рэжым. RCC захоўвае код прыбораў і папярэджанняў і мяняе фон. Чытальнасць і аднаўленне праверце ў машыне. Захоўвайце доступ да экрана. Праз 30 секунд запытваюцца стандартныя рэсурсы, калі сеанс даступны. Затым пацвердзіце вынік. Перазапуск не гарантуе аднаўленне.</string>
     <string name="diag_cluster_rcc_ivi_send">Адправіць тэст RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Запытвае стандартныя рэсурсы RCC без змены рэжыму праекцыі. Адказ OEM і бачнае аднаўленне правяраюцца асобна; затым пацвердзіце ўбачанае. Без перазапуску і аўтаматычнага новага тэсту.</string>
-    <string name="diag_cluster_rcc_debt">Тэст RCC яшчэ не закрыты. Націсніце «Аднавіць рэсурсы RCC BYD», агледзьце панэль і адкажыце ва ўсплывальным акне.</string>
+    <string name="diag_cluster_rcc_debt">Тэст RCC яшчэ не закрыты. Націсніце «Аднавіць рэсурсы RCC BYD / Праверыць вяртанне BYD», агледзьце панэль і адкажыце ва ўсплывальным акне.</string>
     <string name="diag_cluster_rcc_ivi_platform">Тэст адхілены: патрэбныя Android 10 і пацверджанае выяўленне DiLink 3. RCC не адпраўлены.</string>
     <string name="diag_cluster_page_title">Панэль: праекцыя і RCC</string>
     <string name="diag_cluster_page_description">Праекцыя BYD з палосамі, маркер і тэма RCC</string>
     <string name="diag_cluster_native_rcc_blocked">Праекцыя BYD заблакаваная тэстам RCC</string>
+    <string name="diag_cluster_rcc_retire_button">Падрыхтаваць вяртанне BYD пасля памылкі RCC</string>
+    <string name="diag_cluster_rcc_retire_confirm">Перамяшчае толькі наш тэставы RCC у новую папку і захоўвае яго байты. Не адпраўляе загрузку ці перазапуск OEM. Выява можа не змяніцца да сапраўднай паўторнай ініцыялізацыі панэлі BYD. Перападключэння дэмана Android недастаткова. Потым націсніце «Праверыць вяртанне BYD» і пацвердзіце зыходны экран. Іншыя тэсты пакуль заблакаваныя.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Вяртанне BYD падрыхтавана — чаканне панэлі. Уручную паўторна ініцыялізуйце панэль OEM, потым націсніце «Праверыць вяртанне BYD». Праверка толькі чытае выбар і захаваны файл. Перападключэнне Android ці дэмана не даказвае перазапуск панэлі. Потым візуальна пацвердзіце прыборы і індыкатары BYD.</string>
+    <string name="diag_cluster_rcc_verify_return">Праверыць вяртанне BYD</string>
 </resources>

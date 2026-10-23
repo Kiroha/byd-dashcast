@@ -770,14 +770,18 @@
     <string name="diag_cluster_rcc_marker_button">Test RCC marker (recommended)</string>
     <string name="diag_cluster_rcc_ivi_title">RCC resources — experimental IVI test</string>
     <string name="diag_cluster_rcc_ivi_help">Start with the marker. For the theme, select Full and night manually. No mode changes automatically.</string>
-    <string name="diag_cluster_rcc_ivi_identity">Declared firmware 13.1.33.2602030.1, Android 10, positively detected DiLink 3 and daemon 36 required. Installed Java bridge verified; native cluster identity unknown.</string>
+    <string name="diag_cluster_rcc_ivi_identity">Declared firmware 13.1.33.2602030.1, Android 10, positively detected DiLink 3 and daemon 37 required. Installed Java bridge verified; native cluster identity unknown.</string>
     <string name="diag_cluster_rcc_ivi_marker_confirm">This reloads BYD resources with a passive marker while retaining instrument and warning code. Rendering and recovery still require vehicle verification. Keep this screen available. Default resources are requested after 30 seconds if the session remains available; visually confirm recovery. Restarting does not guarantee restoration.</string>
     <string name="diag_cluster_rcc_ivi_theme_confirm">Select Full and night before testing. The RCC retains instrument and warning code and changes the background. Legibility and recovery require vehicle verification. Keep this screen available. Default resources are requested after 30 seconds if the session remains available; then confirm what you see. Restarting does not guarantee restoration.</string>
     <string name="diag_cluster_rcc_ivi_send">Send RCC test</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">This requests the default RCC resources. It does not change projection mode. The OEM reply and visible recovery are checked separately; then confirm what you see. No restart or automatic new test.</string>
-    <string name="diag_cluster_rcc_debt">An RCC test still needs closing. Use “Restore BYD RCC resources”, then answer the popup after inspecting the cluster.</string>
+    <string name="diag_cluster_rcc_debt">An RCC test still needs closing. Use “Restore BYD RCC resources / Verify BYD return”, then answer the popup after inspecting the cluster.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test refused: Android 10 and positive DiLink 3 detection required. No RCC sent.</string>
     <string name="diag_cluster_page_title">Cluster: projection and RCC</string>
     <string name="diag_cluster_page_description">BYD projection with bars, RCC marker and theme</string>
     <string name="diag_cluster_native_rcc_blocked">BYD projection blocked by an RCC test</string>
+    <string name="diag_cluster_rcc_retire_button">Prepare BYD return after RCC error</string>
+    <string name="diag_cluster_rcc_retire_confirm">Moves only our test RCC into a new folder and preserves its bytes. Sends no load or OEM restart. Graphics may stay unchanged until BYD genuinely reinitializes the cluster. Reconnecting the Android daemon is insufficient. Then press “Verify BYD return” and confirm the original display. Other tests remain blocked until then.</string>
+    <string name="diag_cluster_rcc_retired_waiting">BYD return prepared — waiting for the cluster. Manually reinitialize the OEM cluster, then press “Verify BYD return”. Verification only reads the selection and our preserved file. Reconnecting Android or the daemon does not prove a cluster restart. Then visually confirm the BYD instruments and telltales.</string>
+    <string name="diag_cluster_rcc_verify_return">Verify BYD return</string>
 </resources>

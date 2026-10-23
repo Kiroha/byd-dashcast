@@ -9,7 +9,7 @@ internal enum class ClusterThemeTransport(val id: String) {
             require(schema is Int || schema is Long) { "Journal schema must be an integer" }
             return when ((schema as Number).toLong()) {
                 1L, 2L -> { require(transport == null); STRICT_RENDERER }
-                3L -> { require(transport == ANDROID_IVI.id); ANDROID_IVI }
+                3L, 4L -> { require(transport == ANDROID_IVI.id); ANDROID_IVI }
                 else -> error("Unknown transport journal schema")
             }
         }

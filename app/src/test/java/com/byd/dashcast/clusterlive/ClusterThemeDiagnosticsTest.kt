@@ -46,6 +46,21 @@ class ClusterThemeDiagnosticsTest {
         assertTrue(report.contains("oemQueryNativeIdentity\":\"UNKNOWN"))
         assertTrue(report.contains("selection observation only")); assertTrue(report.contains("REFUSED"))
     }
+    @Test fun `decoded OEM negative code and read after failure survive historical export without raw payloads`() {
+        val negative = ClusterThemeProtocol.Response(1005, 0, listOf(3, 0, 0x2330, 0, 0), List(5) { "" })
+        ClusterThemeDiagnostics.received(app, "android-ivi-restore", "connection1", status("QUARANTINE",
+            "Default recovery is unconfirmed. ${negative.resourceFailureSummary()}", "OPAQUE BASE64 PAYLOAD")
+            .put("trace", "resource-response ${negative.resourceFailureSummary()}\nselection-received path=default")
+            .put("transport", "android-ivi").put("rccDebt", true).put("journalSchema", "4").put("carrierIdentity", "device=39 inode=27308")
+            .put("retirementAvailable", false).put("retirement", ClusterThemeRetirement(".dashcast-retired-" + "b".repeat(32), 39, 99, true).json()).toString())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        assertTrue(report.contains("RESOURCE_IS_SAME")); assertTrue(report.contains("0x2330"))
+        assertTrue(report.contains("9008")); assertTrue(report.contains("selection-received path=default"))
+        assertTrue(report.contains("rccDebt\":true")); assertFalse(report.contains("OPAQUE BASE64 PAYLOAD"))
+        assertTrue(report.contains("journalSchema\":\"4")); assertTrue(report.contains("device=39 inode=27308"))
+        assertTrue(report.contains(".dashcast-retired-")); assertTrue(report.contains("retirementAvailable\":false"))
+    }
 
     @Test fun `unchanged polls ignore countdown and operation but changed detail state or raw are retained`() {
         val first = status().put("remainingMs", 30000)

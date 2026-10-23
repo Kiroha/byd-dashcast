@@ -106,7 +106,7 @@ class ClusterThemeIviRecoveryTest {
                 data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(0, data.readInt())
                 reply!!.writeNoException(); reply.writeString(safe.toString()); return true
             }
-        }); versionField.set(null, "36")
+        }); versionField.set(null, "37")
         try { ClusterThemeSession.pin(app).status(); assertFalse(ClusterThemeProjectionDebt.blocked(app)) }
         finally { binderField.set(null, prior); versionField.set(null, version) }
     }
@@ -141,6 +141,20 @@ class ClusterThemeIviRecoveryTest {
         assertTrue(cases[0].second.isEmpty()); assertTrue(cases[1].second.isEmpty())
         assertEquals(listOf(1), cases[2].second)
     }
+    @Test fun `ACK3 with a fresh default query retains recovery debt and exposes its numeric cause`() {
+        val negative = ClusterThemeProtocol.Response(1005, 0, listOf(3, 0, 0x2330, 0, 0), List(5) { "" })
+        val restored = ClusterThemeLiveTest.Exchange(0, default, listOf(negative), true,
+            negative.resourceFailureSummary(), true)
+        ClusterThemeLiveTest.recordRestoreResult(own, restored, false)
+        val receipt = status()
+        assertEquals("QUARANTINE", receipt.getString("state")); assertTrue(receipt.getBoolean("rccDebt"))
+        assertFalse(receipt.getBoolean("defaultQueried")); assertFalse(receipt.getBoolean("iviRecoverySettled"))
+        assertTrue(receipt.getString("detail").contains("RESOURCE_IS_SAME"))
+        assertTrue(receipt.getString("detail").contains("0x2330"))
+        assertFalse(ClusterThemeLiveTest.acceptOemObservation(name))
+        ClusterThemeLiveTest.completeRecovery({ fail("Negative OEM recovery cannot delete its carrier"); false }, {})
+        assertTrue(status().getBoolean("rccDebt"))
+    }
     @Test fun `cleanup failure preserves ordered proof but requires a fresh query and OEM answer on retry`() {
         val (restored, _) = exchange()
         ClusterThemeLiveTest.recordRestoreResult(own, restored, false)
@@ -162,5 +176,56 @@ class ClusterThemeIviRecoveryTest {
         val (restored, _) = exchange()
         ClusterThemeLiveTest.recordRestoreResult(own, restored, false)
         assertFalse(status().getBoolean("iviRecoverySettled")); assertEquals("QUARANTINE", status().getString("state"))
+    }
+    private fun retiredJournal(moved: Boolean = true) = journal().put("schema", 4).put("retirement",
+        ClusterThemeRetirement(".dashcast-retired-" + "b".repeat(32), 39, 99999, moved).json())
+    @Test fun `retired recovery queries only then needs a new matching OEM observation to close original nonce`() {
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(retiredJournal()))
+        assertEquals("QUARANTINE", status().getString("state")); assertTrue(status().getBoolean("rccDebt"))
+        assertFalse(status().getBoolean("retirementAvailable")); assertFalse(ClusterThemeLiveTest.acceptOemObservation(name))
+        val (queried, mutations) = exchange(default, operation = "query")
+        assertTrue(mutations.isEmpty()); ClusterThemeLiveTest.recordRetiredQuery(queried)
+        assertEquals("DEFAULT_QUERIED", status().getString("state")); assertTrue(status().getBoolean("rccDebt"))
+        var preservationChecks = 0
+        ClusterThemeLiveTest.completeRecovery({ preservationChecks++; true }, {})
+        assertEquals(0, preservationChecks)
+        assertFalse(ClusterThemeLiveTest.acceptOemObservation(name.replace("a231", "bbbb")))
+        assertTrue(ClusterThemeLiveTest.acceptOemObservation(name))
+        ClusterThemeLiveTest.completeRecovery({ preservationChecks++; true }, {})
+        assertEquals(1, preservationChecks); assertEquals("CLEAN", status().getString("state"))
+        assertFalse(status().getBoolean("rccDebt")); assertEquals(nonce, status().getString("rccSafeNonce"))
+        assertTrue(status().getJSONObject("retirement").getBoolean("moved"))
+        assertTrue(status().getString("detail").contains("preserved unchanged"))
+    }
+    @Test fun `retired own foreign unknown and failed queries retain debt and incomplete intent cannot mint proof`() {
+        val foreign = own.copy(strings = own.strings.toMutableList().apply { set(2, "foreign.rcc") })
+        for (result in listOf(ClusterThemeLiveTest.Exchange(0, own, emptyList(), false),
+            ClusterThemeLiveTest.Exchange(0, foreign, emptyList(), false),
+            ClusterThemeLiveTest.Exchange(0, default, emptyList(), true, "callback invalid"),
+            ClusterThemeLiveTest.Exchange(-1, default, emptyList(), false))) {
+            ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(retiredJournal()))
+            ClusterThemeLiveTest.recordRetiredQuery(result)
+            assertFalse(status().getBoolean("defaultQueried")); assertFalse(status().getBoolean("iviRecoverySettled"))
+            assertTrue(status().getBoolean("rccDebt")); assertFalse(ClusterThemeLiveTest.acceptOemObservation(name))
+        }
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(retiredJournal(false)))
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.recordRetiredQuery(ClusterThemeLiveTest.Exchange(0, default, emptyList(), false)) }
+        assertTrue(status().getBoolean("rccDebt"))
+    }
+    @Test fun `retirement cannot be admitted without a sealed negative receipt or while another lane is active`() {
+        val same = ClusterThemeProtocol.Response(1005, 0, listOf(3, 0, 0x2330, 0, 0), List(5) { "" })
+        val persisted = own.copy(ints = listOf(1, 0, 0, 0, 0))
+        val invalid = ClusterThemeLiveTest.Exchange(0, persisted, listOf(same), true, "SAME and invalid callback", true)
+        ClusterThemeLiveTest.recordRestoreResult(persisted, invalid, false)
+        assertFalse(status().getBoolean("retirementAvailable"))
+        val valid = invalid.copy(retirementEligible = true)
+        ClusterThemeLiveTest.recordRestoreResult(persisted, valid, false)
+        assertTrue(status().getBoolean("retirementAvailable"))
+        (field("queryActive").get(null) as AtomicBoolean).set(true)
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, Binder()) }
+        (field("queryActive").get(null) as AtomicBoolean).set(false)
+        set("retirementEligibleUntil", 0L)
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, Binder()) }
+        assertEquals("QUARANTINE", status().getString("state"))
     }
 }
