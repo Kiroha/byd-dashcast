@@ -17,6 +17,8 @@ class ProjectionAdasPlanTest {
         var journalReply: ((Boolean) -> Unit)? = null
         var available = true
         var initialized = 0
+        val initializedAt = mutableListOf<Long>()
+        var initializationFails = false
         var frameFailure = false
         var delayedFrame: (() -> Unit)? = null
         var holdNext = false
@@ -27,8 +29,8 @@ class ProjectionAdasPlanTest {
             if (holdJournal) { holdJournal = false; journalReply = done } else done(saved)
         }
         override fun initialize(valid: () -> Boolean, done: (Boolean) -> Unit) {
-            if (valid()) initialized++
-            done(valid())
+            if (valid()) { initialized++; initializedAt += now }
+            done(valid() && !initializationFails)
         }
         override fun command(code: Int, valid: () -> Boolean, done: (Boolean) -> Unit) {
             if (valid()) commands += now to code
@@ -56,16 +58,32 @@ class ProjectionAdasPlanTest {
         val expected = List(3) { ProjectionAdasPlan.HIDE } +
             ProjectionAdasPlan.PHASES.flatMap { (frame, count) -> List(count) { frame } }
         assertEquals(expected, io.frames)
-        assertEquals(listOf(0L to 13, 500L to 18, 1000L to 0), io.commands)
+        assertEquals(listOf(0L to 13), io.commands)
     }
-    @Test fun `post layout retains nominal timing and supersedes the earlier followup`() {
+    @Test fun `one confirmation starts five seconds after the completed pass without layout commands`() {
         val io = Fake(); val plan = ProjectionAdasPlan(io)
-        plan.start(); io.until(30000)
-        assertEquals(listOf(0L to 13, 500L to 18, 1000L to 0, 2000L to 16,
-            3000L to 35, 3000L to 13, 16000L to 13), io.commands)
-        assertEquals(263 * 3, io.frames.size)
+        plan.start(); io.until(5_999)
+        assertEquals(listOf(0L to 13), io.commands)
+        assertEquals(263, io.frames.size)
+        io.until(30_000)
+        assertEquals(listOf(0L to 13, 6_000L to 13), io.commands)
+        assertEquals(263 * 2, io.frames.size)
     }
-    @Test fun `journal failure prevents every command including layout`() {
+    @Test fun `a slow pass completes before confirmation and queued power transitions coalesce`() {
+        val io = Fake().apply { holdNext = true }; val plan = ProjectionAdasPlan(io)
+        plan.start(2); io.until(1_000)
+        plan.observe(3, 102, false, 1_000)
+        io.until(10_000)
+        assertTrue(io.frames.isEmpty())
+        assertEquals(listOf(0L to 13), io.commands)
+        io.delayedFrame!!(); io.until(14_999)
+        assertEquals(263, io.frames.size)
+        assertEquals(listOf(0L to 13), io.commands)
+        io.until(30_000)
+        assertEquals(listOf(0L to 13, 15_000L to 13), io.commands)
+        assertEquals(263 * 2, io.frames.size)
+    }
+    @Test fun `journal failure prevents every command and confirmation`() {
         val io = Fake().apply { saved = false }; val plan = ProjectionAdasPlan(io)
         plan.start(); io.until(60000)
         assertTrue(io.frames.isEmpty()); assertTrue(io.commands.isEmpty()); assertEquals(0, io.initialized)
@@ -90,10 +108,10 @@ class ProjectionAdasPlanTest {
         plan.start(); io.until(1000)
         var restored: Boolean? = null
         plan.restore { restored = it }
-        io.delayedFrame!!(); io.until(2200)
+        io.delayedFrame!!(); io.until(3200)
         assertEquals(List(40) { ProjectionAdasPlan.RESTORE }, io.frames)
         assertEquals(true, restored)
-        assertEquals(listOf(1000L to 12, 2200L to 53), io.commands.takeLast(2))
+        assertEquals(listOf(2000L to 12, 3200L to 53), io.commands.takeLast(2))
         io.until(30000)
         assertEquals(40, io.frames.size)
     }
@@ -104,22 +122,22 @@ class ProjectionAdasPlanTest {
         plan.cancel(); plan.start(); old(); io.until(2000)
         assertEquals(263, io.frames.size)
     }
-    @Test fun `failure permits only the one bounded retry`() {
+    @Test fun `uncertain delivery failure never schedules a confirmation replay`() {
         val io = Fake().apply { frameFailure = true }; val plan = ProjectionAdasPlan(io)
         plan.start(); io.until(60000)
-        assertEquals(3, io.commands.count { it.second == 13 })
+        assertEquals(1, io.commands.count { it.second == 13 })
         assertTrue(io.frames.isEmpty())
     }
     @Test fun `initial raw power snapshot does not manufacture a state transition`() {
         val io = Fake(); val plan = ProjectionAdasPlan(io)
         plan.start(3); plan.observe(3, 102, false, 0); io.until(5000)
-        assertEquals(2, io.commands.count { it.second == 13 })
+        assertEquals(1, io.commands.count { it.second == 13 })
     }
     @Test fun `lost transition is not replayed after four seconds`() {
         val io = Fake(); val plan = ProjectionAdasPlan(io)
         plan.start(2); plan.observe(3, 102, false, 0)
         plan.observe(null, 102, false, 1); io.until(5000)
-        assertEquals(2, io.commands.count { it.second == 13 })
+        assertEquals(1, io.commands.count { it.second == 13 })
     }
     @Test fun `periodic keepalive requires both valid raw power and platform`() {
         val io = Fake(); val plan = ProjectionAdasPlan(io)
@@ -151,19 +169,43 @@ class ProjectionAdasPlanTest {
         assertEquals(listOf(true), delivered)
         io.until(30000)
         assertEquals(listOf(true), delivered)
-        assertEquals(263 * 3, io.frames.size)
+        assertEquals(263 * 2, io.frames.size)
     }
-    @Test fun `superseded batch cannot settle explicit delivery or emit its late frame`() {
+    @Test fun `a slow batch retains delivery authority until cancelled rather than being superseded`() {
         val io = Fake().apply { holdNext = true }; val plan = ProjectionAdasPlan(io)
         val delivered = mutableListOf<Boolean>()
-        plan.start(delivered = delivered::add); io.until(1000)
+        plan.start(delivered = delivered::add); io.until(1_000)
         val stale = io.delayedFrame!!
-        io.until(4000)
-        assertEquals(listOf(true), delivered)
-        val count = io.frames.size
-        stale()
-        assertEquals(count, io.frames.size)
-        assertEquals(listOf(true), delivered)
+        io.until(10_000)
+        assertTrue(delivered.isEmpty())
+        plan.cancel(); stale(); io.until(30_000)
+        assertTrue(io.frames.isEmpty())
+        assertTrue(delivered.isEmpty())
+    }
+    @Test fun `restoration initializes service and waits one second before sending any frame`() {
+        val io = Fake(); val plan = ProjectionAdasPlan(io)
+        var restored: Boolean? = null
+        plan.restore { restored = it }
+        assertEquals(listOf(0L), io.initializedAt)
+        io.until(999)
+        assertTrue(io.frames.isEmpty()); assertTrue(io.commands.isEmpty()); assertNull(restored)
+        io.until(1_000)
+        assertEquals(List(40) { ProjectionAdasPlan.RESTORE }, io.frames)
+        assertEquals(listOf(1_000L to 12), io.commands)
+        io.until(2_200)
+        assertEquals(listOf(1_000L to 12, 2_200L to 53), io.commands)
+        assertEquals(true, restored)
+    }
+    @Test fun `failed restore initialization or lost proof during its delay emits no restore writes`() {
+        for (initializationFailure in listOf(false, true)) {
+            val io = Fake().apply { initializationFails = initializationFailure }
+            val plan = ProjectionAdasPlan(io)
+            var result: Boolean? = null
+            plan.restore { result = it }
+            io.available = false; io.until(30_000)
+            assertEquals(false, result)
+            assertTrue(io.frames.isEmpty()); assertTrue(io.commands.isEmpty())
+        }
     }
     @Test fun `failed initial delivery is not reported as sent`() {
         for (journalFailure in listOf(false, true)) {

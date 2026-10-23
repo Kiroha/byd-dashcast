@@ -2106,8 +2106,10 @@ android {
         // 705 = 1.9.66-beta: separate guarded corner RCC proof and timestamped resource evidence.
         // 708 = 1.9.69-beta: guided RCC recovery outcomes and bounded helper readiness; protocol 40.
         // 709 = 1.9.70-beta: source-qualified RCC observations and current-cohort diagnostics only.
-        versionCode 709
-        versionName "1.9.70-beta"
+        // 710 = 1.9.71-beta: projection ownership/readiness and serialized ADAS recovery on the RCC70 base.
+        // 711 is reserved for the bundled 1.9.70 recovery APK (1.9.71-rc1); future releases require >=712.
+        versionCode 710
+        versionName "1.9.71-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
