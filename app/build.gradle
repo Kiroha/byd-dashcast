@@ -2111,8 +2111,11 @@ android {
         // 712 = 1.9.72-beta: manual exact-cohort native dashboard and guided Cluster Diag.
         // Refresh persistent daemons and use ProxyDaemon protocol 42. Preserve OEM instruments/ADAS
         // and independent recovery; verify the factory profile before replacing this experimental build.
-        versionCode 712
-        versionName "1.9.72-beta"
+        // 713 = 1.9.73-beta: bootstrap the factory projection before validating its virtual
+        // display and selecting the custom dashboard RCC. ProxyDaemon protocol 43 keeps
+        // bootstrap-only recovery separate and refuses unknown/small/ambiguous targets.
+        versionCode 713
+        versionName "1.9.73-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
