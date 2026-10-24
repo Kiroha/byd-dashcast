@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">لوحة DashCast</string>
-    <string name="diag_cluster_dashboard_help">اختبار يدوي أثناء التوقف. تبقى عدادات BYD وتنبيهاتها. يظل الملف محدداً بعد الإغلاق. استعد ملف المصنع وتحقق من عودته قبل تثبيت APK أقدم.</string>
+    <string name="diag_cluster_dashboard_help">اختبار يدوي أثناء التوقف. يظل الملف محدداً بعد الإغلاق. استعد ملف المصنع وتحقق من عودته قبل تثبيت APK أقدم.</string>
     <string name="diag_cluster_dashboard_read">1 · قراءة الحالة والتوافق</string>
     <string name="diag_cluster_dashboard_prepare">2 · تحضير اللوحة</string>
     <string name="diag_cluster_dashboard_choose_app">3 · اختيار التطبيق</string>
@@ -30,5 +30,11 @@
     <string name="diag_cluster_dashboard_small_panel">تم رصد لوحة عدادات صغيرة: رُفض الاختبار. تبقى استعادة BYD متاحة.</string>
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">أغلق عرض BYD المؤقت وتحقق من اختيار المصنع. لم يتم اختيار RCC مخصص. ثم أكد عودة العدادات والتنبيهات.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">قد يفتح التحضير عرض BYD الأصلي مؤقتًا ويتحقق من شاشته قبل اختيار ملف RCC الخاص بنا. لا يبدأ أي تطبيق قبل الضغط على فتح. أكد التوقف والبرنامج الثابت؛ هذا الإقرار لا يقيس الحركة.</string>
-    <string name="diag_cluster_dashboard_protocol">يجب أن يستخدم daemon المتصل البروتوكول 43. أعد توصيله في DashCast قبل إعادة التحضير أو الفتح. لم يتم إرسال أمر BYD.</string>
+    <string name="diag_cluster_dashboard_protocol">يجب أن يستخدم daemon المتصل البروتوكول %1$d. أعد توصيله في DashCast قبل إعادة التحضير أو الفتح. لم يتم إرسال أمر BYD.</string>
+    <string name="diag_cluster_full_app_prepare">2ب · تجهيز التطبيق بملء الشاشة</string>
+    <string name="diag_cluster_full_app_help">اختبار يدوي والسيارة متوقفة. يستخدم التطبيق 1920 × 720. تُخفى أدوات BYD والسرعة وناقل الحركة والمؤشرات وحد السرعة والتنبيهات؛ ثم يعمل إخفاء ADAS الحالي بعد التشغيل. يعيد الإغلاق ADAS؛ ثم استعد ملف المصنع وتحقق من عودته. دون تشغيل تلقائي.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">تجهيز العرض بملء الشاشة. يؤدي الفتح إلى إخفاء أدوات BYD ومؤشراتها وتنبيهاتها ولوحة ADAS. أكد توقف السيارة وفحص البرنامج الثابت. تلزم الاستعادة الكاملة قبل APK أقدم.</string>
+    <string name="diag_cluster_factory_apply">تطبيق اختيار المصنع</string>
+    <string name="diag_cluster_factory_apply_confirm">ملف المصنع محدد بالفعل لكن تطبيقه الأصلي يحتاج إلى تحقق. نفذ انتقال عرض BYD مرة واحدة ثم أغلقه واقرأ الاختيار مجددًا. لن يُرسل RCC مخصص أو اختيار مصنع متكرر. أكد التوقف والبرنامج الثابت.</string>
+    <string name="diag_cluster_full_app_observe_message">أكد فقط إذا كان التطبيق يشغل كامل الشاشة وعناصر BYD المتوقعة مخفية. الأدوات والتنبيهات غائبة عمدًا في هذا العرض. إيصال الأمر لا يثبت العرض.</string>
 </resources>

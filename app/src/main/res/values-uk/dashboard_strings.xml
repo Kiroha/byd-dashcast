@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">Панель DashCast</string>
-    <string name="diag_cluster_dashboard_help">Ручний тест на стоянці. Прилади та попередження BYD зберігаються. Після закриття профіль залишається вибраним. Перед встановленням старого APK відновіть заводський профіль і перевірте результат.</string>
+    <string name="diag_cluster_dashboard_help">Ручний тест на стоянці. Після закриття профіль залишається вибраним. Перед встановленням старого APK відновіть заводський профіль і перевірте результат.</string>
     <string name="diag_cluster_dashboard_read">1 · Прочитати стан і сумісність</string>
     <string name="diag_cluster_dashboard_prepare">2 · Підготувати панель</string>
     <string name="diag_cluster_dashboard_choose_app">3 · Вибрати застосунок</string>
@@ -30,5 +30,11 @@
     <string name="diag_cluster_dashboard_small_panel">Виявлено малу панель приладів: тест відхилено. Відновлення BYD доступне.</string>
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Закрийте тимчасову проєкцію BYD і перевірте заводський вибір. Власний RCC не вибирався. Потім підтвердьте повернення приладів і попереджень.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Підготовка може тимчасово відкрити штатну проєкцію BYD і перевірити її екран перед вибором нашого RCC. Застосунок запускається лише після Відкрити. Підтвердьте стоянку та прошивку; ця заява не вимірює рух.</string>
-    <string name="diag_cluster_dashboard_protocol">Підключений daemon має використовувати протокол 43. Перепідключіть його в DashCast перед Підготувати або Відкрити. Команду BYD не надіслано.</string>
+    <string name="diag_cluster_dashboard_protocol">Підключений daemon має використовувати протокол %1$d. Перепідключіть його в DashCast перед Підготувати або Відкрити. Команду BYD не надіслано.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Підготувати повноекранний застосунок</string>
+    <string name="diag_cluster_full_app_help">Ручний тест на стоянці. Застосунок займає 1920 × 720. Прилади BYD, швидкість, передача, індикатори, обмеження та попередження приховані; після запуску працює наявне приховування ADAS. Закриття відновлює ADAS; потім відновіть і перевірте заводський профіль. Без автозапуску.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Підготувати повноекранну демонстрацію. Відкриття приховує прилади, індикатори й попередження BYD, а також ADAS. Підтвердьте стоянку та перевірку прошивки. Перед старою APK потрібне повне відновлення.</string>
+    <string name="diag_cluster_factory_apply">Застосувати заводський вибір</string>
+    <string name="diag_cluster_factory_apply_confirm">Заводський профіль налаштовано, але нативне застосування не підтверджено. Один раз перемкнути проєкцію BYD, закрити й знову прочитати вибір. Без власного RCC та повторного заводського вибору. Підтвердьте стоянку та прошивку.</string>
+    <string name="diag_cluster_full_app_observe_message">Підтвердьте лише якщо застосунок займає весь екран і потрібні елементи BYD приховані. Прилади й попередження навмисно відсутні в цій демонстрації. Квитанція не доводить відображення.</string>
 </resources>

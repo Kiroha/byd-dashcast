@@ -37,9 +37,13 @@ class ClusterThemeVariantTest {
         assertTrue(ClusterThemeVariant.CORNER_MARKER_21F7735C.isCorner)
         assertFalse(marker.isCorner); assertFalse(full.isCorner)
         assertFalse(ClusterThemeVariant.isCornerId("corner-marker-untrusted"))
-        assertEquals(5, ClusterThemeVariant.values().size)
+        assertEquals(6, ClusterThemeVariant.values().size)
         assertFalse(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isMarker)
         assertTrue(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isPersistent)
+        val app = ClusterThemeVariant.FULL_APP_21F7735C
+        assertTrue(app.isDashboard); assertTrue(app.isFullApp); assertTrue(app.isPersistent)
+        assertFalse(app.isMarker); assertEquals(24, app.startOperation); assertEquals(44, app.minimumProtocol)
+        assertEquals(ClusterDashboardProfile.Viewport(0, 0, 1920, 720), ClusterDashboardProfile.viewport(app))
     }
 
     @Test fun `journal schema types cannot be coerced from fractional or string values`() {

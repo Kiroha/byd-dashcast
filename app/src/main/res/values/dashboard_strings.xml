@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">Tableau de bord DashCast</string>
-    <string name="diag_cluster_dashboard_help">Essai manuel à l’arrêt. Les instruments et alertes BYD sont conservés. Après fermeture, le profil reste sélectionné. Restaure le profil usine et vérifie son retour avant de réinstaller un ancien APK.</string>
+    <string name="diag_cluster_dashboard_help">Essai manuel à l’arrêt. Après fermeture, le profil reste sélectionné. Restaure le profil usine et vérifie son retour avant de réinstaller un ancien APK.</string>
     <string name="diag_cluster_dashboard_read">1 · Lire l’état et la compatibilité</string>
     <string name="diag_cluster_dashboard_prepare">2 · Préparer le tableau de bord</string>
     <string name="diag_cluster_dashboard_choose_app">3 · Choisir l’application</string>
@@ -30,5 +30,11 @@
     <string name="diag_cluster_dashboard_small_panel">Petit combiné détecté : essai refusé. La restauration BYD reste disponible.</string>
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Ferme la projection BYD temporaire et vérifie la sélection usine. Aucun RCC personnalisé n’a été sélectionné. Confirme ensuite le retour des instruments et alertes.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">La préparation peut ouvrir temporairement la projection BYD d’origine, puis vérifier son écran avant de sélectionner notre RCC. Aucune application ne sera lancée avant Ouvrir. Confirme le stationnement et le firmware ; cette déclaration ne mesure pas le mouvement.</string>
-    <string name="diag_cluster_dashboard_protocol">Le daemon connecté doit utiliser le protocole 43. Reconnecte-le dans DashCast avant de relancer Préparer ou Ouvrir. Aucun ordre BYD envoyé.</string>
+    <string name="diag_cluster_dashboard_protocol">Le daemon connecté doit utiliser le protocole %1$d. Reconnecte-le dans DashCast avant de relancer Préparer ou Ouvrir. Aucun ordre BYD envoyé.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Préparer l’application plein écran</string>
+    <string name="diag_cluster_full_app_help">Essai manuel à l’arrêt. L’application utilise 1920 × 720. Les instruments BYD, vitesse, rapport, voyants, limite de vitesse et alertes sont masqués, ainsi que le volet ADAS par la méthode existante après le lancement. Fermer rétablit l’ADAS ; restaure ensuite le profil usine et vérifie son retour. Aucun lancement automatique.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Préparer la démonstration application plein écran. L’ouverture masquera les instruments, voyants et alertes BYD, ainsi que le volet ADAS. Confirme que la voiture est immobilisée et que le firmware est vérifié. Restauration complète obligatoire avant un ancien APK.</string>
+    <string name="diag_cluster_factory_apply">Appliquer la sélection usine</string>
+    <string name="diag_cluster_factory_apply_confirm">Le profil usine est déjà configuré mais son application native reste à confirmer. Exécuter une seule transition de projection BYD, puis la fermer et refaire une lecture. Aucun RCC personnalisé ni nouvelle sélection usine ne seront envoyés. Confirme le stationnement et le firmware.</string>
+    <string name="diag_cluster_full_app_observe_message">Confirme uniquement si l’application occupe tout le combiné et que les éléments BYD attendus sont masqués. Les instruments et alertes sont volontairement absents de cette démonstration. Un reçu ne prouve pas l’affichage.</string>
 </resources>

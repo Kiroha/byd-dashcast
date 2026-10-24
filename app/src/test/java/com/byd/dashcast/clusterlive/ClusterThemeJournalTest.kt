@@ -10,6 +10,21 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class ClusterThemeJournalTest {
+    @Test fun `full app ADAS recovery is durable and cannot coexist with a clean journal`() {
+        val variant = ClusterThemeVariant.FULL_APP_21F7735C
+        val dashboard = JSONObject().put("stage", "CLOSED_RECEIVED").put("nativeDebt", false)
+            .put("helperCommand", -1).put("helperPid", 0).put("helperStart", "").put("helperToken", "")
+        val state = journal().put("variant", variant.id).put("carrierSha256", variant.carrierSha256)
+            .put("dashboard", dashboard).put("fullAppAdas", JSONObject().put("debt", true).put("round", "b".repeat(32)))
+        val recovered = ClusterThemeJournal.recover(state)
+        assertTrue(recovered.fullAppAdasDebt); assertEquals("b".repeat(32), recovered.fullAppAdasRound)
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(state.toString()).put("state", "CLEAN")) }
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(state.toString()).put("fullAppAdas", JSONObject().put("debt", true).put("round", "foreign"))) }
+        state.getJSONObject("fullAppAdas").put("debt", false)
+        state.put("factoryApplyPending", true)
+        assertTrue(ClusterThemeJournal.recover(state).factoryApplyPending)
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(state.toString()).put("state", "CLEAN")) }
+    }
     private fun journal(schema: Int = 3) = JSONObject().put("schema", schema).put("state", "STAGING")
         .put("filename", ClusterThemePolicy.PREFIX + "a".repeat(32) + ".rcc")
         .put("mutated", false).put("helperPid", 0).put("helperStart", "").put("helperToken", "")

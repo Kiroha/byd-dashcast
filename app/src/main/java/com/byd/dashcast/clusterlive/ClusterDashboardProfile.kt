@@ -9,6 +9,13 @@ internal object ClusterDashboardProfile {
     const val APP_Y = 256
     const val APP_WIDTH = 752
     const val APP_HEIGHT = 320
+    data class Viewport(val x: Int, val y: Int, val width: Int, val height: Int)
+    private val dashboardViewport = Viewport(APP_X, APP_Y, APP_WIDTH, APP_HEIGHT)
+    private val fullAppViewport = Viewport(0, 0, WIDTH, HEIGHT)
+    fun viewport(variant: ClusterThemeVariant): Viewport {
+        require(variant.isDashboard) { "A closed dashboard profile is required" }
+        return if (variant.isFullApp) fullAppViewport else dashboardViewport
+    }
     const val COMMAND_GAP_MS = 1200L
     const val BOOTSTRAP_GAP_MS = 3000L
     const val DISPLAY_WAIT_MS = 15000L

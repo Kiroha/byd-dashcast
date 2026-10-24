@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.withLock
 
 /** Closed experiments sharing one ProxyDaemon journal/recovery lane. No OEM file is modified.
  * Status/restore calls do not wait on the command worker. A new daemon never replays a journal.
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger
 internal object ClusterThemeLiveTest {
     private val directory = File("/data/local/tmp/dashcast-cluster-live")
     private val journal = File(directory, "journal.json")
+    private val journalWriteLock = Any()
     private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-live-command").apply { isDaemon = true } }
     private val nativeMode = ClusterNativeModeTest(worker)
     private var productionModeCommands = 0
@@ -68,6 +70,20 @@ internal object ClusterThemeLiveTest {
     @Volatile private var dashboardSmallPanelSeen = false
     @Volatile private var dashboardGeometry = JSONObject()
     private val dashboardReadProbeActive = AtomicBoolean(false)
+    private val fullAppAdasLock = java.util.concurrent.locks.ReentrantLock()
+    private val fullAppAdasReads = java.util.concurrent.ThreadPoolExecutor(0, 1, 30, TimeUnit.SECONDS,
+        java.util.concurrent.SynchronousQueue(), { r -> Thread(r, "full-app-adas-read").apply { isDaemon = true } })
+    @Volatile private var fullAppAdasDebt = false
+    @Volatile private var fullAppAdasRound = ""
+    @Volatile private var fullAppAdasRestoring = false
+    @Volatile private var fullAppAdasStage = "IDLE"
+    private var fullAppAdasFrames = 0
+    private var fullAppAdasRestore12 = false
+    private var fullAppAdasRestore53 = false
+    private var fullAppAdasProofUntil = 0L
+    private var fullAppAdasProofTarget = ""
+    @Volatile private var factoryApplyPending = false
+    @Volatile private var factoryApplyCompleted = false
     // Conservative even after a daemon replacement. Any recovered helper is
     // reaped before another interval starts; no wall-clock inference is used.
     private val active = AtomicBoolean(false)
@@ -179,6 +195,11 @@ internal object ClusterThemeLiveTest {
         dashboardSizeAdmitted = saved.dashboardSizeAdmitted
         dashboardBootstrapRecoverySettled = saved.dashboardBootstrapRecoverySettled
         dashboardSmallPanelSeen = saved.dashboardSmallPanelSeen
+        fullAppAdasDebt = saved.fullAppAdasDebt; fullAppAdasRound = saved.fullAppAdasRound
+        fullAppAdasRestoring = saved.fullAppAdasDebt
+        fullAppAdasStage = if (saved.fullAppAdasDebt) "RECOVERY_REQUIRED" else "IDLE"
+        fullAppAdasProofUntil = 0
+        factoryApplyPending = saved.factoryApplyPending; factoryApplyCompleted = saved.factoryApplyCompleted
         dashboardGeometry = JSONObject() // Recovered geometry is never current admission evidence.
         dashboardHelperCommand = saved.dashboardHelperCommand
         dashboardHelperPid = saved.dashboardHelperPid; dashboardHelperStart = saved.dashboardHelperStart; dashboardHelperToken = saved.dashboardHelperToken
@@ -218,6 +239,9 @@ internal object ClusterThemeLiveTest {
             .put("mutated", mutated).put("uncertain", uncertain).put("iviRecoverySettled", iviRecoverySettled).put("defaultQueried", defaultQueried)
             .put("carrierRemoved", carrierRemoved).put("markerObservedByUser", markerObserved).put("oemObservedByUser", oemObserved)
             .put("themeObservedByUser", themeObserved)
+            .put("factoryApplyPending", factoryApplyPending).put("factoryApplyCompleted", factoryApplyCompleted)
+            .put("fullAppAdas", JSONObject().put("debt", fullAppAdasDebt).put("round", fullAppAdasRound)
+                .put("stage", fullAppAdasStage).put("restoring", fullAppAdasRestoring))
             .put("dashboard", JSONObject().put("stage", dashboardStage).put("nativeDebt", dashboardNativeDebt)
                 .put("pending", dashboardPending.get()).put("helperCommand", dashboardHelperCommand)
                 .put("selectionReady", dashboardSelectionReady).put("round", dashboardRound)
@@ -303,6 +327,8 @@ internal object ClusterThemeLiveTest {
         dashboardSelectionReady = false; dashboardRound = ""
         dashboardBootstrapStarted = false; dashboardSizeAdmitted = false; dashboardBootstrapRecoverySettled = false
         dashboardGeometry = JSONObject()
+        fullAppAdasDebt = false; fullAppAdasRound = ""; fullAppAdasRestoring = false; fullAppAdasStage = "IDLE"
+        factoryApplyPending = false; factoryApplyCompleted = false
         dashboardHelperPid = 0; dashboardHelperStart = ""; dashboardHelperToken = ""
         phase = if (transport == ClusterThemeTransport.ANDROID_IVI) "android-ivi-preflight" else "renderer-discovery"
         synchronized(this) { trace.clear() }
@@ -566,6 +592,122 @@ internal object ClusterThemeLiveTest {
     }
 
     /** A closed sequence, never an arbitrary caller-supplied AutoContainer verb. */
+    /** One fixed step on the pinned diagnostic endpoint; no production shell escape hatch. */
+    fun fullAppAdas(nonce: String, round: String, action: Int, value: Int, count: Int,
+        recovering: Boolean, pkg: String, display: Int, validity: android.os.IBinder): String = fullAppAdasLock.withLock {
+        initialize()
+        val api = com.byd.dashcast.clusterlive.ClusterFullAppAdas
+        check(api.permits(action, value, count, recovering)) { "Unsupported fixed ADAS step" }
+        check(journalTrusted && active.get() && variant.isFullApp &&
+            filename == ClusterThemePolicy.PREFIX + nonce + ".rcc" &&
+            round.matches(Regex("[0-9a-f]{32}"))) { "Owned full-app recovery context required" }
+        fun current(): Boolean {
+            if (!validity.isBinderAlive) return false
+            val d = android.os.Parcel.obtain(); val r = android.os.Parcel.obtain()
+            return try {
+                d.writeInterfaceToken("com.byd.dashcast.RccReservation")
+                validity.transact(1, d, r, 0) && run { r.readException(); r.dataAvail() == 4 && r.readInt() == 1 }
+            } catch (_: Exception) { false } finally { d.recycle(); r.recycle() }
+        }
+        check(current()) { "Full-app reservation expired" }
+        if (recovering) {
+            check(fullAppAdasDebt && round == fullAppAdasRound) { "No matching ADAS recovery debt" }
+        } else {
+            check(dashboardRound == round && dashboardStage == "OPEN_RECEIVED" && dashboardSelectionReady &&
+                !dashboardPending.get() && !dashboardCloseQueued.get() && !restoreRequested.get() &&
+                restoring.get() == -1L && !uncertain && !fullAppAdasRestoring) { "Current full-app opening required" }
+        }
+        var accepted = false
+        try {
+            when (action) {
+                api.JOURNAL -> {
+                    check(!fullAppAdasDebt || fullAppAdasRound == round)
+                    fullAppAdasRound = round; fullAppAdasDebt = true; fullAppAdasStage = "MASKING"
+                    persist(state) // Mutation authority exists only after this durable write.
+                    accepted = true
+                }
+                api.RECOVERY -> {
+                    fullAppAdasRestoring = true; fullAppAdasStage = "RESTORING"
+                    fullAppAdasFrames = 0; fullAppAdasRestore12 = false; fullAppAdasRestore53 = false
+                    fullAppAdasProofUntil = 0
+                    persist(state); accepted = true
+                }
+                api.RESTORED -> {
+                    check(fullAppAdasRestoring && fullAppAdasFrames >= 40 && fullAppAdasRestore12 && fullAppAdasRestore53)
+                    fullAppAdasDebt = false; fullAppAdasRestoring = false; fullAppAdasStage = "RESTORE_DELIVERED"
+                    persist(state); accepted = true
+                }
+                else -> {
+                    check(fullAppAdasDebt && round == fullAppAdasRound)
+                    check(!recovering || fullAppAdasRestoring) { "Begin explicit ADAS recovery first" }
+                    val ctx = ProxyDaemonMain.adasControlContext() ?: error("Existing ADAS context unavailable")
+                    check(com.byd.dashcast.cluster.AndroidDevice.supportsFirmware(android.os.Build.VERSION.SDK_INT,
+                        variant.isFullApp, android.os.Build.FINGERPRINT)) { "Existing ADAS firmware contract differs" }
+                    val receiver = ctx.packageManager.getReceiverInfo(com.byd.dashcast.cluster.NativeAdasWindowControl.RECEIVER, 0)
+                    check(receiver.enabled && receiver.applicationInfo.enabled && receiver.exported && receiver.permission.isNullOrEmpty())
+                    fun proveCurrent() {
+                        check(current())
+                        if (recovering) return
+                        check(pkg.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+")) && display > 0 && pkg != "com.byd.dashcast")
+                        val target = "$round/$pkg/$display"
+                        if (fullAppAdasProofTarget != target || SystemClock.elapsedRealtime() >= fullAppAdasProofUntil) {
+                            val proofDeadline = SystemClock.elapsedRealtime() + 2_500
+                            val probe = fullAppAdasReads.submit<Boolean> {
+                                val dump = ProxyShell.exec("dumpsys activity activities", 2_000, 1_048_576)
+                                dump.exit == 0 && com.byd.dashcast.cluster.ResumedProjection.matches(dump.output, display, pkg) &&
+                                    AdasBodyworkReader.read(ctx, 0) == 2 && AdasBodyworkReader.read(ctx, 0x12d0002a) in setOf(2, 3)
+                            }
+                            // Recovery can revoke this hide while a vendor read is blocked.
+                            fullAppAdasLock.unlock()
+                            val proven = try { probe.get(2_500, TimeUnit.MILLISECONDS) }
+                                finally { probe.cancel(true); fullAppAdasLock.lock() }
+                            check(proven && !fullAppAdasRestoring && fullAppAdasDebt && round == fullAppAdasRound)
+                            check(current() && SystemClock.elapsedRealtime() < proofDeadline)
+                            fullAppAdasProofTarget = target; fullAppAdasProofUntil = SystemClock.elapsedRealtime() + 4_000
+                        }
+                    }
+                    if (action == api.COMMAND) {
+                        if (recovering) check(if (value == 12) fullAppAdasFrames >= 40 else fullAppAdasRestore12)
+                        dashboardIntervals.awaitNative { current() }
+                    }
+                    proveCurrent() // Waiting for the shared native interval can expire source proof.
+                    val command = when (action) {
+                        api.INITIALIZE -> "cmd deviceidle whitelist +com.byd.clusterdebug >/dev/null 2>&1; am startservice -n com.byd.clusterdebug/.ClusterDebugService"
+                        api.COMMAND -> "if service check AutoContainer | grep -q 'not found'; then service call auto_container 2 i32 1000 i32 $value s16 ''; else service call AutoContainer 2 i32 1000 i32 $value s16 ''; fi"
+                        api.FRAMES -> "am broadcast -a com.byd.cluster.spi -p com.byd.clusterdebug --es wholeFrame '${api.frames[value]}' >/dev/null 2>&1"
+                        else -> error("Unsupported ADAS mutation")
+                    }
+                    val batchDeadline = SystemClock.elapsedRealtime() + 4_000
+                    accepted = true
+                    var nativeAttempted = false
+                    try {
+                        repeat(if (action == api.FRAMES) count else 1) {
+                            proveCurrent()
+                            val remaining = batchDeadline - SystemClock.elapsedRealtime()
+                            check(remaining > 0) { "ADAS batch deadline; remaining frames cancelled" }
+                            if (action == api.COMMAND) nativeAttempted = true
+                            val result = ProxyShell.exec("$command && echo DASHCAST_ADAS_OK", remaining, 8_192)
+                            check(result.exit == 0 && com.byd.dashcast.cluster.AdasCommandResult.accepted(result.output) && current())
+                        }
+                    } finally { if (nativeAttempted) dashboardIntervals.nativeFinished() }
+                    if (accepted && recovering) {
+                        if (action == api.FRAMES) fullAppAdasFrames += count
+                        if (action == api.COMMAND && value == 12) fullAppAdasRestore12 = true
+                        if (action == api.COMMAND && value == 53) fullAppAdasRestore53 = true
+                    }
+                    if (!accepted) fullAppAdasStage = "RECOVERY_REQUIRED"
+                }
+            }
+        } catch (error: Exception) {
+            accepted = false
+            if (action == api.RESTORED) fullAppAdasDebt = true
+            fullAppAdasStage = "RECOVERY_REQUIRED"
+            step("full-app-adas-unresolved", "action=$action delivery=UNKNOWN type=${error.javaClass.simpleName}")
+        }
+        step("full-app-adas-step", "action=$action recovery=$recovering accepted=$accepted debt=$fullAppAdasDebt pixels=UNKNOWN")
+        JSONObject(status()).put("fullAppAdasAccepted", accepted).toString()
+    }
+
     @Synchronized fun requestDashboard(open: Boolean, nonce: String, parked: Boolean, firmware: Boolean,
         validity: android.os.IBinder): String {
         initialize()
@@ -615,11 +757,15 @@ internal object ClusterThemeLiveTest {
             ClusterThemeQueryRunner.dashboardMode(command, filename, admit, ready)
         }, write: () -> Unit = { persist(state) }, before: (() -> Boolean) -> Unit = dashboardIntervals::awaitNative,
         finished: () -> Unit = dashboardIntervals::nativeFinished, reap: () -> Unit = ::reapDashboardHelper,
-        bootstrap: Boolean = false) {
+        bootstrap: Boolean = false, factoryApply: Boolean = false) {
         check(variant.isDashboard && journalTrusted && validProjection() && !helperUnreaped)
+        check(!fullAppAdasDebt) { "Complete the existing full-app ADAS restoration before native mode commands" }
         reap()
-        check(!bootstrap || open && !mutated && !dashboardSmallPanelSeen)
+        check(!bootstrap || open && (!mutated || factoryApply) && !dashboardSmallPanelSeen)
+        check(!factoryApply || factoryApplyPending && if (open) bootstrap && !dashboardNativeDebt else dashboardNativeDebt)
         val commands = when {
+            factoryApply && !open -> if (dashboardSizeAdmitted == true) com.byd.dashcast.clusterlive.ClusterDashboardProfile.closeCommands
+                else com.byd.dashcast.clusterlive.ClusterDashboardProfile.bootstrapCloseCommands
             bootstrap -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.bootstrapCommands
             open -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.openCommands
             dashboardSizeAdmitted == false -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.bootstrapCloseCommands
@@ -627,18 +773,18 @@ internal object ClusterThemeLiveTest {
         }
         dashboardStage = if (bootstrap) "NONE" else if (open) "OPENING" else "CLOSING"
         dashboardNativeDebt = true
-        if (bootstrap) dashboardBootstrapStarted = true
+        if (bootstrap && !factoryApply) dashboardBootstrapStarted = true
         dashboardBootstrapRecoverySettled = false
         oemObserved = false
         if (open && !bootstrap) { themeObserved = false; dashboardRound = UUID.randomUUID().toString().replace("-", "") }
         write()
         commands.forEach { command ->
-            before { validProjection() && (!open || !restoreRequested.get() && !dashboardCloseQueued.get()) }
-            check(validProjection() && (!open || !restoreRequested.get() && !dashboardCloseQueued.get())) { "Dashboard sequence retired before helper" }
+            before { validProjection() && (!open || factoryApply || !restoreRequested.get() && !dashboardCloseQueued.get()) }
+            check(validProjection() && (!open || factoryApply || !restoreRequested.get() && !dashboardCloseQueued.get())) { "Dashboard sequence retired before helper" }
             phase = if (bootstrap) "dashboard-bootstrap-$command" else "dashboard-native-$command"
             val previouslyAdmitted = dashboardSizeAdmitted
             val result = try { request(command, {
-                check(validProjection() && (!open || !restoreRequested.get() && !dashboardCloseQueued.get())) { "Dashboard sequence retired before GO" }
+                check(validProjection() && (!open || factoryApply || !restoreRequested.get() && !dashboardCloseQueued.get())) { "Dashboard sequence retired before GO" }
                 if (command == 31) dashboardSizeAdmitted = true // Durable conservative debt before GO.
                 write() // Helper identity and native debt are durable before admission.
             }, { pid, start, token ->
@@ -851,20 +997,20 @@ internal object ClusterThemeLiveTest {
                     iviRecoverySettled = false
                     error("Recovery pre-query unavailable; no overwrite of unknown selection; ${selection.error.orEmpty()}")
                 }
-                if (!selection.query.isDefault() && !selection.query.selected(filename)) {
+                if (!(if (variant.isDashboard) selection.query.isFactoryConfigured() else selection.query.isDefault()) && !selection.query.selected(filename)) {
                     iviRecoverySettled = false
                     error("Another selection is active; no overwrite")
                 }
                 step("restore-prequery", "default=${selection.query.isDefault()} own=${selection.query.selected(filename)}")
-                closeDashboardForFactoryRestore()
                 if (transport == ClusterThemeTransport.ANDROID_IVI && selection.query.selected(filename)) {
                     iviRecoverySettled = false
                     persist(state) // Revoke an older proof before a new mutating recovery attempt.
                 }
-                val restored = if (selection.query.isDefault()) selection else {
-                    awaitDashboardSwitch(true)
-                    try { exchange("restore") } finally { finishDashboardSwitch() }
-                }
+                val restored = if (variant.isDashboard) restoreDashboardFactorySelection(selection)
+                    else if (selection.query.isDefault()) selection else {
+                        awaitDashboardSwitch(true)
+                        try { exchange("restore") } finally { finishDashboardSwitch() }
+                    }
                 step("restore-result", "native=${restored.native} unknown=${restored.unknown} default=${restored.query?.isDefault()} ${restored.error.orEmpty()}")
                 recordRestoreResult(selection.query, restored, priorRecoveryProof)
                 if (transport == ClusterThemeTransport.ANDROID_IVI) {
@@ -877,6 +1023,70 @@ internal object ClusterThemeLiveTest {
                 uncertain = true; state = "QUARANTINE"; detail = "Restore unknown: ${t.message}".take(2000); persistQuietly()
             } finally { restoring.compareAndSet(expectedGeneration, -1) }
         }
+    }
+
+    internal fun restoreDashboardFactorySelection(selection: Exchange,
+        selectFactory: () -> Exchange = {
+            awaitDashboardSwitch(true)
+            try { exchange("restore") } finally { finishDashboardSwitch() }
+        }, close: () -> Unit = { closeDashboardForFactoryRestore() },
+        query: () -> Exchange = { exchange("query") }, write: () -> Unit = { persist(state) }): Exchange {
+        check(variant.isDashboard && !selection.unknown && selection.native == 0)
+        val before = checkNotNull(selection.query)
+        check(before.isFactoryConfigured() || before.selected(filename))
+        var chosen = selection
+        if (!before.isFactoryConfigured()) {
+            factoryApplyPending = true; factoryApplyCompleted = false; write()
+            chosen = selectFactory() // Select before the native close applies its scene transition.
+        }
+        check(!chosen.unknown && chosen.native == 0 && chosen.query?.isFactoryConfigured() == true) {
+            "Factory configuration is unresolved; native transition was not sent"
+        }
+        factoryApplyPending = chosen.query?.isDefault() != true; write()
+        close()
+        val after = query()
+        factoryApplyPending = after.unknown || after.native != 0 || after.query?.isDefault() != true
+        write()
+        return after.copy(attempted = chosen.attempted, responses = chosen.responses + after.responses)
+    }
+
+    @Synchronized fun requestFactoryApply(nonce: String, parked: Boolean, firmware: Boolean,
+        validity: android.os.IBinder): String {
+        initialize()
+        check(parked && firmware && journalTrusted && active.get() && variant.isDashboard && mutated &&
+            filename == ClusterThemePolicy.PREFIX + nonce + ".rcc" && !dashboardNativeDebt &&
+            !fullAppAdasDebt && factoryApplyPending && !helperUnreaped && dashboardHelperPid == 0)
+        projectionValidity = validity
+        check(validProjection())
+        val expected = generation.get()
+        check(restoring.compareAndSet(-1, expected)) { "Recovery is already pending" }
+        restoreRequested.set(true)
+        worker.execute {
+            try {
+                check(generation.get() == expected && validProjection())
+                reapRecoveredHelper(); hashDeadline = SystemClock.elapsedRealtime() + 60000; ownedFile()
+                val before = exchange("query")
+                check(!before.unknown && before.native == 0 && before.query?.isFactoryConfigured() == true) {
+                    "Fresh factory configuration required; no mode1 replay or native transition"
+                }
+                if (before.query?.isDefault() != true) {
+                    factoryApplyCompleted = false; phase = "factory-apply-manual"; persist(state)
+                    runDashboardSequence(true, bootstrap = true, factoryApply = true,
+                        finished = { dashboardIntervals.nativeFinishedAfter(com.byd.dashcast.clusterlive.ClusterDashboardProfile.BOOTSTRAP_GAP_MS) })
+                    runDashboardSequence(false, factoryApply = true)
+                    factoryApplyCompleted = true; persist(state)
+                }
+                val after = exchange("query")
+                factoryApplyPending = after.unknown || after.native != 0 || after.query?.isDefault() != true
+                recordRestoreResult(checkNotNull(before.query), after, false)
+                persist(state); maybeCleanup()
+            } catch (error: Throwable) {
+                factoryApplyPending = true; uncertain = true; state = "QUARANTINE"
+                detail = "Manual factory application unresolved; no automatic retry: ${error.message}".take(2000)
+                persistQuietly()
+            } finally { restoring.compareAndSet(expected, -1) }
+        }
+        return status()
     }
 
     internal fun restoreDashboardBootstrap(query: () -> Exchange = { exchange("query") },
@@ -917,7 +1127,9 @@ internal object ClusterThemeLiveTest {
             // The IVI selection path precedes this ordered default request; neither proves pixels.
             iviRecoverySettled = ClusterThemePolicy.iviRecoveryProven(filename, before,
                 restored.query, restored.native, restored.unknown, restored.attempted) ||
-                priorRecoveryProof && before.isDefault() && defaultQueried
+                priorRecoveryProof && before.isDefault() && defaultQueried ||
+                variant.isDashboard && defaultQueried && !dashboardNativeDebt && !fullAppAdasDebt &&
+                    (factoryApplyCompleted || before.isDefault())
         }
         val recovered = defaultQueried && (loadSettled && !uncertain || iviRecoverySettled)
         state = if (recovered) "DEFAULT_QUERIED" else "QUARANTINE"
@@ -981,6 +1193,7 @@ internal object ClusterThemeLiveTest {
 
     internal fun completeRecovery(cleanup: () -> Boolean, write: (String) -> Unit) {
         try {
+            if (fullAppAdasDebt || factoryApplyPending) return
             if (variant.isDashboard && (dashboardNativeDebt || dashboardHelperPid != 0)) return
             val recoveredIvi = transport == ClusterThemeTransport.ANDROID_IVI && iviRecoverySettled
             val recoveredBootstrap = variant.isDashboard && !mutated && dashboardBootstrapRecoverySettled && defaultQueried
@@ -1011,8 +1224,10 @@ internal object ClusterThemeLiveTest {
         check(!journal.exists() || Os.lstat(journal.path).st_uid == Process.myUid()) { "Journal owner mismatch" }
     }
 
-    private fun persist(newState: String) {
+    private fun persist(newState: String) = synchronized(journalWriteLock) {
         if (newState == "CLEAN") {
+            check(!fullAppAdasDebt) { "Cannot close outstanding full-app ADAS recovery debt" }
+            check(!factoryApplyPending) { "Factory selection still requires a manual application transition" }
             check(!helperUnreaped && helperPid == 0) { "Cannot close journal with an unreaped helper" }
             check(!variant.isDashboard || !dashboardNativeDebt && dashboardHelperPid == 0) { "Cannot close an outstanding dashboard mode debt" }
             check(!variant.isDashboard || !dashboardBootstrapStarted || mutated ||
@@ -1027,6 +1242,8 @@ internal object ClusterThemeLiveTest {
             .put("uncertain", uncertain).put("iviRecoverySettled", iviRecoverySettled).put("defaultQueried", defaultQueried)
             .put("createdDevice", createdDevice).put("createdInode", createdInode)
             .put("helperPid", helperPid).put("helperStart", helperStart).put("helperToken", helperToken)
+            .apply { if (variant.isDashboard) put("factoryApplyPending", factoryApplyPending).put("factoryApplyCompleted", factoryApplyCompleted) }
+            .apply { if (variant.isFullApp) put("fullAppAdas", JSONObject().put("debt", fullAppAdasDebt).put("round", fullAppAdasRound)) }
             .apply { if (variant.isDashboard) put("dashboard", JSONObject().put("stage", dashboardStage)
                 .put("nativeDebt", dashboardNativeDebt).put("helperCommand", dashboardHelperCommand)
                 .put("helperPid", dashboardHelperPid).put("helperStart", dashboardHelperStart).put("helperToken", dashboardHelperToken)

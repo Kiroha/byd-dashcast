@@ -11,7 +11,9 @@ internal object ClusterThemeJournal {
         val dashboardStage: String = "NONE", val dashboardNativeDebt: Boolean = false, val dashboardHelperCommand: Int = -1,
         val dashboardHelperPid: Int = 0, val dashboardHelperStart: String = "", val dashboardHelperToken: String = "",
         val dashboardBootstrapStarted: Boolean = false, val dashboardSizeAdmitted: Boolean? = null,
-        val dashboardBootstrapRecoverySettled: Boolean = false, val dashboardSmallPanelSeen: Boolean = false)
+        val dashboardBootstrapRecoverySettled: Boolean = false, val dashboardSmallPanelSeen: Boolean = false,
+        val fullAppAdasDebt: Boolean = false, val fullAppAdasRound: String = "",
+        val factoryApplyPending: Boolean = false, val factoryApplyCompleted: Boolean = false)
 
     fun recover(j: JSONObject): Recovery {
         val schema = j.get("schema")
@@ -81,8 +83,20 @@ internal object ClusterThemeJournal {
             nativePid > 0 && nativeStart.matches(Regex("[0-9]+")) && nativeToken.matches(Regex("[0-9a-f]{32}")) &&
             variant.isDashboard && ClusterDashboardProfile.permitsCommand(nativeCommand) && nativeDebt)
         require(!clean || !nativeDebt && nativePid == 0)
+        val adas = if (variant.isFullApp) j.getJSONObject("fullAppAdas") else null
+        require(adas == null || adas.get("debt") is Boolean && adas.get("round") is String)
+        val adasDebt = adas?.getBoolean("debt") ?: false
+        val adasRound = adas?.getString("round") ?: ""
+        require(adasRound.isEmpty() && !adasDebt || adasRound.matches(Regex("[0-9a-f]{32}")))
+        require(!clean || !adasDebt) { "Clean journal retains full-app ADAS recovery debt" }
+        for (key in listOf("factoryApplyPending", "factoryApplyCompleted"))
+            require(!j.has(key) || variant.isDashboard && j.get(key) is Boolean)
+        val factoryPending = j.optBoolean("factoryApplyPending")
+        val factoryCompleted = j.optBoolean("factoryApplyCompleted")
+        require(!clean || !factoryPending)
         return Recovery(transport, variant, clean, filename, root, j.optString("renderer"), identity,
             j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled, retirement, stage, nativeDebt, nativeCommand,
-            nativePid, nativeStart, nativeToken, bootstrap, sizeAdmitted, bootstrapSettled, small)
+            nativePid, nativeStart, nativeToken, bootstrap, sizeAdmitted, bootstrapSettled, small, adasDebt, adasRound,
+            factoryPending, factoryCompleted)
     }
 }

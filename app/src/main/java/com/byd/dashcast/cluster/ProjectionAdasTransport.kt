@@ -16,7 +16,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Bounded one-attempt IPC. A timeout is uncertainty, not permission to replay a write. */
 internal class ProjectionAdasTransport(private val context: Context,
     private val binderProvider: () -> IBinder? = { ProxyClient.getProxyDaemonBinder() },
-    private val restoring: () -> Boolean = { false }) {
+    private val restoring: () -> Boolean = { false },
+    private val fixedDiagnostic: FixedDiagnostic? = null) {
+    interface FixedDiagnostic {
+        fun initialize(): Boolean
+        fun command(code: Int): Boolean
+        fun frames(frame: String, count: Int): Boolean
+    }
     private val main = Handler(Looper.getMainLooper())
     private fun lane(name: String) = ThreadPoolExecutor(0, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(1),
         { task -> Thread(task, name).apply { isDaemon = true } })
@@ -55,12 +61,21 @@ internal class ProjectionAdasTransport(private val context: Context,
             AdasCommandResult.accepted(ProxyClient.runShellOnce(binder, "$command && echo DASHCAST_ADAS_OK"))
         }, mutation = true, done = { done(it == true) })
 
-    fun initialize(valid: () -> Boolean, done: (Boolean) -> Unit) = shell(
-        "cmd deviceidle whitelist +com.byd.clusterdebug >/dev/null 2>&1; " +
+    fun initialize(valid: () -> Boolean, done: (Boolean) -> Unit) {
+        fixedDiagnostic?.let { backend ->
+            call(valid, work = { backend.initialize() }, mutation = true, done = { done(it == true) })
+            return
+        }
+        shell("cmd deviceidle whitelist +com.byd.clusterdebug >/dev/null 2>&1; " +
             "am startservice -n com.byd.clusterdebug/.ClusterDebugService", valid, done)
+    }
 
     fun command(code: Int, valid: () -> Boolean, done: (Boolean) -> Unit) {
         require(code in ProjectionAdasPlan.COMMANDS)
+        fixedDiagnostic?.let { backend ->
+            call(valid, work = { backend.command(code) }, mutation = true, done = { done(it == true) })
+            return
+        }
         // Select the service before mutating it. A lost response never causes a second transaction.
         val command = "if service check AutoContainer | grep -q 'not found'; then " +
             "service call auto_container 2 i32 1000 i32 $code s16 ''; else " +
@@ -70,6 +85,10 @@ internal class ProjectionAdasTransport(private val context: Context,
 
     fun frames(frame: String, count: Int, valid: () -> Boolean, done: (Boolean) -> Unit) {
         require(frame in ProjectionAdasPlan.FRAMES && count in 1..10)
+        fixedDiagnostic?.let { backend ->
+            call(valid, work = { backend.frames(frame, count) }, mutation = true, done = { done(it == true) })
+            return
+        }
         val end = SystemClock.uptimeMillis() + 5_000
         var remaining = count
         var finished = false

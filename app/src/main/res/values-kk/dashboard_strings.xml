@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">DashCast аспаптар тақтасы</string>
-    <string name="diag_cluster_dashboard_help">Көлік тоқтап тұрғанда қолмен сынау. BYD аспаптары мен ескертулері сақталады. Жапқаннан кейін профиль таңдалған күйде қалады. Ескі APK орнатпас бұрын зауыттық профильді қалпына келтіріп, тексеріңіз.</string>
+    <string name="diag_cluster_dashboard_help">Көлік тоқтап тұрғанда қолмен сынау. Жапқаннан кейін профиль таңдалған күйде қалады. Ескі APK орнатпас бұрын зауыттық профильді қалпына келтіріп, тексеріңіз.</string>
     <string name="diag_cluster_dashboard_read">1 · Күй мен үйлесімділікті оқу</string>
     <string name="diag_cluster_dashboard_prepare">2 · Тақтаны дайындау</string>
     <string name="diag_cluster_dashboard_choose_app">3 · Қолданбаны таңдау</string>
@@ -30,5 +30,11 @@
     <string name="diag_cluster_dashboard_small_panel">Шағын аспаптар тақтасы анықталды: сынақ қабылданбады. BYD қалпына келтіру қолжетімді.</string>
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Уақытша BYD проекциясын жауып, зауыттық таңдауды тексеріңіз. Өзгертілген RCC таңдалмады. Содан кейін аспаптар мен ескертулердің қайтқанын растаңыз.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Дайындау біздің RCC таңдалғанша бастапқы BYD проекциясын уақытша ашып, экранын тексере алады. Қолданба тек Ашу басылғаннан кейін іске қосылады. Тұрақ пен микробағдарламаны растаңыз; бұл мәлімдеме қозғалысты өлшемейді.</string>
-    <string name="diag_cluster_dashboard_protocol">Қосылған daemon 43 протоколын қолдануы керек. Дайындау не Ашу алдында оны DashCast ішінде қайта қосыңыз. BYD пәрмені жіберілмеді.</string>
+    <string name="diag_cluster_dashboard_protocol">Қосылған daemon %1$d протоколын қолдануы керек. Дайындау не Ашу алдында оны DashCast ішінде қайта қосыңыз. BYD пәрмені жіберілмеді.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Толық экранды қолданбаны дайындау</string>
+    <string name="diag_cluster_full_app_help">Көлік тоқтап тұрғанда қолмен сынау. Қолданба 1920 × 720 аумақты алады. BYD аспаптары, жылдамдық, беріліс, шамдар, шектеу және ескертулер жасырылады; іске қосқан соң қолданыстағы ADAS жасыру орындалады. Жабу ADAS-ты қалпына келтіреді; кейін зауыт профилін қалпына келтіріп тексеріңіз. Автоіске қосу жоқ.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Толық экранды көрсетілімді дайындау. Ашу BYD аспаптарын, шамдарын, ескертулерін және ADAS панелін жасырады. Көліктің тоқтағанын және микробағдарлама тексерілгенін растаңыз. Ескі APK алдында толық қалпына келтіру керек.</string>
+    <string name="diag_cluster_factory_apply">Зауыттық таңдауды қолдану</string>
+    <string name="diag_cluster_factory_apply_confirm">Зауыт профилі таңдалған, бірақ оның қолданылуын тексеру керек. BYD проекциясын бір рет ауыстырып, жауып, таңдауды қайта оқыңыз. Өз RCC файлы не қайталама зауыт таңдауы жіберілмейді. Тұрақ пен микробағдарламаны растаңыз.</string>
+    <string name="diag_cluster_full_app_observe_message">Қолданба бүкіл экранды алса және күтілген BYD элементтері жасырылса ғана растаңыз. Бұл көрсетілімде аспаптар мен ескертулер әдейі жоқ. Қабылдау түбіртегі көрсетілімді дәлелдемейді.</string>
 </resources>

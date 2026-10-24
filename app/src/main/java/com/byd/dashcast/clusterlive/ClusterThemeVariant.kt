@@ -12,9 +12,12 @@ enum class ClusterThemeVariant(val id: String, val startOperation: Int, val asse
     CORNER_MARKER_21F7735C("corner-marker-21f7735c", 18, "cluster_live/corner_marker_21f7735c.rcc",
         "fe069081f1d5c8374276aad2513b8862de61008f67fe6162fb2a4a351e00b734", 39),
     FULL_DASHBOARD_21F7735C("full-dashboard-21f7735c", 19, "cluster_live/full_dashboard_21f7735c.rcc",
-        "8a96299b3acc1cffd2eaf2a57cf94cd2ae26dfd90b5fb6204a0182baea6ac250", 43);
+        "8a96299b3acc1cffd2eaf2a57cf94cd2ae26dfd90b5fb6204a0182baea6ac250", 43),
+    FULL_APP_21F7735C("full-app-21f7735c", 24, "cluster_live/full_app_21f7735c.rcc",
+        "b121e6622f560a04a583c352977813ebc69047635f28cc0dee77ffeec78d007b", 44);
 
-    val isDashboard: Boolean get() = this == FULL_DASHBOARD_21F7735C
+    val isDashboard: Boolean get() = this == FULL_DASHBOARD_21F7735C || this == FULL_APP_21F7735C
+    val isFullApp: Boolean get() = this == FULL_APP_21F7735C
     val isMarker: Boolean get() = this != FULL_SURFACE_TEST && !isDashboard
     val isCorner: Boolean get() = this == CORNER_MARKER || this == CORNER_MARKER_21F7735C
     val isPersistent: Boolean get() = isCorner || isDashboard

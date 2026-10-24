@@ -49,6 +49,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             ClusterThemeVariant.CORNER_MARKER -> 15
             ClusterThemeVariant.CORNER_MARKER_21F7735C -> 18
             ClusterThemeVariant.FULL_DASHBOARD_21F7735C -> 19
+            ClusterThemeVariant.FULL_APP_21F7735C -> 24
         }
         val receipt = call(operation, source, {
             beforeTransaction()
@@ -96,20 +97,41 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         require(round.matches(Regex("[0-9a-f]{32}")))
         return call(22, expectedFilename = name, payload = { it.writeString(round) })
     }
+    fun applyFactorySelection(validity: IBinder): String {
+        check(ProxyClient.supportsProtocol(44))
+        val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned factory recovery session")
+        return call(26, payload = {
+            it.writeString(nonce); it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity)
+        })
+    }
     fun currentDashboardDisplay(): String {
         check(ProxyClient.supportsProtocol(43)) { "Connected protocol43 required for current dashboard display evidence" }
         val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned dashboard session")
         return call(23, payload = { it.writeString(nonce) })
     }
+    internal fun fullAppAdas(round: String, action: Int, value: Int, count: Int, restoring: Boolean,
+        pkg: String, display: Int, validity: IBinder): Boolean {
+        check(ProxyClient.supportsProtocol(44) && isCurrent())
+        require(com.byd.dashcast.clusterlive.ClusterFullAppAdas.permits(action, value, count, restoring))
+        val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned full-app session")
+        val response = call(25, payload = {
+            it.writeString(nonce); it.writeString(round); it.writeInt(action); it.writeInt(value); it.writeInt(count)
+            it.writeInt(if (restoring) 1 else 0); it.writeString(pkg); it.writeInt(display); it.writeStrongBinder(validity)
+        })
+        return JSONObject(response).optBoolean("fullAppAdasAccepted")
+    }
     /** Exactly one transaction on this captured endpoint; never production retry/reconnect. */
-    fun launchDashboardApplication(pkg: String, displayId: Int): String? {
+    fun launchDashboardApplication(pkg: String, displayId: Int,
+        variant: ClusterThemeVariant = ClusterThemeVariant.FULL_DASHBOARD_21F7735C): String? {
         check(isCurrent()) { "Pinned dashboard daemon changed; no launch/replay" }
+        check(!variant.isFullApp || ProxyClient.supportsProtocol(variant.minimumProtocol))
+        val viewport = com.byd.dashcast.clusterlive.ClusterDashboardProfile.viewport(variant)
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
             d.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR)
             d.writeString(pkg); d.writeInt(0); d.writeInt(displayId)
-            d.writeInt(com.byd.dashcast.clusterlive.ClusterDashboardProfile.APP_WIDTH)
-            d.writeInt(com.byd.dashcast.clusterlive.ClusterDashboardProfile.APP_HEIGHT)
+            d.writeInt(viewport.width)
+            d.writeInt(viewport.height)
             d.writeStrongBinder(null)
             check(binder.transact(ProxyDaemonContract.TXN_LAUNCH_AND_FORCE, d, r, 0)) { "Dashboard launch API unavailable" }
             r.readException(); val result = r.readString()
@@ -154,7 +176,8 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             "native-full-request", "native-normal-request", "native-normal-user-observation",
             "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier",
             "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only", "android-ivi-corner-marker-21f7735c",
-            "android-ivi-full-dashboard-21f7735c", "dashboard-open", "dashboard-close", "observe-dashboard", "dashboard-display-read")[operation]
+            "android-ivi-full-dashboard-21f7735c", "dashboard-open", "dashboard-close", "observe-dashboard", "dashboard-display-read",
+            "android-ivi-full-app-21f7735c", "full-app-adas-step", "factory-apply-manual")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
@@ -172,7 +195,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             check(text.length <= 32768 && r.dataAvail() == 0) { "Oversized/malformed live-test status" }
             ClusterThemeDiagnostics.received(app, name, connectionToken, text)
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Daemon lost after call; remote completion UNKNOWN. No replay." }
-            if (operation in 0..1 || operation == 5 || operation in 11..15 || operation == 18 || operation == 19) filename = JSONObject(text).getString("filename")
+            if (operation in 0..1 || operation == 5 || operation in 11..15 || operation == 18 || operation == 19 || operation == 24) filename = JSONObject(text).getString("filename")
             val state = JSONObject(text)
             val safe = state.optString("rccSafeNonce")
             if (safe.matches(Regex("[0-9a-f]{32}")) && app != null && ClusterThemeProjectionDebt.nonce(app) == safe &&

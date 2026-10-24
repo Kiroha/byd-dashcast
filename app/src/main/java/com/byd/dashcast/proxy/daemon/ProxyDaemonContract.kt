@@ -272,6 +272,10 @@ object ProxyDaemonContract {
      * its worker finishes. It never establishes OEM recovery or clears RCC debt. Op fields are unchanged.
      * Protocol 41 permits a fresh bounded corner observation with source 0 or 1 and an exact owned IVI
      * selection. It is never application, registration or recovery proof; operation fields stay unchanged.
+     * Protocol 44 adds operation24 for the closed full-app carrier. Its app viewport is compiled
+     * as0,0,1920,720; native instruments/alerts are hidden in this manual demonstration.
+     * Operation25 accepts only fixed owned ADAS steps; operation26 explicitly applies an
+     * already configured factory profile through one native transition, without mode1 replay.
      * Prompt JSON; never generic/replayed. */
     const val TXN_CLUSTER_LIVE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43 // 44
 

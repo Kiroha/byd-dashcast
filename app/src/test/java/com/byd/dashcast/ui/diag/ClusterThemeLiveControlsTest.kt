@@ -107,8 +107,8 @@ class ClusterThemeLiveControlsTest {
             dashboard.put("geometry", JSONObject().put("verdict", "SMALL"))
             receipt.put("state", "CLEAN").put("rccDebt", false); render.invoke(controls, receipt)
             assertEquals(c.get().getString(R.string.diag_cluster_dashboard_idle), main.text.toString().substringBefore('\n'))
-            val message = ClusterThemeLiveControls::class.java.getDeclaredMethod("dashboardMessage", Int::class.javaPrimitiveType).apply { isAccessible = true }
-            message.invoke(controls, R.string.diag_cluster_dashboard_geometry)
+            val message = ClusterThemeLiveControls::class.java.getDeclaredMethod("dashboardMessage", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).apply { isAccessible = true }
+            message.invoke(controls, R.string.diag_cluster_dashboard_geometry, 43)
             assertTrue(main.isShown); assertEquals(c.get().getString(R.string.diag_cluster_dashboard_geometry), main.text)
             details.performClick(); assertTrue(raw.isShown)
         } finally { c.pause().stop().destroy(); busy.set(false); vf.set(null, previousVersion) }
@@ -423,11 +423,11 @@ class ClusterThemeLiveControlsTest {
             views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().forEach { it.isChecked = true }
             dialog.getButton(-1).performClick()
             assertEquals(0, starts); assertEquals(1L, c.get().entered.count)
-            assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol) })
+            assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol, 43) })
             val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
             repeat(2) {
                 render.invoke(controls, JSONObject().put("state", "IDLE").put("rccDebt", false))
-                assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol) })
+                assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol, 43) })
             }
             assertFalse(ClusterThemeProjectionDebt.blocked(c.get()))
         } finally { c.get().finish.countDown(); controls.close(); c.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
