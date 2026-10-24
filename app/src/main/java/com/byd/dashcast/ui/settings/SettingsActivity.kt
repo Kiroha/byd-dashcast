@@ -67,7 +67,9 @@ class SettingsActivity : AppCompatActivity() {
     // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
     // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
     private lateinit var cbPrerelease: CompoundButton
-    private lateinit var cbBootAutoStart: CompoundButton
+    private lateinit var cbBootProjection: CompoundButton
+    private lateinit var startupSummary: TextView
+    private val startupRepository = com.byd.dashcast.data.apps.AppRepository()
     private lateinit var swNavigationEnabled: CompoundButton
     private lateinit var swNavigationHud: CompoundButton
     private lateinit var swNavigationCluster: CompoundButton
@@ -81,7 +83,6 @@ class SettingsActivity : AppCompatActivity() {
     private var cbCaptureShots: CompoundButton? = null
     private lateinit var swLegacyPath: CompoundButton
     private lateinit var cbFissionMode: CompoundButton
-    private lateinit var swFissionAutoLayout: CompoundButton
     private lateinit var swFissionPrecreateSlots: CompoundButton
     private var nativeAdasDialog: NativeAdasWindowDialog? = null
 
@@ -102,6 +103,9 @@ class SettingsActivity : AppCompatActivity() {
         loadPreferences()
         wireListeners()
         wireSettingsNavRail()
+        if (savedInstanceState == null) intent.getStringExtra(EXTRA_STARTUP_APP)?.let { pkg ->
+            StartupAppsDialog.show(this, startupRepository, pkg, ::updateStartupSummary)
+        }
         // Populate dynamic version text ("0.9.2 · build 121").
         val tvVersion: TextView? = findViewById(R.id.tv_version_value)
         tvVersion?.text = BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE
@@ -230,6 +234,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onDestroy()
         mDestroyed = true
         nativeAdasDialog?.close()
+        startupRepository.shutdown()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -259,11 +264,18 @@ class SettingsActivity : AppCompatActivity() {
         NavRailLayouts.apply(this, R.id.nav_layouts_set, true)
     }
 
+    private fun updateStartupSummary() {
+        startupSummary.text = StartupAppsDialog.summary(this)
+        findViewById<View>(R.id.row_startup_apps).contentDescription =
+            getString(R.string.setting_boot_auto_start) + ": " + startupSummary.text
+    }
+
     private fun bindViews() {
         rgClusterType = findViewById(R.id.rg_cluster_type)
         rgRoundaboutTraffic = findViewById(R.id.rg_roundabout_traffic)
         cbPrerelease = findViewById(R.id.cb_prerelease)
-        cbBootAutoStart = findViewById(R.id.cb_boot_auto_start)
+        cbBootProjection = findViewById(R.id.cb_boot_projection)
+        startupSummary = findViewById(R.id.tv_startup_apps_summary)
         swNavigationEnabled = findViewById(R.id.sw_navigation_enabled)
         swNavigationHud = findViewById(R.id.sw_navigation_hud)
         swNavigationCluster = findViewById(R.id.sw_navigation_cluster)
@@ -277,7 +289,6 @@ class SettingsActivity : AppCompatActivity() {
         cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel)
         swLegacyPath = findViewById(R.id.sw_legacy_path)
         cbFissionMode = findViewById(R.id.cb_fission_mode)
-        swFissionAutoLayout = findViewById(R.id.sw_fission_auto_layout)
         swFissionPrecreateSlots = findViewById(R.id.sw_fission_precreate_slots)
     }
 
@@ -307,7 +318,8 @@ class SettingsActivity : AppCompatActivity() {
         cbPrerelease.isChecked = prefs.getBoolean(PREF_OTA_PRERELEASE, DEFAULT_OTA_PRERELEASE)
 
         // Auto Boot Projection toggle state
-        cbBootAutoStart.isChecked = ClusterPrefs.isBootAutoStartEnabled(this)
+        cbBootProjection.isChecked = ClusterPrefs.isBootProjectionEnabled(this)
+        updateStartupSummary()
 
         // Category filters toggle
         cbShowCategoryFilters.isChecked = prefs.getBoolean(
@@ -336,7 +348,6 @@ class SettingsActivity : AppCompatActivity() {
 
         swLegacyPath.isChecked = DaemonConfig.isLegacyPathEnabled(this)
         cbFissionMode.isChecked = DaemonConfig.isFissionModeEnabled(this)
-        swFissionAutoLayout.isChecked = ClusterPrefs.isFissionAutoLayout(this)
         swFissionPrecreateSlots.isChecked = ClusterPrefs.isFissionPrecreateSlots(this)
         // DiLink 5 is auto-detected via Platform — the manual override toggle
         // was removed in 1.4.23.
@@ -399,9 +410,12 @@ class SettingsActivity : AppCompatActivity() {
             AppLogger.i("SettingsActivity", "ota_include_prerelease=$isChecked")
         }
 
-        // Auto Start Projection checkbox
-        cbBootAutoStart.setOnCheckedChangeListener { _, isChecked ->
-            ClusterPrefs.setBootAutoStartEnabled(this, isChecked)
+        cbBootProjection.setOnCheckedChangeListener { _, enabled ->
+            ClusterPrefs.setBootProjectionEnabled(this, enabled)
+        }
+
+        findViewById<View>(R.id.row_startup_apps).setOnClickListener {
+            StartupAppsDialog.show(this, startupRepository, changed = ::updateStartupSummary)
         }
 
         // Category filters checkbox
@@ -453,10 +467,6 @@ class SettingsActivity : AppCompatActivity() {
             DaemonConfig.setFissionModeEnabled(this, isChecked)
             AppLogger.i("SettingsActivity", "fission_mode=$isChecked")
         }
-        swFissionAutoLayout.setOnCheckedChangeListener { _, isChecked ->
-            ClusterPrefs.setFissionAutoLayout(this, isChecked)
-            AppLogger.i("SettingsActivity", "fission_auto_layout=$isChecked")
-        }
         swFissionPrecreateSlots.setOnCheckedChangeListener { _, isChecked ->
             ClusterPrefs.setFissionPrecreateSlots(this, isChecked)
             AppLogger.i("SettingsActivity", "fission_precreate_slots=$isChecked")
@@ -464,6 +474,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     companion object {
+        const val EXTRA_STARTUP_APP = "startup_app"
         // ── SharedPreferences file (shared with MainActivity / ClusterService) ───
         // Delegates to ClusterPrefs — the single source of truth for this string.
         const val PREFS_NAME = ClusterPrefs.PREFS_NAME

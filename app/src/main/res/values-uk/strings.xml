@@ -97,7 +97,7 @@
     <string name="dialog_reconnect_msg">Перезапустити %1$s на кластері?</string>
     <string name="dialog_reconnect_yes">↺ Перезапустити</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="setting_boot_auto_start">Автоматично запускати проекцію під час запуску (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Програми під час запуску</string>
     <string name="category_navigation">🗺 Навігація</string>
     <string name="category_media">🎵 Медіа</string>
     <string name="filter_all">Всі</string>
@@ -117,7 +117,7 @@
     <string name="settings_cluster_123_desc">Seal EU — преміум</string>
     <string name="settings_cluster_1025_desc">Експериментально</string>
     <string name="settings_section_behavior">Поведінка</string>
-    <string name="settings_boot_auto_start_support">Вмикати дзеркало при запуску автомобіля</string>
+    <string name="settings_boot_auto_start_support">За потреби вмикає проєкцію, а потім відновлює збережені застосунки та їх розташування.</string>
     <string name="settings_reconnect_popup_support">Відновлювати у разі несподіваного відключення</string>
     <string name="settings_quick_stop">Швидка зупинка (без відновлення вихідного кластера)</string>
     <string name="settings_quick_stop_support">Лише відправляє sendInfo 18 + 0, без зміни розміру</string>
@@ -144,7 +144,7 @@
     <string name="main_btn_launch_layout_apps">Запустити додатки макета</string>
     <string name="main_section_favorites">ОБРАНЕ</string>
     <string name="main_section_all_apps">Усі додатки</string>
-    <string name="sheet_auto_launch">Автозапуск при старті</string>
+    <string name="sheet_auto_launch">Використовувати цю програму під час запуску…</string>
     <string name="sheet_add_favorite">Додати в обране</string>
     <string name="sheet_remove_favorite">Видалити з обраного</string>
     <string name="sheet_to_main">На головний екран</string>
@@ -786,4 +786,18 @@
     <string name="diag_cluster_rcc_restore_blocked">Проєкція та нові тести заблоковані до завершення цього сеансу RCC. Виконай кроки повернення BYD нижче; лише перепідключення демона недостатньо.</string>
     <string name="diag_cluster_rcc_restore_mismatch">Сеанси RCC застосунку та демона не збігаються. Команду не надіслано; файли та блокування збережено.</string>
     <string name="diag_cluster_rcc_restore_expired">Стан змінився або підтвердження минуло. Команду не надіслано. Перевір сеанс знову.</string>
+    <string name="floating_mirror_open">Відкрити сенсорне дзеркало на весь екран</string>
+    <string name="setting_boot_projection">Увімкнути режим проєкції панелі приладів під час запуску</string>
+    <string name="settings_boot_projection_support">Вмикає проєкцію під час запуску автомобіля без відкриття застосунків.</string>
+    <string name="startup_none">Жодні</string>
+    <string name="startup_last_session">Відновлювати останній сеанс</string>
+    <string name="startup_choose_app">Завжди відкривати вибрану програму</string>
+    <string name="startup_choose_layout">Завжди відкривати вибране компонування</string>
+    <string name="startup_app_fmt">Програма: %1$s</string>
+    <string name="startup_layout_fmt">Компонування: %1$s</string>
+    <string name="startup_unavailable_fmt">Недоступно: %1$s</string>
+    <string name="startup_continue">Продовжити</string>
+    <string name="startup_confirm_app_fmt">Завжди відкривати %1$s під час запуску автомобіля? Це замінить відновлення останнього сеансу.</string>
+    <string name="startup_no_targets">Немає доступних елементів. Перевірте встановлені програми та збережені компонування.</string>
+    <string name="startup_app_selected">Програма запуску — змінити…</string>
 </resources>
