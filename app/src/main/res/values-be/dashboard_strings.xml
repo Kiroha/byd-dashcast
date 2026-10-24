@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">Тэхнічныя звесткі і папярэднія тэсты</string>
     <string name="diag_cluster_dashboard_confirmed">✓ Экран пацверджаны карыстальнікам</string>
     <string name="diag_cluster_dashboard_restore_confirm">Закрыйце праекцыю і запытайце заводскі профіль. Няўдалае закрыццё застаецца нявырашаным нават пасля вяртання заводскага профілю. Потым пацвердзіце бачныя прыборы і папярэджанні.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Часовае ўключэнне штатнай праекцыі BYD…</string>
+    <string name="diag_cluster_dashboard_display_wait">Чаканне экрана праекцыі BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">Экран праекцыі BYD недаступны або несумяшчальны. Праверце падрабязнасці.</string>
+    <string name="diag_cluster_dashboard_restore_required">Ініцыялізацыя пачата: патрабуецца аднаўленне BYD.</string>
+    <string name="diag_cluster_dashboard_small_panel">Выяўлена малая панэль прыбораў: тэст адхілены. Аднаўленне BYD даступнае.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Закрыйце часовую праекцыю BYD і праверце заводскі выбар. Уласны RCC не выбіраўся. Потым пацвердзіце вяртанне прыбораў і папярэджанняў.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Падрыхтоўка можа часова адкрыць штатную праекцыю BYD і праверыць яе экран перад выбарам нашага RCC. Праграма запускаецца толькі пасля Адкрыць. Пацвердзіце стаянку і прашыўку; гэта заява не вымярае рух.</string>
+    <string name="diag_cluster_dashboard_protocol">Падключаны daemon павінен выкарыстоўваць пратакол 43. Перападключыце яго ў DashCast перад Падрыхтаваць або Адкрыць. Каманда BYD не адпраўлена.</string>
 </resources>

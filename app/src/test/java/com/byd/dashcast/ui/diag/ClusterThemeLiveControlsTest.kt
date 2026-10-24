@@ -65,6 +65,8 @@ class ClusterThemeLiveControlsTest {
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
     @Test fun `dashboard main flow keeps details folded and distinguishes preparation receipts and user observation`() {
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previousVersion = vf.get(null); vf.set(null, "43")
         val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
@@ -92,11 +94,24 @@ class ClusterThemeLiveControlsTest {
             assertEquals(c.get().getString(R.string.diag_cluster_dashboard_confirmed), main.text.toString().substringBefore('\n'))
             dashboard.put("stage", "CLOSED_RECEIVED"); render.invoke(controls, receipt)
             assertTrue(open.isEnabled); assertFalse(observe.isEnabled)
+            dashboard.put("stage", "NONE").put("bootstrapStarted", true)
+            receipt.put("mutated", false).put("state", "PREFLIGHT").put("phase", "dashboard-bootstrap-16")
+            render.invoke(controls, receipt)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_bootstrap), main.text.toString().substringBefore('\n'))
+            receipt.put("phase", "dashboard-display-wait"); render.invoke(controls, receipt)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_display_wait), main.text.toString().substringBefore('\n'))
+            receipt.put("state", "QUARANTINE").put("uncertain", true); render.invoke(controls, receipt)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_restore_required), main.text.toString().substringBefore('\n'))
+            render.invoke(controls, receipt)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_restore_required), main.text.toString().substringBefore('\n'))
+            dashboard.put("geometry", JSONObject().put("verdict", "SMALL"))
+            receipt.put("state", "CLEAN").put("rccDebt", false); render.invoke(controls, receipt)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_idle), main.text.toString().substringBefore('\n'))
             val message = ClusterThemeLiveControls::class.java.getDeclaredMethod("dashboardMessage", Int::class.javaPrimitiveType).apply { isAccessible = true }
             message.invoke(controls, R.string.diag_cluster_dashboard_geometry)
             assertTrue(main.isShown); assertEquals(c.get().getString(R.string.diag_cluster_dashboard_geometry), main.text)
             details.performClick(); assertTrue(raw.isShown)
-        } finally { c.pause().stop().destroy(); busy.set(false) }
+        } finally { c.pause().stop().destroy(); busy.set(false); vf.set(null, previousVersion) }
     }
     @Test fun `foreground dashboard validity captured before queueing cannot revive after pause and a new activation`() {
         val prior = ClusterThemeLiveControls::class.java.getDeclaredField("reservation").apply { isAccessible = true }.get(null)
@@ -380,6 +395,44 @@ class ClusterThemeLiveControlsTest {
     @Test fun `corner confirmation sends exact observed cohort asset through operation18 with both assertions`() =
         assertFixedAssetLoad(ClusterThemeVariant.CORNER_MARKER_21F7735C, 18, R.string.diag_cluster_rcc_corners_button, R.string.diag_cluster_rcc_corners_confirm)
 
+    @Test fun `real Prepare click reaches operation19 with only the central Android display present`() {
+        val dm = RuntimeEnvironment.getApplication().getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+        assertTrue(dm.displays.none { it.displayId != 0 && com.byd.dashcast.cluster.display.ClusterDisplayNames.isKnownClusterName(it.name) })
+        assertFixedAssetLoad(ClusterThemeVariant.FULL_DASHBOARD_21F7735C, 19,
+            R.string.diag_cluster_dashboard_prepare, R.string.diag_cluster_dashboard_prepare_confirm)
+    }
+
+    @Test fun `dashboard preparation explains old protocol42 locally before any source staging or start IPC`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = bf.get(null); val version = vf.get(null); var starts = 0
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                if (data.readInt() != 0) starts++
+                reply!!.writeNoException(); reply.writeString("""{"state":"IDLE","filename":"","rccDebt":false}""")
+                return true
+            }
+        }); vf.set(null, "42")
+        val c = Robolectric.buildActivity(UnavailableSourceActivity::class.java).setup()
+        val panel = LinearLayout(c.get()); val main = LinearLayout(c.get()); panel.addView(main)
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), panel, { true }, {}, { false }, {}, dashboardContainer = main)
+        try {
+            views(main).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_prepare) }.performClick()
+            ShadowLooper.idleMainLooper(); val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            views(dialog.window!!.decorView as ViewGroup).filterIsInstance<CheckBox>().forEach { it.isChecked = true }
+            dialog.getButton(-1).performClick()
+            assertEquals(0, starts); assertEquals(1L, c.get().entered.count)
+            assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol) })
+            val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
+            repeat(2) {
+                render.invoke(controls, JSONObject().put("state", "IDLE").put("rccDebt", false))
+                assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol) })
+            }
+            assertFalse(ClusterThemeProjectionDebt.blocked(c.get()))
+        } finally { c.get().finish.countDown(); controls.close(); c.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }
+    }
+
     private fun assertFixedAssetLoad(variant: ClusterThemeVariant, operation: Int, button: Int, confirmation: Int) {
         val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
@@ -415,10 +468,12 @@ class ClusterThemeLiveControlsTest {
                 } catch (error: Throwable) { failure = error; throw error }
                 finally { if (assetReceived || failure != null) received.countDown() }
             }
-        }); vf.set(null, "41")
+        }); vf.set(null, if (variant.isDashboard) "43" else "41")
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
-        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {})
+        val dashboard = if (variant.isDashboard) LinearLayout(activity.get()).also(panel::addView) else null
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {}, dashboardContainer = dashboard)
+        if (variant.isDashboard) controls.setActive(true)
         try {
             views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(button) }.performClick()
             ShadowLooper.idleMainLooper()

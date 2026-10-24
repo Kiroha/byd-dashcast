@@ -4,7 +4,11 @@ package com.byd.dashcast.clusterlive
 internal class ClusterDashboardIntervals(private val clock: () -> Long, private val pause: (Long) -> Unit) {
     @Volatile private var nativeAfter = clock() + ClusterDashboardProfile.COMMAND_GAP_MS
     @Volatile private var rccAfter = clock() + ClusterDashboardProfile.RCC_SWITCH_GAP_MS
-    fun nativeFinished() { nativeAfter = clock() + ClusterDashboardProfile.COMMAND_GAP_MS }
+    fun nativeFinished() = nativeFinishedAfter(ClusterDashboardProfile.COMMAND_GAP_MS)
+    fun nativeFinishedAfter(gapMs: Long) {
+        require(gapMs >= ClusterDashboardProfile.COMMAND_GAP_MS)
+        nativeAfter = clock() + gapMs
+    }
     fun rccFinished() { rccAfter = clock() + ClusterDashboardProfile.RCC_SWITCH_GAP_MS }
     fun rccRemaining(): Long = (rccAfter - clock()).coerceAtLeast(0)
     fun awaitNative(valid: () -> Boolean) = await({ nativeAfter }, valid)
