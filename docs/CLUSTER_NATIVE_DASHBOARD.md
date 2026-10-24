@@ -9,9 +9,13 @@ Open **Diag → DashCast dashboard**. The main flow reads the current connected
 daemon, prepares the dashboard, selects an application, opens it, and records
 the user's visual observation. Every write requires an explicit parked and
 firmware assertion; the checkbox is not a movement sensor. Preparation and
-opening require one currently visible ON cluster display with real geometry
-1920 × 720. Unknown/ambiguous geometry and the existing small-panel latch refuse
-the new profile. The fixed factory Restore button remains outside the scroll
+opening are separated from projection-display discovery. Preparation requires
+the pinned API 29 / positive DiLink3 / exact installed cohort and factory selection.
+If no projection display exists, it first opens the original BYD projection with
+`16 → 3 s → 35`, without changing its screen size or selecting the custom RCC.
+Only a freshly observed, unique OEM-owned ON 1920 × 720 projection display admits
+custom selection and the later size-forcing command. Unknown/ambiguous geometry,
+private or unconfirmed owners and the existing small-panel latch refuse it. The fixed factory Restore button remains outside the scroll
 area. Earlier native/RCC diagnostics remain under folded technical details.
 
 ## Rendering
@@ -45,12 +49,37 @@ factory source hashes.
 
 ## Ownership, sequencing and recovery
 
-ProxyDaemon protocol 42 adds closed dashboard operations; callers cannot choose
+ProxyDaemon protocol 43 adds the closed factory-bootstrap and current-display read; callers cannot choose
 arbitrary native commands or asset hashes. The existing owned RCC journal and
-nonce protect selection and recovery. Opening uses `31 → 16 → 35`; closing uses
+nonce protect selection and recovery. After factory bootstrap and observed geometry,
+opening uses `31 → 16 → 35`; closing uses
 `18 → 0 → 31`. A monotonic 1200 ms interval applies between all native attempts,
 including the boundary between separate open, close and Restore requests.
 Each helper keeps its short deadline and records its identity before GO.
+
+The dedicated display reader runs only a fixed `dumpsys -t 1 display` read as
+shell on API 29, with bounded capture and process cleanup. It reuses the existing
+DMS parser and display model. Logical-display counts, IDs and complete base
+records must agree; truncation, dump errors or timeout markers remain unavailable
+even when dumpsys exits zero. The target must be the single named xdja/fission
+display, owned by `com.xdja.containerservice` / UID 1000, non-private and ON.
+The central screen and inferred IDs/sizes never serve as projection evidence.
+Read-only discovery uses at most six completed probes in a 15-second window,
+with at least one second after each completed probe. Cancel/Restore retires future
+probes and stops its owned reader; an unreaped reader prevents another read but
+never disables the independent native/RCC Restore lane. Normal status polling
+reads cached state only. The reader itself makes no AutoContainer call.
+
+Bootstrap native debt is durable before GO, even while `mutated` remains false
+because no custom RCC has been selected. Bootstrap-only Restore uses `18 → 0`,
+then a fresh factory query and a human observation before CLEAN; it never sends 31
+or invents a custom-load recovery acknowledgment. The journal keeps this proof
+separate from `iviRecoverySettled`, and reads old 72 fields conservatively without
+inventing size admission. A fresh geometry check remains immediately before 31
+and before the application slot. A lost or changed display stops later writes.
+If a previously admitted full-profile close loses its display before its last 31,
+that 31 is refused, native debt remains and factory RCC recovery still proceeds;
+software does not claim a completed physical recovery.
 
 A conservative 15.5 s host compatibility interval precedes RCC selection
 changes. This is outside the helper deadline. The native theme-path handler's

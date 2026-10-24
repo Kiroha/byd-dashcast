@@ -12,7 +12,7 @@ enum class ClusterThemeVariant(val id: String, val startOperation: Int, val asse
     CORNER_MARKER_21F7735C("corner-marker-21f7735c", 18, "cluster_live/corner_marker_21f7735c.rcc",
         "fe069081f1d5c8374276aad2513b8862de61008f67fe6162fb2a4a351e00b734", 39),
     FULL_DASHBOARD_21F7735C("full-dashboard-21f7735c", 19, "cluster_live/full_dashboard_21f7735c.rcc",
-        "8a96299b3acc1cffd2eaf2a57cf94cd2ae26dfd90b5fb6204a0182baea6ac250", 42);
+        "8a96299b3acc1cffd2eaf2a57cf94cd2ae26dfd90b5fb6204a0182baea6ac250", 43);
 
     val isDashboard: Boolean get() = this == FULL_DASHBOARD_21F7735C
     val isMarker: Boolean get() = this != FULL_SURFACE_TEST && !isDashboard

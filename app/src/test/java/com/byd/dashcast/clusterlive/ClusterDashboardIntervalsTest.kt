@@ -34,6 +34,6 @@ class ClusterDashboardIntervalsTest {
             assertFalse(ClusterDashboardProfile.permitsGeometry(w, h, false))
         assertFalse(ClusterDashboardProfile.permitsGeometry(1920, 720, true))
         for (command in listOf(-1, 1, 13, 29, 30, 88, 89)) assertFalse(ClusterDashboardProfile.permitsCommand(command))
-        assertEquals(42, ClusterThemeVariant.FULL_DASHBOARD_21F7735C.minimumProtocol)
+        assertEquals(43, ClusterThemeVariant.FULL_DASHBOARD_21F7735C.minimumProtocol)
     }
 }

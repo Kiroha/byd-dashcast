@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">Технічні відомості та попередні тести</string>
     <string name="diag_cluster_dashboard_confirmed">✓ Екран підтверджено користувачем</string>
     <string name="diag_cluster_dashboard_restore_confirm">Закрийте проєкцію та запитайте заводський профіль. Невдале закриття залишається невирішеним навіть після повернення заводського профілю. Потім підтвердьте видимі прилади та попередження.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Тимчасове ввімкнення штатної проєкції BYD…</string>
+    <string name="diag_cluster_dashboard_display_wait">Очікування екрана проєкції BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">Екран проєкції BYD недоступний або несумісний. Перевірте подробиці.</string>
+    <string name="diag_cluster_dashboard_restore_required">Ініціалізацію розпочато: потрібне відновлення BYD.</string>
+    <string name="diag_cluster_dashboard_small_panel">Виявлено малу панель приладів: тест відхилено. Відновлення BYD доступне.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Закрийте тимчасову проєкцію BYD і перевірте заводський вибір. Власний RCC не вибирався. Потім підтвердьте повернення приладів і попереджень.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Підготовка може тимчасово відкрити штатну проєкцію BYD і перевірити її екран перед вибором нашого RCC. Застосунок запускається лише після Відкрити. Підтвердьте стоянку та прошивку; ця заява не вимірює рух.</string>
+    <string name="diag_cluster_dashboard_protocol">Підключений daemon має використовувати протокол 43. Перепідключіть його в DashCast перед Підготувати або Відкрити. Команду BYD не надіслано.</string>
 </resources>
