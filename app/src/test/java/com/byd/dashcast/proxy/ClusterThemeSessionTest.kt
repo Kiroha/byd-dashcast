@@ -34,6 +34,29 @@ class ClusterThemeSessionTest {
         RuntimeEnvironment.getApplication().getSharedPreferences("native_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
+    @Test fun `dashboard application launch uses one captured endpoint and never retries a lost reply`() {
+        var calls = 0
+        val first = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_LAUNCH_AND_FORCE, code)
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                assertEquals("org.example.maps", data.readString()); assertEquals(0, data.readInt())
+                assertEquals(7, data.readInt()); assertEquals(752, data.readInt()); assertEquals(320, data.readInt())
+                assertNull(data.readStrongBinder()); assertEquals(0, data.dataAvail())
+                calls++; throw DeadObjectException()
+            }
+        }
+        binderField.set(null, first); versionField.set(null, "42")
+        val session = ClusterThemeSession.pin(RuntimeEnvironment.getApplication())
+        assertThrows(DeadObjectException::class.java) { session.launchDashboardApplication("org.example.maps", 7) }
+        assertEquals(1, calls)
+        var replacementCalls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { replacementCalls++; return false }
+        })
+        assertThrows(IllegalStateException::class.java) { session.launchDashboardApplication("org.example.maps", 7) }
+        assertEquals(0, replacementCalls); assertEquals(1, calls)
+    }
     @Test fun `Android RCC operation35 commits exact debt before fixed marker request`() {
         val app = RuntimeEnvironment.getApplication(); var calls = 0
         binderField.set(null, object : Binder() {

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast dashboard</string>
+    <string name="diag_cluster_dashboard_help">Manual test while parked. BYD instruments and alerts remain. Closing keeps the profile selected. Restore the factory profile and verify its return before installing an older APK.</string>
+    <string name="diag_cluster_dashboard_read">1 · Read state and compatibility</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Prepare dashboard</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Choose application</string>
+    <string name="diag_cluster_dashboard_open">4 · Open dashboard</string>
+    <string name="diag_cluster_dashboard_close">Close projection</string>
+    <string name="diag_cluster_dashboard_observe">5 · Confirm observed display</string>
+    <string name="diag_cluster_dashboard_observe_message">Confirm only if you see the DashCast dashboard, instruments, alerts and application. A command receipt does not prove this display.</string>
+    <string name="diag_cluster_dashboard_confirm">Confirm that the vehicle is stationary and the firmware context has been checked. This checkbox is an assertion, not a movement measurement. Validation in the car remains necessary.</string>
+    <string name="diag_cluster_dashboard_geometry">One active 1920 × 720 cluster must be detected. Unknown, ambiguous or small geometry refuses this test.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prepare the DashCast profile first and wait for selection to finish.</string>
+    <string name="diag_cluster_dashboard_idle">○ No dashboard prepared</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Restoring</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Uncertain state: use Restore</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Opening received; confirm the display</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Projection closed; factory restore still required</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Operation in progress</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profile selected; choose an application and open the dashboard</string>
+    <string name="diag_cluster_dashboard_selected_app">Application: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Technical details and previous tests</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Display confirmed by the user</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Close projection and request the factory profile. A failed close remains unresolved even if the factory profile returns. Then confirm the visible instruments and alerts.</string>
+</resources>

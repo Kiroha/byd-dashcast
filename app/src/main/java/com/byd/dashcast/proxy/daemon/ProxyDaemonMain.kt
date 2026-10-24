@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "41"
+    private const val PROTOCOL_VERSION = "42"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -820,7 +820,7 @@ object ProxyDaemonMain {
                                 check(data.dataAvail() == 0) { "Unsupported native mode request" }
                                 ClusterThemeLiveTest.nativeModeRequest(full, nonce, parked, firmware, validity)
                             }
-                            11, 12, 15, 18 -> {
+                            11, 12, 15, 18, 19 -> {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
                                 try {
                                     val parked = data.readInt() == 1; val firmware = data.readInt() == 1
@@ -832,7 +832,8 @@ object ProxyDaemonMain {
                                             11 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.MARKER
                                             12 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST
                                             15 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER
-                                            else -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER_21F7735C
+                                            18 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER_21F7735C
+                                            else -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_DASHBOARD_21F7735C
                                         })
                                 } catch (error: Throwable) { runCatching { source.close() }; throw error }
                             }
@@ -843,6 +844,17 @@ object ProxyDaemonMain {
                                 check(data.dataAvail() == 0)
                                 if (operation == 14) ClusterThemeLiveTest.requestAndroidRetirement(nonce, parked, firmware, validity)
                                 else ClusterThemeLiveTest.requestAndroidRestore(nonce, parked, firmware, validity)
+                            }
+                            20, 21 -> {
+                                val nonce = data.readString() ?: ""
+                                val parked = data.readInt() == 1; val firmware = data.readInt() == 1
+                                val validity = data.readStrongBinder() ?: error("Missing dashboard reservation")
+                                check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.requestDashboard(operation == 20, nonce, parked, firmware, validity)
+                            }
+                            22 -> {
+                                val name = data.readString() ?: ""; val round = data.readString() ?: ""; check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.observeDashboard(name, round)
                             }
                             10 -> {
                                 val nonce = data.readString() ?: ""

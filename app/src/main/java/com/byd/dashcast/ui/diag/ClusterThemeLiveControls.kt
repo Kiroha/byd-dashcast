@@ -37,7 +37,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private val nativeStatus: (String, ClusterThemeSession) -> Unit = { _, _ -> },
     private val prompts: ClusterObservationPrompts = ClusterObservationPrompts(activity),
     private val nativeStatusUnavailable: () -> Unit = {},
-    private val openClusterPage: () -> Unit = {}) {
+    private val openClusterPage: () -> Unit = {}, dashboardContainer: LinearLayout? = null) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-restore-ui").apply { isDaemon = true } }
@@ -50,6 +50,11 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         private var reservation: ProjectionCommandSequencer.Session? = null
         private var reservationFilename = ""
         private var reservationDebt = false
+        private var dashboardFission: com.byd.dashcast.fission.FissionOrchestrator? = null
+        private var dashboardUi = java.lang.ref.WeakReference<ClusterThemeLiveControls>(null)
+        private var dashboardPackage = ""
+        private var dashboardLabel = ""
+        @Volatile private var dashboardSlotsUnsettled = false
     }
     private val handler = Handler(Looper.getMainLooper())
     private val app = activity.applicationContext
@@ -63,6 +68,14 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private var lastSummary = ""
     @Volatile private var active = false
     @Volatile private var activation = 0L
+    private val dashboardCommandGeneration = AtomicLong(0)
+    private class DashboardOpenTicket(val activation: Long, val filename: String,
+        val reservation: ProjectionCommandSequencer.Session, val pinned: ClusterThemeSession) {
+        val dispatched = AtomicBoolean(false)
+    }
+    @Volatile private var dashboardTicket: DashboardOpenTicket? = null
+    @Volatile private var dashboardFilename = ""
+    @Volatile private var dashboardLaunchStateReady = false
     @Volatile private var statusPending = false
     private val observationPending = AtomicBoolean(false)
     private var displayed: JSONObject? = null
@@ -70,6 +83,12 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private val restoreButton = Button(activity)
     private val retireButton = Button(activity)
     private val cornerVerifyButton = Button(activity)
+    private var dashboardOpenButton: Button? = null
+    private var dashboardObserveButton: Button? = null
+    private val dashboardStatus = TextView(activity).apply {
+        textSize = 16f; text = activity.getString(R.string.diag_cluster_dashboard_waiting)
+        accessibilityLiveRegion = android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
     @Volatile private var queryPending = false
     private val status = TextView(activity).apply {
         textSize = 14f
@@ -84,6 +103,42 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         }
     }
     init {
+        dashboardUi = java.lang.ref.WeakReference(this)
+        dashboardContainer?.let { host ->
+            host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_dashboard_title); textSize = 20f; isAccessibilityHeading = true })
+            host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_dashboard_help); textSize = 15f })
+            host.addView(dashboardStatus)
+            fun action(label: Int, run: () -> Unit) = Button(activity).apply {
+                text = activity.getString(label); isAllCaps = false
+                minHeight = (48 * activity.resources.displayMetrics.density).toInt()
+                contentDescription = text; setOnClickListener { run() }
+            }.also(host::addView)
+            action(R.string.diag_cluster_dashboard_read) {
+                submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
+            }
+            action(R.string.diag_cluster_dashboard_prepare) { requestStart(ClusterThemeVariant.FULL_DASHBOARD_21F7735C) }
+            action(R.string.diag_cluster_dashboard_choose_app) { chooseDashboardApp() }
+            dashboardOpenButton = action(R.string.diag_cluster_dashboard_open) { confirmDashboard(true) }.apply { isEnabled = false }
+            action(R.string.diag_cluster_dashboard_close) { confirmDashboard(false) }
+            dashboardObserveButton = action(R.string.diag_cluster_dashboard_observe) {
+                val name = displayed?.takeIf { it.optString("variant") == ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id }?.optString("filename")
+                if (name == null) { dashboardMessage(R.string.diag_cluster_dashboard_prepare_first); return@action }
+                val round = displayed?.optJSONObject("dashboard")?.optString("round").orEmpty()
+                val observedSession = displayedSession
+                if (observedSession == null) { dashboardMessage(R.string.diag_cluster_dashboard_waiting); return@action }
+                val observedActivation = activation
+                if (displayed?.optJSONObject("dashboard")?.optString("stage") != "OPEN_RECEIVED" || !round.matches(Regex("[0-9a-f]{32}"))) {
+                    dashboardMessage(R.string.diag_cluster_dashboard_waiting); return@action
+                }
+                AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_dashboard_observe)
+                    .setMessage(R.string.diag_cluster_dashboard_observe_message).setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> submit("observe-dashboard") {
+                        check(active && !closed && activation == observedActivation && observedSession.isCurrent() &&
+                            displayed?.optString("filename") == name && displayed?.optJSONObject("dashboard")?.optString("round") == round)
+                        observedSession.observedDashboard(name, round)
+                    } }.show()
+            }.apply { isEnabled = false }
+        }
         // Keep recovery in the fixed header; detailed status can live in the cluster page.
         val headerIndex = 0
         statusContainer.addView(status)
@@ -94,9 +149,10 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             setOnClickListener {
                 confirmation?.dismiss(); confirmation = null
                 abortBeforeSend.set(true)
+                dashboardTicket = null; dashboardCommandGeneration.incrementAndGet()
                 ClusterThemeDiagnostics.local(app, "restore-button", "LOCAL", "Opening Cluster page and reading current pinned daemon status before choosing recovery; no OEM request yet.")
                 openClusterPage()
-                requestRecoveryAction()
+                stopDashboardSlots { requestRecoveryAction() }
             }
         }, headerIndex)
         controls.addView(Button(activity).apply {
@@ -175,6 +231,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                 ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C -> R.string.diag_cluster_rcc_corners_confirm
                 ClusterThemeVariant.MARKER -> R.string.diag_cluster_rcc_ivi_marker_confirm
                 ClusterThemeVariant.FULL_SURFACE_TEST -> R.string.diag_cluster_rcc_ivi_theme_confirm
+                ClusterThemeVariant.FULL_DASHBOARD_21F7735C -> R.string.diag_cluster_dashboard_confirm
             })
             .setView(checks).setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.diag_cluster_rcc_ivi_send, null).create()
@@ -189,22 +246,169 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         }
         dialog.show()
     }
+    private fun dashboardGeometry(): Boolean {
+        val dm = app.getSystemService(android.content.Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+        val matches = dm.displays.filter { com.byd.dashcast.cluster.display.ClusterDisplayNames.isKnownClusterName(it.name) }
+        if (matches.size != 1 || matches.single().state != android.view.Display.STATE_ON) return false
+        val size = android.graphics.Point(); matches.single().getRealSize(size)
+        return com.byd.dashcast.clusterlive.ClusterDashboardProfile.permitsGeometry(size.x, size.y,
+            com.byd.dashcast.data.prefs.ClusterPrefs.isSmallClusterPanelLatched(app))
+    }
+    private fun chooseDashboardApp() {
+        val expectedActivation = activation
+        work.execute {
+            val pm = app.packageManager
+            val homes = pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_HOME), 0).map { it.activityInfo.packageName }.toSet()
+            val choices = pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0)
+                .filter { it.activityInfo.packageName != app.packageName && com.byd.dashcast.cluster.ProjectionSafetyPolicy.isAllowed(it.activityInfo.packageName, it.activityInfo.packageName in homes) }
+                .distinctBy { it.activityInfo.packageName }.map { it.activityInfo.packageName to it.loadLabel(pm).toString() }
+                .sortedBy { it.second.lowercase(java.util.Locale.getDefault()) }
+            handler.post {
+                if (closed || !active || activation != expectedActivation) return@post
+                AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_dashboard_choose_app)
+                    .setItems(choices.map { it.second }.toTypedArray()) { _, index ->
+                        dashboardPackage = choices[index].first; dashboardLabel = choices[index].second
+                        displayed?.let(::renderDashboard)
+                    }.setNegativeButton(android.R.string.cancel, null).show()
+            }
+        }
+    }
+    private fun confirmDashboard(open: Boolean) {
+        if (!open) { dashboardTicket = null; dashboardCommandGeneration.incrementAndGet() }
+        if (displayed?.optString("variant") != ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id || displayed?.optBoolean("rccDebt") != true) {
+            dashboardMessage(R.string.diag_cluster_dashboard_prepare_first); return
+        }
+        if (open && (displayed?.optJSONObject("dashboard")?.optBoolean("selectionReady") != true ||
+                displayed?.optString("phase") != "observation" || displayed?.optBoolean("uncertain") == true ||
+                displayed?.optJSONObject("dashboard")?.optString("stage") !in setOf("NONE", "CLOSED_RECEIVED"))) {
+            dashboardMessage(R.string.diag_cluster_dashboard_waiting); return
+        }
+        if (open && (dashboardPackage.isEmpty() || !dashboardGeometry())) {
+            dashboardMessage(if (dashboardPackage.isEmpty()) R.string.diag_cluster_dashboard_choose_app else R.string.diag_cluster_dashboard_geometry); return
+        }
+        val expected = activation
+        val checks = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        val parked = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_parked) }
+        val firmware = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_firmware) }
+        checks.addView(parked); checks.addView(firmware)
+        val dialog = AlertDialog.Builder(activity).setTitle(if (open) R.string.diag_cluster_dashboard_open else R.string.diag_cluster_dashboard_close)
+            .setMessage(R.string.diag_cluster_dashboard_confirm).setView(checks)
+            .setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.diag_cluster_native_send, null).create()
+        confirmation = dialog
+        dialog.setOnShowListener {
+            val send = dialog.getButton(AlertDialog.BUTTON_POSITIVE); send.isEnabled = false
+            parked.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked && firmware.isChecked }
+            firmware.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked && firmware.isChecked }
+            send.setOnClickListener {
+                if (!parked.isChecked || !firmware.isChecked || closed || activation != expected) return@setOnClickListener
+                dialog.dismiss(); confirmation = null
+                val request = {
+                    val reserved = reserve()
+                    if (reserved != null) {
+                        val pinned = checkNotNull(session)
+                        val expectedCommand = dashboardCommandGeneration.get()
+                        val commandValidity = validity(reserved, foreground = true)
+                        dashboardTicket = if (open) DashboardOpenTicket(expected, dashboardFilename, reserved, pinned) else null
+                        submit(if (open) "dashboard-open" else "dashboard-close") {
+                            check(active && !closed && activation == expected && dashboardCommandGeneration.get() == expectedCommand && pinned.isCurrent()) {
+                                "Dashboard click expired before IPC; no sequence sent"
+                            }
+                            pinned.dashboardProjection(open, commandValidity)
+                        }
+                    } else dashboardMessage(R.string.diag_cluster_native_busy)
+                }
+                if (open) request() else stopDashboardSlots(request)
+            }
+        }
+        dialog.show()
+    }
+    private fun stopDashboardSlots(next: () -> Unit) {
+        dashboardTicket = null; dashboardCommandGeneration.incrementAndGet()
+        // Remote recovery must never queue behind a blocked local VD transaction.
+        next()
+        val fission = dashboardFission
+        fission?.stopAll(Runnable {
+            if (fission.getSlots().isEmpty() && com.byd.dashcast.fission.FissionReleaseDebt.snapshot().isEmpty()) {
+                dashboardSlotsUnsettled = false; dashboardUi.get()?.releaseReservation()
+            }
+        })
+    }
+    private fun ticketCurrent(ticket: DashboardOpenTicket): Boolean = dashboardTicket === ticket && !closed && active &&
+        activation == ticket.activation && dashboardFilename == ticket.filename && ticket.pinned.isCurrent() &&
+        ProjectionCommandBus.ownsDiagnostic(ticket.reservation) && dashboardLaunchStateReady
+    private fun renderDashboard(j: JSONObject) {
+        val own = j.optString("variant") == ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id && j.optBoolean("rccDebt")
+        val stage = j.optJSONObject("dashboard")?.optString("stage").orEmpty()
+        dashboardFilename = j.optString("filename")
+        dashboardLaunchStateReady = own && stage == "OPEN_RECEIVED" && !j.optBoolean("uncertain") &&
+            !j.optBoolean("recoveryPending") && j.optJSONObject("dashboard")?.optBoolean("pending") == false
+        val label = when {
+            !own -> R.string.diag_cluster_dashboard_idle
+            j.optBoolean("recoveryPending") -> R.string.diag_cluster_dashboard_restoring
+            j.optBoolean("uncertain") || stage == "UNKNOWN" -> R.string.diag_cluster_dashboard_unknown
+            stage == "OPEN_RECEIVED" && j.optBoolean("themeObservedByUser") && j.optJSONObject("dashboard")?.optString("pixels") == "USER_REPORTED" -> R.string.diag_cluster_dashboard_confirmed
+            stage == "OPEN_RECEIVED" -> R.string.diag_cluster_dashboard_open_received
+            stage == "CLOSED_RECEIVED" -> R.string.diag_cluster_dashboard_closed_received
+            stage in setOf("OPENING", "CLOSING") || j.optString("phase") != "observation" -> R.string.diag_cluster_dashboard_waiting
+            j.optJSONObject("dashboard")?.optBoolean("selectionReady") != true -> R.string.diag_cluster_dashboard_waiting
+            else -> R.string.diag_cluster_dashboard_ready
+        }
+        dashboardStatus.text = activity.getString(label) + if (dashboardLabel.isNotEmpty()) "\n" + activity.getString(R.string.diag_cluster_dashboard_selected_app, dashboardLabel) else ""
+        dashboardOpenButton?.isEnabled = own && j.optJSONObject("dashboard")?.optBoolean("selectionReady") == true &&
+            j.optString("phase") == "observation" && !j.optBoolean("uncertain") && !j.optBoolean("recoveryPending") &&
+            j.optJSONObject("dashboard")?.optBoolean("pending") == false && stage in setOf("NONE", "CLOSED_RECEIVED")
+        dashboardObserveButton?.isEnabled = dashboardLaunchStateReady &&
+            j.optJSONObject("dashboard")?.optString("round")?.matches(Regex("[0-9a-f]{32}")) == true
+        if (!own || stage == "UNKNOWN" || j.optBoolean("uncertain") || j.optBoolean("recoveryPending")) dashboardTicket = null
+        val ticket = dashboardTicket
+        if (own && stage == "OPEN_RECEIVED" && ticket != null && ticketCurrent(ticket) && ticket.dispatched.compareAndSet(false, true)) {
+            val reserved = ticket.reservation
+            if (dashboardFission == null) {
+                dashboardFission = com.byd.dashcast.fission.FissionOrchestrator(app,
+                    object : com.byd.dashcast.domain.cluster.ProjectionStateProvider {
+                        override fun isProjectionActive() = com.byd.dashcast.cluster.ClusterService.getInstance()?.isProjectionActive() == true
+                        override fun stopProjectionIfActive(onStopped: Runnable?) { onStopped?.run() }
+                    }, object : com.byd.dashcast.fission.FissionOrchestrator.Callbacks {
+                        override fun onSlotsChanged(slots: Collection<com.byd.dashcast.fission.FissionOrchestrator.SlotState>) {
+                            if (slots.isEmpty() && com.byd.dashcast.fission.FissionReleaseDebt.snapshot().isEmpty()) {
+                                dashboardSlotsUnsettled = false; dashboardUi.get()?.releaseReservation()
+                            }
+                        }
+                        override fun onDaemonBinderAcquired(binder: android.os.IBinder?) {}
+                        override fun onStatusMessage(message: String?) {}
+                        override fun onSlotError(pkg: String?, message: String?) { dashboardUi.get()?.show("${message.orEmpty()}", "dashboard-app-slot") }
+                        override fun onProjectionConflict(proceedCallback: Runnable?) { dashboardUi.get()?.show("Projection conflict", "dashboard-app-conflict") }
+                    })
+            }
+            dashboardSlotsUnsettled = true
+            val owner = java.lang.ref.WeakReference(this)
+            runCatching { dashboardFission?.startDashboardSlot(dashboardPackage, dashboardLabel, reserved, ticket.pinned) { owner.get()?.ticketCurrent(ticket) == true } }
+                .onFailure { show(ClusterThemeDiagnostics.failure(it), "dashboard-app-refused"); stopDashboardSlots {} }
+        }
+    }
     private fun reserve(): ProjectionCommandSequencer.Session? = synchronized(reservationLock) {
         reservation?.takeIf { ProjectionCommandBus.isCurrent(it) }
             ?: ProjectionCommandBus.reserveDiagnostic()?.also {
                 reservation = it; reservationFilename = ""; reservationDebt = false
             }
     }
-    private fun validity(lease: ProjectionCommandSequencer.Session) = object : Binder() {
+    private fun validity(lease: ProjectionCommandSequencer.Session, foreground: Boolean = false): Binder {
+        val expectedActivation = activation
+        val expectedDashboardGeneration = dashboardCommandGeneration.get()
+        return object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code != 1) return false
             data.enforceInterface("com.byd.dashcast.RccReservation")
-            reply?.writeNoException(); reply?.writeInt(if (ProjectionCommandBus.isCurrent(lease)) 1 else 0)
+            reply?.writeNoException(); reply?.writeInt(if (ProjectionCommandBus.isCurrent(lease) &&
+                (!foreground || !closed && active && activation == expectedActivation && dashboardCommandGeneration.get() == expectedDashboardGeneration)) 1 else 0)
             return true
+        }
         }
     }
     private fun releaseReservation() = synchronized(reservationLock) {
-        if (!ClusterThemeProjectionDebt.blocked(app) && !reservationDebt) reservation?.let {
+        if (!ClusterThemeProjectionDebt.blocked(app) && !reservationDebt && !dashboardSlotsUnsettled) reservation?.let {
             ProjectionCommandBus.endSession(it); reservation = null; reservationFilename = ""
         }
     }
@@ -343,6 +547,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val dialog = AlertDialog.Builder(activity).setTitle(if (verifyCorners) R.string.diag_cluster_rcc_corners_verify_button else if (retire) R.string.diag_cluster_rcc_retire_button
             else if (retired) R.string.diag_cluster_rcc_verify_return else R.string.diag_cluster_rcc_restore)
             .setMessage(if (verifyCorners) R.string.diag_cluster_rcc_corners_verify_confirm else if (retire) R.string.diag_cluster_rcc_retire_confirm else if (retired) R.string.diag_cluster_rcc_retired_waiting
+                else if (displayed?.optString("variant") == ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id) R.string.diag_cluster_dashboard_restore_confirm
                 else R.string.diag_cluster_rcc_ivi_restore_confirm).setView(checks)
             .setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.diag_cluster_native_send, null).create()
         confirmation = dialog
@@ -389,6 +594,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         }
         val reserved = reserve()
         if (reserved == null) { show(activity.getString(R.string.diag_cluster_native_busy), "ivi-reservation-refused"); return }
+        if (variant.isDashboard && !dashboardGeometry()) {
+            releaseReservation(); dashboardMessage(R.string.diag_cluster_dashboard_geometry); return
+        }
         // Reserve request lane BEFORE global busy ownership. Polling cannot strand the claim.
         if (!busy.compareAndSet(false, true)) { releaseReservation(); show("Another request is active. No start submitted.", "start-busy"); return }
         if (recoveryBusy.get() || diagClaimed.get() || !claimDiag()) { busy.set(false); releaseReservation(); show("Diagnostic lane unavailable. No start submitted.", "start-refused"); return }
@@ -427,7 +635,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     total += n; check(total <= ClusterThemePolicy.MAX_CARRIER); output.write(buffer, 0, n) }
                 output.fd.sync()
             } }
-            return ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { s.startIvi(it, variant, validity(reserved), beforeTransaction) }
+            return ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { s.startIvi(it, variant, validity(reserved, variant.isDashboard), beforeTransaction) }
         } finally { source.delete() } // Only this app's source; daemon owns the carrier.
     }
     private fun submit(operation: String, automatic: Boolean = false, action: () -> String) {
@@ -483,6 +691,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             if (!closed && pinned.isCurrent()) {
                 if (active && activation == requestedActivation) {
                     displayed = j; displayedSession = pinned
+                    renderDashboard(j)
                     restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else if (j.optBoolean("retirementAvailable")) R.string.diag_cluster_rcc_retire_button else R.string.diag_cluster_rcc_restore)
                     restoreButton.contentDescription = restoreButton.text
                     retireButton.visibility = if (j.optBoolean("rccDebt") && (j.optBoolean("retirementAvailable") || retirement != null && !retirement.optBoolean("moved"))) android.view.View.VISIBLE else android.view.View.GONE
@@ -502,8 +711,18 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private fun show(text: String, operation: String? = null) {
         if (operation != null) ClusterThemeDiagnostics.local(app, operation, "LOCAL", text)
         handler.post { if (!closed && !activity.isDestroyed) status.text = text }
+        if (operation != null && (operation.startsWith("dashboard") || operation.endsWith("failed") || operation.endsWith("refused") || operation.contains("busy"))) {
+            handler.post { if (!closed && active) dashboardStatus.text = activity.getString(
+                if (operation.contains("busy")) R.string.diag_cluster_native_busy else R.string.diag_cluster_dashboard_unknown) }
+        }
+    }
+    private fun dashboardMessage(label: Int) {
+        val text = activity.getString(label)
+        show(text)
+        dashboardStatus.text = text
     }
     fun setActive(value: Boolean) {
+        if (!value) { dashboardTicket = null; dashboardCommandGeneration.incrementAndGet() }
         active = value
         activation++
         displayed = null; displayedSession = null

@@ -76,4 +76,25 @@ class ClusterThemeJournalTest {
         assertTrue(ClusterThemeJournal.recover(complete).clean)
         assertThrows(Exception::class.java) { ClusterThemeJournal.recover(complete.put("iviRecoverySettled", false)) }
     }
+    @Test fun `dashboard native helper and RCC helper retain separate validated identities across restart`() {
+        val variant = ClusterThemeVariant.FULL_DASHBOARD_21F7735C
+        val state = JSONObject().put("stage", "UNKNOWN").put("nativeDebt", true)
+            .put("helperCommand", 18).put("helperPid", 43).put("helperStart", "9876").put("helperToken", "b".repeat(32))
+        val j = journal().put("variant", variant.id).put("carrierSha256", variant.carrierSha256)
+            .put("mutated", true).put("createdDevice", 1).put("createdInode", 9)
+            .put("helperPid", 42).put("helperStart", "1234").put("helperToken", "a".repeat(32)).put("dashboard", state)
+        val recovered = ClusterThemeJournal.recover(j)
+        assertEquals(42, recovered.helperPid); assertEquals(43, recovered.dashboardHelperPid)
+        assertEquals(18, recovered.dashboardHelperCommand); assertTrue(recovered.dashboardNativeDebt)
+        for ((key, value) in listOf("helperPid" to -1, "helperPid" to "43", "helperPid" to 1.5,
+            "helperCommand" to 1, "nativeDebt" to "true", "helperToken" to "foreign", "helperStart" to "")) {
+            val bad = JSONObject(j.toString()).put("dashboard", JSONObject(state.toString()).put(key, value))
+            assertThrows(Exception::class.java) { ClusterThemeJournal.recover(bad) }
+        }
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put("state", "CLEAN")) }
+        val nativeClosed = JSONObject(state.toString()).put("stage", "CLOSED_RECEIVED").put("nativeDebt", false)
+            .put("helperCommand", -1).put("helperPid", 0).put("helperStart", "").put("helperToken", "")
+        val clean = JSONObject(j.toString()).put("state", "CLEAN").put("helperPid", 0).put("helperStart", "").put("helperToken", "").put("dashboard", nativeClosed)
+        assertTrue(ClusterThemeJournal.recover(clean).clean)
+    }
 }

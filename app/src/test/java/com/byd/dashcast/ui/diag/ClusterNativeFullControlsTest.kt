@@ -84,9 +84,10 @@ class ClusterNativeFullControlsTest {
         val c = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
             val activity = c.get(); val all = views(activity.findViewById(android.R.id.content))
-            val title = activity.getString(R.string.diag_cluster_page_title)
-            assertEquals("Cluster : projection et RCC", title)
+            val title = activity.getString(R.string.diag_cluster_dashboard_title)
+            assertEquals("Tableau de bord DashCast", title)
             all.filterIsInstance<Button>().single { it.text.toString().startsWith(title + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text == activity.getString(R.string.diag_cluster_dashboard_details) }.performClick()
             assertTrue(all.filterIsInstance<android.widget.TextView>().any { it.text == title })
             assertTrue(all.filterIsInstance<Button>().any { it.text == "Tester la projection BYD (avec bandeaux)" })
         } finally { c.destroy() }

@@ -40,6 +40,7 @@ internal class ProjectionCommandSequencer {
     private var diagnostic = false
 
     @Synchronized fun diagnosticReserved(): Boolean = diagnostic
+    @Synchronized fun ownsDiagnostic(session: Session): Boolean = diagnostic && isCurrent(session)
 
     /** Never retire projection ownership or queued cleanup merely to run a diagnostic. */
     @Synchronized fun reserveDiagnostic(): Session? {
@@ -180,6 +181,7 @@ internal object ProjectionCommandBus {
         sequencer.currentSession()
 
     fun diagnosticReserved(): Boolean = sequencer.diagnosticReserved()
+    fun ownsDiagnostic(session: ProjectionCommandSequencer.Session): Boolean = sequencer.ownsDiagnostic(session)
 
     fun reserveDiagnostic(): ProjectionCommandSequencer.Session? = synchronized(sequencer) {
         if (externalCommands > 0 || !com.byd.dashcast.cluster.ProjectionAdasCoordinator.idleForDiagnostic() ||

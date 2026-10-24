@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast gösterge paneli</string>
+    <string name="diag_cluster_dashboard_help">Araç park halindeyken elle test edin. BYD göstergeleri ve uyarıları korunur. Kapatınca profil seçili kalır. Eski APK yüklemeden önce fabrika profilini geri yükleyip doğrulayın.</string>
+    <string name="diag_cluster_dashboard_read">1 · Durum ve uyumluluğu oku</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Paneli hazırla</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Uygulama seç</string>
+    <string name="diag_cluster_dashboard_open">4 · Paneli aç</string>
+    <string name="diag_cluster_dashboard_close">Yansıtmayı kapat</string>
+    <string name="diag_cluster_dashboard_observe">5 · Görünen ekranı doğrula</string>
+    <string name="diag_cluster_dashboard_observe_message">Yalnızca panel, göstergeler, uyarılar ve uygulama görünüyorsa doğrulayın. Komut yanıtı görüntüyü kanıtlamaz.</string>
+    <string name="diag_cluster_dashboard_confirm">Aracın durduğunu ve yazılımın kontrol edildiğini doğrulayın. Bu kutu bir beyandır, hareket ölçümü değildir. Araçta doğrulama hâlâ gereklidir.</string>
+    <string name="diag_cluster_dashboard_geometry">Tek bir etkin 1920 × 720 piksel gösterge algılanmalıdır. Bilinmeyen, belirsiz veya küçük boyut: test reddedilir.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Önce DashCast profilini hazırlayın ve seçimin bitmesini bekleyin.</string>
+    <string name="diag_cluster_dashboard_idle">○ Panel hazırlanmadı</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Geri yükleniyor</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Durum belirsiz: Geri yükle seçeneğini kullanın</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Açılış yanıtı alındı; ekranı doğrulayın</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Yansıtma kapalı; fabrika geri yüklemesi gerekli</string>
+    <string name="diag_cluster_dashboard_waiting">◷ İşlem sürüyor</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profil seçildi; uygulamayı seçip paneli açın</string>
+    <string name="diag_cluster_dashboard_selected_app">Uygulama: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Teknik ayrıntılar ve önceki testler</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Ekran kullanıcı tarafından doğrulandı</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Yansıtmayı kapatıp fabrika profilini isteyin. Fabrika profili dönse bile başarısız kapatma çözülmemiş kalır. Ardından görünen göstergeleri ve uyarıları doğrulayın.</string>
+</resources>

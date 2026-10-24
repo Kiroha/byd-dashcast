@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Панель DashCast</string>
+    <string name="diag_cluster_dashboard_help">Ручний тест на стоянці. Прилади та попередження BYD зберігаються. Після закриття профіль залишається вибраним. Перед встановленням старого APK відновіть заводський профіль і перевірте результат.</string>
+    <string name="diag_cluster_dashboard_read">1 · Прочитати стан і сумісність</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Підготувати панель</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Вибрати застосунок</string>
+    <string name="diag_cluster_dashboard_open">4 · Відкрити панель</string>
+    <string name="diag_cluster_dashboard_close">Закрити проєкцію</string>
+    <string name="diag_cluster_dashboard_observe">5 · Підтвердити видимий екран</string>
+    <string name="diag_cluster_dashboard_observe_message">Підтверджуйте лише якщо видно панель, прилади, попередження та застосунок. Відповідь команди не доводить відображення.</string>
+    <string name="diag_cluster_dashboard_confirm">Підтвердьте нерухомість автомобіля та перевірку прошивки. Цей прапорець — заява, а не вимірювання руху. Перевірка в автомобілі ще необхідна.</string>
+    <string name="diag_cluster_dashboard_geometry">Має визначатися одна активна панель 1920 × 720 пікселів. Невідомий, неоднозначний або малий розмір: тест відхилено.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Спочатку підготуйте профіль DashCast і дочекайтеся завершення вибору.</string>
+    <string name="diag_cluster_dashboard_idle">○ Панель не підготовлена</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Відновлення</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Стан невідомий: скористайтеся відновленням</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Відкриття прийнято; підтвердьте екран</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Проєкцію закрито; відновіть заводський профіль</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Виконується операція</string>
+    <string name="diag_cluster_dashboard_ready">✓ Профіль вибрано; виберіть застосунок і відкрийте панель</string>
+    <string name="diag_cluster_dashboard_selected_app">Застосунок: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Технічні відомості та попередні тести</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Екран підтверджено користувачем</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Закрийте проєкцію та запитайте заводський профіль. Невдале закриття залишається невирішеним навіть після повернення заводського профілю. Потім підтвердьте видимі прилади та попередження.</string>
+</resources>

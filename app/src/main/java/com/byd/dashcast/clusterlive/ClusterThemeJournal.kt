@@ -7,7 +7,9 @@ internal object ClusterThemeJournal {
     data class Recovery(val transport: ClusterThemeTransport, val variant: ClusterThemeVariant,
         val clean: Boolean, val filename: String, val root: String, val renderer: String, val identity: String,
         val mutated: Boolean, val helperPid: Int, val helperStart: String, val helperToken: String,
-        val device: Long, val inode: Long, val iviRecoverySettled: Boolean, val retirement: ClusterThemeRetirement?)
+        val device: Long, val inode: Long, val iviRecoverySettled: Boolean, val retirement: ClusterThemeRetirement?,
+        val dashboardStage: String = "NONE", val dashboardNativeDebt: Boolean = false, val dashboardHelperCommand: Int = -1,
+        val dashboardHelperPid: Int = 0, val dashboardHelperStart: String = "", val dashboardHelperToken: String = "")
 
     fun recover(j: JSONObject): Recovery {
         val schema = j.get("schema")
@@ -15,7 +17,7 @@ internal object ClusterThemeJournal {
         val variant = ClusterThemeVariant.recover(if (transport == ClusterThemeTransport.ANDROID_IVI) 2 else schema,
             if (j.has("variant")) j.getString("variant") else null,
             if (j.has("carrierSha256")) j.getString("carrierSha256") else null)
-        require(!variant.isCorner || transport == ClusterThemeTransport.ANDROID_IVI) { "Corner marker is Android IVI only" }
+        require(!variant.isPersistent || transport == ClusterThemeTransport.ANDROID_IVI) { "Persistent profile is Android IVI only" }
         val clean = j.getString("state") == "CLEAN"
         val filename = j.getString("filename"); require(ClusterThemePolicy.ownedName(filename))
         require(j.get("mutated") is Boolean)
@@ -48,7 +50,27 @@ internal object ClusterThemeJournal {
                 require(!clean || recoverySettled) { "Retired CLEAN journal requires recovery proof" }
             }
         } else { require(!j.has("retirement")); null }
+        val dashboard = if (variant.isDashboard) j.getJSONObject("dashboard") else null
+        dashboard?.let {
+            require(it.get("stage") is String && it.get("nativeDebt") is Boolean)
+            for (key in listOf("helperPid", "helperCommand")) require(it.get(key) is Int || it.get(key) is Long)
+            require(it.getLong("helperPid") in 0..Int.MAX_VALUE.toLong())
+            require(it.get("helperStart") is String && it.get("helperToken") is String)
+        }
+        val stage = dashboard?.getString("stage") ?: "NONE"
+        val nativeDebt = dashboard?.getBoolean("nativeDebt") ?: false
+        val nativeCommand = dashboard?.getInt("helperCommand") ?: -1
+        val nativePid = dashboard?.getInt("helperPid") ?: 0
+        val nativeStart = dashboard?.getString("helperStart") ?: ""
+        val nativeToken = dashboard?.getString("helperToken") ?: ""
+        require(stage in setOf("NONE", "OPENING", "OPEN_RECEIVED", "CLOSING", "CLOSED_RECEIVED", "UNKNOWN"))
+        require(stage !in setOf("OPENING", "OPEN_RECEIVED", "CLOSING") || nativeDebt)
+        require(nativePid == 0 && nativeStart.isEmpty() && nativeToken.isEmpty() && nativeCommand == -1 ||
+            nativePid > 0 && nativeStart.matches(Regex("[0-9]+")) && nativeToken.matches(Regex("[0-9a-f]{32}")) &&
+            variant.isDashboard && ClusterDashboardProfile.permitsCommand(nativeCommand) && nativeDebt)
+        require(!clean || !nativeDebt && nativePid == 0)
         return Recovery(transport, variant, clean, filename, root, j.optString("renderer"), identity,
-            j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled, retirement)
+            j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled, retirement, stage, nativeDebt, nativeCommand,
+            nativePid, nativeStart, nativeToken)
     }
 }

@@ -52,6 +52,10 @@ class ClusterThemeLiveTestLifecycleTest {
         set("transport", com.byd.dashcast.clusterlive.ClusterThemeTransport.STRICT_RENDERER)
         flag("active").set(true); flag("queryActive").set(false); flag("restoreRequested").set(false)
         set("oemQuery", JSONObject()); set("helperUnreaped", false)
+        set("dashboardStage", "NONE"); set("dashboardNativeDebt", false); set("dashboardHelperCommand", -1)
+        set("dashboardHelperPid", 0); set("dashboardHelperStart", ""); set("dashboardHelperToken", "")
+        set("dashboardSelectionReady", false); set("dashboardRound", "")
+        flag("dashboardPending").set(false); flag("dashboardCloseQueued").set(false)
         count("generation").set(10); count("restoring").set(-1)
         (field("observationPending").get(null) as AtomicInteger).set(0)
     }
@@ -69,6 +73,99 @@ class ClusterThemeLiveTestLifecycleTest {
     private fun cornerSelection(source: Int = 0, path: String = ClusterThemePolicy.HOST_DIRECTORY + name) =
         com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, source, 0),
             listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", path, "", "DashCast_a"))
+    private fun dashboardSession() {
+        set("variant", ClusterThemeVariant.FULL_DASHBOARD_21F7735C); set("mutated", true)
+        set("transport", com.byd.dashcast.clusterlive.ClusterThemeTransport.ANDROID_IVI)
+        set("phase", "observation"); set("dashboardSelectionReady", true)
+        set("state", "AWAITING_OBSERVATION")
+        field("projectionValidity").set(null, reservation())
+    }
+    @Test fun `actual dashboard sequence opens closes and factory recovery does not duplicate native teardown`() {
+        dashboardSession()
+        var now = 0L
+        val intervals = com.byd.dashcast.clusterlive.ClusterDashboardIntervals({ now }, { now += it })
+        val sent = mutableListOf<Pair<Int, Long>>()
+        val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
+            ready(43, "12345", "c".repeat(32)); admit()
+            assertTrue(field("dashboardNativeDebt").getBoolean(null))
+            assertEquals(43, field("dashboardHelperPid").getInt(null))
+            assertEquals(0, field("helperPid").getInt(null))
+            sent += command to now
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("attempted", true).put("native", 0), true)
+        }
+        fun run(open: Boolean) = ClusterThemeLiveTest.runDashboardSequence(open, request, {}, intervals::awaitNative, intervals::nativeFinished, {})
+        run(true)
+        assertEquals("OPEN_RECEIVED", field("dashboardStage").get(null)); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        run(false)
+        assertEquals("CLOSED_RECEIVED", field("dashboardStage").get(null)); assertFalse(field("dashboardNativeDebt").getBoolean(null))
+        var extraClose = 0
+        ClusterThemeLiveTest.closeDashboardForFactoryRestore({ extraClose++; run(false) }, {})
+        assertEquals(0, extraClose)
+        assertEquals(listOf(31, 16, 35, 18, 0, 31), sent.map { it.first })
+        assertEquals(listOf(1200L, 2400L, 3600L, 4800L, 6000L, 7200L), sent.map { it.second })
+        assertEquals(1, sent.count { it.first == 18 }); assertEquals(1, sent.count { it.first == 0 })
+        assertTrue(flag("active").get()) // Closing projection never releases RCC ownership.
+    }
+    @Test fun `failed actual native close leaves its debt but cannot throw across the factory recovery boundary`() {
+        dashboardSession(); set("dashboardNativeDebt", true)
+        val sent = mutableListOf<Int>()
+        val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
+            ready(43, "12345", "c".repeat(32)); admit(); sent += command
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "UNAVAILABLE").put("attempted", true), false)
+        }
+        ClusterThemeLiveTest.closeDashboardForFactoryRestore({
+            ClusterThemeLiveTest.runDashboardSequence(false, request, {}, { valid -> check(valid()) }, {}, {})
+        }, {})
+        assertEquals(listOf(18), sent); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        assertEquals(43, field("dashboardHelperPid").getInt(null)); assertEquals(0, field("helperPid").getInt(null))
+        val factory = com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, 1, 0),
+            listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", "default", "", "default"))
+        ClusterThemeLiveTest.recordRestoreResult(cornerSelection(), ClusterThemeLiveTest.Exchange(0, factory, emptyList(), false, attempted = true), false)
+        assertTrue(field("defaultQueried").getBoolean(null)); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        assertTrue(flag("active").get())
+    }
+    @Test fun `dashboard open refuses unfinished preparation and queued work rechecks uncertainty before native mutation`() {
+        dashboardSession(); set("phase", "carrier-staging"); set("dashboardSelectionReady", false)
+        assertThrows(IllegalStateException::class.java) {
+            ClusterThemeLiveTest.requestDashboard(true, "a".repeat(32), true, true, reservation())
+        }
+        assertFalse(field("dashboardNativeDebt").getBoolean(null))
+        dashboardSession()
+        val release = CountDownLatch(1); val entered = CountDownLatch(1)
+        worker.execute { entered.countDown(); release.await(3, TimeUnit.SECONDS) }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        ClusterThemeLiveTest.requestDashboard(true, "a".repeat(32), true, true, reservation())
+        set("uncertain", true); release.countDown(); drain()
+        assertFalse(field("dashboardNativeDebt").getBoolean(null))
+        assertEquals(0, field("dashboardHelperPid").getInt(null))
+        assertEquals("UNKNOWN", field("dashboardStage").get(null))
+    }
+    @Test fun `dashboard physical observation is bound to the current opening round and cannot survive queued close`() {
+        dashboardSession(); set("dashboardStage", "OPEN_RECEIVED"); set("dashboardNativeDebt", true); set("dashboardRound", "b".repeat(32))
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.observeDashboard(name, "c".repeat(32)) }
+        assertFalse(field("themeObserved").getBoolean(null))
+        val release = CountDownLatch(1); worker.execute { release.await(3, TimeUnit.SECONDS) }
+        ClusterThemeLiveTest.observeDashboard(name, "b".repeat(32))
+        set("dashboardStage", "CLOSING"); release.countDown(); drain()
+        assertFalse(field("themeObserved").getBoolean(null))
+    }
+    @Test fun `factory proof can be recorded despite native debt but neither cleanup nor CLEAN can erase that debt`() {
+        dashboardSession(); set("dashboardNativeDebt", true); set("oemObserved", true)
+        val factory = com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, 1, 0),
+            listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", "default", "", "default"))
+        ClusterThemeLiveTest.recordRestoreResult(cornerSelection(), ClusterThemeLiveTest.Exchange(0, factory, emptyList(), false, attempted = true), false)
+        assertTrue(field("defaultQueried").getBoolean(null)); assertTrue(field("iviRecoverySettled").getBoolean(null))
+        assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        var cleaned = 0; val writes = mutableListOf<String>()
+        ClusterThemeLiveTest.completeRecovery({ cleaned++; true }, { writes += it })
+        assertEquals(0, cleaned); assertTrue(writes.isEmpty()); assertTrue(flag("active").get())
+        set("dashboardNativeDebt", false); set("dashboardHelperPid", 43)
+        ClusterThemeLiveTest.completeRecovery({ cleaned++; true }, { writes += it })
+        assertEquals(0, cleaned); assertTrue(flag("active").get())
+        set("dashboardHelperPid", 0)
+        ClusterThemeLiveTest.completeRecovery({ cleaned++; true }, { writes += it })
+        assertEquals(1, cleaned); assertTrue("CLEAN" in writes); assertFalse(flag("active").get())
+    }
     @Test fun `recovered corner read only query creates fresh visual round and yes never settles load or recovery debt`() {
         for (profile in listOf(ClusterThemeVariant.CORNER_MARKER, ClusterThemeVariant.CORNER_MARKER_21F7735C)) for (source in listOf(0, 1)) {
             reset()
