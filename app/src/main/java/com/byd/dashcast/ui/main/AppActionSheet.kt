@@ -22,7 +22,6 @@ import com.byd.dashcast.ui.settings.SettingsActivity
 import com.byd.dashcast.util.AppLogger
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
  * Shows the per-app bottom sheet and DPI override dialogs.
@@ -47,7 +46,6 @@ object AppActionSheet {
         fun onSendToMain(app: AppInfo)
         fun onKillApp(app: AppInfo)
         fun onToggleFavorite(app: AppInfo)
-        fun onSetAutoLaunch(app: AppInfo, enable: Boolean)
     }
 
     // ── Public entry point ────────────────────────────────────────────────────
@@ -64,7 +62,8 @@ object AppActionSheet {
         val icon = v.findViewById<ImageView>(R.id.sheet_icon)
         val name = v.findViewById<TextView>(R.id.sheet_name)
         val pkg = v.findViewById<TextView>(R.id.sheet_pkg)
-        val swAuto = v.findViewById<MaterialSwitch>(R.id.sheet_sw_auto)
+        val rowStartup = v.findViewById<View>(R.id.sheet_action_startup)
+        val startupLabel = v.findViewById<TextView>(R.id.sheet_startup_label)
         val rowFav = v.findViewById<View>(R.id.sheet_action_favorite)
         val lblFav = v.findViewById<TextView>(R.id.sheet_lbl_favorite)
         val rowToMain = v.findViewById<View>(R.id.sheet_action_to_main)
@@ -79,8 +78,14 @@ object AppActionSheet {
         pkg.text = app.packageName
         lblFav.setText(if (app.isFavorite) R.string.sheet_remove_favorite else R.string.sheet_add_favorite)
 
-        swAuto.isChecked = app.isAutoLaunch
-        swAuto.setOnCheckedChangeListener { _, checked -> host.onSetAutoLaunch(app, checked) }
+        val startup = ClusterPrefs.getStartupApps(ctx)
+        startupLabel.setText(if (startup.mode == com.byd.dashcast.data.prefs.StartupAppsMode.APP && startup.target == app.packageName)
+            R.string.startup_app_selected else R.string.sheet_auto_launch)
+        rowStartup.setOnClickListener {
+            host.startActivity(Intent(ctx, SettingsActivity::class.java)
+                .putExtra(SettingsActivity.EXTRA_STARTUP_APP, app.packageName))
+            dialog.dismiss()
+        }
 
         rowFav.setOnClickListener {
             host.onToggleFavorite(app)

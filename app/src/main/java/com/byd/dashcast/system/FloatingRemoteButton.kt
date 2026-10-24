@@ -12,6 +12,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Point
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.content.res.ColorStateList
+import android.content.res.Configuration
+import android.view.ViewConfiguration
+import android.widget.FrameLayout
+import android.widget.ImageView
+import com.byd.dashcast.cluster.ClusterService
+import com.byd.dashcast.fission.FissionOrchestrator
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.IBinder
@@ -22,7 +32,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
-import android.widget.TextView
 
 import com.byd.dashcast.MainActivity
 import com.byd.dashcast.R
@@ -49,7 +58,7 @@ class FloatingRemoteButton : Service() {
 
     private val mDimHandler = Handler(Looper.getMainLooper())
     private val mDimRunnable = Runnable {
-        mFloatView?.animate()?.alpha(0.35f)?.setDuration(300)?.start()
+        mFloatView?.animate()?.alpha(0.78f)?.setDuration(300)?.start()
     }
 
     fun triggerDimTimer() {
@@ -95,7 +104,14 @@ class FloatingRemoteButton : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         sInstance = this
-        if (mFloatView != null) return START_STICKY
+        if (intent == null) {
+            sShouldBeVisible = ClusterService.getInstance()?.activeProjectionApps()?.isNotEmpty() == true ||
+                FissionOrchestrator.getActiveLayoutPackages().isNotEmpty()
+        }
+        if (mFloatView != null) {
+            if (sShouldBeVisible) { mFloatView?.visibility = View.VISIBLE; promoteForeground() }
+            return START_STICKY
+        }
         startForegroundCompat()
         createOverlay()
         AppLogger.d(TAG, "FloatingRemoteButton started")
@@ -152,25 +168,39 @@ class FloatingRemoteButton : Service() {
         mGrantAttempted = false
         mWindowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        val badge = TextView(this)
-        badge.text = "📺" // 📺
-        badge.textSize = 22f
-        badge.setBackgroundColor(Color.argb(220, 0, 105, 92)) // teal #00695C
-        badge.setPadding(20, 12, 20, 12)
-        badge.elevation = 8f
-        badge.visibility = View.GONE // hidden until an app is on the cluster
-
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+        val shape = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Color.argb(240, 42, 49, 64), Color.argb(245, 20, 25, 35))).apply {
+            cornerRadius = dp(28).toFloat()
+            setStroke(dp(1).coerceAtLeast(1), Color.argb(100, 152, 180, 211))
+        }
+        val badge = FrameLayout(this).apply {
+            background = RippleDrawable(ColorStateList.valueOf(Color.argb(75, 80, 220, 200)), shape, null)
+            elevation = dp(8).toFloat()
+            contentDescription = getString(R.string.floating_mirror_open)
+            isClickable = true
+            isFocusable = true
+            visibility = View.GONE
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_floating_mirror)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        badge.addView(icon, FrameLayout.LayoutParams(dp(30), dp(38), Gravity.CENTER))
+        badge.setOnClickListener { openMirror() }
+        badge.setOnLongClickListener { showQuickSwitchPopup(); true }
         val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                2038,  // TYPE_APPLICATION_OVERLAY
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                dp(56), dp(72), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT
         )
-        params.gravity = Gravity.TOP or Gravity.END
-        params.x = 12
-        params.y = 220
+        params.gravity = Gravity.TOP or Gravity.LEFT
+        val saved = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        val size = screenSize()
+        params.x = saved.getInt("floating_mirror_x", size.x - dp(68))
+        params.y = saved.getInt("floating_mirror_y", dp(180))
+        clampPosition(params)
 
         mPrefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -179,6 +209,7 @@ class FloatingRemoteButton : Service() {
         snap.interpolator = DECELERATE
         snap.addUpdateListener { animation ->
             params.x = animation.animatedValue as Int
+            clampPosition(params)
             try {
                 if (mFloatView != null) mWindowManager.updateViewLayout(mFloatView, params)
             } catch (ignored: Exception) {
@@ -193,72 +224,50 @@ class FloatingRemoteButton : Service() {
             private var initTX = 0f
             private var initTY = 0f
             private var downTime = 0L
+            private var dragging = false
+            private val slop = ViewConfiguration.get(this@FloatingRemoteButton).scaledTouchSlop
 
             override fun onTouch(v: View, e: MotionEvent): Boolean {
-                // Reset opacity and cancel pending dim
-                badge.alpha = 1.0f
+                badge.animate().cancel()
+                badge.alpha = 1f
                 mDimHandler.removeCallbacks(mDimRunnable)
-
-                // Trigger dim
-                if (e.action == MotionEvent.ACTION_UP || e.action == MotionEvent.ACTION_CANCEL) {
-                    mDimHandler.postDelayed(mDimRunnable, 3000)
-                }
-
-                when (e.action) {
+                when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
-                        initX = params.x
-                        initY = params.y
-                        initTX = e.rawX
-                        initTY = e.rawY
-                        downTime = System.currentTimeMillis()
-                        return true
+                        mSnapAnimator?.cancel()
+                        initX = params.x; initY = params.y
+                        initTX = e.rawX; initTY = e.rawY
+                        downTime = e.eventTime
+                        dragging = false
+                        badge.isPressed = true
                     }
-
                     MotionEvent.ACTION_MOVE -> {
-                        val dx = initTX - e.rawX
+                        val dx = e.rawX - initTX
                         val dy = e.rawY - initTY
-                        params.x = initX + dx.toInt()
-                        params.y = initY + dy.toInt()
-                        mWindowManager.updateViewLayout(mFloatView, params)
-                        return true
-                    }
-
-                    MotionEvent.ACTION_UP -> {
-                        val movX = abs(e.rawX - initTX)
-                        val movY = abs(e.rawY - initTY)
-                        val held = System.currentTimeMillis() - downTime
-                        if (movX < 12 && movY < 12) {
-                            if (held > 600) {
-                                // Long press → show recent apps popup for quick switching
-                                AppLogger.i(TAG, "Long-press → show quick-switch popup")
-                                showQuickSwitchPopup()
-                            } else {
-                                // Tap → bring MainActivity to front + open mirror panel
-                                val bringFront = Intent(
-                                        this@FloatingRemoteButton, MainActivity::class.java)
-                                bringFront.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                        or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                                bringFront.action = ACTION_SHOW_MIRROR
-                                startActivity(bringFront)
-                                AppLogger.d(TAG, "Tap → ACTION_SHOW_MIRROR")
-                            }
-                        } else {
-                            // Snap to edge logic
-                            val screenWidth = resources.displayMetrics.widthPixels
-                            val halfWidth = screenWidth / 2
-                            // Gravity is END, so params.x is the margin from the RIGHT.
-                            // If params.x > halfWidth, it's closer to the LEFT edge.
-                            val targetX = if (params.x > halfWidth) (screenWidth - badge.width) else 0
-
-                            val anim = mSnapAnimator!!
-                            if (anim.isRunning) anim.cancel()
-                            anim.setIntValues(params.x, targetX)
-                            anim.start()
+                        if (abs(dx) > slop || abs(dy) > slop) dragging = true
+                        if (dragging) {
+                            badge.isPressed = false
+                            params.x = initX + dx.toInt(); params.y = initY + dy.toInt()
+                            clampPosition(params)
+                            updatePosition(params)
                         }
-                        return true
                     }
+                    MotionEvent.ACTION_UP -> {
+                        badge.isPressed = false
+                        if (!dragging) {
+                            if (e.eventTime - downTime >= ViewConfiguration.getLongPressTimeout()) badge.performLongClick()
+                            else badge.performClick()
+                        } else {
+                            val maxX = (screenSize().x - params.width).coerceAtLeast(0)
+                            val targetX = if (params.x + params.width / 2 > screenSize().x / 2) maxX else 0
+                            mPrefs?.edit()?.putInt("floating_mirror_x", targetX)?.putInt("floating_mirror_y", params.y)?.apply()
+                            mSnapAnimator?.setIntValues(params.x, targetX)
+                            mSnapAnimator?.start()
+                        }
+                        triggerDimTimer()
+                    }
+                    MotionEvent.ACTION_CANCEL -> { badge.isPressed = false; triggerDimTimer() }
                 }
-                return false
+                return true
             }
         })
 
@@ -289,7 +298,41 @@ class FloatingRemoteButton : Service() {
         }
     }
 
+    private fun screenSize(): Point = Point().also { mWindowManager.defaultDisplay.getSize(it) }
+
+    private fun clampPosition(params: WindowManager.LayoutParams) {
+        val size = screenSize()
+        params.x = params.x.coerceIn(0, (size.x - params.width).coerceAtLeast(0))
+        params.y = params.y.coerceIn(0, (size.y - params.height).coerceAtLeast(0))
+    }
+
+    private fun updatePosition(params: WindowManager.LayoutParams) {
+        val view = mFloatView ?: return
+        if (mDestroyed || !view.isAttachedToWindow) return
+        try { mWindowManager.updateViewLayout(view, params) }
+        catch (error: Exception) { AppLogger.w(TAG, "overlay position unavailable: ${error.message}") }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        mSnapAnimator?.cancel()
+        val params = mFloatView?.layoutParams as? WindowManager.LayoutParams ?: return
+        clampPosition(params)
+        updatePosition(params)
+    }
+
+    private fun mirrorIntent() = Intent(this, MainActivity::class.java).apply {
+        action = ACTION_SHOW_MIRROR
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    }
+
+    private fun openMirror() {
+        try { startActivity(mirrorIntent()) }
+        catch (error: Exception) { AppLogger.e(TAG, "opening tactile mirror failed", error) }
+    }
+
     private fun showQuickSwitchPopup() {
+        if (mQuickSwitchDialog?.isShowing == true || mDestroyed) return
         // The dialog always offers "Report a bug" as the first entry (so the bug
         // reporter is reachable over any app at the moment it breaks), followed by
         // the recent apps for quick-switching.
@@ -347,8 +390,7 @@ class FloatingRemoteButton : Service() {
                 NotificationManager.IMPORTANCE_MIN))
 
         if (mFgPendingIntent == null) {
-            val tapIntent = Intent(this, MainActivity::class.java)
-            tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val tapIntent = mirrorIntent()
             mFgPendingIntent = PendingIntent.getActivity(
                     this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE)
         }
@@ -376,8 +418,7 @@ class FloatingRemoteButton : Service() {
         if (mIsForeground) return
         try {
             if (mFgPendingIntent == null) {
-                val tapIntent = Intent(this, MainActivity::class.java)
-                tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                val tapIntent = mirrorIntent()
                 mFgPendingIntent = PendingIntent.getActivity(
                         this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE)
             }
@@ -432,8 +473,13 @@ class FloatingRemoteButton : Service() {
         @Volatile private var sShouldBeVisible = false
 
         @JvmStatic
-        fun show() {
+        @JvmOverloads
+        fun show(context: Context? = null) {
             sShouldBeVisible = true
+            if (context != null && (sInstance == null || sInstance?.mFloatView == null)) {
+                try { context.applicationContext.startForegroundService(Intent(context.applicationContext, FloatingRemoteButton::class.java)) }
+                catch (error: Exception) { AppLogger.w(TAG, "floating mirror service unavailable: ${error.message}") }
+            }
             val inst = sInstance
             if (inst?.mFloatView != null) {
                 inst.mFloatView?.post {
@@ -455,9 +501,9 @@ class FloatingRemoteButton : Service() {
             val inst = sInstance ?: return
             // v1.2.74 — drop the FG notification too: badge invisible should not
             // leave a "Miroir cluster actif" notification dangling.
-            inst.demoteForeground()
-            if (inst.mFloatView == null) return
-            inst.mFloatView?.post {
+            inst.mDimHandler.post {
+                if (sShouldBeVisible) return@post
+                inst.demoteForeground()
                 val i = sInstance
                 if (i?.mFloatView != null) {
                     i.mFloatView?.visibility = View.GONE

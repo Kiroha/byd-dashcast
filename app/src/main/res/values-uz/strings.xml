@@ -97,7 +97,7 @@
     <string name="dialog_reconnect_msg">%1$s ni klasterda qayta ishga tushirish?</string>
     <string name="dialog_reconnect_yes">↺ Qayta ishga tushirish</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="setting_boot_auto_start">Ishga tushganda proyeksiyani avtomatik boshlash (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Ishga tushgandagi ilovalar</string>
     <string name="category_navigation">🗺 Navigatsiya</string>
     <string name="category_media">🎵 Media</string>
     <string name="filter_all">Barchasi</string>
@@ -117,7 +117,7 @@
     <string name="settings_cluster_123_desc">Seal EU — yuqori darajadagi</string>
     <string name="settings_cluster_1025_desc">Eksperimental</string>
     <string name="settings_section_behavior">Xatti-harakat</string>
-    <string name="settings_boot_auto_start_support">Avtomobil ishga tushganda mirror\'ni yoqish</string>
+    <string name="settings_boot_auto_start_support">Zarur boʻlsa aks ettirishni yoqadi, soʻng saqlangan ilovalar va ularning joylashuvini tiklaydi.</string>
     <string name="settings_reconnect_popup_support">Kutilmagan uzilganda tiklash</string>
     <string name="settings_quick_stop">Tezkor toʻxtatish (asl klasterni tiklamasdan)</string>
     <string name="settings_quick_stop_support">Faqat sendInfo 18 + 0 yuboradi, oʻlchamni oʻzgartirmaydi</string>
@@ -144,7 +144,7 @@
     <string name="main_btn_launch_layout_apps">Layout ilovalarini ishga tushirish</string>
     <string name="main_section_favorites">SEVIMLILAR</string>
     <string name="main_section_all_apps">Barcha ilovalar</string>
-    <string name="sheet_auto_launch">Ishga tushishda avtomatik ochish</string>
+    <string name="sheet_auto_launch">Ushbu ilovani ishga tushganda ishlatish…</string>
     <string name="sheet_add_favorite">Saralanganlarga qoʻshish</string>
     <string name="sheet_remove_favorite">Saralanganlardan olib tashlash</string>
     <string name="sheet_to_main">Asosiy ekranga yuborish</string>
@@ -786,4 +786,18 @@
     <string name="diag_cluster_rcc_restore_blocked">Bu RCC seansi yopilmaguncha proyeksiya va yangi sinovlar bloklanadi. Quyidagi BYD qaytish bosqichlarini bajaring; faqat daemonni qayta ulash yetarli emas.</string>
     <string name="diag_cluster_rcc_restore_mismatch">Ilova va daemon RCC seanslari mos kelmaydi. Buyruq yuborilmadi; fayllar va blok saqlanadi.</string>
     <string name="diag_cluster_rcc_restore_expired">Holat o‘zgardi yoki bu tasdiq eskirdi. Buyruq yuborilmadi. Seansni qayta tekshiring.</string>
+    <string name="floating_mirror_open">Sensorli aks ettirishni toʻliq ekranda ochish</string>
+    <string name="setting_boot_projection">Ishga tushganda asboblar panelini aks ettirish rejimiga oʻtkazish</string>
+    <string name="settings_boot_projection_support">Avtomobil ishga tushganda ilovalarni ochmasdan aks ettirishni yoqadi.</string>
+    <string name="startup_none">Hech biri</string>
+    <string name="startup_last_session">Oxirgi seansni davom ettirish</string>
+    <string name="startup_choose_app">Tanlangan ilovani doim ochish</string>
+    <string name="startup_choose_layout">Tanlangan tartibni doim ochish</string>
+    <string name="startup_app_fmt">Ilova: %1$s</string>
+    <string name="startup_layout_fmt">Tartib: %1$s</string>
+    <string name="startup_unavailable_fmt">Mavjud emas: %1$s</string>
+    <string name="startup_continue">Davom etish</string>
+    <string name="startup_confirm_app_fmt">Avtomobil ishga tushganda %1$s doim ochilsinmi? Bu oxirgi seansni davom ettirish o‘rnini bosadi.</string>
+    <string name="startup_no_targets">Mavjud elementlar yo‘q. O‘rnatilgan ilovalar va saqlangan tartiblarni tekshiring.</string>
+    <string name="startup_app_selected">Boshlang‘ich ilova — o‘zgartirish…</string>
 </resources>

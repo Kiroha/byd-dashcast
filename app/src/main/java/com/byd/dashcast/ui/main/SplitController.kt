@@ -1,5 +1,6 @@
 package com.byd.dashcast.ui.main
 
+import com.byd.dashcast.data.prefs.ProjectionSessionPrefs
 import android.content.Context
 import android.os.Looper
 import android.view.View
@@ -58,6 +59,16 @@ class SplitController(private val mHost: Host) {
 
     // ── Getters ───────────────────────────────────────────────────────────────
 
+    fun adoptRestoredApps(apps: List<ProjectionSessionPrefs.App>) {
+        val primary = apps.firstOrNull() ?: return
+        mCurrentSplitSlot = primary.bounds?.let { if (it.left == 0) 1 else 2 } ?: 0
+        mSecondDashboardPkg = apps.getOrNull(1)?.packageName
+        mSecondDashboardApp = mSecondDashboardPkg?.let { pkg ->
+            try { val pm = mHost.getContext().packageManager; pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }
+            catch (_: Exception) { pkg }
+        }
+    }
+
     fun getCurrentSplitSlot(): Int = mCurrentSplitSlot
     fun getSecondDashboardPkg(): String? = mSecondDashboardPkg
     fun getSecondDashboardApp(): String? = mSecondDashboardApp
@@ -91,6 +102,8 @@ class SplitController(private val mHost: Host) {
     fun commitFullScreenIfMatches(expectedPkg: String?, generation: Int): Boolean {
         if (!mReplacementGate.isCurrent(generation)
                 || expectedPkg == null || expectedPkg != mSecondDashboardPkg) return false
+        ProjectionSessionPrefs.remove(mHost.getContext(), expectedPkg)
+        mHost.getClusterServiceIfBound()?.forgetProjectionApp(expectedPkg)
         mSecondDashboardApp = null
         mSecondDashboardPkg = null
         mCurrentSplitSlot = 0
@@ -203,7 +216,7 @@ class SplitController(private val mHost: Host) {
 
     private fun launchInSlot(svc: ClusterService, splitPkg: String?, splitApp: String?,
                              l: Int, t: Int, r: Int, b: Int, slot: Int, generation: Int) {
-        svc.launchOnDashboardWithBounds(splitPkg, l, t, r, b) { launched ->
+        val callback = ClusterService.LaunchCallback { launched ->
             mHost.runOnUiThread {
                 if (!mHost.isActivityAlive()) return@runOnUiThread
                 if (!isCurrentSecondDashboardReplacement(generation)) return@runOnUiThread
@@ -224,6 +237,8 @@ class SplitController(private val mHost: Host) {
                 }
             }
         }
+        if (slot == 0) svc.launchOnDashboard(splitPkg, callback)
+        else svc.launchOnDashboardWithBounds(splitPkg, l, t, r, b, callback)
     }
 
     /** Resets split state (slot + second app). Call when the main app changes or cluster stops. */

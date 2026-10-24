@@ -64,28 +64,28 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Auto-launch switch -->
+    <!-- Shortcut to the central startup choice. -->
     <LinearLayout
+        android:id="@+id/sheet_action_startup"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
         android:background="?android:attr/selectableItemBackground">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:id="@+id/sheet_startup_label"
             android:text="@string/sheet_auto_launch"
             android:textSize="15sp"
             android:textColor="@color/md_on_surface"/>
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/sheet_sw_auto"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
     </LinearLayout>
 
     <View
