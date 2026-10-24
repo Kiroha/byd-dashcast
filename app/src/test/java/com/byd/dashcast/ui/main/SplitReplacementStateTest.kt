@@ -1,6 +1,8 @@
 package com.byd.dashcast.ui.main
 
 import android.content.Context
+import com.byd.dashcast.data.prefs.ProjectionSessionPrefs
+import android.graphics.Rect
 import com.byd.dashcast.cluster.ClusterService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,6 +32,20 @@ class SplitReplacementStateTest {
         assertNull(controller.getSecondDashboardApp())
         assertNull(controller.getSecondDashboardPkg())
         assertEquals(1, host.changes)
+    }
+
+    @Test
+    fun `verified full screen transition removes stopped secondary from resume snapshot`() {
+        val host = RecordingHost()
+        val context = host.getContext()
+        ProjectionSessionPrefs.clear(context)
+        ProjectionSessionPrefs.rememberClassic(context, "com.example.first", Rect(0, 0, 960, 720))
+        ProjectionSessionPrefs.rememberClassic(context, "com.example.second", Rect(960, 0, 1920, 720))
+        val controller = SplitController(host)
+        controller.setSecondDashboardPkg("com.example.second")
+        val generation = controller.beginSecondDashboardReplacement()
+        assertTrue(controller.commitFullScreenIfMatches("com.example.second", generation))
+        assertEquals(listOf("com.example.first"), ProjectionSessionPrefs.read(context)!!.apps.map { it.packageName })
     }
 
     @Test

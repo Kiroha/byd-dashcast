@@ -38,7 +38,8 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         val prefs = context.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
-        val autoStartEnabled = ClusterPrefs.isBootAutoStartEnabled(context)
+        val restoreApps = ClusterPrefs.isBootAutoStartEnabled(context)
+        val autoStartEnabled = ClusterPrefs.isAnyBootProjectionEnabled(context)
         val prewarmDaemon = true
 
         // We need to keep the process alive across multiple async tasks that
@@ -105,15 +106,15 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         if (autoStartEnabled) {
-            if (isLayoutAutoStartRequested(appCtx)) {
+            if (restoreApps && isLayoutAutoStartRequested(appCtx)) {
                 // LAYOUT auto-start: the favourite Layout owns startup — it activates projection AND
                 // launches every bound app itself, headlessly (FissionOrchestrator.
-                // maybeAutoStartOnAppLaunch, the same call MainActivity.onCreate makes). Do NOT also
+                // maybeAutoStartOnAppLaunch). Do NOT also
                 // start the classic ClusterService projection: it would trip the layout's
                 // projection-conflict check ("classic projection already active") and nothing would
                 // launch (INC-20260716-201008 — layout user got projection on but no apps). Delay a
                 // little so the daemon pre-warm connects first; the orchestrator runs on its own bg
-                // thread. MainActivity's later call to the same method no-ops (one-shot per process).
+                // thread. Repeated boot/ACC delivery uses the same process ownership guard.
                 AppLogger.i("BootReceiver", "DashCast Auto-Boot: layout auto-start (headless)")
                 val done = takeToken()
                 sMain.postDelayed({
@@ -132,7 +133,8 @@ class BootReceiver : BroadcastReceiver() {
                     // once it is up, headlessly — so a tester who set an auto-launch app gets it at
                     // startup without opening DashCast (INC-20260716-091016).
                     val serviceIntent = Intent(context, ClusterService::class.java)
-                        .putExtra(ClusterService.EXTRA_BOOT_AUTOLAUNCH, true)
+                        .putExtra(ClusterService.EXTRA_BOOT_AUTOLAUNCH, restoreApps)
+                        .putExtra(ClusterService.EXTRA_BOOT_PROJECTION, true)
                     context.startForegroundService(serviceIntent)
                 } catch (e: Exception) {
                     AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.message)

@@ -26,10 +26,12 @@ class ClusterActivationReadinessTest {
     private val ready = mutableListOf<Int>()
     private val late = mutableListOf<Int>()
     private var timeouts = 0
+    private val completions = mutableListOf<Boolean>()
     private lateinit var manager: ClusterManager
     private val callback = object : ClusterManager.DisplayReadyCallback {
         override fun onDisplayReady(display: Display?, displayId: Int) { ready += displayId }
         override fun onDisplayTimeout() { timeouts++ }
+        override fun onActivationComplete(success: Boolean) { completions += success }
         override fun onDisplayLateReady(display: Display?, displayId: Int) { late += displayId }
     }
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
@@ -66,11 +68,15 @@ class ClusterActivationReadinessTest {
         advance(500)
         assertEquals(listOf(id), ready)
         assertTrue(ClusterManager.isQtInProjectionMode())
+        assertTrue(completions.isEmpty())
+        assertFalse(ClusterManager.isProjectionReadyForApps())
         advance(3000)
         take(35).onSuccess("")
         advance(20000)
         assertEquals(listOf(id), ready)
         assertEquals(0, timeouts)
+        assertEquals(listOf(true), completions)
+        assertTrue(ClusterManager.isProjectionReadyForApps())
     }
 
     @Test fun `failed cmd16 cannot become ready through cmd35 or a late display`() {
@@ -88,6 +94,7 @@ class ClusterActivationReadinessTest {
         assertTrue(late.isEmpty())
         assertFalse(ClusterManager.isQtInProjectionMode())
         assertEquals(listOf(16, 35), commands)
+        assertEquals(listOf(false), completions)
     }
 
     @Test fun `late cmd16 success can resolve during the existing grace window`() {
@@ -132,6 +139,33 @@ class ClusterActivationReadinessTest {
         assertFalse(ClusterManager.isQtInProjectionMode())
     }
 
+    @Test fun `terminal cmd35 failure does not certify an early resolved display`() {
+        manager.activateClusterDisplay(callback)
+        advance(2000)
+        display()
+        take(16).onSuccess("")
+        advance(3000)
+        assertTrue(ready.isNotEmpty())
+        assertTrue(completions.isEmpty())
+        take(35).onError("refused")
+        advance(0)
+        assertEquals(listOf(false), completions)
+        assertFalse(ClusterManager.isProjectionReadyForApps())
+    }
+
+    @Test fun `cancelled terminal callback cannot complete its replacement`() {
+        manager.activateClusterDisplay(callback)
+        advance(2000)
+        take(16).onSuccess("")
+        advance(3000)
+        val old35 = take(35)
+        manager.cancel()
+        manager.activateClusterDisplay(callback)
+        old35.onSuccess("")
+        advance(0)
+        assertTrue(completions.isEmpty())
+    }
+
     @Test fun `retired and never started managers cannot erase current owner geometry`() {
         manager.activateClusterDisplay(callback)
         val newOwner = ProjectionCommandBus.beginSession()
@@ -165,14 +199,21 @@ class ClusterActivationReadinessTest {
         take(16).onSuccess("")
         advance(0)
         assertEquals(listOf(id), ready)
+        assertEquals(listOf(true), completions)
     }
 
-    @Test fun `existing display with unchanged active Qt session keeps the fast path`() {
+    @Test fun `Qt flag without completed current session cannot bypass activation`() {
         val id = display()
         ClusterManager.notifyProjectionActive()
         manager.activateClusterDisplay(callback)
         advance(0)
+        assertTrue(ready.isEmpty())
+        assertEquals(listOf(16), commands)
+        assertFalse(ClusterManager.isProjectionReadyForApps())
+        take(16).onSuccess("")
+        advance(0)
         assertEquals(listOf(id), ready)
-        assertTrue(commands.isEmpty())
+        assertEquals(listOf(true), completions)
+        assertTrue(ClusterManager.isProjectionReadyForApps())
     }
 }

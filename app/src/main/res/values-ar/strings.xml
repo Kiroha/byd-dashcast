@@ -102,7 +102,7 @@
     <string name="dialog_reconnect_msg">إعادة تشغيل %1$s على العنقود؟</string>
     <string name="dialog_reconnect_yes">↺ إعادة تشغيل</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="setting_boot_auto_start">بدء العرض التلقائي عند بدء التشغيل (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">التطبيقات عند بدء التشغيل</string>
     <string name="category_navigation">🗺 الملاحة</string>
     <string name="category_media">🎵 وسائط</string>
     <string name="filter_all">الكل</string>
@@ -122,7 +122,7 @@
     <string name="settings_cluster_123_desc">Seal EU — متميزة</string>
     <string name="settings_cluster_1025_desc">تجريبي</string>
     <string name="settings_section_behavior">السلوك</string>
-    <string name="settings_boot_auto_start_support">تفعيل المرآة عند تشغيل السيارة</string>
+    <string name="settings_boot_auto_start_support">يفعّل العرض عند الحاجة، ثم يستعيد التطبيقات المحفوظة وترتيبها.</string>
     <string name="settings_reconnect_popup_support">الاستعادة عند الانفصال غير المتوقع</string>
     <string name="settings_quick_stop">إيقاف سريع (بدون استعادة العنقود الأصلي)</string>
     <string name="settings_quick_stop_support">يرسل فقط sendInfo 18 + 0 دون تغيير الحجم</string>
@@ -149,7 +149,7 @@
     <string name="main_btn_launch_layout_apps">تشغيل تطبيقات التخطيط</string>
     <string name="main_section_favorites">المفضلة</string>
     <string name="main_section_all_apps">كل التطبيقات</string>
-    <string name="sheet_auto_launch">تشغيل تلقائي عند البدء</string>
+    <string name="sheet_auto_launch">استخدام هذا التطبيق عند بدء التشغيل…</string>
     <string name="sheet_add_favorite">إضافة إلى المفضلة</string>
     <string name="sheet_remove_favorite">إزالة من المفضلة</string>
     <string name="sheet_to_main">إرسال إلى الشاشة الرئيسية</string>
@@ -791,4 +791,18 @@
     <string name="diag_cluster_rcc_restore_blocked">يظل العرض والاختبارات الجديدة محظورين حتى إغلاق جلسة RCC هذه. اتبع خطوات عودة BYD أدناه؛ إعادة توصيل daemon وحدها لا تكفي.</string>
     <string name="diag_cluster_rcc_restore_mismatch">جلستا RCC في التطبيق وdaemon مختلفتان. لم يُرسل أي أمر؛ تبقى الملفات والحظر محفوظة.</string>
     <string name="diag_cluster_rcc_restore_expired">تغيّرت الحالة أو انتهت صلاحية التأكيد. لم يُرسل أي أمر. افحص الجلسة مجددًا.</string>
+    <string name="floating_mirror_open">فتح المرآة التفاعلية بملء الشاشة</string>
+    <string name="setting_boot_projection">تفعيل وضع العرض على لوحة العدادات عند بدء التشغيل</string>
+    <string name="settings_boot_projection_support">يفعّل العرض عند تشغيل السيارة دون تشغيل التطبيقات.</string>
+    <string name="startup_none">لا شيء</string>
+    <string name="startup_last_session">استئناف الجلسة الأخيرة</string>
+    <string name="startup_choose_app">فتح تطبيق محدد دائمًا</string>
+    <string name="startup_choose_layout">فتح تخطيط محدد دائمًا</string>
+    <string name="startup_app_fmt">التطبيق: %1$s</string>
+    <string name="startup_layout_fmt">التخطيط: %1$s</string>
+    <string name="startup_unavailable_fmt">غير متاح: %1$s</string>
+    <string name="startup_continue">متابعة</string>
+    <string name="startup_confirm_app_fmt">هل تريد فتح %1$s دائمًا عند بدء تشغيل السيارة؟ يحل هذا الاختيار محل استئناف الجلسة الأخيرة.</string>
+    <string name="startup_no_targets">لا توجد عناصر متاحة. تحقق من التطبيقات المثبتة والتخطيطات المحفوظة.</string>
+    <string name="startup_app_selected">تطبيق بدء التشغيل — تغيير…</string>
 </resources>
