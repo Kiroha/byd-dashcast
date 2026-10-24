@@ -83,9 +83,13 @@ remaining native close; no automatic replay occurs. A fresh factory query and
 the user's observation are still required before deleting only the owned
 carrier and closing recovery. A recovered journal never opens the dashboard.
 
-**Restore and verify the factory profile before installing an older APK.** Older
-versions do not recognize this new closed profile and cannot be assumed to
-recover its journal. Existing historical carriers are retained byte-for-byte.
+**Rollback to an older APK is not supported or validated for this profile.**
+Restore and visually verify the factory profile before any APK replacement, but
+this does not establish old-APK compatibility: the retained CLEAN journal still
+uses a variant older versions cannot recognize. Do not use the build-711 recovery
+ZIP as a compatible rollback or delete the journal to bypass the guard. A
+compatible forward recovery build would be required for replacement after this
+experiment. Existing historical carriers are retained byte-for-byte.
 
 ## Host checks and limits
 
