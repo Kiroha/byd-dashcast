@@ -329,27 +329,32 @@ class FissionOrchestrator(
     @Volatile private var dashboardDiagnosticSession: com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session? = null
     @Volatile private var dashboardProxySession: com.byd.dashcast.proxy.ClusterThemeSession? = null
     @Volatile private var dashboardLaunchValid: (() -> Boolean)? = null
+    @Volatile private var dashboardVariant = com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_DASHBOARD_21F7735C
 
     /** Slot operations only: the closed RCC diagnostic owns every native mode command. */
     internal fun startDashboardSlot(pkg: String, label: String,
         diagnostic: com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session,
-        pinned: com.byd.dashcast.proxy.ClusterThemeSession, valid: () -> Boolean) {
+        pinned: com.byd.dashcast.proxy.ClusterThemeSession,
+        variant: com.byd.dashcast.clusterlive.ClusterThemeVariant = com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_DASHBOARD_21F7735C,
+        valid: () -> Boolean) {
         check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(diagnostic))
         check(pinned.isCurrent())
         check(valid())
         check(!mProjectionState.isProjectionActive() && mSlots.isEmpty())
+        check(variant.isDashboard && ProxyClient.supportsProtocol(variant.minimumProtocol))
         dashboardDiagnosticSession = diagnostic
         dashboardProxySession = pinned
         dashboardLaunchValid = valid
-        val profile = com.byd.dashcast.clusterlive.ClusterDashboardProfile
+        dashboardVariant = variant
+        val viewport = com.byd.dashcast.clusterlive.ClusterDashboardProfile.viewport(variant)
         submitQuietly("dashboard-slot") {
             try {
                 check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(diagnostic))
                 check(pinned.isCurrent()) { "Pinned dashboard daemon changed before attachment" }
                 check(valid()) { "Dashboard opening ticket expired before attachment" }
                 verifyDashboardDisplay()
-                doStartSlot(pkg, label, Rect(profile.APP_X, profile.APP_Y,
-                    profile.APP_X + profile.APP_WIDTH, profile.APP_Y + profile.APP_HEIGHT), null)
+                doStartSlot(pkg, label, Rect(viewport.x, viewport.y,
+                    viewport.x + viewport.width, viewport.y + viewport.height), null)
             } catch (error: Exception) { post { mCallbacks.onSlotError(pkg, error.message); mCallbacks.onSlotsChanged(mSlots.values) } }
             finally { dashboardLaunchValid = null }
         }
@@ -760,7 +765,7 @@ class FissionOrchestrator(
             }
             dashboardDiagnosticSession?.let { check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(it) && dashboardProxySession?.isCurrent() == true && dashboardLaunchValid?.invoke() == true) }
             verifyDashboardDisplayIfOwned()
-            val launchResult = dashboardProxySession?.launchDashboardApplication(pkg, displayId)
+            val launchResult = dashboardProxySession?.launchDashboardApplication(pkg, displayId, dashboardVariant)
                 ?: if (dashboardDiagnosticSession == null) ProxyClient.launchAndForce(pkg, null, displayId,
                     rect.width(), rect.height()) else error("Pinned dashboard launch returned no result; no replay")
             AppLogger.i(TAG, "FISSION launchAndForce result:\n$launchResult")

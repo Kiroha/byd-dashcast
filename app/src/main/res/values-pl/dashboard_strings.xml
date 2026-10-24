@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">Pulpit DashCast</string>
-    <string name="diag_cluster_dashboard_help">Test ręczny na postoju. Wskaźniki i ostrzeżenia BYD pozostają aktywne. Zamknięcie nie wyłącza profilu. Przed instalacją starszego APK przywróć profil fabryczny i sprawdź jego powrót.</string>
+    <string name="diag_cluster_dashboard_help">Test ręczny na postoju. Zamknięcie nie wyłącza profilu. Przed instalacją starszego APK przywróć profil fabryczny i sprawdź jego powrót.</string>
     <string name="diag_cluster_dashboard_read">1 · Odczytaj stan i zgodność</string>
     <string name="diag_cluster_dashboard_prepare">2 · Przygotuj pulpit</string>
     <string name="diag_cluster_dashboard_choose_app">3 · Wybierz aplikację</string>
@@ -30,5 +30,11 @@
     <string name="diag_cluster_dashboard_small_panel">Wykryto mały zestaw wskaźników: test odrzucony. Przywrócenie BYD jest nadal dostępne.</string>
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Zamknij tymczasową projekcję BYD i sprawdź wybór fabryczny. Nie wybrano niestandardowego RCC. Następnie potwierdź powrót wskaźników i ostrzeżeń.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Przygotowanie może tymczasowo otworzyć oryginalną projekcję BYD i sprawdzić jej ekran przed wybraniem naszego RCC. Aplikacja uruchamia się dopiero po Otwórz. Potwierdź postój i firmware; to oświadczenie nie mierzy ruchu.</string>
-    <string name="diag_cluster_dashboard_protocol">Połączony daemon musi używać protokołu 43. Połącz go ponownie w DashCast przed Przygotuj lub Otwórz. Nie wysłano polecenia BYD.</string>
+    <string name="diag_cluster_dashboard_protocol">Połączony daemon musi używać protokołu %1$d. Połącz go ponownie w DashCast przed Przygotuj lub Otwórz. Nie wysłano polecenia BYD.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Przygotuj aplikację pełnoekranową</string>
+    <string name="diag_cluster_full_app_help">Ręczny test na postoju. Aplikacja używa 1920 × 720. Instrumenty BYD, prędkość, bieg, kontrolki, ograniczenie i alerty są ukryte; po uruchomieniu działa istniejące ukrywanie ADAS. Zamknięcie przywraca ADAS; potem przywróć i sprawdź profil fabryczny. Bez automatycznego startu.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Przygotuj demonstrację pełnoekranową. Otwarcie ukrywa instrumenty, kontrolki i alerty BYD oraz panel ADAS. Potwierdź postój i sprawdzony firmware. Przed starszym APK wymagane pełne przywrócenie.</string>
+    <string name="diag_cluster_factory_apply">Zastosuj wybór fabryczny</string>
+    <string name="diag_cluster_factory_apply_confirm">Profil fabryczny jest skonfigurowany, ale jego natywne zastosowanie wymaga sprawdzenia. Wykonaj jedno przełączenie projekcji BYD, zamknij ją i odczytaj wybór ponownie. Bez własnego RCC ani powtórnego wyboru fabrycznego. Potwierdź postój i firmware.</string>
+    <string name="diag_cluster_full_app_observe_message">Potwierdź tylko, gdy aplikacja zajmuje cały ekran, a przewidziane elementy BYD są ukryte. Instrumenty i alerty celowo nie są wyświetlane w tej demonstracji. Potwierdzenie odbioru nie dowodzi wyświetlenia.</string>
 </resources>

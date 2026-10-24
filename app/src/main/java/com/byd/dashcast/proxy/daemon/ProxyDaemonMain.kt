@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "43"
+    private const val PROTOCOL_VERSION = "44"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -180,6 +180,7 @@ object ProxyDaemonMain {
     @Volatile private var sSystemContext: Context? = null
 
     internal fun taskRecoveryContext(): Context? = sSystemContext
+    internal fun adasControlContext(): Context? = sWrappedContext
 
     /** Permission-bypass wrapper around [sSystemContext].
      *  Set immediately after [sSystemContext]; used by [CanWriteVerbs] so that
@@ -820,7 +821,7 @@ object ProxyDaemonMain {
                                 check(data.dataAvail() == 0) { "Unsupported native mode request" }
                                 ClusterThemeLiveTest.nativeModeRequest(full, nonce, parked, firmware, validity)
                             }
-                            11, 12, 15, 18, 19 -> {
+                            11, 12, 15, 18, 19, 24 -> {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
                                 try {
                                     val parked = data.readInt() == 1; val firmware = data.readInt() == 1
@@ -833,7 +834,8 @@ object ProxyDaemonMain {
                                             12 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_SURFACE_TEST
                                             15 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER
                                             18 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER_21F7735C
-                                            else -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_DASHBOARD_21F7735C
+                                            19 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_DASHBOARD_21F7735C
+                                            else -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_APP_21F7735C
                                         })
                                 } catch (error: Throwable) { runCatching { source.close() }; throw error }
                             }
@@ -845,12 +847,13 @@ object ProxyDaemonMain {
                                 if (operation == 14) ClusterThemeLiveTest.requestAndroidRetirement(nonce, parked, firmware, validity)
                                 else ClusterThemeLiveTest.requestAndroidRestore(nonce, parked, firmware, validity)
                             }
-                            20, 21 -> {
+                            20, 21, 26 -> {
                                 val nonce = data.readString() ?: ""
                                 val parked = data.readInt() == 1; val firmware = data.readInt() == 1
                                 val validity = data.readStrongBinder() ?: error("Missing dashboard reservation")
                                 check(data.dataAvail() == 0)
-                                ClusterThemeLiveTest.requestDashboard(operation == 20, nonce, parked, firmware, validity)
+                                if (operation == 26) ClusterThemeLiveTest.requestFactoryApply(nonce, parked, firmware, validity)
+                                else ClusterThemeLiveTest.requestDashboard(operation == 20, nonce, parked, firmware, validity)
                             }
                             22 -> {
                                 val name = data.readString() ?: ""; val round = data.readString() ?: ""; check(data.dataAvail() == 0)
@@ -859,6 +862,16 @@ object ProxyDaemonMain {
                             23 -> {
                                 val nonce = data.readString() ?: ""; check(data.dataAvail() == 0)
                                 ClusterThemeLiveTest.currentDashboardDisplay(nonce)
+                            }
+                            25 -> {
+                                val nonce = data.readString() ?: ""; val round = data.readString() ?: ""
+                                val action = data.readInt(); val value = data.readInt(); val count = data.readInt()
+                                val restoring = data.readInt() == 1
+                                val pkg = data.readString() ?: ""; val display = data.readInt()
+                                val validity = data.readStrongBinder() ?: error("Missing full-app ADAS reservation")
+                                check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.fullAppAdas(nonce, round, action, value, count,
+                                    restoring, pkg, display, validity)
                             }
                             10 -> {
                                 val nonce = data.readString() ?: ""

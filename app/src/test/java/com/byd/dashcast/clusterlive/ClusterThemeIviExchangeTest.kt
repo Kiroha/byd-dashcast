@@ -69,8 +69,31 @@ class ClusterThemeIviExchangeTest {
         for (operation in listOf("query", "restore")) {
             val recovery = Fixture().apply { cohortValid = false }; val result = recovery.run(operation)
             assertNull(result.error); assertEquals(0, recovery.cohortChecks)
-            assertEquals(operation == "restore", result.attempted)
+            assertFalse(result.attempted) // Already configured factory: never replay mode1.
         }
+    }
+    @Test fun `factory configured with source zero is pending and never permits a new load or mode one replay`() {
+        val pending = selection(0)
+        assertTrue(ClusterThemeProtocol.decode(pending).isFactoryConfigured())
+        assertFalse(ClusterThemeProtocol.decode(pending).isDefault())
+        val restore = Fixture().apply { baseline = pending; customSend = { receiver!!(1000, pending) } }
+        val result = restore.run("restore")
+        assertNull(result.error); assertFalse(result.attempted)
+        assertEquals(listOf(1), restore.sent.map { it.cmd })
+        val load = Fixture().apply { baseline = pending }
+        assertNotNull(load.run("load").error); assertFalse(load.sent.any { it.cmd == 5 })
+    }
+    @Test fun `mode one ACK4 plus configured source zero remains pending without claiming strict factory`() {
+        val f = Fixture()
+        f.customSend = { request ->
+            if (request.cmd == 1) f.receiver!!(1000, if (++f.queryCount == 1) selection(0, ClusterThemePolicy.HOST_DIRECTORY + name) else selection(0))
+            else f.receiver!!(1000, ack("default", 4))
+        }
+        val result = f.run("restore")
+        assertNull(result.error); assertTrue(result.attempted)
+        val configured = ClusterThemeProtocol.decode(result.postQueryResponses.last())
+        assertTrue(configured.isFactoryConfigured()); assertFalse(configured.isDefault())
+        assertEquals(1, f.sent.count { it.cmd == 5 })
     }
     @Test fun `cohort deadline before send refuses mutation and a post send deadline never replays`() {
         val before = Fixture().apply { cohortTimeCost = 7000 }; val refused = before.run()

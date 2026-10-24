@@ -57,6 +57,8 @@ class ClusterThemeLiveTestLifecycleTest {
         set("dashboardSelectionReady", false); set("dashboardRound", "")
         set("dashboardBootstrapStarted", false); set("dashboardSizeAdmitted", false)
         set("dashboardBootstrapRecoverySettled", false); set("dashboardSmallPanelSeen", false); set("dashboardGeometry", JSONObject())
+        set("fullAppAdasDebt", false); set("fullAppAdasRound", ""); set("fullAppAdasRestoring", false)
+        set("factoryApplyPending", false); set("factoryApplyCompleted", false)
         flag("dashboardPending").set(false); flag("dashboardCloseQueued").set(false)
         count("generation").set(10); count("restoring").set(-1)
         (field("observationPending").get(null) as AtomicInteger).set(0)
@@ -90,6 +92,53 @@ class ClusterThemeLiveTestLifecycleTest {
         com.byd.dashcast.cluster.display.ClusterDisplayInfo(0, "Écran intégré", 1920, 1080, 0, state = "ON")))
     private fun factorySelection() = com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, 1, 0),
         listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", "default", "", "default"))
+
+    @Test fun `dashboard factory selection precedes close and a fresh strict property query`() {
+        dashboardSession(); set("dashboardNativeDebt", true)
+        val own = ClusterThemeLiveTest.Exchange(0, cornerSelection(), emptyList(), false)
+        val pending = factorySelection().copy(ints = listOf(1, 0, 0, 0, 0))
+        val events = mutableListOf<String>()
+        val result = ClusterThemeLiveTest.restoreDashboardFactorySelection(own,
+            selectFactory = {
+                assertTrue(field("factoryApplyPending").getBoolean(null)); events += "select-factory"
+                ClusterThemeLiveTest.Exchange(0, pending, emptyList(), false, attempted = true)
+            }, close = {
+                events += "close"; assertTrue(field("factoryApplyPending").getBoolean(null)); set("dashboardNativeDebt", false)
+            }, query = { events += "fresh-query"; ClusterThemeLiveTest.Exchange(0, factorySelection(), emptyList(), false) }, write = {})
+        assertEquals(listOf("select-factory", "close", "fresh-query"), events)
+        assertTrue(result.attempted); assertFalse(field("factoryApplyPending").getBoolean(null))
+        ClusterThemeLiveTest.recordRestoreResult(checkNotNull(own.query), result, false)
+        assertTrue(field("iviRecoverySettled").getBoolean(null))
+    }
+
+    @Test fun `published73 configured zero recovery never replays selection and cannot clean without native application`() {
+        dashboardSession(); set("dashboardNativeDebt", false)
+        val pending = factorySelection().copy(ints = listOf(1, 0, 0, 0, 0))
+        val before = ClusterThemeLiveTest.Exchange(0, pending, emptyList(), false)
+        var selections = 0
+        val result = ClusterThemeLiveTest.restoreDashboardFactorySelection(before,
+            selectFactory = { selections++; error("mode1 replay") }, close = {}, query = { before }, write = {})
+        assertEquals(0, selections); assertTrue(field("factoryApplyPending").getBoolean(null))
+        ClusterThemeLiveTest.recordRestoreResult(pending, result, false)
+        assertFalse(field("defaultQueried").getBoolean(null)); assertFalse(field("iviRecoverySettled").getBoolean(null))
+        set("carrierRemoved", true); set("oemObserved", true)
+        ClusterThemeLiveTest.completeRecovery({ error("must retain carrier") }, {})
+        assertTrue(flag("active").get()); assertEquals("QUARANTINE", field("state").get(null))
+    }
+
+    @Test fun `manual factory cycle uses fixed16 35 18 0 and retains debt before every admission`() {
+        dashboardSession(); set("dashboardNativeDebt", false); field("dashboardSizeAdmitted").set(null, null)
+        set("factoryApplyPending", true); flag("restoreRequested").set(true)
+        val sent = mutableListOf<Int>()
+        val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { cmd, admit, ready ->
+            ready(43, "12345", "c".repeat(32)); admit(); assertTrue(field("dashboardNativeDebt").getBoolean(null)); sent += cmd
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("attempted", true).put("native", 0), true)
+        }
+        ClusterThemeLiveTest.runDashboardSequence(true, request, {}, {}, {}, {}, bootstrap = true, factoryApply = true)
+        ClusterThemeLiveTest.runDashboardSequence(false, request, {}, {}, {}, {}, factoryApply = true)
+        assertEquals(listOf(16, 35, 18, 0), sent)
+        assertFalse(field("dashboardNativeDebt").getBoolean(null)); assertTrue(field("factoryApplyPending").getBoolean(null))
+    }
 
     @Test fun `cold bootstrap keeps factory selection until observed display then permits normal dashboard opening`() {
         dashboardSession(); set("mutated", false); set("dashboardSelectionReady", false)
