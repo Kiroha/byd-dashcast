@@ -97,7 +97,7 @@
     <string name="dialog_reconnect_msg">¿Relanzar %1$s en el clúster?</string>
     <string name="dialog_reconnect_yes">↺ Relanzar</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="setting_boot_auto_start">Iniciar proyección automáticamente al inicio (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Aplicaciones al arrancar</string>
     <string name="category_navigation">🗺 Navegación</string>
     <string name="category_media">🎵 Multimedia</string>
     <string name="filter_all">Todo</string>
@@ -117,7 +117,7 @@
     <string name="settings_cluster_123_desc">Seal EU — gama alta</string>
     <string name="settings_cluster_1025_desc">Experimental</string>
     <string name="settings_section_behavior">Comportamiento</string>
-    <string name="settings_boot_auto_start_support">Activar mirror al arrancar el vehículo</string>
+    <string name="settings_boot_auto_start_support">Activa la proyección si es necesario y restaura las aplicaciones y su disposición guardadas.</string>
     <string name="settings_reconnect_popup_support">Restaurar si se desconecta inesperadamente</string>
     <string name="settings_quick_stop">Parada rápida (sin restaurar el clúster original)</string>
     <string name="settings_quick_stop_support">Solo envía sendInfo 18 + 0, sin cambiar el tamaño</string>
@@ -144,7 +144,7 @@
     <string name="main_btn_launch_layout_apps">Lanzar apps del layout</string>
     <string name="main_section_favorites">FAVORITOS</string>
     <string name="main_section_all_apps">Todas las apps</string>
-    <string name="sheet_auto_launch">Lanzamiento automático al inicio</string>
+    <string name="sheet_auto_launch">Usar esta aplicación al arrancar…</string>
     <string name="sheet_add_favorite">Añadir a favoritos</string>
     <string name="sheet_remove_favorite">Quitar de favoritos</string>
     <string name="sheet_to_main">Enviar a la pantalla principal</string>
@@ -786,4 +786,18 @@
     <string name="diag_cluster_rcc_restore_blocked">La proyección y las nuevas pruebas siguen bloqueadas hasta cerrar esta sesión RCC. Sigue los pasos de vuelta a BYD de abajo; reconectar solo el daemon no basta.</string>
     <string name="diag_cluster_rcc_restore_mismatch">Las sesiones RCC de la aplicación y el daemon no coinciden. No se envió ninguna orden; los archivos y el bloqueo se conservan.</string>
     <string name="diag_cluster_rcc_restore_expired">El estado cambió o esta confirmación caducó. No se envió ninguna orden. Comprueba otra vez la sesión.</string>
+    <string name="floating_mirror_open">Abrir el espejo táctil a pantalla completa</string>
+    <string name="setting_boot_projection">Activar el modo de proyección del cuadro al arrancar</string>
+    <string name="settings_boot_projection_support">Activa la proyección al arrancar el vehículo, sin abrir aplicaciones.</string>
+    <string name="startup_none">Ninguna</string>
+    <string name="startup_last_session">Reanudar la última sesión</string>
+    <string name="startup_choose_app">Abrir siempre una aplicación elegida</string>
+    <string name="startup_choose_layout">Abrir siempre una disposición elegida</string>
+    <string name="startup_app_fmt">Aplicación: %1$s</string>
+    <string name="startup_layout_fmt">Disposición: %1$s</string>
+    <string name="startup_unavailable_fmt">No disponible: %1$s</string>
+    <string name="startup_continue">Continuar</string>
+    <string name="startup_confirm_app_fmt">¿Abrir siempre %1$s al arrancar el vehículo? Esta opción sustituye la reanudación de la última sesión.</string>
+    <string name="startup_no_targets">No hay elementos disponibles. Revisa las aplicaciones instaladas y las disposiciones guardadas.</string>
+    <string name="startup_app_selected">Aplicación de inicio — cambiar…</string>
 </resources>

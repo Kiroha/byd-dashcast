@@ -606,8 +606,40 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <!-- Démarrer au boot -->
+                        <!-- Mode projection au démarrage, indépendant de la relance des applications -->
                         <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                app:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_restart_alt"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/setting_boot_projection"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_boot_projection_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_boot_projection"
+                                android:contentDescription="@string/setting_boot_projection"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- One central choice of startup applications. -->
+                        <LinearLayout
+                            android:id="@+id/row_startup_apps"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?android:attr/selectableItemBackground"
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 android:layout_width="28dp"
@@ -624,13 +656,16 @@
                                     android:text="@string/setting_boot_auto_start"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_boot_auto_start_support"/>
+                                    android:id="@+id/tv_startup_apps_summary"
+                                    android:text="@string/startup_none"/>
                             </LinearLayout>
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/cb_boot_auto_start"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_vertical"/>
+                            <ImageView
+                                android:contentDescription="@null"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center_vertical"
+                                android:src="@drawable/ic_arrow_forward"
+                                app:tint="@color/md_on_surface_variant"/>
                         </LinearLayout>
 
                         <!-- Reconnexion automatique -->
@@ -1079,33 +1114,6 @@
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/cb_fission_mode"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_vertical"/>
-                        </LinearLayout>
-
-                        <!-- Fission: activate favourite layout automatically -->
-                        <LinearLayout
-                            style="@style/Widget.DashCast.ListItem">
-                            <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:layout_marginEnd="16dp"
-                                android:layout_gravity="center_vertical"
-                                android:scaleType="fitCenter"
-                                app:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_dashboard"/>
-                            <LinearLayout
-                                style="@style/Widget.DashCast.ListItem.Content">
-                                <TextView
-                                    style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_fission_auto_layout"/>
-                                <TextView
-                                    style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_fission_auto_layout_support"/>
-                            </LinearLayout>
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/sw_fission_auto_layout"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>

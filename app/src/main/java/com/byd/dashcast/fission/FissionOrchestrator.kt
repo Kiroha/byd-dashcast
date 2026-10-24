@@ -1,7 +1,12 @@
 package com.byd.dashcast.fission
 
 import android.annotation.SuppressLint
+import com.byd.dashcast.data.prefs.ProjectionSessionPrefs
+import com.byd.dashcast.data.prefs.StartupAppsMode
+import com.byd.dashcast.data.prefs.StartupAppsSelection
+import com.byd.dashcast.system.FloatingRemoteButton
 import android.content.Context
+import android.content.Intent
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.os.DeadObjectException
@@ -148,9 +153,11 @@ class FissionOrchestrator(
     // without volatile a background write may not be visible to a later main-thread read
     // (stale layout-selector label/checkmark). Siblings above are already volatile.
     @Volatile private var mFirstDisplayId = -1
+    private val mSnapshotGeneration = java.util.concurrent.atomic.AtomicInteger()
     @Volatile private var mActiveLayout: LayoutPreset? = null
     @Volatile private var mSelectedMirrorPackage: String? = null
     @Volatile private var mAutoStartAttempt = false
+    @Volatile private var mStartupSelection: StartupAppsSelection? = null
     @Volatile private var mActivationGuardToken = 0L
     @Volatile private var mClusterActivationManager: ClusterManager? = null
 
@@ -297,7 +304,7 @@ class FissionOrchestrator(
                     // down in between (pre-existing crash on this path, same shape as the
                     // manual one).
                     ensureClusterProjectionThen(
-                            Runnable { submitOrFail(Runnable { activateFavoriteLayout() }, null) })
+                            Runnable { submitOrFail(Runnable { activateFavoriteLayout(favoriteLayout.copy()) }, null) })
                 } else if (precreate) {
                     precreateSlots(favoriteLayout)
                 }
@@ -361,7 +368,8 @@ class FissionOrchestrator(
     }
 
     private fun ensureClusterProjectionThen(next: Runnable, onFailure: Runnable?) {
-        if (ClusterManager.isQtInProjectionMode()) {
+        if (!startupSelectionCurrent()) { markAutoStartFailed("startup selection changed"); onFailure?.run(); return }
+        if (ClusterManager.isProjectionReadyForApps()) {
             if (com.byd.dashcast.cluster.display.ProjectionCommandBus.currentSession() == null) {
                 reusedProjectionSession = com.byd.dashcast.cluster.display.ProjectionCommandBus.tryBeginSession()
                 if (reusedProjectionSession == null) { onFailure?.run(); return }
@@ -375,11 +383,39 @@ class FissionOrchestrator(
             abandonClusterActivation()
             val manager = ClusterManager(mAppCtx)
             mClusterActivationManager = manager
+            var displayReady = false
+            var commandsComplete = false
+            var continued = false
+            fun proceedWhenReady() {
+                if (displayReady && commandsComplete && !continued && mClusterActivationManager === manager && !mDestroyed) {
+                    continued = true
+                    if (!startupSelectionCurrent()) {
+                        mClusterActivationManager = null
+                        manager.abandon()
+                        markAutoStartFailed("startup selection changed")
+                        onFailure?.run()
+                        return
+                    }
+                    next.run()
+                }
+            }
             manager.activateClusterDisplay(object : ClusterManager.DisplayReadyCallback {
+                override fun onActivationComplete(success: Boolean) {
+                    if (mClusterActivationManager !== manager || mDestroyed || continued) return
+                    if (success) { commandsComplete = true; proceedWhenReady() }
+                    else {
+                        continued = true
+                        mClusterActivationManager = null
+                        manager.abandon()
+                        markAutoStartFailed("cluster activation commands failed")
+                        onFailure?.run()
+                    }
+                }
                 override fun onDisplayReady(display: Display?, displayId: Int) {
                     if (mClusterActivationManager !== manager || mDestroyed) return
                     AppLogger.i(TAG, "auto-layout: cluster projection ready (display=$displayId)")
-                    next.run()
+                    displayReady = true
+                    proceedWhenReady()
                 }
                 override fun onDisplayTimeout() {
                     if (mClusterActivationManager !== manager || mDestroyed) return
@@ -448,6 +484,7 @@ class FissionOrchestrator(
     }
 
     private fun stopAll(purgeDaemonSlots: Boolean, onComplete: Runnable?) {
+        mSnapshotGeneration.incrementAndGet()
         val completeAdasStop = projectionAdasSession?.let {
             com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(mAppCtx, it)
         } ?: Runnable {}
@@ -582,6 +619,8 @@ class FissionOrchestrator(
             }
             ShellGateway.execShell(mAppCtx, "am force-stop $pkg")
             mSlots.remove(pkg)
+            ProjectionSessionPrefs.remove(mAppCtx, pkg)
+            if (mSlots.isEmpty()) FloatingRemoteButton.hide()
             mSelectedMirrorPackage = LayoutSlotSelection.resolve(
                     mSelectedMirrorPackage, orderedSlotPackages())
             mProjecting = mSlots.isNotEmpty()
@@ -610,6 +649,15 @@ class FissionOrchestrator(
             val slot = mSlots[pkg]
             if (!applyAcceptedResize(slot, requestedRect, resized)) {
                 AppLogger.w(TAG, "resizeSlot rejected pkg=$pkg")
+            } else {
+                mActiveLayout?.let { layout ->
+                    layout.slots.firstOrNull { it.packageName == pkg }?.apply {
+                        x = requestedRect.left; y = requestedRect.top; w = requestedRect.width(); h = requestedRect.height()
+                    }
+                    synchronized(FissionOrchestrator.Companion) {
+                        if (sAutoStartOrchestrator === this) ProjectionSessionPrefs.rememberLayout(mAppCtx, layout, mSlots.keys.toSet())
+                    }
+                }
             }
             post { mCallbacks.onSlotsChanged(mSlots.values) }
         }
@@ -763,6 +811,7 @@ class FissionOrchestrator(
                 }
             }
             dashboardDiagnosticSession?.let { check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(it) && dashboardProxySession?.isCurrent() == true && dashboardLaunchValid?.invoke() == true) }
+            checkDashboardLaunch()
             val launchResult = dashboardProxySession?.launchDashboardApplication(pkg, displayId)
                 ?: if (dashboardDiagnosticSession == null) ProxyClient.launchAndForce(pkg, null, displayId,
                     rect.width(), rect.height()) else error("Pinned dashboard launch returned no result; no replay")
@@ -795,6 +844,7 @@ class FissionOrchestrator(
                 AppLogger.i(TAG, "FISSION MIRROR_START displayId=$displayId ok=$mMirrorReady")
             }
 
+            checkDashboardLaunch()
             mSlots[pkg] = SlotState(pkg, label, displayId, layerStack, rect)
             mSelectedMirrorPackage = LayoutSlotSelection.resolve(
                     mSelectedMirrorPackage, orderedSlotPackages())
@@ -815,6 +865,7 @@ class FissionOrchestrator(
     }
 
     private fun checkDashboardLaunch() {
+        check(startupSelectionCurrent()) { "Startup selection changed" }
         dashboardDiagnosticSession?.let {
             check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(it) &&
                 dashboardProxySession?.isCurrent() == true && dashboardLaunchValid?.invoke() == true) {
@@ -822,6 +873,9 @@ class FissionOrchestrator(
             }
         }
     }
+
+    private fun startupSelectionCurrent(): Boolean =
+        mStartupSelection?.let { it == ClusterPrefs.getStartupApps(mAppCtx) } != false
 
     @Throws(Exception::class)
     private fun doSwitchToLayout(newLayout: LayoutPreset?, surfaceHolder: SurfaceHolder?) {
@@ -901,8 +955,7 @@ class FissionOrchestrator(
         mProjecting = mSlots.isNotEmpty()
     }
 
-    private fun activateFavoriteLayout() {
-        val fav = LayoutPrefs.getAutoStartLayout(mAppCtx)
+    private fun activateFavoriteLayout(fav: LayoutPreset? = LayoutPrefs.getAutoStartLayout(mAppCtx)) {
         if (fav == null) {
             post { mCallbacks.onStatusMessage(null) }
             markAutoStartFailed("saved favourite layout disappeared")
@@ -923,6 +976,7 @@ class FissionOrchestrator(
             // guard's own expiry covers anything that reaches neither.
             if (sActivationGate.release(mActivationGuardToken)) {
                 mAutoStartAttempt = false
+                mStartupSelection = null
             }
         }
     }
@@ -1059,10 +1113,17 @@ class FissionOrchestrator(
     /** Commits the logical active layout only if its physical slot switch completes. */
     @Throws(Exception::class)
     private fun switchActiveLayout(target: LayoutPreset?, surfaceHolder: SurfaceHolder?) {
+        val generation = mSnapshotGeneration.get()
         val previous = mActiveLayout
         mActiveLayout = target
         try {
             doSwitchToLayout(target, surfaceHolder)
+            synchronized(FissionOrchestrator.Companion) {
+                if (target != null && generation == mSnapshotGeneration.get() && sAutoStartOrchestrator === this && startupSelectionCurrent()) {
+                    ProjectionSessionPrefs.rememberLayout(mAppCtx, target, mSlots.keys.toSet())
+                    if (mSlots.isNotEmpty()) FloatingRemoteButton.show(mAppCtx)
+                }
+            }
         } catch (error: Exception) {
             mActiveLayout = previous
             mSelectedMirrorPackage = LayoutSlotSelection.resolve(
@@ -1400,19 +1461,17 @@ class FissionOrchestrator(
         }
 
         /**
-         * Launch-time entry point: when "auto favourite layout" is enabled, activates the cluster
-         * projection and the favourite layout (which then launches the bound apps) as soon as
-         * DashCast starts — without requiring the user to open the Fission screen.
-         *
-         * No-op when the option is off, Layouts mode is disabled, no favourite layout exists,
-         * classic projection is already running, or it already fired this process.
+         * Vehicle-start entry point. The central choice selects the exact saved layout or the
+         * last actual layout snapshot; opening MainActivity never invokes this automatically.
          */
         @JvmStatic
         fun isAutoStartRequested(context: Context): Boolean {
             val appCtx = context.applicationContext
-            return LayoutAutoStartPolicy.isRequested(
-                    DaemonConfig.isFissionModeEnabled(appCtx),
-                    ClusterPrefs.isFissionAutoLayout(appCtx))
+            return when (ClusterPrefs.getStartupApps(appCtx).mode) {
+                StartupAppsMode.LAYOUT -> true
+                StartupAppsMode.LAST_SESSION -> ProjectionSessionPrefs.read(appCtx)?.layout != null
+                else -> false
+            }
         }
 
         // @Synchronized on a companion function locks the COMPANION INSTANCE, not the class —
@@ -1426,10 +1485,26 @@ class FissionOrchestrator(
         fun maybeAutoStartOnAppLaunch(context: Context): AutoStartResult {
             if (sAutoStartFired) return AutoStartResult.ALREADY_STARTED
             val appCtx = context.applicationContext
-            if (!isAutoStartRequested(appCtx)) return AutoStartResult.DISABLED
-            val fav = LayoutPrefs.getAutoStartLayout(appCtx)
+            if (!isAutoStartRequested(appCtx)) {
+                startProjectionOnlyIfRequested(appCtx)
+                return AutoStartResult.DISABLED
+            }
+            val selection = ClusterPrefs.getStartupApps(appCtx)
+            val saved = if (selection.mode == StartupAppsMode.LAST_SESSION) ProjectionSessionPrefs.read(appCtx) else null
+            val fav = if (selection.mode == StartupAppsMode.LAYOUT)
+                LayoutPrefs.load(appCtx).firstOrNull { it.id == selection.target }?.copy()
+                else saved?.layout
             if (fav == null) {
                 AppLogger.w(TAG, "auto-start requested but no unambiguous saved layout has bound apps")
+                startProjectionOnlyIfRequested(appCtx)
+                return AutoStartResult.MISSING_LAYOUT
+            }
+            fav.slots.forEach { slot ->
+                slot.packageName?.let { if (appCtx.packageManager.getLaunchIntentForPackage(it) == null) slot.packageName = null }
+            }
+            if (fav.slots.none { it.packageName != null }) {
+                if (selection.mode == StartupAppsMode.LAST_SESSION) ProjectionSessionPrefs.clear(appCtx)
+                startProjectionOnlyIfRequested(appCtx)
                 return AutoStartResult.MISSING_LAYOUT
             }
             if (isClassicProjectionActive()) {
@@ -1463,9 +1538,23 @@ class FissionOrchestrator(
             val orch = FissionOrchestrator(appCtx,
                     headlessProjectionState(), headlessCallbacks("auto-start"))
             orch.mAutoStartAttempt = true
+            orch.mStartupSelection = selection
             orch.mActivationGuardToken = activation.token
             replaceHeadlessAfterStop(orch, fav)
             return AutoStartResult.STARTED
+        }
+
+        /** Missing apps must not discard the independent projection-only startup request. */
+        private fun startProjectionOnlyIfRequested(context: Context) {
+            if (!ClusterPrefs.isBootProjectionEnabled(context) || isClassicProjectionActive() ||
+                sAutoStartOrchestrator != null) return
+            val activation = sActivationGate.tryAcquire(SystemClock.elapsedRealtime()) ?: return
+            try {
+                context.startForegroundService(Intent(context, ClusterService::class.java)
+                    .putExtra(ClusterService.EXTRA_BOOT_PROJECTION, true))
+            } catch (error: Exception) {
+                AppLogger.w(TAG, "projection-only fallback failed: ${error.message}")
+            } finally { sActivationGate.release(activation.token) }
         }
 
         /**
@@ -1684,8 +1773,13 @@ class FissionOrchestrator(
 
         private fun stopAutoOrchestrator(purgeDaemonSlots: Boolean, context: Context?,
                                          onComplete: Runnable?) {
-            val o = sAutoStartOrchestrator
-            sAutoStartOrchestrator = null
+            val o = synchronized(FissionOrchestrator.Companion) {
+                val current = sAutoStartOrchestrator
+                sAutoStartOrchestrator = null
+                (context ?: current?.mAppCtx)?.let(ProjectionSessionPrefs::clear)
+                FloatingRemoteButton.hide()
+                current
+            }
             val teardownToken = sActivationGate.forceAcquire(SystemClock.elapsedRealtime()).token
             val complete = Runnable {
                 sActivationGate.release(teardownToken)

@@ -97,7 +97,7 @@
     <string name="dialog_reconnect_msg">%1$s кластерде қайта іске қосу?</string>
     <string name="dialog_reconnect_yes">↺ Қайта іске қосу</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="setting_boot_auto_start">Іске қосылғанда проекцияны автоматты түрде бастау (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Іске қосылғандағы қолданбалар</string>
     <string name="category_navigation">🗺 Навигация</string>
     <string name="category_media">🎵 Медиа</string>
     <string name="filter_all">Барлығы</string>
@@ -117,7 +117,7 @@
     <string name="settings_cluster_123_desc">Seal EU — премиум</string>
     <string name="settings_cluster_1025_desc">Эксперименталды</string>
     <string name="settings_section_behavior">Әрекет</string>
-    <string name="settings_boot_auto_start_support">Көлік іске қосылғанда айнаны қосу</string>
+    <string name="settings_boot_auto_start_support">Қажет болса проекцияны қосып, сақталған қолданбалар мен олардың орналасуын қалпына келтіреді.</string>
     <string name="settings_reconnect_popup_support">Күтпеген ажырау кезінде қалпына келтіру</string>
     <string name="settings_quick_stop">Жылдам тоқтату (бастапқы кластерді қалпына келтірмей)</string>
     <string name="settings_quick_stop_support">Тек sendInfo 18 + 0 жібереді, өлшемді өзгертпейді</string>
@@ -144,7 +144,7 @@
     <string name="main_btn_launch_layout_apps">Орналасу қосымшаларын іске қосу</string>
     <string name="main_section_favorites">ТАҢДАУЛЫЛАР</string>
     <string name="main_section_all_apps">Барлық қосымшалар</string>
-    <string name="sheet_auto_launch">Іске қосылғанда автоматты ашу</string>
+    <string name="sheet_auto_launch">Осы қолданбаны іске қосылғанда пайдалану…</string>
     <string name="sheet_add_favorite">Таңдаулыларға қосу</string>
     <string name="sheet_remove_favorite">Таңдаулылардан алып тастау</string>
     <string name="sheet_to_main">Негізгі экранға жіберу</string>
@@ -786,4 +786,18 @@
     <string name="diag_cluster_rcc_restore_blocked">Бұл RCC сеансы аяқталғанша проекция мен жаңа сынақтар бұғатталған. Төмендегі BYD қайту қадамдарын орында; daemon қызметін ғана қайта қосу жеткіліксіз.</string>
     <string name="diag_cluster_rcc_restore_mismatch">Қолданба мен daemon RCC сеанстары сәйкес келмейді. Пәрмен жіберілмеді; файлдар мен бұғаттау сақталды.</string>
     <string name="diag_cluster_rcc_restore_expired">Күй өзгерді немесе растау мерзімі аяқталды. Пәрмен жіберілмеді. Сеансты қайта тексер.</string>
+    <string name="floating_mirror_open">Сенсорлық айнаны толық экранда ашу</string>
+    <string name="setting_boot_projection">Іске қосылғанда аспаптар тақтасының проекция режимін қосу</string>
+    <string name="settings_boot_projection_support">Көлік іске қосылғанда қолданбаларды ашпай проекцияны қосады.</string>
+    <string name="startup_none">Ешқайсысы</string>
+    <string name="startup_last_session">Соңғы сеансты жалғастыру</string>
+    <string name="startup_choose_app">Таңдалған қолданбаны әрқашан ашу</string>
+    <string name="startup_choose_layout">Таңдалған орналасуды әрқашан ашу</string>
+    <string name="startup_app_fmt">Қолданба: %1$s</string>
+    <string name="startup_layout_fmt">Орналасу: %1$s</string>
+    <string name="startup_unavailable_fmt">Қолжетімсіз: %1$s</string>
+    <string name="startup_continue">Жалғастыру</string>
+    <string name="startup_confirm_app_fmt">Көлік іске қосылғанда %1$s әрқашан ашылсын ба? Бұл соңғы сеансты жалғастыруды алмастырады.</string>
+    <string name="startup_no_targets">Қолжетімді элементтер жоқ. Орнатылған қолданбалар мен сақталған орналасуларды тексеріңіз.</string>
+    <string name="startup_app_selected">Іске қосу қолданбасы — өзгерту…</string>
 </resources>

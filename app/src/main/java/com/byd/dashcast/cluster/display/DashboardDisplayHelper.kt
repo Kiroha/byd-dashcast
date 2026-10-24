@@ -34,6 +34,7 @@ class DashboardDisplayHelper internal constructor(
     interface Listener {
         fun onDashboardDisplayConnected(display: Display?, displayId: Int)
         fun onDashboardDisplayDisconnected()
+        fun onDashboardActivationComplete(success: Boolean) {}
     }
 
     private val mContext: Context = context.applicationContext
@@ -41,6 +42,8 @@ class DashboardDisplayHelper internal constructor(
 
     // Known cluster display ID — -1 if not connected
     private var mKnownClusterDisplayId = -1
+    private var mActivationComplete = false
+    fun isActivationComplete(): Boolean = mActivationComplete && mProjectionSession?.let(::owns) == true
     private var mProjectionSession: ProjectionCommandSequencer.Session? = null
 
     private var mDisconnectListener: DisplayManager.DisplayListener? = null
@@ -59,6 +62,7 @@ class DashboardDisplayHelper internal constructor(
         if (session == null) { mListener.onDashboardDisplayDisconnected(); return }
         unregisterDisconnectListener()
         mProjectionSession = session
+        mActivationComplete = false
         mKnownClusterDisplayId = -1
         val disconnectListener = object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {}
@@ -67,6 +71,7 @@ class DashboardDisplayHelper internal constructor(
                 if (!owns(session) || displayId != mKnownClusterDisplayId) return
                 AppLogger.i(TAG, "Dashboard display removed: id=$displayId")
                 mKnownClusterDisplayId = -1
+                mActivationComplete = false
                 ClusterManager.notifyProjectionStopped()
                 mListener.onDashboardDisplayDisconnected()
             }
@@ -74,6 +79,11 @@ class DashboardDisplayHelper internal constructor(
         mDisconnectListener = disconnectListener
         mDisplayManager.registerDisplayListener(disconnectListener, null)
         activateDisplay(session, object : ClusterManager.DisplayReadyCallback {
+            override fun onActivationComplete(success: Boolean) {
+                if (!owns(session)) return
+                mActivationComplete = success
+                mListener.onDashboardActivationComplete(success)
+            }
             override fun onDisplayReady(display: Display?, displayId: Int) {
                 if (!owns(session) || mKnownClusterDisplayId > 0) return
                 mKnownClusterDisplayId = displayId

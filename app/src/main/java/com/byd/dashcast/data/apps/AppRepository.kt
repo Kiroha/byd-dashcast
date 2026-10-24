@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
  *
  * **Problem solved:** Previously ~150 lines of app-loading logic were embedded
  * directly in `MainActivity.loadInstalledApps()`, `setFavorite()`, and
- * `setAutoLaunch()`, mixed with UI event handling. Every change to sorting,
+ * `refreshStartupSelection()`, mixed with UI event handling. Every change to sorting,
  * filtering, or persistence required editing the 3 900-line god class.
  *
  * **Architecture role:** Data layer. Owns the PackageManager query, caching,
@@ -31,7 +31,7 @@ import java.util.concurrent.Executors
  *  - [loadApps] dispatches the PM query on a single-threaded daemon executor.
  *  - The callback is always posted back to the main thread via [Handler].
  *  - The cached list is written once per load; mutations ([setFavorite],
- *    [setAutoLaunch]) are in-place on the same objects and are only called
+ *    [refreshStartupSelection]) are in-place on the same objects and are only called
  *    from the main thread (Activity callback).
  */
 class AppRepository {
@@ -107,25 +107,11 @@ class AppRepository {
         }
     }
 
-    /**
-     * Sets one package as the auto-launch target, clearing any previous one.
-     * Persists the change and patches the in-memory cache.
-     *
-     * Pass `enable=false` to clear auto-launch entirely.
-     *
-     * Must be called from the **main thread**.
-     */
-    fun setAutoLaunch(ctx: Context, packageName: String?, enable: Boolean) {
-        ClusterPrefs.setAutoLaunchPkg(ctx, if (enable) packageName else null)
-
-        // Patch the cache: clear all then set the one that won, so stale entries
-        // from a previous auto-launch package are also cleared.
-        val cached = mCachedApps
-        if (cached != null) {
-            for (app in cached) {
-                app.isAutoLaunch = enable && packageName == app.packageName
-            }
-        }
+    /** Reflect the central selection without changing it when returning from Settings. */
+    fun refreshStartupSelection(ctx: Context) {
+        val selected = ClusterPrefs.getStartupApps(ctx)
+        val pkg = selected.target.takeIf { selected.mode == com.byd.dashcast.data.prefs.StartupAppsMode.APP }
+        mCachedApps?.forEach { it.isAutoLaunch = it.packageName == pkg }
     }
 
     /**
@@ -139,7 +125,7 @@ class AppRepository {
     /**
      * Returns the current in-memory app list without triggering a reload.
      * Safe to call from the main thread immediately after [setFavorite] or
-     * [setAutoLaunch] to refresh the UI without a PackageManager re-query.
+     * [refreshStartupSelection] to refresh the UI without a PackageManager re-query.
      *
      * @return the cached sorted list, or an empty list if no load has completed yet.
      */
@@ -178,7 +164,8 @@ class AppRepository {
         }
 
         val favorites = ClusterPrefs.getFavorites(ctx)
-        val autoLaunchPkg = ClusterPrefs.getAutoLaunchPkg(ctx)
+        val startup = ClusterPrefs.getStartupApps(ctx)
+        val autoLaunchPkg = startup.target.takeIf { startup.mode == com.byd.dashcast.data.prefs.StartupAppsMode.APP }
         val selfPkg = ctx.packageName
         val prefs = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
 

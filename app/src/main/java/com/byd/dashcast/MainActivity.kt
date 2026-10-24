@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.ComponentName
+import com.byd.dashcast.data.prefs.ProjectionSessionPrefs
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -113,14 +114,16 @@ class MainActivity : AppCompatActivity(),
     private var mClusterService: ClusterService? = null
     private var mServiceBound = false
     private var mBindRequested = false // true as soon as a bindService is in progress
+    private var mActivityStarted = false
+    private var mPassiveBindAttempts = 0
+    private val mPassiveBindRetry = Runnable { adoptExistingClusterService() }
     private lateinit var mDashboardLauncher: DashboardLauncher // local ref updated after bind
 
     /** Single source of truth for app loading, caching, and favorite/auto-launch mutations. */
     private val mAppRepo = AppRepository()
-    private var mPendingAutoLaunchPkg: String? = null
+    private var mPendingFullscreenMirror = false
     private var mPendingAppAfterActivation: AppInfo? = null
     private var mPendingShortcutAfterActivation: Pair<AppInfo, AppShortcut>? = null
-    private var mMissingAutoLayoutToastShown = false
     private val mDashboardSelectionTracker = DashboardSelectionTracker()
 
     private val mServiceConn = object : ServiceConnection {
@@ -221,36 +224,10 @@ class MainActivity : AppCompatActivity(),
 
         // Safety-net: if projection auto-start is disabled, move any leftover cluster apps
         // back to Display 0. Auto-launch pending package consumed in the cluster-connect callback.
-        val bootAutoStartEnabled = ClusterPrefs.isBootAutoStartEnabled(this)
-        var sessionResumePending = false
-        mPendingAutoLaunchPkg = ClusterPrefs.getAutoLaunchPkg(this)
-        // Session-resume: re-activate the last cluster package if a previous projection was
-        // interrupted. Read the session set HERE — before the cleanup thread clears it.
-        if (mPendingAutoLaunchPkg == null && !bootAutoStartEnabled) {
-            val prevSession = ClusterPrefs.getSessionClusterPkgs(this)
-            if (prevSession.isNotEmpty()) {
-                sessionResumePending = true
-                val lastPkg = ClusterPrefs.getLastClusterPkg(this)
-                mPendingAutoLaunchPkg = if (lastPkg != null && prevSession.contains(lastPkg))
-                    lastPkg
-                else
-                    prevSession.iterator().next()
-                AppLogger.i(
-                    TAG, "session-resume: pending auto-launch « " + mPendingAutoLaunchPkg +
-                        " » from interrupted session (" + prevSession.size + " app(s))"
-                )
-            }
-        }
-        // When the Layouts auto-start owns startup, it activates the cluster projection AND
-        // launches every bound app itself. The single-app auto-launch must NOT also fire: it
-        // would create a classic ClusterService projection first, and the layout's ensureDaemon()
-        // then sees an active projection → aborts the whole layout with "Daemon unavailable" and
-        // nothing launches (byd_log 20260705_194004). Suppress it here so the two auto-starts
-        // don't race; the layout is the single source of truth for startup launching.
-        if (isLayoutAutoStartRequested() && mPendingAutoLaunchPkg != null) {
-            AppLogger.i(TAG, "Layout auto-start configured — suppressing single-app auto-launch of « "
-                    + mPendingAutoLaunchPkg + " » (the layout owns startup launching)")
-        }
+        val bootAutoStartEnabled = ClusterPrefs.isAnyBootProjectionEnabled(this)
+        val restoreApps = ClusterPrefs.isBootAutoStartEnabled(this)
+        val savedSession = if (restoreApps) ProjectionSessionPrefs.read(this) else null
+        val sessionResumePending = savedSession != null
         if (BootDisplayCleanup.shouldRunAtStartup(bootAutoStartEnabled, sessionResumePending)) {
             // Off-load the (binder-reflection) cleanup to a named daemon thread.
             val appCtx = applicationContext
@@ -258,8 +235,7 @@ class MainActivity : AppCompatActivity(),
             cleanupThread.isDaemon = true
             cleanupThread.start()
         } else if (bootAutoStartEnabled) {
-            // Auto-start enabled: clear the persisted set (apps managed normally).
-            ClusterPrefs.clearSessionClusterPkgs(this)
+            AppLogger.i(TAG, "Saved projection owns startup; preserving cleanup history")
         } else {
             AppLogger.i(TAG, "Session resume owns startup — skipping display cleanup")
         }
@@ -417,20 +393,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun onResume() {
         super.onResume()
-        // Re-evaluate after returning from Settings/Layout Manager, not only on process creation.
-        // This lets a newly saved/favourited layout launch immediately without restarting DashCast.
-        when (FissionOrchestrator.maybeAutoStartOnAppLaunch(this)) {
-            FissionOrchestrator.AutoStartResult.MISSING_LAYOUT -> {
-                if (!mMissingAutoLayoutToastShown) {
-                    mMissingAutoLayoutToastShown = true
-                    Toast.makeText(applicationContext, R.string.lm_save_before_favorite,
-                        Toast.LENGTH_LONG).show()
-                }
-            }
-            FissionOrchestrator.AutoStartResult.DISABLED -> mMissingAutoLayoutToastShown = false
-            FissionOrchestrator.AutoStartResult.STARTED -> mMissingAutoLayoutToastShown = false
-            else -> Unit
-        }
+        mAppRepo.refreshStartupSelection(this)
+        mAppListCoordinator.notifyAppsChanged()
         // Hotspot navrail entry depends on the "use_own_sim" pref; re-evaluate on every resume.
         mNavCoordinator?.refreshHotspot()
         // v1.2.45 — Compact apps panel pref is live-applied.
@@ -441,8 +405,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun updateLaunchLayoutAppsButton() {
-        val show = !ClusterPrefs.isFissionAutoLayout(this) &&
-            DaemonConfig.isFissionModeEnabled(this) &&
+        val show = DaemonConfig.isFissionModeEnabled(this) &&
             favoriteLayoutHasApps()
         btnLaunchLayoutApps.visibility = if (show) View.VISIBLE else View.GONE
     }
@@ -490,10 +453,11 @@ class MainActivity : AppCompatActivity(),
 
     private fun handleShowMirrorIntent(intent: Intent?) {
         if (intent == null) return
-        if (FloatingRemoteButton.ACTION_SHOW_MIRROR == intent.action && mCurrentDashboardApp != null) {
-            showMirrorView()
-            attemptStartMirrorWithCurrentHolder()
-            AppLogger.d(TAG, "handleShowMirrorIntent → showMirrorView for $mCurrentDashboardApp")
+        if (FloatingRemoteButton.ACTION_SHOW_MIRROR == intent.action) {
+            mPendingFullscreenMirror = true
+            mPassiveBindAttempts = 0
+            adoptExistingClusterService()
+            tryOpenPendingFullscreenMirror()
         } else if (FloatingRemoteButton.ACTION_QUICK_SWITCH == intent.action) {
             val pkg = intent.getStringExtra(FloatingRemoteButton.EXTRA_QUICK_SWITCH_PKG)
             if (pkg != null) {
@@ -501,6 +465,18 @@ class MainActivity : AppCompatActivity(),
                 quickSwitchToApp(pkg)
             }
         }
+    }
+
+    private fun tryOpenPendingFullscreenMirror() {
+        if (!mPendingFullscreenMirror || mFullscreenCoordinator == null) return
+        val classicReady = mCurrentDashboardPkg != null &&
+            mClusterService?.activeProjectionApps()?.any { it.packageName == mCurrentDashboardPkg } == true
+        val layoutReady = FissionOrchestrator.getSelectedLayoutMirrorTarget() != null
+        if (!classicReady && !layoutReady) return
+        mPendingFullscreenMirror = false
+        showMirrorView()
+        enterFullscreenMirror()
+        attemptStartMirrorWithCurrentHolder()
     }
 
     private fun quickSwitchToApp(pkgName: String) {
@@ -556,6 +532,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun onStart() {
         super.onStart()
+        mActivityStarted = true
+        mPassiveBindAttempts = 0
         AppLogger.lifecycle(javaClass.simpleName, "onStart")
         if (AdbLocalClient.isAdbPortRefused() && !sAdbWarningShown) {
             sAdbWarningShown = true
@@ -595,23 +573,10 @@ class MainActivity : AppCompatActivity(),
             }
             if (mCurrentDashboardApp != null) {
                 btnShowMirror.visibility = View.VISIBLE
-                FloatingRemoteButton.show()
+                FloatingRemoteButton.show(this)
             }
         } else if (!mBindRequested) {
-            // Check if the service is already running (e.g. Activity re-opened)
-            if (ClusterService.sIsRunning) {
-                mBindRequested = true
-                mNavCoordinator?.setStatusPending()
-                val svcIntent = Intent(this, ClusterService::class.java)
-                bindService(svcIntent, mServiceConn, Context.BIND_AUTO_CREATE)
-            } else if (mPendingAutoLaunchPkg != null && !isLayoutAutoStartRequested()) {
-                // v1.4.24 — an explicitly configured auto-launch app activates projection at startup.
-                AppLogger.i(
-                    TAG, "auto-launch app configured (" + mPendingAutoLaunchPkg +
-                        ") — activating projection on startup"
-                )
-                activateCluster()
-            }
+            adoptExistingClusterService()
         }
         mStatePollCoordinator?.start()
         // Reflect fission-layout apps in the app list (indicator + long-press kill).
@@ -621,6 +586,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun onStop() {
         super.onStop()
+        mActivityStarted = false
+        mScreenshotHandler.removeCallbacks(mPassiveBindRetry)
         AppLogger.lifecycle(javaClass.simpleName, "onStop")
         mStatePollCoordinator?.stop()
         // Keep the daemon mirror alive when a nav app is actively streaming on the cluster.
@@ -660,13 +627,24 @@ class MainActivity : AppCompatActivity(),
             unregisterReceiver(mDaemonReadyReceiver)
             mDaemonReadyReceiverRegistered = false
         }
-        if (mServiceBound) {
-            stopClusterMirror()
+        if (mServiceBound || mBindRequested) {
+            if (mServiceBound) stopClusterMirror()
             unbindService(mServiceConn)
             mServiceBound = false
             mBindRequested = false
         }
         mMirrorCoordinator?.destroy()
+    }
+
+    /** Adopt boot's owner without creating a projection merely by opening this screen. */
+    private fun adoptExistingClusterService() {
+        if (!mActivityStarted || mServiceBound || mBindRequested) return
+        mScreenshotHandler.removeCallbacks(mPassiveBindRetry)
+        mBindRequested = bindService(Intent(this, ClusterService::class.java), mServiceConn, 0)
+        if (!mBindRequested && ++mPassiveBindAttempts < 20 &&
+            (mPendingFullscreenMirror || ClusterPrefs.isAnyBootProjectionEnabled(this))) {
+            mScreenshotHandler.postDelayed(mPassiveBindRetry, 500)
+        }
     }
 
     private fun restorePendingBootAdoption() {
@@ -696,14 +674,15 @@ class MainActivity : AppCompatActivity(),
             updateDashboardStatus(null)
 
             // Restore active cluster app if the Activity was recreated (in-memory state lost).
-            if (mCurrentDashboardPkg == null) {
-                val pkg = ClusterPrefs.getClusterPkg(this)
+            if (mCurrentDashboardPkg == null && svc?.isBootRestoring() != true) {
+                val pkg = svc?.activeProjectionApps()?.firstOrNull()?.packageName
                 val name = ClusterPrefs.getClusterName(this)
                 if (pkg != null) {
                     mCurrentDashboardPkg = pkg
                     mCurrentDashboardApp = name
                     mAppListCoordinator.setCurrentPackage(pkg)
                     updateDashboardStatus(name)
+                    svc?.activeProjectionApps()?.let { mSplitController?.adoptRestoredApps(it) }
                     updateControlLabel()
                     showMirrorView() // makes panelClusterControl visible
                     AppLogger.i(TAG, "cluster active app restored: $pkg")
@@ -744,10 +723,7 @@ class MainActivity : AppCompatActivity(),
                 onSendToDashboard(pending)
             }
 
-            // Auto-Launch process. Only runs if the app list is already loaded; if the
-            // cluster connected before the async load finished, the pending is kept and
-            // replayed from loadAppsAsync()'s callback (see tryExecutePendingAutoLaunch).
-            tryExecutePendingAutoLaunch()
+            tryOpenPendingFullscreenMirror()
 
             // Reconnect reminder (guarded by user preference).
             val reconnectEnabled = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -775,6 +751,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onClusterDisplayDisconnected() {
+        mPendingFullscreenMirror = false
         mDashboardSelectionTracker.takePendingForInvalidation()
         AppLogger.log(TAG, "Dashboard disconnected")
         runOnUiThread {
@@ -796,13 +773,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     // ---- AppListAdapter.OnSendToDashboardListener ----
-
-    override fun onSetAutoLaunch(app: AppInfo, enable: Boolean) {
-        mAppRepo.setAutoLaunch(this, app.packageName, enable)
-        // Post to avoid IllegalStateException (cannot call notify during bind)
-        val coord = mAppListCoordinator
-        Handler(Looper.getMainLooper()).post { coord.notifyAppsChanged() }
-    }
 
     override fun onToggleFavorite(app: AppInfo) {
         // setFavorite patches the in-memory cache and re-sorts — no PackageManager re-query.
@@ -1094,7 +1064,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onLaunchShortcut(app: AppInfo, shortcut: AppShortcut) {
-        mClusterService?.cancelPendingLaunchRecovery()
+        mClusterService?.cancelProjectionRestore()
         mDashboardSelectionTracker.begin(null)
         mPendingAppAfterActivation = null
         mPendingShortcutAfterActivation = null
@@ -1168,7 +1138,9 @@ class MainActivity : AppCompatActivity(),
                     split.setSecondDashboardPkg(app.packageName)
                     mSessionTracker.remove(app.packageName)
                     mSessionTracker.add(app.packageName)
+                    service?.recordProjectedApplication(app.packageName, activeSplitBounds)
                     updateControlLabel()
+                    tryOpenPendingFullscreenMirror()
                     return
                 }
                 if (app.packageName == mMainDisplayPkg) {
@@ -1182,6 +1154,7 @@ class MainActivity : AppCompatActivity(),
                 mCurrentDashboardApp = app.appName
                 mCurrentDashboardPkg = app.packageName
                 mSessionTracker.add(app.packageName)
+                service?.recordProjectedApplication(app.packageName)
                 ClusterPrefs.addRecentApp(this, app.packageName, app.appName)
                 mUsageTracker.trackStart()
                 ClusterPrefs.setClusterPkg(this, app.packageName)
@@ -1524,10 +1497,10 @@ class MainActivity : AppCompatActivity(),
         val svc = mClusterService
         if (!mServiceBound || svc == null) {
             // Service stopped or not started yet — start + bind it.
+            val svcIntent = Intent(this, ClusterService::class.java)
+            startForegroundService(svcIntent)
             if (!mBindRequested) {
                 mBindRequested = true
-                val svcIntent = Intent(this, ClusterService::class.java)
-                startForegroundService(svcIntent)
                 bindService(svcIntent, mServiceConn, Context.BIND_AUTO_CREATE)
             }
             mNavCoordinator?.setStatusPending()
@@ -1543,12 +1516,10 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    /** True when the Layouts auto-start owns the startup launch. */
-    private fun isLayoutAutoStartRequested(): Boolean =
-        FissionOrchestrator.isAutoStartRequested(this)
-
     private fun restoreBydDashboard() {
-        mClusterService?.cancelPendingLaunchRecovery()
+        mPendingFullscreenMirror = false
+        ProjectionSessionPrefs.clear(this)
+        mClusterService?.cancelProjectionRestore()
         mDashboardSelectionTracker.begin(null)
         val completeAdasStop = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(this)
         btnRestoreCluster.isEnabled = false
@@ -1672,10 +1643,10 @@ class MainActivity : AppCompatActivity(),
         }
         if (appName == null) {
             btnShowMirror.visibility = View.GONE
-            FloatingRemoteButton.hide()
+            if (FissionOrchestrator.getActiveLayoutPackages().isEmpty()) FloatingRemoteButton.hide()
         } else {
             btnShowMirror.visibility = View.VISIBLE
-            FloatingRemoteButton.show()
+            FloatingRemoteButton.show(this)
         }
         btnRestoreCluster.isEnabled = true
     }
@@ -1774,7 +1745,9 @@ class MainActivity : AppCompatActivity(),
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
     private fun originCluster() {
-        mClusterService?.cancelPendingLaunchRecovery()
+        mPendingFullscreenMirror = false
+        ProjectionSessionPrefs.clear(this)
+        mClusterService?.cancelProjectionRestore()
         mDashboardSelectionTracker.begin(null)
         val stopTicket = ProjectionCommandBus.cleanupTicket()
         val completeAdasStop = com.byd.dashcast.cluster.ProjectionAdasCoordinator.prepareStop(this)
@@ -1867,39 +1840,9 @@ class MainActivity : AppCompatActivity(),
     private fun loadAppsAsync() {
         mAppRepo.loadApps(this) { apps ->
             if (isFinishing || isDestroyed) return@loadApps
+            mAppRepo.refreshStartupSelection(this)
             mAppListCoordinator.deliver(apps, true)
-            // The list is now ready: run an auto-launch that was deferred because the
-            // cluster connected before this async load finished (no-op otherwise).
-            tryExecutePendingAutoLaunch()
         }
-    }
-
-    /**
-     * Runs the configured auto-launch app once it is available in the app list.
-     * The pending package is consumed ONLY when the app is found, so a cluster-connect
-     * that races ahead of the async app-list load no longer drops the auto-launch:
-     * [onClusterDisplayConnected] keeps the pending and [loadAppsAsync]'s callback retries it.
-     * [onSendToDashboard] handles activation if the service/display is not up yet.
-     */
-    private fun tryExecutePendingAutoLaunch() {
-        val targetPkg = mPendingAutoLaunchPkg ?: return
-        if (isLayoutAutoStartRequested()) {
-            AppLogger.d(TAG, "single-app auto-launch deferred: Layout auto-start owns startup")
-            return
-        }
-        // Resolve from the FULL app list (favorites INCLUDED). The UI grid getApps()
-        // excludes favorites into a separate strip, so a favorited auto-launch / boot-
-        // projection app (e.g. a favorited Waze) was never found here and stayed
-        // "deferred: app list not ready yet" forever — and thus never launched.
-        val app = mAppRepo.findByPackage(targetPkg)
-            ?: mAppListCoordinator.getApps().firstOrNull { it.packageName == targetPkg }
-        if (app != null) {
-            mPendingAutoLaunchPkg = null // consume only once the app is actually found
-            AppLogger.i(TAG, "Executing pending auto-launch for $targetPkg")
-            onSendToDashboard(app)
-            return
-        }
-        AppLogger.i(TAG, "auto-launch $targetPkg deferred: app list not ready yet")
     }
 
     // ── Coordinator wiring ────────────────────────────────────────────────────
@@ -2222,6 +2165,8 @@ class MainActivity : AppCompatActivity(),
         mAppListCoordinator.setLayoutPackages(packages)
         updateLayoutMirrorSwitcher()
         mMirrorCoordinator?.onLayoutTargetChanged()
+        if (packages.isNotEmpty()) FloatingRemoteButton.show(this)
+        tryOpenPendingFullscreenMirror()
     }
 
     private fun selectLayoutMirror(packageName: String) {
