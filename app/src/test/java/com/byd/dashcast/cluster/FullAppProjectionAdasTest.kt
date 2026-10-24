@@ -61,9 +61,13 @@ class FullAppProjectionAdasTest {
         val reservation = checkNotNull(ProjectionCommandBus.reserveDiagnostic())
         try {
             ClusterThemeProjectionDebt.begin(app, "a".repeat(32))
-            val owner = FullAppProjectionAdas(app, ClusterThemeSession.pin(app), reservation, round, "test.maps", 8) { true }
+            val capturedOpening: () -> Boolean = { true }
+            val owner = FullAppProjectionAdas(app, ClusterThemeSession.pin(app), reservation, round, "test.maps", 8, capturedOpening)
             assertEquals(1, authority(owner, "hideValidity")); assertEquals(0, authority(owner, "recoveryValidity"))
             owner.restore {}
+            val retained = FullAppProjectionAdas::class.java.getDeclaredField("openingCurrent").apply { isAccessible = true }.get(owner)
+            assertNotSame(capturedOpening, retained)
+            assertFalse((retained as Function0<*>).invoke() as Boolean)
             assertEquals(0, authority(owner, "hideValidity")); assertEquals(1, authority(owner, "recoveryValidity"))
             assertTrue(recovered.await(2, TimeUnit.SECONDS))
             owner.cancelHide()

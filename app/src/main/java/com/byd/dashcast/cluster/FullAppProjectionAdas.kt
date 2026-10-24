@@ -16,7 +16,7 @@ import org.json.JSONObject
 /** Existing ADAS plan, scoped to one manually opened full-app diagnostic round. */
 internal class FullAppProjectionAdas(context: Context, private val pinned: ClusterThemeSession,
     private val reservation: ProjectionCommandSequencer.Session, private val round: String,
-    private val pkg: String, private val display: Int, private val openingCurrent: () -> Boolean) {
+    private val pkg: String, private val display: Int, private var openingCurrent: () -> Boolean) {
     private val main = Handler(Looper.getMainLooper())
     private val binder = ProxyClient.getProxyDaemonBinder()
     @Volatile private var hideRetired = false
@@ -82,7 +82,11 @@ internal class FullAppProjectionAdas(context: Context, private val pinned: Clust
         }
     }
     /** Immediate invalidation also retires already queued hide/periodic callbacks. */
-    fun cancelHide() { hideRetired = true; plan.cancel() }
+    fun cancelHide() {
+        hideRetired = true
+        openingCurrent = { false } // Recovery must not retain the diagnostic Activity.
+        plan.cancel()
+    }
     fun restore(done: (Boolean) -> Unit) {
         check(Looper.myLooper() == Looper.getMainLooper())
         callbacks += done
