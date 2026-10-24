@@ -2116,8 +2116,11 @@ android {
         // bootstrap-only recovery separate and refuses unknown/small/ambiguous targets.
         // 714 = 1.9.74-beta: one explicit startup source, durable projection sessions and
         // a reliable fullscreen tactile mirror shortcut. Retain protocol 43 cold-start fixes.
-        versionCode 714
-        versionName "1.9.74-beta"
+        // 715 = 1.9.75-beta: a manual 1920x720 full-app cluster experiment, with
+        // native instruments/telltales hidden and the existing complete ADAS recovery plan.
+        // Protocol 44 keeps the previous dashboard and 1.9.74 startup behavior intact.
+        versionCode 715
+        versionName "1.9.75-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base French). Strips ~58 dead AndroidX/Material locale
