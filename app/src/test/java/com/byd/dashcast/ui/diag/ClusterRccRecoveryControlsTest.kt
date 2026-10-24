@@ -151,7 +151,8 @@ class ClusterRccRecoveryControlsTest {
             if (adas) f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("ADAS\n") }.performClick()
             f.clickHeader()
             assertTrue(f.operations.isNotEmpty()); assertTrue(f.operations.all { it == 0 })
-            assertTrue(f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
+            assertTrue(f.all.filterIsInstance<Button>().single { it.text == f.app.getString(R.string.diag_cluster_dashboard_read) }.isShown)
+            assertFalse(f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
             f.confirm(); f.waitFor { 13 in f.operations && !flag("recoveryBusy").get() }
             assertFalse(2 in f.operations); assertFalse(14 in f.operations)
             f.checkLease()
@@ -200,7 +201,7 @@ class ClusterRccRecoveryControlsTest {
     }
     @Test fun `helper readiness failure without sealed eligibility is a failure popup with no preparation or OEM observation`() {
         Fixture(receipt().put("phase", "restore-query").put("detail", "Restore unknown: Helper readiness unavailable before admission; no GO sent")).use { f ->
-            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
             f.waitFor { f.dialog() != null }
             val popup = f.dialog()!!
             assertEquals(f.app.getString(android.R.string.ok), popup.getButton(-1).text)
@@ -220,7 +221,7 @@ class ClusterRccRecoveryControlsTest {
     @Test fun `automatic SAME with a mismatched local nonce offers no preparation`() {
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", 0).edit().putString("nonce", "e".repeat(32)).commit()
         Fixture(receipt(true)).use { f ->
-            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
             f.waitFor { f.dialog() != null }
             assertEquals(f.app.getString(android.R.string.ok), f.dialog()!!.getButton(-1).text)
             assertTrue(f.dialog()!!.findViewById<TextView>(android.R.id.message).text.contains(f.app.getString(R.string.diag_cluster_rcc_restore_mismatch)))
@@ -243,7 +244,7 @@ class ClusterRccRecoveryControlsTest {
     }
     @Test fun `old protocol eligible SAME page entry offers reconnect guidance rather than preparation`() {
         Fixture(receipt(true), protocol = "40").use { f ->
-            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
             f.waitFor { f.dialog() != null }
             assertEquals(f.app.getString(android.R.string.ok), f.dialog()!!.getButton(-1).text)
             assertEquals(f.app.getString(R.string.diag_cluster_rcc_restore_protocol), f.dialog()!!.findViewById<TextView>(android.R.id.message).text)
@@ -262,7 +263,7 @@ class ClusterRccRecoveryControlsTest {
     }
     @Test fun `fresh default receipt opens OEM observation without offering preparation or sending restore`() {
         Fixture(receipt().put("state", "DEFAULT_QUERIED").put("defaultQueried", true).put("iviRecoverySettled", true)).use { f ->
-            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
             f.waitFor { f.dialog() != null }
             assertEquals(f.app.getString(R.string.diag_cluster_observation_yes), f.dialog()!!.getButton(-1).text)
             assertTrue(f.operations.all { it == 0 }); f.dialog()!!.getButton(-1).performClick()

@@ -13,9 +13,9 @@ internal object ClusterThemeCohort {
         "1dfee5a0ad746166cb28d79bddfe9352dc510df6cbcd0001f4751af1a6dbf5e4"
     )).toMap()
     fun expected(variant: ClusterThemeVariant): Map<String, String> =
-        if (variant == ClusterThemeVariant.CORNER_MARKER_21F7735C) observed21f7735c else legacy
+        if (variant == ClusterThemeVariant.CORNER_MARKER_21F7735C || variant.isDashboard) observed21f7735c else legacy
     fun id(variant: ClusterThemeVariant): String =
-        if (variant == ClusterThemeVariant.CORNER_MARKER_21F7735C) "21f7735c" else "3197abee"
+        if (variant == ClusterThemeVariant.CORNER_MARKER_21F7735C || variant.isDashboard) "21f7735c" else "3197abee"
     fun requireMatch(variant: ClusterThemeVariant, actual: Map<String, String>) {
         val expected = expected(variant)
         require(actual.keys == expected.keys) { "Incomplete installed artifact cohort; no new RCC load" }

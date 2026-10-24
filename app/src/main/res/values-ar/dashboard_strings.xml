@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">لوحة DashCast</string>
+    <string name="diag_cluster_dashboard_help">اختبار يدوي أثناء التوقف. تبقى عدادات BYD وتنبيهاتها. يظل الملف محدداً بعد الإغلاق. استعد ملف المصنع وتحقق من عودته قبل تثبيت APK أقدم.</string>
+    <string name="diag_cluster_dashboard_read">1 · قراءة الحالة والتوافق</string>
+    <string name="diag_cluster_dashboard_prepare">2 · تحضير اللوحة</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · اختيار التطبيق</string>
+    <string name="diag_cluster_dashboard_open">4 · فتح اللوحة</string>
+    <string name="diag_cluster_dashboard_close">إغلاق العرض</string>
+    <string name="diag_cluster_dashboard_observe">5 · تأكيد الشاشة الظاهرة</string>
+    <string name="diag_cluster_dashboard_observe_message">أكد فقط إذا رأيت اللوحة والعدادات والتنبيهات والتطبيق. استلام رد الأمر لا يثبت ظهور الشاشة.</string>
+    <string name="diag_cluster_dashboard_confirm">أكد أن السيارة ثابتة وأن إصدار النظام قد تم التحقق منه. هذا الخيار إقرار وليس قياساً للحركة. لا يزال التحقق داخل السيارة مطلوباً.</string>
+    <string name="diag_cluster_dashboard_geometry">يجب اكتشاف لوحة واحدة نشطة بدقة 1920 × 720 بكسل. الحجم المجهول أو الملتبس أو الصغير يرفض الاختبار.</string>
+    <string name="diag_cluster_dashboard_prepare_first">حضّر ملف DashCast أولاً وانتظر اكتمال الاختيار.</string>
+    <string name="diag_cluster_dashboard_idle">○ لم يتم تحضير لوحة</string>
+    <string name="diag_cluster_dashboard_restoring">↩ جارٍ الاستعادة</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ الحالة غير مؤكدة: استخدم الاستعادة</string>
+    <string name="diag_cluster_dashboard_open_received">✓ تم استلام الفتح؛ أكد الشاشة</string>
+    <string name="diag_cluster_dashboard_closed_received">○ العرض مغلق؛ استعادة المصنع ما زالت مطلوبة</string>
+    <string name="diag_cluster_dashboard_waiting">◷ العملية جارية</string>
+    <string name="diag_cluster_dashboard_ready">✓ تم اختيار الملف؛ اختر تطبيقاً وافتح اللوحة</string>
+    <string name="diag_cluster_dashboard_selected_app">التطبيق: %1$s</string>
+    <string name="diag_cluster_dashboard_details">التفاصيل التقنية والاختبارات السابقة</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ تم تأكيد الشاشة بواسطة المستخدم</string>
+    <string name="diag_cluster_dashboard_restore_confirm">أغلق العرض واطلب ملف المصنع. يبقى فشل الإغلاق دون حل حتى إذا عاد ملف المصنع. ثم أكد العدادات والتنبيهات الظاهرة.</string>
+</resources>

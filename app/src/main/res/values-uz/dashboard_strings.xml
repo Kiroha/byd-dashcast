@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast asboblar paneli</string>
+    <string name="diag_cluster_dashboard_help">Avtomobil to‘xtaganda qo‘lda sinash. BYD asboblari va ogohlantirishlari saqlanadi. Yopilganda profil tanlangan qoladi. Eski APK o‘rnatishdan oldin zavod profilini tiklab tekshiring.</string>
+    <string name="diag_cluster_dashboard_read">1 · Holat va moslikni o‘qish</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Panelni tayyorlash</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Ilovani tanlash</string>
+    <string name="diag_cluster_dashboard_open">4 · Panelni ochish</string>
+    <string name="diag_cluster_dashboard_close">Proyeksiyani yopish</string>
+    <string name="diag_cluster_dashboard_observe">5 · Ko‘ringan ekranni tasdiqlash</string>
+    <string name="diag_cluster_dashboard_observe_message">Faqat panel, asboblar, ogohlantirishlar va ilova ko‘rinsa tasdiqlang. Buyruq javobi tasvirni isbotlamaydi.</string>
+    <string name="diag_cluster_dashboard_confirm">Avtomobil qimirlamayotganini va dasturiy ta’minot tekshirilganini tasdiqlang. Bu belgi bayonot, harakat o‘lchovi emas. Avtomobilda tekshirish hali zarur.</string>
+    <string name="diag_cluster_dashboard_geometry">Bitta faol 1920 × 720 pikselli panel aniqlanishi kerak. Noma’lum, noaniq yoki kichik o‘lcham: sinov rad etiladi.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Avval DashCast profilini tayyorlang va tanlash tugashini kuting.</string>
+    <string name="diag_cluster_dashboard_idle">○ Panel tayyorlanmagan</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Tiklanmoqda</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Holat noaniq: Tiklashdan foydalaning</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Ochish javobi olindi; ekranni tasdiqlang</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Proyeksiya yopiq; zavod profilini tiklash kerak</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Amal bajarilmoqda</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profil tanlandi; ilovani tanlab panelni oching</string>
+    <string name="diag_cluster_dashboard_selected_app">Ilova: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Texnik tafsilotlar va oldingi sinovlar</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Ekran foydalanuvchi tomonidan tasdiqlandi</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Proyeksiyani yoping va zavod profilini so‘rang. Zavod profili qaytsa ham muvaffaqiyatsiz yopish hal etilmagan qoladi. Keyin ko‘rinadigan asboblar va ogohlantirishlarni tasdiqlang.</string>
+</resources>

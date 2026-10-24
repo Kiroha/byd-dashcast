@@ -11,7 +11,8 @@ class ClusterThemeCohortTest {
         assertEquals("21f7735cad4408f7baf7086b0e0d7b4ed3d1d2818a35bea6b8ad026102d9f4b1", actual["/system/lib64/libBydCluster.so"])
         assertEquals("1dfee5a0ad746166cb28d79bddfe9352dc510df6cbcd0001f4751af1a6dbf5e4", actual["/system/lib64/commonTranslate.rcc"])
         ClusterThemeCohort.requireMatch(live, actual)
-        for (old in ClusterThemeVariant.values().filter { it != live }) {
+        ClusterThemeCohort.requireMatch(ClusterThemeVariant.FULL_DASHBOARD_21F7735C, actual)
+        for (old in ClusterThemeVariant.values().filter { it != live && !it.isDashboard }) {
             ClusterThemeCohort.requireMatch(old, ClusterThemeCohort.expected(old))
             assertThrows(IllegalArgumentException::class.java) { ClusterThemeCohort.requireMatch(old, actual) }
             assertThrows(IllegalArgumentException::class.java) { ClusterThemeCohort.requireMatch(live, ClusterThemeCohort.expected(old)) }

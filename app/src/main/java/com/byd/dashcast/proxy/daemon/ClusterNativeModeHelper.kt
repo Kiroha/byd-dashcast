@@ -33,8 +33,11 @@ object ClusterNativeModeHelper {
             println("DASHCAST_NATIVE_STEP=$line")
         }
         try {
-            require(args.size == 2 && args[0].matches(Regex("[0-9a-f]{32}")))
-            val command = args[1].toInt(); require(command == 16 || command == 18)
+            require(args.size in 2..3 && args[0].matches(Regex("[0-9a-f]{32}")))
+            val dashboard = args.size == 3
+            val command = args[1].toInt()
+            require(if (dashboard) com.byd.dashcast.clusterlive.ClusterThemePolicy.ownedName(args[2]) &&
+                com.byd.dashcast.clusterlive.ClusterDashboardProfile.permitsCommand(command) else command == 16 || command == 18)
             step("helper-start", "command=$command uid=${Process.myUid()} pid=${Process.myPid()} token=${args[0]}")
             val dir = File("/data/local/tmp/dashcast-native-mode/request-${args[0]}")
             val st = Os.lstat(dir.path)
@@ -47,6 +50,19 @@ object ClusterNativeModeHelper {
             if (Looper.myLooper() == null) Looper.prepareMainLooper()
             val thread = Class.forName("android.app.ActivityThread").getMethod("systemMain").invoke(null)
             val context = thread.javaClass.getMethod("getSystemContext").invoke(thread) as Context
+            if (dashboard && command == 31) {
+                // Read the actual current display. A cached registry or preset is
+                // not evidence that the car has the required physical geometry.
+                val dm = context.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+                val matches = dm.displays.filter { com.byd.dashcast.cluster.display.ClusterDisplayNames.isKnownClusterName(it.name) }
+                check(matches.size == 1) { "Current cluster geometry is missing or ambiguous" }
+                val size = android.graphics.Point(); matches.single().getRealSize(size)
+                check(matches.single().state == android.view.Display.STATE_ON &&
+                    com.byd.dashcast.clusterlive.ClusterDashboardProfile.permitsGeometry(size.x, size.y, false)) {
+                    "Dashboard requires an actual ON 1920x720 cluster; unknown/small geometry refused"
+                }
+                step("dashboard-current-geometry", "display=${matches.single().displayId} size=${size.x}x${size.y}")
+            }
             result.put("phase", "java-identity")
             step("java-identity-begin", "package=${com.byd.dashcast.clusterlive.ClusterThemePolicy.JAVA_PACKAGE} expectedSHA256=${com.byd.dashcast.clusterlive.ClusterThemePolicy.JAVA_APK_SHA}")
             val identity = ClusterThemeQueryHelper.installedIdentity(context, deadline)

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Pulpit DashCast</string>
+    <string name="diag_cluster_dashboard_help">Test ręczny na postoju. Wskaźniki i ostrzeżenia BYD pozostają aktywne. Zamknięcie nie wyłącza profilu. Przed instalacją starszego APK przywróć profil fabryczny i sprawdź jego powrót.</string>
+    <string name="diag_cluster_dashboard_read">1 · Odczytaj stan i zgodność</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Przygotuj pulpit</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Wybierz aplikację</string>
+    <string name="diag_cluster_dashboard_open">4 · Otwórz pulpit</string>
+    <string name="diag_cluster_dashboard_close">Zamknij projekcję</string>
+    <string name="diag_cluster_dashboard_observe">5 · Potwierdź widoczny ekran</string>
+    <string name="diag_cluster_dashboard_observe_message">Potwierdź tylko, gdy widzisz pulpit, wskaźniki, ostrzeżenia i aplikację. Odpowiedź polecenia nie potwierdza obrazu.</string>
+    <string name="diag_cluster_dashboard_confirm">Potwierdź postój pojazdu i sprawdzenie oprogramowania. To oświadczenie, a nie pomiar ruchu. Nadal wymagany jest test w samochodzie.</string>
+    <string name="diag_cluster_dashboard_geometry">Musi zostać wykryty jeden aktywny zestaw 1920 × 720 pikseli. Rozmiar nieznany, niejednoznaczny lub mały: test odrzucony.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Najpierw przygotuj profil DashCast i poczekaj na koniec wyboru.</string>
+    <string name="diag_cluster_dashboard_idle">○ Pulpit nieprzygotowany</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Przywracanie</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Stan niepewny: użyj Przywróć</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Otwarcie odebrane; potwierdź ekran</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Projekcja zamknięta; nadal przywróć profil fabryczny</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Operacja w toku</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profil wybrany; wybierz aplikację i otwórz pulpit</string>
+    <string name="diag_cluster_dashboard_selected_app">Aplikacja: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Szczegóły techniczne i poprzednie testy</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Ekran potwierdzony przez użytkownika</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Zamknij projekcję i przywróć profil fabryczny. Nieudane zamknięcie pozostaje nierozwiązane nawet po powrocie profilu fabrycznego. Następnie potwierdź widoczne wskaźniki i ostrzeżenia.</string>
+</resources>

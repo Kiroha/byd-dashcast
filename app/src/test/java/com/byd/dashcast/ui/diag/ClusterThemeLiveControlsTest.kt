@@ -64,6 +64,106 @@ class ClusterThemeLiveControlsTest {
         detected.setBoolean(Platform.get(), oldDetected)
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
+    @Test fun `dashboard main flow keeps details folded and distinguishes preparation receipts and user observation`() {
+        val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
+        try {
+            val all = views(c.get().findViewById(android.R.id.content))
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
+            val details = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_details) }
+            val raw = all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }
+            assertFalse(raw.isShown)
+            val controls = DiagActivity::class.java.getDeclaredField("liveThemeControls").apply { isAccessible = true }.get(c.get()) as ClusterThemeLiveControls
+            val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
+            val main = ClusterThemeLiveControls::class.java.getDeclaredField("dashboardStatus").apply { isAccessible = true }.get(controls) as TextView
+            val open = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_open) }
+            val observe = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_observe) }
+            val dashboard = JSONObject().put("stage", "NONE").put("selectionReady", false).put("pending", false)
+            val receipt = JSONObject().put("variant", ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id).put("rccDebt", true)
+                .put("filename", "owned-fixture").put("phase", "carrier-staging").put("dashboard", dashboard)
+            render.invoke(controls, receipt)
+            assertFalse(open.isEnabled); assertFalse(observe.isEnabled)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_waiting), main.text.toString().substringBefore('\n'))
+            dashboard.put("selectionReady", true); receipt.put("phase", "observation"); render.invoke(controls, receipt)
+            assertTrue(open.isEnabled); assertFalse(observe.isEnabled)
+            dashboard.put("stage", "OPEN_RECEIVED").put("round", "a".repeat(32)); render.invoke(controls, receipt)
+            assertFalse(open.isEnabled); assertTrue(observe.isEnabled)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_open_received), main.text.toString().substringBefore('\n'))
+            dashboard.put("pixels", "USER_REPORTED"); receipt.put("themeObservedByUser", true); render.invoke(controls, receipt)
+            assertEquals(c.get().getString(R.string.diag_cluster_dashboard_confirmed), main.text.toString().substringBefore('\n'))
+            dashboard.put("stage", "CLOSED_RECEIVED"); render.invoke(controls, receipt)
+            assertTrue(open.isEnabled); assertFalse(observe.isEnabled)
+            val message = ClusterThemeLiveControls::class.java.getDeclaredMethod("dashboardMessage", Int::class.javaPrimitiveType).apply { isAccessible = true }
+            message.invoke(controls, R.string.diag_cluster_dashboard_geometry)
+            assertTrue(main.isShown); assertEquals(c.get().getString(R.string.diag_cluster_dashboard_geometry), main.text)
+            details.performClick(); assertTrue(raw.isShown)
+        } finally { c.pause().stop().destroy(); busy.set(false) }
+    }
+    @Test fun `foreground dashboard validity captured before queueing cannot revive after pause and a new activation`() {
+        val prior = ClusterThemeLiveControls::class.java.getDeclaredField("reservation").apply { isAccessible = true }.get(null)
+        if (prior is com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session)
+            com.byd.dashcast.cluster.display.ProjectionCommandBus.endSession(prior)
+        val reserved = checkNotNull(com.byd.dashcast.cluster.display.ProjectionCommandBus.reserveDiagnostic())
+        val c = Robolectric.buildActivity(Activity::class.java).setup()
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), LinearLayout(c.get()), { false }, {}, { false }, {})
+        fun set(name: String, value: Any) = ClusterThemeLiveControls::class.java.getDeclaredField(name).apply { isAccessible = true }.set(controls, value)
+        set("active", true); set("activation", 7L)
+        val validity = ClusterThemeLiveControls::class.java.getDeclaredMethod("validity",
+            com.byd.dashcast.cluster.display.ProjectionCommandSequencer.Session::class.java, Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+            .invoke(controls, reserved, true) as Binder
+        fun allowed(): Int {
+            val data = Parcel.obtain(); val reply = Parcel.obtain()
+            try { data.writeInterfaceToken("com.byd.dashcast.RccReservation"); assertTrue(validity.transact(1, data, reply, 0)); reply.readException(); return reply.readInt() }
+            finally { reply.recycle(); data.recycle() }
+        }
+        try {
+            assertEquals(1, allowed())
+            controls.setActive(false); set("active", true); set("activation", 9L)
+            assertEquals(0, allowed())
+        } finally { controls.close(); c.pause().stop().destroy(); com.byd.dashcast.cluster.display.ProjectionCommandBus.endSession(reserved) }
+    }
+    @Test fun `remote recovery is admitted while a real attach Binder call blocks the Fission worker`() {
+        val c = Robolectric.buildActivity(Activity::class.java).setup()
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), LinearLayout(c.get()), { false }, {}, { false }, {})
+        val fission = com.byd.dashcast.fission.FissionOrchestrator(c.get(),
+            object : com.byd.dashcast.domain.cluster.ProjectionStateProvider {
+                override fun isProjectionActive() = false
+                override fun stopProjectionIfActive(onStopped: Runnable?) { onStopped?.run() }
+            }, object : com.byd.dashcast.fission.FissionOrchestrator.Callbacks {
+                override fun onSlotsChanged(slots: Collection<com.byd.dashcast.fission.FissionOrchestrator.SlotState>) {}
+                override fun onDaemonBinderAcquired(binder: android.os.IBinder?) {}
+                override fun onStatusMessage(message: String?) {}
+                override fun onSlotError(pkg: String?, message: String?) {}
+                override fun onProjectionConflict(proceedCallback: Runnable?) {}
+            })
+        val executor = com.byd.dashcast.fission.FissionOrchestrator::class.java.getDeclaredField("mExec").apply { isAccessible = true }.get(fission) as java.util.concurrent.ExecutorService
+        val field = ClusterThemeLiveControls::class.java.getDeclaredField("dashboardFission").apply { isAccessible = true }
+        val previous = field.get(null); field.set(null, fission)
+        val entered = CountDownLatch(1); val release = CountDownLatch(1); val returned = CountDownLatch(1)
+        val surface = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(com.byd.dashcast.proxy.daemon.SurfaceDaemon.TRANSACT_ATTACH_SLOT, code)
+                data.enforceInterface(com.byd.dashcast.proxy.daemon.SurfaceDaemon.DESCRIPTOR)
+                entered.countDown(); check(release.await(3, TimeUnit.SECONDS))
+                reply!!.writeNoException(); reply.writeInt(0); return true
+            }
+        }
+        executor.execute {
+            try { com.byd.dashcast.fission.FissionClient.attachSlot(surface, "org.example.maps", 464, 256, 752, 320) }
+            finally { returned.countDown() }
+        }
+        try {
+            assertTrue(entered.await(1, TimeUnit.SECONDS)); assertEquals(1L, returned.count)
+            val remote = CountDownLatch(1)
+            val stop = ClusterThemeLiveControls::class.java.getDeclaredMethod("stopDashboardSlots", kotlin.jvm.functions.Function0::class.java).apply { isAccessible = true }
+            stop.invoke(controls, { remote.countDown(); Unit })
+            assertTrue(remote.await(100, TimeUnit.MILLISECONDS))
+            assertEquals(1L, returned.count) // Remote request did not wait for attach/teardown.
+        } finally {
+            release.countDown(); assertTrue(returned.await(1, TimeUnit.SECONDS))
+            val drained = CountDownLatch(1); executor.execute { drained.countDown() }; assertTrue(drained.await(1, TimeUnit.SECONDS))
+            executor.shutdownNow(); field.set(null, previous); controls.close(); c.pause().stop().destroy()
+        }
+    }
     @Test fun `restore stays pinned outside pages and is not part of diagnostic busy disabling`() {
         val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
         try {
@@ -75,7 +175,8 @@ class ClusterThemeLiveControlsTest {
             val method = DiagActivity::class.java.getDeclaredMethod("allDiagButtons").apply { isAccessible = true }
             assertFalse((method.invoke(c.get()) as List<*>).contains(restore))
             assertEquals(7, all.filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
-            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_details) }.performClick()
             assertTrue(restore.isEnabled && restore.visibility == View.VISIBLE)
             assertTrue(all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
             c.get().onBackPressed()
@@ -146,7 +247,8 @@ class ClusterThemeLiveControlsTest {
         val c = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
-            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_details) }.performClick()
             val load = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_rcc_corners_button) }
             busy.set(true); load.performClick(); assertNull(ShadowAlertDialog.getLatestAlertDialog())
             assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("start-busy"))
@@ -189,7 +291,8 @@ class ClusterThemeLiveControlsTest {
         try {
             c.pause().stop().destroy(); c = Robolectric.buildActivity(DiagActivity::class.java).setup()
             val all = views(c.get().findViewById(android.R.id.content))
-            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_page_title) + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text.toString().startsWith(c.get().getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
+            all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_details) }.performClick()
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("state UNKNOWN") })
             all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.performClick()
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)

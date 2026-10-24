@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Tableau de bord DashCast</string>
+    <string name="diag_cluster_dashboard_help">Essai manuel à l’arrêt. Les instruments et alertes BYD sont conservés. Après fermeture, le profil reste sélectionné. Restaure le profil usine et vérifie son retour avant de réinstaller un ancien APK.</string>
+    <string name="diag_cluster_dashboard_read">1 · Lire l’état et la compatibilité</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Préparer le tableau de bord</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Choisir l’application</string>
+    <string name="diag_cluster_dashboard_open">4 · Ouvrir le tableau de bord</string>
+    <string name="diag_cluster_dashboard_close">Fermer la projection</string>
+    <string name="diag_cluster_dashboard_observe">5 · Confirmer l’affichage observé</string>
+    <string name="diag_cluster_dashboard_observe_message">Confirme uniquement si tu vois le tableau de bord DashCast, les instruments, les alertes et l’application. Un reçu de commande ne prouve pas cet affichage.</string>
+    <string name="diag_cluster_dashboard_confirm">Confirme que le véhicule est immobilisé et que le contexte firmware a été vérifié. Cette case est une déclaration, pas une mesure du mouvement. La validation réelle reste à faire dans la voiture.</string>
+    <string name="diag_cluster_dashboard_geometry">Un combiné actif de 1920 × 720 pixels doit être détecté. Taille inconnue, ambiguë ou petit combiné : essai refusé.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prépare d’abord le profil DashCast et attends la fin de la sélection.</string>
+    <string name="diag_cluster_dashboard_idle">○ Aucun tableau de bord préparé</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Restauration en cours</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ État incertain : utilise Restaurer</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Ouverture reçue ; affichage à confirmer</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Projection fermée ; restauration usine encore requise</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Opération en cours</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profil sélectionné ; choisis une application puis ouvre le tableau de bord</string>
+    <string name="diag_cluster_dashboard_selected_app">Application : %1$s</string>
+    <string name="diag_cluster_dashboard_details">Détails techniques et anciens tests</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Affichage confirmé par l’utilisateur</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Ferme la projection et demande le profil usine. Un échec de fermeture reste à résoudre, même si le profil usine revient. Confirme ensuite les instruments et alertes visibles.</string>
+</resources>

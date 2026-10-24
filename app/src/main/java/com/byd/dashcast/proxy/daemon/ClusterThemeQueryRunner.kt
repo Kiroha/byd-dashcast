@@ -19,7 +19,12 @@ internal object ClusterThemeQueryRunner {
         require(command == 16 || command == 18)
         return runHelper(command, admit, ready)
     }
-    private fun runHelper(command: Int?, admit: () -> Unit, recordReady: (Int, String, String) -> Unit): Result {
+    fun dashboardMode(command: Int, filename: String, admit: () -> Unit, ready: (Int, String, String) -> Unit): Result {
+        require(com.byd.dashcast.clusterlive.ClusterDashboardProfile.permitsCommand(command))
+        require(com.byd.dashcast.clusterlive.ClusterThemePolicy.ownedName(filename))
+        return runHelper(command, admit, ready, filename)
+    }
+    private fun runHelper(command: Int?, admit: () -> Unit, recordReady: (Int, String, String) -> Unit, dashboardFilename: String? = null): Result {
         val root = File(if (command == null) "/data/local/tmp/dashcast-cluster-query" else "/data/local/tmp/dashcast-native-mode")
         if (!root.exists()) check(root.mkdir()) { "Cannot create private query directory" }
         val rootStat = Os.lstat(root.path)
@@ -42,6 +47,7 @@ internal object ClusterThemeQueryRunner {
             val arguments = mutableListOf("/system/bin/app_process64", "-Xnoimage-dex2oat", "/system/bin",
                 if (command == null) "com.byd.dashcast.proxy.daemon.ClusterThemeQueryHelper" else "com.byd.dashcast.proxy.daemon.ClusterNativeModeHelper", token)
             if (command != null) arguments.add(command.toString())
+            dashboardFilename?.let(arguments::add)
             val process = ProcessBuilder(arguments).redirectErrorStream(true)
                 .apply { environment()["CLASSPATH"] = apk }.start()
             child = process; reaped = false

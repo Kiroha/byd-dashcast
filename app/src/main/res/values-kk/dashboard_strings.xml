@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast аспаптар тақтасы</string>
+    <string name="diag_cluster_dashboard_help">Көлік тоқтап тұрғанда қолмен сынау. BYD аспаптары мен ескертулері сақталады. Жапқаннан кейін профиль таңдалған күйде қалады. Ескі APK орнатпас бұрын зауыттық профильді қалпына келтіріп, тексеріңіз.</string>
+    <string name="diag_cluster_dashboard_read">1 · Күй мен үйлесімділікті оқу</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Тақтаны дайындау</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Қолданбаны таңдау</string>
+    <string name="diag_cluster_dashboard_open">4 · Тақтаны ашу</string>
+    <string name="diag_cluster_dashboard_close">Проекцияны жабу</string>
+    <string name="diag_cluster_dashboard_observe">5 · Көрінген экранды растау</string>
+    <string name="diag_cluster_dashboard_observe_message">Тақта, аспаптар, ескертулер және қолданба көрінсе ғана растаңыз. Пәрмен жауабы экранды дәлелдемейді.</string>
+    <string name="diag_cluster_dashboard_confirm">Көліктің қозғалмай тұрғанын және микробағдарламаның тексерілгенін растаңыз. Бұл белгі — мәлімдеме, қозғалыс өлшемі емес. Көлікте тексеру әлі қажет.</string>
+    <string name="diag_cluster_dashboard_geometry">Бір белсенді 1920 × 720 пиксельдік тақта анықталуы тиіс. Белгісіз, екіұшты немесе шағын өлшем: сынақ қабылданбайды.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Алдымен DashCast профилін дайындап, таңдаудың аяқталуын күтіңіз.</string>
+    <string name="diag_cluster_dashboard_idle">○ Тақта дайындалмаған</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Қалпына келтірілуде</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Күй белгісіз: қалпына келтіруді қолданыңыз</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Ашу жауабы алынды; экранды растаңыз</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Проекция жабық; зауыттық профильді қалпына келтіріңіз</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Операция орындалуда</string>
+    <string name="diag_cluster_dashboard_ready">✓ Профиль таңдалды; қолданбаны таңдап, тақтаны ашыңыз</string>
+    <string name="diag_cluster_dashboard_selected_app">Қолданба: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Техникалық мәліметтер мен алдыңғы сынақтар</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Экранды пайдаланушы растады</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Проекцияны жауып, зауыттық профильді сұраңыз. Зауыттық профиль қайтса да, сәтсіз жабу шешілмеген болып қалады. Содан кейін көрінетін аспаптар мен ескертулерді растаңыз.</string>
+</resources>

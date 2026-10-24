@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Cruscotto DashCast</string>
+    <string name="diag_cluster_dashboard_help">Test manuale a veicolo fermo. Strumenti e avvisi BYD restano attivi. La chiusura mantiene il profilo selezionato. Ripristina e verifica il profilo di fabbrica prima di installare un APK precedente.</string>
+    <string name="diag_cluster_dashboard_read">1 · Leggi stato e compatibilità</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Prepara il cruscotto</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Scegli applicazione</string>
+    <string name="diag_cluster_dashboard_open">4 · Apri il cruscotto</string>
+    <string name="diag_cluster_dashboard_close">Chiudi proiezione</string>
+    <string name="diag_cluster_dashboard_observe">5 · Conferma la schermata osservata</string>
+    <string name="diag_cluster_dashboard_observe_message">Conferma solo se vedi cruscotto, strumenti, avvisi e applicazione. Una risposta al comando non dimostra la visualizzazione.</string>
+    <string name="diag_cluster_dashboard_confirm">Conferma che il veicolo sia fermo e il firmware verificato. Questa casella è una dichiarazione, non una misura del movimento. Resta necessaria la verifica in auto.</string>
+    <string name="diag_cluster_dashboard_geometry">Deve essere rilevato un solo quadro attivo da 1920 × 720 pixel. Dimensioni sconosciute, ambigue o piccole: test rifiutato.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prepara prima il profilo DashCast e attendi la fine della selezione.</string>
+    <string name="diag_cluster_dashboard_idle">○ Nessun cruscotto preparato</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Ripristino in corso</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Stato incerto: usa Ripristina</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Apertura ricevuta; conferma la schermata</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Proiezione chiusa; ripristino di fabbrica ancora richiesto</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Operazione in corso</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profilo selezionato; scegli un’applicazione e apri il cruscotto</string>
+    <string name="diag_cluster_dashboard_selected_app">Applicazione: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Dettagli tecnici e test precedenti</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Schermata confermata dall’utente</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Chiude la proiezione e richiede il profilo di fabbrica. Una chiusura fallita resta irrisolta anche se torna il profilo di fabbrica. Conferma poi strumenti e avvisi visibili.</string>
+</resources>

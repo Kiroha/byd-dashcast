@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Panel DashCast</string>
+    <string name="diag_cluster_dashboard_help">Prueba manual con el vehículo parado. Se conservan instrumentos y alertas BYD. Al cerrar, el perfil sigue seleccionado. Restaura el perfil de fábrica y compruébalo antes de instalar un APK anterior.</string>
+    <string name="diag_cluster_dashboard_read">1 · Leer estado y compatibilidad</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Preparar el panel</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Elegir aplicación</string>
+    <string name="diag_cluster_dashboard_open">4 · Abrir el panel</string>
+    <string name="diag_cluster_dashboard_close">Cerrar proyección</string>
+    <string name="diag_cluster_dashboard_observe">5 · Confirmar la pantalla observada</string>
+    <string name="diag_cluster_dashboard_observe_message">Confirma solo si ves el panel, instrumentos, alertas y aplicación. La respuesta de un comando no demuestra esa imagen.</string>
+    <string name="diag_cluster_dashboard_confirm">Confirma que el vehículo está inmóvil y que se verificó el firmware. Esta casilla es una declaración, no una medición del movimiento. Falta validar en el vehículo.</string>
+    <string name="diag_cluster_dashboard_geometry">Debe detectarse un único cuadro activo de 1920 × 720 píxeles. Tamaño desconocido, ambiguo o pequeño: prueba rechazada.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prepara primero el perfil DashCast y espera a que termine la selección.</string>
+    <string name="diag_cluster_dashboard_idle">○ Ningún panel preparado</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Restaurando</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Estado incierto: usa Restaurar</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Apertura recibida; confirma la pantalla</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Proyección cerrada; aún debes restaurar el perfil de fábrica</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Operación en curso</string>
+    <string name="diag_cluster_dashboard_ready">✓ Perfil seleccionado; elige una aplicación y abre el panel</string>
+    <string name="diag_cluster_dashboard_selected_app">Aplicación: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Detalles técnicos y pruebas anteriores</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Pantalla confirmada por el usuario</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Cierra la proyección y solicita el perfil de fábrica. Un cierre fallido sigue pendiente aunque vuelva el perfil de fábrica. Confirma después los instrumentos y alertas visibles.</string>
+</resources>

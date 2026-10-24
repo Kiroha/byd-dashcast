@@ -37,7 +37,9 @@ class ClusterThemeVariantTest {
         assertTrue(ClusterThemeVariant.CORNER_MARKER_21F7735C.isCorner)
         assertFalse(marker.isCorner); assertFalse(full.isCorner)
         assertFalse(ClusterThemeVariant.isCornerId("corner-marker-untrusted"))
-        assertEquals(4, ClusterThemeVariant.values().size)
+        assertEquals(5, ClusterThemeVariant.values().size)
+        assertFalse(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isMarker)
+        assertTrue(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isPersistent)
     }
 
     @Test fun `journal schema types cannot be coerced from fractional or string values`() {

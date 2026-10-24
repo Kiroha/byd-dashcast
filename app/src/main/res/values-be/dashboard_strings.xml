@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Панэль DashCast</string>
+    <string name="diag_cluster_dashboard_help">Ручны тэст на стаянцы. Прыборы і папярэджанні BYD захоўваюцца. Пасля закрыцця профіль застаецца выбраным. Перад усталяваннем старога APK аднавіце заводскі профіль і праверце вынік.</string>
+    <string name="diag_cluster_dashboard_read">1 · Прачытаць стан і сумяшчальнасць</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Падрыхтаваць панэль</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Выбраць праграму</string>
+    <string name="diag_cluster_dashboard_open">4 · Адкрыць панэль</string>
+    <string name="diag_cluster_dashboard_close">Закрыць праекцыю</string>
+    <string name="diag_cluster_dashboard_observe">5 · Пацвердзіць бачны экран</string>
+    <string name="diag_cluster_dashboard_observe_message">Пацвярджайце толькі калі бачны панэль, прыборы, папярэджанні і праграма. Адказ каманды не даказвае адлюстраванне.</string>
+    <string name="diag_cluster_dashboard_confirm">Пацвердзіце нерухомасць аўтамабіля і праверку прашыўкі. Гэты сцяжок — заява, а не вымярэнне руху. Праверка ў аўтамабілі яшчэ патрэбная.</string>
+    <string name="diag_cluster_dashboard_geometry">Павінна вызначацца адна актыўная панэль 1920 × 720 пікселяў. Невядомы, неадназначны або малы памер: тэст адхілены.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Спачатку падрыхтуйце профіль DashCast і дачакайцеся завяршэння выбару.</string>
+    <string name="diag_cluster_dashboard_idle">○ Панэль не падрыхтаваная</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Аднаўленне</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Стан невядомы: скарыстайцеся аднаўленнем</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Адкрыццё прынята; пацвердзіце экран</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Праекцыя закрытая; аднавіце заводскі профіль</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Аперацыя выконваецца</string>
+    <string name="diag_cluster_dashboard_ready">✓ Профіль выбраны; выберыце праграму і адкрыйце панэль</string>
+    <string name="diag_cluster_dashboard_selected_app">Праграма: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Тэхнічныя звесткі і папярэднія тэсты</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Экран пацверджаны карыстальнікам</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Закрыйце праекцыю і запытайце заводскі профіль. Няўдалае закрыццё застаецца нявырашаным нават пасля вяртання заводскага профілю. Потым пацвердзіце бачныя прыборы і папярэджанні.</string>
+</resources>
