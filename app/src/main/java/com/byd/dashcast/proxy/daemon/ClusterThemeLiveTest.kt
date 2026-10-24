@@ -62,6 +62,12 @@ internal object ClusterThemeLiveTest {
     private val dashboardIntervals = com.byd.dashcast.clusterlive.ClusterDashboardIntervals(SystemClock::elapsedRealtime, Thread::sleep)
     @Volatile private var dashboardSelectionReady = false
     @Volatile private var dashboardRound = ""
+    @Volatile private var dashboardBootstrapStarted = false
+    @Volatile private var dashboardSizeAdmitted: Boolean? = null
+    @Volatile private var dashboardBootstrapRecoverySettled = false
+    @Volatile private var dashboardSmallPanelSeen = false
+    @Volatile private var dashboardGeometry = JSONObject()
+    private val dashboardReadProbeActive = AtomicBoolean(false)
     // Conservative even after a daemon replacement. Any recovered helper is
     // reaped before another interval starts; no wall-clock inference is used.
     private val active = AtomicBoolean(false)
@@ -169,6 +175,11 @@ internal object ClusterThemeLiveTest {
         transport = saved.transport; variant = saved.variant
         dashboardStage = saved.dashboardStage; dashboardNativeDebt = saved.dashboardNativeDebt
         dashboardSelectionReady = false; dashboardRound = ""
+        dashboardBootstrapStarted = saved.dashboardBootstrapStarted
+        dashboardSizeAdmitted = saved.dashboardSizeAdmitted
+        dashboardBootstrapRecoverySettled = saved.dashboardBootstrapRecoverySettled
+        dashboardSmallPanelSeen = saved.dashboardSmallPanelSeen
+        dashboardGeometry = JSONObject() // Recovered geometry is never current admission evidence.
         dashboardHelperCommand = saved.dashboardHelperCommand
         dashboardHelperPid = saved.dashboardHelperPid; dashboardHelperStart = saved.dashboardHelperStart; dashboardHelperToken = saved.dashboardHelperToken
         retirement = saved.retirement; retirementEligibleUntil = 0
@@ -178,7 +189,7 @@ internal object ClusterThemeLiveTest {
         }
         if (!saved.clean) {
             filename = saved.filename; renderer = saved.renderer; identity = saved.identity
-            mutated = saved.mutated; uncertain = mutated
+            mutated = saved.mutated; uncertain = mutated || dashboardNativeDebt
             helperPid = saved.helperPid; helperStart = saved.helperStart; helperToken = saved.helperToken
             createdDevice = saved.device; createdInode = saved.inode
             state = "QUARANTINE"; detail = "Previous daemon stopped. No replay. Recovery requires manual Restore; remote completion remains unknown."
@@ -210,6 +221,9 @@ internal object ClusterThemeLiveTest {
             .put("dashboard", JSONObject().put("stage", dashboardStage).put("nativeDebt", dashboardNativeDebt)
                 .put("pending", dashboardPending.get()).put("helperCommand", dashboardHelperCommand)
                 .put("selectionReady", dashboardSelectionReady).put("round", dashboardRound)
+                .put("bootstrapStarted", dashboardBootstrapStarted).put("sizeAdmitted", dashboardSizeAdmitted ?: JSONObject.NULL)
+                .put("bootstrapRecoverySettled", dashboardBootstrapRecoverySettled).put("smallPanelSeen", dashboardSmallPanelSeen)
+                .put("geometry", dashboardGeometry)
                 .put("pixels", if (themeObserved) "USER_REPORTED" else "UNKNOWN")
                 .put("switchWaitMs", dashboardIntervals.rccRemaining()))
             .put("loadEvidence", JSONObject().put("send", loadRequestReceipt).put("selection", loadSelectionReceipt)
@@ -272,6 +286,7 @@ internal object ClusterThemeLiveTest {
             check(ClusterThemePolicy.permitsCarrierSource(st.st_mode, st.st_size)) { "Source must be a bounded regular file (pipes/devices refused)" }
         } catch (t: Throwable) { source.close(); throw t }
         if (!parkedAssertion || !journalTrusted || helperUnreaped || productionModeCommands != 0 ||
+            requestedVariant.isDashboard && dashboardSmallPanelSeen ||
             queryActive.get() || nativeMode.blocked() || !active.compareAndSet(false, true)) {
             source.close()
             return if (requestedTransport == ClusterThemeTransport.ANDROID_IVI) JSONObject(status()).put("rccRejectedNonce", requestedNonce).toString() else status()
@@ -286,6 +301,8 @@ internal object ClusterThemeLiveTest {
         variant = requestedVariant; transport = requestedTransport; projectionValidity = validity
         dashboardStage = "NONE"; dashboardNativeDebt = false; dashboardHelperCommand = -1
         dashboardSelectionReady = false; dashboardRound = ""
+        dashboardBootstrapStarted = false; dashboardSizeAdmitted = false; dashboardBootstrapRecoverySettled = false
+        dashboardGeometry = JSONObject()
         dashboardHelperPid = 0; dashboardHelperStart = ""; dashboardHelperToken = ""
         phase = if (transport == ClusterThemeTransport.ANDROID_IVI) "android-ivi-preflight" else "renderer-discovery"
         synchronized(this) { trace.clear() }
@@ -360,12 +377,15 @@ internal object ClusterThemeLiveTest {
                         check(hash(it, ClusterThemePolicy.MAX_CARRIER) == variant.carrierSha256)
                     }
                     step("carrier-hash-verified", "variant=${variant.id} SHA256=${variant.carrierSha256} device=$createdDevice inode=$createdInode")
+                    if (variant.isDashboard) prepareDashboardDisplay()
                     if (transport == ClusterThemeTransport.ANDROID_IVI) {
                         ownedFile(); check(validProjection()) { "Projection reservation expired before load" }
                     } else checkRendererIdentity()
                     checkDeadline(); check(!restoreRequested.get()) { "Restore requested; load cancelled" }
                     phase = "load"
                     awaitDashboardSwitch(false)
+                    if (variant.isDashboard) requireDashboardDisplay()
+                    phase = "load"
                     markLoadStarted()
                     val load = try { exchange("load") } finally { finishDashboardSwitch() }
                     recordLoadEvidence(load)
@@ -385,7 +405,7 @@ internal object ClusterThemeLiveTest {
                     if (restoreRequested.get() || uncertain && !variant.isPersistent) enqueueRestore(thisGeneration)
                 } catch (t: Throwable) {
                     detail = "$phase: ${t.javaClass.simpleName}: ${t.message}".take(2000)
-                    if (mutated) {
+                    if (mutated || dashboardNativeDebt || dashboardHelperPid != 0) {
                         uncertain = true; state = "QUARANTINE"; persistQuietly()
                         if (variant.isPersistent) deadline = 0
                         if (!variant.isPersistent || restoreRequested.get()) enqueueRestore(thisGeneration)
@@ -456,6 +476,95 @@ internal object ClusterThemeLiveTest {
         if (variant.isDashboard) dashboardIntervals.rccFinished()
     }
 
+    private fun currentDashboardOpening(): Boolean = validProjection() && !restoreRequested.get() && !dashboardCloseQueued.get()
+
+    private fun readDashboardGeometry(budgetMs: Long): com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.Evidence {
+        check(dashboardReadProbeActive.compareAndSet(false, true)) { "A display snapshot is already active" }
+        try {
+            val result = ClusterThemeQueryRunner.dashboardDisplay(filename, budgetMs, ::currentDashboardOpening) {
+                check(currentDashboardOpening()) { "Display query cancelled before GO" }
+            }
+            if (!result.reaped || result.receipt.optString("state") != "RECEIVED" || !result.receipt.has("geometry"))
+                return com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.Evidence("UNAVAILABLE",
+                    "Display snapshot unavailable: ${result.receipt.optString("detail").take(256)}", emptyList())
+            return runCatching { com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.fromJson(result.receipt.getJSONObject("geometry")) }
+                .getOrElse { com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.Evidence("UNAVAILABLE", "Malformed display snapshot", emptyList()) }
+        } finally { dashboardReadProbeActive.set(false) }
+    }
+
+    /** Independent read-only lane: never hold the live-test monitor while a child runs. */
+    fun currentDashboardDisplay(nonce: String): String {
+        initialize()
+        val expected = synchronized(this) {
+            check(nonce.matches(Regex("[0-9a-f]{32}")) && filename == ClusterThemePolicy.PREFIX + nonce + ".rcc" &&
+                variant.isDashboard && active.get() && dashboardStage == "OPEN_RECEIVED" &&
+                !dashboardPending.get() && !uncertain && currentDashboardOpening()) { "Current dashboard opening required" }
+            generation.get()
+        }
+        val evidence = readDashboardGeometry(8000)
+        synchronized(this) {
+            check(generation.get() == expected && dashboardStage == "OPEN_RECEIVED" && currentDashboardOpening() && !uncertain) {
+                "Display snapshot belongs to a retired dashboard opening" }
+            recordDashboardGeometry(evidence)
+            return status()
+        }
+    }
+
+    private fun recordDashboardGeometry(evidence: com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.Evidence,
+        write: () -> Unit = { persist(state) }) {
+        dashboardGeometry = evidence.json().put("receivedEpochMs", System.currentTimeMillis())
+            .put("receivedElapsedMs", SystemClock.elapsedRealtime())
+        if (evidence.verdict == "SMALL") dashboardSmallPanelSeen = true
+        step("dashboard-display", dashboardGeometry.toString())
+        write()
+    }
+
+    internal fun prepareDashboardDisplay(
+        probe: (Long) -> com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.Evidence = ::readDashboardGeometry,
+        bootstrap: () -> Unit = { runDashboardSequence(true, bootstrap = true,
+            finished = { dashboardIntervals.nativeFinishedAfter(com.byd.dashcast.clusterlive.ClusterDashboardProfile.BOOTSTRAP_GAP_MS) }) },
+        factory: () -> Boolean = { exchange("query").let { !it.unknown && it.native == 0 && it.query?.isDefault() == true } },
+        write: () -> Unit = { persist(state) }, clock: () -> Long = SystemClock::elapsedRealtime,
+        pause: (Long) -> Unit = Thread::sleep) {
+        check(variant.isDashboard && !dashboardSmallPanelSeen && !mutated && currentDashboardOpening())
+        phase = "dashboard-display-query"
+        var evidence = probe(8000); recordDashboardGeometry(evidence, write)
+        if (evidence.verdict == "ABSENT") {
+            check(currentDashboardOpening() && factory()) { "Factory selection is not freshly confirmed before bootstrap" }
+            check(currentDashboardOpening())
+            bootstrap()
+            phase = "dashboard-display-wait"; write()
+            val until = clock() + com.byd.dashcast.clusterlive.ClusterDashboardProfile.DISPLAY_WAIT_MS
+            var attempts = 0
+            while (true) {
+                check(currentDashboardOpening()) { "Display wait cancelled; bootstrap recovery remains required" }
+                val remaining = until - clock()
+                check(remaining > 0 && attempts++ < com.byd.dashcast.clusterlive.ClusterDashboardProfile.DISPLAY_PROBE_LIMIT) {
+                    "OEM projection display did not appear within the bounded wait" }
+                evidence = probe(minOf(8000L, remaining)); recordDashboardGeometry(evidence, write)
+                check(currentDashboardOpening()) { "Display result belongs to a cancelled opening" }
+                if (evidence.verdict != "ABSENT") break
+                // One completed read at a time; no persistent background enumeration.
+                val next = minOf(until, clock() + com.byd.dashcast.clusterlive.ClusterDashboardProfile.DISPLAY_PROBE_GAP_MS)
+                while (clock() < next) {
+                    check(currentDashboardOpening()) { "Display wait cancelled" }
+                    pause(minOf(25, next - clock()))
+                }
+            }
+        }
+        check(evidence.ready && !dashboardSmallPanelSeen && currentDashboardOpening()) {
+            "Projection display refused: ${evidence.verdict}: ${evidence.reason}" }
+        phase = "dashboard-display-ready"; write()
+    }
+
+    private fun requireDashboardDisplay() {
+        check(currentDashboardOpening() && !dashboardSmallPanelSeen)
+        val evidence = readDashboardGeometry(8000)
+        recordDashboardGeometry(evidence)
+        check(evidence.ready && !dashboardSmallPanelSeen && currentDashboardOpening()) {
+            "Current projection display refused: ${evidence.verdict}: ${evidence.reason}" }
+    }
+
     /** A closed sequence, never an arbitrary caller-supplied AutoContainer verb. */
     @Synchronized fun requestDashboard(open: Boolean, nonce: String, parked: Boolean, firmware: Boolean,
         validity: android.os.IBinder): String {
@@ -486,6 +595,7 @@ internal object ClusterThemeLiveTest {
                     "Fresh query does not report the exact owned dashboard selection"
                 }
                 check(!open || dashboardSelectionReady && !uncertain && !restoreRequested.get() && !dashboardCloseQueued.get())
+                if (open) requireDashboardDisplay()
                 runDashboardSequence(open)
                 if (!open) maybeCleanup()
             } catch (error: Throwable) {
@@ -504,22 +614,32 @@ internal object ClusterThemeLiveTest {
         request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
             ClusterThemeQueryRunner.dashboardMode(command, filename, admit, ready)
         }, write: () -> Unit = { persist(state) }, before: (() -> Boolean) -> Unit = dashboardIntervals::awaitNative,
-        finished: () -> Unit = dashboardIntervals::nativeFinished, reap: () -> Unit = ::reapDashboardHelper) {
+        finished: () -> Unit = dashboardIntervals::nativeFinished, reap: () -> Unit = ::reapDashboardHelper,
+        bootstrap: Boolean = false) {
         check(variant.isDashboard && journalTrusted && validProjection() && !helperUnreaped)
         reap()
-        val commands = if (open) com.byd.dashcast.clusterlive.ClusterDashboardProfile.openCommands
-            else com.byd.dashcast.clusterlive.ClusterDashboardProfile.closeCommands
-        dashboardStage = if (open) "OPENING" else "CLOSING"
+        check(!bootstrap || open && !mutated && !dashboardSmallPanelSeen)
+        val commands = when {
+            bootstrap -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.bootstrapCommands
+            open -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.openCommands
+            dashboardSizeAdmitted == false -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.bootstrapCloseCommands
+            else -> com.byd.dashcast.clusterlive.ClusterDashboardProfile.closeCommands // Legacy receipt: do not invent prior admission.
+        }
+        dashboardStage = if (bootstrap) "NONE" else if (open) "OPENING" else "CLOSING"
         dashboardNativeDebt = true
+        if (bootstrap) dashboardBootstrapStarted = true
+        dashboardBootstrapRecoverySettled = false
         oemObserved = false
-        if (open) { themeObserved = false; dashboardRound = UUID.randomUUID().toString().replace("-", "") }
+        if (open && !bootstrap) { themeObserved = false; dashboardRound = UUID.randomUUID().toString().replace("-", "") }
         write()
         commands.forEach { command ->
             before { validProjection() && (!open || !restoreRequested.get() && !dashboardCloseQueued.get()) }
             check(validProjection() && (!open || !restoreRequested.get() && !dashboardCloseQueued.get())) { "Dashboard sequence retired before helper" }
-            phase = "dashboard-native-$command"
+            phase = if (bootstrap) "dashboard-bootstrap-$command" else "dashboard-native-$command"
+            val previouslyAdmitted = dashboardSizeAdmitted
             val result = try { request(command, {
                 check(validProjection() && (!open || !restoreRequested.get() && !dashboardCloseQueued.get())) { "Dashboard sequence retired before GO" }
+                if (command == 31) dashboardSizeAdmitted = true // Durable conservative debt before GO.
                 write() // Helper identity and native debt are durable before admission.
             }, { pid, start, token ->
                 dashboardHelperPid = pid; dashboardHelperStart = start; dashboardHelperToken = token
@@ -529,15 +649,21 @@ internal object ClusterThemeLiveTest {
                 dashboardHelperPid = 0; dashboardHelperStart = ""; dashboardHelperToken = ""; dashboardHelperCommand = -1
             }
             val receipt = result.receipt
+            if (command == 31 && result.reaped && receipt.has("attempted") && !receipt.getBoolean("attempted"))
+                dashboardSizeAdmitted = previouslyAdmitted // The reaped helper proves it refused before sending.
+            receipt.optJSONObject("geometry")?.let {
+                recordDashboardGeometry(com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.fromJson(it), write)
+            }
             step("dashboard-command-received", "command=$command reaped=${result.reaped} state=${receipt.optString("state")} native=${receipt.opt("native")} pixels=UNKNOWN")
             write()
             check(result.reaped && receipt.optString("state") == "RECEIVED" && receipt.optBoolean("attempted") &&
                 receipt.has("native") && receipt.getInt("native") == 0) { "Native dashboard command $command unresolved; no replay" }
         }
         dashboardNativeDebt = open
-        dashboardStage = if (open) "OPEN_RECEIVED" else "CLOSED_RECEIVED"
-        phase = "observation"
-        detail = "Dashboard ${if (open) "opening" else "closing"} sequence returned. Native pixels and QML application require observation. RCC remains selected; factory Restore is required before ordinary projection or downgrade."
+        dashboardStage = if (bootstrap) "NONE" else if (open) "OPEN_RECEIVED" else "CLOSED_RECEIVED"
+        phase = if (bootstrap) "dashboard-display-wait" else "observation"
+        detail = if (bootstrap) "Factory projection bootstrap 16/35 returned; waiting for an observed OEM projection display. No custom RCC selected and no size-forcing command sent."
+            else "Dashboard ${if (open) "opening" else "closing"} sequence returned. Native pixels and QML application require observation. Factory Restore is required before ordinary projection; older APK rollback remains unsupported."
         write()
     }
 
@@ -680,8 +806,16 @@ internal object ClusterThemeLiveTest {
                 check(journalTrusted) { "Journal identity/mutation state unknown; no replay or mutation" }
                 reapRecoveredHelper()
                 deadline = 0
+                if (!mutated && variant.isDashboard && dashboardBootstrapStarted) {
+                    check(validProjection()) { "Explicit live reservation required for bootstrap recovery" }
+                    hashDeadline = SystemClock.elapsedRealtime() + 60000
+                    ownedFile()
+                    restoreDashboardBootstrap()
+                    maybeCleanup()
+                    return@execute
+                }
                 if (!mutated) {
-                    // Journal proves no native mutation began (LOAD_STARTED is fsynced first).
+                    // Neither an RCC load nor a native bootstrap was admitted.
                     if (root.isEmpty() && renderer.isNotEmpty()) identifyRenderer()
                     if (createdInode >= 0) check(cleanupOwned(true)) { "Owned partial cleanup unavailable; retained" }
                     state = "CLEAN"; detail = "Cancelled before native load; only a positively owned partial carrier was removed."
@@ -745,6 +879,34 @@ internal object ClusterThemeLiveTest {
         }
     }
 
+    internal fun restoreDashboardBootstrap(query: () -> Exchange = { exchange("query") },
+        close: () -> Unit = { closeDashboardForFactoryRestore() }, write: () -> Unit = { persist(state) }) {
+        check(variant.isDashboard && dashboardBootstrapStarted && !mutated && validProjection())
+        state = "RESTORING"; phase = "bootstrap-restore-query"; oemObserved = false
+        dashboardBootstrapRecoverySettled = false; write()
+        val before = query()
+        check(!before.unknown && before.native == 0 && before.query?.isDefault() == true) {
+            "Bootstrap recovery requires a fresh factory selection; no custom overwrite" }
+        close()
+        recordBootstrapRestoreResult(query())
+        write()
+    }
+
+    internal fun recordBootstrapRestoreResult(queried: Exchange) {
+        check(variant.isDashboard && dashboardBootstrapStarted && !mutated)
+        defaultQueried = !queried.unknown && queried.native == 0 && queried.query?.isDefault() == true
+        dashboardBootstrapRecoverySettled = defaultQueried && !dashboardNativeDebt && dashboardHelperPid == 0
+        // This proof concerns only bootstrap 18/0 plus a fresh factory query.
+        // It must never stand in for the custom-load recovery protocol.
+        iviRecoverySettled = false
+        state = if (dashboardBootstrapRecoverySettled) "DEFAULT_QUERIED" else "QUARANTINE"
+        phase = "bootstrap-recovery-observation"
+        detail = if (dashboardBootstrapRecoverySettled)
+            "Bootstrap close returned and factory selection freshly queried. No custom RCC was selected; confirm the native instruments and warnings before closing recovery."
+            else "Bootstrap recovery remains unresolved; native debt/helper retained. No custom RCC was selected."
+        step("bootstrap-recovery-proof", "settled=$dashboardBootstrapRecoverySettled default=$defaultQueried nativeDebt=$dashboardNativeDebt")
+    }
+
     internal fun recordRestoreResult(before: ClusterThemeProtocol.Response, restored: Exchange, priorRecoveryProof: Boolean) {
         retirementEligibleUntil = if (transport == ClusterThemeTransport.ANDROID_IVI && retirement == null && restored.retirementEligible &&
             ClusterThemeRetirement.eligible(filename, restored.query, restored.responses, restored.native, restored.attempted))
@@ -773,7 +935,7 @@ internal object ClusterThemeLiveTest {
         step("retired-default-query", "native=${queried.native} unknown=${queried.unknown} default=$defaultQueried")
     }
     internal fun acceptOemObservation(expectedFilename: String): Boolean {
-        if (!active.get() || !mutated || !defaultQueried || filename != expectedFilename || !ClusterThemePolicy.ownedName(expectedFilename)) return false
+        if (!active.get() || !(mutated || dashboardBootstrapRecoverySettled) || !defaultQueried || filename != expectedFilename || !ClusterThemePolicy.ownedName(expectedFilename)) return false
         oemObserved = true
         return true
     }
@@ -783,7 +945,7 @@ internal object ClusterThemeLiveTest {
         if (which == 1 && variant.isCorner) return status()
         if (which == 1 && (variant != expectedVariant || state != "AWAITING_OBSERVATION" || uncertain || restoreRequested.get())) return status()
         // These are tester statements, never inferred from a callback or selection query.
-        if (active.get() && mutated && expectedFilename == filename && ClusterThemePolicy.ownedName(expectedFilename)) {
+        if (active.get() && (mutated || dashboardBootstrapRecoverySettled) && expectedFilename == filename && ClusterThemePolicy.ownedName(expectedFilename)) {
             if (which == 2 && !defaultQueried) return status() // Observation must follow the default query, not just a queued restore.
             val observedFilename = filename
             val observedGeneration = generation.get()
@@ -821,14 +983,15 @@ internal object ClusterThemeLiveTest {
         try {
             if (variant.isDashboard && (dashboardNativeDebt || dashboardHelperPid != 0)) return
             val recoveredIvi = transport == ClusterThemeTransport.ANDROID_IVI && iviRecoverySettled
-            if (!carrierRemoved && oemObserved && (ClusterThemePolicy.canDeleteCarrier(defaultQueried, loadSettled, uncertain) || recoveredIvi && defaultQueried)) {
+            val recoveredBootstrap = variant.isDashboard && !mutated && dashboardBootstrapRecoverySettled && defaultQueried
+            if (!carrierRemoved && oemObserved && (ClusterThemePolicy.canDeleteCarrier(defaultQueried, loadSettled, uncertain) || recoveredIvi && defaultQueried || recoveredBootstrap)) {
                 check(cleanup()) { "Owned carrier cleanup identity unavailable; retained" }
                 carrierRemoved = true
                 detail = if (retirement != null) "Default queried; retired bytes preserved. A new test remains blocked until visual confirmation."
                     else "Default selection queried; only our verified carrier removed. Confirm OEM pixels; a new test remains blocked."
                 write(state)
             }
-            if (carrierRemoved && oemObserved && (!uncertain || recoveredIvi) && defaultQueried) {
+            if (carrierRemoved && oemObserved && (!uncertain || recoveredIvi || recoveredBootstrap) && defaultQueried) {
                 state = "CLEAN"; detail = if (retirement != null) "Default queried; tester confirmed OEM display. Retired RCC preserved unchanged. No reboot guarantee."
                     else "Default queried; tester confirmed OEM display. Only our carrier deleted. No reboot guarantee."
                 write(state); deadline = 0; active.set(false)
@@ -852,6 +1015,8 @@ internal object ClusterThemeLiveTest {
         if (newState == "CLEAN") {
             check(!helperUnreaped && helperPid == 0) { "Cannot close journal with an unreaped helper" }
             check(!variant.isDashboard || !dashboardNativeDebt && dashboardHelperPid == 0) { "Cannot close an outstanding dashboard mode debt" }
+            check(!variant.isDashboard || !dashboardBootstrapStarted || mutated ||
+                dashboardBootstrapRecoverySettled && defaultQueried && oemObserved) { "Bootstrap recovery requires fresh factory and human confirmation" }
             helperStart = ""; helperToken = ""
         }
         val j = JSONObject().put("schema", if (retirement != null) 4 else if (transport == ClusterThemeTransport.ANDROID_IVI) 3 else 2).put("state", newState).put("filename", filename)
@@ -864,7 +1029,9 @@ internal object ClusterThemeLiveTest {
             .put("helperPid", helperPid).put("helperStart", helperStart).put("helperToken", helperToken)
             .apply { if (variant.isDashboard) put("dashboard", JSONObject().put("stage", dashboardStage)
                 .put("nativeDebt", dashboardNativeDebt).put("helperCommand", dashboardHelperCommand)
-                .put("helperPid", dashboardHelperPid).put("helperStart", dashboardHelperStart).put("helperToken", dashboardHelperToken)) }
+                .put("helperPid", dashboardHelperPid).put("helperStart", dashboardHelperStart).put("helperToken", dashboardHelperToken)
+                .put("bootstrapStarted", dashboardBootstrapStarted).put("sizeAdmitted", dashboardSizeAdmitted ?: JSONObject.NULL)
+                .put("bootstrapRecoverySettled", dashboardBootstrapRecoverySettled).put("smallPanelSeen", dashboardSmallPanelSeen)) }
         val temporary = File(directory, "journal-${UUID.randomUUID()}.tmp")
         val fd = Os.open(temporary.path, OsConstants.O_WRONLY or OsConstants.O_CREAT or OsConstants.O_EXCL or OsConstants.O_NOFOLLOW, 384)
         try {

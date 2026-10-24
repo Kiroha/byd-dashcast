@@ -85,16 +85,21 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return call(6, expectedFilename = expectedFilename)
     }
     fun dashboardProjection(open: Boolean, validity: IBinder): String {
-        check(ProxyClient.supportsProtocol(42)) { "Connected protocol42 required; no reconnect/replay" }
+        check(ProxyClient.supportsProtocol(43)) { "Connected protocol43 required; no reconnect/replay" }
         val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned dashboard RCC session")
         return call(if (open) 20 else 21, payload = {
             it.writeString(nonce); it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity)
         })
     }
     fun observedDashboard(name: String, round: String): String {
-        check(ProxyClient.supportsProtocol(42))
+        check(ProxyClient.supportsProtocol(43))
         require(round.matches(Regex("[0-9a-f]{32}")))
         return call(22, expectedFilename = name, payload = { it.writeString(round) })
+    }
+    fun currentDashboardDisplay(): String {
+        check(ProxyClient.supportsProtocol(43)) { "Connected protocol43 required for current dashboard display evidence" }
+        val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned dashboard session")
+        return call(23, payload = { it.writeString(nonce) })
     }
     /** Exactly one transaction on this captured endpoint; never production retry/reconnect. */
     fun launchDashboardApplication(pkg: String, displayId: Int): String? {
@@ -149,7 +154,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             "native-full-request", "native-normal-request", "native-normal-user-observation",
             "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier",
             "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only", "android-ivi-corner-marker-21f7735c",
-            "android-ivi-full-dashboard-21f7735c", "dashboard-open", "dashboard-close", "observe-dashboard")[operation]
+            "android-ivi-full-dashboard-21f7735c", "dashboard-open", "dashboard-close", "observe-dashboard", "dashboard-display-read")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {

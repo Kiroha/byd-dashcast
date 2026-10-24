@@ -97,4 +97,24 @@ class ClusterThemeJournalTest {
         val clean = JSONObject(j.toString()).put("state", "CLEAN").put("helperPid", 0).put("helperStart", "").put("helperToken", "").put("dashboard", nativeClosed)
         assertTrue(ClusterThemeJournal.recover(clean).clean)
     }
+    @Test fun `bootstrap recovery before custom mutation is durable while legacy size admission stays unknown`() {
+        val variant = ClusterThemeVariant.FULL_DASHBOARD_21F7735C
+        val native = JSONObject().put("stage", "NONE").put("nativeDebt", true)
+            .put("helperCommand", 16).put("helperPid", 43).put("helperStart", "9876").put("helperToken", "b".repeat(32))
+        val j = journal().put("variant", variant.id).put("carrierSha256", variant.carrierSha256).put("dashboard", native)
+        val old = ClusterThemeJournal.recover(j)
+        assertNull(old.dashboardSizeAdmitted); assertFalse(old.dashboardBootstrapStarted)
+        native.put("bootstrapStarted", true).put("sizeAdmitted", false).put("bootstrapRecoverySettled", false).put("smallPanelSeen", true)
+        val boot = ClusterThemeJournal.recover(j)
+        assertTrue(boot.dashboardBootstrapStarted); assertFalse(boot.mutated); assertEquals(false, boot.dashboardSizeAdmitted)
+        assertTrue(boot.dashboardNativeDebt); assertTrue(boot.dashboardSmallPanelSeen)
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put("state", "CLEAN")) }
+        for ((key, value) in listOf("bootstrapStarted" to "true", "sizeAdmitted" to 1, "bootstrapRecoverySettled" to true, "sizeAdmitted" to true))
+            assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put("dashboard", JSONObject(native.toString()).put(key, value))) }
+        native.put("stage", "CLOSED_RECEIVED").put("nativeDebt", false).put("helperCommand", -1)
+            .put("helperPid", 0).put("helperStart", "").put("helperToken", "")
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put("state", "CLEAN")) }
+        native.put("bootstrapRecoverySettled", true)
+        assertTrue(ClusterThemeJournal.recover(JSONObject(j.toString()).put("state", "CLEAN")).clean)
+    }
 }

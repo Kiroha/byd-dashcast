@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">Dettagli tecnici e test precedenti</string>
     <string name="diag_cluster_dashboard_confirmed">✓ Schermata confermata dall’utente</string>
     <string name="diag_cluster_dashboard_restore_confirm">Chiude la proiezione e richiede il profilo di fabbrica. Una chiusura fallita resta irrisolta anche se torna il profilo di fabbrica. Conferma poi strumenti e avvisi visibili.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Attivazione temporanea della proiezione BYD originale…</string>
+    <string name="diag_cluster_dashboard_display_wait">In attesa dello schermo di proiezione BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">Schermo di proiezione BYD non disponibile o incompatibile. Controlla i dettagli.</string>
+    <string name="diag_cluster_dashboard_restore_required">Inizializzazione avviata: occorre ripristinare BYD.</string>
+    <string name="diag_cluster_dashboard_small_panel">Quadro piccolo rilevato: prova rifiutata. Il ripristino BYD resta disponibile.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Chiudi la proiezione BYD temporanea e verifica la selezione di fabbrica. Nessun RCC personalizzato è stato selezionato. Poi conferma il ritorno degli strumenti e degli avvisi.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">La preparazione può aprire temporaneamente la proiezione BYD originale e verificarne lo schermo prima di selezionare il nostro RCC. Nessuna app si avvia prima di Apri. Conferma parcheggio e firmware; questa dichiarazione non misura il movimento.</string>
+    <string name="diag_cluster_dashboard_protocol">Il daemon connesso deve usare il protocollo 43. Ricollegalo in DashCast prima di riprovare Prepara o Apri. Nessun comando BYD inviato.</string>
 </resources>

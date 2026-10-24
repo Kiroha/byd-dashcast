@@ -25,6 +25,27 @@ import java.util.concurrent.atomic.AtomicInteger
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class ClusterThemeSessionTest {
+    @Test fun `current dashboard display read is closed operation23 on the pinned protocol43 endpoint without retry`() {
+        val app = RuntimeEnvironment.getApplication(); val nonce = "a".repeat(32)
+        ClusterThemeProjectionDebt.begin(app, nonce)
+        var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST, code)
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(23, data.readInt())
+                assertEquals(nonce, data.readString()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"AWAITING_OBSERVATION","filename":"","variant":"full-dashboard-21f7735c","rccDebt":true,"dashboard":{"geometry":{"verdict":"READY"}}}""")
+                return true
+            }
+        }); versionField.set(null, "42")
+        val session = ClusterThemeSession.pin(app)
+        assertThrows(IllegalStateException::class.java) { session.currentDashboardDisplay() }; assertEquals(0, calls)
+        versionField.set(null, "43")
+        assertEquals("READY", org.json.JSONObject(session.currentDashboardDisplay()).getJSONObject("dashboard").getJSONObject("geometry").getString("verdict"))
+        assertEquals(1, calls)
+        binderField.set(null, Binder())
+        assertThrows(IllegalStateException::class.java) { session.currentDashboardDisplay() }; assertEquals(1, calls)
+    }
     private val binderField = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
     private val versionField = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
     private val old = binderField.get(null)
