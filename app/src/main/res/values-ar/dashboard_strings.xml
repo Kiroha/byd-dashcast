@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">التفاصيل التقنية والاختبارات السابقة</string>
     <string name="diag_cluster_dashboard_confirmed">✓ تم تأكيد الشاشة بواسطة المستخدم</string>
     <string name="diag_cluster_dashboard_restore_confirm">أغلق العرض واطلب ملف المصنع. يبقى فشل الإغلاق دون حل حتى إذا عاد ملف المصنع. ثم أكد العدادات والتنبيهات الظاهرة.</string>
+    <string name="diag_cluster_dashboard_bootstrap">جارٍ تفعيل عرض BYD الأصلي مؤقتًا…</string>
+    <string name="diag_cluster_dashboard_display_wait">في انتظار شاشة عرض BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">شاشة عرض BYD غير متاحة أو غير متوافقة. راجع التفاصيل.</string>
+    <string name="diag_cluster_dashboard_restore_required">بدأت التهيئة: يلزم استعادة BYD.</string>
+    <string name="diag_cluster_dashboard_small_panel">تم رصد لوحة عدادات صغيرة: رُفض الاختبار. تبقى استعادة BYD متاحة.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">أغلق عرض BYD المؤقت وتحقق من اختيار المصنع. لم يتم اختيار RCC مخصص. ثم أكد عودة العدادات والتنبيهات.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">قد يفتح التحضير عرض BYD الأصلي مؤقتًا ويتحقق من شاشته قبل اختيار ملف RCC الخاص بنا. لا يبدأ أي تطبيق قبل الضغط على فتح. أكد التوقف والبرنامج الثابت؛ هذا الإقرار لا يقيس الحركة.</string>
+    <string name="diag_cluster_dashboard_protocol">يجب أن يستخدم daemon المتصل البروتوكول 43. أعد توصيله في DashCast قبل إعادة التحضير أو الفتح. لم يتم إرسال أمر BYD.</string>
 </resources>

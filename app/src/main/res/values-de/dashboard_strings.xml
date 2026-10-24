@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">Technische Details und frühere Tests</string>
     <string name="diag_cluster_dashboard_confirmed">✓ Anzeige vom Benutzer bestätigt</string>
     <string name="diag_cluster_dashboard_restore_confirm">Projektion schließen und Werksprofil anfordern. Ein fehlgeschlagenes Schließen bleibt offen, auch wenn das Werksprofil zurückkehrt. Danach sichtbare Instrumente und Warnungen bestätigen.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Originale BYD-Projektion wird vorübergehend aktiviert…</string>
+    <string name="diag_cluster_dashboard_display_wait">Warten auf das BYD-Projektionsdisplay…</string>
+    <string name="diag_cluster_dashboard_display_rejected">BYD-Projektionsdisplay fehlt oder ist inkompatibel. Details prüfen.</string>
+    <string name="diag_cluster_dashboard_restore_required">Initialisierung gestartet: BYD-Wiederherstellung erforderlich.</string>
+    <string name="diag_cluster_dashboard_small_panel">Kleines Kombiinstrument erkannt: Test abgelehnt. BYD-Wiederherstellung bleibt verfügbar.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Vorübergehende BYD-Projektion schließen und Werksauswahl prüfen. Kein eigenes RCC wurde ausgewählt. Danach die Rückkehr der Instrumente und Warnungen bestätigen.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Die Vorbereitung kann die originale BYD-Projektion vorübergehend öffnen und deren Display prüfen, bevor unser RCC ausgewählt wird. Erst Öffnen startet eine Anwendung. Parkzustand und Firmware bestätigen; dies ist keine Bewegungsmessung.</string>
+    <string name="diag_cluster_dashboard_protocol">Der verbundene Daemon muss Protokoll 43 verwenden. Vor Vorbereiten oder Öffnen in DashCast neu verbinden. Kein BYD-Befehl gesendet.</string>
 </resources>

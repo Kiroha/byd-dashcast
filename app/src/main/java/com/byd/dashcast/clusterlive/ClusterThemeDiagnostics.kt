@@ -26,14 +26,15 @@ internal object ClusterThemeDiagnostics {
         "nativeModeState" to 32, "nativeModeNonce" to 32, "nativeModeDetail" to 768,
         "nativeModePhysicalPixels" to 16, "nativeModeQmlAck" to 16, "nativeModeDebounce" to 16, "nativeModeTransactionAttempted" to 16,
         "nativeModeTrace" to 6144, "nativeModeFullReceipt" to 1536, "nativeModeNormalReceipt" to 1536,
-        "dashboardStage" to 32, "dashboardRound" to 32, "dashboardPixels" to 32)
+        "dashboardStage" to 32, "dashboardRound" to 32, "dashboardPixels" to 32, "dashboardGeometry" to 4096)
     private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs",
         "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs",
         "dashboardHelperCommand")
     private val booleanFields = listOf("mutated", "uncertain", "iviRecoverySettled", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
         "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable", "recoveryPending",
-        "dashboardNativeDebt", "dashboardPending", "dashboardSelectionReady")
+        "dashboardNativeDebt", "dashboardPending", "dashboardSelectionReady", "dashboardBootstrapStarted",
+        "dashboardBootstrapRecoverySettled", "dashboardSmallPanelSeen", "dashboardSizeAdmitted")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
     private var cacheIssue = ""
@@ -75,9 +76,11 @@ internal object ClusterThemeDiagnostics {
                 }
             }
             reply.optJSONObject("dashboard")?.let { dashboard ->
-                for (field in listOf("stage", "round", "pixels", "helperCommand", "nativeDebt", "pending", "selectionReady"))
+                for (field in listOf("stage", "round", "pixels", "helperCommand", "nativeDebt", "pending", "selectionReady",
+                    "bootstrapStarted", "bootstrapRecoverySettled", "smallPanelSeen", "sizeAdmitted"))
                     if (dashboard.has(field) && !dashboard.isNull(field))
                         event.put("dashboard" + field.replaceFirstChar { it.uppercase() }, dashboard.get(field))
+                dashboard.optJSONObject("geometry")?.let { event.put("dashboardGeometry", it.toString()) }
             }
             // Retain changes without storing Parcel/base64 payloads or unbounded helper output.
             val raw = reply.optString("raw").take(32768)

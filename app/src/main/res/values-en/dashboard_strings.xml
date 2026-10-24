@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">Technical details and previous tests</string>
     <string name="diag_cluster_dashboard_confirmed">✓ Display confirmed by the user</string>
     <string name="diag_cluster_dashboard_restore_confirm">Close projection and request the factory profile. A failed close remains unresolved even if the factory profile returns. Then confirm the visible instruments and alerts.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Temporarily activating the original BYD projection…</string>
+    <string name="diag_cluster_dashboard_display_wait">Waiting for the BYD projection display…</string>
+    <string name="diag_cluster_dashboard_display_rejected">BYD projection display unavailable or incompatible. Check the details.</string>
+    <string name="diag_cluster_dashboard_restore_required">Initialization started: BYD restoration is required.</string>
+    <string name="diag_cluster_dashboard_small_panel">Small cluster observed: test refused. BYD restoration remains available.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Close the temporary BYD projection and verify the factory selection. No custom RCC was selected. Then confirm the instruments and alerts have returned.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Preparation may temporarily open the original BYD projection, then check its display before selecting our RCC. No application starts before Open. Confirm parking and firmware; this assertion does not measure movement.</string>
+    <string name="diag_cluster_dashboard_protocol">The connected daemon must use protocol 43. Reconnect it in DashCast before trying Prepare or Open again. No BYD command was sent.</string>
 </resources>

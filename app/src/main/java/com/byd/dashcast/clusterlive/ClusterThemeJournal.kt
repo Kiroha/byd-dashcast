@@ -9,7 +9,9 @@ internal object ClusterThemeJournal {
         val mutated: Boolean, val helperPid: Int, val helperStart: String, val helperToken: String,
         val device: Long, val inode: Long, val iviRecoverySettled: Boolean, val retirement: ClusterThemeRetirement?,
         val dashboardStage: String = "NONE", val dashboardNativeDebt: Boolean = false, val dashboardHelperCommand: Int = -1,
-        val dashboardHelperPid: Int = 0, val dashboardHelperStart: String = "", val dashboardHelperToken: String = "")
+        val dashboardHelperPid: Int = 0, val dashboardHelperStart: String = "", val dashboardHelperToken: String = "",
+        val dashboardBootstrapStarted: Boolean = false, val dashboardSizeAdmitted: Boolean? = null,
+        val dashboardBootstrapRecoverySettled: Boolean = false, val dashboardSmallPanelSeen: Boolean = false)
 
     fun recover(j: JSONObject): Recovery {
         val schema = j.get("schema")
@@ -63,6 +65,16 @@ internal object ClusterThemeJournal {
         val nativePid = dashboard?.getInt("helperPid") ?: 0
         val nativeStart = dashboard?.getString("helperStart") ?: ""
         val nativeToken = dashboard?.getString("helperToken") ?: ""
+        for (key in listOf("bootstrapStarted", "bootstrapRecoverySettled", "smallPanelSeen"))
+            require(dashboard?.has(key) != true || dashboard.get(key) is Boolean)
+        require(dashboard?.has("sizeAdmitted") != true || dashboard.isNull("sizeAdmitted") || dashboard.get("sizeAdmitted") is Boolean)
+        val bootstrap = dashboard?.optBoolean("bootstrapStarted") ?: false
+        val sizeAdmitted = if (dashboard?.has("sizeAdmitted") == true && !dashboard.isNull("sizeAdmitted")) dashboard.getBoolean("sizeAdmitted") else null
+        val bootstrapSettled = dashboard?.optBoolean("bootstrapRecoverySettled") ?: false
+        val small = dashboard?.optBoolean("smallPanelSeen") ?: false
+        require(!bootstrapSettled || bootstrap && !j.getBoolean("mutated") && !nativeDebt && nativePid == 0)
+        require(!bootstrap || j.getBoolean("mutated") || sizeAdmitted != true)
+        require(!clean || !bootstrap || j.getBoolean("mutated") || bootstrapSettled)
         require(stage in setOf("NONE", "OPENING", "OPEN_RECEIVED", "CLOSING", "CLOSED_RECEIVED", "UNKNOWN"))
         require(stage !in setOf("OPENING", "OPEN_RECEIVED", "CLOSING") || nativeDebt)
         require(nativePid == 0 && nativeStart.isEmpty() && nativeToken.isEmpty() && nativeCommand == -1 ||
@@ -71,6 +83,6 @@ internal object ClusterThemeJournal {
         require(!clean || !nativeDebt && nativePid == 0)
         return Recovery(transport, variant, clean, filename, root, j.optString("renderer"), identity,
             j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled, retirement, stage, nativeDebt, nativeCommand,
-            nativePid, nativeStart, nativeToken)
+            nativePid, nativeStart, nativeToken, bootstrap, sizeAdmitted, bootstrapSettled, small)
     }
 }

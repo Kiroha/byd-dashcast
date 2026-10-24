@@ -23,4 +23,12 @@
     <string name="diag_cluster_dashboard_details">Szczegóły techniczne i poprzednie testy</string>
     <string name="diag_cluster_dashboard_confirmed">✓ Ekran potwierdzony przez użytkownika</string>
     <string name="diag_cluster_dashboard_restore_confirm">Zamknij projekcję i przywróć profil fabryczny. Nieudane zamknięcie pozostaje nierozwiązane nawet po powrocie profilu fabrycznego. Następnie potwierdź widoczne wskaźniki i ostrzeżenia.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Tymczasowe uruchamianie oryginalnej projekcji BYD…</string>
+    <string name="diag_cluster_dashboard_display_wait">Oczekiwanie na ekran projekcji BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">Ekran projekcji BYD niedostępny lub niezgodny. Sprawdź szczegóły.</string>
+    <string name="diag_cluster_dashboard_restore_required">Inicjalizacja rozpoczęta: wymagane przywrócenie BYD.</string>
+    <string name="diag_cluster_dashboard_small_panel">Wykryto mały zestaw wskaźników: test odrzucony. Przywrócenie BYD jest nadal dostępne.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Zamknij tymczasową projekcję BYD i sprawdź wybór fabryczny. Nie wybrano niestandardowego RCC. Następnie potwierdź powrót wskaźników i ostrzeżeń.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Przygotowanie może tymczasowo otworzyć oryginalną projekcję BYD i sprawdzić jej ekran przed wybraniem naszego RCC. Aplikacja uruchamia się dopiero po Otwórz. Potwierdź postój i firmware; to oświadczenie nie mierzy ruchu.</string>
+    <string name="diag_cluster_dashboard_protocol">Połączony daemon musi używać protokołu 43. Połącz go ponownie w DashCast przed Przygotuj lub Otwórz. Nie wysłano polecenia BYD.</string>
 </resources>

@@ -354,12 +354,7 @@ class FissionOrchestrator(
                 check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(diagnostic))
                 check(pinned.isCurrent()) { "Pinned dashboard daemon changed before attachment" }
                 check(valid()) { "Dashboard opening ticket expired before attachment" }
-                val dm = mAppCtx.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-                val candidates = dm.displays.filter { com.byd.dashcast.cluster.display.ClusterDisplayNames.isKnownClusterName(it.name) }
-                check(candidates.size == 1) { "Current cluster display missing/ambiguous" }
-                val size = android.graphics.Point(); candidates.single().getRealSize(size)
-                check(candidates.single().state == Display.STATE_ON && profile.permitsGeometry(size.x, size.y,
-                    ClusterPrefs.isSmallClusterPanelLatched(mAppCtx))) { "Current 1920x720 cluster required" }
+                verifyDashboardDisplay()
                 doStartSlot(pkg, label, Rect(profile.APP_X, profile.APP_Y,
                     profile.APP_X + profile.APP_WIDTH, profile.APP_Y + profile.APP_HEIGHT), null)
             } catch (error: Exception) { post { mCallbacks.onSlotError(pkg, error.message); mCallbacks.onSlotsChanged(mSlots.values) } }
@@ -774,6 +769,7 @@ class FissionOrchestrator(
             try { existingId = FissionClient.querySlot(mDaemonBinder!!, pkg) } catch (ignored: Exception) {}
             checkDashboardLaunch()
             val displayId: Int
+            verifyDashboardDisplayIfOwned()
             if (existingId > 0) {
                 post { mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_reuse_fmt, label)) }
                 checkDashboardLaunch()
@@ -812,6 +808,7 @@ class FissionOrchestrator(
             }
             dashboardDiagnosticSession?.let { check(com.byd.dashcast.cluster.display.ProjectionCommandBus.ownsDiagnostic(it) && dashboardProxySession?.isCurrent() == true && dashboardLaunchValid?.invoke() == true) }
             checkDashboardLaunch()
+            verifyDashboardDisplayIfOwned()
             val launchResult = dashboardProxySession?.launchDashboardApplication(pkg, displayId)
                 ?: if (dashboardDiagnosticSession == null) ProxyClient.launchAndForce(pkg, null, displayId,
                     rect.width(), rect.height()) else error("Pinned dashboard launch returned no result; no replay")
@@ -876,6 +873,29 @@ class FissionOrchestrator(
 
     private fun startupSelectionCurrent(): Boolean =
         mStartupSelection?.let { it == ClusterPrefs.getStartupApps(mAppCtx) } != false
+
+    private fun verifyDashboardDisplayIfOwned() {
+        if (dashboardDiagnosticSession != null) verifyDashboardDisplay()
+    }
+
+    private fun verifyDashboardDisplay() {
+        checkDashboardLaunch()
+        check(!ClusterPrefs.isSmallClusterPanelLatched(mAppCtx)) { "Observed small cluster protection is latched" }
+        val pinned = checkNotNull(dashboardProxySession)
+        val status = org.json.JSONObject(pinned.currentDashboardDisplay())
+        val evidence = com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.fromJson(
+            status.getJSONObject("dashboard").getJSONObject("geometry"))
+        if (status.getJSONObject("dashboard").optBoolean("smallPanelSeen")) ClusterPrefs.latchSmallClusterPanel(mAppCtx)
+        check(evidence.ready) { "Current OEM projection display refused: ${evidence.verdict}: ${evidence.reason}" }
+        val target = evidence.displays.single { it.ownerUid == 1000 && it.ownerPackage == "com.xdja.containerservice" }
+        val dm = mAppCtx.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val display = dm.getDisplay(target.id) ?: error("Observed OEM display is not currently visible to the app")
+        val size = android.graphics.Point(); display.getRealSize(size)
+        check(display.name == target.name && display.state == Display.STATE_ON && display.flags and Display.FLAG_PRIVATE == 0 &&
+            com.byd.dashcast.clusterlive.ClusterDashboardProfile.permitsGeometry(size.x, size.y,
+                ClusterPrefs.isSmallClusterPanelLatched(mAppCtx))) { "Observed OEM projection display changed before attachment" }
+        checkDashboardLaunch()
+    }
 
     @Throws(Exception::class)
     private fun doSwitchToLayout(newLayout: LayoutPreset?, surfaceHolder: SurfaceHolder?) {

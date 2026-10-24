@@ -55,15 +55,17 @@ class ClusterThemeLiveTestLifecycleTest {
         set("dashboardStage", "NONE"); set("dashboardNativeDebt", false); set("dashboardHelperCommand", -1)
         set("dashboardHelperPid", 0); set("dashboardHelperStart", ""); set("dashboardHelperToken", "")
         set("dashboardSelectionReady", false); set("dashboardRound", "")
+        set("dashboardBootstrapStarted", false); set("dashboardSizeAdmitted", false)
+        set("dashboardBootstrapRecoverySettled", false); set("dashboardSmallPanelSeen", false); set("dashboardGeometry", JSONObject())
         flag("dashboardPending").set(false); flag("dashboardCloseQueued").set(false)
         count("generation").set(10); count("restoring").set(-1)
         (field("observationPending").get(null) as AtomicInteger).set(0)
     }
     @After fun finish() { drain(); flag("active").set(false) }
-    private fun reservation() = object : Binder() {
+    private fun reservation(valid: () -> Boolean = { true }) = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             data.enforceInterface("com.byd.dashcast.RccReservation"); assertEquals(1, code)
-            reply!!.writeNoException(); reply.writeInt(1); return true
+            reply!!.writeNoException(); reply.writeInt(if (valid()) 1 else 0); return true
         }
     }
     private fun cornerSession() {
@@ -79,6 +81,137 @@ class ClusterThemeLiveTestLifecycleTest {
         set("phase", "observation"); set("dashboardSelectionReady", true)
         set("state", "AWAITING_OBSERVATION")
         field("projectionValidity").set(null, reservation())
+    }
+    private fun projectionGeometry(width: Int = 1920, height: Int = 720) =
+        com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.inspect(listOf(
+            com.byd.dashcast.cluster.display.ClusterDisplayInfo(7, "fission_bg_xdjaVirtualSurface", width, height, 7,
+                ownerUid = 1000, ownerPackage = "com.xdja.containerservice", state = "ON")))
+    private val absentGeometry get() = com.byd.dashcast.clusterlive.ClusterDashboardDisplayPolicy.inspect(listOf(
+        com.byd.dashcast.cluster.display.ClusterDisplayInfo(0, "Écran intégré", 1920, 1080, 0, state = "ON")))
+    private fun factorySelection() = com.byd.dashcast.clusterlive.ClusterThemeProtocol.Response(1001, 4, listOf(1, 0, 0, 1, 0),
+        listOf(com.byd.dashcast.clusterlive.ClusterThemeProtocol.UI_VERSION, "", "default", "", "default"))
+
+    @Test fun `cold bootstrap keeps factory selection until observed display then permits normal dashboard opening`() {
+        dashboardSession(); set("mutated", false); set("dashboardSelectionReady", false)
+        var now = 0L
+        val intervals = com.byd.dashcast.clusterlive.ClusterDashboardIntervals({ now }, { now += it })
+        val sent = mutableListOf<Pair<Int, Long>>(); val events = mutableListOf<String>()
+        val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
+            ready(43, "12345", "c".repeat(32)); admit()
+            assertTrue(field("dashboardNativeDebt").getBoolean(null))
+            sent += command to now; events += "command-$command"
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("attempted", true).put("native", 0), true)
+        }
+        var probes = 0; var factories = 0
+        ClusterThemeLiveTest.prepareDashboardDisplay(probe = {
+            assertFalse(field("mutated").getBoolean(null)); events += "probe"
+            if (++probes < 3) absentGeometry else projectionGeometry()
+        }, bootstrap = {
+            ClusterThemeLiveTest.runDashboardSequence(true, request, {}, intervals::awaitNative,
+                { intervals.nativeFinishedAfter(3000) }, {}, bootstrap = true)
+        }, factory = { factories++; true }, write = {}, clock = { now }, pause = { now += it })
+        assertEquals(listOf(16, 35), sent.map { it.first }); assertTrue(sent[1].second - sent[0].second >= 3000)
+        assertEquals(1, factories); assertEquals(3, probes); assertFalse(field("dashboardSizeAdmitted").get(null) as Boolean)
+        assertFalse(field("mutated").getBoolean(null)); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        assertEquals("NONE", field("dashboardStage").get(null))
+        events += "select-custom"; set("mutated", true)
+        ClusterThemeLiveTest.runDashboardSequence(true, request, {}, intervals::awaitNative, intervals::nativeFinished, {})
+        assertEquals(listOf(16, 35, 31, 16, 35), sent.map { it.first })
+        assertTrue(events.indexOf("select-custom") > events.lastIndexOf("probe"))
+        assertTrue(field("dashboardSizeAdmitted").get(null) as Boolean)
+        assertEquals("OPEN_RECEIVED", field("dashboardStage").get(null))
+    }
+
+    @Test fun `small display after bootstrap never admits forcing and bootstrap-only restore requires query and human observation`() {
+        dashboardSession(); set("mutated", false)
+        val sent = mutableListOf<Int>()
+        val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
+            ready(43, "12345", "c".repeat(32)); admit(); sent += command
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("attempted", true).put("native", 0), true)
+        }
+        var probes = 0
+        assertThrows(IllegalStateException::class.java) {
+            ClusterThemeLiveTest.prepareDashboardDisplay(probe = { if (++probes == 1) absentGeometry else projectionGeometry(1280, 480) },
+                bootstrap = { ClusterThemeLiveTest.runDashboardSequence(true, request, {}, {}, {}, {}, bootstrap = true) },
+                factory = { true }, write = {})
+        }
+        assertTrue(field("dashboardSmallPanelSeen").getBoolean(null)); assertEquals(listOf(16, 35), sent)
+        assertFalse(field("mutated").getBoolean(null)); assertFalse(field("dashboardSizeAdmitted").get(null) as Boolean)
+        var queries = 0; val writes = mutableListOf<String>()
+        ClusterThemeLiveTest.restoreDashboardBootstrap(query = {
+            queries++; ClusterThemeLiveTest.Exchange(0, factorySelection(), emptyList(), false)
+        }, close = { ClusterThemeLiveTest.closeDashboardForFactoryRestore(
+            { ClusterThemeLiveTest.runDashboardSequence(false, request, {}, {}, {}, {}) }, {}) }, write = {})
+        assertEquals(listOf(16, 35, 18, 0), sent); assertEquals(2, queries)
+        assertTrue(field("dashboardBootstrapRecoverySettled").getBoolean(null)); assertFalse(field("iviRecoverySettled").getBoolean(null))
+        var cleaned = 0
+        ClusterThemeLiveTest.completeRecovery({ cleaned++; true }, { writes += it })
+        assertEquals(0, cleaned); assertTrue(flag("active").get())
+        assertTrue(ClusterThemeLiveTest.acceptOemObservation(name))
+        ClusterThemeLiveTest.completeRecovery({ cleaned++; true }, { writes += it })
+        assertEquals(1, cleaned); assertEquals("CLEAN", writes.last()); assertFalse(flag("active").get())
+    }
+
+    @Test fun `display wait has bounded probes and cancellation cannot continue bootstrap writes`() {
+        dashboardSession(); set("mutated", false)
+        var now = 0L; var probes = 0
+        val times = mutableListOf<Long>()
+        assertThrows(IllegalStateException::class.java) {
+            ClusterThemeLiveTest.prepareDashboardDisplay(probe = { probes++; times += now; now += 100; absentGeometry },
+                bootstrap = { set("dashboardBootstrapStarted", true); set("dashboardNativeDebt", true) }, factory = { true },
+                write = {}, clock = { now }, pause = { now += it })
+        }
+        assertEquals(7, probes)
+        times.drop(1).zipWithNext().forEach { (a, b) -> assertTrue(b - a >= 1100) }
+        assertTrue(now <= 15000); assertFalse(field("mutated").getBoolean(null)); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        for (restore in listOf(false, true)) {
+            reset(); dashboardSession(); set("mutated", false)
+            var valid = true; field("projectionValidity").set(null, reservation { valid })
+            val sent = mutableListOf<Int>()
+            val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
+                ready(43, "12345", "c".repeat(32)); admit(); sent += command
+                if (restore) flag("restoreRequested").set(true) else valid = false
+                ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("attempted", true).put("native", 0), true)
+            }
+            assertThrows(IllegalStateException::class.java) {
+                ClusterThemeLiveTest.runDashboardSequence(true, request, {}, { check(it()) }, {}, {}, bootstrap = true)
+            }
+            assertEquals(listOf(16), sent); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+            assertFalse(field("dashboardSizeAdmitted").get(null) as Boolean)
+        }
+    }
+    @Test fun `bootstrap native helper uncertainty keeps its separate debt even when factory query is available`() {
+        dashboardSession(); set("mutated", false); set("dashboardBootstrapStarted", true)
+        set("dashboardNativeDebt", true); set("dashboardHelperPid", 43); set("dashboardHelperCommand", 16)
+        set("dashboardHelperStart", "12345"); set("dashboardHelperToken", "c".repeat(32))
+        var queries = 0
+        ClusterThemeLiveTest.restoreDashboardBootstrap(query = {
+            queries++; ClusterThemeLiveTest.Exchange(0, factorySelection(), emptyList(), false)
+        }, close = { ClusterThemeLiveTest.closeDashboardForFactoryRestore({ error("Owned native helper remains unresolved") }, {}) }, write = {})
+        assertEquals(2, queries); assertTrue(field("defaultQueried").getBoolean(null))
+        assertFalse(field("mutated").getBoolean(null)); assertFalse(field("iviRecoverySettled").getBoolean(null))
+        assertFalse(field("dashboardBootstrapRecoverySettled").getBoolean(null)); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        assertEquals(43, field("dashboardHelperPid").getInt(null))
+        var cleaned = false; ClusterThemeLiveTest.completeRecovery({ cleaned = true; true }, {})
+        assertFalse(cleaned); assertTrue(flag("active").get())
+    }
+    @Test fun `full close cannot force31 after display disappears and factory proof does not erase native debt`() {
+        dashboardSession(); set("dashboardNativeDebt", true); set("dashboardSizeAdmitted", true)
+        val sent = mutableListOf<Int>()
+        val request: (Int, () -> Unit, (Int, String, String) -> Unit) -> ClusterThemeQueryRunner.Result = { command, admit, ready ->
+            ready(43, "12345", "c".repeat(32)); admit()
+            if (command == 31) ClusterThemeQueryRunner.Result(JSONObject().put("state", "UNAVAILABLE")
+                .put("attempted", false).put("geometry", absentGeometry.json()), true)
+            else { sent += command; ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("attempted", true).put("native", 0), true) }
+        }
+        ClusterThemeLiveTest.closeDashboardForFactoryRestore({
+            ClusterThemeLiveTest.runDashboardSequence(false, request, {}, {}, {}, {})
+        }, {})
+        assertEquals(listOf(18, 0), sent); assertTrue(field("dashboardNativeDebt").getBoolean(null))
+        ClusterThemeLiveTest.recordRestoreResult(cornerSelection(), ClusterThemeLiveTest.Exchange(0, factorySelection(), emptyList(), false, attempted = true), false)
+        assertTrue(field("iviRecoverySettled").getBoolean(null)); assertTrue(field("defaultQueried").getBoolean(null))
+        var cleaned = false; ClusterThemeLiveTest.completeRecovery({ cleaned = true; true }, {})
+        assertFalse(cleaned); assertTrue(flag("active").get())
     }
     @Test fun `actual dashboard sequence opens closes and factory recovery does not duplicate native teardown`() {
         dashboardSession()
