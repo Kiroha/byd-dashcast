@@ -36,7 +36,10 @@ For a pending selection with native projection already closed, the separate
 (31 only when size admission was previously established), then queries again.
 It never repeats the factory selection request or retries automatically. Confirm
 the restored factory display before the owned carrier can be retired or removed.
-Restore and verify before installing an older APK.
+Factory restoration recovers the vehicle presentation; it does not authorize an
+APK downgrade. Versions 1.9.73/1.9.74 cannot read the new profile journal, including
+a CLEAN journal. Downgrading to those APKs is unsupported and unvalidated. Keep
+this build or a later build that explicitly supports this profile.
 
 The carrier is reproducible with `tools/cluster/build_full_app.py`. Host checks use
 `test_full_app.py` and `validate_full_app_qt5.py`: only owned QML and simulated
