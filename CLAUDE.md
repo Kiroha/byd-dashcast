@@ -1,7 +1,7 @@
 ## Development and release branches
 
-- Work in `feat/hud-2.0` for development, fixes and prereleases, including version and release-note commits.
-- Keep the regular `MyBYDApp` workspace on `feat/hud-2.0`; do not move prerelease work to separate release branches.
+- Work in `beta` for development, fixes and prereleases, including version and release-note commits.
+- Keep the regular `MyBYDApp` workspace on `beta`; do not move prerelease work to separate release branches.
 - Reserve `main` for stable releases. Change this workflow only when explicitly requested by the user.
 
 ## graphify
