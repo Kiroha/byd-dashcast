@@ -712,6 +712,10 @@
     <!-- Closed read-only OEM RCC selection query. -->
     <string name="diag_cluster_oem_query_button">Прачытаць выбар RCC OEM (толькі чытанне)</string>
     <string name="diag_cluster_oem_query_explanation">Запытвае службу BYD без пошуку працэсу Qt. Тэма не загружаецца, не аднаўляецца і не выдаляецца. Патрэбны падключаны дэман з пратаколам 33. Адказ апісвае выбар, але не пацвярджае загрузку нашай тэмы.</string>
+    <string name="diag_cluster_oem_query_idle">Апошні запыт: вынік не атрыманы.</string>
+    <string name="diag_cluster_oem_query_pending">Выконваецца запыт OEM… Загрузка або аднаўленне не запытваліся.</string>
+    <string name="diag_cluster_oem_query_failed">Запыт адхілены або недаступны: %1$s. Вынік выбару не атрыманы; стан аднаўлення не зменены.</string>
+    <string name="diag_cluster_oem_query_stale">Злучэнне з daemon змянілася або недаступнае. Паўтарыце запыт; аднаўленне не мяркуецца.</string>
     <string name="diag_cluster_oem_query_busy">Выконваецца іншая аперацыя. Дачакайцеся яе заканчэння перад запытам.</string>
     <string name="diag_cluster_oem_query_result">Даныя RCC OEM: %1$s\n%2$s\nРэгістрацыя callback: %3$s; натыўны вынік: %4$s\n%5$s\nШырокавяшчальны callback без ідэнтыфікатара запыту: толькі назіранне выбару. Натыўная ідэнтычнасць і выява на экране невядомыя.</string>
     <string name="diag_send_report">Адправіць дыягнастычную справаздачу</string>

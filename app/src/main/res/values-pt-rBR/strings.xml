@@ -659,6 +659,10 @@
     <string name="native_adas_preference_failed">Não foi possível salvar este ajuste. O valor anterior foi mantido.</string>
     <string name="diag_cluster_oem_query_button">Consultar o RCC OEM (somente leitura)</string>
     <string name="diag_cluster_oem_query_explanation">Consulta o serviço BYD sem procurar o processo Qt. Nenhum tema é carregado, restaurado ou excluído. Requer o daemon conectado com protocolo 33. A resposta descreve a seleção; não valida o carregamento do nosso tema.</string>
+    <string name="diag_cluster_oem_query_idle">Última consulta: nenhum resultado recebido.</string>
+    <string name="diag_cluster_oem_query_pending">Consulta OEM em andamento… Nenhum carregamento ou restauração solicitado.</string>
+    <string name="diag_cluster_oem_query_failed">Consulta recusada ou indisponível: %1$s. Nenhum resultado de seleção recebido; a recuperação permanece inalterada.</string>
+    <string name="diag_cluster_oem_query_stale">Conexão com o daemon alterada ou indisponível. Consulte novamente; a restauração não é presumida.</string>
     <string name="diag_cluster_oem_query_busy">Outra operação está ativa. Aguarde seu término antes de consultar.</string>
     <string name="diag_cluster_oem_query_result">Registro RCC OEM: %1$s\n%2$s\nRegistro do callback: %3$s; retorno nativo: %4$s\n%5$s\nCallback transmitido sem identificador de solicitação: apenas observação da seleção. Identidade nativa e pixels físicos desconhecidos.</string>
     <string name="diag_send_report">Enviar um relatório de diagnóstico</string>

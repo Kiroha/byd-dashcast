@@ -43,7 +43,7 @@ class ClusterThemeLiveTestLifecycleTest {
     private val name = ClusterThemePolicy.PREFIX + "a".repeat(32) + ".rcc"
     private fun drain() { val done = CountDownLatch(1); worker.execute { done.countDown() }; assertTrue(done.await(3, TimeUnit.SECONDS)) }
     @Before fun reset() {
-        drain(); set("initialized", true); set("journalTrusted", true); set("state", "PREFLIGHT")
+        drain(); set("initialized", true); set("journalTrusted", true); set("state", "PREFLIGHT"); set("recoveredQuarantine", false)
         set("filename", name); set("mutated", false); set("uncertain", false); set("root", "")
         set("renderer", ""); set("deadline", 0L); set("markerObserved", false); set("oemObserved", false); set("carrierRemoved", false); set("createdInode", -1L); set("createdDevice", -1L)
         set("themeObserved", false); set("variant", ClusterThemeVariant.MARKER)
@@ -637,6 +637,134 @@ class ClusterThemeLiveTestLifecycleTest {
         assertTrue(flag("queryActive").get())
         assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
         assertFalse(field("mutated").getBoolean(null)); assertFalse(flag("restoreRequested").get())
+    }
+
+    private fun recoverLegacyQueryFixture() {
+        val profile = ClusterThemeVariant.FULL_APP_21F7735C
+        val saved = JSONObject().put("schema", 3).put("state", "QUARANTINE")
+            .put("transport", "android-ivi").put("variant", profile.id).put("carrierSha256", profile.carrierSha256)
+            .put("filename", name).put("mutated", true).put("helperPid", 0).put("helperStart", "").put("helperToken", "")
+            .put("root", "/storage/emulated/0/.cluster/translate/").put("identity", "1:2/1:3/1:4")
+            .put("createdDevice", 1).put("createdInode", 9)
+            .put("dashboard", JSONObject().put("stage", "UNKNOWN").put("nativeDebt", true)
+                .put("helperCommand", -1).put("helperPid", 0).put("helperStart", "").put("helperToken", ""))
+            .put("fullAppAdas", JSONObject().put("debt", true).put("round", "b".repeat(32)))
+        ClusterThemeLiveTest.applyRecoveredJournal(com.byd.dashcast.clusterlive.ClusterThemeJournal.recover(saved))
+    }
+
+    @Test fun `trusted dormant recovered legacy quarantine permits only consultation and preserves all recovery evidence`() {
+        recoverLegacyQueryFixture()
+        val journal = field("journal").get(null) as java.io.File
+        val bytes = journal.takeIf { it.exists() }?.readBytes()
+        val before = JSONObject(ClusterThemeLiveTest.status())
+        var queries = 0
+        ClusterThemeLiveTest.querySelection { admit ->
+            admit(); queries++
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED").put("selection", "factory-selection-fixture"), true)
+        }; drain()
+        val after = JSONObject(ClusterThemeLiveTest.status())
+        assertEquals(1, queries)
+        for (key in before.keys()) if (key !in setOf("oemQuery", "remainingMs"))
+            assertEquals(key, before.get(key).toString(), after.get(key).toString())
+        if (bytes == null) assertFalse(journal.exists()) else assertArrayEquals(bytes, journal.readBytes())
+        assertTrue(after.getBoolean("rccDebt")); assertTrue(after.getBoolean("recoveredQuarantine"))
+        assertFalse(after.getBoolean("defaultQueried")); assertFalse(after.getBoolean("oemObservedByUser"))
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.beginProductionModeCommand() }
+    }
+
+    @Test fun `query exception is never inferred from live quarantine and refuses every concurrent or untrusted owner`() {
+        set("state", "QUARANTINE")
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        val busyCases = listOf<Pair<String, Any>>(
+            "journalTrusted" to false, "helperUnreaped" to true, "helperPid" to 123, "dashboardHelperPid" to 456,
+            "productionModeCommands" to 1, "recoveredQuarantine" to false,
+        )
+        for ((key, value) in busyCases) {
+            reset(); recoverLegacyQueryFixture(); set(key, value)
+            assertThrows(key, IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        }
+        for (key in listOf("dashboardPending", "dashboardCloseQueued", "dashboardReadProbeActive", "restoreRequested")) {
+            reset(); recoverLegacyQueryFixture(); flag(key).set(true)
+            assertThrows(key, IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+            flag(key).set(false)
+        }
+        reset(); recoverLegacyQueryFixture(); count("restoring").set(10)
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        reset(); recoverLegacyQueryFixture(); (field("observationPending").get(null) as AtomicInteger).set(1)
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+        reset(); recoverLegacyQueryFixture()
+        val lock = field("fullAppAdasLock").get(null) as java.util.concurrent.locks.ReentrantLock
+        lock.lock()
+        try { assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } } }
+        finally { lock.unlock() }
+    }
+
+    @Test fun `eligibility is checked again at GO and an unreaped query retains a manual restore request`() {
+        recoverLegacyQueryFixture()
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        ClusterThemeLiveTest.querySelection { admit ->
+            entered.countDown(); release.await()
+            assertThrows(IllegalStateException::class.java) { admit() }
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "UNAVAILABLE").put("phase", "test-admission-refused"), false)
+        }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        ClusterThemeLiveTest.requestAndroidRestore("a".repeat(32), true, true, reservation())
+        assertTrue(flag("restoreRequested").get()); assertEquals(-1L, count("restoring").get())
+        release.countDown(); drain()
+        assertTrue(flag("queryActive").get()); assertTrue(flag("restoreRequested").get())
+        val status = JSONObject(ClusterThemeLiveTest.status())
+        assertEquals("test-admission-refused", status.getJSONObject("oemQuery").getString("phase"))
+        assertTrue(status.getBoolean("recoveryPending"))
+        assertEquals(-1L, count("restoring").get())
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+    }
+
+    @Test fun `positively reaped query releases retained manual restore without concurrent recovery`() {
+        recoverLegacyQueryFixture()
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        ClusterThemeLiveTest.querySelection { admit ->
+            admit(); entered.countDown(); release.await()
+            assertEquals(-1L, count("restoring").get())
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED"), true)
+        }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        ClusterThemeLiveTest.requestRestore(name)
+        assertEquals(-1L, count("restoring").get())
+        release.countDown(); drain(); drain()
+        assertFalse(flag("queryActive").get()); assertTrue(flag("restoreRequested").get())
+        assertFalse(field("recoveredQuarantine").getBoolean(null))
+        assertEquals("QUARANTINE", JSONObject(ClusterThemeLiveTest.status()).getString("state"))
+        assertTrue(JSONObject(ClusterThemeLiveTest.status()).getString("detail").startsWith("Restore unknown:"))
+    }
+
+    @Test fun `native mode debt stays strict and a refused ADAS request does not consume historical provenance`() {
+        recoverLegacyQueryFixture()
+        assertThrows(IllegalStateException::class.java) {
+            ClusterThemeLiveTest.fullAppAdas("a".repeat(32), "b".repeat(32), -1, 0, 1, true, "", 0, reservation())
+        }
+        assertTrue(JSONObject(ClusterThemeLiveTest.status()).getBoolean("recoveredQuarantine"))
+        val native = field("nativeMode").get(null)
+        val debt = native.javaClass.getDeclaredField("debt").apply { isAccessible = true }
+        val previous = debt.getBoolean(native)
+        try {
+            debt.setBoolean(native, true)
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.querySelection { error("must not run") } }
+            assertTrue(debt.getBoolean(native)); assertTrue(flag("active").get())
+        } finally { debt.setBoolean(native, previous) }
+    }
+
+    @Test fun `completed clean recovery with retained restore intent can still be consulted without becoming pending`() {
+        flag("active").set(false); set("state", "CLEAN"); flag("restoreRequested").set(true)
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        ClusterThemeLiveTest.querySelection { admit ->
+            admit(); entered.countDown(); release.await()
+            ClusterThemeQueryRunner.Result(JSONObject().put("state", "RECEIVED"), true)
+        }
+        assertTrue(entered.await(1, TimeUnit.SECONDS))
+        assertFalse(JSONObject(ClusterThemeLiveTest.status()).getBoolean("recoveryPending"))
+        release.countDown(); drain()
+        assertTrue(flag("restoreRequested").get()); assertFalse(flag("active").get())
+        assertEquals("CLEAN", JSONObject(ClusterThemeLiveTest.status()).getString("state"))
     }
 
     @Test fun `missing ACK permits only fresh fault-free visual settlement before restore`() {

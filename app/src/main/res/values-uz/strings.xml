@@ -712,6 +712,10 @@
     <!-- Closed read-only OEM RCC selection query. -->
     <string name="diag_cluster_oem_query_button">OEM RCC tanlovini o‘qish (faqat o‘qish)</string>
     <string name="diag_cluster_oem_query_explanation">Qt jarayonini qidirmasdan BYD xizmatiga so‘rov yuboradi. Mavzu yuklanmaydi, tiklanmaydi va o‘chirilmaydi. 33-protokol bilan ulangan daemon kerak. Javob tanlovni ko‘rsatadi, ammo mavzumiz yuklanishini tasdiqlamaydi.</string>
+    <string name="diag_cluster_oem_query_idle">Oxirgi so‘rov: natija olinmadi.</string>
+    <string name="diag_cluster_oem_query_pending">OEM so‘rovi bajarilmoqda… Yuklash yoki tiklash so‘ralmadi.</string>
+    <string name="diag_cluster_oem_query_failed">So‘rov rad etildi yoki mavjud emas: %1$s. Tanlov natijasi olinmadi; tiklash holati o‘zgarmadi.</string>
+    <string name="diag_cluster_oem_query_stale">Daemon ulanishi o‘zgardi yoki mavjud emas. Qayta so‘rang; tiklangan holat deb hisoblanmaydi.</string>
     <string name="diag_cluster_oem_query_busy">Boshqa amal bajarilmoqda. So‘rovdan oldin uning tugashini kuting.</string>
     <string name="diag_cluster_oem_query_result">OEM RCC ma’lumoti: %1$s\n%2$s\nCallback ro‘yxati: %3$s; nativ natija: %4$s\n%5$s\nSo‘rov identifikatorisiz tarqatiladigan callback: faqat tanlov kuzatuvi. Nativ identifikatsiya va ekrandagi tasvir noma’lum.</string>
     <string name="diag_send_report">Diagnostika hisobotini yuborish</string>

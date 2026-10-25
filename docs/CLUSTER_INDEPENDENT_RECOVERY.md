@@ -129,6 +129,27 @@ This ties the findings to this observed cohort, not every DiLink 3 firmware.
 Analysis-only APK carriers retain the JAR DEX bytes unchanged; their artificial
 manifests do not describe installed packages or permissions.
 
+## Read-only consultation while historical debt remains
+
+The OEM selection query can inspect a trusted, dormant Android IVI session
+recovered into quarantine. This exception does not apply to a live failure,
+untrusted journal, recorded helper, native-mode debt or command/recovery in
+flight. Eligibility is checked again before the isolated query helper receives
+GO. The query leaves the recovery journal, debt and visual observations intact;
+a received factory selection never establishes restored instruments.
+
+The diagnostic page keeps the last consultation or refusal below its button,
+separate from the historical status refreshed by polling. Connection or page
+changes invalidate pending UI callbacks. The existing receipt timestamp ordering
+can retain an older pending display after a backward clock adjustment; another
+manual consultation after the helper finishes obtains a fresh receipt.
+
+A manual Restore requested during consultation waits for positive helper reap.
+If reap is unconfirmed, the request stays pending and recovery cannot advance;
+this requires further diagnosis, not an automatic retry or daemon restart.
+The consultation therefore can delay recovery. These changes have JVM coverage;
+their behavior on the vehicle remains unvalidated.
+
 ## Evidence anchors
 
 Complete records are retained locally; raw decompilation and device records are

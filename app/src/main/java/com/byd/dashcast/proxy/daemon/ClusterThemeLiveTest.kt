@@ -113,6 +113,7 @@ internal object ClusterThemeLiveTest {
     @Volatile private var createdInode = -1L
     @Volatile private var helperUnreaped = false
     @Volatile private var journalTrusted = true
+    @Volatile private var recoveredQuarantine = false
     @Volatile private var helperPid = 0
     @Volatile private var helperStart = ""
     @Volatile private var helperToken = ""
@@ -184,6 +185,8 @@ internal object ClusterThemeLiveTest {
     }
 
     internal fun applyRecoveredJournal(saved: ClusterThemeJournal.Recovery) {
+        // Provenance is local to this daemon; a live failure never gains this read-only exception.
+        recoveredQuarantine = journalTrusted && !saved.clean && saved.transport == ClusterThemeTransport.ANDROID_IVI
         cornerVerification = null
         loadRequestReceipt = "NOT_RECORDED"; loadSelectionReceipt = "NOT_RECORDED"; loadRegistrationReceipt = "NOT_RECORDED"
         defaultQueried = false; loadSettled = false; oemObserved = false
@@ -228,7 +231,8 @@ internal object ClusterThemeLiveTest {
             .put("carrierSha256", if (journalTrusted) variant.carrierSha256 else "").put("phase", phase)
             .put("transport", transport.id).put("nativeIdentity", if (transport == ClusterThemeTransport.ANDROID_IVI) "UNKNOWN" else "STRICT_PROFILE")
             .put("trace", synchronized(this) { trace.joinToString("\n") }).put("rccDebt", active.get())
-            .put("recoveryPending", restoring.get() >= 0)
+            .put("recoveryPending", restoring.get() >= 0 || queryActive.get() && restoreRequested.get() && active.get())
+            .put("recoveredQuarantine", recoveredQuarantine)
             .put("retirement", retirement?.json()).put("retirementAvailable", retirement == null && retirementEligibleUntil > SystemClock.elapsedRealtime())
             .put("journalSchema", if (retirement != null) "4" else if (transport == ClusterThemeTransport.ANDROID_IVI) "3" else "2")
             .put("carrierIdentity", "device=$createdDevice inode=$createdInode")
@@ -278,9 +282,19 @@ internal object ClusterThemeLiveTest {
         return status()
     }
 
-    @Synchronized fun querySelection(run: () -> ClusterThemeQueryRunner.Result = ClusterThemeQueryRunner::run): String {
+    private fun checkQueryEligibility() {
+        check(journalTrusted && (!active.get() || recoveredQuarantine && state == "QUARANTINE" &&
+            transport == ClusterThemeTransport.ANDROID_IVI) && !helperUnreaped && helperPid == 0 &&
+            dashboardHelperPid == 0 && !nativeMode.blocked() && restoring.get() == -1L && (!active.get() || !restoreRequested.get()) &&
+            !dashboardPending.get() && !dashboardCloseQueued.get() && !dashboardReadProbeActive.get() &&
+            observationPending.get() == 0 && !fullAppAdasLock.isLocked && productionModeCommands == 0) {
+            "Live command, recovery, untrusted journal or recorded helper blocks read-only consultation; historical RCC debt is retained"
+        }
+    }
+
+    @Synchronized fun querySelection(run: (() -> Unit) -> ClusterThemeQueryRunner.Result = ClusterThemeQueryRunner::run): String {
         initialize()
-        check(journalTrusted && !active.get() && !helperUnreaped && !nativeMode.blocked()) { "Native or RCC test/recovery/quarantine active; read-only query refused" }
+        checkQueryEligibility()
         check(queryActive.compareAndSet(false, true)) { "Read-only query already active or helper not reaped; no replay" }
         oemQuery = JSONObject().put("state", "PENDING").put("phase", "queued")
             .put("detail", "One read-only OEM selection query; no renderer discovery, carrier, load or restore.")
@@ -288,14 +302,21 @@ internal object ClusterThemeLiveTest {
         worker.execute {
             var reaped = true
             try {
-                val result = run()
+                val result = run { synchronized(this) { checkQueryEligibility() } }
                 oemQuery = result.receipt; reaped = result.reaped
             } catch (error: Throwable) {
                 reaped = false // An unexpected runner failure cannot establish that a child was reaped.
                 oemQuery = JSONObject().put("state", "UNAVAILABLE").put("phase", "helper-start")
                     .put("detail", "${error.javaClass.simpleName}: ${error.message}; query child cleanup unconfirmed; further queries/tests blocked".take(768))
                     .put("nativeIdentity", "UNKNOWN").put("receivedEpochMs", System.currentTimeMillis())
-            } finally { if (reaped) queryActive.set(false) }
+            } finally {
+                synchronized(this) {
+                    if (reaped) {
+                        queryActive.set(false)
+                        if (restoreRequested.get() && active.get()) enqueueRestore()
+                    }
+                }
+            }
         }
         return status()
     }
@@ -322,6 +343,7 @@ internal object ClusterThemeLiveTest {
             return if (requestedTransport == ClusterThemeTransport.ANDROID_IVI) JSONObject(status()).put("rccRejectedNonce", requestedNonce).toString() else status()
         }
         val thisGeneration = generation.incrementAndGet()
+        recoveredQuarantine = false
         restoreRequested.set(false); observationPending.set(0)
         mutated = false; uncertain = false; loadSettled = false; iviRecoverySettled = false; defaultQueried = false
         retirement = null; retirementEligibleUntil = 0
@@ -472,7 +494,8 @@ internal object ClusterThemeLiveTest {
     @Synchronized fun requestAndroidRestore(nonce: String, parked: Boolean, firmware: Boolean, validity: android.os.IBinder): String {
         initialize()
         require(nonce.matches(Regex("[0-9a-f]{32}")))
-        check(parked && firmware && journalTrusted && !queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0)
+        check(parked && firmware && journalTrusted && (!queryActive.get() || active.get() && recoveredQuarantine) &&
+            !nativeMode.blocked() && productionModeCommands == 0)
         projectionValidity = validity
         check(validProjection()) { "Idle projection reservation expired; no recovery request sent" }
         val expected = ClusterThemePolicy.PREFIX + nonce + ".rcc"
@@ -602,6 +625,9 @@ internal object ClusterThemeLiveTest {
     fun fullAppAdas(nonce: String, round: String, action: Int, value: Int, count: Int,
         recovering: Boolean, pkg: String, display: Int, validity: android.os.IBinder): String = fullAppAdasLock.withLock {
         initialize()
+        synchronized(this) {
+            check(!queryActive.get()) { "Read-only query helper must finish before an ADAS operation" }
+        }
         check(recovering || !variant.isRecoveryOnly) { "New full-app masking is disabled; existing recovery debt is retained" }
         val api = com.byd.dashcast.clusterlive.ClusterFullAppAdas
         check(api.permits(action, value, count, recovering)) { "Unsupported fixed ADAS step" }
@@ -624,6 +650,7 @@ internal object ClusterThemeLiveTest {
                 !dashboardPending.get() && !dashboardCloseQueued.get() && !restoreRequested.get() &&
                 restoring.get() == -1L && !uncertain && !fullAppAdasRestoring) { "Current full-app opening required" }
         }
+        recoveredQuarantine = false
         var accepted = false
         try {
             when (action) {
@@ -728,6 +755,7 @@ internal object ClusterThemeLiveTest {
         check(!open || dashboardSelectionReady && phase == "observation" && !uncertain && dashboardStage in setOf("NONE", "CLOSED_RECEIVED")) { "Dashboard open requires a settled owned selection" }
         check(open || dashboardNativeDebt || dashboardPending.get()) { "No dashboard native mode debt to close" }
         projectionValidity = validity; check(validProjection())
+        recoveredQuarantine = false
         if (open) check(dashboardPending.compareAndSet(false, true)) { "Dashboard sequence already pending" }
         else {
             check(dashboardCloseQueued.compareAndSet(false, true)) { "Dashboard close already queued" }
@@ -851,9 +879,11 @@ internal object ClusterThemeLiveTest {
         initialize()
         if (nativeMode.blocked()) return status()
         if (expectedFilename != null && expectedFilename != filename) return status()
+        recoveredQuarantine = false
         cornerVerification = null
         restoreRequested.set(true)
-        if (active.get()) enqueueRestore()
+        // The query owns its child until positively reaped; retain manual recovery intent meanwhile.
+        if (active.get() && !queryActive.get()) enqueueRestore()
         return status()
     }
 
@@ -866,6 +896,7 @@ internal object ClusterThemeLiveTest {
             filename == ClusterThemePolicy.PREFIX + nonce + ".rcc") { "Trusted active corner RCC session required" }
         check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped && helperPid == 0)
         projectionValidity = validity; check(validProjection()) { "Projection reservation expired" }
+        recoveredQuarantine = false
         val expected = generation.get()
         check(restoring.compareAndSet(-1, expected)) { "Recovery or verification worker already active" }
         cornerVerification = null; markerObserved = false; restoreRequested.set(false)
@@ -914,6 +945,7 @@ internal object ClusterThemeLiveTest {
         check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped)
         check(retirement != null || retirementEligibleUntil > SystemClock.elapsedRealtime()) { "First request Restore: a fresh ACK3 RESOURCE_IS_SAME and exact own selection are required" }
         check(retirement?.moved != true) { "Already retired: use Verify BYD return for a read-only check; no further move or OEM command" }
+        recoveredQuarantine = false
         projectionValidity = validity; check(validProjection()) { "Projection reservation expired" }
         val expected = generation.get()
         check(restoring.compareAndSet(-1, expected)) { "Recovery worker already active" }
@@ -1067,9 +1099,10 @@ internal object ClusterThemeLiveTest {
         initialize()
         check(parked && firmware && journalTrusted && active.get() && variant.isDashboard && mutated &&
             filename == ClusterThemePolicy.PREFIX + nonce + ".rcc" && !dashboardNativeDebt &&
-            !fullAppAdasDebt && factoryApplyPending && !helperUnreaped && dashboardHelperPid == 0)
+            !fullAppAdasDebt && factoryApplyPending && !helperUnreaped && dashboardHelperPid == 0 && !queryActive.get())
         projectionValidity = validity
         check(validProjection())
+        recoveredQuarantine = false
         val expected = generation.get()
         check(restoring.compareAndSet(-1, expected)) { "Recovery is already pending" }
         restoreRequested.set(true)
@@ -1164,8 +1197,9 @@ internal object ClusterThemeLiveTest {
         return true
     }
 
-    fun observe(which: Int, expectedFilename: String, expectedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
+    @Synchronized fun observe(which: Int, expectedFilename: String, expectedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER): String {
         initialize()
+        if (queryActive.get()) return status()
         if (which == 1 && variant.isCorner) return status()
         if (which == 1 && (variant != expectedVariant || state != "AWAITING_OBSERVATION" || uncertain || restoreRequested.get())) return status()
         // These are tester statements, never inferred from a callback or selection query.

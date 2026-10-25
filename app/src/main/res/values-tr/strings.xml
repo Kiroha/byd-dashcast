@@ -712,6 +712,10 @@
     <!-- Closed read-only OEM RCC selection query. -->
     <string name="diag_cluster_oem_query_button">OEM RCC seçimini oku (salt okunur)</string>
     <string name="diag_cluster_oem_query_explanation">Qt işlemini aramadan BYD hizmetini sorgular. Tema yüklenmez, geri yüklenmez veya silinmez. Bağlı protokol 33 daemon gerektirir. Yanıt seçimi açıklar; temamızın yüklenmesini doğrulamaz.</string>
+    <string name="diag_cluster_oem_query_idle">Son sorgu: sonuç alınmadı.</string>
+    <string name="diag_cluster_oem_query_pending">OEM sorgusu sürüyor… Yükleme veya geri yükleme istenmedi.</string>
+    <string name="diag_cluster_oem_query_failed">Sorgu reddedildi veya kullanılamıyor: %1$s. Seçim sonucu alınmadı; kurtarma durumu değişmedi.</string>
+    <string name="diag_cluster_oem_query_stale">Daemon bağlantısı değişti veya kullanılamıyor. Yeniden sorgulayın; geri yükleme gerçekleştiği varsayılmaz.</string>
     <string name="diag_cluster_oem_query_busy">Başka bir işlem etkin. Sorgulamadan önce bitmesini bekleyin.</string>
     <string name="diag_cluster_oem_query_result">OEM RCC kaydı: %1$s\n%2$s\nCallback kaydı: %3$s; yerel dönüş: %4$s\n%5$s\nİstek kimliği olmayan yayın callback: yalnızca seçim gözlemi. Yerel kimlik ve fiziksel ekran görüntüsü bilinmiyor.</string>
     <string name="diag_send_report">Tanılama raporu gönder</string>

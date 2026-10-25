@@ -93,6 +93,15 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         accessibilityLiveRegion = android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     @Volatile private var queryPending = false
+    private val queryStatus = TextView(activity).apply {
+        textSize = 16f
+        text = activity.getString(R.string.diag_cluster_oem_query_idle)
+        accessibilityLiveRegion = android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    private var queryUiGeneration = 0L
+    private var queryStatusSession: ClusterThemeSession? = null
+    private var queryStatusEpoch = 0L
+    private var queryStatusPolling = false
     private val status = TextView(activity).apply {
         textSize = 14f
         text = "Physical cluster state UNKNOWN. Read the current connected daemon status before drawing conclusions."
@@ -169,12 +178,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             text = activity.getString(R.string.diag_cluster_oem_query_button)
             isAllCaps = false
             minHeight = (48 * activity.resources.displayMetrics.density).toInt()
-            setOnClickListener {
-                if (!queryPending && !recoveryBusy.get() && !otherBusy() && !diagClaimed.get()) {
-                    submit("oem-selection-query") { ClusterThemeSession.pin(app).also { session = it }.querySelection() }
-                } else show(activity.getString(R.string.diag_cluster_oem_query_busy), "oem-query-busy")
-            }
+            setOnClickListener { querySelection() }
         })
+        controls.addView(queryStatus)
         controls.addView(TextView(activity).apply {
             text = activity.getString(R.string.diag_cluster_oem_query_explanation)
             textSize = 14f
@@ -715,6 +721,60 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             return ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { s.startIvi(it, variant, validity(reserved, variant.isDashboard), beforeTransaction) }
         } finally { source.delete() } // Only this app's source; daemon owns the carrier.
     }
+    private fun querySelection() {
+        val historicalClaim = diagClaimed.get() && displayed?.optBoolean("recoveredQuarantine") == true &&
+            displayedSession?.isCurrent() == true
+        if (queryPending || recoveryBusy.get() || otherBusy() && !historicalClaim || diagClaimed.get() && !historicalClaim ||
+            !busy.compareAndSet(false, true)) {
+            if (!queryPending) queryStatusPolling = false
+            queryStatus.text = activity.getString(R.string.diag_cluster_oem_query_busy)
+            return
+        }
+        val request = ++queryUiGeneration
+        val requestedActivation = activation
+        val myLease = lease.get()
+        queryPending = true; queryStatusPolling = false; queryStatusSession = null
+        queryStatus.text = activity.getString(R.string.diag_cluster_oem_query_pending)
+        work.execute {
+            var queryConnection: ClusterThemeSession? = null
+            try {
+                val pinned = ClusterThemeSession.pin(app).also { session = it; queryConnection = it }
+                val text = pinned.querySelection()
+                val receipt = checkNotNull(JSONObject(text).optJSONObject("oemQuery")) { "Missing OEM query receipt" }
+                check(receipt.optString("state") in setOf("PENDING", "RECEIVED", "UNAVAILABLE")) { "Unsupported OEM query receipt" }
+                render(text, myLease, pinned, requestedActivation)
+                handler.post {
+                    if (!closed && active && activation == requestedActivation && queryUiGeneration == request && pinned.isCurrent()) {
+                        queryStatusSession = pinned; queryStatusEpoch = receipt.optLong("receivedEpochMs")
+                        queryStatusPolling = true
+                        renderQuery(receipt, pinned)
+                    }
+                }
+            } catch (error: Throwable) {
+                val failure = ClusterThemeDiagnostics.failure(error)
+                ClusterThemeDiagnostics.local(app, "oem-selection-query-failed", "LOCAL", failure)
+                handler.post {
+                    if (!closed && active && activation == requestedActivation && queryUiGeneration == request) {
+                        queryPending = false; queryStatusPolling = false
+                        queryStatus.text = if (queryConnection?.isCurrent() == false) activity.getString(R.string.diag_cluster_oem_query_stale)
+                            else activity.getString(R.string.diag_cluster_oem_query_failed, failure)
+                    }
+                }
+            } finally { busy.set(false); handler.post { refreshPrompt() } }
+        }
+    }
+    private fun renderQuery(query: JSONObject?, pinned: ClusterThemeSession) {
+        if (queryStatusSession?.isCurrent() == false) {
+            queryStatusPolling = false; queryStatusSession = null
+            queryStatus.text = activity.getString(R.string.diag_cluster_oem_query_stale)
+        }
+        if (!queryStatusPolling || queryStatusSession?.sharesConnection(pinned) != true || query == null ||
+            query.optLong("receivedEpochMs") < queryStatusEpoch) return
+        val text = activity.getString(R.string.diag_cluster_oem_query_result,
+            query.optString("state"), query.optString("detail"), query.opt("registration")?.toString() ?: "UNKNOWN",
+            query.opt("native")?.toString() ?: "UNKNOWN", query.optString("selection"))
+        if (queryStatus.text.toString() != text) queryStatus.text = text
+    }
     private fun submit(operation: String, automatic: Boolean = false, action: () -> String) {
         if (!busy.compareAndSet(false, true)) {
             if (!automatic) show("Another request is active. No request submitted.", "$operation-busy")
@@ -728,6 +788,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                 if (operation == "status") handler.post {
                     if (active && activation == requestedActivation) {
                         displayed = null; displayedSession = null; prompts.update("rcc", null); nativeStatusUnavailable()
+                        queryStatusPolling = false; queryStatusSession = null
+                        queryStatus.text = activity.getString(R.string.diag_cluster_oem_query_stale)
                     }
                 }
                 show("REFUSED/UNKNOWN: ${ClusterThemeDiagnostics.failure(t)}. No request replayed.", "$operation-failed")
@@ -768,6 +830,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             if (!closed && pinned.isCurrent()) {
                 if (active && activation == requestedActivation) {
                     displayed = j; displayedSession = pinned
+                    renderQuery(query, pinned)
                     renderDashboard(j)
                     restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else if (j.optBoolean("retirementAvailable")) R.string.diag_cluster_rcc_retire_button else R.string.diag_cluster_rcc_restore)
                     restoreButton.contentDescription = restoreButton.text
@@ -805,6 +868,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         displayed = null; displayedSession = null
         handler.removeCallbacks(poll)
         if (!value) {
+            queryUiGeneration++; queryStatusPolling = false; queryStatusSession = null
+            queryStatus.text = activity.getString(R.string.diag_cluster_oem_query_idle)
             confirmation?.dismiss(); confirmation = null
             recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null
             displayed = null; displayedSession = null

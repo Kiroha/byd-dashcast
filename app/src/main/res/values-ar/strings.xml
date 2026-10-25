@@ -717,6 +717,10 @@
     <!-- Closed read-only OEM RCC selection query. -->
     <string name="diag_cluster_oem_query_button">قراءة اختيار RCC الأصلي (للقراءة فقط)</string>
     <string name="diag_cluster_oem_query_explanation">يستعلم من خدمة BYD دون البحث عن عملية Qt. لا يتم تحميل أي سمة أو استعادتها أو حذفها. يتطلب اتصال daemon بالبروتوكول 33. تصف الاستجابة الاختيار ولا تؤكد تحميل سمتنا.</string>
+    <string name="diag_cluster_oem_query_idle">آخر استعلام: لم تُستلم نتيجة.</string>
+    <string name="diag_cluster_oem_query_pending">جارٍ استعلام OEM… لم يُطلب تحميل أو استعادة.</string>
+    <string name="diag_cluster_oem_query_failed">رُفض الاستعلام أو تعذّر: %1$s. لم تُستلم نتيجة اختيار؛ تظل حالة الاستعادة دون تغيير.</string>
+    <string name="diag_cluster_oem_query_stale">تغيّر اتصال daemon أو أصبح غير متاح. أعد الاستعلام؛ لا يُفترض اكتمال الاستعادة.</string>
     <string name="diag_cluster_oem_query_busy">هناك عملية أخرى قيد التنفيذ. انتظر انتهاءها قبل الاستعلام.</string>
     <string name="diag_cluster_oem_query_result">سجل RCC الأصلي: %1$s\n%2$s\nتسجيل callback: %3$s؛ النتيجة الأصلية: %4$s\n%5$s\ncallback مبثوث بلا معرّف طلب: ملاحظة للاختيار فقط. هوية المحرك والصورة الفعلية غير معروفتين.</string>
     <string name="diag_send_report">إرسال تقرير تشخيصي</string>

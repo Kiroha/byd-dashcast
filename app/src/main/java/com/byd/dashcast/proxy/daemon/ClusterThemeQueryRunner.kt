@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal object ClusterThemeQueryRunner {
     data class Result(val receipt: JSONObject, val reaped: Boolean)
     @Volatile private var outstandingDisplayProbe: java.lang.Process? = null
-    fun run(): Result = runHelper(null, {}, { _, _, _ -> })
+    fun run(admit: () -> Unit = {}): Result = runHelper(null, admit, { _, _, _ -> })
     fun nativeMode(command: Int, admit: () -> Unit, ready: (Int, String, String) -> Unit): Result {
         require(command == 16 || command == 18)
         return runHelper(command, admit, ready)

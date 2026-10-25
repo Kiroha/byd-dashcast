@@ -728,6 +728,10 @@
     <!-- Closed read-only OEM RCC selection query. -->
     <string name="diag_cluster_oem_query_button">Read OEM RCC selection (read only)</string>
     <string name="diag_cluster_oem_query_explanation">Queries the BYD service without finding the Qt process. No theme is loaded, restored or deleted. Requires the connected protocol-33 daemon. The response describes selection; it does not validate loading our theme.</string>
+    <string name="diag_cluster_oem_query_idle">Last consultation: no result received.</string>
+    <string name="diag_cluster_oem_query_pending">OEM consultation pending… No load or restore requested.</string>
+    <string name="diag_cluster_oem_query_failed">Consultation refused or unavailable: %1$s. No selection result received; recovery remains unchanged.</string>
+    <string name="diag_cluster_oem_query_stale">Daemon connection changed or unavailable. Consult again; no restored state is inferred.</string>
     <string name="diag_cluster_oem_query_busy">Another operation is active. Wait for it to finish before this query.</string>
     <string name="diag_cluster_oem_query_result">OEM RCC receipt: %1$s\n%2$s\nCallback registration: %3$s; native return: %4$s\n%5$s\nBroadcast callback without a request identifier: selection observation only. Native identity and physical pixels unknown.</string>
     <string name="diag_send_report">Send a diagnostic report</string>

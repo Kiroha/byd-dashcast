@@ -712,6 +712,10 @@
     <!-- Closed read-only OEM RCC selection query. -->
     <string name="diag_cluster_oem_query_button">Consultar la selección RCC OEM (solo lectura)</string>
     <string name="diag_cluster_oem_query_explanation">Consulta el servicio BYD sin buscar el proceso Qt. No carga, restaura ni elimina temas. Requiere el daemon conectado con protocolo 33. La respuesta describe la selección; no valida la carga de nuestro tema.</string>
+    <string name="diag_cluster_oem_query_idle">Última consulta: ningún resultado recibido.</string>
+    <string name="diag_cluster_oem_query_pending">Consulta OEM en curso… No se solicitó carga ni restauración.</string>
+    <string name="diag_cluster_oem_query_failed">Consulta rechazada o no disponible: %1$s. No se recibió ningún resultado de selección; la recuperación sigue igual.</string>
+    <string name="diag_cluster_oem_query_stale">La conexión del daemon cambió o no está disponible. Consulta de nuevo; no se presupone la restauración.</string>
     <string name="diag_cluster_oem_query_busy">Hay otra operación activa. Espera a que termine antes de consultar.</string>
     <string name="diag_cluster_oem_query_result">Registro RCC OEM: %1$s\n%2$s\nRegistro del callback: %3$s; retorno nativo: %4$s\n%5$s\nCallback difundido sin identificador de solicitud: solo observación de la selección. Identidad nativa e imagen física desconocidas.</string>
     <string name="diag_send_report">Enviar un informe de diagnóstico</string>

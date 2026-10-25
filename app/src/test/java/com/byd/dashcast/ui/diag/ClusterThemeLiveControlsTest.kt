@@ -64,6 +64,169 @@ class ClusterThemeLiveControlsTest {
         detected.setBoolean(Platform.get(), oldDetected)
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
+    private fun drainQueryUi() {
+        val executor = ClusterThemeLiveControls::class.java.getDeclaredField("work").apply { isAccessible = true }.get(null) as java.util.concurrent.ExecutorService
+        val done = CountDownLatch(1); executor.execute { done.countDown() }
+        assertTrue(done.await(3, TimeUnit.SECONDS)); ShadowLooper.idleMainLooper()
+    }
+    private fun historicalQueryStatus() = JSONObject().put("state", "QUARANTINE").put("detail", "Historical dormant session")
+        .put("recoveredQuarantine", true).put("variant", "full-app-21f7735c").put("transport", "android-ivi")
+        .put("rccDebt", true).put("filename", "").put("daemonUid", 2000).put("defaultQueried", false)
+        .put("markerObservedByUser", false).put("oemObservedByUser", false)
+
+    @Test fun `historical own diagnostic claim permits only fixed query and stable receipt survives status polling`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val prior = bf.get(null); val version = vf.get(null)
+        val receipt = historicalQueryStatus()
+        var queries = 0; var releases = 0
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                when (val op = data.readInt()) {
+                    0 -> Unit
+                    7 -> { queries++; receipt.put("oemQuery", JSONObject().put("state", "RECEIVED")
+                        .put("detail", "selection only").put("selection", "factory-fixture").put("receivedEpochMs", 1L)) }
+                    else -> error("Unexpected mutating operation $op")
+                }
+                reply!!.writeNoException(); reply.writeString(receipt.toString()); return true
+            }
+        }); vf.set(null, "44")
+        val c = Robolectric.buildActivity(Activity::class.java).setup()
+        val panel = LinearLayout(c.get())
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), panel,
+            { busy.compareAndSet(false, true) }, { releases++; busy.set(false) }, { busy.get() }, {})
+        try {
+            controls.setActive(true); drainQueryUi(); assertTrue(busy.get())
+            val button = views(panel).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) }
+            assertTrue("Only the fixed consultation remains enabled under the historical claim", button.isEnabled)
+            button.performClick(); drainQueryUi()
+            val result = ClusterThemeLiveControls::class.java.getDeclaredField("queryStatus").apply { isAccessible = true }.get(controls) as TextView
+            assertEquals(1, queries); assertTrue(result.text.contains("factory-fixture")); assertEquals(16f, result.textSize / c.get().resources.displayMetrics.scaledDensity)
+            assertEquals(View.ACCESSIBILITY_LIVE_REGION_POLITE, result.accessibilityLiveRegion)
+            val stable = result.text
+            (ClusterThemeLiveControls::class.java.getDeclaredField("poll").apply { isAccessible = true }.get(controls) as Runnable).run()
+            drainQueryUi(); assertSame("Unchanged receipt must not be announced again", stable, result.text)
+            assertTrue(busy.get()); assertEquals(0, releases)
+        } finally { controls.close(); c.pause().stop().destroy(); bf.set(null, prior); vf.set(null, version) }
+    }
+
+    @Test fun `query refusal or missing receipt remains visible after quarantine status poll`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val prior = bf.get(null); val version = vf.get(null)
+        for (missing in listOf(false, true)) {
+            busy.set(false)
+            (ClusterThemeLiveControls::class.java.getDeclaredField("diagClaimed").apply { isAccessible = true }.get(null) as AtomicBoolean).set(false)
+            bf.set(null, object : Binder() {
+                override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                    data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                    val op = data.readInt(); check(op in setOf(0, 7))
+                    if (op == 7 && !missing) throw IllegalStateException("Recorded helper blocks query")
+                    reply!!.writeNoException(); reply.writeString(historicalQueryStatus().toString()); return true
+                }
+            }); vf.set(null, "44")
+            val c = Robolectric.buildActivity(Activity::class.java).setup(); val panel = LinearLayout(c.get())
+            val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), panel,
+                { busy.compareAndSet(false, true) }, { busy.set(false) }, { busy.get() }, {})
+            try {
+                controls.setActive(true); drainQueryUi()
+                views(panel).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) }.performClick()
+                drainQueryUi()
+                val result = ClusterThemeLiveControls::class.java.getDeclaredField("queryStatus").apply { isAccessible = true }.get(controls) as TextView
+                val failure = result.text.toString()
+                assertTrue(failure.contains(if (missing) "Missing OEM query receipt" else "Recorded helper blocks query"))
+                (ClusterThemeLiveControls::class.java.getDeclaredField("poll").apply { isAccessible = true }.get(controls) as Runnable).run()
+                drainQueryUi(); assertEquals(failure, result.text.toString()); assertTrue(busy.get())
+            } finally { controls.close(); c.pause().stop().destroy() }
+        }
+        bf.set(null, prior); vf.set(null, version)
+    }
+
+    @Test fun `old connection query cannot populate a new page activation`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val prior = bf.get(null); val version = vf.get(null)
+        val entered = CountDownLatch(1); val release = CountDownLatch(1)
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                val op = data.readInt(); check(op in setOf(0, 7))
+                val receipt = historicalQueryStatus()
+                if (op == 7) {
+                    entered.countDown(); check(release.await(3, TimeUnit.SECONDS))
+                    receipt.put("oemQuery", JSONObject().put("state", "RECEIVED").put("selection", "OLD-QUERY").put("receivedEpochMs", 1L))
+                }
+                reply!!.writeNoException(); reply.writeString(receipt.toString()); return true
+            }
+        }); vf.set(null, "44")
+        val c = Robolectric.buildActivity(Activity::class.java).setup(); val panel = LinearLayout(c.get())
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), panel, { true }, {}, { false }, {})
+        try {
+            controls.setActive(true); drainQueryUi()
+            views(panel).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) }.performClick()
+            assertTrue(entered.await(3, TimeUnit.SECONDS)); controls.setActive(false)
+            bf.set(null, Binder()); controls.setActive(true); release.countDown(); drainQueryUi()
+            val result = ClusterThemeLiveControls::class.java.getDeclaredField("queryStatus").apply { isAccessible = true }.get(controls) as TextView
+            assertFalse(result.text.contains("OLD-QUERY"))
+        } finally { release.countDown(); controls.close(); c.pause().stop().destroy(); bf.set(null, prior); vf.set(null, version) }
+    }
+
+    @Test fun `second tap during pending consultation sends no duplicate and final receipt still arrives`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val prior = bf.get(null); val version = vf.get(null)
+        val receipt = historicalQueryStatus(); var queries = 0
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                when (data.readInt()) {
+                    0 -> Unit
+                    7 -> { queries++; receipt.put("oemQuery", JSONObject().put("state", "PENDING").put("receivedEpochMs", 1L)) }
+                    else -> error("Unexpected mutation")
+                }
+                reply!!.writeNoException(); reply.writeString(receipt.toString()); return true
+            }
+        }); vf.set(null, "44")
+        val c = Robolectric.buildActivity(Activity::class.java).setup(); val panel = LinearLayout(c.get())
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), panel, { true }, {}, { false }, {})
+        try {
+            controls.setActive(true); drainQueryUi()
+            val button = views(panel).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) }
+            button.performClick(); drainQueryUi(); button.performClick(); drainQueryUi()
+            assertEquals(1, queries)
+            receipt.getJSONObject("oemQuery").put("state", "RECEIVED").put("selection", "FINAL-QUERY").put("receivedEpochMs", 2L)
+            (ClusterThemeLiveControls::class.java.getDeclaredField("poll").apply { isAccessible = true }.get(controls) as Runnable).run()
+            drainQueryUi()
+            val result = ClusterThemeLiveControls::class.java.getDeclaredField("queryStatus").apply { isAccessible = true }.get(controls) as TextView
+            assertTrue(result.text.contains("FINAL-QUERY")); assertEquals(1, queries)
+        } finally { controls.close(); c.pause().stop().destroy(); bf.set(null, prior); vf.set(null, version) }
+    }
+
+    @Test fun `live quarantine own claim never receives the historical UI exception`() {
+        val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val prior = bf.get(null); val version = vf.get(null); var queries = 0
+        bf.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                if (data.readInt() != 0) queries++
+                reply!!.writeNoException(); reply.writeString(historicalQueryStatus().put("recoveredQuarantine", false).toString()); return true
+            }
+        }); vf.set(null, "44")
+        val c = Robolectric.buildActivity(Activity::class.java).setup(); val panel = LinearLayout(c.get())
+        val controls = ClusterThemeLiveControls(c.get(), LinearLayout(c.get()), panel,
+            { busy.compareAndSet(false, true) }, { busy.set(false) }, { busy.get() }, {})
+        try {
+            controls.setActive(true); drainQueryUi()
+            views(panel).filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_oem_query_button) }.performClick()
+            val result = ClusterThemeLiveControls::class.java.getDeclaredField("queryStatus").apply { isAccessible = true }.get(controls) as TextView
+            val refused = result.text.toString()
+            assertEquals(c.get().getString(R.string.diag_cluster_oem_query_busy), refused)
+            (ClusterThemeLiveControls::class.java.getDeclaredField("poll").apply { isAccessible = true }.get(controls) as Runnable).run()
+            drainQueryUi(); assertEquals(refused, result.text.toString()); assertEquals(0, queries); assertTrue(busy.get())
+        } finally { controls.close(); c.pause().stop().destroy(); bf.set(null, prior); vf.set(null, version) }
+    }
     @Test fun `retired full app never reenables preparation opening or observation from an old positive receipt`() {
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previous = vf.get(null); vf.set(null, "44")
