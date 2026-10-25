@@ -391,6 +391,7 @@ object AdbLocalClient {
 
     @Volatile private var sLastDaemonStartMs = 0L
     private val sMirrorDaemonStartInFlight = AtomicBoolean(false)
+    private val sMirrorAuthorizationRecovery = LegacyDaemonRecovery()
     fun getLastDaemonStartMs(): Long = sLastDaemonStartMs
 
     /**
@@ -420,20 +421,40 @@ object AdbLocalClient {
                     else ""
                     val knownBinder = DaemonBinderResolver.surfaceDaemonBinder()
                     val binderAlive = knownBinder != null && knownBinder.isBinderAlive
-                    if (SurfaceDaemonReusePolicy.shouldReuse(binderAlive, daemonPid,
+                    var retiredRejectedDaemon = false
+                    if (SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(binderAlive, daemonPid,
                             versionMarker, BuildConfig.VERSION_CODE)) {
-                        AppLogger.i(TAG, "MirrorDaemon already active for build " +
-                            BuildConfig.VERSION_CODE + " pid=" + daemonPid +
-                            " — reusing Binder")
-                        noteTransportSuccess()
-                        return@use
+                        when (LegacyDaemonRecovery.probe(LegacyDaemonRecovery.Endpoint.SURFACE, knownBinder!!)) {
+                            LegacyDaemonRecovery.Access.ALLOWED -> {
+                                AppLogger.i(TAG, "MirrorDaemon already authorized pid=" + daemonPid +
+                                    " marker=" + versionMarker + " — preserving Binder and surfaces")
+                                noteTransportSuccess()
+                                return@use
+                            }
+                            LegacyDaemonRecovery.Access.UNAVAILABLE -> {
+                                AppLogger.w(TAG, "MirrorDaemon authorization unavailable — preserving live surfaces")
+                                return@use
+                            }
+                            LegacyDaemonRecovery.Access.DENIED -> {
+                                retiredRejectedDaemon = sMirrorAuthorizationRecovery.recover(
+                                    LegacyDaemonRecovery.Endpoint.SURFACE, knownBinder,
+                                    { command -> dadb.shell(command).allOutput },
+                                    context.packageCodePath,
+                                    { DaemonBinderResolver.surfaceDaemonBinder() === knownBinder })
+                                if (!retiredRejectedDaemon) {
+                                    AppLogger.w(TAG, "MirrorDaemon authorization rejected; safe migration unavailable")
+                                    return@use
+                                }
+                                AppLogger.i(TAG, "Retired rejected MirrorDaemon generation — starting installed APK")
+                            }
+                        }
                     }
                     if (psOut.isNotEmpty()) {
                         AppLogger.i(TAG, "MirrorDaemon identity stale, duplicate, or unavailable" +
                             " (pid=" + daemonPid + ", marker=" + versionMarker +
                             ", binder=" + binderAlive + ") — restarting")
                     }
-                    if (psOut.isNotEmpty()) {
+                    if (psOut.isNotEmpty() && !retiredRejectedDaemon) {
                         dadb.shell(KILL_DAEMON_CMD)
                         AppLogger.i(TAG, "Old MirrorDaemon(s) killed.")
                         Thread.sleep(500)

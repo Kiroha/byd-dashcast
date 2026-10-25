@@ -9,6 +9,19 @@ package com.byd.dashcast.infrastructure
  * documented on [com.byd.dashcast.proxy.daemon.SurfaceDaemon].
  */
 object SurfaceDaemonReusePolicy {
+    /** A missing/stale hint is insufficient reason to destroy an authorized live surface owner. */
+    @JvmStatic
+    fun shouldProbeBeforeReplacing(binderAlive: Boolean, daemonPid: Int,
+                                   versionMarker: String?, appBuild: Int): Boolean {
+        if (!binderAlive) return false
+        val marker = versionMarker?.trim()?.split(':')
+        val markedPid = marker?.getOrNull(0)?.toIntOrNull()
+        val markedBuild = marker?.getOrNull(1)?.toIntOrNull()
+        val knownBuild = if (marker?.size == 2 && daemonPid > 0 && markedPid == daemonPid &&
+            markedBuild != null && markedBuild > 0) markedBuild else null
+        return knownBuild == null || knownBuild == appBuild
+    }
+
     @JvmStatic
     fun singleProcessPid(psOutput: String?): Int {
         if (psOutput == null || psOutput.trim().isEmpty()) return -1

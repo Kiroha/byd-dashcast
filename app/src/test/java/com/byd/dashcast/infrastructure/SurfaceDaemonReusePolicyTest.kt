@@ -5,6 +5,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SurfaceDaemonReusePolicyTest {
+    @Test fun `missing or stale process marker checks live authorization before replacing surfaces`() {
+        assertTrue(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(true, 15234, "", 587))
+        assertTrue(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(true, 15234, "8111:587", 587))
+        assertTrue(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(true, -1, "15234:587", 587))
+        assertTrue(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(true, 15234, "15234:0", 587))
+        assertTrue(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(true, 15234, "15234:-1", 587))
+        assertFalse(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(false, 15234, "", 587))
+        assertFalse(SurfaceDaemonReusePolicy.shouldProbeBeforeReplacing(true, 15234, "15234:586", 587))
+    }
     @Test
     fun `live daemon from current build is reused`() {
         assertTrue(SurfaceDaemonReusePolicy.shouldReuse(true, 15234, "15234:587", 587))

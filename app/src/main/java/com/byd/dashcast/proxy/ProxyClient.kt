@@ -15,6 +15,7 @@ import android.view.Surface
 
 import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.infrastructure.AdbLocalClient
+import com.byd.dashcast.infrastructure.LegacyDaemonRecovery
 import com.byd.dashcast.infrastructure.task.TaskLocation
 import com.byd.dashcast.proxy.daemon.BinderParcelable
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract
@@ -1326,6 +1327,38 @@ object ProxyClient {
                 t
             }
     private val sAsyncReconnectPending = AtomicBoolean(false)
+    private val sAuthorizationRecoveryPending = AtomicBoolean(false)
+    private val sAuthorizationRecovery = LegacyDaemonRecovery()
+
+    /** A rejected old daemon is migrated off-thread; the failed privileged operation is not retried. */
+    private fun recoverRejectedDaemon(expected: IBinder) {
+        val ctx = sAppCtx ?: return
+        if (!sAuthorizationRecoveryPending.compareAndSet(false, true)) return
+        try {
+            sReconnectExecutor.execute {
+                try {
+                    val retired = sAuthorizationRecovery.recover(LegacyDaemonRecovery.Endpoint.PROXY,
+                        expected,
+                        { command -> AdbLocalClient.executeShellWithResultBlocking(ctx, command, 15_000) },
+                        ctx.packageCodePath,
+                        { lookupRegisteredProxyBinder() === expected &&
+                            (sBinder == null || sBinder === expected) })
+                    if (retired) {
+                        clearConnectionIfCurrent(expected)
+                        AppLogger.i(TAG, "Retired rejected proxy generation — reconnecting installed APK")
+                        connect(ctx)
+                    }
+                } catch (error: Exception) {
+                    if (error is InterruptedException) Thread.currentThread().interrupt()
+                    AppLogger.w(TAG, "Proxy identity migration unavailable: " + error.javaClass.simpleName)
+                } finally {
+                    sAuthorizationRecoveryPending.set(false)
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            sAuthorizationRecoveryPending.set(false)
+        }
+    }
 
     // Threads that own their own transport fallback (e.g. the ShellGateway serial executor, which
     // routes to AdbLocalClient on any failure) can opt out of the blocking bootstrap: a binder that
@@ -1565,6 +1598,7 @@ object ProxyClient {
         } catch (e: Exception) {
             AppLogger.w(TAG, "handshake failed (" + e.javaClass.simpleName + ")")
             clearConnectionIfCurrent(expectedBinder)
+            if (e is SecurityException) recoverRejectedDaemon(expectedBinder)
             return false
         } finally {
             reply.recycle()
