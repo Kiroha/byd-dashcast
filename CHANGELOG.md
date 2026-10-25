@@ -15,6 +15,17 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.9.76-beta (versionCode 716)
+
+**Retire the unsafe full-screen cluster profile while preserving recovery.** New
+loads and reopening are rejected by the UI, session and daemon; legacy asset and
+journal identity stay intact for closing and restoration. Authenticated negative
+restoration results retain their guarded carrier-retirement metadata without
+turning failure into success. The rewritten QML candidate remains offline and is
+not packaged or loadable in the car. Protocol 44 remains unchanged; verify the
+running daemon is build 716 before any cluster diagnostic. Vehicle validation and
+independent recovery remain unproven. See [the release notes](docs/releases/1.9.76-beta.md).
+
 ### 1.9.60-beta (versionCode 699)
 
 **Read the selected OEM RCC through the Android service even when the host Qt
