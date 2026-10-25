@@ -120,7 +120,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                 submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
             }
             action(R.string.diag_cluster_dashboard_prepare) { requestStart(ClusterThemeVariant.FULL_DASHBOARD_21F7735C) }
-            action(R.string.diag_cluster_full_app_prepare) { requestStart(ClusterThemeVariant.FULL_APP_21F7735C) }
+            action(R.string.diag_cluster_full_app_prepare) { requestStart(ClusterThemeVariant.FULL_APP_21F7735C) }.apply { isEnabled = false }
             host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_full_app_help); textSize = 15f })
             action(R.string.diag_cluster_dashboard_choose_app) { chooseDashboardApp() }
             dashboardOpenButton = action(R.string.diag_cluster_dashboard_open) { confirmDashboard(true) }.apply { isEnabled = false }
@@ -128,6 +128,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             factoryApplyButton = action(R.string.diag_cluster_factory_apply) { confirmIviRestore(applyFactory = true) }
                 .apply { visibility = android.view.View.GONE }
             dashboardObserveButton = action(R.string.diag_cluster_dashboard_observe) {
+                if (displayed?.let(::dashboardVariant)?.isRecoveryOnly == true) {
+                    dashboardMessage(R.string.diag_cluster_full_app_help); return@action
+                }
                 val name = displayed?.takeIf { dashboardVariant(it) != null }?.optString("filename")
                 if (name == null) { dashboardMessage(R.string.diag_cluster_dashboard_prepare_first); return@action }
                 val round = displayed?.optJSONObject("dashboard")?.optString("round").orEmpty()
@@ -217,6 +220,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         })
     }
     private fun requestStart(variant: ClusterThemeVariant) {
+        if (variant.isRecoveryOnly) { show(activity.getString(R.string.diag_cluster_full_app_help)); return }
         if (ClusterNativeProjectionDebt.blocked(app) || displayed?.optJSONObject("nativeMode")?.optBoolean("debt") == true) {
             showNativeBlock()
         } else if (ClusterThemeProjectionDebt.blocked(app)) {
@@ -278,6 +282,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private fun confirmDashboard(open: Boolean) {
         if (!open) { dashboardTicket = null; dashboardCommandGeneration.incrementAndGet() }
         val variant = displayed?.let(::dashboardVariant)
+        if (open && variant?.isRecoveryOnly == true) { dashboardMessage(R.string.diag_cluster_full_app_help); return }
         if (open && !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(variant?.minimumProtocol ?: 43)) {
             dashboardMessage(R.string.diag_cluster_dashboard_protocol, variant?.minimumProtocol ?: 43)
             ClusterThemeDiagnostics.local(app, "dashboard-protocol-refused", "REFUSED", "Connected protocol43 required; no dashboard command sent")
@@ -321,7 +326,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                             check(active && !closed && activation == expected && dashboardCommandGeneration.get() == expectedCommand && pinned.isCurrent()) {
                                 "Dashboard click expired before IPC; no sequence sent"
                             }
-                            pinned.dashboardProjection(open, commandValidity)
+                            pinned.dashboardProjection(open, commandValidity, variant)
                         }
                     } else dashboardMessage(R.string.diag_cluster_native_busy)
                 }
@@ -366,10 +371,11 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             com.byd.dashcast.data.prefs.ClusterPrefs.latchSmallClusterPanel(app)
         val geometry = dashboard?.optJSONObject("geometry")?.optString("verdict").orEmpty()
         dashboardFilename = j.optString("filename")
-        dashboardLaunchStateReady = own && stage == "OPEN_RECEIVED" && !j.optBoolean("uncertain") &&
+        dashboardLaunchStateReady = own && variant?.isRecoveryOnly != true && stage == "OPEN_RECEIVED" && !j.optBoolean("uncertain") &&
             !j.optBoolean("recoveryPending") && j.optJSONObject("dashboard")?.optBoolean("pending") == false
         val label = when {
             j.optBoolean("recoveryPending") -> R.string.diag_cluster_dashboard_restoring
+            variant?.isRecoveryOnly == true -> R.string.diag_cluster_full_app_observe_message
             !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(variant?.minimumProtocol ?: 43) -> R.string.diag_cluster_dashboard_protocol
             !own && j.optString("state") == "CLEAN" -> R.string.diag_cluster_dashboard_idle
             isDashboard && geometry == "SMALL" -> R.string.diag_cluster_dashboard_small_panel
@@ -389,13 +395,13 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             else -> R.string.diag_cluster_dashboard_ready
         }
         dashboardStatus.text = activity.getString(label, variant?.minimumProtocol ?: 43) + if (dashboardLabel.isNotEmpty()) "\n" + activity.getString(R.string.diag_cluster_dashboard_selected_app, dashboardLabel) else ""
-        dashboardOpenButton?.isEnabled = own && j.optJSONObject("dashboard")?.optBoolean("selectionReady") == true &&
+        dashboardOpenButton?.isEnabled = own && variant?.isRecoveryOnly != true && j.optJSONObject("dashboard")?.optBoolean("selectionReady") == true &&
             !com.byd.dashcast.data.prefs.ClusterPrefs.isSmallClusterPanelLatched(app) &&
             j.optString("phase") == "observation" && !j.optBoolean("uncertain") && !j.optBoolean("recoveryPending") &&
             j.optJSONObject("dashboard")?.optBoolean("pending") == false && stage in setOf("NONE", "CLOSED_RECEIVED")
         dashboardObserveButton?.isEnabled = dashboardLaunchStateReady &&
             j.optJSONObject("dashboard")?.optString("round")?.matches(Regex("[0-9a-f]{32}")) == true
-        if (!own || stage == "UNKNOWN" || j.optBoolean("uncertain") || j.optBoolean("recoveryPending")) dashboardTicket = null
+        if (!own || variant?.isRecoveryOnly == true || stage == "UNKNOWN" || j.optBoolean("uncertain") || j.optBoolean("recoveryPending")) dashboardTicket = null
         val ticket = dashboardTicket
         if (own && stage == "OPEN_RECEIVED" && ticket != null && ticketCurrent(ticket) && ticket.dispatched.compareAndSet(false, true)) {
             val reserved = ticket.reservation
@@ -425,7 +431,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     }
     private fun fullAppSlotReady(slots: Collection<com.byd.dashcast.fission.FissionOrchestrator.SlotState>) {
         val ticket = dashboardTicket ?: return
-        if (!ticket.variant.isFullApp || !ticketCurrent(ticket) || fullAppAdas != null) return
+        if (ticket.variant.isRecoveryOnly || !ticket.variant.isFullApp || !ticketCurrent(ticket) || fullAppAdas != null) return
         val target = slots.singleOrNull { it.pkg == dashboardPackage } ?: return
         val round = displayed?.optJSONObject("dashboard")?.optString("round").orEmpty()
         if (!round.matches(Regex("[0-9a-f]{32}"))) return
@@ -651,6 +657,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         } else dispatch()
     }
     private fun begin(variant: ClusterThemeVariant) {
+        if (variant.isRecoveryOnly) { show(activity.getString(R.string.diag_cluster_full_app_help)); return }
         if (Build.VERSION.SDK_INT != 29 || !Platform.get().isAutoDetectedDiLink3()) {
             show(activity.getString(R.string.diag_cluster_rcc_ivi_platform), "ivi-platform-refused"); return
         }
@@ -691,6 +698,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         pendingNotice()
     }
     private fun start(variant: ClusterThemeVariant, reserved: ProjectionCommandSequencer.Session, beforeTransaction: () -> Unit): String {
+        check(!variant.isRecoveryOnly) { "Retired full-app profile cannot be staged" }
         val s = session ?: ClusterThemeSession.pin(app).also { session = it }
         check(com.byd.dashcast.proxy.ProxyClient.supportsProtocol(41)) { activity.getString(R.string.diag_cluster_rcc_restore_protocol) }
         ClusterThemeDiagnostics.local(app, "prepare-source", "LOCAL", "Preparing ${variant.id} bounded app-owned carrier; no cluster load requested yet.")

@@ -64,6 +64,37 @@ class ClusterThemeLiveControlsTest {
         detected.setBoolean(Platform.get(), oldDetected)
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
+    @Test fun `retired full app never reenables preparation opening or observation from an old positive receipt`() {
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = vf.get(null); vf.set(null, "44")
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val header = LinearLayout(activity.get()); val panel = LinearLayout(activity.get())
+        val dashboard = LinearLayout(activity.get()).also(panel::addView)
+        val controls = ClusterThemeLiveControls(activity.get(), header, panel, { true }, {}, { false }, {}, dashboardContainer = dashboard)
+        val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
+        val status = ClusterThemeLiveControls::class.java.getDeclaredField("dashboardStatus").apply { isAccessible = true }.get(controls) as TextView
+        val receipt = JSONObject().put("variant", ClusterThemeVariant.FULL_APP_21F7735C.id).put("rccDebt", true)
+            .put("phase", "observation").put("filename", "legacy-fixture").put("themeObservedByUser", true)
+            .put("dashboard", JSONObject().put("stage", "OPEN_RECEIVED").put("selectionReady", true)
+                .put("pending", false).put("round", "a".repeat(32)).put("pixels", "USER_REPORTED"))
+        fun button(text: Int) = views(panel).filterIsInstance<Button>().single { it.text == activity.get().getString(text) }
+        try {
+            repeat(2) {
+                render.invoke(controls, receipt)
+                assertFalse(button(R.string.diag_cluster_full_app_prepare).isEnabled)
+                assertFalse(button(R.string.diag_cluster_dashboard_open).isEnabled)
+                assertFalse(button(R.string.diag_cluster_dashboard_observe).isEnabled)
+                assertEquals(activity.get().getString(R.string.diag_cluster_full_app_observe_message), status.text.toString())
+            }
+            assertTrue(views(header).filterIsInstance<Button>().single().isEnabled)
+            receipt.put("recoveryPending", true); render.invoke(controls, receipt)
+            assertEquals(activity.get().getString(R.string.diag_cluster_dashboard_restoring), status.text.toString())
+            receipt.put("recoveryPending", false).getJSONObject("dashboard").put("stage", "CLOSED_RECEIVED")
+            render.invoke(controls, receipt)
+            assertFalse(button(R.string.diag_cluster_dashboard_open).isEnabled)
+            assertEquals(activity.get().getString(R.string.diag_cluster_full_app_observe_message), status.text.toString())
+        } finally { controls.close(); activity.pause().stop().destroy(); vf.set(null, previous) }
+    }
     @Test fun `dashboard main flow keeps details folded and distinguishes preparation receipts and user observation`() {
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         val previousVersion = vf.get(null); vf.set(null, "43")

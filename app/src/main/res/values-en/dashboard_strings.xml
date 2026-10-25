@@ -31,10 +31,10 @@
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Close the temporary BYD projection and verify the factory selection. No custom RCC was selected. Then confirm the instruments and alerts have returned.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Preparation may temporarily open the original BYD projection, then check its display before selecting our RCC. No application starts before Open. Confirm parking and firmware; this assertion does not measure movement.</string>
     <string name="diag_cluster_dashboard_protocol">The connected daemon must use protocol %1$d. Reconnect it in DashCast before trying Prepare or Open again. No BYD command was sent.</string>
-    <string name="diag_cluster_full_app_prepare">2b · Prepare full-screen application</string>
-    <string name="diag_cluster_full_app_help">Manual parked test. The app uses 1920 × 720. BYD instruments, speed, gear, telltales, speed limit and alerts are hidden; the existing ADAS masking runs after launch. Close restores ADAS; then restore the factory profile and verify its return. No automatic launch.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Prepare the full-screen app demonstration. Opening hides BYD instruments, telltales and alerts, plus the ADAS panel. Confirm the vehicle is stationary and the firmware is checked. Older APKs do not support this profile, even after factory restoration.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Full-screen prototype (PC only)</string>
+    <string name="diag_cluster_full_app_help">Prototype for PC checks only. Vehicle loading remains unavailable until independent recovery is validated. BYD instruments and alerts are preserved. Restore remains available for the retired profile.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">This prototype cannot be loaded in the vehicle. The retired full-screen profile is available for recovery only.</string>
     <string name="diag_cluster_factory_apply">Apply factory selection</string>
     <string name="diag_cluster_factory_apply_confirm">The factory profile is already configured but its native application needs verification. Run one BYD projection transition, close it and read the selection again. No custom RCC or repeated factory selection is sent. Confirm parking and firmware.</string>
-    <string name="diag_cluster_full_app_observe_message">Confirm only if the app occupies the entire cluster and the expected BYD elements are hidden. Instruments and alerts are intentionally absent in this demonstration. A receipt does not prove the display.</string>
+    <string name="diag_cluster_full_app_observe_message">The retired profile cannot be opened or approved as ready. Use Restore, then separately confirm that the BYD instruments and alerts have returned.</string>
 </resources>

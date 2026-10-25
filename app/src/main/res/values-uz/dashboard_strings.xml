@@ -31,10 +31,10 @@
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Vaqtinchalik BYD proyeksiyasini yoping va zavod tanlovini tekshiring. Maxsus RCC tanlanmadi. Keyin asboblar va ogohlantirishlar qaytganini tasdiqlang.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Tayyorlash bizning RCC tanlanishidan oldin asl BYD proyeksiyasini vaqtincha ochib, ekranini tekshirishi mumkin. Ilova faqat Ochish bosilgach ishga tushadi. To‘xtash va dasturiy ta’minotni tasdiqlang; bu bayonot harakatni o‘lchamaydi.</string>
     <string name="diag_cluster_dashboard_protocol">Ulangan daemon %1$d-protokoldan foydalanishi kerak. Tayyorlash yoki Ochishdan oldin uni DashCast ichida qayta ulang. BYD buyrug‘i yuborilmadi.</string>
-    <string name="diag_cluster_full_app_prepare">2b · To‘liq ekranli ilovani tayyorlash</string>
-    <string name="diag_cluster_full_app_help">To‘xtab turgan mashinada qo‘lda sinov. Ilova 1920 × 720 maydonni egallaydi. BYD asboblari, tezlik, uzatma, chiroqlar, cheklov va ogohlantirishlar yashiriladi; keyin mavjud ADAS yashirish ishlaydi. Yopish ADAS’ni tiklaydi; so‘ng zavod profilini tiklab tekshiring. Avtoishga tushirish yo‘q.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">To‘liq ekranli namoyishni tayyorlang. Ochish BYD asboblari, chiroqlari, ogohlantirishlari va ADAS panelini yashiradi. Mashina to‘xtaganini va mikrodastur tekshirilganini tasdiqlang. Eski APK versiyalari zavod profili tiklangandan keyin ham bu profilni qo‘llamaydi.</string>
+    <string name="diag_cluster_full_app_prepare">2b · To‘liq ekran prototipi (faqat PC)</string>
+    <string name="diag_cluster_full_app_help">Faqat PC tekshiruvlari uchun prototip. Mustaqil tiklash tasdiqlanmaguncha avtomobilga yuklash mavjud emas. BYD asboblari va ogohlantirishlari saqlanadi. Eski profil uchun Tiklash mavjud.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Bu prototipni avtomobilga yuklab bo‘lmaydi. Eski to‘liq ekran profili faqat tiklash uchun mavjud.</string>
     <string name="diag_cluster_factory_apply">Zavod tanlovini qo‘llash</string>
     <string name="diag_cluster_factory_apply_confirm">Zavod profili sozlangan, ammo mahalliy qo‘llanishi tekshirilishi kerak. BYD proyeksiyasini bir marta o‘zgartirib, yoping va tanlovni qayta o‘qing. Maxsus RCC yoki takroriy zavod tanlovi yuborilmaydi. To‘xtash va mikrodasturni tasdiqlang.</string>
-    <string name="diag_cluster_full_app_observe_message">Faqat ilova butun ekranni egallagan va kerakli BYD elementlari yashirilgan bo‘lsa tasdiqlang. Bu namoyishda asboblar va ogohlantirishlar ataylab yo‘q. Qabul xabari tasvirni isbotlamaydi.</string>
+    <string name="diag_cluster_full_app_observe_message">Eski profilni ochib yoki tayyor deb tasdiqlab bo‘lmaydi. Tiklashdan foydalaning, so‘ng BYD asboblari va ogohlantirishlari qaytganini alohida tasdiqlang.</string>
 </resources>

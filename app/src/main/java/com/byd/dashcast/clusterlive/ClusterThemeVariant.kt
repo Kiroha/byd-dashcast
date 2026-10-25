@@ -18,6 +18,8 @@ enum class ClusterThemeVariant(val id: String, val startOperation: Int, val asse
 
     val isDashboard: Boolean get() = this == FULL_DASHBOARD_21F7735C || this == FULL_APP_21F7735C
     val isFullApp: Boolean get() = this == FULL_APP_21F7735C
+    // Keep the historical id/hash and debt schema readable, but never load it again.
+    val isRecoveryOnly: Boolean get() = this == FULL_APP_21F7735C
     val isMarker: Boolean get() = this != FULL_SURFACE_TEST && !isDashboard
     val isCorner: Boolean get() = this == CORNER_MARKER || this == CORNER_MARKER_21F7735C
     val isPersistent: Boolean get() = isCorner || isDashboard

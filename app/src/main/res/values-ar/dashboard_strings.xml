@@ -31,10 +31,10 @@
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">أغلق عرض BYD المؤقت وتحقق من اختيار المصنع. لم يتم اختيار RCC مخصص. ثم أكد عودة العدادات والتنبيهات.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">قد يفتح التحضير عرض BYD الأصلي مؤقتًا ويتحقق من شاشته قبل اختيار ملف RCC الخاص بنا. لا يبدأ أي تطبيق قبل الضغط على فتح. أكد التوقف والبرنامج الثابت؛ هذا الإقرار لا يقيس الحركة.</string>
     <string name="diag_cluster_dashboard_protocol">يجب أن يستخدم daemon المتصل البروتوكول %1$d. أعد توصيله في DashCast قبل إعادة التحضير أو الفتح. لم يتم إرسال أمر BYD.</string>
-    <string name="diag_cluster_full_app_prepare">2ب · تجهيز التطبيق بملء الشاشة</string>
-    <string name="diag_cluster_full_app_help">اختبار يدوي والسيارة متوقفة. يستخدم التطبيق 1920 × 720. تُخفى أدوات BYD والسرعة وناقل الحركة والمؤشرات وحد السرعة والتنبيهات؛ ثم يعمل إخفاء ADAS الحالي بعد التشغيل. يعيد الإغلاق ADAS؛ ثم استعد ملف المصنع وتحقق من عودته. دون تشغيل تلقائي.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">تجهيز العرض بملء الشاشة. يؤدي الفتح إلى إخفاء أدوات BYD ومؤشراتها وتنبيهاتها ولوحة ADAS. أكد توقف السيارة وفحص البرنامج الثابت. لا تدعم ملفات APK الأقدم هذا الملف حتى بعد استعادة ملف المصنع.</string>
+    <string name="diag_cluster_full_app_prepare">2b · نموذج ملء الشاشة (للحاسوب فقط)</string>
+    <string name="diag_cluster_full_app_help">نموذج للفحوص على الحاسوب فقط. يبقى التحميل في السيارة غير متاح حتى التحقق من استعادة مستقلة. تبقى عدادات BYD وتنبيهاتها محفوظة. تظل الاستعادة متاحة للملف القديم.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">لا يمكن تحميل هذا النموذج في السيارة. الملف القديم لملء الشاشة متاح للاستعادة فقط.</string>
     <string name="diag_cluster_factory_apply">تطبيق اختيار المصنع</string>
     <string name="diag_cluster_factory_apply_confirm">ملف المصنع محدد بالفعل لكن تطبيقه الأصلي يحتاج إلى تحقق. نفذ انتقال عرض BYD مرة واحدة ثم أغلقه واقرأ الاختيار مجددًا. لن يُرسل RCC مخصص أو اختيار مصنع متكرر. أكد التوقف والبرنامج الثابت.</string>
-    <string name="diag_cluster_full_app_observe_message">أكد فقط إذا كان التطبيق يشغل كامل الشاشة وعناصر BYD المتوقعة مخفية. الأدوات والتنبيهات غائبة عمدًا في هذا العرض. إيصال الأمر لا يثبت العرض.</string>
+    <string name="diag_cluster_full_app_observe_message">لا يمكن فتح الملف القديم أو تأكيد جاهزيته. استخدم الاستعادة ثم أكد بشكل منفصل عودة عدادات BYD وتنبيهاتها.</string>
 </resources>

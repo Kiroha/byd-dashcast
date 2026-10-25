@@ -31,10 +31,10 @@
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Geçici BYD yansıtmasını kapat ve fabrika seçimini doğrula. Özel RCC seçilmedi. Ardından göstergelerin ve uyarıların döndüğünü onayla.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Hazırlık, RCC seçilmeden önce özgün BYD yansıtmasını geçici olarak açıp ekranını denetleyebilir. Aç seçilmeden uygulama başlamaz. Park ve ürün yazılımını onayla; bu beyan hareketi ölçmez.</string>
     <string name="diag_cluster_dashboard_protocol">Bağlı daemon protokol %1$d kullanmalı. Hazırla veya Aç seçeneğinden önce DashCast içinde yeniden bağlan. BYD komutu gönderilmedi.</string>
-    <string name="diag_cluster_full_app_prepare">2b · Tam ekran uygulamayı hazırla</string>
-    <string name="diag_cluster_full_app_help">Araç dururken manuel test. Uygulama 1920 × 720 alan kullanır. BYD göstergeleri, hız, vites, uyarı ışıkları, hız sınırı ve uyarılar gizlenir; ardından mevcut ADAS gizleme çalışır. Kapat, ADAS’ı geri yükler; sonra fabrika profilini geri yükleyip doğrula. Otomatik başlatma yok.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Tam ekran gösterimini hazırla. Açılış BYD göstergelerini, uyarı ışıklarını, uyarıları ve ADAS panelini gizler. Aracın durduğunu ve firmware kontrolünü onayla. Eski APK sürümleri, fabrika geri yüklemesinden sonra bile bu profili desteklemez.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Tam ekran prototipi (yalnızca PC)</string>
+    <string name="diag_cluster_full_app_help">Yalnızca PC kontrolleri için prototip. Bağımsız geri yükleme doğrulanana kadar araca yükleme kullanılamaz. BYD göstergeleri ve uyarıları korunur. Eski profil için Geri yükle kullanılabilir.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Bu prototip araca yüklenemez. Eski tam ekran profili yalnızca geri yükleme için kullanılabilir.</string>
     <string name="diag_cluster_factory_apply">Fabrika seçimini uygula</string>
     <string name="diag_cluster_factory_apply_confirm">Fabrika profili ayarlı ancak yerel uygulanması doğrulanmalı. BYD projeksiyonunu bir kez değiştir, kapat ve seçimi tekrar oku. Özel RCC veya tekrarlanan fabrika seçimi gönderilmez. Park ve firmware durumunu onayla.</string>
-    <string name="diag_cluster_full_app_observe_message">Yalnızca uygulama tüm ekranı kaplıyor ve beklenen BYD öğeleri gizliyse onayla. Bu gösterimde göstergeler ve uyarılar bilerek yoktur. Bir alındı bildirimi görüntüyü kanıtlamaz.</string>
+    <string name="diag_cluster_full_app_observe_message">Eski profil açılamaz veya hazır olarak onaylanamaz. Geri yükle seçeneğini kullan, ardından BYD göstergeleri ve uyarılarının geri döndüğünü ayrıca onayla.</string>
 </resources>

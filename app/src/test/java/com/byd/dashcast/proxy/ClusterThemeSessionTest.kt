@@ -25,6 +25,38 @@ import java.util.concurrent.atomic.AtomicInteger
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class ClusterThemeSessionTest {
+    @Test fun `retired profile refuses new work before debt callback or IPC while existing recovery stays callable`() {
+        val app = RuntimeEnvironment.getApplication()
+        val retired = ClusterThemeVariant.FULL_APP_21F7735C
+        var calls = 0; var before = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                calls++
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                val operation = data.readInt()
+                assertTrue(operation in setOf(13, 21, 25))
+                reply!!.writeNoException()
+                reply.writeString("""{"state":"QUARANTINE","filename":"legacy-fixture","rccDebt":true,"fullAppAdasAccepted":true}""")
+                return true
+            }
+        }); versionField.set(null, "44")
+        val session = ClusterThemeSession.pin(app)
+        val source = ParcelFileDescriptor.createPipe()
+        try {
+            assertThrows(IllegalStateException::class.java) { session.startIvi(source[0], retired, Binder()) { before++ } }
+            assertThrows(IllegalStateException::class.java) { session.start(source[0], retired) { before++ } }
+            assertThrows(IllegalStateException::class.java) { session.dashboardProjection(true, Binder(), retired) }
+            assertThrows(IllegalStateException::class.java) { session.launchDashboardApplication("com.waze", 4, retired) }
+            assertThrows(IllegalStateException::class.java) { session.fullAppAdas("a".repeat(32), 0, 0, 0, false, "com.waze", 4, Binder()) }
+            assertEquals(0, before); assertEquals(0, calls)
+            assertFalse(ClusterThemeProjectionDebt.blocked(app))
+            ClusterThemeProjectionDebt.begin(app, "a".repeat(32))
+            session.dashboardProjection(false, Binder(), retired)
+            session.restoreIvi(Binder())
+            assertTrue(session.fullAppAdas("a".repeat(32), 4, 0, 0, true, "", 0, Binder()))
+            assertEquals(3, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } finally { source.forEach { it.close() } }
+    }
     @Test fun `current dashboard display read is closed operation23 on the pinned protocol43 endpoint without retry`() {
         val app = RuntimeEnvironment.getApplication(); val nonce = "a".repeat(32)
         ClusterThemeProjectionDebt.begin(app, nonce)

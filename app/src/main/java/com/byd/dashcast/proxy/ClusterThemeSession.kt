@@ -32,6 +32,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun start(source: ParcelFileDescriptor, beforeTransaction: () -> Unit): String = call(1, source, beforeTransaction)
     fun start(source: ParcelFileDescriptor, variant: ClusterThemeVariant, beforeTransaction: () -> Unit): String {
+        check(!variant.isRecoveryOnly) { "Retired full-app profile is recovery-only" }
         require(!variant.isPersistent) { "Persistent profile requires the explicit Android IVI operation" }
         check(ProxyClient.supportsProtocol(variant.minimumProtocol)) {
             "Connected ProxyDaemon protocol ${variant.minimumProtocol} required for ${variant.id}. No reconnect/replay."
@@ -40,6 +41,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     fun startIvi(source: ParcelFileDescriptor, variant: ClusterThemeVariant, validity: IBinder,
         beforeTransaction: () -> Unit): String {
+        check(!variant.isRecoveryOnly) { "Retired full-app profile is recovery-only; no debt or IPC started" }
         check(ProxyClient.supportsProtocol(37)) { "Connected ProxyDaemon protocol 37 required for Android IVI RCC loading; no renderer fallback" }
         check(ProxyClient.supportsProtocol(variant.minimumProtocol)) { "Connected ProxyDaemon protocol ${variant.minimumProtocol} required for ${variant.id}; no fallback" }
         val nonce = java.util.UUID.randomUUID().toString().replace("-", "")
@@ -85,7 +87,8 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         check(ProxyClient.supportsProtocol(32)) { "Connected ProxyDaemon protocol 32 required. No reconnect/replay." }
         return call(6, expectedFilename = expectedFilename)
     }
-    fun dashboardProjection(open: Boolean, validity: IBinder): String {
+    fun dashboardProjection(open: Boolean, validity: IBinder, variant: ClusterThemeVariant): String {
+        check(!open || !variant.isRecoveryOnly) { "Retired full-app opening is disabled; close remains available" }
         check(ProxyClient.supportsProtocol(43)) { "Connected protocol43 required; no reconnect/replay" }
         val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned dashboard RCC session")
         return call(if (open) 20 else 21, payload = {
@@ -111,6 +114,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     }
     internal fun fullAppAdas(round: String, action: Int, value: Int, count: Int, restoring: Boolean,
         pkg: String, display: Int, validity: IBinder): Boolean {
+        check(restoring) { "Retired full-app masking is disabled; existing ADAS recovery remains available" }
         check(ProxyClient.supportsProtocol(44) && isCurrent())
         require(com.byd.dashcast.clusterlive.ClusterFullAppAdas.permits(action, value, count, restoring))
         val nonce = app?.let { ClusterThemeProjectionDebt.nonce(it) } ?: error("No owned full-app session")
@@ -123,6 +127,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
     /** Exactly one transaction on this captured endpoint; never production retry/reconnect. */
     fun launchDashboardApplication(pkg: String, displayId: Int,
         variant: ClusterThemeVariant = ClusterThemeVariant.FULL_DASHBOARD_21F7735C): String? {
+        check(!variant.isRecoveryOnly) { "Retired full-app application launch is unavailable; Restore remains available" }
         check(isCurrent()) { "Pinned dashboard daemon changed; no launch/replay" }
         check(!variant.isFullApp || ProxyClient.supportsProtocol(variant.minimumProtocol))
         val viewport = com.byd.dashcast.clusterlive.ClusterDashboardProfile.viewport(variant)
