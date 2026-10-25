@@ -15,7 +15,7 @@ export default {
       '✅ Compatible DiLink 3 (Seal EU / 6125F) et DiLink 5 (unités de tête BYD récentes).',
       "✅ Aucune modification système : DashCast s'installe comme une app classique.",
       '✅ ADB local en TCP — aucun ordinateur nécessaire après la première autorisation.',
-      "✅ 13 langues d'interface, choisies au premier démarrage, modifiables à tout moment.",
+      "✅ 14 langues d'interface, choisies au premier démarrage, modifiables à tout moment.",
       "✅ Miroir tactile temps réel : pilotez le cluster depuis l'écran central.",
       '✅ Mode Layouts : plusieurs apps côte-à-côte sur le cluster, zones dessinées au doigt.',
       "✅ Lancement automatique : projection + app (ou layout favori) dès l'ouverture de DashCast.",
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Écran de bienvenue — choix de la langue',
       lead:
-        "Au tout premier lancement, DashCast affiche la grille des 13 langues disponibles. Touchez votre langue : le choix est mémorisé et l'écran ne réapparaîtra plus. Vous pourrez changer de langue à tout moment via Réglages.",
+        "Au tout premier lancement, DashCast affiche la grille des 14 langues disponibles. Touchez votre langue : le choix est mémorisé et l'écran ne réapparaîtra plus. Vous pourrez changer de langue à tout moment via Réglages.",
       mockupLabel: "Voir l'écran 1 (Bienvenue)",
       featuresTitle: 'Détails',
       features: [
         {
-          title: '13 langues prises en charge',
+          title: '14 langues prises en charge',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. La langue choisie est appliquée immédiatement, sans redémarrage.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. La langue choisie est appliquée immédiatement, sans redémarrage.",
         },
         {
           title: 'Sens de lecture automatique',
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Langue',
-          text: '13 langues — le changement est instantané.',
+          text: '14 langues — le changement est instantané.',
         },
       ],
       howTo: {

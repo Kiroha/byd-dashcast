@@ -15,7 +15,7 @@ export default {
       '✅ DiLink 3 (Seal EU / 6125F) ve DiLink 5 (daha yeni BYD ünitelerinde) çalışır.',
       '✅ Sistem değişikliği yok: DashCast diğer uygulamalar gibi kurulur.',
       '✅ TCP üzerinden yerel ADB — ilk yetkilendirmeden sonra bilgisayar gerekmez.',
-      '✅ 13 arayüz dili, ilk açılışta seçilir, istediğiniz zaman değiştirilir.',
+      '✅ 14 arayüz dili, ilk açılışta seçilir, istediğiniz zaman değiştirilir.',
       '✅ Gerçek zamanlı dokunmatik ayna: kümeyi merkez ekrandan yönetin.',
       '✅ Düzenler modu: kümede yan yana birden fazla uygulama, parmakla çizilen bölgeler.',
       '✅ Otomatik başlatma: DashCast açılır açılmaz projeksiyon + uygulama (veya favori düzen).',
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Karşılama ekranı — dil seçimi',
       lead:
-        'İlk açılışta DashCast, mevcut 13 dilin ızgarasını gösterir. Dilinize dokunun: seçim kaydedilir ve ekran bir daha görünmez. Dili istediğiniz zaman Ayarlardan değiştirebilirsiniz.',
+        'İlk açılışta DashCast, mevcut 14 dilin ızgarasını gösterir. Dilinize dokunun: seçim kaydedilir ve ekran bir daha görünmez. Dili istediğiniz zaman Ayarlardan değiştirebilirsiniz.',
       mockupLabel: 'Ekran 1\'i gör (Karşılama)',
       featuresTitle: 'Ayrıntılar',
       features: [
         {
-          title: '13 desteklenen dil',
+          title: '14 desteklenen dil',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Seçilen dil anında uygulanır, yeniden başlatma gerekmez.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Seçilen dil anında uygulanır, yeniden başlatma gerekmez.",
         },
         {
           title: 'Otomatik okuma yönü',
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Dil',
-          text: '13 dil — değişim anlıktır.',
+          text: '14 dil — değişim anlıktır.',
         },
       ],
       howTo: {

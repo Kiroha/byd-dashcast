@@ -15,7 +15,7 @@ export default {
       '✅ Funktioniert mit DiLink 3 (Seal EU / 6125F) und DiLink 5 (neuere BYD-Headunits).',
       '✅ Keine Systemmodifikation: DashCast wird wie jede andere App installiert.',
       '✅ Lokales ADB über TCP — nach der ersten Autorisierung kein Computer mehr nötig.',
-      '✅ 13 Oberflächensprachen, Auswahl beim ersten Start, jederzeit änderbar.',
+      '✅ 14 Oberflächensprachen, Auswahl beim ersten Start, jederzeit änderbar.',
       '✅ Echtzeit-Touch-Spiegel: Steuern Sie das Cockpit vom zentralen Bildschirm aus.',
       '✅ Layouts-Modus: mehrere Apps nebeneinander auf dem Cockpit, Zonen mit dem Finger gezeichnet.',
       '✅ Autostart: Projektion + App (oder Favoriten-Layout), sobald DashCast öffnet.',
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Willkommensbildschirm — Sprachauswahl',
       lead:
-        'Beim allerersten Start zeigt DashCast ein Raster mit den 13 verfügbaren Sprachen. Tippen Sie auf Ihre Sprache: Die Wahl wird gespeichert und der Bildschirm erscheint nicht mehr. Die Sprache kann jederzeit in den Einstellungen geändert werden.',
+        'Beim allerersten Start zeigt DashCast ein Raster mit den 14 verfügbaren Sprachen. Tippen Sie auf Ihre Sprache: Die Wahl wird gespeichert und der Bildschirm erscheint nicht mehr. Die Sprache kann jederzeit in den Einstellungen geändert werden.',
       mockupLabel: 'Bildschirm 1 ansehen (Willkommen)',
       featuresTitle: 'Details',
       features: [
         {
-          title: '13 unterstützte Sprachen',
+          title: '14 unterstützte Sprachen',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Die gewählte Sprache wird sofort angewendet, kein Neustart nötig.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Die gewählte Sprache wird sofort angewendet, kein Neustart nötig.",
         },
         {
           title: 'Automatische Leserichtung',
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Sprache',
-          text: '13 Sprachen — der Wechsel ist sofort.',
+          text: '14 Sprachen — der Wechsel ist sofort.',
         },
       ],
       howTo: {

@@ -98,7 +98,7 @@ class BugWizardActivity : Activity() {
      * Position of the chosen issue inside its category array, or -1.
      *
      * The stable identity of a symptom, and the reason it is an index rather than a slug: the nine
-     * issue arrays are pinned to identical item counts across all thirteen locales — this screen
+     * issue arrays are pinned to identical item counts across all fourteen locales — this screen
      * already indexes them BY POSITION to work at all — so position N means the same symptom in
      * every language. Inventing English slugs would mean 47 new strings that can drift out of sync
      * with the arrays they mirror; the index cannot.

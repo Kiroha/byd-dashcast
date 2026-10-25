@@ -63,7 +63,7 @@
          the dashboard design language. -->
     <issue id="ButtonStyle" severity="ignore" />
 
-    <!-- Counts are displayed numerically next to the label in 13 locales;
+    <!-- Counts are displayed numerically next to the label in 14 locales;
          a full per-locale plurals matrix adds noise for no UX gain. -->
     <issue id="PluralsCandidate" severity="ignore" />
 

@@ -32,6 +32,7 @@ object LocaleHelper {
     const val LANG_KK = "kk"
     const val LANG_BE = "be"
     const val LANG_PL = "pl"
+    const val LANG_PT_BR = "pt-BR"
 
     /**
      * Applies the saved locale to the given context without re-saving the preference.

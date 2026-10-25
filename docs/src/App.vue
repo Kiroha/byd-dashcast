@@ -2,30 +2,17 @@
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import ManualTemplate from './components/ManualTemplate.vue';
 import { languages, resolveLocale } from './locales';
+import { readLocaleFromLocation, readSectionFromLocation } from './locales/navigation.js';
 
 // AUD-159 — injected from app/build.gradle by vite.config.js, never hand-written.
 const appVersion = __APP_VERSION__;
 
-const activeCode = ref(readLocaleFromLocation());
-const activeSection = ref(readSectionFromLocation());
-
-function readLocaleFromLocation() {
-  const hashMatch = window.location.hash.match(/^#\/([a-z]{2})\b/);
-  // AUD-157 — hold ?lang= to the same shape as the hash. resolveLocale is the real
-  // guard now, but there is no reason for this half of the pair to stay looser.
-  const queryLocale = new URLSearchParams(window.location.search).get('lang');
-  const queryMatch = queryLocale?.match(/^[a-z]{2}$/) ? queryLocale : '';
-  return hashMatch?.[1] || queryMatch || '';
-}
-
-function readSectionFromLocation() {
-  const hashMatch = window.location.hash.match(/^#\/[a-z]{2}\/(s[1-9])\b/);
-  return hashMatch?.[1] || '';
-}
+const activeCode = ref(readLocaleFromLocation(window.location));
+const activeSection = ref(readSectionFromLocation(window.location));
 
 function handleNavigation() {
-  activeCode.value = readLocaleFromLocation();
-  activeSection.value = readSectionFromLocation();
+  activeCode.value = readLocaleFromLocation(window.location);
+  activeSection.value = readSectionFromLocation(window.location);
 }
 
 function selectLocale(code) {

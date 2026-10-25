@@ -15,7 +15,7 @@ export default {
       '✅ Działa na DiLink 3 (Seal EU / 6125F) i DiLink 5 (nowsze jednostki BYD).',
       '✅ Bez modyfikacji systemu: DashCast instaluje się jak każda inna aplikacja.',
       '✅ Lokalne ADB po TCP — po pierwszej autoryzacji komputer nie jest potrzebny.',
-      '✅ 13 języków interfejsu, wybieranych przy pierwszym uruchomieniu, zmienialnych w każdej chwili.',
+      '✅ 14 języków interfejsu, wybieranych przy pierwszym uruchomieniu, zmienialnych w każdej chwili.',
       '✅ Dotykowe lustro w czasie rzeczywistym: steruj klastrem z centralnego ekranu.',
       '✅ Tryb Layouts: kilka aplikacji obok siebie na klastrze, strefy rysowane palcem.',
       '✅ Autostart: projekcja + aplikacja (lub ulubiony layout) zaraz po otwarciu DashCast.',
@@ -35,14 +35,14 @@ export default {
       screen: 'screen-1',
       title: '1. Ekran powitalny — wybór języka',
       lead:
-        'Przy pierwszym uruchomieniu DashCast pokazuje siatkę z 13 dostępnymi językami. Dotknij swojego: wybór jest zapamiętywany i ekran już się nie pojawi. Język można zmienić w każdej chwili w Ustawieniach.',
+        'Przy pierwszym uruchomieniu DashCast pokazuje siatkę z 14 dostępnymi językami. Dotknij swojego: wybór jest zapamiętywany i ekran już się nie pojawi. Język można zmienić w każdej chwili w Ustawieniach.',
       mockupLabel: 'Zobacz ekran 1 (Powitanie)',
       featuresTitle: 'Szczegóły',
       features: [
         {
-          title: '13 obsługiwanych języków',
+          title: '14 obsługiwanych języków',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Wybrany język jest stosowany natychmiast, bez restartu.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Português (Brasil), Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Wybrany język jest stosowany natychmiast, bez restartu.",
         },
         {
           title: 'Automatyczny kierunek czytania',
@@ -189,7 +189,7 @@ export default {
         },
         {
           title: '🌐 Język',
-          text: '13 języków — zmiana jest natychmiastowa.',
+          text: '14 języków — zmiana jest natychmiastowa.',
         },
       ],
       howTo: {
