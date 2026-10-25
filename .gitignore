@@ -83,3 +83,4 @@ __pycache__/
 
 # Quarantined minimal cluster bench artifacts; never package or select on a car.
 /artifacts/cluster_minimal_app_bench/
+/artifacts/cluster_minimal_perf_bench/
