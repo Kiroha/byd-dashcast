@@ -129,6 +129,7 @@ object ClusterThemeIviHelper {
                 return r.readInt()
             } finally { r.recycle(); d.recycle() }
         }
+        override fun verifyLoadCohort(): String = ClusterThemeCohortVerifier.verify(variant, deadline)
         override fun verifyCarrier() {
             ClusterThemeAndroidStorage.withDirectory { anchor, directory ->
             check(directory.identity == expectedParents) { "Carrier parent differs from staged directory generation" }

@@ -3,6 +3,7 @@ package com.byd.dashcast.proxy.daemon
 import android.content.Context
 import android.os.Binder
 import android.os.Parcel
+import android.os.ParcelFileDescriptor
 import com.byd.dashcast.clusterlive.*
 import com.byd.dashcast.proxy.ClusterThemeSession
 import com.byd.dashcast.proxy.ProxyClient
@@ -46,18 +47,20 @@ class ClusterThemeIviRecoveryTest {
         b.finish(b.endTable()); return b.sizedByteArray()
     }
     private fun exchange(before: ClusterThemeProtocol.Response = own, after: ClusterThemeProtocol.Response = default,
-        carrierValid: Boolean = true, operation: String = "restore"): Pair<ClusterThemeLiveTest.Exchange, List<Int>> {
+        carrierValid: Boolean = true, operation: String = "restore",
+        negative: ClusterThemeProtocol.Response? = null): Pair<ClusterThemeLiveTest.Exchange, List<Int>> {
         var time = 0L; var queries = 0; lateinit var receiver: (Int, ByteArray) -> Unit
         val mutations = ArrayList<Int>()
         val transport = object : ClusterThemeIviExchange.Transport {
             override fun verifyIdentity() = Unit
             override fun alive() = true
             override fun register(callback: (Int, ByteArray) -> Unit): Int { receiver = callback; return 0 }
+            override fun verifyLoadCohort(): String = error("Recovery must not require a new-load cohort")
             override fun verifyCarrier() { check(carrierValid) { "Carrier generation/hash differs" } }
             override fun send(data: ByteArray): Int {
                 val request = ClusterThemeProtocol.decode(data)
                 if (request.cmd == 1) receiver(1000, bytes(if (++queries == 1) before else after))
-                else mutations.add(request.ints[0])
+                else { mutations.add(request.ints[0]); negative?.let { receiver(1000, bytes(it)) } }
                 return 0
             }
             override fun close() = Unit
@@ -65,7 +68,73 @@ class ClusterThemeIviRecoveryTest {
         val result = ClusterThemeIviExchange.execute(operation, name, transport, 7000, { time }, { time += 25 })
         return ClusterThemeLiveTest.Exchange(result.native,
             result.postQueryResponses.map(ClusterThemeProtocol::decode).lastOrNull { it.cmd == 1001 && it.sub == 4 },
-            result.responses.map(ClusterThemeProtocol::decode), result.error != null, result.error, result.attempted) to mutations
+            result.responses.map(ClusterThemeProtocol::decode), result.error != null, result.error, result.attempted,
+            result.retirementEligible) to mutations
+    }
+    private fun legacyJournal(adasDebt: Boolean = true) = journal()
+        .put("variant", ClusterThemeVariant.FULL_APP_21F7735C.id)
+        .put("carrierSha256", ClusterThemeVariant.FULL_APP_21F7735C.carrierSha256)
+        .put("dashboard", JSONObject().put("stage", "OPEN_RECEIVED").put("nativeDebt", true)
+            .put("helperCommand", -1).put("helperPid", 0).put("helperStart", "").put("helperToken", ""))
+        .put("fullAppAdas", JSONObject().put("debt", adasDebt).put("round", if (adasDebt) nonce else ""))
+
+    @Test fun `build715 serialized full app retains both recovery debts and refuses activation before source inspection`() {
+        val serialized = legacyJournal().toString()
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(JSONObject(serialized)))
+        val before = status()
+        val source = ParcelFileDescriptor.createPipe()
+        try {
+            val refused = JSONObject(ClusterThemeLiveTest.start(source[0], true, ClusterThemeVariant.FULL_APP_21F7735C,
+                ClusterThemeTransport.ANDROID_IVI, "b".repeat(32), Binder()))
+            assertTrue(refused.has("activationRefused")); assertEquals("b".repeat(32), refused.getString("rccRejectedNonce"))
+            assertEquals(before.getString("filename"), refused.getString("filename"))
+            assertEquals(before.getString("variant"), refused.getString("variant"))
+            assertTrue(refused.getBoolean("rccDebt")); assertTrue(refused.getJSONObject("fullAppAdas").getBoolean("debt"))
+            assertTrue(refused.getJSONObject("dashboard").getBoolean("nativeDebt"))
+            assertEquals("QUARANTINE", refused.getString("state"))
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestDashboard(true, nonce, true, true, Binder()) }
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.observeDashboard(name, nonce) }
+            assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.fullAppAdas(nonce, nonce, 0, 0, 0, false, "com.waze", 4, Binder()) }
+            assertEquals(before.getJSONObject("fullAppAdas").toString(), status().getJSONObject("fullAppAdas").toString())
+        } finally { source.forEach { it.close() } }
+    }
+
+    @Test fun `sealed same resource rejection reaches retirement accounting without native close and expires on restart`() {
+        val original = legacyJournal().toString()
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(JSONObject(original)))
+        val persistedOwn = selection(ClusterThemePolicy.HOST_DIRECTORY + name, 0)
+        val same = ClusterThemeProtocol.Response(1005, 0, listOf(3, 0, 0x2330, 0, 0), List(5) { "" })
+        val (rejected, mutations) = exchange(persistedOwn, persistedOwn, negative = same)
+        assertTrue(rejected.retirementEligible); assertEquals(listOf(1), mutations)
+        fun account(result: ClusterThemeLiveTest.Exchange) {
+            val chosen = ClusterThemeLiveTest.restoreDashboardFactorySelection(
+                ClusterThemeLiveTest.Exchange(0, persistedOwn, emptyList(), false), selectFactory = { result },
+                close = { fail("Negative factory selection must not apply a native transition") },
+                query = { error("Negative factory selection must not start a post-close query") }, write = {})
+            assertSame(result, chosen)
+            ClusterThemeLiveTest.recordRestoreResult(persistedOwn, chosen, false)
+        }
+        account(rejected)
+        assertTrue(status().getBoolean("retirementAvailable")); assertTrue(status().getBoolean("rccDebt"))
+        assertEquals("QUARANTINE", status().getString("state")); assertFalse(status().getBoolean("iviRecoverySettled"))
+        assertTrue(status().getJSONObject("fullAppAdas").getBoolean("debt"))
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(JSONObject(original)))
+        assertFalse(status().getBoolean("retirementAvailable")); assertTrue(status().getBoolean("rccDebt"))
+        account(rejected); assertTrue(status().getBoolean("retirementAvailable"))
+    }
+
+    @Test fun `negative receipt cannot retire a foreign malformed or missing selection`() {
+        val same = ClusterThemeProtocol.Response(1005, 0, listOf(3, 0, 0x2330, 0, 0), List(5) { "" })
+        val exact = selection(ClusterThemePolicy.HOST_DIRECTORY + name, 0)
+        for (unproven in listOf(exact.copy(strings = exact.strings.toMutableList().apply { set(2, "foreign.rcc") }),
+            exact.copy(ints = listOf(1, 0, 0, 1, 0)), null)) {
+            ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(JSONObject(legacyJournal().toString())))
+            // Even a mistakenly propagated flag cannot replace the exact production proof checks.
+            ClusterThemeLiveTest.recordRestoreResult(exact, ClusterThemeLiveTest.Exchange(0, unproven,
+                listOf(same), true, "RESOURCE_IS_SAME", true, true), false)
+            assertFalse(status().getBoolean("retirementAvailable")); assertTrue(status().getBoolean("rccDebt"))
+            assertEquals("QUARANTINE", status().getString("state"))
+        }
     }
     @Before fun reset() {
         set("initialized", true); set("journalTrusted", true); set("helperUnreaped", false)

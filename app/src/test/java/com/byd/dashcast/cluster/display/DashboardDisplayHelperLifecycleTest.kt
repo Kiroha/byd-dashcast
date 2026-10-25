@@ -76,6 +76,26 @@ class DashboardDisplayHelperLifecycleTest {
         assertNotSame(oldDisconnect, disconnectListener())
     }
 
+    @Test fun `completion is independent from display order and resets on new ownership`() {
+        helper.start()
+        callbacks.last().onDisplayReady(null, 9)
+        assertFalse(helper.isActivationComplete())
+        callbacks.last().onActivationComplete(true)
+        assertTrue(helper.isActivationComplete())
+        val old = callbacks.last()
+        helper.start()
+        assertFalse(helper.isActivationComplete())
+        old.onActivationComplete(true)
+        assertFalse(helper.isActivationComplete())
+        callbacks.last().onActivationComplete(true)
+        assertTrue(helper.isActivationComplete())
+        callbacks.last().onDisplayReady(null, 9)
+        assertEquals(9, helper.getKnownClusterDisplayId())
+        helper.stopWithoutAdb()
+        callbacks.last().onActivationComplete(true)
+        assertFalse(helper.isActivationComplete())
+    }
+
     @Test fun `replacement without stop retires old callbacks and keeps a single current subscription`() {
         helper.start()
         val old = callbacks.single()

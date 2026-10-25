@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class DiagPagesTest {
-    private val titles = listOf("ADAS", RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title), "HUD & navigation", "Projection & displays",
+    private val titles = listOf("ADAS", RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title), "HUD & navigation", "Projection & displays",
         "Exports & OEM collection", "Reporting", "Diagnostic log")
 
     private fun views(group: ViewGroup): List<View> = (0 until group.childCount).flatMap { i ->
@@ -67,7 +67,7 @@ class DiagPagesTest {
             assertEquals(7, all(activity).filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
             val tools = mapOf(
                 "ADAS" to "ADAS targets (read-only snapshot)",
-                RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title) to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button),
+                RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title) to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare),
                 "HUD & navigation" to "HUD bench (DL3)",
                 "Projection & displays" to "OEM cluster probes (read-only)",
                 "Exports & OEM collection" to "Export complet accessible",
@@ -106,19 +106,19 @@ class DiagPagesTest {
     @Test fun `current page survives recreation and unknown saved destinations return to the hub`() {
         var controller = Robolectric.buildActivity(DiagActivity::class.java).create()
         try {
-            menu(controller.get(), RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title)).performClick()
+            menu(controller.get(), RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title)).performClick()
             val saved = save(controller.get())
             controller.destroy()
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
-            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button))))
-            assertFalse(visible(menu(controller.get(), RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_page_title))))
+            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare))))
+            assertFalse(visible(menu(controller.get(), RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title))))
             tool(controller.get(), "Back").performClick()
             assertTrue(visible(menu(controller.get(), "ADAS")))
             controller.destroy()
             saved.putString("diag.page", "unrecognized-destination")
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
             assertTrue(visible(menu(controller.get(), "ADAS")))
-            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_rcc_theme_button))))
+            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare))))
         } finally { controller.destroy() }
     }
 

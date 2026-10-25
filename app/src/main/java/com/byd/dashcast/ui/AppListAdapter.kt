@@ -33,7 +33,6 @@ class AppListAdapter(
         fun onSendToMain(app: AppInfo)
         fun onKillApp(app: AppInfo)
         fun onToggleFavorite(app: AppInfo)
-        fun onSetAutoLaunch(app: AppInfo, enable: Boolean)
         /** v0.9.72 — long-press now opens an action bottom sheet (favorite/move/kill/auto). */
         fun onShowActions(app: AppInfo)
     }

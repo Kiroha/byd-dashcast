@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast dashboard</string>
+    <string name="diag_cluster_dashboard_help">Manual test while parked. Closing keeps the profile selected. Restore the factory profile and verify its return before installing an older APK.</string>
+    <string name="diag_cluster_dashboard_read">1 · Read state and compatibility</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Prepare dashboard</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Choose application</string>
+    <string name="diag_cluster_dashboard_open">4 · Open dashboard</string>
+    <string name="diag_cluster_dashboard_close">Close projection</string>
+    <string name="diag_cluster_dashboard_observe">5 · Confirm observed display</string>
+    <string name="diag_cluster_dashboard_observe_message">Confirm only if you see the DashCast dashboard, instruments, alerts and application. A command receipt does not prove this display.</string>
+    <string name="diag_cluster_dashboard_confirm">Confirm that the vehicle is stationary and the firmware context has been checked. This checkbox is an assertion, not a movement measurement. Validation in the car remains necessary.</string>
+    <string name="diag_cluster_dashboard_geometry">One active 1920 × 720 cluster must be detected. Unknown, ambiguous or small geometry refuses this test.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prepare the DashCast profile first and wait for selection to finish.</string>
+    <string name="diag_cluster_dashboard_idle">○ No dashboard prepared</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Restoring</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Uncertain state: use Restore</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Opening received; confirm the display</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Projection closed; factory restore still required</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Operation in progress</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profile selected; choose an application and open the dashboard</string>
+    <string name="diag_cluster_dashboard_selected_app">Application: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Technical details and previous tests</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Display confirmed by the user</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Close projection and request the factory profile. A failed close remains unresolved even if the factory profile returns. Then confirm the visible instruments and alerts.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Temporarily activating the original BYD projection…</string>
+    <string name="diag_cluster_dashboard_display_wait">Waiting for the BYD projection display…</string>
+    <string name="diag_cluster_dashboard_display_rejected">BYD projection display unavailable or incompatible. Check the details.</string>
+    <string name="diag_cluster_dashboard_restore_required">Initialization started: BYD restoration is required.</string>
+    <string name="diag_cluster_dashboard_small_panel">Small cluster observed: test refused. BYD restoration remains available.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Close the temporary BYD projection and verify the factory selection. No custom RCC was selected. Then confirm the instruments and alerts have returned.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Preparation may temporarily open the original BYD projection, then check its display before selecting our RCC. No application starts before Open. Confirm parking and firmware; this assertion does not measure movement.</string>
+    <string name="diag_cluster_dashboard_protocol">The connected daemon must use protocol %1$d. Reconnect it in DashCast before trying Prepare or Open again. No BYD command was sent.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Full-screen prototype (PC only)</string>
+    <string name="diag_cluster_full_app_help">Prototype for PC checks only. Vehicle loading remains unavailable until independent recovery is validated. BYD instruments and alerts are preserved. Restore remains available for the retired profile.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">This prototype cannot be loaded in the vehicle. The retired full-screen profile is available for recovery only.</string>
+    <string name="diag_cluster_factory_apply">Apply factory selection</string>
+    <string name="diag_cluster_factory_apply_confirm">The factory profile is already configured but its native application needs verification. Run one BYD projection transition, close it and read the selection again. No custom RCC or repeated factory selection is sent. Confirm parking and firmware.</string>
+    <string name="diag_cluster_full_app_observe_message">The retired profile cannot be opened or approved as ready. Use Restore, then separately confirm that the BYD instruments and alerts have returned.</string>
+</resources>

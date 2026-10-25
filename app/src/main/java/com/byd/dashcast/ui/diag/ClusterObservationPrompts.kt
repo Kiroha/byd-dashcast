@@ -77,6 +77,7 @@ internal class ClusterObservationPrompts(private val activity: Activity) {
                     log(q, "stale-positive-refused"); dismiss("stale"); return@setOnClickListener
                 }
                 log(q, "yes-user-observation")
+                dialog = null; active = null // Dismiss callbacks may arrive after answer() updates the lane.
                 popup.dismiss()
                 q.answer()
             }

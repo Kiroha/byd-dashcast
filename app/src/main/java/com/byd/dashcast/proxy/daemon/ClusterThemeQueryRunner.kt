@@ -14,12 +14,30 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Owns only a query child and a private temporary lease; never reads/writes the live-test journal. */
 internal object ClusterThemeQueryRunner {
     data class Result(val receipt: JSONObject, val reaped: Boolean)
+    @Volatile private var outstandingDisplayProbe: java.lang.Process? = null
     fun run(): Result = runHelper(null, {}, { _, _, _ -> })
     fun nativeMode(command: Int, admit: () -> Unit, ready: (Int, String, String) -> Unit): Result {
         require(command == 16 || command == 18)
         return runHelper(command, admit, ready)
     }
-    private fun runHelper(command: Int?, admit: () -> Unit, recordReady: (Int, String, String) -> Unit): Result {
+    fun dashboardMode(command: Int, filename: String, admit: () -> Unit, ready: (Int, String, String) -> Unit): Result {
+        require(com.byd.dashcast.clusterlive.ClusterDashboardProfile.permitsCommand(command))
+        require(com.byd.dashcast.clusterlive.ClusterThemePolicy.ownedName(filename))
+        return runHelper(command, admit, ready, filename)
+    }
+    @Synchronized fun dashboardDisplay(filename: String, budgetMs: Long, valid: () -> Boolean, admit: () -> Unit): Result {
+        require(com.byd.dashcast.clusterlive.ClusterThemePolicy.ownedName(filename))
+        require(budgetMs in 1..15000)
+        outstandingDisplayProbe?.let { previous ->
+            if (previous.isAlive || !previous.waitFor(1, TimeUnit.MILLISECONDS))
+                return Result(JSONObject().put("state", "UNAVAILABLE").put("detail", "Previous owned display reader remains unreaped; no new probe"), false)
+            outstandingDisplayProbe = null
+        }
+        return runHelper(-1, admit, { _, _, _ -> }, filename, budgetMs, valid)
+    }
+    private fun runHelper(command: Int?, admit: () -> Unit, recordReady: (Int, String, String) -> Unit,
+        dashboardFilename: String? = null, probeBudgetMs: Long? = null, probeValid: (() -> Boolean)? = null): Result {
+        val probeDeadline = probeBudgetMs?.let { SystemClock.elapsedRealtime() + it }
         val root = File(if (command == null) "/data/local/tmp/dashcast-cluster-query" else "/data/local/tmp/dashcast-native-mode")
         if (!root.exists()) check(root.mkdir()) { "Cannot create private query directory" }
         val rootStat = Os.lstat(root.path)
@@ -42,6 +60,7 @@ internal object ClusterThemeQueryRunner {
             val arguments = mutableListOf("/system/bin/app_process64", "-Xnoimage-dex2oat", "/system/bin",
                 if (command == null) "com.byd.dashcast.proxy.daemon.ClusterThemeQueryHelper" else "com.byd.dashcast.proxy.daemon.ClusterNativeModeHelper", token)
             if (command != null) arguments.add(command.toString())
+            dashboardFilename?.let(arguments::add)
             val process = ProcessBuilder(arguments).redirectErrorStream(true)
                 .apply { environment()["CLASSPATH"] = apk }.start()
             child = process; reaped = false
@@ -55,8 +74,12 @@ internal object ClusterThemeQueryRunner {
                     }
                 } }
             }, "cluster-query-result").apply { isDaemon = true; start() }
-            val readyUntil = SystemClock.elapsedRealtime() + 4000
-            while (!ready.exists() && process.isAlive && SystemClock.elapsedRealtime() < readyUntil) Thread.sleep(25)
+            val readyUntil = minOf(SystemClock.elapsedRealtime() + 4000, probeDeadline ?: Long.MAX_VALUE)
+            while (!ready.exists() && process.isAlive && SystemClock.elapsedRealtime() < readyUntil) {
+                check(probeValid == null || probeValid()) { "Display snapshot cancelled before readiness" }
+                Thread.sleep(25)
+            }
+            check(probeValid == null || probeValid()) { "Display snapshot cancelled before admission" }
             val fd = Os.open(ready.path, OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_NONBLOCK or OsConstants.O_CLOEXEC, 0)
             try {
                 val st = Os.fstat(fd)
@@ -70,8 +93,11 @@ internal object ClusterThemeQueryRunner {
             } finally { Os.close(fd) }
             check(process.isAlive) { "Read-only helper died before admission" }
             admit()
+            check(probeDeadline == null || SystemClock.elapsedRealtime() < probeDeadline) { "Display snapshot budget expired before GO" }
             process.outputStream.write("GO\n".toByteArray()); process.outputStream.flush()
-            check(process.waitFor(9000, TimeUnit.MILLISECONDS)) { "Read-only helper deadline; no replay" }
+            val waitMs = minOf(9000L, probeDeadline?.let { (it - SystemClock.elapsedRealtime()).coerceAtLeast(1) } ?: 9000L)
+            if (probeValid == null) check(process.waitFor(waitMs, TimeUnit.MILLISECONDS)) { "Read-only helper deadline; no replay" }
+            else awaitDisplayProbe(process, SystemClock.elapsedRealtime() + waitMs, probeValid)
             reaped = true
             reader.join(500)
             check(!reader.isAlive && !overflow.get()) { "Incomplete/oversized query result" }
@@ -110,7 +136,25 @@ internal object ClusterThemeQueryRunner {
                 .filter { it.startsWith("DASHCAST_NATIVE_STEP=") }.map { it.removePrefix("DASHCAST_NATIVE_STEP=").take(512) }.take(20).toList()
             result.put("trace", org.json.JSONArray(partial))
         }
-        if (!reaped) result.put("detail", "Owned query helper not reaped; further queries/tests blocked. Native renderer identity UNKNOWN.")
+        if (command == -1 && !reaped) outstandingDisplayProbe = child
+        if (!reaped) result.put("detail", if (command == -1)
+            "Owned display reader not reaped; further display probes blocked. Native/RCC Restore remains available."
+            else "Owned query helper not reaped; further queries/tests blocked. Native renderer identity UNKNOWN.")
         return Result(result.put("receivedEpochMs", System.currentTimeMillis()), reaped)
+    }
+
+    internal fun awaitDisplayProbe(process: java.lang.Process, deadline: Long, valid: () -> Boolean) {
+        while (process.isAlive && SystemClock.elapsedRealtime() < deadline) {
+            if (!valid()) {
+                process.destroyForcibly()
+                error("Display snapshot cancelled; owned read-only child stopped")
+            }
+            if (process.waitFor(50, TimeUnit.MILLISECONDS)) {
+                check(valid()) { "Display snapshot completed for a retired opening" }
+                return
+            }
+        }
+        check(!process.isAlive) { "Display snapshot deadline; no replay" }
+        check(valid()) { "Display snapshot completed for a retired opening" }
     }
 }

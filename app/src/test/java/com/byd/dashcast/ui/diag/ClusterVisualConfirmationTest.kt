@@ -84,7 +84,7 @@ class ClusterVisualConfirmationTest {
         val native: ClusterNativeFullControls
         val rcc: ClusterThemeLiveControls
         init {
-            bf.set(null, binder); vf.set(null, "38")
+            bf.set(null, binder); vf.set(null, "41")
             app.getSharedPreferences("native_cluster_operational_debt", 0).edit().clear().commit()
             native = ClusterNativeFullControls(app, header, body, { true }, {}, {}, prompts)
             rcc = ClusterThemeLiveControls(app, header, body, { true }, {}, { false }, {}, nativeStatus = { text, s -> native.receivedStatus(text, s) }, prompts = prompts)
@@ -195,14 +195,20 @@ class ClusterVisualConfirmationTest {
             assertTrue(f.ops.all { it == 0 })
         }
     }
-    @Test fun `corner popup describes corners and positive sends only exact local operation16`() {
-        Fixture(status(rcc = true, variant = "corner-marker").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
+    @Test fun `source1 corner round without ACK2 asks visual question and sends only local observation without closing debt`() {
+        Fixture(status(rcc = true, variant = "corner-marker-21f7735c").put("transport", "android-ivi")
+            .put("rccDebt", true).put("uncertain", true).put("iviRecoverySettled", false)
+            .put("detail", "Fresh owned IVI selection; source=1; nativePropertyEmpty=true")
+            .put("loadEvidence", JSONObject().put("selection", "OWN_PATH_REPORTED").put("ack2", "NOT_RECEIVED"))
+            .put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
             f.activate(); f.waitFor { f.currentDialog() != null }
             assertEquals(f.app.getString(R.string.diag_cluster_observe_corners_message),
                 f.currentDialog()!!.findViewById<TextView>(android.R.id.message).text)
             f.currentDialog()!!.getButton(-1).performClick(); f.waitFor { f.ops.contains(16) }
             assertEquals(listOf(16), f.ops.filter { it != 0 }); assertEquals(listOf(filename), f.filenames)
             assertTrue(f.receipt.getBoolean("markerObservedByUser")); assertFalse(f.receipt.getBoolean("themeObservedByUser"))
+            assertTrue(f.receipt.getBoolean("rccDebt")); assertTrue(f.receipt.getBoolean("uncertain"))
+            assertFalse(f.receipt.getBoolean("iviRecoverySettled")); assertFalse(f.receipt.getBoolean("defaultQueried"))
         }
     }
     @Test fun `initial corner selection alone never opens a visual popup or sends a new operation`() {
@@ -226,7 +232,7 @@ class ClusterVisualConfirmationTest {
         Fixture(status()).use { f ->
             f.prompts.setVisible(true)
             ClusterNativeProjectionDebt.begin(f.app, nonce)
-            buttons(f.body).single { it.text == f.app.getString(R.string.diag_cluster_rcc_theme_button) }.performClick()
+            buttons(f.body).single { it.text == f.app.getString(R.string.diag_cluster_rcc_corners_button) }.performClick()
             assertNotNull(f.currentDialog()); assertEquals(f.app.getString(android.R.string.ok), f.currentDialog()!!.getButton(-1).text)
             f.currentDialog()!!.getButton(-1).performClick()
             assertTrue(f.ops.isEmpty()); assertTrue(ClusterNativeProjectionDebt.blocked(f.app))

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Panel DashCast</string>
+    <string name="diag_cluster_dashboard_help">Prueba manual con el vehículo parado. Al cerrar, el perfil sigue seleccionado. Restaura el perfil de fábrica y compruébalo antes de instalar un APK anterior.</string>
+    <string name="diag_cluster_dashboard_read">1 · Leer estado y compatibilidad</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Preparar el panel</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Elegir aplicación</string>
+    <string name="diag_cluster_dashboard_open">4 · Abrir el panel</string>
+    <string name="diag_cluster_dashboard_close">Cerrar proyección</string>
+    <string name="diag_cluster_dashboard_observe">5 · Confirmar la pantalla observada</string>
+    <string name="diag_cluster_dashboard_observe_message">Confirma solo si ves el panel, instrumentos, alertas y aplicación. La respuesta de un comando no demuestra esa imagen.</string>
+    <string name="diag_cluster_dashboard_confirm">Confirma que el vehículo está inmóvil y que se verificó el firmware. Esta casilla es una declaración, no una medición del movimiento. Falta validar en el vehículo.</string>
+    <string name="diag_cluster_dashboard_geometry">Debe detectarse un único cuadro activo de 1920 × 720 píxeles. Tamaño desconocido, ambiguo o pequeño: prueba rechazada.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prepara primero el perfil DashCast y espera a que termine la selección.</string>
+    <string name="diag_cluster_dashboard_idle">○ Ningún panel preparado</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Restaurando</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Estado incierto: usa Restaurar</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Apertura recibida; confirma la pantalla</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Proyección cerrada; aún debes restaurar el perfil de fábrica</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Operación en curso</string>
+    <string name="diag_cluster_dashboard_ready">✓ Perfil seleccionado; elige una aplicación y abre el panel</string>
+    <string name="diag_cluster_dashboard_selected_app">Aplicación: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Detalles técnicos y pruebas anteriores</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Pantalla confirmada por el usuario</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Cierra la proyección y solicita el perfil de fábrica. Un cierre fallido sigue pendiente aunque vuelva el perfil de fábrica. Confirma después los instrumentos y alertas visibles.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Activando temporalmente la proyección original BYD…</string>
+    <string name="diag_cluster_dashboard_display_wait">Esperando la pantalla de proyección BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">Pantalla de proyección BYD no disponible o incompatible. Consulta los detalles.</string>
+    <string name="diag_cluster_dashboard_restore_required">Inicialización iniciada: se requiere restaurar BYD.</string>
+    <string name="diag_cluster_dashboard_small_panel">Cuadro pequeño detectado: prueba rechazada. La restauración BYD sigue disponible.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Cierra la proyección temporal BYD y verifica la selección de fábrica. No se seleccionó ningún RCC personalizado. Después confirma el regreso de los instrumentos y alertas.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">La preparación puede abrir temporalmente la proyección original BYD y comprobar su pantalla antes de seleccionar nuestro RCC. Ninguna aplicación se inicia antes de Abrir. Confirma el estacionamiento y el firmware; esta declaración no mide el movimiento.</string>
+    <string name="diag_cluster_dashboard_protocol">El daemon conectado debe usar el protocolo %1$d. Vuelve a conectarlo en DashCast antes de repetir Preparar o Abrir. No se envió ninguna orden BYD.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Prototipo a pantalla completa (solo PC)</string>
+    <string name="diag_cluster_full_app_help">Prototipo solo para pruebas en PC. La carga en el vehículo seguirá bloqueada hasta validar una recuperación independiente. Se conservan los instrumentos y avisos de BYD. Restaurar sigue disponible para el perfil retirado.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Este prototipo no puede cargarse en el vehículo. El perfil de pantalla completa retirado solo permite su recuperación.</string>
+    <string name="diag_cluster_factory_apply">Aplicar selección de fábrica</string>
+    <string name="diag_cluster_factory_apply_confirm">El perfil de fábrica ya está configurado pero falta verificar su aplicación nativa. Ejecutar una transición de proyección BYD, cerrarla y volver a leer. No se envía RCC propio ni se repite la selección de fábrica. Confirma estacionamiento y firmware.</string>
+    <string name="diag_cluster_full_app_observe_message">El perfil retirado no puede abrirse ni confirmarse como listo. Usa Restaurar y confirma por separado que han vuelto los instrumentos y avisos de BYD.</string>
+</resources>

@@ -53,7 +53,11 @@ object ClusterPrefs {
     private const val KEY_HUD_BANNER_DISMISSED = "hud_notif_banner_dismissed"
 
     // ── Startup behaviour ────────────────────────────────────────────────────
+    // Existing key remains the last-app restoration opt-in on deployed devices.
     const val KEY_BOOT_AUTO_START = "boot_auto_start_enabled"
+    private const val KEY_BOOT_PROJECTION = "boot_projection_enabled"
+    private const val KEY_STARTUP_APPS_MODE = "startup_apps_mode"
+    private const val KEY_STARTUP_APPS_TARGET = "startup_apps_target"
 
     // ── Projection start behaviour ───────────────────────────────────────────
     /**
@@ -249,12 +253,58 @@ object ClusterPrefs {
     // ─────────────────────────────────────────────────────────────────────────
 
     @JvmStatic
-    fun isBootAutoStartEnabled(ctx: Context): Boolean =
-        prefs(ctx).getBoolean(KEY_BOOT_AUTO_START, false)
+    fun isBootAutoStartEnabled(ctx: Context): Boolean = getStartupApps(ctx).mode != StartupAppsMode.NONE
+
+    @JvmStatic
+    @Synchronized
+    fun getStartupApps(ctx: Context): StartupAppsSelection {
+        val p = prefs(ctx)
+        if (!p.contains(KEY_STARTUP_APPS_MODE)) {
+            // Legacy app/favourite choices never granted permission to launch at vehicle boot.
+            val mode = if (p.getBoolean(KEY_BOOT_AUTO_START, false)) StartupAppsMode.LAST_SESSION else StartupAppsMode.NONE
+            p.edit().putString(KEY_STARTUP_APPS_MODE, mode.name).remove(KEY_STARTUP_APPS_TARGET).apply()
+        }
+        val mode = try { StartupAppsMode.valueOf(p.getString(KEY_STARTUP_APPS_MODE, null).orEmpty()) }
+            catch (_: IllegalArgumentException) { StartupAppsMode.NONE }
+        return StartupAppsSelection(mode, p.getString(KEY_STARTUP_APPS_TARGET, null))
+    }
+
+    @JvmStatic
+    @Synchronized
+    fun setStartupApps(ctx: Context, selection: StartupAppsSelection) {
+        require(selection.mode !in setOf(StartupAppsMode.APP, StartupAppsMode.LAYOUT) || !selection.target.isNullOrBlank())
+        require(selection.mode != StartupAppsMode.APP || selection.hasValidAppTarget())
+        val target = selection.target.takeIf { selection.mode == StartupAppsMode.APP || selection.mode == StartupAppsMode.LAYOUT }
+        edit(ctx).putString(KEY_STARTUP_APPS_MODE, selection.mode.name)
+            .putString(KEY_STARTUP_APPS_TARGET, target).apply()
+    }
+
+    @JvmStatic
+    fun observeStartupApps(ctx: Context, changed: () -> Unit): Closeable {
+        val p = prefs(ctx)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_STARTUP_APPS_MODE || key == KEY_STARTUP_APPS_TARGET) changed()
+        }
+        p.registerOnSharedPreferenceChangeListener(listener)
+        return Closeable { p.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    @JvmStatic
+    fun isBootProjectionEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_BOOT_PROJECTION, false)
+
+    @JvmStatic
+    fun setBootProjectionEnabled(ctx: Context, enabled: Boolean) {
+        edit(ctx).putBoolean(KEY_BOOT_PROJECTION, enabled).apply()
+    }
+
+    @JvmStatic
+    fun isAnyBootProjectionEnabled(ctx: Context): Boolean =
+        isBootProjectionEnabled(ctx) || isBootAutoStartEnabled(ctx)
 
     @JvmStatic
     fun setBootAutoStartEnabled(ctx: Context, enabled: Boolean) {
         edit(ctx).putBoolean(KEY_BOOT_AUTO_START, enabled).apply()
+        setStartupApps(ctx, StartupAppsSelection(if (enabled) StartupAppsMode.LAST_SESSION else StartupAppsMode.NONE))
     }
 
     // ───────────────────────────────────────────────────────────────────────

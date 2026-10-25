@@ -25,6 +25,59 @@ import java.util.concurrent.atomic.AtomicInteger
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class ClusterThemeSessionTest {
+    @Test fun `retired profile refuses new work before debt callback or IPC while existing recovery stays callable`() {
+        val app = RuntimeEnvironment.getApplication()
+        val retired = ClusterThemeVariant.FULL_APP_21F7735C
+        var calls = 0; var before = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                calls++
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                val operation = data.readInt()
+                assertTrue(operation in setOf(13, 21, 25))
+                reply!!.writeNoException()
+                reply.writeString("""{"state":"QUARANTINE","filename":"legacy-fixture","rccDebt":true,"fullAppAdasAccepted":true}""")
+                return true
+            }
+        }); versionField.set(null, "44")
+        val session = ClusterThemeSession.pin(app)
+        val source = ParcelFileDescriptor.createPipe()
+        try {
+            assertThrows(IllegalStateException::class.java) { session.startIvi(source[0], retired, Binder()) { before++ } }
+            assertThrows(IllegalStateException::class.java) { session.start(source[0], retired) { before++ } }
+            assertThrows(IllegalStateException::class.java) { session.dashboardProjection(true, Binder(), retired) }
+            assertThrows(IllegalStateException::class.java) { session.launchDashboardApplication("com.waze", 4, retired) }
+            assertThrows(IllegalStateException::class.java) { session.fullAppAdas("a".repeat(32), 0, 0, 0, false, "com.waze", 4, Binder()) }
+            assertEquals(0, before); assertEquals(0, calls)
+            assertFalse(ClusterThemeProjectionDebt.blocked(app))
+            ClusterThemeProjectionDebt.begin(app, "a".repeat(32))
+            session.dashboardProjection(false, Binder(), retired)
+            session.restoreIvi(Binder())
+            assertTrue(session.fullAppAdas("a".repeat(32), 4, 0, 0, true, "", 0, Binder()))
+            assertEquals(3, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } finally { source.forEach { it.close() } }
+    }
+    @Test fun `current dashboard display read is closed operation23 on the pinned protocol43 endpoint without retry`() {
+        val app = RuntimeEnvironment.getApplication(); val nonce = "a".repeat(32)
+        ClusterThemeProjectionDebt.begin(app, nonce)
+        var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST, code)
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(23, data.readInt())
+                assertEquals(nonce, data.readString()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"AWAITING_OBSERVATION","filename":"","variant":"full-dashboard-21f7735c","rccDebt":true,"dashboard":{"geometry":{"verdict":"READY"}}}""")
+                return true
+            }
+        }); versionField.set(null, "42")
+        val session = ClusterThemeSession.pin(app)
+        assertThrows(IllegalStateException::class.java) { session.currentDashboardDisplay() }; assertEquals(0, calls)
+        versionField.set(null, "43")
+        assertEquals("READY", org.json.JSONObject(session.currentDashboardDisplay()).getJSONObject("dashboard").getJSONObject("geometry").getString("verdict"))
+        assertEquals(1, calls)
+        binderField.set(null, Binder())
+        assertThrows(IllegalStateException::class.java) { session.currentDashboardDisplay() }; assertEquals(1, calls)
+    }
     private val binderField = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
     private val versionField = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
     private val old = binderField.get(null)
@@ -33,6 +86,29 @@ class ClusterThemeSessionTest {
         binderField.set(null, old); versionField.set(null, oldVersion)
         RuntimeEnvironment.getApplication().getSharedPreferences("native_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
         RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+    @Test fun `dashboard application launch uses one captured endpoint and never retries a lost reply`() {
+        var calls = 0
+        val first = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(ProxyDaemonContract.TXN_LAUNCH_AND_FORCE, code)
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
+                assertEquals("org.example.maps", data.readString()); assertEquals(0, data.readInt())
+                assertEquals(7, data.readInt()); assertEquals(752, data.readInt()); assertEquals(320, data.readInt())
+                assertNull(data.readStrongBinder()); assertEquals(0, data.dataAvail())
+                calls++; throw DeadObjectException()
+            }
+        }
+        binderField.set(null, first); versionField.set(null, "42")
+        val session = ClusterThemeSession.pin(RuntimeEnvironment.getApplication())
+        assertThrows(DeadObjectException::class.java) { session.launchDashboardApplication("org.example.maps", 7) }
+        assertEquals(1, calls)
+        var replacementCalls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean { replacementCalls++; return false }
+        })
+        assertThrows(IllegalStateException::class.java) { session.launchDashboardApplication("org.example.maps", 7) }
+        assertEquals(0, replacementCalls); assertEquals(1, calls)
     }
     @Test fun `Android RCC operation35 commits exact debt before fixed marker request`() {
         val app = RuntimeEnvironment.getApplication(); var calls = 0
@@ -96,6 +172,29 @@ class ClusterThemeSessionTest {
             assertEquals(listOf(15, 16), operations); assertTrue(ClusterThemeProjectionDebt.blocked(app))
         } } finally { file.delete() }
     }
+    @Test fun `observed cohort refuses38 before debt and sends only its closed operation18 at39`() {
+        val app = RuntimeEnvironment.getApplication(); var calls = 0
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); assertEquals(18, data.readInt())
+                ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
+                assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                val nonce = data.readString(); assertEquals(ClusterThemeProjectionDebt.nonce(app), nonce)
+                assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail()); calls++
+                reply!!.writeNoException(); reply.writeString("""{"state":"QUARANTINE","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","variant":"corner-marker-21f7735c","rccDebt":true}""")
+                return true
+            }
+        }); versionField.set(null, "38")
+        val file = File.createTempFile("rcc-live-cohort", ".rcc").apply { writeText("fixture") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { source ->
+            val session = ClusterThemeSession.pin(app)
+            assertThrows(IllegalStateException::class.java) { session.startIvi(source, ClusterThemeVariant.CORNER_MARKER_21F7735C, Binder()) {} }
+            assertEquals(0, calls); assertFalse(ClusterThemeProjectionDebt.blocked(app))
+            assertThrows(IllegalArgumentException::class.java) { session.start(source, ClusterThemeVariant.CORNER_MARKER_21F7735C) {} }
+            versionField.set(null, "39"); session.startIvi(source, ClusterThemeVariant.CORNER_MARKER_21F7735C, Binder()) {}
+            assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } } finally { file.delete() }
+    }
     @Test fun `corner read only verification sends original nonce operation17 and preserves debt`() {
         val app = RuntimeEnvironment.getApplication(); val nonce = "a".repeat(32); var calls = 0
         ClusterThemeProjectionDebt.begin(app, nonce)
@@ -109,8 +208,11 @@ class ClusterThemeSessionTest {
             }
         }); versionField.set(null, "37")
         val session = ClusterThemeSession.pin(app)
-        assertThrows(IllegalStateException::class.java) { session.verifyCorners(Binder()) }; assertEquals(0, calls)
-        versionField.set(null, "38"); session.verifyCorners(Binder())
+        for (old in listOf("37", "38", "39", "40")) {
+            versionField.set(null, old)
+            assertThrows(IllegalStateException::class.java) { session.verifyCorners(Binder()) }; assertEquals(0, calls)
+        }
+        versionField.set(null, "41"); session.verifyCorners(Binder())
         assertEquals(1, calls); assertEquals(nonce, ClusterThemeProjectionDebt.nonce(app))
     }
     @Test fun `explicit orphan debt reconciliation is operation13 and only current exact safe nonce clears it`() {

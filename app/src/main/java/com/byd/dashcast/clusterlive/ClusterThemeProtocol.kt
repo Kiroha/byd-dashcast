@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /** Closed subset of SX326 PadToClusterReq / ClusterToPadRes, type 8. No arbitrary commands.
- * Slots are bound to libBydCluster 3197abee…: cmd/sub 4/6, ints 8..16, strings 18..26.
+ * Slots verified in libBydCluster 3197abee… and 21f7735c…: cmd/sub 4/6, ints 8..16, strings 18..26.
  */
 object ClusterThemeProtocol {
     const val UI_VERSION = "Di3F_DynastyOceanTranslate_V0001"
@@ -26,9 +26,11 @@ object ClusterThemeProtocol {
     }
 
     data class Response(val cmd: Int, val sub: Int, val ints: List<Int>, val strings: List<String>) {
-        fun isDefault(): Boolean = cmd == 1001 && sub == 4 && ints[0] == 1 &&
-            ints[3] == 1 && strings[0] == UI_VERSION && strings[2] == "default" && strings[4] == "default"
-        // getTranslateSource reports the native RCC field independently of the IVI selection path.
+        fun isFactoryConfigured(): Boolean = cmd == 1001 && sub == 4 && ints[0] == 1 &&
+            ints[3] in 0..1 && strings[0] == UI_VERSION && strings[2] == "default" && strings[4] == "default"
+        // source1 means the native Qt path property is empty. Registration and pixels remain unknown.
+        fun isDefault(): Boolean = isFactoryConfigured() && ints[3] == 1
+        // getTranslateSource reports the native Qt path property independently of the IVI selection path.
         fun selected(name: String): Boolean = ClusterThemePolicy.ownedName(name) && cmd == 1001 && sub == 4 && ints[0] == 1 &&
             ints[3] in 0..1 && strings[0] == UI_VERSION && strings[2] == ClusterThemePolicy.HOST_DIRECTORY + name
         fun summary(): String = "cmd=$cmd sub=$sub ints=$ints strings=$strings"

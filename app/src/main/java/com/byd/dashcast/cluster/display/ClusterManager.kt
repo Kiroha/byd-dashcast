@@ -54,6 +54,8 @@ class ClusterManager internal constructor(
     interface DisplayReadyCallback {
         fun onDisplayReady(display: Display?, displayId: Int)
         fun onDisplayTimeout()
+        /** Command-chain delivery completed; display availability is a separate condition. */
+        fun onActivationComplete(success: Boolean) {}
 
         /**
          * Called if the VirtualDisplay appears after the initial timeout fires.
@@ -85,6 +87,9 @@ class ClusterManager internal constructor(
      * in flight passes the generation guard and fires a SECOND `onDisplayReady` (duplicate
      * `wm overscan reset`, duplicate notification update, duplicate MainActivity callback).
      */
+    private var mActivationCallback: DisplayReadyCallback? = null
+    private var mTerminalGeneration = -1
+    private var mActivationSucceeded = false
     @Volatile private var mActivationGeneration = 0
     @Volatile private var mReadyGeneration = -1
     private lateinit var mProjectionSession: ProjectionCommandSequencer.Session
@@ -156,10 +161,13 @@ class ClusterManager internal constructor(
         session: ProjectionCommandSequencer.Session,
         callback: DisplayReadyCallback,
     ) {
+        val reuseCompletedProjection = isProjectionReadyForApps() &&
+            ProjectionCommandBus.currentSession() === session
         // 1.2.29 — defensive cancel() at entry: on retry, re-entering registered a new listener
         // without unregistering the old, leaking listeners and double-launching on the cluster.
         cancel()
         mProjectionSession = session
+        mActivationCallback = callback
         ProjectionCommandBus.runIfCurrent(session, ClusterDisplayRegistry::clear)
         val gen = mActivationGeneration
         mRequireCmd16Success = Platform.get().isDiLink3(mContext)
@@ -192,6 +200,7 @@ class ClusterManager internal constructor(
                         sendProjectionInfo(CMD_PROJECTION_ON, this)
                         return
                     }
+                    completeActivation(gen, out?.contains("does not exist") != true)
                     mHandler.postDelayed({
                         if (gen == mActivationGeneration) resolveDl5Display(dm, callback, gen)
                     }, 500)
@@ -200,6 +209,7 @@ class ClusterManager internal constructor(
                 override fun onError(err: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "DL5 activation ADB(cmd=16) ERROR: $err")
+                    completeActivation(gen, false)
                     // Still attempt to resolve a display — they may be already up.
                     mHandler.postDelayed({
                         if (gen == mActivationGeneration) resolveDl5Display(dm, callback, gen)
@@ -251,8 +261,9 @@ class ClusterManager internal constructor(
         // The persisted latch was right; its reading point was not.
         if (found != null) latchPanelGeometry(found)
 
-        if (found != null && sQtInProjectionMode) {
+        if (found != null && sQtInProjectionMode && reuseCompletedProjection) {
             mActivationCmd16Succeeded = true
+            completeActivation(gen, true)
             // True fast path: VD up AND Qt already projecting — just hand the display back.
             AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id=${found.displayId})")
             mHandler.post {
@@ -765,6 +776,7 @@ class ClusterManager internal constructor(
                     mHandler.post {
                         if (!isCurrentActivation(gen)) return@post
                         mActivationCmd16Succeeded = true
+                        completeActivation(gen, true)
                         if (!claimDisplayReady(gen)) return@post
                         notifyProjectionActive()
                         if (isCurrentActivation(gen)) {
@@ -776,6 +788,7 @@ class ClusterManager internal constructor(
                 override fun onError(err: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: $err")
+                    completeActivation(gen, false)
                     mHandler.post {
                         if (isCurrentActivation(gen) && mReadyGeneration != gen) {
                             callback.onDisplayTimeout()
@@ -941,12 +954,14 @@ class ClusterManager internal constructor(
                 override fun onSuccess(out: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.i(TAG, "activation ADB(cmd=35): $out")
+                    completeActivation(gen, mActivationCmd16Succeeded)
                     // Defensive: cmd 35 can only run after cmd 16, so the latch is already set.
                     markCmd16Dispatched(gen)
                 }
                 override fun onError(err: String?) {
                     if (gen != mActivationGeneration) return
                     AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: $err")
+                    completeActivation(gen, false)
                     markCmd16Dispatched(gen)
                 }
             })
@@ -960,6 +975,16 @@ class ClusterManager internal constructor(
         if (gen == mActivationGeneration) mActivationCmd16Dispatched = true
     }
 
+    private fun completeActivation(gen: Int, success: Boolean) {
+        mHandler.post {
+            if (!isCurrentActivation(gen) || mTerminalGeneration == gen) return@post
+            mTerminalGeneration = gen
+            mActivationSucceeded = success
+            publishActivationReadiness(gen)
+            mActivationCallback?.onActivationComplete(success)
+        }
+    }
+
     private fun sendProjectionInfo(info: Int, callback: AdbLocalClient.Callback) {
         sendCommand(mContext, mProjectionSession, info, callback)
     }
@@ -968,7 +993,14 @@ class ClusterManager internal constructor(
     private fun claimDisplayReady(gen: Int): Boolean {
         if (!canResolveDisplay(gen) || mReadyGeneration == gen) return false
         mReadyGeneration = gen
+        publishActivationReadiness(gen)
         return true
+    }
+
+    private fun publishActivationReadiness(gen: Int) {
+        if (isCurrentActivation(gen) && mReadyGeneration == gen && mTerminalGeneration == gen && mActivationSucceeded) {
+            sReadyForAppsSession = mProjectionSession
+        }
     }
 
     private fun isCurrentActivation(gen: Int): Boolean =
@@ -1119,6 +1151,11 @@ class ClusterManager internal constructor(
         // Invalidate any in-flight daemon probe / sendInfo callback from this activation: they
         // run on background threads and cannot be removed from the handler queue.
         mActivationGeneration++
+        mActivationCallback = null
+        mActivationSucceeded = false
+        if (this::mProjectionSession.isInitialized && sReadyForAppsSession === mProjectionSession) {
+            sReadyForAppsSession = null
+        }
         mReadyGeneration = -1
         mActivationCmd16Dispatched = false
         mActivationCmd16Succeeded = false
@@ -1155,6 +1192,9 @@ class ClusterManager internal constructor(
 
     /** Cancels a directly-owned activation and relinquishes its process-wide command session. */
     fun abandon() {
+        if (this::mProjectionSession.isInitialized) {
+            ProjectionCommandBus.runIfCurrent(mProjectionSession, ::notifyProjectionStopped)
+        }
         cancel()
         if (this::mProjectionSession.isInitialized) {
             ProjectionCommandBus.endSession(mProjectionSession)
@@ -1256,11 +1296,18 @@ class ClusterManager internal constructor(
         // Volatile because notifyProjection*() may be called from any thread (AdbLocalClient callbacks).
         @Volatile
         private var sQtInProjectionMode = false
+        @Volatile private var sReadyForAppsSession: ProjectionCommandSequencer.Session? = null
+
+        /** Current owner has both a resolved display and successful terminal command delivery. */
+        @JvmStatic
+        fun isProjectionReadyForApps(): Boolean = sQtInProjectionMode &&
+            sReadyForAppsSession?.let(ProjectionCommandBus::isCurrent) == true
 
         /** Hooked by AdbLocalClient at the entry of restoreBydOnCluster() / restoreOriginCluster(). */
         @JvmStatic
         fun notifyProjectionStopped() {
             sQtInProjectionMode = false
+            sReadyForAppsSession = null
         }
 
         /**

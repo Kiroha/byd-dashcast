@@ -8,6 +8,7 @@ internal object ClusterThemeIviExchange {
         fun register(receiver: (Int, ByteArray) -> Unit): Int
         fun send(bytes: ByteArray): Int
         fun verifyCarrier()
+        fun verifyLoadCohort(): String
     }
     data class Receipt(val native: Int?, val queryNative: Int?, val responses: List<ByteArray>,
         val postQueryResponses: List<ByteArray>, val attempted: Boolean, val error: String?, val trace: List<String>,
@@ -104,13 +105,18 @@ internal object ClusterThemeIviExchange {
             check(registration == 0) { "Callback registration refused: $registration" }
             synchronized(lock) { accepting = true }
             val baseline = query()
-            if (operation == "query") {
+            if (operation == "query" || operation == "restore" && baseline.first.isFactoryConfigured()) {
                 native = queryNative; post = baseline.second
+                if (operation == "restore") step("factory-already-configured: no mode1 replay; native Qt path property and pixels require verification")
             } else {
                 check(baseline.first.strings[0] == ClusterThemeProtocol.UI_VERSION) { "UI contract version differs" }
                 check(if (operation == "load") baseline.first.isDefault()
-                    else baseline.first.isDefault() || baseline.first.selected(name)) { "Baseline is custom/incompatible; no overwrite" }
+                    else baseline.first.isFactoryConfigured() || baseline.first.selected(name)) { "Baseline is custom/incompatible; no overwrite" }
                 transport.verifyIdentity(); current()
+                if (operation == "load") {
+                    val cohort = transport.verifyLoadCohort(); current()
+                    step("installed-artifact-cohort-verified id=$cohort loadedNativeIdentity=UNKNOWN")
+                }
                 transport.verifyCarrier()
                 current()
                 // The daemon durably recorded its debt/helper identity before this helper received GO.
@@ -145,7 +151,7 @@ internal object ClusterThemeIviExchange {
                     step("negative-response-validated retirementEligible=$retirementEligible nativeIdentity=UNKNOWN")
                 }
                 synchronized(lock) { check(resourceFailure.isEmpty()) { resourceFailure } }
-                check(if (operation == "load") selected.first.selected(name) else selected.first.isDefault()) {
+                check(if (operation == "load") selected.first.selected(name) else selected.first.isFactoryConfigured()) {
                     "Post-query selection does not match requested target"
                 }
                 val decoded = synchronized(lock) { events.drop(mutationFloor).map { ClusterThemeProtocol.decode(it) } }
@@ -162,7 +168,7 @@ internal object ClusterThemeIviExchange {
                 check(resourceFailure.isEmpty()) { resourceFailure }
                 val finalBytes = events.drop(lastQueryFloor)
                 val finalSelection = selection(finalBytes) ?: error("Fresh selection missing at success seal")
-                check(operation == "query" || if (operation == "load") finalSelection.selected(name) else finalSelection.isDefault()) {
+                check(operation == "query" || if (operation == "load") finalSelection.selected(name) else finalSelection.isFactoryConfigured()) {
                     "Final broadcast selection conflicts with requested target"
                 }
                 post = finalBytes

@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ClusterThemeVariantTest {
+    @Test fun `retired full app keeps its durable identity but has no new activation authority`() {
+        val retired = ClusterThemeVariant.FULL_APP_21F7735C
+        assertEquals("full-app-21f7735c", retired.id)
+        assertEquals("b121e6622f560a04a583c352977813ebc69047635f28cc0dee77ffeec78d007b", retired.carrierSha256)
+        assertEquals(24, retired.startOperation)
+        assertTrue(retired.isFullApp); assertTrue(retired.isDashboard); assertTrue(retired.isRecoveryOnly)
+        assertTrue(ClusterThemeVariant.values().filter { it != retired }.none { it.isRecoveryOnly })
+    }
     @Test fun `legacy schema is exclusively the historical marker experiment`() {
         assertEquals(ClusterThemeVariant.MARKER, ClusterThemeVariant.recover(1, null, null))
         assertThrows(IllegalArgumentException::class.java) { ClusterThemeVariant.recover(1, "full-surface-test", null) }
@@ -31,7 +39,19 @@ class ClusterThemeVariantTest {
         assertEquals(15, ClusterThemeVariant.CORNER_MARKER.startOperation)
         assertEquals(38, ClusterThemeVariant.CORNER_MARKER.minimumProtocol)
         assertTrue(ClusterThemeVariant.CORNER_MARKER.isMarker); assertFalse(full.isMarker)
-        assertEquals(3, ClusterThemeVariant.values().size)
+        assertEquals(18, ClusterThemeVariant.CORNER_MARKER_21F7735C.startOperation)
+        assertEquals(39, ClusterThemeVariant.CORNER_MARKER_21F7735C.minimumProtocol)
+        assertTrue(ClusterThemeVariant.CORNER_MARKER.isCorner)
+        assertTrue(ClusterThemeVariant.CORNER_MARKER_21F7735C.isCorner)
+        assertFalse(marker.isCorner); assertFalse(full.isCorner)
+        assertFalse(ClusterThemeVariant.isCornerId("corner-marker-untrusted"))
+        assertEquals(6, ClusterThemeVariant.values().size)
+        assertFalse(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isMarker)
+        assertTrue(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isPersistent)
+        val app = ClusterThemeVariant.FULL_APP_21F7735C
+        assertTrue(app.isDashboard); assertTrue(app.isFullApp); assertTrue(app.isPersistent)
+        assertFalse(app.isMarker); assertEquals(24, app.startOperation); assertEquals(44, app.minimumProtocol)
+        assertEquals(ClusterDashboardProfile.Viewport(0, 0, 1920, 720), ClusterDashboardProfile.viewport(app))
     }
 
     @Test fun `journal schema types cannot be coerced from fractional or string values`() {

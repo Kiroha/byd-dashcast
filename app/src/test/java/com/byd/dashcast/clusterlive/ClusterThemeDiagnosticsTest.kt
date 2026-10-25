@@ -25,6 +25,22 @@ class ClusterThemeDiagnosticsTest {
             .put("mutated", false).put("uncertain", false).put("raw", raw)
     private fun savedEvents() = JSONObject(prefs.getString(ClusterThemeDiagnostics.KEY, "")!!).getJSONArray("events")
 
+    @Test fun `dashboard export preserves separate native debt and user observation without private payloads or countdown churn`() {
+        val dashboard = JSONObject().put("stage", "UNKNOWN").put("round", "a".repeat(32)).put("pixels", "UNKNOWN")
+            .put("nativeDebt", true).put("pending", false).put("selectionReady", false).put("helperCommand", 18)
+            .put("switchWaitMs", 15000).put("privatePayload", "DO_NOT_EXPORT")
+        val receipt = status("DEFAULT_QUERIED").put("defaultQueried", true).put("rccDebt", true).put("dashboard", dashboard)
+        ClusterThemeDiagnostics.received(app, "status", "connection1", receipt.toString())
+        dashboard.put("switchWaitMs", 10000)
+        ClusterThemeDiagnostics.received(app, "status", "connection1", receipt.toString())
+        assertEquals(1, savedEvents().length())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        assertTrue(report.contains("dashboardNativeDebt\":true")); assertTrue(report.contains("defaultQueried\":true"))
+        assertTrue(report.contains("dashboardStage\":\"UNKNOWN")); assertTrue(report.contains("dashboardPixels\":\"UNKNOWN"))
+        assertFalse(report.contains("DO_NOT_EXPORT")); assertFalse(report.contains("switchWaitMs"))
+    }
+
     @Test fun `empty raw early refusal survives app memory loss and records renderer identity honestly`() {
         ClusterThemeDiagnostics.received(app, "start", "app-local-binder", status().toString())
         forgetMemory()
@@ -76,6 +92,17 @@ class ClusterThemeDiagnosticsTest {
         assertEquals(4, events.length())
         assertTrue(events.getJSONObject(3).has("rawSha256"))
         assertFalse(ClusterThemeDiagnostics.snapshot(app).contains("secretParcelBase64"))
+    }
+    @Test fun `queued recovery and terminal failure remain distinct in exported history without clearing debt`() {
+        val pending = status("QUARANTINE", "Recovered previous session").put("rccDebt", true).put("recoveryPending", true)
+        ClusterThemeDiagnostics.received(app, "android-ivi-restore", "connection1", pending.toString())
+        ClusterThemeDiagnostics.received(app, "status", "connection1", JSONObject(pending.toString()).put("recoveryPending", false)
+            .put("detail", "Helper readiness unavailable before admission; no GO sent").toString())
+        forgetMemory()
+        val report = ClusterThemeDiagnostics.snapshot(app)
+        assertTrue(report.contains("recoveryPending\":true")); assertTrue(report.contains("recoveryPending\":false"))
+        assertTrue(report.contains("rccDebt\":true")); assertTrue(report.contains("Helper readiness unavailable"))
+        assertEquals(2, savedEvents().length())
     }
 
     @Test fun `local failures do not hide or refresh previous status and remain historical after restart`() {

@@ -25,12 +25,18 @@ internal object ClusterThemeDiagnostics {
         "oemQuerySelection" to 1536, "oemQueryNativeIdentity" to 16,
         "nativeModeState" to 32, "nativeModeNonce" to 32, "nativeModeDetail" to 768,
         "nativeModePhysicalPixels" to 16, "nativeModeQmlAck" to 16, "nativeModeDebounce" to 16, "nativeModeTransactionAttempted" to 16,
-        "nativeModeTrace" to 6144, "nativeModeFullReceipt" to 1536, "nativeModeNormalReceipt" to 1536)
+        "nativeModeTrace" to 6144, "nativeModeFullReceipt" to 1536, "nativeModeNormalReceipt" to 1536,
+        "dashboardStage" to 32, "dashboardRound" to 32, "dashboardPixels" to 32, "dashboardGeometry" to 4096,
+        "fullAppAdasStage" to 32, "fullAppAdasRound" to 32)
     private val queryNumbers = listOf("oemQueryRegistration", "oemQueryNative", "oemQueryReceivedEpochMs",
-        "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs")
+        "nativeModeCommand", "nativeModeNative", "nativeModeReceivedEpochMs", "nativeModeQueuedElapsedMs", "nativeModeAdmittedElapsedMs",
+        "dashboardHelperCommand")
     private val booleanFields = listOf("mutated", "uncertain", "iviRecoverySettled", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
-        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable")
+        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable", "recoveryPending",
+        "dashboardNativeDebt", "dashboardPending", "dashboardSelectionReady", "dashboardBootstrapStarted",
+        "dashboardBootstrapRecoverySettled", "dashboardSmallPanelSeen", "dashboardSizeAdmitted",
+        "fullAppAdasDebt", "fullAppAdasRestoring", "factoryApplyPending", "factoryApplyCompleted")
     private var store: Context? = null
     private var events = ArrayList<JSONObject>()
     private var cacheIssue = ""
@@ -70,6 +76,17 @@ internal object ClusterThemeDiagnostics {
                 for (field in listOf("fullReceipt", "normalReceipt")) mode.optJSONObject(field)?.let {
                     event.put("nativeMode" + field.replaceFirstChar { it.uppercase() }, it.toString())
                 }
+            }
+            reply.optJSONObject("dashboard")?.let { dashboard ->
+                for (field in listOf("stage", "round", "pixels", "helperCommand", "nativeDebt", "pending", "selectionReady",
+                    "bootstrapStarted", "bootstrapRecoverySettled", "smallPanelSeen", "sizeAdmitted"))
+                    if (dashboard.has(field) && !dashboard.isNull(field))
+                        event.put("dashboard" + field.replaceFirstChar { it.uppercase() }, dashboard.get(field))
+                dashboard.optJSONObject("geometry")?.let { event.put("dashboardGeometry", it.toString()) }
+            }
+            reply.optJSONObject("fullAppAdas")?.let { adas ->
+                for (field in listOf("stage", "round", "debt", "restoring"))
+                    if (adas.has(field)) event.put("fullAppAdas" + field.replaceFirstChar { it.uppercase() }, adas.get(field))
             }
             // Retain changes without storing Parcel/base64 payloads or unbounded helper output.
             val raw = reply.optString("raw").take(32768)

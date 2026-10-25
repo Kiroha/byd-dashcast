@@ -1,5 +1,6 @@
 package com.byd.dashcast.cluster
 
+import com.byd.dashcast.data.prefs.ProjectionSessionPrefs
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -56,6 +57,8 @@ class ClusterSessionTracker(context: Context) {
     fun remove(pkg: String?) {
         if (pkg == null) return
         mPkgs.remove(pkg)
+        ProjectionSessionPrefs.remove(mAppCtx, pkg)
+        ClusterService.getInstance()?.forgetProjectionApp(pkg)
     }
 
     fun contains(pkg: String?): Boolean = pkg != null && mPkgs.contains(pkg)

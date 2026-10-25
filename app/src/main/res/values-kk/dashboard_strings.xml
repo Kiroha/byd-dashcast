@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast аспаптар тақтасы</string>
+    <string name="diag_cluster_dashboard_help">Көлік тоқтап тұрғанда қолмен сынау. Жапқаннан кейін профиль таңдалған күйде қалады. Ескі APK орнатпас бұрын зауыттық профильді қалпына келтіріп, тексеріңіз.</string>
+    <string name="diag_cluster_dashboard_read">1 · Күй мен үйлесімділікті оқу</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Тақтаны дайындау</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Қолданбаны таңдау</string>
+    <string name="diag_cluster_dashboard_open">4 · Тақтаны ашу</string>
+    <string name="diag_cluster_dashboard_close">Проекцияны жабу</string>
+    <string name="diag_cluster_dashboard_observe">5 · Көрінген экранды растау</string>
+    <string name="diag_cluster_dashboard_observe_message">Тақта, аспаптар, ескертулер және қолданба көрінсе ғана растаңыз. Пәрмен жауабы экранды дәлелдемейді.</string>
+    <string name="diag_cluster_dashboard_confirm">Көліктің қозғалмай тұрғанын және микробағдарламаның тексерілгенін растаңыз. Бұл белгі — мәлімдеме, қозғалыс өлшемі емес. Көлікте тексеру әлі қажет.</string>
+    <string name="diag_cluster_dashboard_geometry">Бір белсенді 1920 × 720 пиксельдік тақта анықталуы тиіс. Белгісіз, екіұшты немесе шағын өлшем: сынақ қабылданбайды.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Алдымен DashCast профилін дайындап, таңдаудың аяқталуын күтіңіз.</string>
+    <string name="diag_cluster_dashboard_idle">○ Тақта дайындалмаған</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Қалпына келтірілуде</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Күй белгісіз: қалпына келтіруді қолданыңыз</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Ашу жауабы алынды; экранды растаңыз</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Проекция жабық; зауыттық профильді қалпына келтіріңіз</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Операция орындалуда</string>
+    <string name="diag_cluster_dashboard_ready">✓ Профиль таңдалды; қолданбаны таңдап, тақтаны ашыңыз</string>
+    <string name="diag_cluster_dashboard_selected_app">Қолданба: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Техникалық мәліметтер мен алдыңғы сынақтар</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Экранды пайдаланушы растады</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Проекцияны жауып, зауыттық профильді сұраңыз. Зауыттық профиль қайтса да, сәтсіз жабу шешілмеген болып қалады. Содан кейін көрінетін аспаптар мен ескертулерді растаңыз.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Бастапқы BYD проекциясы уақытша қосылуда…</string>
+    <string name="diag_cluster_dashboard_display_wait">BYD проекция экраны күтілуде…</string>
+    <string name="diag_cluster_dashboard_display_rejected">BYD проекция экраны қолжетімсіз немесе үйлеспейді. Мәліметтерді тексеріңіз.</string>
+    <string name="diag_cluster_dashboard_restore_required">Баптау басталды: BYD қалпына келтіру қажет.</string>
+    <string name="diag_cluster_dashboard_small_panel">Шағын аспаптар тақтасы анықталды: сынақ қабылданбады. BYD қалпына келтіру қолжетімді.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Уақытша BYD проекциясын жауып, зауыттық таңдауды тексеріңіз. Өзгертілген RCC таңдалмады. Содан кейін аспаптар мен ескертулердің қайтқанын растаңыз.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Дайындау біздің RCC таңдалғанша бастапқы BYD проекциясын уақытша ашып, экранын тексере алады. Қолданба тек Ашу басылғаннан кейін іске қосылады. Тұрақ пен микробағдарламаны растаңыз; бұл мәлімдеме қозғалысты өлшемейді.</string>
+    <string name="diag_cluster_dashboard_protocol">Қосылған daemon %1$d протоколын қолдануы керек. Дайындау не Ашу алдында оны DashCast ішінде қайта қосыңыз. BYD пәрмені жіберілмеді.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Толық экран прототипі (тек PC)</string>
+    <string name="diag_cluster_full_app_help">Тек PC тексерулеріне арналған прототип. Тәуелсіз қалпына келтіру тексерілгенше көлікке жүктеу қолжетімсіз. BYD аспаптары мен ескертулері сақталады. Ескі профиль үшін Қалпына келтіру қолжетімді.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Бұл прототипті көлікке жүктеуге болмайды. Ескі толық экран профилі тек қалпына келтіру үшін қолжетімді.</string>
+    <string name="diag_cluster_factory_apply">Зауыттық таңдауды қолдану</string>
+    <string name="diag_cluster_factory_apply_confirm">Зауыт профилі таңдалған, бірақ оның қолданылуын тексеру керек. BYD проекциясын бір рет ауыстырып, жауып, таңдауды қайта оқыңыз. Өз RCC файлы не қайталама зауыт таңдауы жіберілмейді. Тұрақ пен микробағдарламаны растаңыз.</string>
+    <string name="diag_cluster_full_app_observe_message">Ескі профильді ашуға немесе дайын деп растауға болмайды. Қалпына келтіруді пайдаланып, содан кейін BYD аспаптары мен ескертулерінің оралғанын бөлек растаңыз.</string>
+</resources>

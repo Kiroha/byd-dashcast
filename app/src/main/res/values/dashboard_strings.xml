@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">Tableau de bord DashCast</string>
+    <string name="diag_cluster_dashboard_help">Essai manuel à l’arrêt. Après fermeture, le profil reste sélectionné. Restaure le profil usine et vérifie son retour avant de réinstaller un ancien APK.</string>
+    <string name="diag_cluster_dashboard_read">1 · Lire l’état et la compatibilité</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Préparer le tableau de bord</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Choisir l’application</string>
+    <string name="diag_cluster_dashboard_open">4 · Ouvrir le tableau de bord</string>
+    <string name="diag_cluster_dashboard_close">Fermer la projection</string>
+    <string name="diag_cluster_dashboard_observe">5 · Confirmer l’affichage observé</string>
+    <string name="diag_cluster_dashboard_observe_message">Confirme uniquement si tu vois le tableau de bord DashCast, les instruments, les alertes et l’application. Un reçu de commande ne prouve pas cet affichage.</string>
+    <string name="diag_cluster_dashboard_confirm">Confirme que le véhicule est immobilisé et que le contexte firmware a été vérifié. Cette case est une déclaration, pas une mesure du mouvement. La validation réelle reste à faire dans la voiture.</string>
+    <string name="diag_cluster_dashboard_geometry">Un combiné actif de 1920 × 720 pixels doit être détecté. Taille inconnue, ambiguë ou petit combiné : essai refusé.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Prépare d’abord le profil DashCast et attends la fin de la sélection.</string>
+    <string name="diag_cluster_dashboard_idle">○ Aucun tableau de bord préparé</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Restauration en cours</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ État incertain : utilise Restaurer</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Ouverture reçue ; affichage à confirmer</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Projection fermée ; restauration usine encore requise</string>
+    <string name="diag_cluster_dashboard_waiting">◷ Opération en cours</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profil sélectionné ; choisis une application puis ouvre le tableau de bord</string>
+    <string name="diag_cluster_dashboard_selected_app">Application : %1$s</string>
+    <string name="diag_cluster_dashboard_details">Détails techniques et anciens tests</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Affichage confirmé par l’utilisateur</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Ferme la projection et demande le profil usine. Un échec de fermeture reste à résoudre, même si le profil usine revient. Confirme ensuite les instruments et alertes visibles.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Activation temporaire de la projection BYD d’origine…</string>
+    <string name="diag_cluster_dashboard_display_wait">En attente de l’écran de projection BYD…</string>
+    <string name="diag_cluster_dashboard_display_rejected">Écran de projection BYD indisponible ou incompatible. Consulte les détails.</string>
+    <string name="diag_cluster_dashboard_restore_required">Initialisation commencée : restauration BYD requise.</string>
+    <string name="diag_cluster_dashboard_small_panel">Petit combiné détecté : essai refusé. La restauration BYD reste disponible.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Ferme la projection BYD temporaire et vérifie la sélection usine. Aucun RCC personnalisé n’a été sélectionné. Confirme ensuite le retour des instruments et alertes.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">La préparation peut ouvrir temporairement la projection BYD d’origine, puis vérifier son écran avant de sélectionner notre RCC. Aucune application ne sera lancée avant Ouvrir. Confirme le stationnement et le firmware ; cette déclaration ne mesure pas le mouvement.</string>
+    <string name="diag_cluster_dashboard_protocol">Le daemon connecté doit utiliser le protocole %1$d. Reconnecte-le dans DashCast avant de relancer Préparer ou Ouvrir. Aucun ordre BYD envoyé.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Prototype plein écran (hors voiture)</string>
+    <string name="diag_cluster_full_app_help">Prototype destiné aux contrôles sur PC. Le chargement dans la voiture reste indisponible tant qu’une récupération indépendante n’est pas validée. Les instruments et alertes BYD sont conservés. Restaurer reste disponible pour l’ancien profil.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Ce prototype ne peut pas être chargé dans la voiture. L’ancien profil plein écran est réservé à sa restauration.</string>
+    <string name="diag_cluster_factory_apply">Appliquer la sélection usine</string>
+    <string name="diag_cluster_factory_apply_confirm">Le profil usine est déjà configuré mais son application native reste à confirmer. Exécuter une seule transition de projection BYD, puis la fermer et refaire une lecture. Aucun RCC personnalisé ni nouvelle sélection usine ne seront envoyés. Confirme le stationnement et le firmware.</string>
+    <string name="diag_cluster_full_app_observe_message">L’ancien profil ne peut plus être ouvert ni validé comme prêt. Utilise Restaurer, puis confirme séparément le retour des instruments et alertes BYD.</string>
+</resources>

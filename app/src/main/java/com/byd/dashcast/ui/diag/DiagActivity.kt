@@ -93,7 +93,7 @@ class DiagActivity : Activity() {
         EXPORTS("Exports & OEM collection", "Local firmware files, OEM reports and manual sharing"),
         REPORTING("Reporting", "Pair the reporting channel"),
         LOG("Diagnostic log", "Read and select diagnostic results");
-        fun title(activity: DiagActivity): String = if (this == CLUSTER) activity.getString(R.string.diag_cluster_page_title) else title
+        fun title(activity: DiagActivity): String = if (this == CLUSTER) activity.getString(R.string.diag_cluster_dashboard_title) else title
         fun description(activity: DiagActivity): String = if (this == CLUSTER) activity.getString(R.string.diag_cluster_page_description) else description
     }
     private var currentPage: Page? = null
@@ -225,16 +225,26 @@ class DiagActivity : Activity() {
         val reportingBody = page(Page.REPORTING)
         val activityLogBody = page(Page.LOG)
 
-        addDiagnosticReportShortcut(clusterBody)
+        val dashboardBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        clusterBody.addView(dashboardBody)
+        val clusterTechnical = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        clusterBody.addView(Button(this).apply {
+            text = getString(R.string.diag_cluster_dashboard_details); isAllCaps = false
+            minHeight = (48 * density).toInt()
+            setOnClickListener { clusterTechnical.visibility = if (clusterTechnical.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+        })
+        clusterBody.addView(clusterTechnical)
+        addDiagnosticReportShortcut(clusterTechnical)
         observationPrompts = ClusterObservationPrompts(this)
-        nativeFullControls = ClusterNativeFullControls(this, recoveryBar, clusterBody,
+        nativeFullControls = ClusterNativeFullControls(this, recoveryBar, clusterTechnical,
             claimDiag = { claimBusyOrWarn() }, releaseDiag = { releaseBusy() }, transcript = { log(it) }, prompts = observationPrompts!!)
-        clusterBody.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_ivi_title); textSize = 19f })
-        liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
+        clusterTechnical.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_ivi_title); textSize = 19f })
+        liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterTechnical,
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
-            statusContainer = clusterBody, nativeStatus = { text, pinned -> nativeFullControls?.receivedStatus(text, pinned) },
-            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeFullControls?.statusUnavailable() })
+            statusContainer = clusterTechnical, nativeStatus = { text, pinned -> nativeFullControls?.receivedStatus(text, pinned) },
+            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeFullControls?.statusUnavailable() },
+            openClusterPage = { showPage(Page.CLUSTER) }, dashboardContainer = dashboardBody)
         addDiagnosticReportShortcut(reportingBody)
         exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."

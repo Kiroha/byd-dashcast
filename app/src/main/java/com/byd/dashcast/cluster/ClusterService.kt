@@ -32,6 +32,10 @@ import com.byd.dashcast.cluster.display.DashboardLauncher
 import com.byd.dashcast.cluster.dpi.ClusterDpiManager
 import com.byd.dashcast.cluster.mirror.ClusterInputForwarder
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager
+import com.byd.dashcast.data.prefs.ProjectionSessionPrefs
+import com.byd.dashcast.data.prefs.StartupAppsMode
+import com.byd.dashcast.data.prefs.StartupAppsSelection
+import com.byd.dashcast.system.FloatingRemoteButton
 import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.domain.cluster.ProjectionStateProvider
 import com.byd.dashcast.fission.FissionOrchestrator
@@ -130,7 +134,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
 
     @Volatile private var mProjectionActive = false
     @Volatile private var mDestroyed = false
-    private val mOperationGate = LifecycleGate()
+    private var mOperationGate = LifecycleGate()
     private val mRecoveryRequests = AtomicLong()
     private val mRecoveredPlacement = RecoveredPlacementGuard()
     @Volatile private var mRecoveryDisplayId = -1
@@ -144,7 +148,106 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     private lateinit var mTaskFinder: TaskFinder
 
     /** Package to auto-launch once the cluster display connects (armed in onStartCommand at boot). */
-    @Volatile private var mBootAutoLaunchPkg: String? = null
+    private var mObservedDisplayDisconnect = false
+    private var mBootRestoreRequested = false
+    private var mBootRestoring = false
+    private var mBootDispatch = false
+    private var mBootGeneration = 0
+    private var mBootApps: List<ProjectionSessionPrefs.App> = emptyList()
+    private var mBootSelection: StartupAppsSelection? = null
+    private var mStartupObserver: java.io.Closeable? = null
+    private val mActiveApps = linkedMapOf<String, ProjectionSessionPrefs.App>()
+
+    @Synchronized fun activeProjectionApps(): List<ProjectionSessionPrefs.App> =
+        mActiveApps.values.map { it.copy(bounds = it.bounds?.let(::Rect)) }
+    @Synchronized fun forgetProjectionApp(pkg: String) { mActiveApps.remove(pkg) }
+    @Synchronized private fun clearActiveProjectionApps() { mActiveApps.clear() }
+    fun recordProjectedApplication(pkg: String, bounds: Rect? = null) {
+        trackLaunch(pkg, bounds, null).onResult(true)
+    }
+    fun isBootRestoring(): Boolean = mBootRestoring
+    fun ownsBootRestore(): Boolean = mBootRestoreRequested
+
+    private fun cancelBootRestore() {
+        mBootGeneration++
+        mBootRestoring = false
+        mBootApps = emptyList()
+    }
+
+    fun cancelProjectionRestore() {
+        cancelBootRestore()
+        mOperationGate.invalidate()
+        mOperationGate = LifecycleGate()
+        mPendingLaunchRunnable?.let(mMainHandler::removeCallbacks)
+        mPendingLaunchRunnable = null
+        mPendingDashboardCallback = null
+        cancelPendingLaunchRecovery()
+    }
+
+    private fun trackLaunch(pkg: String?, bounds: Rect?, requested: LaunchCallback?): LaunchCallback {
+        val generation = mBootGeneration
+        val expectedDisplay = displayId
+        return object : LaunchCallback {
+            override fun onResult(success: Boolean) {
+                if (generation != mBootGeneration || displayId <= 0 || displayId != expectedDisplay || !mProjectionActive) {
+                    requested?.onResult(false)
+                    return
+                }
+                if (success && pkg != null) synchronized(this@ClusterService) {
+                    if (bounds == null) mActiveApps.clear()
+                    mActiveApps[pkg] = ProjectionSessionPrefs.App(pkg, bounds?.let(::Rect))
+                    if (!mBootRestoring) ProjectionSessionPrefs.rememberClassic(this@ClusterService, pkg, bounds)
+                    val primary = mActiveApps.values.first().packageName
+                    val name = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(primary, 0)).toString() }
+                        catch (_: Exception) { primary }
+                    ClusterPrefs.setClusterPkg(this@ClusterService, primary)
+                    ClusterPrefs.setClusterName(this@ClusterService, name)
+                    ClusterPrefs.setLastCluster(this@ClusterService, primary, name)
+                    FloatingRemoteButton.show(this@ClusterService)
+                }
+                requested?.onResult(success)
+        }
+        }
+    }
+
+    private fun drainBootRestore() {
+        if (!mBootRestoring || displayId <= 0 || !mDisplayHelper.isActivationComplete() || mBootApps.isEmpty()) return
+        val apps = mBootApps
+        mBootApps = emptyList()
+        val generation = mBootGeneration
+        fun launchNext(index: Int) {
+            if (generation != mBootGeneration || !mProjectionActive) return
+            if (mBootSelection != ClusterPrefs.getStartupApps(this)) { cancelProjectionRestore(); return }
+            if (index == apps.size) {
+                mBootRestoring = false
+                // A cold daemon failure must not erase the user's next-boot intent.
+                val retained = apps.filter { app ->
+                    try { packageManager.getApplicationInfo(app.packageName, 0); true }
+                    catch (_: PackageManager.NameNotFoundException) { false }
+                    catch (_: Exception) { true }
+                }
+                if (mBootSelection?.mode == StartupAppsMode.LAST_SESSION) {
+                    ProjectionSessionPrefs.replaceClassic(this, retained)
+                } else {
+                    activeProjectionApps().takeIf { it.isNotEmpty() }?.let { ProjectionSessionPrefs.replaceClassic(this, it) }
+                }
+                sBootLaunchedPkg = activeProjectionApps().firstOrNull()?.packageName
+                mListener?.onClusterDisplayConnected(null, displayId)
+                return
+            }
+            val app = apps[index]
+            val callback = object : LaunchCallback {
+                override fun onResult(success: Boolean) { launchNext(index + 1) }
+            }
+            mBootDispatch = true
+            try {
+                val r = app.bounds
+                if (r == null) launchOnDashboard(app.packageName, callback)
+                else launchOnDashboardWithBounds(app.packageName, r.left, r.top, r.right, r.bottom, callback)
+            } finally { mBootDispatch = false }
+        }
+        launchNext(0)
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -264,29 +367,39 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (mStartupObserver == null) mStartupObserver = ClusterPrefs.observeStartupApps(this) {
+            val cancel = Runnable {
+                if (mBootRestoring && mBootSelection != ClusterPrefs.getStartupApps(this)) cancelProjectionRestore()
+            }
+            if (Looper.myLooper() == Looper.getMainLooper()) cancel.run() else mMainHandler.post(cancel)
+        }
         if (intent != null && ACTION_RESTART_PROJECTION == intent.action) {
             restartProjection()
         }
-        // Headless boot auto-launch: BootReceiver starts us with EXTRA_BOOT_AUTOLAUNCH so the
-        // configured app is launched onto the cluster at startup WITHOUT the user opening DashCast
-        // (INC-20260716-091016). Arm it here (intent is delivered to onStartCommand); the actual
-        // launch happens in onDashboardDisplayConnected once the cluster display is up.
-        if (intent != null && intent.getBooleanExtra(EXTRA_BOOT_AUTOLAUNCH, false)) {
-            // Mirror MainActivity's guard: when a Layout auto-start is configured, IT owns startup
-            // launching (activates projection + launches every bound app). A headless single-app
-            // launch here would create a classic projection first, and the layout's ensureDaemon()
-            // would then abort with "Daemon unavailable". So skip the single-app path for layout users.
-            if (isLayoutAutoStartRequested()) {
-                AppLogger.i(TAG, "boot auto-launch: layout auto-start owns startup — headless single-app launch skipped")
-            } else {
-                val pkg = ClusterPrefs.getAutoLaunchPkg(this)
-                if (pkg != null && pkg.isNotEmpty()) {
-                    mBootAutoLaunchPkg = pkg
-                    AppLogger.i(TAG, "boot auto-launch armed (headless) → $pkg")
-                } else {
-                    AppLogger.i(TAG, "boot auto-launch requested but no app configured")
-                }
+        if (intent?.getBooleanExtra(EXTRA_BOOT_PROJECTION, false) == true &&
+            ClusterPrefs.isAnyBootProjectionEnabled(this)) {
+            if (mObservedDisplayDisconnect && displayId <= 0) {
+                mObservedDisplayDisconnect = false
+                restartProjection()
             }
+        }
+        if (intent?.getBooleanExtra(EXTRA_BOOT_AUTOLAUNCH, false) == true &&
+                ClusterPrefs.isBootAutoStartEnabled(this) && !mBootRestoreRequested &&
+                !isLayoutAutoStartRequested() && activeProjectionApps().isEmpty()) {
+            mBootRestoreRequested = true
+            val selection = ClusterPrefs.getStartupApps(this)
+            mBootSelection = selection
+            mBootApps = when (selection.mode) {
+                StartupAppsMode.LAST_SESSION -> ProjectionSessionPrefs.read(this)?.takeIf { it.layout == null }?.apps.orEmpty()
+                StartupAppsMode.APP -> if (selection.hasValidAppTarget()) listOf(ProjectionSessionPrefs.App(selection.target!!)) else emptyList()
+                else -> emptyList()
+            }
+            mBootRestoring = mBootApps.isNotEmpty()
+            if (mObservedDisplayDisconnect && displayId <= 0) {
+                mObservedDisplayDisconnect = false
+                restartProjection()
+            }
+            drainBootRestore()
         }
         return START_STICKY
     }
@@ -308,8 +421,11 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     override fun onDestroy() {
+        mStartupObserver?.close()
+        mStartupObserver = null
         cancelPendingLaunchRecovery()
         mRecoveredPlacement.clear()
+        cancelBootRestore()
         mOperationGate.invalidate()
         mDestroyed = true
         try {
@@ -672,7 +788,10 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     private fun moveTaskToDisplayInternal(packageName: String?, targetDisplayId: Int,
-                                          callback: LaunchCallback?) {
+                                          requestedCallback: LaunchCallback?) {
+        if (mBootRestoring && !mBootDispatch) cancelProjectionRestore()
+        val callback = if (targetDisplayId > 0) trackLaunch(packageName, null, requestedCallback) else requestedCallback
+        if (targetDisplayId > 0 && !isProjectionAllowed(packageName)) { callback?.onResult(false); return }
         val operation = mOperationGate.capture()
         ProjectionAdasCoordinator.targetRequested(this, packageName, targetDisplayId)
         if (PKG_FORCE_FRESH_LAUNCH == packageName && targetDisplayId > 0) {
@@ -806,7 +925,9 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     // Launch on cluster
     // ─────────────────────────────────────────────────────────────────────────
 
-    fun launchOnDashboard(packageName: String?, callback: LaunchCallback?) {
+    fun launchOnDashboard(packageName: String?, requestedCallback: LaunchCallback?) {
+        if (mBootRestoring && !mBootDispatch) cancelProjectionRestore()
+        val callback = trackLaunch(packageName, null, requestedCallback)
         val operation = mOperationGate.capture()
         if (!operation.isValid) return
         // Backstop for the paths the app picker does not gate: auto-launch, saved layouts, the
@@ -985,7 +1106,10 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
 
     fun launchOnDashboardWithBounds(packageName: String?,
                                     left: Int, top: Int, right: Int, bottom: Int,
-                                    callback: LaunchCallback?) {
+                                    requestedCallback: LaunchCallback?) {
+        if (mBootRestoring && !mBootDispatch) cancelProjectionRestore()
+        val callback = trackLaunch(packageName, Rect(left, top, right, bottom), requestedCallback)
+        if (!isProjectionAllowed(packageName)) { callback.onResult(false); return }
         val operation = mOperationGate.capture()
         if (!operation.isValid) return
         cancelPendingLaunchRecovery()
@@ -1488,6 +1612,10 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     }
 
     fun stopProjectionNoAdb() {
+        cancelProjectionRestore()
+        clearActiveProjectionApps()
+        ProjectionSessionPrefs.clear(this)
+        FloatingRemoteButton.hide()
         cancelPendingLaunchRecovery()
         mRecoveredPlacement.clear()
         val completeAdasStop = mDisplayHelper.prepareAdasStop()
@@ -1529,7 +1657,16 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
     // DashboardDisplayHelper.Listener
     // ─────────────────────────────────────────────────────────────────────────
 
+    override fun onDashboardActivationComplete(success: Boolean) {
+        if (success) drainBootRestore()
+        else if (mBootRestoring) {
+            AppLogger.w(TAG, "boot restoration deferred: native activation command chain failed")
+            cancelBootRestore()
+        }
+    }
+
     override fun onDashboardDisplayConnected(display: Display?, displayId: Int) {
+        mObservedDisplayDisconnect = false
         if (mRecoveryDisplayId != displayId) cancelPendingLaunchRecovery()
         mRecoveryDisplayId = displayId
         AppLogger.log(TAG, "Cluster display connected: id=$displayId")
@@ -1570,26 +1707,15 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
         }
         mListener?.onClusterDisplayConnected(display, displayId)
 
-        // Headless boot auto-launch (armed in onStartCommand): the cluster is now up, so launch the
-        // configured app onto it — no MainActivity needed. Record it as the cluster app on success
-        // so a later MainActivity open adopts it (via getLastClusterPkg / sBootLaunchedPkg) instead
-        // of relaunching (which would force-stop the running nav). Fires once.
-        val armed = mBootAutoLaunchPkg
-        if (displayId > 0 && armed != null) {
-            mBootAutoLaunchPkg = null
-            AppLogger.i(TAG, "boot auto-launch → $armed on display $displayId")
-            launchOnDashboard(armed, object : LaunchCallback {
-                override fun onResult(success: Boolean) {
-                    AppLogger.i(TAG, "boot auto-launch result=$success → $armed")
-                    // Mark it so a later MainActivity open adopts it (shows the mirror) instead of
-                    // relaunching — see MainActivity.onSendToDashboard's sBootLaunchedPkg guard.
-                    if (success) sBootLaunchedPkg = armed
-                }
-            })
-        }
+        drainBootRestore()
     }
 
     override fun onDashboardDisplayDisconnected() {
+        mObservedDisplayDisconnect = true
+        cancelProjectionRestore()
+        mBootRestoreRequested = false
+        clearActiveProjectionApps()
+        FloatingRemoteButton.hide()
         mRecoveryDisplayId = -1
         cancelPendingLaunchRecovery()
         AppLogger.log(TAG, "Cluster display disconnected")
@@ -1715,6 +1841,7 @@ class ClusterService : Service(), DashboardDisplayHelper.Listener, ProjectionSta
         private const val PKG_FORCE_FRESH_LAUNCH = "com.telenav.app.arp"
 
         /** Set by BootReceiver when it starts us at boot: also auto-launch the configured app. */
+        const val EXTRA_BOOT_PROJECTION = "boot_projection"
         const val EXTRA_BOOT_AUTOLAUNCH = "boot_autolaunch"
 
         /** Re-arms a stopped-but-still-bound service before restarting native projection. */

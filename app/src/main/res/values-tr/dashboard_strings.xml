@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_cluster_dashboard_title">DashCast gösterge paneli</string>
+    <string name="diag_cluster_dashboard_help">Araç park halindeyken elle test edin. Kapatınca profil seçili kalır. Eski APK yüklemeden önce fabrika profilini geri yükleyip doğrulayın.</string>
+    <string name="diag_cluster_dashboard_read">1 · Durum ve uyumluluğu oku</string>
+    <string name="diag_cluster_dashboard_prepare">2 · Paneli hazırla</string>
+    <string name="diag_cluster_dashboard_choose_app">3 · Uygulama seç</string>
+    <string name="diag_cluster_dashboard_open">4 · Paneli aç</string>
+    <string name="diag_cluster_dashboard_close">Yansıtmayı kapat</string>
+    <string name="diag_cluster_dashboard_observe">5 · Görünen ekranı doğrula</string>
+    <string name="diag_cluster_dashboard_observe_message">Yalnızca panel, göstergeler, uyarılar ve uygulama görünüyorsa doğrulayın. Komut yanıtı görüntüyü kanıtlamaz.</string>
+    <string name="diag_cluster_dashboard_confirm">Aracın durduğunu ve yazılımın kontrol edildiğini doğrulayın. Bu kutu bir beyandır, hareket ölçümü değildir. Araçta doğrulama hâlâ gereklidir.</string>
+    <string name="diag_cluster_dashboard_geometry">Tek bir etkin 1920 × 720 piksel gösterge algılanmalıdır. Bilinmeyen, belirsiz veya küçük boyut: test reddedilir.</string>
+    <string name="diag_cluster_dashboard_prepare_first">Önce DashCast profilini hazırlayın ve seçimin bitmesini bekleyin.</string>
+    <string name="diag_cluster_dashboard_idle">○ Panel hazırlanmadı</string>
+    <string name="diag_cluster_dashboard_restoring">↩ Geri yükleniyor</string>
+    <string name="diag_cluster_dashboard_unknown">⚠ Durum belirsiz: Geri yükle seçeneğini kullanın</string>
+    <string name="diag_cluster_dashboard_open_received">✓ Açılış yanıtı alındı; ekranı doğrulayın</string>
+    <string name="diag_cluster_dashboard_closed_received">○ Yansıtma kapalı; fabrika geri yüklemesi gerekli</string>
+    <string name="diag_cluster_dashboard_waiting">◷ İşlem sürüyor</string>
+    <string name="diag_cluster_dashboard_ready">✓ Profil seçildi; uygulamayı seçip paneli açın</string>
+    <string name="diag_cluster_dashboard_selected_app">Uygulama: %1$s</string>
+    <string name="diag_cluster_dashboard_details">Teknik ayrıntılar ve önceki testler</string>
+    <string name="diag_cluster_dashboard_confirmed">✓ Ekran kullanıcı tarafından doğrulandı</string>
+    <string name="diag_cluster_dashboard_restore_confirm">Yansıtmayı kapatıp fabrika profilini isteyin. Fabrika profili dönse bile başarısız kapatma çözülmemiş kalır. Ardından görünen göstergeleri ve uyarıları doğrulayın.</string>
+    <string name="diag_cluster_dashboard_bootstrap">Özgün BYD yansıtması geçici olarak etkinleştiriliyor…</string>
+    <string name="diag_cluster_dashboard_display_wait">BYD yansıtma ekranı bekleniyor…</string>
+    <string name="diag_cluster_dashboard_display_rejected">BYD yansıtma ekranı kullanılamıyor veya uyumsuz. Ayrıntıları kontrol et.</string>
+    <string name="diag_cluster_dashboard_restore_required">Başlatma başladı: BYD geri yüklemesi gerekiyor.</string>
+    <string name="diag_cluster_dashboard_small_panel">Küçük gösterge paneli algılandı: test reddedildi. BYD geri yüklemesi kullanılabilir.</string>
+    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Geçici BYD yansıtmasını kapat ve fabrika seçimini doğrula. Özel RCC seçilmedi. Ardından göstergelerin ve uyarıların döndüğünü onayla.</string>
+    <string name="diag_cluster_dashboard_prepare_confirm">Hazırlık, RCC seçilmeden önce özgün BYD yansıtmasını geçici olarak açıp ekranını denetleyebilir. Aç seçilmeden uygulama başlamaz. Park ve ürün yazılımını onayla; bu beyan hareketi ölçmez.</string>
+    <string name="diag_cluster_dashboard_protocol">Bağlı daemon protokol %1$d kullanmalı. Hazırla veya Aç seçeneğinden önce DashCast içinde yeniden bağlan. BYD komutu gönderilmedi.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Tam ekran prototipi (yalnızca PC)</string>
+    <string name="diag_cluster_full_app_help">Yalnızca PC kontrolleri için prototip. Bağımsız geri yükleme doğrulanana kadar araca yükleme kullanılamaz. BYD göstergeleri ve uyarıları korunur. Eski profil için Geri yükle kullanılabilir.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Bu prototip araca yüklenemez. Eski tam ekran profili yalnızca geri yükleme için kullanılabilir.</string>
+    <string name="diag_cluster_factory_apply">Fabrika seçimini uygula</string>
+    <string name="diag_cluster_factory_apply_confirm">Fabrika profili ayarlı ancak yerel uygulanması doğrulanmalı. BYD projeksiyonunu bir kez değiştir, kapat ve seçimi tekrar oku. Özel RCC veya tekrarlanan fabrika seçimi gönderilmez. Park ve firmware durumunu onayla.</string>
+    <string name="diag_cluster_full_app_observe_message">Eski profil açılamaz veya hazır olarak onaylanamaz. Geri yükle seçeneğini kullan, ardından BYD göstergeleri ve uyarılarının geri döndüğünü ayrıca onayla.</string>
+</resources>
