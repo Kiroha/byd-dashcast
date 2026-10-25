@@ -103,26 +103,13 @@ object SurfaceDaemon {
      *  pasted into every bug report. Triagers grep it across historical reports. */
     private const val TAG = "MirrorDaemon"
 
-    /** Our app's uid. Resolution is retried from the Binder gate after transient PM failures. */
-    @Volatile private var sAppUid = -1
+    /** Loaded-APK signer anchor; every app transaction resolves fresh installed identity. */
+    @Volatile private var sCallerIdentity: DaemonCallerIdentity? = null
 
     /** True if `uid` may drive the privileged MirrorBinder verbs. */
     private fun isAllowedCaller(uid: Int): Boolean {
-        var appUid = sAppUid
-        if (appUid < 0) appUid = resolveAppUid()
-        return DaemonCallerPolicy.isAllowed(uid, Process.myUid(), appUid)
-    }
-
-    private fun resolveAppUid(): Int {
-        val context = sSysContext ?: return -1
-        return try {
-            val resolved = context.packageManager.getPackageUid(BuildConfig.APPLICATION_ID, 0)
-            sAppUid = resolved
-            resolved
-        } catch (t: Throwable) {
-            out("app uid resolution failed; privileged app calls remain denied: " + t.message)
-            -1
-        }
+        return sCallerIdentity?.isAllowed(uid)
+            ?: DaemonCallerPolicy.isAllowed(uid, Process.myUid(), -1)
     }
 
     // Actions broadcast
@@ -398,9 +385,14 @@ object SurfaceDaemon {
             val daemonBinder: IBinder = MirrorBinder()
             out("MirrorBinder created")
 
-            // Resolve before publication. A transient failure is retried by isAllowedCaller();
-            // until then only system and the daemon itself may use privileged verbs.
-            val resolvedAppUid = resolveAppUid()
+            // Anchor the loaded code once; PM installation metadata is never positively cached.
+            sCallerIdentity = DaemonCallerIdentity.fromLoadedApk(sSysContext!!)
+            if (sCallerIdentity == null) {
+                out("FATAL: loaded APK signer unavailable — refusing Binder publication")
+                System.exit(2)
+                return
+            }
+            val resolvedAppUid = sCallerIdentity!!.installedUid()
             if (resolvedAppUid >= 0) out("app uid resolved: $resolvedAppUid")
 
             writeVersionFile()
@@ -470,7 +462,7 @@ object SurfaceDaemon {
             val callingUid = getCallingUid()
             if (!isAllowedCaller(callingUid)) {
                 Log.w(TAG, "MirrorBinder: rejected transact code=$code from uid=$callingUid")
-                reply?.writeException(SecurityException("caller uid $callingUid not permitted"))
+                reply?.writeException(SecurityException("caller identity validation failed for uid $callingUid"))
                 return true // consumed (rejected) — do not run the privileged verb
             }
             when (code) {

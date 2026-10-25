@@ -203,27 +203,13 @@ object ProxyDaemonMain {
      *  addService (SELinux blocks untrusted apps). Public so ProxyClient can cross-check. */
     const val SERVICE_NAME = "byd_proxy_daemon"
 
-    /** Our app's uid. Resolution is retried from the Binder gate after transient PM failures. */
-    @Volatile private var sAppUid = -1
+    /** Loaded-APK signer anchor; every app transaction resolves fresh installed identity. */
+    @Volatile private var sCallerIdentity: DaemonCallerIdentity? = null
 
     /** True if `uid` may drive the privileged ProxyBinder verbs. */
     private fun isAllowedCaller(uid: Int): Boolean {
-        var appUid = sAppUid
-        if (appUid < 0) appUid = resolveAppUid()
-        return DaemonCallerPolicy.isAllowed(uid, Process.myUid(), appUid)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun resolveAppUid(): Int {
-        val context = sSystemContext ?: return -1
-        return try {
-            val resolved = context.packageManager.getPackageUid(BuildConfig.APPLICATION_ID, 0)
-            sAppUid = resolved
-            resolved
-        } catch (t: Throwable) {
-            log("app uid resolution failed; privileged app calls remain denied: $t")
-            -1
-        }
+        return sCallerIdentity?.isAllowed(uid)
+            ?: DaemonCallerPolicy.isAllowed(uid, Process.myUid(), -1)
     }
 
     /** Best-effort registration of the proxy binder in the global ServiceManager (uid-2000/system
@@ -319,9 +305,14 @@ object ProxyDaemonMain {
             // createPackageContext is unavailable.
             sWrappedContext = SystemContextHelper.adoptIdentity(systemContext)
 
-            // Resolve before publication. A transient failure is retried by isAllowedCaller();
-            // until then only system and the daemon itself may use privileged verbs.
-            val resolvedAppUid = resolveAppUid()
+            // Anchor the loaded code once; PM installation metadata is never positively cached.
+            sCallerIdentity = DaemonCallerIdentity.fromLoadedApk(systemContext)
+            if (sCallerIdentity == null) {
+                log("FATAL: loaded APK signer unavailable — refusing Binder publication")
+                System.exit(2)
+                return
+            }
+            val resolvedAppUid = sCallerIdentity!!.installedUid()
             if (resolvedAppUid >= 0) log("app uid resolved: $resolvedAppUid")
             // Best-effort ServiceManager registration for the app-side authenticity cross-check.
             registerInServiceManager(binder)
@@ -786,7 +777,7 @@ object ProxyDaemonMain {
             if (!isAllowedCaller(callingUid)) {
                 log("ProxyBinder: rejected transact code=$code from uid=$callingUid")
                 reply?.writeException(
-                    SecurityException("caller uid $callingUid not permitted"))
+                    SecurityException("caller identity validation failed for uid $callingUid"))
                 return true
             }
             when (code) {
