@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ClusterThemeVariantTest {
+    @Test fun `retired full app keeps its durable identity but has no new activation authority`() {
+        val retired = ClusterThemeVariant.FULL_APP_21F7735C
+        assertEquals("full-app-21f7735c", retired.id)
+        assertEquals("b121e6622f560a04a583c352977813ebc69047635f28cc0dee77ffeec78d007b", retired.carrierSha256)
+        assertEquals(24, retired.startOperation)
+        assertTrue(retired.isFullApp); assertTrue(retired.isDashboard); assertTrue(retired.isRecoveryOnly)
+        assertTrue(ClusterThemeVariant.values().filter { it != retired }.none { it.isRecoveryOnly })
+    }
     @Test fun `legacy schema is exclusively the historical marker experiment`() {
         assertEquals(ClusterThemeVariant.MARKER, ClusterThemeVariant.recover(1, null, null))
         assertThrows(IllegalArgumentException::class.java) { ClusterThemeVariant.recover(1, "full-surface-test", null) }

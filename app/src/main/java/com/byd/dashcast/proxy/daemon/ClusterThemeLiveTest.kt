@@ -304,6 +304,12 @@ internal object ClusterThemeLiveTest {
         requestedVariant: ClusterThemeVariant = ClusterThemeVariant.MARKER,
         requestedTransport: ClusterThemeTransport = ClusterThemeTransport.STRICT_RENDERER,
         requestedNonce: String? = null, validity: android.os.IBinder? = null): String {
+        if (requestedVariant.isRecoveryOnly) {
+            source.close()
+            val refused = JSONObject(status()).put("activationRefused", "Retired full-app profile is recovery-only; offline candidate is not admitted")
+            if (requestedTransport == ClusterThemeTransport.ANDROID_IVI) refused.put("rccRejectedNonce", requestedNonce)
+            return refused.toString()
+        }
         initialize()
         try {
             val st = Os.fstat(source.fileDescriptor)
@@ -596,6 +602,7 @@ internal object ClusterThemeLiveTest {
     fun fullAppAdas(nonce: String, round: String, action: Int, value: Int, count: Int,
         recovering: Boolean, pkg: String, display: Int, validity: android.os.IBinder): String = fullAppAdasLock.withLock {
         initialize()
+        check(recovering || !variant.isRecoveryOnly) { "New full-app masking is disabled; existing recovery debt is retained" }
         val api = com.byd.dashcast.clusterlive.ClusterFullAppAdas
         check(api.permits(action, value, count, recovering)) { "Unsupported fixed ADAS step" }
         check(journalTrusted && active.get() && variant.isFullApp &&
@@ -711,6 +718,7 @@ internal object ClusterThemeLiveTest {
     @Synchronized fun requestDashboard(open: Boolean, nonce: String, parked: Boolean, firmware: Boolean,
         validity: android.os.IBinder): String {
         initialize()
+        check(!open || !variant.isRecoveryOnly) { "Retired full-app profile cannot open; close and Restore remain available" }
         check(parked && firmware && journalTrusted && active.get() && variant.isDashboard && mutated &&
             transport == ClusterThemeTransport.ANDROID_IVI && productionModeCommands == 0 && !queryActive.get() &&
             !nativeMode.blocked() && !helperUnreaped && restoring.get() == -1L && (!open || !restoreRequested.get())) {
@@ -822,7 +830,7 @@ internal object ClusterThemeLiveTest {
     }
 
     @Synchronized fun observeDashboard(name: String, round: String): String {
-        fun current() = journalTrusted && active.get() && variant.isDashboard && filename == name &&
+        fun current() = journalTrusted && active.get() && variant.isDashboard && !variant.isRecoveryOnly && filename == name &&
             round.matches(Regex("[0-9a-f]{32}")) && round == dashboardRound && dashboardStage == "OPEN_RECEIVED" &&
             !dashboardPending.get() && !restoreRequested.get() && restoring.get() == -1L && !uncertain &&
             !helperUnreaped && dashboardHelperPid == 0
@@ -1039,6 +1047,9 @@ internal object ClusterThemeLiveTest {
             factoryApplyPending = true; factoryApplyCompleted = false; write()
             chosen = selectFactory() // Select before the native close applies its scene transition.
         }
+        // A sealed negative receipt authorizes only the explicit preservation path,
+        // never a native close/apply sequence or a successful recovery checkpoint.
+        if (chosen.retirementEligible) return chosen
         check(!chosen.unknown && chosen.native == 0 && chosen.query?.isFactoryConfigured() == true) {
             "Factory configuration is unresolved; native transition was not sent"
         }
@@ -1047,7 +1058,8 @@ internal object ClusterThemeLiveTest {
         val after = query()
         factoryApplyPending = after.unknown || after.native != 0 || after.query?.isDefault() != true
         write()
-        return after.copy(attempted = chosen.attempted, responses = chosen.responses + after.responses)
+        return after.copy(attempted = chosen.attempted, responses = chosen.responses + after.responses,
+            retirementEligible = chosen.retirementEligible)
     }
 
     @Synchronized fun requestFactoryApply(nonce: String, parked: Boolean, firmware: Boolean,

@@ -31,10 +31,10 @@
     <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Zamknij tymczasową projekcję BYD i sprawdź wybór fabryczny. Nie wybrano niestandardowego RCC. Następnie potwierdź powrót wskaźników i ostrzeżeń.</string>
     <string name="diag_cluster_dashboard_prepare_confirm">Przygotowanie może tymczasowo otworzyć oryginalną projekcję BYD i sprawdzić jej ekran przed wybraniem naszego RCC. Aplikacja uruchamia się dopiero po Otwórz. Potwierdź postój i firmware; to oświadczenie nie mierzy ruchu.</string>
     <string name="diag_cluster_dashboard_protocol">Połączony daemon musi używać protokołu %1$d. Połącz go ponownie w DashCast przed Przygotuj lub Otwórz. Nie wysłano polecenia BYD.</string>
-    <string name="diag_cluster_full_app_prepare">2b · Przygotuj aplikację pełnoekranową</string>
-    <string name="diag_cluster_full_app_help">Ręczny test na postoju. Aplikacja używa 1920 × 720. Instrumenty BYD, prędkość, bieg, kontrolki, ograniczenie i alerty są ukryte; po uruchomieniu działa istniejące ukrywanie ADAS. Zamknięcie przywraca ADAS; potem przywróć i sprawdź profil fabryczny. Bez automatycznego startu.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Przygotuj demonstrację pełnoekranową. Otwarcie ukrywa instrumenty, kontrolki i alerty BYD oraz panel ADAS. Potwierdź postój i sprawdzony firmware. Starsze APK nie obsługują tego profilu nawet po przywróceniu ustawień fabrycznych.</string>
+    <string name="diag_cluster_full_app_prepare">2b · Prototyp pełnoekranowy (tylko PC)</string>
+    <string name="diag_cluster_full_app_help">Prototyp wyłącznie do testów na PC. Ładowanie w samochodzie jest zablokowane do czasu sprawdzenia niezależnego przywracania. Przyrządy i ostrzeżenia BYD pozostają widoczne. Przywracanie starego profilu jest nadal dostępne.</string>
+    <string name="diag_cluster_full_app_prepare_confirm">Tego prototypu nie można załadować w samochodzie. Stary profil pełnoekranowy jest dostępny wyłącznie do przywracania.</string>
     <string name="diag_cluster_factory_apply">Zastosuj wybór fabryczny</string>
     <string name="diag_cluster_factory_apply_confirm">Profil fabryczny jest skonfigurowany, ale jego natywne zastosowanie wymaga sprawdzenia. Wykonaj jedno przełączenie projekcji BYD, zamknij ją i odczytaj wybór ponownie. Bez własnego RCC ani powtórnego wyboru fabrycznego. Potwierdź postój i firmware.</string>
-    <string name="diag_cluster_full_app_observe_message">Potwierdź tylko, gdy aplikacja zajmuje cały ekran, a przewidziane elementy BYD są ukryte. Instrumenty i alerty celowo nie są wyświetlane w tej demonstracji. Potwierdzenie odbioru nie dowodzi wyświetlenia.</string>
+    <string name="diag_cluster_full_app_observe_message">Starego profilu nie można otworzyć ani zatwierdzić jako gotowego. Użyj Przywróć, a następnie osobno potwierdź powrót przyrządów i ostrzeżeń BYD.</string>
 </resources>
