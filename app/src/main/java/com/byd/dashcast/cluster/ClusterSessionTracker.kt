@@ -364,9 +364,11 @@ class ClusterSessionTracker(context: Context) {
                     evictNext(svc, candidates, idx + 1, evictionStartedAt, onAllDone)
                     return@execute
                 }
-                probes++
                 val match = try {
-                    val location = ProxyClient.findTaskLocationForPackage(pkg)
+                    val location = ClusterEvictionPolicy.probeWithinBudget(SystemClock.elapsedRealtime() - evictionStartedAt) {
+                        probes++
+                        ProxyClient.findTaskLocationForPackage(pkg)
+                    }
                     lastSeen = "status=${location.status} task=${location.taskId} " +
                         "display=${location.displayId}"
                     location.matchDisplay(0)

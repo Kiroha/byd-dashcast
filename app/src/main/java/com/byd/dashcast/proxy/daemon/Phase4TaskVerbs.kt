@@ -198,22 +198,10 @@ object Phase4TaskVerbs {
      */
     private fun amStartFailed(out: String?): Boolean = TaskLaunchRecovery.isStartFailure(out)
 
-    /** Polls up to ~5 s for `packageName`'s task id to appear. Returns -1 if none. */
-    private fun pollForTaskId(packageName: String): Int {
-        var taskId = -1
-        var i = 1
-        while (i <= 16 && taskId <= 0) {
-            try {
-                Thread.sleep(300)
-            } catch (ie: InterruptedException) {
-                Thread.currentThread().interrupt()
-                break
-            }
-            taskId = findTaskIdForPackage(packageName)
-            i++
-        }
-        return taskId
-    }
+    /** Cheap polling only; one bounded corroboration follows when reflection is inconclusive. */
+    private fun pollForTaskLocation(packageName: String, current: () -> Boolean): TaskLocation =
+        TaskLocationConfirmation.poll(current, { findTaskLocationFast(packageName) },
+            { Thread.sleep(300) }, { confirmTaskLocation(packageName, it, current) })
 
     /** Starts the app on `displayId` WITHOUT --windowingMode (default = fullscreen stack), the
      *  last-resort that avoids the FREEFORM-stack WindowManager NPE on some DiLink 3 ROMs. */
@@ -232,13 +220,15 @@ object Phase4TaskVerbs {
         return out
     }
 
-    private data class PlainLaunchResult(val taskId: Int, val frameworkBlocked: Boolean)
+    private data class PlainLaunchResult(val location: TaskLocation, val frameworkBlocked: Boolean)
 
     /** A failed FREEFORM creation leaves a new empty split stack, so clean again before plain. */
     private fun retryPlainOnCleanDisplay(log: StringBuilder, displayId: Int,
-                                         cmpFlat: String?, packageName: String): PlainLaunchResult {
+                                         cmpFlat: String?, packageName: String,
+                                         current: () -> Boolean): PlainLaunchResult {
         var plainOutput: String? = null
-        val taskId = TaskLaunchRecovery.retryOnCleanDisplay(object : TaskLaunchRecovery.Operations {
+        val location = TaskLaunchRecovery.retryOnCleanDisplay(object : TaskLaunchRecovery.Operations {
+            override fun isCurrent(): Boolean = current()
             override fun cleanDisplay(): String {
                 val cleanup = cleanFissionStacks(displayId)
                 log.append("(re-clean after FREEFORM failure)\n").append(cleanup)
@@ -249,10 +239,9 @@ object Phase4TaskVerbs {
                 plainOutput = startPlainOnDisplay(log, displayId, cmpFlat, packageName)
             }
 
-            override fun pollTask(): Int = pollForTaskId(packageName)
+            override fun pollTask(): TaskLocation = pollForTaskLocation(packageName, current)
         })
-        return PlainLaunchResult(taskId, taskId <= 0 && TaskLaunchRecovery.isBlockedAfterPlainLaunch(
-                plainOutput, findTaskLocationForPackage(packageName)))
+        return PlainLaunchResult(location, TaskLaunchRecovery.isBlockedAfterPlainLaunch(plainOutput, location))
     }
 
     private fun recoveryComponent(packageName: String, cmpFlat: String?, context: Context): ComponentName? {
@@ -319,7 +308,7 @@ object Phase4TaskVerbs {
                         val command = EmptyPrimaryStackRecovery.launchCommand(component.flattenToString(), displayId)
                         log.append("(one SX361 empty-primary reuse attempt)\n$ ").append(command).append('\n')
                         log.append(execShell(command, 5000) ?: "(no output)").append('\n')
-                        pollForTaskId(packageName)
+                        pollForTaskLocation(packageName) { isCurrent() }
                     }
                 }) ?: return false
             log.append(TaskLaunchRecovery.RECOVERED_PRIMARY_MARKER).append(" task=").append(location.taskId)
@@ -395,14 +384,39 @@ object Phase4TaskVerbs {
     @JvmStatic
     fun findTaskLocationForPackage(packageName: String?): TaskLocation {
         if (packageName == null || packageName.isEmpty()) return TaskLocation.unknown()
+        return confirmTaskLocation(packageName, findTaskLocationFast(packageName)) { true }
+    }
+
+    private fun findTaskLocationFast(packageName: String): TaskLocation {
         return try {
             val locations = queryTaskLocationsForPackage(packageName)
-            if (locations.isEmpty()) TaskLocation.absent() else locations[0]
+            when (locations.distinctBy { it.taskId to it.displayId }.size) {
+                0 -> TaskLocation.absent()
+                1 -> locations[0]
+                else -> TaskLocation.unknown()
+            }
         } catch (t: Throwable) {
             Log.w(TAG, "findTaskLocationForPackage($packageName) failed: $t")
             TaskLocation.unknown()
         }
     }
+
+    private fun confirmTaskLocation(packageName: String, fast: TaskLocation,
+                                    current: () -> Boolean): TaskLocation =
+        TaskLocationConfirmation.confirm(Build.VERSION.SDK_INT, packageName, fast, current) {
+            // The new dump parser intentionally establishes only user-0 ownership.
+            fun userZero(): Boolean = try {
+                Class.forName("android.app.ActivityManager").getMethod("getCurrentUser").invoke(null) == 0
+            } catch (_: Throwable) { false }
+            if (!current() || !userZero()) ProxyShell.Result(-1, "") else {
+                val result = ProxyShell.exec(TaskLocationConfirmation.COMMAND,
+                    TaskLocationConfirmation.TIMEOUT_MS, TaskLocationConfirmation.MAX_OUTPUT_BYTES)
+                val confirmed = if (current() && userZero()) result else ProxyShell.Result(-1, "")
+                val state = if (confirmed.exit == 0) "complete" else "unavailable"
+                Log.i(TAG, "task corroboration: reflection=${fast.status} dump=$state chars=${result.output.length}")
+                confirmed
+            }
+        }
 
     /** Resolves ATM and delegates to [topTaskOnDisplay]; null on any failure (read-only). */
     private fun topTaskOnDisplayForWatchdog(targetDisplayId: Int): String? {
@@ -493,6 +507,7 @@ object Phase4TaskVerbs {
                 }
             }
             sGetTasks = getTasks
+            if (getTasks != null) Log.i(TAG, "task lookup signature: ${getTasks.toGenericString()}")
         }
         if (getTasks == null) throw NoSuchMethodException("getTasks")
 
@@ -941,11 +956,16 @@ object Phase4TaskVerbs {
         Log.i(TAG, "FISSION launchAndForce START pkg=$packageName displayId=$displayId " +
                 width + "x" + height)
         val generation = sWatchdogs.start(packageName)
+        val current = { sWatchdogs.isCurrent(packageName, generation) &&
+            (recoveryToken == null || LaunchRecoveryToken.isCurrent(recoveryToken)) }
+        fun checkCurrent() { check(current()) { "launch request no longer current" } }
         try {
+            checkCurrent()
             // Pre-cleanup: nuke any zombie split-screen-primary / freeform stack.
             log.append(cleanFissionStacks(displayId))
 
             // Always force-stop: running task keeps existing stack's mode otherwise.
+            checkCurrent()
             log.append("$ am force-stop ").append(packageName).append('\n')
             val stopOut = execShell("am force-stop $packageName", 3000)
             log.append(stopOut ?: "(no output)").append('\n')
@@ -978,6 +998,7 @@ object Phase4TaskVerbs {
 
             // Dilink5 Dashboard pattern: -S -W --windowingMode 5 --display N pkg/cls.
             if (cmpFlat != null) {
+                checkCurrent()
                 val cmd = "am start-activity -S -W" +
                         " --windowingMode 5" +
                         " --display " + displayId +
@@ -995,6 +1016,7 @@ object Phase4TaskVerbs {
             // Do not repeat the same --windowingMode launch after the known BYD framework NPE:
             // it only recreates another poisoned split stack. Re-clean and go plain instead.
             if (!started && !freeformStackFailure) {
+                checkCurrent()
                 val cmd = "am start-activity -S -W" +
                         " --windowingMode 5" +
                         " --display " + displayId +
@@ -1006,41 +1028,29 @@ object Phase4TaskVerbs {
                 val out = execShell(cmd, 5000)
                 log.append(out ?: "(no output)").append('\n')
                 started = !amStartFailed(out)
-                freeformStackFailure = TaskLaunchRecovery.isFreeformStackFailure(out)
             }
 
-            // Last-resort (no --windowingMode): on some DiLink 3.0 ROMs, creating a FREEFORM
-            // stack on the fission display throws inside WindowManager (NPE in
-            // ActivityStack.onConfigurationChanged) so NO activity starts. Dropping the windowing
-            // mode lets the activity land in the display's default (fullscreen) stack — visible on
-            // the cluster at full size — and the FREEFORM flip further down still gets its chance.
-            // EARLY trigger: both --windowingMode 5 attempts clearly threw (am printed the error).
-            var triedPlain = false
+            // Shell success and a failed task query are not proof of placement or absence.
+            var location = TaskLocationConfirmation.afterStart(Build.VERSION.SDK_INT, started, current,
+                { findTaskLocationFast(packageName) }, { Thread.sleep(300) },
+                { confirmTaskLocation(packageName, it, current) })
+            log.append("findTask(post-poll) = ").append(location.taskId)
+                .append(" status=").append(location.status).append(" display=").append(location.displayId).append('\n')
             var frameworkBlocked = false
-            var taskId: Int
-            if (!started) {
-                val plain = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName)
-                taskId = plain.taskId
+            location = TaskLaunchRecovery.retryIfAbsent(location, current) {
+                val plain = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName, current)
                 frameworkBlocked = plain.frameworkBlocked
-                triedPlain = true
-            } else {
-                // Poll up to ~5 s for the task to appear.
-                taskId = pollForTaskId(packageName)
+                log.append("findTask(post-fallback) = ").append(plain.location.taskId)
+                    .append(" status=").append(plain.location.status).append('\n')
+                plain.location
             }
-            log.append("findTask(post-poll) = ").append(taskId).append('\n')
-
-            // LATE trigger: the freeform attempt reported "started" (no am error text) yet landed
-            // NO task — the FREEFORM stack creation failed silently on this ROM (INC-20260716-091016,
-            // where started=true skipped the old !started-gated last-resort). Retry once without the
-            // windowing mode, keyed on the ACTUAL outcome (no task) rather than the am exit text.
-            if (taskId <= 0 && !triedPlain) {
-                val plain = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName)
-                taskId = plain.taskId
-                frameworkBlocked = plain.frameworkBlocked
-                log.append("findTask(post-fallback) = ").append(taskId).append('\n')
+            checkCurrent()
+            if (TaskLocationConfirmation.placementUnconfirmed(Build.VERSION.SDK_INT, location, displayId)) {
+                log.append(TaskLaunchRecovery.PLACEMENT_UNCONFIRMED_MARKER)
+                    .append(" pkg=").append(packageName).append(" display=").append(displayId).append('\n')
+                return log.toString()
             }
-
-            if (taskId <= 0) {
+            if (location.status == TaskLocation.Status.ABSENT) {
                 if (frameworkBlocked) {
                     if (recoverEmptyPrimary(log, packageName, cmpFlat, displayId, generation, recoveryToken)) return log.toString()
                     val location = findTaskLocationForPackage(packageName)
@@ -1053,10 +1063,13 @@ object Phase4TaskVerbs {
                 log.append("FAIL: no task discovered for ").append(packageName).append('\n')
                 return log.toString()
             }
+            val taskId = location.taskId
 
             // Placement sequence mirrors DevTool handleLaunchAndForce exactly.
             // This is the ONLY sequence confirmed to work on BYD DiLink 3.0.
+            checkCurrent()
             log.append("  ").append(Phase4DisplayVerbs.setDisplayToSingleTaskInstance(displayId)).append('\n')
+            checkCurrent()
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n')
 
             // Resolve real stackId via getAllStackInfos (DiLink 3) or getAllRootTaskInfos (DiLink 5 / Android 12).
@@ -1081,10 +1094,12 @@ object Phase4TaskVerbs {
             }
 
             // FREEFORM pre-move: flip task+stack to FREEFORM before the move.
+            checkCurrent()
             log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n')
 
             // moveStackToDisplay (DiLink 3) or moveRootTaskToDisplay (DiLink 5 / Android 12).
             if (stackId >= 0) {
+                checkCurrent()
                 try {
                     val ac = Class.forName("android.app.ActivityTaskManager")
                     val ia = ac.getMethod("getService").invoke(null)!!
@@ -1097,19 +1112,27 @@ object Phase4TaskVerbs {
             }
 
             // FREEFORM post-move: moveStackToDisplay creates a FULLSCREEN stack; re-apply FREEFORM.
+            checkCurrent()
             log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n')
 
+            checkCurrent()
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n')
+            checkCurrent()
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n')
 
+            checkCurrent()
             val watchdogStatus = startFissionWatchdog(packageName, taskId, displayId, width, height)
             log.append(watchdogStatus).append('\n')
             log.append("FINISH: launchAndForce complete.\n")
             Log.i(TAG, "FISSION launchAndForce DONE pkg=$packageName taskId=$taskId " +
                     "displayId=$displayId watchdog=$watchdogStatus")
         } catch (t: Throwable) {
-            log.append("EXCEPTION: ").append(t).append('\n')
-            Log.e(TAG, "FISSION launchAndForce EXCEPTION: $t")
+            if (!current()) log.append(TaskLaunchRecovery.PLACEMENT_UNCONFIRMED_MARKER)
+                .append(" cancelled launch\n")
+            else {
+                log.append("EXCEPTION: ").append(t).append('\n')
+                Log.e(TAG, "FISSION launchAndForce EXCEPTION: $t")
+            }
         } finally {
             sWatchdogs.finish(packageName, generation)
         }

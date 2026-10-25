@@ -1,11 +1,40 @@
 package com.byd.dashcast.cluster
 
 import com.byd.dashcast.infrastructure.task.TaskLocation.DisplayMatch
+import com.byd.dashcast.infrastructure.task.TaskLocation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ClusterEvictionPolicyTest {
+
+    @Test
+    fun `expired shared budget prevents additional landing probes for remaining packages`() {
+        var lookups = 0
+        var elapsed = 0L
+        repeat(4) {
+            ClusterEvictionPolicy.probeWithinBudget(elapsed) {
+                lookups++
+                elapsed += ClusterEvictionPolicy.LANDING_BUDGET_MS
+                TaskLocation.unknown()
+            }
+        }
+        assertEquals(1, lookups)
+        assertEquals(TaskLocation.Status.UNKNOWN,
+            ClusterEvictionPolicy.probeWithinBudget(elapsed) { error("expired lookup must not run") }.status)
+    }
+
+    @Test
+    fun `fast first lookup leaves the shared budget available for the next app`() {
+        var lookups = 0
+        for (elapsed in listOf(0L, 550L)) {
+            ClusterEvictionPolicy.probeWithinBudget(elapsed) {
+                lookups++
+                TaskLocation.found(42, 0)
+            }
+        }
+        assertEquals(2, lookups)
+    }
 
     @Test
     fun `app confirmed on display 0 stops the wait immediately`() {

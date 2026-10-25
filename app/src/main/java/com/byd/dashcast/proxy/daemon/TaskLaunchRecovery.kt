@@ -14,7 +14,8 @@ object TaskLaunchRecovery {
     interface Operations {
         fun cleanDisplay(): String?
         fun launchPlain()
-        fun pollTask(): Int
+        fun pollTask(): TaskLocation
+        fun isCurrent(): Boolean = true
     }
 
     @JvmStatic
@@ -77,9 +78,22 @@ object TaskLaunchRecovery {
 
     /** The failed FREEFORM attempt creates a fresh zombie stack, so cleanup must run again. */
     @JvmStatic
-    fun retryOnCleanDisplay(operations: Operations): Int {
+    fun retryOnCleanDisplay(operations: Operations): TaskLocation {
+        if (!operations.isCurrent()) return TaskLocation.unknown()
         operations.cleanDisplay()
+        if (!operations.isCurrent()) return TaskLocation.unknown()
         operations.launchPlain()
-        return operations.pollTask()
+        if (!operations.isCurrent()) return TaskLocation.unknown()
+        val location = operations.pollTask()
+        return if (operations.isCurrent()) location else TaskLocation.unknown()
+    }
+
+    /** Only a complete independent lookup can authorize a second destructive launch. */
+    fun retryIfAbsent(location: TaskLocation, current: () -> Boolean,
+                      retry: () -> TaskLocation): TaskLocation {
+        if (!current()) return TaskLocation.unknown()
+        if (location.status != TaskLocation.Status.ABSENT) return location
+        val result = retry()
+        return if (current()) result else TaskLocation.unknown()
     }
 }

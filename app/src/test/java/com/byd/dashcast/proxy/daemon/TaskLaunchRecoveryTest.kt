@@ -34,7 +34,7 @@ class TaskLaunchRecoveryTest {
     fun retryCleansPoisonedDisplayBeforePlainLaunchAndPoll() {
         val events = mutableListOf<String>()
 
-        val taskId = TaskLaunchRecovery.retryOnCleanDisplay(
+        val location = TaskLaunchRecovery.retryOnCleanDisplay(
             object : TaskLaunchRecovery.Operations {
                 override fun cleanDisplay(): String {
                     events += "clean"
@@ -45,14 +45,14 @@ class TaskLaunchRecoveryTest {
                     events += "plain"
                 }
 
-                override fun pollTask(): Int {
+                override fun pollTask(): TaskLocation {
                     events += "poll"
-                    return 73
+                    return TaskLocation.found(73, 9)
                 }
             }
         )
 
-        assertEquals(73, taskId)
+        assertEquals(73, location.taskId)
         assertEquals(listOf("clean", "plain", "poll"), events)
     }
 

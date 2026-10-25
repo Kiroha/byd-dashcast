@@ -54,6 +54,10 @@ object ClusterEvictionPolicy {
      */
     const val SETTLE_AFTER_LANDING_MS = 250L
 
+    /** Additional landing probes share one deadline; the initial safety lookup remains mandatory. */
+    fun probeWithinBudget(elapsedMs: Long, probe: () -> TaskLocation): TaskLocation =
+        if (elapsedMs >= LANDING_BUDGET_MS) TaskLocation.unknown() else probe()
+
     /**
      * The packages Stop projection must evict: [main] + [second] first (they are what the user
      * just had on screen, so they should be dealt with first), then everything still [tracked].
