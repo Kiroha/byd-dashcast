@@ -2122,8 +2122,11 @@ android {
         // 716 = 1.9.76-beta: retire the unsafe full-app profile while retaining its
         // recovery identity and journal. The rewritten QML candidate stays offline;
         // refresh persistent daemons so protocol 44 also enforces the new load refusal.
-        versionCode 716
-        versionName "1.9.76-beta"
+        // 717 = 1.9.77-beta: allow isolated read-only OEM selection consultation for
+        // trusted dormant IVI recovery history and retain its visible result in Diag.
+        // Preserve protocol 44 and recovery gates; include Brazilian Portuguese support.
+        versionCode 717
+        versionName "1.9.77-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 13 + base French). Strips ~58 dead AndroidX/Material locale
