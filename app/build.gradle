@@ -2125,8 +2125,10 @@ android {
         // 717 = 1.9.77-beta: allow isolated read-only OEM selection consultation for
         // trusted dormant IVI recovery history and retain its visible result in Diag.
         // Preserve protocol 44 and recovery gates; include Brazilian Portuguese support.
-        versionCode 717
-        versionName "1.9.77-beta"
+        // 718 = 1.9.78-beta: independently confirm Android 13 task placement while
+        // preserving the legacy DiLink 3 launch/recovery path. Protocol 44 is unchanged.
+        versionCode 718
+        versionName "1.9.78-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 13 + base French). Strips ~58 dead AndroidX/Material locale
