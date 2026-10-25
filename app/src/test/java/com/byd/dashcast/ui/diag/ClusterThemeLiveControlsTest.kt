@@ -310,7 +310,13 @@ class ClusterThemeLiveControlsTest {
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
             while (busy.get() && System.nanoTime() < until) Thread.sleep(5)
             assertFalse("Definite pre-transmission refusal must release Diag gate", busy.get())
-            ShadowLooper.idleMainLooper()
+            // Releasing the Diag claim precedes posting its result to the main looper.
+            val visibleUntil = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+            while (!all.filterIsInstance<TextView>().any { it.text.toString().contains("REFUSED before start transmission") } &&
+                System.nanoTime() < visibleUntil) {
+                ShadowLooper.idleMainLooper()
+                Thread.sleep(5)
+            }
             assertTrue(all.filterIsInstance<TextView>().any { it.text.toString().contains("REFUSED before start transmission") })
             assertTrue(ClusterThemeDiagnostics.snapshot(c.get()).contains("REFUSED before start transmission"))
             assertTrue(all.filterIsInstance<Button>().single { it.text == "Verify experimental theme (local only)" }.isEnabled)
