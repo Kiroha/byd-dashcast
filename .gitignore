@@ -74,3 +74,9 @@ audit/
 
 # Kotlin build-tool scratch (error logs written by the Kotlin daemon)
 .kotlin/
+
+# Python tool caches (cluster tooling and CI helper scripts)
+__pycache__/
+
+# Local Open Code Review reports (may contain source and diagnostics)
+.opencodereview/results/

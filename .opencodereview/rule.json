@@ -1,0 +1,66 @@
+{
+  "include": [
+    "app/src/test/**/*.{kt,java}",
+    "app/src/androidTest/**/*.{kt,java}",
+    "relay/src/**/*.test.js",
+    "tools/cluster/test_*.py",
+    "tools/cluster/**/*.{qml,js}"
+  ],
+  "exclude": [
+    "**/build/**",
+    "**/.gradle/**",
+    "**/.kotlin/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/__pycache__/**",
+    "graphify-out/**",
+    "artifacts/**",
+    "triage/**",
+    "audit/**",
+    "captures/**",
+    "**/.externalNativeBuild/**",
+    "**/.cxx/**",
+    "**/.venv/**",
+    "**/*.apk",
+    "**/*.aab",
+    "**/*.rcc",
+    "**/*.jar",
+    "**/local.properties",
+    "**/local.settings.json",
+    "**/keystore/**",
+    "**/*.keystore",
+    "**/*.jks",
+    "**/*.p12",
+    "**/*.pfx",
+    "**/*.key",
+    "**/*.pem",
+    "**/.env",
+    "**/.env.*",
+    "**/byd_bugreport_*",
+    "**/bugbundle_*",
+    "cluster_rcc_answers.txt",
+    ".opencodereview/results/**"
+  ],
+  "rules": [
+    {
+      "path": "app/**",
+      "rule": "Report only actionable defects supported by a concrete path and changed line, trigger and impact. Read AGENTS.md and the relevant source and tests. Keep static/JVM evidence distinct from runtime or vehicle validation; unknown firmware/model/API must remain unknown. Respond in French, retaining code identifiers. Do not emit style-only findings or demand tests for reversible documentation/configuration changes. Account for every previewed file as reviewed or skipped with a reason. Respect existing global triage, single implementation owner, specialist selection and independent verifier rules; OCR supplements these and does not replace them. Reviews are read-only unless fixes were requested. Never run commands affecting a vehicle, deploy, publish, read credential files or activate experimental transports as part of a review.\n\nDashCast uses native Kotlin/Views/XML, one app module, minSdk 28, targetSdk 29, compileSdk 36; recheck Gradle and manifest when these change. Check lifecycle cleanup, main-thread blocking, cancellation, bounded retries, API guards, resource/localization consistency and manifest exposure. BYD Android is not proven AAOS: optional android.car, compile-only OEM stubs, compileSdk and fallback DL3 detection prove neither hardware identity nor effective permissions. Validate endpoints/descriptors and daemon ownership: SurfaceDaemon retains persistent surfaces/resources, ProxyDaemon executes commands; check release, reconnect and recovery paths. Treat WSS control, navigation freshness and WebRTC video as separate states. Missing, unreadable or stale movement means unknown, never parked; zero speed alone and ProjectionSafetyPolicy HOME exclusion are not driving locks. Preserve OEM alerts/telltales, restrictions and recovery. Do not propose arbitrary distractionOptimized declarations, unsafe display/input routing, bypasses or unverified CAN/VHAL/SOME/IP effects; current SOME/IP foundations are inactive and non-AAOS HUD production uses legacy DL3. Check pinned TLS/trust, pairing authorization, IPC input validation, stale guidance rejection and privileged command injection. Hardware compatibility requires model/ROM/firmware evidence. For changed behavior, inspect relevant app/src/test coverage and select targeted JVM/lint checks; never claim a build proves in-car operation.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "tools/cluster/**",
+      "rule": "Report only actionable defects supported by a concrete path and changed line, trigger and impact. Read AGENTS.md and the relevant source and tests. Keep static/JVM evidence distinct from runtime or vehicle validation; unknown firmware/model/API must remain unknown. Respond in French, retaining code identifiers. Do not emit style-only findings or demand tests for reversible documentation/configuration changes. Account for every previewed file as reviewed or skipped with a reason. Respect existing global triage, single implementation owner, specialist selection and independent verifier rules; OCR supplements these and does not replace them. Reviews are read-only unless fixes were requested. Never run commands affecting a vehicle, deploy, publish, read credential files or activate experimental transports as part of a review.\n\nCluster tools generate Qt/QML resources used on OEM displays. Check Qt5 compatibility, dimensions, visibility, bounds and wrong-display/input regressions; preserve OEM telltales and recovery behavior. Check deterministic binary formats, checksums, input/path/command validation and bounded resource use. Validate against tools/cluster tests and offline Qt5 checks where relevant. Never upload/activate artifacts or run vehicle effects to validate a review. Firmware and hardware compatibility remain unknown without appropriate parked-vehicle evidence.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "relay/**",
+      "rule": "Report only actionable defects supported by a concrete path and changed line, trigger and impact. Read AGENTS.md and the relevant source and tests. Keep static/JVM evidence distinct from runtime or vehicle validation; unknown firmware/model/API must remain unknown. Respond in French, retaining code identifiers. Do not emit style-only findings or demand tests for reversible documentation/configuration changes. Account for every previewed file as reviewed or skipped with a reason. Respect existing global triage, single implementation owner, specialist selection and independent verifier rules; OCR supplements these and does not replace them. Reviews are read-only unless fixes were requested. Never run commands affecting a vehicle, deploy, publish, read credential files or activate experimental transports as part of a review.\n\nThe relay is a Node.js Azure Functions service that handles diagnostic reports. Check authentication/authorization, request size limits, validation, timeouts, retry/idempotency and upstream error handling. Keep Telegram/Azure credentials server-side and out of APKs, logs, reports and version control. Diagnostic data may contain SSIDs, account names, device inventories and screenshots: verify minimization/redaction and avoid logging sensitive bodies. Check the relevant node --test cases (npm test in relay), including failure paths.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "**/*",
+      "rule": "Report only actionable defects supported by a concrete path and changed line, trigger and impact. Read AGENTS.md and the relevant source and tests. Keep static/JVM evidence distinct from runtime or vehicle validation; unknown firmware/model/API must remain unknown. Respond in French, retaining code identifiers. Do not emit style-only findings or demand tests for reversible documentation/configuration changes. Account for every previewed file as reviewed or skipped with a reason. Respect existing global triage, single implementation owner, specialist selection and independent verifier rules; OCR supplements these and does not replace them. Reviews are read-only unless fixes were requested. Never run commands affecting a vehicle, deploy, publish, read credential files or activate experimental transports as part of a review.",
+      "merge_system_rule": true
+    }
+  ]
+}
