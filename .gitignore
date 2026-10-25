@@ -80,3 +80,6 @@ __pycache__/
 
 # Local Open Code Review reports (may contain source and diagnostics)
 .opencodereview/results/
+
+# Quarantined minimal cluster bench artifacts; never package or select on a car.
+/artifacts/cluster_minimal_app_bench/
