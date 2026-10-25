@@ -3,10 +3,12 @@
 Evidence checkpoint: 2026-10-25. This is an engineering finding, **not a validated
 recovery procedure or permission to load a new cluster theme**.
 
-The investigation combined static REA analysis with narrowly filtered, read-only
-observations from the identified vehicle. No reboot, country change, MCU write,
-property write or RCC load was performed. The candidate full-screen presentation
-remains offline; the retired full-app profile remains recovery-only.
+The investigation began with static REA analysis and narrowly filtered, read-only
+vehicle observations. A separately authorized external maintenance restart was
+then tested once from a normal OEM baseline, as recorded below. No country-change
+or MCU-configuration operation, direct property write or RCC load was issued by
+the investigator. The candidate full-screen presentation remains offline; the
+retired full-app profile remains recovery-only.
 
 ## What Country Code Tool actually does
 
@@ -55,16 +57,17 @@ Initial read-only permission checkpoint, before the manual app update:
 | DashCast at the initial checkpoint | UID 10081, version **1.9.75-beta / build 715** | Not present in requested/installed permission sections |
 | Android shell | UID 2000, `android.uid.shell`; only the shell package in that shared UID | Not present in requested/installed permission sections |
 
-The user subsequently installed **1.9.76-beta / build 716 manually** and
-confirmed the normal OEM display. A new read-only observation confirms UID
+At the next historical checkpoint, the user installed **1.9.76-beta / build 716
+manually** and confirmed the normal OEM display. Read-only observation confirmed UID
 10081 and APK SHA-256
 `1ff58ce9aa840c8aaad0438ef0a3ce2f9b04fdbd4f1dadedd637252a23e51327`, exactly
-matching the reviewed published release. **Build 716 is the current installed
-application; build 715 above is historical.** The investigator performed no
-installation or vehicle write.
+matching the reviewed published release. **Builds 715 and 716 are historical.**
+The user subsequently installed **1.9.77-beta / build 717**; filtered package
+metadata confirmed that version before the maintenance trial. The investigator
+performed neither installation.
 
 A version marker reporting 716, a registered proxy service and a live proxy
-process under UID 2000 were also observed. They are operational metadata, **not
+process under UID 2000 were also observed at the 716 checkpoint. They are operational metadata, **not
 an authenticated Binder attestation of the running daemon build**, and do not
 prove recovery or full-screen admission. A fresh daemon-version check remains
 separate from the application package/hash check.
@@ -101,12 +104,29 @@ latter and `reboot,fission-all` in `ro.boot.bootreason`, while
 consistent historical boot tags, not proof of the value the host file reader
 will obtain during a future exit.
 
-The separate external ADB maintenance protocol is under investigation as its
-own authorization path. The actual adbd binary was not readable from the current
-cell, so forwarding of a requested reason to the required fresh persistent key
-has **not** been established. No reset was used to test it. Absence of host Qt
-processes or init-service fields in the IVI view is not evidence that they are
-stopped.
+The external ADB maintenance protocol has its own authorization path; the
+positive baseline below does not grant REBOOT permission to DashCast or shell
+Binder callers. The actual adbd binary was not readable from the cell, so the
+forwarding implementation and writer/freshness of the exact host-read persistent
+key remain untraced. Missing host Qt processes or init-service fields in the IVI
+view do not establish that they are stopped.
+
+## Single authorized external maintenance baseline
+
+With build 717 and normal BYD instruments confirmed, the user gave fresh consent
+for one external ADB maintenance restart with reason `fission-all`, immobilized
+in P with the parking brake applied. Intent was recorded before transmission.
+Exactly one request was sent: its client timed out after 10 seconds and initial
+shell reads were unresponsive. No second attempt was made; timeout alone did
+not establish failure.
+
+ADB later returned with a changed IVI-exposed boot identity, new Android
+system-server generation, reset uptime and boot reason `fission-all`. The user
+confirmed the visible **Restarting** screen and normal BYD instruments afterwards.
+This supports reason acceptance and a new Android/IVI generation on this vehicle.
+Native Qt process generation and exact host/MCU restart scope were not directly
+measured. This normal-state trial does **not** prove recovery from failed root
+QML, a frozen/dead Qt consumer or a crashed controller, or admit a new RCC.
 
 ## Firmware identity established by read-only comparison
 
@@ -147,8 +167,11 @@ manual consultation after the helper finishes obtains a fresh receipt.
 A manual Restore requested during consultation waits for positive helper reap.
 If reap is unconfirmed, the request stays pending and recovery cannot advance;
 this requires further diagnosis, not an automatic retry or daemon restart.
-The consultation therefore can delay recovery. These changes have JVM coverage;
-their behavior on the vehicle remains unvalidated.
+The consultation therefore can delay recovery. One build-717 consultation
+returned `RECEIVED`, registration `0`, native result `0` and command `1001` /
+subcommand `4` with default-related selection fields. This uncorrelated callback
+reports selection only; the user separately confirmed normal OEM instruments.
+Other concurrency, refusal and helper-reap cases retain JVM coverage only.
 
 ## Evidence anchors
 
@@ -168,17 +191,18 @@ not published in the repository. These REA IDs identify the relevant findings:
 
 ## Next controlled step and remaining gates
 
-The manual update to the reviewed, signed **1.9.76-beta / build 716** and the
-user's confirmation of normal BYD instruments complete the application-baseline
-step. The exact installed APK hash is confirmed above. This is **not** a recovery
-test, a Binder daemon attestation or admission to load a new RCC. The retired
-profile's refusal and the offline candidate remain in place. See the
-[1.9.76 release notes](releases/1.9.76-beta.md).
+The current checkpoint is **1.9.77-beta / build 717** with one successful
+read-only consultation and one external maintenance restart from a normal OEM
+baseline. The user confirmed normal instruments after that restart. Neither
+observation is a failed-QML recovery test, Binder daemon attestation or admission
+to load a new RCC. The retired profile's refusal and offline candidate remain in
+place. See the [1.9.77 release notes](releases/1.9.77-beta.md).
 
-Before any separate recovery trial:
+Before any fault-recovery trial:
 
-- Establish the external caller's actual authority, reason-forwarding contract,
-  persistent-key writer and freshness; do not use a permission workaround.
+- Keep the observed external maintenance authority separate from Android Binder
+  permissions. Resolve the exact persistent-key writer and freshness where
+  possible; direct forwarding and native consumer restart remain unmeasured.
 - Preserve the exact owned carrier and recovery journal. A host restart which
   reloads the same bad persistent RCC may repeat the failure. Factory resources
   and OEM indications must remain intact.
