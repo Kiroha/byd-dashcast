@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "44"
+    private const val PROTOCOL_VERSION = "45"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -785,7 +785,20 @@ object ProxyDaemonMain {
                     data.enforceInterface(DESCRIPTOR)
                     try {
                         val operation = data.readInt()
+                        ClusterThemeLiveTest.checkRestartOperation(operation)
                         val result = when (operation) {
+                            27 -> {
+                                val nonce = data.readString() ?: ""
+                                val validity = data.readStrongBinder() ?: error("Missing restart reservation")
+                                check(data.dataAvail() == 0)
+                                ClusterThemeLiveTest.prepareRestart(nonce, validity)
+                            }
+                            28, 29 -> {
+                                val nonce = data.readString() ?: ""; val round = data.readString() ?: ""
+                                check(data.dataAvail() == 0)
+                                if (operation == 28) ClusterThemeLiveTest.confirmRestart(nonce, round)
+                                else ClusterThemeLiveTest.cancelRestart(round)
+                            }
                             0 -> ClusterThemeLiveTest.status()
                             1 -> {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)

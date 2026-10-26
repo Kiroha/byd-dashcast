@@ -167,7 +167,7 @@ class ClusterRccRecoveryControlsTest {
             val popup = f.dialog()!!
             assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_button), popup.getButton(-1).text)
             assertTrue(popup.findViewById<TextView>(android.R.id.message).text.contains("RESOURCE_IS_SAME"))
-            assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_button), f.header().text)
+            assertEquals(f.app.getString(R.string.diag_cluster_rcc_restore), f.header().text)
             assertEquals(listOf(13), f.operations.filter { it != 0 }); f.checkLease()
             popup.getButton(-1).performClick()
             assertTrue(f.dialog()!!.getButton(-1).text == f.app.getString(R.string.diag_cluster_native_send))

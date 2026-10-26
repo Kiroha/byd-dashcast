@@ -13,7 +13,9 @@ internal object ClusterThemeJournal {
         val dashboardBootstrapStarted: Boolean = false, val dashboardSizeAdmitted: Boolean? = null,
         val dashboardBootstrapRecoverySettled: Boolean = false, val dashboardSmallPanelSeen: Boolean = false,
         val fullAppAdasDebt: Boolean = false, val fullAppAdasRound: String = "",
-        val factoryApplyPending: Boolean = false, val factoryApplyCompleted: Boolean = false)
+        val factoryApplyPending: Boolean = false, val factoryApplyCompleted: Boolean = false,
+        val restartDispatchPending: Boolean = false, val restartBootId: String = "", val restartRound: String = "",
+        val restartCompleted: ClusterRestartCompletion? = null)
 
     fun recover(j: JSONObject): Recovery {
         val schema = j.get("schema")
@@ -94,9 +96,19 @@ internal object ClusterThemeJournal {
         val factoryPending = j.optBoolean("factoryApplyPending")
         val factoryCompleted = j.optBoolean("factoryApplyCompleted")
         require(!clean || !factoryPending)
+        require(!j.has("restartDispatchPending") || j.get("restartDispatchPending") is Boolean)
+        val restartPending = j.optBoolean("restartDispatchPending")
+        require(!restartPending || !clean && retirement?.moved == true)
+        val restartBoot = j.optString("restartBootId")
+        require(!restartPending || restartBoot.matches(Regex("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")))
+        val restartRound = j.optString("restartRound")
+        require(!restartPending || restartRound.matches(Regex("[0-9a-f]{32}")))
+        val restartCompleted = j.optJSONObject("restartCompleted")?.let(ClusterRestartCompletion::parse)
+        require(!j.has("restartCompleted") || restartCompleted != null)
+        require(restartCompleted == null || clean && !restartPending && retirement?.moved == true)
         return Recovery(transport, variant, clean, filename, root, j.optString("renderer"), identity,
             j.getBoolean("mutated"), pid.toInt(), start, token, device, inode, recoverySettled, retirement, stage, nativeDebt, nativeCommand,
             nativePid, nativeStart, nativeToken, bootstrap, sizeAdmitted, bootstrapSettled, small, adasDebt, adasRound,
-            factoryPending, factoryCompleted)
+            factoryPending, factoryCompleted, restartPending, restartBoot, restartRound, restartCompleted)
     }
 }

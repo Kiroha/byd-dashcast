@@ -740,7 +740,7 @@
     <string name="diag_cluster_native_seen_full">أرى عرض Full الأصلي من BYD</string>
     <string name="diag_cluster_native_seen_normal">أرى عرض BYD العادي مجددًا</string>
     <string name="diag_cluster_rcc_theme_button">سمة RCC تجريبية — Full + ليلي</string>
-    <string name="diag_cluster_rcc_restore">استعادة موارد RCC الخاصة بـBYD</string>
+    <string name="diag_cluster_rcc_restore">استرجاع لوحة العدادات</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">لا / ليس بعد</string>
@@ -769,21 +769,21 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">اختر Full والوضع الليلي قبل الاختبار. يحتفظ RCC بكود العدادات والتحذيرات ويغير الخلفية. تحقق من الوضوح والاستعادة في السيارة. أبقِ الشاشة متاحة. تُطلب الموارد الافتراضية بعد 30 ثانية إذا بقيت الجلسة متاحة. ثم أكد ما تراه. إعادة التشغيل لا تضمن الاستعادة.</string>
     <string name="diag_cluster_rcc_ivi_send">إرسال اختبار RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">يطلب موارد RCC الافتراضية دون تغيير وضع العرض. يتم التحقق من رد OEM والاستعادة المرئية بشكل منفصل؛ ثم أكد ما تراه. لا إعادة تشغيل أو اختبار جديد تلقائي.</string>
-    <string name="diag_cluster_rcc_debt">ما زال اختبار RCC مفتوحًا. استخدم «استعادة موارد RCC الخاصة بـBYD» أو «التحقق من عودة BYD»، ثم اتبع النتيجة والخطوة المقترحة. لا يظهر السؤال المرئي إلا بعد التحقق من اختيار BYD الافتراضي.</string>
+    <string name="diag_cluster_rcc_debt">ما زال اختبار RCC مفتوحًا. استخدم «استرجاع لوحة العدادات» أو «التحقق من عودة BYD»، ثم اتبع النتيجة والخطوة المقترحة. لا يظهر السؤال المرئي إلا بعد التحقق من اختيار BYD الافتراضي.</string>
     <string name="diag_cluster_rcc_ivi_platform">رُفض الاختبار: يلزم Android 10 واكتشاف DiLink 3 مؤكداً. لم يُرسل أي RCC.</string>
     <string name="diag_cluster_page_title">لوحة العدادات: الإسقاط وRCC</string>
     <string name="diag_cluster_page_description">عرض BYD مع الأشرطة والتحقق من زوايا RCC</string>
     <string name="diag_cluster_native_rcc_blocked">اختبار RCC يمنع إسقاط BYD</string>
     <string name="diag_cluster_rcc_retire_button">تهيئة عودة BYD بعد خطأ RCC</string>
-    <string name="diag_cluster_rcc_retire_confirm">ينقل ملف RCC التجريبي الخاص بنا فقط إلى مجلد جديد ويحفظ بايتاته. لا يرسل تحميلاً أو إعادة تشغيل OEM. ثم استخدم «التحقق من عودة BYD» لفحص للقراءة فقط. يظهر السؤال البصري فقط إذا تأكد اختيار BYD الافتراضي. وإلا فاستخدم «إرسال تقرير تشخيصي». تبقى الاختبارات الأخرى محظورة حتى إغلاق الجلسة.</string>
-    <string name="diag_cluster_rcc_retired_waiting">تم تحضير عودة BYD: ملفنا محفوظ خارج موقعه الأصلي. اضغط الآن «التحقق من عودة BYD» لقراءة الاختيار دون تحميل أو إعادة تشغيل. إذا تأكد الاختيار الافتراضي فأجب عن عدادات وتحذيرات BYD. وإلا فاستخدم «إرسال تقرير تشخيصي». لم يثبت إجراء محدد لإعادة الضبط اليدوي؛ إعادة اتصال daemon لا تثبت إعادة تشغيل لوحة العدادات.</string>
+    <string name="diag_cluster_rcc_retire_confirm">ينقل RCC التجريبي الخاص بـ DashCast فقط ويحفظ بياناته. لا إعادة تشغيل في هذه الخطوة. ثم يفحص الملفات ويطلب موافقة منفصلة إن توفرت الميزة.</string>
+    <string name="diag_cluster_rcc_retired_waiting">تم تسجيل النقل. استرجاع لوحة العدادات يستأنف الفحوص ويعرض إعادة تشغيل منفصلة إن توفرت. الإلغاء لا يعيد التشغيل. يجب تأكيد الاسترجاع الفعلي.</string>
     <string name="diag_cluster_rcc_verify_return">التحقق من عودة BYD</string>
     <string name="diag_cluster_rcc_corners_button">اختبار تحميل RCC (علامات الزوايا)</string>
-    <string name="diag_cluster_rcc_corners_confirm">يطلب اختياراً دائماً لملف RCC بعلامات سماوية وأرجوانية رفيعة في الزوايا مع الحفاظ على عدادات وتحذيرات BYD. العلامات مخصصة فقط لحالة ON واكتمال التشغيل وP وسرعة صفر؛ هذا لا يكتشف الوقوف الآمن. لا يلزم Full أو الوضع الليلي. الاختيار لا يثبت تطبيق Qt. لا توجد عودة تلقائية بعد 30 ثانية. ثم استخدم «التحقق من علامات زوايا RCC» وأجب نعم أو لا أو لست متأكداً حسب اللوحة. لم يثبت إجراء لإعادة الضبط اليدوي. لإغلاق الجلسة استخدم «استعادة موارد RCC الخاصة بـBYD».</string>
+    <string name="diag_cluster_rcc_corners_confirm">يطلب اختياراً دائماً لملف RCC بعلامات سماوية وأرجوانية رفيعة في الزوايا مع الحفاظ على عدادات وتحذيرات BYD. العلامات مخصصة فقط لحالة ON واكتمال التشغيل وP وسرعة صفر؛ هذا لا يكتشف الوقوف الآمن. لا يلزم Full أو الوضع الليلي. الاختيار لا يثبت تطبيق Qt. لا توجد عودة تلقائية بعد 30 ثانية. ثم استخدم «التحقق من علامات زوايا RCC» وأجب نعم أو لا أو لست متأكداً حسب اللوحة. لم يثبت إجراء لإعادة الضبط اليدوي. لإغلاق الجلسة استخدم «استرجاع لوحة العدادات».</string>
     <string name="diag_cluster_observe_corners_message">هل ترى العلامات السماوية والأرجوانية في زوايا لوحة العدادات الفعلية مع وضوح عدادات BYD ومؤشرات التحذير؟</string>
     <string name="diag_cluster_rcc_load_receipts">الإرسال: %1$s\nالاختيار: %2$s\nACK2 (رد غير مرتبط): %3$s\nالعرض: %4$s</string>
     <string name="diag_cluster_rcc_corners_verify_button">التحقق من علامات زوايا RCC</string>
-    <string name="diag_cluster_rcc_corners_verify_confirm">يفحص ملفنا واختيار BYD ثم يفتح سؤالاً بصرياً إذا تطابق الاختيار. لا يعيد تحميل أو تشغيل أي شيء. أجب حسب العلامات المرئية فعلياً. نعم تسجل ملاحظتك فقط؛ أغلق الجلسة بشكل منفصل باستخدام «استعادة موارد RCC الخاصة بـBYD». إذا لم يتغير شيء فاستخدم «إرسال تقرير تشخيصي»؛ لا يُطلب إجراء محدد لإعادة الضبط اليدوي.</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">يفحص ملفنا واختيار BYD ثم يفتح سؤالاً بصرياً إذا تطابق الاختيار. لا يعيد تحميل أو تشغيل أي شيء. أجب حسب العلامات المرئية فعلياً. نعم تسجل ملاحظتك فقط؛ أغلق الجلسة بشكل منفصل باستخدام «استرجاع لوحة العدادات». إذا لم يتغير شيء فاستخدم «إرسال تقرير تشخيصي»؛ لا يُطلب إجراء محدد لإعادة الضبط اليدوي.</string>
     <string name="diag_cluster_rcc_corners_pending">تم حفظ إعداد RCC — العرض غير مؤكد</string>
     <string name="diag_cluster_rcc_cohort_help">يتحقق اختبار الزوايا من إصدار لوحة العدادات المثبت. استبدال الشاشة بالكامل غير متاح: يجب أولاً إثبات ظهور العلامات. لم تعد الاختبارات القديمة غير المتوافقة معروضة؛ تظل استعادة جلساتها متاحة.</string>
     <string name="diag_cluster_rcc_restore_reading">جارٍ قراءة جلسة RCC للـ daemon المتصل… لم يُرسل أي أمر إلى BYD.</string>
@@ -810,4 +810,25 @@
     <string name="startup_confirm_app_fmt">هل تريد فتح %1$s دائمًا عند بدء تشغيل السيارة؟ يحل هذا الاختيار محل استئناف الجلسة الأخيرة.</string>
     <string name="startup_no_targets">لا توجد عناصر متاحة. تحقق من التطبيقات المثبتة والتخطيطات المحفوظة.</string>
     <string name="startup_app_selected">تطبيق بدء التشغيل — تغيير…</string>
+
+    <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
+    <string name="cluster_wizard_intro">تحقق من الحالة واتبع الخطوة التالية ثم أكد ما تراه على لوحة العدادات. يبقى الاسترجاع متاحًا في الأعلى.</string>
+    <string name="cluster_wizard_advanced">الاختبارات السابقة والتفاصيل التقنية</string>
+    <string name="cluster_wizard_next">عرض الخطوة التالية</string>
+    <string name="cluster_wizard_wait">العملية جارية. انتظر النتيجة قبل المتابعة.</string>
+    <string name="cluster_wizard_offline">ملف ملء الشاشة الجديد لا يزال قيد التحقق على الحاسوب. لا يمكن تحميل RCC جديد بملء الشاشة هنا.</string>
+    <string name="cluster_wizard_recovery">تحتاج الجلسة إلى استرجاع. اختر استرجاع لوحة العدادات واتبع الخطوات.</string>
+    <string name="cluster_wizard_observe">تم طلب العرض. أكد ما تراه أو أغلق العرض.</string>
+    <string name="cluster_wizard_choose">اختر تطبيقًا ثم افتح العرض.</string>
+    <string name="cluster_restart_checking">جارٍ فحص RCC المحفوظ وموقعه الأصلي ومجلد التحميل…</string>
+    <string name="cluster_restart_ready">يسجل السجل نقل RCC. يلزم فحص جديد قبل اقتراح إعادة التشغيل.</string>
+    <string name="cluster_restart_unknown">تم إعداد إعادة التشغيل أو إرسالها. النتيجة غير معروفة. لا تكررها: انتظر عودة BYD ثم تحقق من الشاشة.</string>
+    <string name="cluster_restart_blocked">إعادة التشغيل محظورة. النقل أو التحقق غير مؤكد. لا توجد إعادة تلقائية. راجع التفاصيل أو أرسل تقريرًا.</string>
+    <string name="cluster_restart_parked">أؤكد: السيارة متوقفة في P وفرامل الوقوف مفعّلة.</string>
+    <string name="cluster_restart_title">إعادة التشغيل لاسترجاع لوحة العدادات؟</string>
+    <string name="cluster_restart_confirm">تم حفظ RCC الخاص بـ DashCast في مجلد الاسترجاع. اسمه الأصلي وأي مدخل DashCast آخر غير موجود في مجلد التحميل. ستتكرر الفحوص بعد موافقتك. سيوقف fission-all الشاشات واتصال ADB مؤقتًا. يجب التحقق من الاسترجاع الفعلي. لن يتغير إعداد البلد.</string>
+    <string name="cluster_restart_accept">الموافقة على إعادة التشغيل</string>
+    <string name="cluster_wizard_details_show">عرض التفاصيل والاختبارات السابقة</string>
+    <string name="cluster_wizard_details_hide">إخفاء التفاصيل والاختبارات السابقة</string>
+    <string name="cluster_restart_context">أسترجع موارد اختبار DashCast على هذه السيارة.</string>
 </resources>

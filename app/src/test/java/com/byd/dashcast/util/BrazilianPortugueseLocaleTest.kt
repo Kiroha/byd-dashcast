@@ -52,7 +52,7 @@ class BrazilianPortugueseLocaleTest {
         assertEquals("Aguardando orientações de navegação", selected.getString(R.string.satellite_guidance_waiting))
         val recreated = LocaleHelper.applyLocale(context)
         assertEquals("pt-BR", recreated.resources.configuration.locales[0].toLanguageTag())
-        assertEquals("Restaurar os recursos RCC BYD", recreated.getString(R.string.diag_cluster_rcc_restore))
+        assertEquals("Restaurar painel", recreated.getString(R.string.diag_cluster_rcc_restore))
         assertTrue(recreated.getString(R.string.diag_cluster_full_app_prepare_confirm).contains("não pode ser carregado"))
         val french = LocaleHelper.setLocale(context, LocaleHelper.LANG_FR)
         assertEquals("fr", LocaleHelper.getSavedLanguage(context))

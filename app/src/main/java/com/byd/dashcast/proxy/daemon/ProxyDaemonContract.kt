@@ -276,7 +276,10 @@ object ProxyDaemonContract {
      * as0,0,1920,720; native instruments/alerts are hidden in this manual demonstration.
      * Operation25 accepts only fixed owned ADAS steps; operation26 explicitly applies an
      * already configured factory profile through one native transition, without mode1 replay.
-     * Prompt JSON; never generic/replayed. */
+     * Protocol45 operations27/28/29 prepare, consume or cancel a verified retired-RCC restart
+     * confirmation. They never reboot themselves; the app uses one separately authenticated
+     * fixed local ADB host service after explicit consent and durable intent. Prompt JSON;
+     * never generic/replayed. */
     const val TXN_CLUSTER_LIVE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43 // 44
 
 }

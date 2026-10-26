@@ -71,6 +71,22 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
         return call(if (retire) 14 else 13, payload = { it.writeString(nonce); it.writeInt(1); it.writeInt(1); it.writeStrongBinder(validity) })
     }
     fun restore(): String { if (filename.isEmpty()) status(); return call(2) }
+    fun prepareRestart(validity: IBinder): String {
+        check(ProxyClient.supportsProtocol(45)) { "Connect the updated protocol-45 daemon first" }
+        val nonce = recoveryNonce()
+        return call(27, payload = { it.writeString(nonce); it.writeStrongBinder(validity) })
+    }
+    fun confirmRestart(round: String): String {
+        check(ProxyClient.supportsProtocol(45) && round.matches(Regex("[0-9a-f]{32}")))
+        return call(28, payload = { it.writeString(recoveryNonce()); it.writeString(round) })
+    }
+    fun cancelRestart(round: String): String {
+        check(ProxyClient.supportsProtocol(45))
+        return call(29, payload = { it.writeString(recoveryNonce()); it.writeString(round) })
+    }
+    private fun recoveryNonce(): String = filename.takeIf(com.byd.dashcast.clusterlive.ClusterThemePolicy::ownedName)
+        ?.removePrefix(com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX)?.removeSuffix(".rcc")
+        ?: error("No positively owned RCC session")
     fun observedMarker(expectedFilename: String? = null): String = call(3, expectedFilename = expectedFilename)
     fun observedCorners(expectedFilename: String, round: String): String {
         check(ProxyClient.supportsProtocol(38)) { "Connected ProxyDaemon protocol 38 required for corner observation" }
@@ -182,7 +198,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier",
             "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only", "android-ivi-corner-marker-21f7735c",
             "android-ivi-full-dashboard-21f7735c", "dashboard-open", "dashboard-close", "observe-dashboard", "dashboard-display-read",
-            "android-ivi-full-app-21f7735c", "full-app-adas-step", "factory-apply-manual")[operation]
+            "android-ivi-full-app-21f7735c", "full-app-adas-step", "factory-apply-manual", "restart-prepare", "restart-confirm", "restart-cancel")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {

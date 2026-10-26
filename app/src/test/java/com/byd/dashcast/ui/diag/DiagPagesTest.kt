@@ -67,7 +67,7 @@ class DiagPagesTest {
             assertEquals(7, all(activity).filterIsInstance<Button>().count { it.contentDescription?.toString()?.endsWith("Open page") == true })
             val tools = mapOf(
                 "ADAS" to "ADAS targets (read-only snapshot)",
-                RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title) to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare),
+                RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title) to controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_read),
                 "HUD & navigation" to "HUD bench (DL3)",
                 "Projection & displays" to "OEM cluster probes (read-only)",
                 "Exports & OEM collection" to "Export complet accessible",
@@ -110,7 +110,11 @@ class DiagPagesTest {
             val saved = save(controller.get())
             controller.destroy()
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
-            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare))))
+            assertTrue(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_read))))
+            val prepare = tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare))
+            assertFalse("Previous tests stay folded after recreation", visible(prepare))
+            tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.cluster_wizard_details_show)).performClick()
+            assertTrue("Explicitly expanding details exposes the previous test", visible(prepare))
             assertFalse(visible(menu(controller.get(), RuntimeEnvironment.getApplication().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_title))))
             tool(controller.get(), "Back").performClick()
             assertTrue(visible(menu(controller.get(), "ADAS")))
@@ -118,7 +122,7 @@ class DiagPagesTest {
             saved.putString("diag.page", "unrecognized-destination")
             controller = Robolectric.buildActivity(DiagActivity::class.java).create(saved)
             assertTrue(visible(menu(controller.get(), "ADAS")))
-            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_prepare))))
+            assertFalse(visible(tool(controller.get(), controller.get().getString(com.byd.dashcast.R.string.diag_cluster_dashboard_read))))
         } finally { controller.destroy() }
     }
 

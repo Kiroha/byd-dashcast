@@ -55,6 +55,20 @@ internal object ClusterThemeRetiredStorage {
             check(absent(File(parent, name))) { "Original RCC lookup name reappeared during verification" }
         }
     }
+
+    /** A failed directory read is uncertainty. Never interpret it as an empty lookup directory. */
+    fun verifyForRestart(name: String, parentIdentity: String, device: Long, inode: Long, expectedHash: String,
+        state: ClusterThemeRetirement, hash: (File) -> String) = ClusterThemeAndroidStorage.withDirectory { parent, directory ->
+        check(directory.identity == parentIdentity) { "Retirement parent changed" }
+        com.byd.dashcast.clusterlive.ClusterRestartFiles.verify(object : com.byd.dashcast.clusterlive.ClusterRestartFiles.Storage {
+            override fun originalAbsent() = absent(File(parent, name))
+            override fun verifyPreserved() = verify(name, parentIdentity, device, inode, expectedHash, state, hash)
+            override fun entries(): Array<String>? = File(parent).list()
+            override fun verifyDirectory() {
+                check(ClusterThemeAndroidStorage.directory(false) == directory) { "RCC lookup directory changed" }
+            }
+        })
+    }
     private fun <T> access(name: String, parentIdentity: String, prior: ClusterThemeRetirement?, create: Boolean,
         action: (String, String, ClusterThemeRetirement) -> T): T {
         check(ClusterThemePolicy.ownedName(name))

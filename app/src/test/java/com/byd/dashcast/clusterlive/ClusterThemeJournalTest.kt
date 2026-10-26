@@ -10,6 +10,24 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class ClusterThemeJournalTest {
+    @Test fun `restart intent and completed observation remain strictly correlated across recovery`() {
+        val before = "11111111-1111-1111-1111-111111111111"
+        val after = "22222222-2222-2222-2222-222222222222"
+        val j = journal().put("schema", 4).put("mutated", true).put("createdDevice", 1).put("createdInode", 9)
+            .put("retirement", ClusterThemeRetirement(".dashcast-retired-" + "b".repeat(32), 1, 15, true).json())
+            .put("restartDispatchPending", true).put("restartBootId", before).put("restartRound", "c".repeat(32))
+        assertTrue(ClusterThemeJournal.recover(j).restartDispatchPending)
+        for ((key, value) in listOf("restartDispatchPending" to "true", "restartBootId" to "", "restartRound" to "foreign", "state" to "CLEAN"))
+            assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(j.toString()).put(key, value)) }
+        val completed = ClusterRestartCompletion("c".repeat(32), before, after)
+        val clean = JSONObject(j.toString()).put("state", "CLEAN").put("iviRecoverySettled", true)
+            .put("restartDispatchPending", false).put("restartCompleted", completed.json())
+        assertEquals(completed, ClusterThemeJournal.recover(clean).restartCompleted)
+        assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(clean.toString()).put("state", "QUARANTINE")) }
+        for ((key, value) in listOf("round" to 123, "beforeBoot" to after, "confirmedBoot" to "unknown"))
+            assertThrows(Exception::class.java) { ClusterThemeJournal.recover(JSONObject(clean.toString())
+                .put("restartCompleted", JSONObject(completed.json().toString()).put(key, value))) }
+    }
     @Test fun `full app ADAS recovery is durable and cannot coexist with a clean journal`() {
         val variant = ClusterThemeVariant.FULL_APP_21F7735C
         val dashboard = JSONObject().put("stage", "CLOSED_RECEIVED").put("nativeDebt", false)

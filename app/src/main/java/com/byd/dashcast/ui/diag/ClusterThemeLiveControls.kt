@@ -37,7 +37,10 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private val nativeStatus: (String, ClusterThemeSession) -> Unit = { _, _ -> },
     private val prompts: ClusterObservationPrompts = ClusterObservationPrompts(activity),
     private val nativeStatusUnavailable: () -> Unit = {},
-    private val openClusterPage: () -> Unit = {}, dashboardContainer: LinearLayout? = null) {
+    private val openClusterPage: () -> Unit = {}, dashboardContainer: LinearLayout? = null,
+    private val restartConnection: (android.content.Context) -> com.byd.dashcast.infrastructure.ClusterRestartConnection =
+        com.byd.dashcast.infrastructure.AdbLocalClient::clusterRestartConnection,
+    restartBoot: () -> String = com.byd.dashcast.clusterlive.ClusterBootIdentity::read) {
     companion object {
         private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-ui").apply { isDaemon = true } }
         private val recovery = Executors.newSingleThreadExecutor { r -> Thread(r, "cluster-test-restore-ui").apply { isDaemon = true } }
@@ -67,6 +70,14 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private var recoveryGuidanceCurrent: (() -> Boolean)? = null
     private val shownRecoveryGuidance = linkedSetOf<String>()
     private var lastSummary = ""
+    private val restartIntent = com.byd.dashcast.clusterlive.ClusterRestartIntent(app, restartBoot)
+    private var restartRound = ""
+    private var restartSession: ClusterThemeSession? = null
+    @Volatile private var restartPreparing = false
+    private var restartWizardRequested = false
+    private val restartSettlementPending = AtomicBoolean(false)
+    private var workflowNext: Button? = null
+    private var legacyActions: LinearLayout? = null
     @Volatile private var active = false
     @Volatile private var activation = 0L
     private val dashboardCommandGeneration = AtomicLong(0)
@@ -118,19 +129,20 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         dashboardUi = java.lang.ref.WeakReference(this)
         dashboardContainer?.let { host ->
             host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_dashboard_title); textSize = 20f; isAccessibilityHeading = true })
-            host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_dashboard_help); textSize = 15f })
+            host.addView(TextView(activity).apply { text = activity.getString(R.string.cluster_wizard_intro); textSize = 15f })
             host.addView(dashboardStatus)
+            val old = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+            legacyActions = old
             fun action(label: Int, run: () -> Unit) = Button(activity).apply {
                 text = activity.getString(label); isAllCaps = false
                 minHeight = (48 * activity.resources.displayMetrics.density).toInt()
                 contentDescription = text; setOnClickListener { run() }
-            }.also(host::addView)
+            }.also { if (label == R.string.diag_cluster_dashboard_read) host.addView(it) else old.addView(it) }
             action(R.string.diag_cluster_dashboard_read) {
                 submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
             }
             action(R.string.diag_cluster_dashboard_prepare) { requestStart(ClusterThemeVariant.FULL_DASHBOARD_21F7735C) }
             action(R.string.diag_cluster_full_app_prepare) { requestStart(ClusterThemeVariant.FULL_APP_21F7735C) }.apply { isEnabled = false }
-            host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_full_app_help); textSize = 15f })
             action(R.string.diag_cluster_dashboard_choose_app) { chooseDashboardApp() }
             dashboardOpenButton = action(R.string.diag_cluster_dashboard_open) { confirmDashboard(true) }.apply { isEnabled = false }
             action(R.string.diag_cluster_dashboard_close) { confirmDashboard(false) }
@@ -157,6 +169,13 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                         observedSession.observedDashboard(name, round)
                     } }.show()
             }.apply { isEnabled = false }
+            workflowNext = Button(activity).apply {
+                isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
+                text = activity.getString(R.string.cluster_wizard_next)
+                setOnClickListener { nextWorkflowStep() }
+            }.also(host::addView)
+            controls.addView(TextView(activity).apply { text = activity.getString(R.string.cluster_wizard_advanced); textSize = 18f; isAccessibilityHeading = true })
+            controls.addView(old)
         }
         // Keep recovery in the fixed header; detailed status can live in the cluster page.
         val headerIndex = 0
@@ -167,7 +186,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             contentDescription = activity.getString(R.string.diag_cluster_rcc_restore)
             setOnClickListener {
                 confirmation?.dismiss(); confirmation = null
+                recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null
                 abortBeforeSend.set(true)
+                restartWizardRequested = true
                 dashboardTicket = null; dashboardCommandGeneration.incrementAndGet()
                 ClusterThemeDiagnostics.local(app, "restore-button", "LOCAL", "Opening Cluster page and reading current pinned daemon status before choosing recovery; no OEM request yet.")
                 openClusterPage()
@@ -284,6 +305,139 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     }.setNegativeButton(android.R.string.cancel, null).show()
             }
         }
+    }
+    private fun nextWorkflowStep() {
+        val j = displayed
+        when {
+            restartPreparing || restartRound.isNotEmpty() -> Unit
+            j == null -> submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
+            j.optBoolean("recoveryPending") -> recoveryMessage(activity.getString(R.string.cluster_wizard_wait))
+            j.optBoolean("restartDispatchPending") || restartIntent.pending() ||
+                j.optJSONObject("retirement")?.optBoolean("moved") == true || j.optBoolean("uncertain") -> {
+                restartWizardRequested = true; stopDashboardSlots { requestRecoveryAction() }
+            }
+            dashboardObserveButton?.isEnabled == true -> dashboardObserveButton?.performClick()
+            dashboardOpenButton?.isEnabled == true && dashboardPackage.isEmpty() -> chooseDashboardApp()
+            dashboardOpenButton?.isEnabled == true -> confirmDashboard(true)
+            j.optJSONObject("dashboard")?.optString("stage") == "OPEN_RECEIVED" -> confirmDashboard(false)
+            else -> recoveryMessage(activity.getString(R.string.cluster_wizard_offline))
+        }
+    }
+    private fun updateWorkflow(j: JSONObject) {
+        val message = when {
+            restartPreparing -> R.string.cluster_restart_checking
+            j.optBoolean("restartDispatchPending") || restartIntent.pending() -> R.string.cluster_restart_unknown
+            j.optBoolean("recoveryPending") -> R.string.cluster_wizard_wait
+            j.optJSONObject("retirement")?.optBoolean("moved") == true -> R.string.cluster_restart_ready
+            j.optBoolean("rccDebt") && (j.optBoolean("uncertain") || j.let(::dashboardVariant)?.isRecoveryOnly == true) -> R.string.cluster_wizard_recovery
+            j.optJSONObject("dashboard")?.optString("stage") == "OPEN_RECEIVED" -> R.string.cluster_wizard_observe
+            dashboardOpenButton?.isEnabled == true -> R.string.cluster_wizard_choose
+            j.optBoolean("rccDebt") -> R.string.cluster_wizard_wait
+            !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(43) -> R.string.diag_cluster_dashboard_protocol
+            else -> R.string.cluster_wizard_offline
+        }
+        dashboardStatus.text = activity.getString(message, 43) + if (dashboardLabel.isNotEmpty())
+            "\n" + activity.getString(R.string.diag_cluster_dashboard_selected_app, dashboardLabel) else ""
+        workflowNext?.text = activity.getString(when {
+            j.optBoolean("restartDispatchPending") || restartIntent.pending() -> R.string.diag_cluster_rcc_verify_return
+            j.optJSONObject("retirement")?.optBoolean("moved") == true || j.optBoolean("uncertain") -> R.string.diag_cluster_rcc_restore
+            dashboardObserveButton?.isEnabled == true -> R.string.diag_cluster_dashboard_observe
+            dashboardOpenButton?.isEnabled == true && dashboardPackage.isEmpty() -> R.string.diag_cluster_dashboard_choose_app
+            dashboardOpenButton?.isEnabled == true -> R.string.diag_cluster_dashboard_open
+            j.optJSONObject("dashboard")?.optString("stage") == "OPEN_RECEIVED" -> R.string.diag_cluster_dashboard_close
+            else -> R.string.cluster_wizard_next
+        })
+            workflowNext?.isEnabled = !restartPreparing && restartRound.isEmpty() && !j.optBoolean("recoveryPending")
+        workflowNext?.contentDescription = workflowNext?.text
+        workflowNext?.visibility = if (message == R.string.cluster_wizard_offline) android.view.View.GONE else android.view.View.VISIBLE
+    }
+
+    private fun prepareRestartConfirmation(pinned: ClusterThemeSession) {
+        if (restartPreparing || restartRound.isNotEmpty() || !recoveryBusy.compareAndSet(false, true)) return
+        restartWizardRequested = false // One explicit continuation; polling never retries failed preparation.
+        val requestedActivation = activation
+        val reserved = reserve()
+        if (reserved == null) { recoveryBusy.set(false); recoveryMessage(activity.getString(R.string.diag_cluster_native_busy)); return }
+        restartPreparing = true
+        recoveryGuidance?.dismiss(); confirmation?.dismiss()
+        prompts.update("rcc", null)
+        dashboardStatus.text = activity.getString(R.string.cluster_restart_checking)
+        recovery.execute {
+            var round = ""
+            try {
+                check(active && !closed && activation == requestedActivation && pinned.isCurrent() && !restartIntent.pending())
+                check(!dashboardSlotsUnsettled && com.byd.dashcast.fission.FissionReleaseDebt.snapshot().isEmpty()) { "Projection resources have not finished closing" }
+                val proof = JSONObject(pinned.prepareRestart(validity(reserved, foreground = true)))
+                round = proof.getString("restartRound")
+                check(round.matches(Regex("[0-9a-f]{32}")))
+                val confirmedRound = round
+                handler.post {
+                    if (!active || closed || activation != requestedActivation || !pinned.isCurrent()) {
+                        recovery.execute { runCatching { pinned.cancelRestart(confirmedRound) } }
+                    } else {
+                        restartRound = confirmedRound; restartSession = pinned
+                        showRestartPopup(pinned, confirmedRound, requestedActivation)
+                    }
+                }
+            } catch (error: Throwable) {
+                if (round.isNotEmpty()) runCatching { pinned.cancelRestart(round) }
+                handler.post { if (active && !closed && activation == requestedActivation)
+                    recoveryMessage(activity.getString(R.string.cluster_restart_blocked) + "\n\n" + ClusterThemeDiagnostics.failure(error)) }
+            } finally { restartPreparing = false; recoveryBusy.set(false) }
+        }
+    }
+    private fun showRestartPopup(pinned: ClusterThemeSession, round: String, expectedActivation: Long) {
+        val checks = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        val parked = CheckBox(activity).apply { text = activity.getString(R.string.cluster_restart_parked) }
+        checks.addView(parked)
+        val dialog = AlertDialog.Builder(activity).setTitle(R.string.cluster_restart_title)
+            .setMessage(R.string.cluster_restart_confirm).setView(checks)
+            .setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.cluster_restart_accept, null).create()
+        confirmation = dialog
+        var accepted = false
+        dialog.setOnDismissListener { if (!accepted) cancelRestartConfirmation() }
+        dialog.setOnShowListener {
+            val send = dialog.getButton(AlertDialog.BUTTON_POSITIVE); send.isEnabled = false
+            parked.setOnCheckedChangeListener { _, _ -> send.isEnabled = parked.isChecked }
+            send.setOnClickListener {
+                if (!parked.isChecked || !active || closed || activation != expectedActivation || restartRound != round || !pinned.isCurrent()) {
+                    dialog.dismiss(); return@setOnClickListener
+                }
+                accepted = true; send.isEnabled = false; restartPreparing = true
+                restartRound = ""; restartSession = null; dialog.dismiss(); confirmation = null
+                recovery.execute {
+                    var dispatchAttempted = false
+                    var daemonConfirmed = false
+                    try {
+                        check(active && !closed && activation == expectedActivation && pinned.isCurrent())
+                        restartConnection(app).use { connection ->
+                            check(active && !closed && activation == expectedActivation && pinned.isCurrent() && !restartIntent.pending())
+                            check(!dashboardSlotsUnsettled && com.byd.dashcast.fission.FissionReleaseDebt.snapshot().isEmpty())
+                            val receipt = JSONObject(pinned.confirmRestart(round)) // Re-hash and inventory AFTER consent and ADB authentication.
+                            check(receipt.optBoolean("restartAuthorized") && receipt.optString("restartRound") == round)
+                            daemonConfirmed = true
+                            restartIntent.record(receipt.getString("filename"), round)
+                            check(active && !closed && activation == expectedActivation && pinned.isCurrent())
+                            dispatchAttempted = true
+                            connection.dispatch() // At most one ADB OPEN; a disconnect is an unknown outcome.
+                        }
+                    } catch (error: Throwable) {
+                        ClusterThemeDiagnostics.local(app, "cluster-restart", "UNKNOWN", "dispatchAttempted=$dispatchAttempted; no replay; " + ClusterThemeDiagnostics.failure(error))
+                        if (!dispatchAttempted && !restartIntent.pending()) runCatching { pinned.cancelRestart(round) }
+                    } finally {
+                        restartPreparing = false; restartWizardRequested = false
+                        handler.post { if (!closed && active) recoveryMessage(activity.getString(
+                            if (daemonConfirmed || restartIntent.pending()) R.string.cluster_restart_unknown else R.string.cluster_restart_blocked)) }
+                    }
+                }
+            }
+        }
+        dialog.show()
+    }
+    private fun cancelRestartConfirmation() {
+        val round = restartRound; val pinned = restartSession
+        restartRound = ""; restartSession = null; restartWizardRequested = false
+        if (round.isNotEmpty() && pinned != null) recovery.execute { runCatching { pinned.cancelRestart(round) } }
     }
     private fun confirmDashboard(open: Boolean) {
         if (!open) { dashboardTicket = null; dashboardCommandGeneration.incrementAndGet() }
@@ -407,6 +561,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             j.optJSONObject("dashboard")?.optBoolean("pending") == false && stage in setOf("NONE", "CLOSED_RECEIVED")
         dashboardObserveButton?.isEnabled = dashboardLaunchStateReady &&
             j.optJSONObject("dashboard")?.optString("round")?.matches(Regex("[0-9a-f]{32}")) == true
+        updateWorkflow(j)
         if (!own || variant?.isRecoveryOnly == true || stage == "UNKNOWN" || j.optBoolean("uncertain") || j.optBoolean("recoveryPending")) dashboardTicket = null
         val ticket = dashboardTicket
         if (own && stage == "OPEN_RECEIVED" && ticket != null && ticketCurrent(ticket) && ticket.dispatched.compareAndSet(false, true)) {
@@ -481,6 +636,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             j.optString("rccSafeNonce") == name.removePrefix(ClusterThemePolicy.PREFIX).removeSuffix(".rcc")) reservationDebt = false
     }
     private fun requestRecoveryAction() {
+        if (restartPreparing || restartRound.isNotEmpty()) return
         if (!recoveryBusy.compareAndSet(false, true)) {
             recoveryMessage(activity.getString(R.string.diag_cluster_native_busy)); return
         }
@@ -508,7 +664,10 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                             current.optString("transport") == "android-ivi" && current.optBoolean("rccDebt") -> {
                                 if (!ClusterThemePolicy.ownedName(remoteName) || local != null && remoteName != ClusterThemePolicy.PREFIX + local + ".rcc") {
                                     recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_mismatch))
-                                } else if (current.optBoolean("retirementAvailable")) showRecoveryGuidance(current, pinned, force = true)
+                                } else if (current.optJSONObject("retirement")?.optBoolean("moved") == true &&
+                                    com.byd.dashcast.proxy.ProxyClient.supportsProtocol(45) && !current.optBoolean("restartDispatchPending") && !restartIntent.pending())
+                                    prepareRestartConfirmation(pinned)
+                                else if (current.optBoolean("retirementAvailable")) showRecoveryGuidance(current, pinned, force = true)
                                 else confirmIviRestore()
                             }
                             current.optString("transport") == "strict-renderer" && current.optBoolean("rccDebt") -> restore(false)
@@ -538,6 +697,12 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_blocked))
     }
     private fun showRecoveryGuidance(j: JSONObject, pinned: ClusterThemeSession, force: Boolean = false) {
+        if (restartPreparing || restartRound.isNotEmpty()) return
+        if (restartWizardRequested && active && !closed && j.optJSONObject("retirement")?.optBoolean("moved") == true &&
+            !j.optBoolean("recoveryPending") && !j.optBoolean("restartDispatchPending") && !restartIntent.pending() &&
+            com.byd.dashcast.proxy.ProxyClient.supportsProtocol(45)) {
+            prepareRestartConfirmation(pinned); return
+        }
         if (recoveryGuidanceCurrent?.invoke() == false) { recoveryGuidance?.dismiss(); recoveryGuidance = null; recoveryGuidanceCurrent = null }
         if (!closed && active && pinned.isCurrent() && j.optBoolean("rccDebt") && j.optString("transport") == "android-ivi" &&
             !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(41)) {
@@ -599,7 +764,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         val expectedFilename = displayed?.optString("filename")
         val checks = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val parked = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_parked) }
-        val firmware = CheckBox(activity).apply { text = activity.getString(R.string.diag_cluster_native_firmware) }
+        val firmware = CheckBox(activity).apply { text = activity.getString(R.string.cluster_restart_context) }
         checks.addView(parked); checks.addView(firmware)
         val retired = displayed?.let { it.optBoolean("rccDebt") && it.optJSONObject("retirement")?.optBoolean("moved") == true } == true
         val dialog = AlertDialog.Builder(activity).setTitle(if (verifyCorners) R.string.diag_cluster_rcc_corners_verify_button else if (retire) R.string.diag_cluster_rcc_retire_button
@@ -805,6 +970,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     }
     private fun render(text: String, expectedLease: Long, pinned: ClusterThemeSession, requestedActivation: Long) {
         val j = JSONObject(text)
+        settleRestartIntent(j, pinned)
         rememberReservationDebt(j, pinned)
         if (j.getString("state") in setOf("IDLE", "CLEAN", "REFUSED")) releaseClaim(expectedLease)
         val query = j.optJSONObject("oemQuery")
@@ -832,9 +998,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     displayed = j; displayedSession = pinned
                     renderQuery(query, pinned)
                     renderDashboard(j)
-                    restoreButton.text = activity.getString(if (retiredPending) R.string.diag_cluster_rcc_verify_return else if (j.optBoolean("retirementAvailable")) R.string.diag_cluster_rcc_retire_button else R.string.diag_cluster_rcc_restore)
+                    restoreButton.text = activity.getString(R.string.diag_cluster_rcc_restore)
                     restoreButton.contentDescription = restoreButton.text
-                    retireButton.visibility = if (j.optBoolean("rccDebt") && (j.optBoolean("retirementAvailable") || retirement != null && !retirement.optBoolean("moved"))) android.view.View.VISIBLE else android.view.View.GONE
+                    retireButton.visibility = android.view.View.GONE
                     cornerVerifyButton.visibility = if (j.optBoolean("rccDebt") && j.optBoolean("mutated") && ClusterThemeVariant.isCornerId(j.optString("variant")) && retirement == null) android.view.View.VISIBLE else android.view.View.GONE
                     if (j.has("nativeMode")) nativeStatus(text, pinned)
                     refreshPrompt()
@@ -847,6 +1013,23 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             }
         }
         show(summary)
+    }
+    private fun settleRestartIntent(receipt: JSONObject, pinned: ClusterThemeSession) {
+        if (!restartIntent.pending() || receipt.optString("state") != "CLEAN" || receipt.optBoolean("rccDebt", true) ||
+            !(receipt.optBoolean("oemObservedByUser") || receipt.optJSONObject("restartCompleted") != null) || !restartSettlementPending.compareAndSet(false, true)) return
+        val name = receipt.optString("filename")
+        work.execute {
+            try {
+                check(pinned.isCurrent())
+                val fresh = JSONObject(pinned.status())
+                val historical = fresh.optJSONObject("restartCompleted")?.let(com.byd.dashcast.clusterlive.ClusterRestartCompletion::parse)
+                check(pinned.isCurrent() && fresh.optString("filename") == name && fresh.optString("state") == "CLEAN" &&
+                    !fresh.optBoolean("rccDebt", true) && (fresh.optBoolean("oemObservedByUser") || historical != null))
+                restartIntent.observedRestored(name, historical)
+            } catch (error: Throwable) {
+                ClusterThemeDiagnostics.local(app, "restart-settlement", "UNKNOWN", ClusterThemeDiagnostics.failure(error))
+            } finally { restartSettlementPending.set(false) }
+        }
     }
     private fun show(text: String, operation: String? = null) {
         if (operation != null) ClusterThemeDiagnostics.local(app, operation, "LOCAL", text)
@@ -868,6 +1051,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         displayed = null; displayedSession = null
         handler.removeCallbacks(poll)
         if (!value) {
+            cancelRestartConfirmation()
             queryUiGeneration++; queryStatusPolling = false; queryStatusSession = null
             queryStatus.text = activity.getString(R.string.diag_cluster_oem_query_idle)
             confirmation?.dismiss(); confirmation = null
@@ -927,6 +1111,9 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                 acquired = busy.compareAndSet(false, true)
                 check(acquired) { "Another request replaced visual confirmation" }
                 val text = action()
+                val restored = JSONObject(text)
+                if (restored.optString("state") == "CLEAN" && restored.optBoolean("oemObservedByUser") && !restored.optBoolean("rccDebt"))
+                    restartIntent.observedRestored(restored.getString("filename"))
                 session?.let { render(text, expectedLease, it, requestedActivation) }
             } catch (t: Throwable) { show("Visual confirmation refused: ${ClusterThemeDiagnostics.failure(t)}. No load/replay.", "$operation-failed") }
             finally { if (acquired) busy.set(false); observationPending.set(false); handler.post { refreshPrompt() } }

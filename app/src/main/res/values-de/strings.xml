@@ -735,7 +735,7 @@
     <string name="diag_cluster_native_seen_full">Ich sehe das native BYD-Vollbild</string>
     <string name="diag_cluster_native_seen_normal">Ich sehe wieder die normale BYD-Anzeige</string>
     <string name="diag_cluster_rcc_theme_button">Experimentelles RCC-Design — Full + Nacht</string>
-    <string name="diag_cluster_rcc_restore">BYD-RCC-Ressourcen wiederherstellen</string>
+    <string name="diag_cluster_rcc_restore">Kombiinstrument wiederherstellen</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Nein / noch nicht</string>
@@ -764,21 +764,21 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Vor dem Test Full und Nacht wählen. Das RCC behält Instrumenten- und Warncode und ändert den Hintergrund. Lesbarkeit und Wiederherstellung am Fahrzeug prüfen. Bildschirm verfügbar halten. Nach 30 Sekunden werden bei verfügbarer Sitzung Standardressourcen angefordert. Danach die Anzeige bestätigen. Neustart garantiert keine Wiederherstellung.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC-Test senden</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Fordert die Standard-RCC-Ressourcen an und ändert den Projektionsmodus nicht. OEM-Antwort und sichtbare Wiederherstellung werden getrennt geprüft. Danach die Anzeige bestätigen. Kein Neustart oder automatischer neuer Test.</string>
-    <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. Nutze „BYD-RCC-Ressourcen wiederherstellen“ oder „BYD-Rückkehr prüfen“ und folge dem Ergebnis und dem vorgeschlagenen nächsten Schritt. Die Sichtprüfung erscheint erst nach Prüfung der BYD-Standardauswahl.</string>
+    <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. Nutze „Kombiinstrument wiederherstellen“ oder „BYD-Rückkehr prüfen“ und folge dem Ergebnis und dem vorgeschlagenen nächsten Schritt. Die Sichtprüfung erscheint erst nach Prüfung der BYD-Standardauswahl.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test verweigert: Android 10 und eindeutige DiLink-3-Erkennung erforderlich. Kein RCC gesendet.</string>
     <string name="diag_cluster_page_title">Kombiinstrument: Projektion und RCC</string>
     <string name="diag_cluster_page_description">BYD-Projektion mit Leisten und RCC-Eckprüfung</string>
     <string name="diag_cluster_native_rcc_blocked">RCC-Test blockiert die BYD-Projektion</string>
     <string name="diag_cluster_rcc_retire_button">BYD-Rückkehr nach RCC-Fehler vorbereiten</string>
-    <string name="diag_cluster_rcc_retire_confirm">Verschiebt nur unsere Test-RCC in einen neuen Ordner und erhält ihre Bytes. Kein Laden oder OEM-Neustart. Danach „BYD-Rückkehr prüfen“ für eine reine Leseprüfung nutzen. Die Sichtfrage erscheint nur bei bestätigter BYD-Standardauswahl. Sonst „Diagnosebericht senden“ nutzen. Weitere Tests bleiben bis zum Sitzungsabschluss gesperrt.</string>
-    <string name="diag_cluster_rcc_retired_waiting">BYD-Rückkehr vorbereitet: Unsere Datei bleibt außerhalb ihres ursprünglichen Orts erhalten. Jetzt „BYD-Rückkehr prüfen“ drücken, um die Auswahl ohne Laden oder Neustart abzufragen. Bei bestätigter Standardauswahl die Sichtfrage zu BYD-Instrumenten und Warnanzeigen beantworten. Sonst „Diagnosebericht senden“ nutzen. Kein bestimmtes manuelles Reset-Verfahren ist belegt; eine Daemon-Neuverbindung beweist keinen Cluster-Neustart.</string>
+    <string name="diag_cluster_rcc_retire_confirm">Verschiebt nur das DashCast-Test-RCC und bewahrt seine Bytes. Noch kein Neustart. Danach werden Dateien geprüft und gegebenenfalls eine separate Neustartzustimmung angefordert.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Verschiebung protokolliert. Kombiinstrument wiederherstellen setzt die Prüfungen fort und bietet gegebenenfalls einen separaten Neustart an. Abbrechen startet nichts neu. Die tatsächliche Anzeige muss bestätigt werden.</string>
     <string name="diag_cluster_rcc_verify_return">BYD-Rückkehr prüfen</string>
     <string name="diag_cluster_rcc_corners_button">RCC-Laden testen (Eckmarkierungen)</string>
-    <string name="diag_cluster_rcc_corners_confirm">Fordert die dauerhafte Auswahl einer RCC mit dünnen cyanfarbenen und magentafarbenen Eckmarkierungen an; BYD-Instrumente und Warnanzeigen bleiben erhalten. Nur bei ON, abgeschlossenem Start, P und Stillstand vorgesehen; dies erkennt kein sicheres Parken. Full und Nacht sind nicht nötig. Auswahl beweist keine Qt-Anwendung. Keine automatische Rückkehr nach 30 Sekunden. Danach „RCC-Eckmarkierungen prüfen“ nutzen und nach dem Cluster mit Ja, Nein oder Unsicher antworten. Kein manuelles Reset-Verfahren ist belegt. Zum Abschluss „BYD-RCC-Ressourcen wiederherstellen“ nutzen.</string>
+    <string name="diag_cluster_rcc_corners_confirm">Fordert die dauerhafte Auswahl einer RCC mit dünnen cyanfarbenen und magentafarbenen Eckmarkierungen an; BYD-Instrumente und Warnanzeigen bleiben erhalten. Nur bei ON, abgeschlossenem Start, P und Stillstand vorgesehen; dies erkennt kein sicheres Parken. Full und Nacht sind nicht nötig. Auswahl beweist keine Qt-Anwendung. Keine automatische Rückkehr nach 30 Sekunden. Danach „RCC-Eckmarkierungen prüfen“ nutzen und nach dem Cluster mit Ja, Nein oder Unsicher antworten. Kein manuelles Reset-Verfahren ist belegt. Zum Abschluss „Kombiinstrument wiederherstellen“ nutzen.</string>
     <string name="diag_cluster_observe_corners_message">Sind die cyanfarbenen und magentafarbenen Eckmarkierungen sichtbar und die BYD-Instrumente und Warnanzeigen lesbar?</string>
     <string name="diag_cluster_rcc_load_receipts">Senden: %1$s\nAuswahl: %2$s\nACK2 (nicht zugeordnete Antwort): %3$s\nAnzeige: %4$s</string>
     <string name="diag_cluster_rcc_corners_verify_button">RCC-Eckmarkierungen prüfen</string>
-    <string name="diag_cluster_rcc_corners_verify_confirm">Prüft unsere Datei und die BYD-Auswahl und öffnet bei passender Auswahl eine Sichtfrage. Kein Neuladen oder Neustart. Nach den tatsächlich sichtbaren Markierungen antworten. Ja speichert nur die Beobachtung; die Sitzung separat mit „BYD-RCC-Ressourcen wiederherstellen“ abschließen. Bei unverändertem Bild „Diagnosebericht senden“ nutzen; kein bestimmter manueller Reset wird verlangt.</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Prüft unsere Datei und die BYD-Auswahl und öffnet bei passender Auswahl eine Sichtfrage. Kein Neuladen oder Neustart. Nach den tatsächlich sichtbaren Markierungen antworten. Ja speichert nur die Beobachtung; die Sitzung separat mit „Kombiinstrument wiederherstellen“ abschließen. Bei unverändertem Bild „Diagnosebericht senden“ nutzen; kein bestimmter manueller Reset wird verlangt.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC-Konfiguration gespeichert — Anzeige unbestätigt</string>
     <string name="diag_cluster_rcc_cohort_help">Der Ecktest prüft die installierte Cluster-Version. Vollständiger Bildschirmersatz ist nicht verfügbar: Zuerst müssen sichtbare Eckmarkierungen nachgewiesen werden. Inkompatible alte Tests werden nicht mehr angeboten; ihre Sitzungen können weiter wiederhergestellt werden.</string>
     <string name="diag_cluster_rcc_restore_reading">RCC-Sitzung des verbundenen Daemons wird gelesen… Kein BYD-Befehl gesendet.</string>
@@ -805,4 +805,25 @@
     <string name="startup_confirm_app_fmt">%1$s beim Fahrzeugstart immer öffnen? Dies ersetzt das Fortsetzen der letzten Sitzung.</string>
     <string name="startup_no_targets">Nichts verfügbar. Installierte Apps und gespeicherte Layouts prüfen.</string>
     <string name="startup_app_selected">Start-App — ändern…</string>
+
+    <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
+    <string name="cluster_wizard_intro">Aktuellen Zustand prüfen, dem nächsten Schritt folgen und die Anzeige im Kombiinstrument bestätigen. Wiederherstellen bleibt oben erreichbar.</string>
+    <string name="cluster_wizard_advanced">Frühere Tests und technische Details</string>
+    <string name="cluster_wizard_next">Nächsten Schritt anzeigen</string>
+    <string name="cluster_wizard_wait">Vorgang läuft. Vor dem Fortfahren das Ergebnis abwarten.</string>
+    <string name="cluster_wizard_offline">Das neue Vollbildprofil wird noch am PC geprüft. Hier kann kein neues Vollbild-RCC geladen werden.</string>
+    <string name="cluster_wizard_recovery">Eine Sitzung muss wiederhergestellt werden. Kombiinstrument wiederherstellen wählen und den Schritten folgen.</string>
+    <string name="cluster_wizard_observe">Projektion wurde angefordert. Anzeige bestätigen oder Projektion schließen.</string>
+    <string name="cluster_wizard_choose">Eine Anwendung wählen, dann die Projektion öffnen.</string>
+    <string name="cluster_restart_checking">Gesichertes RCC, ursprünglichen Pfad und Ladeverzeichnis prüfen…</string>
+    <string name="cluster_restart_ready">Laut Protokoll wurde das RCC verschoben. Vor einem Neustart ist eine neue Prüfung nötig.</string>
+    <string name="cluster_restart_unknown">Ein Neustart wurde vorbereitet oder angefordert. Ergebnis unbekannt. Nicht erneut senden: auf BYD warten und Anzeige prüfen.</string>
+    <string name="cluster_restart_blocked">Neustart gesperrt. Verschieben oder Prüfung nicht bestätigt. Kein automatischer Wiederholungsversuch. Details lesen oder Bericht senden.</string>
+    <string name="cluster_restart_parked">Ich bestätige: Fahrzeug steht in P, Feststellbremse angezogen.</string>
+    <string name="cluster_restart_title">Neustart zur Wiederherstellung des Kombiinstruments?</string>
+    <string name="cluster_restart_confirm">Das DashCast-RCC bleibt im Wiederherstellungsverzeichnis erhalten. Sein ursprünglicher Name und weitere DashCast-Einträge fehlen im Ladeverzeichnis. Nach Ihrer Zustimmung werden diese Prüfungen wiederholt. fission-all unterbricht Bildschirme und ADB. Die tatsächliche Wiederherstellung muss noch geprüft werden. Die Ländereinstellung bleibt unverändert.</string>
+    <string name="cluster_restart_accept">Neustart bestätigen</string>
+    <string name="cluster_wizard_details_show">Details und frühere Tests anzeigen</string>
+    <string name="cluster_wizard_details_hide">Details und frühere Tests ausblenden</string>
+    <string name="cluster_restart_context">Ich stelle die DashCast-Testressourcen dieses Fahrzeugs wieder her.</string>
 </resources>

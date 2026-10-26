@@ -750,6 +750,12 @@ object AdbLocalClient {
         return connect(context, SHELL_IDLE_TIMEOUT_MS)
     }
 
+    /** Fixed ADB host-service request; deliberately not a shell/Binder reboot command. */
+    internal fun clusterRestartConnection(context: Context): ClusterRestartConnection {
+        val dadb = connect(context.applicationContext, 10000)
+        return FixedClusterRestartConnection(dadb::open, dadb::close)
+    }
+
     @Throws(Exception::class)
     private fun connect(context: Context, socketTimeoutMs: Int): Dadb {
         var keyPair = sKeyPair

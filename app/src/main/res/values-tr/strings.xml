@@ -735,7 +735,7 @@
     <string name="diag_cluster_native_seen_full">BYD yerel Full görünümünü görüyorum</string>
     <string name="diag_cluster_native_seen_normal">Normal BYD görünümünü yeniden görüyorum</string>
     <string name="diag_cluster_rcc_theme_button">Deneysel RCC teması — Full + gece</string>
-    <string name="diag_cluster_rcc_restore">BYD RCC kaynaklarını geri yükle</string>
+    <string name="diag_cluster_rcc_restore">Göstergeyi geri yükle</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Hayır / henüz değil</string>
@@ -764,21 +764,21 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Testten önce Full ve geceyi seçin. RCC gösterge ve uyarı kodunu korur, arka planı değiştirir. Okunabilirlik ve geri dönüşü araçta doğrulayın. Ekranı erişilebilir tutun. Oturum sürerse 30 saniye sonra varsayılan kaynaklar istenir. Ardından gördüğünüzü onaylayın. Yeniden başlatma geri dönüşü garanti etmez.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC testini gönder</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Projeksiyon modunu değiştirmeden varsayılan RCC kaynaklarını ister. OEM yanıtı ve görünür geri dönüş ayrı doğrulanır; ardından gördüğünüzü onaylayın. Yeniden başlatma veya otomatik yeni test yok.</string>
-    <string name="diag_cluster_rcc_debt">Bir RCC testi açık kaldı. “BYD RCC kaynaklarını geri yükle” veya “BYD dönüşünü doğrula” düğmesini kullan, ardından sonucu ve önerilen adımı izle. Görsel soru yalnızca BYD varsayılan seçimi kontrol edildikten sonra görünür.</string>
+    <string name="diag_cluster_rcc_debt">Bir RCC testi açık kaldı. “Göstergeyi geri yükle” veya “BYD dönüşünü doğrula” düğmesini kullan, ardından sonucu ve önerilen adımı izle. Görsel soru yalnızca BYD varsayılan seçimi kontrol edildikten sonra görünür.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test reddedildi: Android 10 ve kesin DiLink 3 algılaması gerekir. RCC gönderilmedi.</string>
     <string name="diag_cluster_page_title">Gösterge: yansıtma ve RCC</string>
     <string name="diag_cluster_page_description">Şeritli BYD projeksiyonu ve RCC köşe doğrulaması</string>
     <string name="diag_cluster_native_rcc_blocked">RCC testi BYD yansıtmasını engelliyor</string>
     <string name="diag_cluster_rcc_retire_button">RCC hatasından sonra BYD dönüşünü hazırla</string>
-    <string name="diag_cluster_rcc_retire_confirm">Yalnızca test RCC dosyamızı yeni bir klasöre taşır ve baytlarını korur. Yükleme veya OEM yeniden başlatma göndermez. Sonra salt okunur kontrol için “BYD dönüşünü doğrula” kullan. Görsel soru yalnızca varsayılan BYD seçimi doğrulanırsa açılır. Aksi halde “Tanılama raporu gönder” kullan. Diğer testler oturum kapanana kadar engelli kalır.</string>
-    <string name="diag_cluster_rcc_retired_waiting">BYD dönüşü hazırlandı: dosyamız ilk konumunun dışında korunuyor. Yükleme veya yeniden başlatma olmadan seçimi okumak için şimdi “BYD dönüşünü doğrula” bas. Varsayılan seçim doğrulanırsa BYD göstergeleri ve uyarı ışıkları sorusunu yanıtla. Aksi halde “Tanılama raporu gönder” kullan. Belirlenmiş bir elle sıfırlama yöntemi yoktur; daemon bağlantısını yenilemek göstergeyi yeniden başlattığını kanıtlamaz.</string>
+    <string name="diag_cluster_rcc_retire_confirm">Yalnızca DashCast test RCC dosyasını taşır ve baytlarını korur. Bu adımda yeniden başlatma yoktur. Sonra dosyalar denetlenir ve varsa ayrı onay istenir.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Taşıma kaydedildi. Göstergeyi geri yükle kontrolleri sürdürür ve varsa ayrı yeniden başlatma onayı sunar. İptal hiçbir şeyi yeniden başlatmaz. Fiziksel geri dönüş doğrulanmalıdır.</string>
     <string name="diag_cluster_rcc_verify_return">BYD dönüşünü doğrula</string>
     <string name="diag_cluster_rcc_corners_button">RCC yüklemeyi test et (köşe işaretleri)</string>
-    <string name="diag_cluster_rcc_corners_confirm">BYD göstergeleri ve uyarı ışıkları korunarak ince camgöbeği ve macenta köşe işaretleri içeren RCC dosyasının kalıcı seçimini ister. Yalnızca ON, açılış tamamlanmış, P ve sıfır hız için tasarlanmıştır; güvenli park durumunu algılamaz. Full ve gece gerekmez. Seçim Qt uygulamasını kanıtlamaz. 30 saniye sonra otomatik dönüş yoktur. Sonra “RCC köşe işaretlerini doğrula” kullan ve göstergeye göre Evet, Hayır veya Emin değilim yanıtı ver. Belirlenmiş bir elle sıfırlama yöntemi yoktur. Oturumu kapatmak için “BYD RCC kaynaklarını geri yükle” kullan.</string>
+    <string name="diag_cluster_rcc_corners_confirm">BYD göstergeleri ve uyarı ışıkları korunarak ince camgöbeği ve macenta köşe işaretleri içeren RCC dosyasının kalıcı seçimini ister. Yalnızca ON, açılış tamamlanmış, P ve sıfır hız için tasarlanmıştır; güvenli park durumunu algılamaz. Full ve gece gerekmez. Seçim Qt uygulamasını kanıtlamaz. 30 saniye sonra otomatik dönüş yoktur. Sonra “RCC köşe işaretlerini doğrula” kullan ve göstergeye göre Evet, Hayır veya Emin değilim yanıtı ver. Belirlenmiş bir elle sıfırlama yöntemi yoktur. Oturumu kapatmak için “Göstergeyi geri yükle” kullan.</string>
     <string name="diag_cluster_observe_corners_message">Fiziksel göstergenin köşelerinde camgöbeği ve macenta işaretleri, BYD gösterge ve uyarıları okunabilir olarak görüyor musunuz?</string>
     <string name="diag_cluster_rcc_load_receipts">Gönderim: %1$s\nSeçim: %2$s\nACK2 (ilişkilendirilmemiş yanıt): %3$s\nEkran: %4$s</string>
     <string name="diag_cluster_rcc_corners_verify_button">RCC köşe işaretlerini doğrula</string>
-    <string name="diag_cluster_rcc_corners_verify_confirm">Dosyamızı ve BYD seçimini kontrol eder; eşleşirse görsel soruyu açar. Yeniden yükleme veya yeniden başlatma yapmaz. Gerçekte görünen işaretlere göre yanıtla. Evet yalnızca gözlemini kaydeder; oturumu ayrıca “BYD RCC kaynaklarını geri yükle” ile kapat. Değişiklik yoksa “Tanılama raporu gönder” kullan; belirli bir elle sıfırlama istenmez.</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Dosyamızı ve BYD seçimini kontrol eder; eşleşirse görsel soruyu açar. Yeniden yükleme veya yeniden başlatma yapmaz. Gerçekte görünen işaretlere göre yanıtla. Evet yalnızca gözlemini kaydeder; oturumu ayrıca “Göstergeyi geri yükle” ile kapat. Değişiklik yoksa “Tanılama raporu gönder” kullan; belirli bir elle sıfırlama istenmez.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC yapılandırması kaydedildi — görüntü doğrulanmadı</string>
     <string name="diag_cluster_rcc_cohort_help">Köşe testi kurulu gösterge sürümünü denetler. Tam ekran değiştirme kullanılamıyor: önce köşe işaretlerinin görünmesi doğrulanmalı. Uyumsuz eski testler artık sunulmuyor; oturumlarını kurtarma kullanılabilir.</string>
     <string name="diag_cluster_rcc_restore_reading">Bağlı daemonun RCC oturumu okunuyor… BYD komutu gönderilmedi.</string>
@@ -805,4 +805,25 @@
     <string name="startup_confirm_app_fmt">Araç başladığında her zaman %1$s açılsın mı? Bu seçim son oturumu sürdürmenin yerini alır.</string>
     <string name="startup_no_targets">Kullanılabilir öğe yok. Yüklü uygulamaları ve kaydedilen düzenleri kontrol edin.</string>
     <string name="startup_app_selected">Başlangıç uygulaması — değiştir…</string>
+
+    <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
+    <string name="cluster_wizard_intro">Durumu kontrol edin, sonraki adımı izleyin ve göstergeyi doğrulayın. Geri yükleme üstte erişilebilir kalır.</string>
+    <string name="cluster_wizard_advanced">Önceki testler ve teknik ayrıntılar</string>
+    <string name="cluster_wizard_next">Sonraki adımı göster</string>
+    <string name="cluster_wizard_wait">İşlem sürüyor. Devam etmeden önce sonucu bekleyin.</string>
+    <string name="cluster_wizard_offline">Yeni tam ekran profili bilgisayarda doğrulanıyor. Burada yeni tam ekran RCC yüklenemez.</string>
+    <string name="cluster_wizard_recovery">Bir oturumun geri yüklenmesi gerekiyor. Göstergeyi geri yükle seçeneğini kullanın.</string>
+    <string name="cluster_wizard_observe">Yansıtma istendi. Gördüğünüzü doğrulayın veya yansıtmayı kapatın.</string>
+    <string name="cluster_wizard_choose">Bir uygulama seçin ve yansıtmayı açın.</string>
+    <string name="cluster_restart_checking">Korunan RCC, eski konumu ve yükleme klasörü kontrol ediliyor…</string>
+    <string name="cluster_restart_ready">Günlük RCC dosyasının taşındığını gösteriyor. Yeniden başlatmadan önce yeni kontroller gerekir.</string>
+    <string name="cluster_restart_unknown">Yeniden başlatma hazırlandı veya gönderildi. Sonuç bilinmiyor. Tekrarlamayın: BYD görüntüsünü bekleyin ve kontrol edin.</string>
+    <string name="cluster_restart_blocked">Yeniden başlatma engellendi. Taşıma veya doğrulama kesin değil. Otomatik tekrar yok. Ayrıntılara bakın veya rapor gönderin.</string>
+    <string name="cluster_restart_parked">Onaylıyorum: araç P konumunda hareketsiz, park freni çekili.</string>
+    <string name="cluster_restart_title">Göstergeyi geri yüklemek için yeniden başlatılsın mı?</string>
+    <string name="cluster_restart_confirm">DashCast RCC kurtarma klasöründe korunuyor. Eski adı ve diğer DashCast girdileri yükleme klasöründe yok. Onayınızdan sonra kontroller tekrarlanacak. fission-all ekranları ve ADB bağlantısını kesecek. Fiziksel geri dönüş ayrıca doğrulanmalıdır. Ülke ayarı değişmez.</string>
+    <string name="cluster_restart_accept">Yeniden başlatmayı kabul et</string>
+    <string name="cluster_wizard_details_show">Ayrıntıları ve önceki testleri göster</string>
+    <string name="cluster_wizard_details_hide">Ayrıntıları ve önceki testleri gizle</string>
+    <string name="cluster_restart_context">Bu araçtaki DashCast test kaynaklarını geri yüklüyorum.</string>
 </resources>

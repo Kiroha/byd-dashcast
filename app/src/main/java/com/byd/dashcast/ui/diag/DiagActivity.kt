@@ -229,9 +229,14 @@ class DiagActivity : Activity() {
         clusterBody.addView(dashboardBody)
         val clusterTechnical = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         clusterBody.addView(Button(this).apply {
-            text = getString(R.string.diag_cluster_dashboard_details); isAllCaps = false
+            text = getString(R.string.cluster_wizard_details_show); isAllCaps = false
             minHeight = (48 * density).toInt()
-            setOnClickListener { clusterTechnical.visibility = if (clusterTechnical.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+            setOnClickListener {
+                val expanded = clusterTechnical.visibility != View.VISIBLE
+                clusterTechnical.visibility = if (expanded) View.VISIBLE else View.GONE
+                text = getString(if (expanded) R.string.cluster_wizard_details_hide else R.string.cluster_wizard_details_show)
+                contentDescription = text
+            }
         })
         clusterBody.addView(clusterTechnical)
         addDiagnosticReportShortcut(clusterTechnical)

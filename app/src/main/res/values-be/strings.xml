@@ -735,7 +735,7 @@
     <string name="diag_cluster_native_seen_full">Бачу штатны выгляд Full BYD</string>
     <string name="diag_cluster_native_seen_normal">Зноў бачу звычайны экран BYD</string>
     <string name="diag_cluster_rcc_theme_button">Эксперыментальная тэма RCC — Full + ноч</string>
-    <string name="diag_cluster_rcc_restore">Аднавіць рэсурсы RCC BYD</string>
+    <string name="diag_cluster_rcc_restore">Аднавіць панэль</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Не / яшчэ не</string>
@@ -764,21 +764,21 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Перад тэстам выберыце Full і начны рэжым. RCC захоўвае код прыбораў і папярэджанняў і мяняе фон. Чытальнасць і аднаўленне праверце ў машыне. Захоўвайце доступ да экрана. Праз 30 секунд запытваюцца стандартныя рэсурсы, калі сеанс даступны. Затым пацвердзіце вынік. Перазапуск не гарантуе аднаўленне.</string>
     <string name="diag_cluster_rcc_ivi_send">Адправіць тэст RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Запытвае стандартныя рэсурсы RCC без змены рэжыму праекцыі. Адказ OEM і бачнае аднаўленне правяраюцца асобна; затым пацвердзіце ўбачанае. Без перазапуску і аўтаматычнага новага тэсту.</string>
-    <string name="diag_cluster_rcc_debt">Тэст RCC яшчэ не завершаны. Націсні «Аднавіць рэсурсы RCC BYD» або «Праверыць вяртанне BYD», потым выканай прапанаваны крок паводле выніку. Пытанне пра экран з’явіцца толькі пасля праверкі стандартнага выбару BYD.</string>
+    <string name="diag_cluster_rcc_debt">Тэст RCC яшчэ не завершаны. Націсні «Аднавіць панэль» або «Праверыць вяртанне BYD», потым выканай прапанаваны крок паводле выніку. Пытанне пра экран з’явіцца толькі пасля праверкі стандартнага выбару BYD.</string>
     <string name="diag_cluster_rcc_ivi_platform">Тэст адхілены: патрэбныя Android 10 і пацверджанае выяўленне DiLink 3. RCC не адпраўлены.</string>
     <string name="diag_cluster_page_title">Панэль: праекцыя і RCC</string>
     <string name="diag_cluster_page_description">Праекцыя BYD з палосамі і праверка вуглавых метак RCC</string>
     <string name="diag_cluster_native_rcc_blocked">Праекцыя BYD заблакаваная тэстам RCC</string>
     <string name="diag_cluster_rcc_retire_button">Падрыхтаваць вяртанне BYD пасля памылкі RCC</string>
-    <string name="diag_cluster_rcc_retire_confirm">Перамяшчае толькі наш тэставы RCC у новую папку, захоўваючы байты. Не адпраўляе загрузку або перазапуск OEM. Потым выкарыстоўвай «Праверыць вяртанне BYD» для праверкі толькі для чытання. Візуальнае пытанне з’явіцца толькі пасля пацверджання стандартнага выбару BYD. Інакш выкарыстоўвай «Адправіць дыягнастычную справаздачу». Іншыя тэсты заблакіраваны да закрыцця сеанса.</string>
-    <string name="diag_cluster_rcc_retired_waiting">Вяртанне BYD падрыхтавана: наш файл захаваны па-за пачатковым месцам. Цяпер націсні «Праверыць вяртанне BYD», каб прачытаць выбар без загрузкі і перазапуску. Калі пацверджаны стандартны выбар, адказвай пра прыборы і індыкатары BYD. Інакш выкарыстоўвай «Адправіць дыягнастычную справаздачу». Канкрэтная працэдура ручнога скіду не ўсталявана; перападключэнне дэмана не даказвае перазапуск панэлі прыбораў.</string>
+    <string name="diag_cluster_rcc_retire_confirm">Перамяшчае толькі тэставы RCC DashCast і захоўвае яго байты. На гэтым кроку няма перазапуску. Потым правярае файлы і пры даступнасці запытвае асобную згоду.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Перамяшчэнне запісана. Аднавіць панэль працягвае праверкі і прапануе асобны перазапуск, калі даступны. Скасаванне нічога не перазапускае. Фактычнае аднаўленне трэба пацвердзіць.</string>
     <string name="diag_cluster_rcc_verify_return">Праверыць вяртанне BYD</string>
     <string name="diag_cluster_rcc_corners_button">Праверыць загрузку RCC (вуглавыя меткі)</string>
-    <string name="diag_cluster_rcc_corners_confirm">Запытвае пастаянны выбар RCC з тонкімі блакітнымі і пурпуровымі вуглавымі меткамі, захоўваючы прыборы і індыкатары BYD. Меткі прызначаны толькі для ON, завершанага запуску, P і нулявой хуткасці; гэта не вызначае бяспечную стаянку. Full і ноч не патрэбны. Выбар не даказвае прымяненне Qt. Аўтавяртання праз 30 секунд няма. Потым націсні «Праверыць вуглавыя меткі RCC» і адказвай Так, Не або Не ўпэўнены паводле экрана панэлі. Працэдура ручнога скіду не ўсталявана. Каб закрыць сеанс, выкарыстоўвай «Аднавіць рэсурсы RCC BYD».</string>
+    <string name="diag_cluster_rcc_corners_confirm">Запытвае пастаянны выбар RCC з тонкімі блакітнымі і пурпуровымі вуглавымі меткамі, захоўваючы прыборы і індыкатары BYD. Меткі прызначаны толькі для ON, завершанага запуску, P і нулявой хуткасці; гэта не вызначае бяспечную стаянку. Full і ноч не патрэбны. Выбар не даказвае прымяненне Qt. Аўтавяртання праз 30 секунд няма. Потым націсні «Праверыць вуглавыя меткі RCC» і адказвай Так, Не або Не ўпэўнены паводле экрана панэлі. Працэдура ручнога скіду не ўсталявана. Каб закрыць сеанс, выкарыстоўвай «Аднавіць панэль».</string>
     <string name="diag_cluster_observe_corners_message">Ці бачныя блакітныя і пурпуровыя меткі ў вуглах фізічнай панэлі, а прыборы і індыкатары BYD чытэльныя?</string>
     <string name="diag_cluster_rcc_load_receipts">Адпраўка: %1$s\nВыбар: %2$s\nACK2 (несупастаўлены адказ): %3$s\nВыява: %4$s</string>
     <string name="diag_cluster_rcc_corners_verify_button">Праверыць вуглавыя меткі RCC</string>
-    <string name="diag_cluster_rcc_corners_verify_confirm">Правярае наш файл і выбар BYD, потым пры супадзенні адкрывае візуальнае пытанне. Нічога не перазагружае і не перазапускае. Адказвай паводле рэальна бачных метак. Так запісвае толькі назіранне; асобна закрый сеанс праз «Аднавіць рэсурсы RCC BYD». Калі нічога не мяняецца, выкарыстоўвай «Адправіць дыягнастычную справаздачу»; канкрэтны ручны скід не патрабуецца.</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Правярае наш файл і выбар BYD, потым пры супадзенні адкрывае візуальнае пытанне. Нічога не перазагружае і не перазапускае. Адказвай паводле рэальна бачных метак. Так запісвае толькі назіранне; асобна закрый сеанс праз «Аднавіць панэль». Калі нічога не мяняецца, выкарыстоўвай «Адправіць дыягнастычную справаздачу»; канкрэтны ручны скід не патрабуецца.</string>
     <string name="diag_cluster_rcc_corners_pending">Канфігурацыя RCC захавана — выява не пацверджана</string>
     <string name="diag_cluster_rcc_cohort_help">Вуглавы тэст правярае ўсталяваную версію панэлі прыбораў. Замена ўсяго экрана недаступная: спачатку трэба пацвердзіць бачныя меткі. Несумяшчальныя старыя тэсты больш не прапануюцца; аднаўленне іх сеансаў даступнае.</string>
     <string name="diag_cluster_rcc_restore_reading">Чытанне сеанса RCC падключанага дэмана… Каманда BYD не адпраўлена.</string>
@@ -805,4 +805,25 @@
     <string name="startup_confirm_app_fmt">Заўсёды адкрываць %1$s пры запуску аўтамабіля? Гэта заменіць аднаўленне апошняга сеанса.</string>
     <string name="startup_no_targets">Нічога не даступна. Праверце ўсталяваныя праграмы і захаваныя макеты.</string>
     <string name="startup_app_selected">Праграма запуску — змяніць…</string>
+
+    <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
+    <string name="cluster_wizard_intro">Праверце стан, выканайце наступны крок і пацвердзіце выяву на панэлі. Аднаўленне даступна ўверсе.</string>
+    <string name="cluster_wizard_advanced">Папярэднія тэсты і тэхнічныя звесткі</string>
+    <string name="cluster_wizard_next">Паказаць наступны крок</string>
+    <string name="cluster_wizard_wait">Аперацыя выконваецца. Дачакайцеся выніку.</string>
+    <string name="cluster_wizard_offline">Новы поўнаэкранны профіль яшчэ правяраецца на ПК. Тут нельга загрузіць новы поўнаэкранны RCC.</string>
+    <string name="cluster_wizard_recovery">Сеанс патрабуе аднаўлення. Націсніце Аднавіць панэль і выканайце крокі.</string>
+    <string name="cluster_wizard_observe">Праекцыя запытана. Пацвердзіце выяву або закрыйце праекцыю.</string>
+    <string name="cluster_wizard_choose">Выберыце праграму і адкрыйце праекцыю.</string>
+    <string name="cluster_restart_checking">Праверка захаванага RCC, зыходнага шляху і папкі загрузкі…</string>
+    <string name="cluster_restart_ready">У журнале RCC пазначаны як перамешчаны. Перад перазапускам патрэбна новая праверка.</string>
+    <string name="cluster_restart_unknown">Перазапуск падрыхтаваны або адпраўлены. Вынік невядомы. Не паўтарайце: дачакайцеся BYD і праверце экран.</string>
+    <string name="cluster_restart_blocked">Перазапуск заблакаваны. Перамяшчэнне або праверка не пацверджаны. Аўтапаўтору няма. Праглядзіце звесткі або адпраўце справаздачу.</string>
+    <string name="cluster_restart_parked">Пацвярджаю: аўто нерухомае ў P, стаяначны тормаз уключаны.</string>
+    <string name="cluster_restart_title">Перазапусціць для аднаўлення панэлі?</string>
+    <string name="cluster_restart_confirm">RCC DashCast захаваны ў папцы аднаўлення. Зыходнае імя і іншыя запісы DashCast адсутнічаюць у папцы загрузкі. Пасля згоды праверкі паўторацца. fission-all перапыніць працу экранаў і ADB. Фактычнае аднаўленне трэба праверыць. Краіна не змяняецца.</string>
+    <string name="cluster_restart_accept">Дазволіць перазапуск</string>
+    <string name="cluster_wizard_details_show">Паказаць звесткі і мінулыя тэсты</string>
+    <string name="cluster_wizard_details_hide">Схаваць звесткі і мінулыя тэсты</string>
+    <string name="cluster_restart_context">Я аднаўляю тэставыя рэсурсы DashCast гэтага аўто.</string>
 </resources>

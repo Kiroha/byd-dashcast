@@ -735,7 +735,7 @@
     <string name="diag_cluster_native_seen_full">BYD asl Full ko‘rinishini ko‘ryapman</string>
     <string name="diag_cluster_native_seen_normal">BYD oddiy ko‘rinishini yana ko‘ryapman</string>
     <string name="diag_cluster_rcc_theme_button">Tajribaviy RCC mavzusi — Full + tun</string>
-    <string name="diag_cluster_rcc_restore">BYD RCC resurslarini tiklash</string>
+    <string name="diag_cluster_rcc_restore">Panelni tiklash</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Yo‘q / hali emas</string>
@@ -764,21 +764,21 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Sinovdan oldin Full va tun rejimini tanlang. RCC asboblar va ogohlantirishlar kodini saqlaydi va fonni o‘zgartiradi. O‘qilish va tiklanishni avtomobilda tekshiring. Ekran ochiq qolsin. Seans mavjud bo‘lsa, 30 soniyadan so‘ng standart resurslar so‘raladi. Keyin ko‘rganingizni tasdiqlang. Qayta ishga tushirish tiklashni kafolatlamaydi.</string>
     <string name="diag_cluster_rcc_ivi_send">RCC sinovini yuborish</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Proyeksiya rejimini o‘zgartirmasdan standart RCC resurslarini so‘raydi. OEM javobi va ko‘rinadigan tiklanish alohida tekshiriladi; keyin ko‘rganingizni tasdiqlang. Qayta ishga tushirish yoki avtomatik yangi sinov yo‘q.</string>
-    <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. «BYD RCC resurslarini tiklash» yoki «BYD qaytishini tekshirish» tugmasini bosing, keyin natija va tavsiya etilgan bosqichga amal qiling. Ekran haqidagi savol faqat BYD standart tanlovi tekshirilgandan so‘ng chiqadi.</string>
+    <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. «Panelni tiklash» yoki «BYD qaytishini tekshirish» tugmasini bosing, keyin natija va tavsiya etilgan bosqichga amal qiling. Ekran haqidagi savol faqat BYD standart tanlovi tekshirilgandan so‘ng chiqadi.</string>
     <string name="diag_cluster_rcc_ivi_platform">Sinov rad etildi: Android 10 va aniq DiLink 3 aniqlanishi kerak. RCC yuborilmadi.</string>
     <string name="diag_cluster_page_title">Asboblar: proyeksiya va RCC</string>
     <string name="diag_cluster_page_description">Tasmali BYD proyeksiyasi va RCC burchaklarini tekshirish</string>
     <string name="diag_cluster_native_rcc_blocked">RCC sinovi BYD proyeksiyasini blokladi</string>
     <string name="diag_cluster_rcc_retire_button">RCC xatosidan keyin BYD qaytishini tayyorlash</string>
-    <string name="diag_cluster_rcc_retire_confirm">Faqat sinov RCC faylimizni yangi papkaga ko‘chiradi va baytlarini saqlaydi. OEM yuklash yoki qayta ishga tushirish yuborilmaydi. Keyin faqat o‘qish tekshiruvi uchun “BYD qaytishini tekshirish” dan foydalaning. Vizual savol faqat standart BYD tanlovi tasdiqlansa ochiladi. Aks holda “Diagnostika hisobotini yuborish” dan foydalaning. Boshqa sinovlar seans yopilguncha bloklanadi.</string>
-    <string name="diag_cluster_rcc_retired_waiting">BYD qaytishi tayyorlandi: faylimiz dastlabki joyidan tashqarida saqlangan. Yuklash yoki qayta ishga tushirishsiz tanlovni o‘qish uchun hozir “BYD qaytishini tekshirish” ni bosing. Standart tanlov tasdiqlansa, BYD asboblari va ogohlantirish chiroqlari haqida javob bering. Aks holda “Diagnostika hisobotini yuborish” dan foydalaning. Aniq qo‘lda tiklash tartibi belgilanmagan; daemon ga qayta ulanish panel qayta ishga tushganini isbotlamaydi.</string>
+    <string name="diag_cluster_rcc_retire_confirm">Faqat DashCast sinov RCC faylini ko‘chiradi va baytlarini saqlaydi. Bu qadam qayta ishga tushirmaydi. Keyin fayllarni tekshirib, mavjud bo‘lsa alohida rozilik so‘raydi.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Ko‘chirish qayd etildi. Panelni tiklash tekshiruvlarni davom ettirib, mavjud bo‘lsa alohida qayta ishga tushirishni taklif qiladi. Bekor qilish qayta ishga tushirmaydi. Haqiqiy tiklanishni tasdiqlash kerak.</string>
     <string name="diag_cluster_rcc_verify_return">BYD qaytishini tekshirish</string>
     <string name="diag_cluster_rcc_corners_button">RCC yuklanishini sinash (burchak belgilari)</string>
-    <string name="diag_cluster_rcc_corners_confirm">BYD asboblari va ogohlantirish chiroqlarini saqlab, ingichka zangori va to‘q pushti burchak belgilari bo‘lgan RCC ni doimiy tanlashni so‘raydi. Belgilar faqat ON, ishga tushish tugagan, P va nol tezlik uchun mo‘ljallangan; bu xavfsiz to‘xtashni aniqlamaydi. Full va tun kerak emas. Tanlov Qt qo‘llanganini isbotlamaydi. 30 soniyadan keyin avtomatik qaytish yo‘q. Keyin “RCC burchak belgilarini tekshirish” ni bosing va panelga qarab Ha, Yo‘q yoki Ishonchim komil emas deb javob bering. Qo‘lda tiklash tartibi belgilanmagan. Seansni yopish uchun “BYD RCC resurslarini tiklash” dan foydalaning.</string>
+    <string name="diag_cluster_rcc_corners_confirm">BYD asboblari va ogohlantirish chiroqlarini saqlab, ingichka zangori va to‘q pushti burchak belgilari bo‘lgan RCC ni doimiy tanlashni so‘raydi. Belgilar faqat ON, ishga tushish tugagan, P va nol tezlik uchun mo‘ljallangan; bu xavfsiz to‘xtashni aniqlamaydi. Full va tun kerak emas. Tanlov Qt qo‘llanganini isbotlamaydi. 30 soniyadan keyin avtomatik qaytish yo‘q. Keyin “RCC burchak belgilarini tekshirish” ni bosing va panelga qarab Ha, Yo‘q yoki Ishonchim komil emas deb javob bering. Qo‘lda tiklash tartibi belgilanmagan. Seansni yopish uchun “Panelni tiklash” dan foydalaning.</string>
     <string name="diag_cluster_observe_corners_message">Haqiqiy panel burchaklarida moviy va pushti belgilar ko‘rinyaptimi, BYD asboblari va ogohlantirish chiroqlari o‘qiladimi?</string>
     <string name="diag_cluster_rcc_load_receipts">Yuborish: %1$s\nTanlov: %2$s\nACK2 (bog‘lanmagan javob): %3$s\nTasvir: %4$s</string>
     <string name="diag_cluster_rcc_corners_verify_button">RCC burchak belgilarini tekshirish</string>
-    <string name="diag_cluster_rcc_corners_verify_confirm">Faylimiz va BYD tanlovini tekshiradi, mos kelsa vizual savolni ochadi. Hech narsani qayta yuklamaydi va qayta ishga tushirmaydi. Haqiqatan ko‘rinadigan belgilarga qarab javob bering. Ha faqat kuzatuvingizni yozadi; seansni alohida “BYD RCC resurslarini tiklash” orqali yoping. Hech narsa o‘zgarmasa, “Diagnostika hisobotini yuborish” dan foydalaning; aniq qo‘lda tiklash so‘ralmaydi.</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Faylimiz va BYD tanlovini tekshiradi, mos kelsa vizual savolni ochadi. Hech narsani qayta yuklamaydi va qayta ishga tushirmaydi. Haqiqatan ko‘rinadigan belgilarga qarab javob bering. Ha faqat kuzatuvingizni yozadi; seansni alohida “Panelni tiklash” orqali yoping. Hech narsa o‘zgarmasa, “Diagnostika hisobotini yuborish” dan foydalaning; aniq qo‘lda tiklash so‘ralmaydi.</string>
     <string name="diag_cluster_rcc_corners_pending">RCC sozlamasi saqlandi — tasvir tasdiqlanmagan</string>
     <string name="diag_cluster_rcc_cohort_help">Burchak sinovi o‘rnatilgan asboblar paneli versiyasini tekshiradi. Butun ekranni almashtirish mavjud emas: avval ko‘rinadigan belgilar tasdiqlanishi kerak. Mos kelmaydigan eski sinovlar endi taklif qilinmaydi; ularning seanslarini tiklash mumkin.</string>
     <string name="diag_cluster_rcc_restore_reading">Ulangan daemonning RCC seansi o‘qilmoqda… BYD buyrug‘i yuborilmadi.</string>
@@ -805,4 +805,25 @@
     <string name="startup_confirm_app_fmt">Avtomobil ishga tushganda %1$s doim ochilsinmi? Bu oxirgi seansni davom ettirish o‘rnini bosadi.</string>
     <string name="startup_no_targets">Mavjud elementlar yo‘q. O‘rnatilgan ilovalar va saqlangan tartiblarni tekshiring.</string>
     <string name="startup_app_selected">Boshlang‘ich ilova — o‘zgartirish…</string>
+
+    <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
+    <string name="cluster_wizard_intro">Holatni tekshiring, keyingi qadamni bajaring va paneldagi tasvirni tasdiqlang. Tiklash yuqorida mavjud.</string>
+    <string name="cluster_wizard_advanced">Oldingi sinovlar va texnik tafsilotlar</string>
+    <string name="cluster_wizard_next">Keyingi qadamni ko‘rsatish</string>
+    <string name="cluster_wizard_wait">Amal bajarilmoqda. Natijani kuting.</string>
+    <string name="cluster_wizard_offline">Yangi to‘liq ekran profili hali kompyuterda tekshirilmoqda. Bu yerda yangi to‘liq ekran RCC yuklanmaydi.</string>
+    <string name="cluster_wizard_recovery">Seansni tiklash kerak. Panelni tiklashni tanlang va qadamlarni bajaring.</string>
+    <string name="cluster_wizard_observe">Proyeksiya so‘raldi. Tasvirni tasdiqlang yoki proyeksiyani yoping.</string>
+    <string name="cluster_wizard_choose">Ilovani tanlang, so‘ng proyeksiyani oching.</string>
+    <string name="cluster_restart_checking">Saqlangan RCC, asl yo‘l va yuklash papkasi tekshirilmoqda…</string>
+    <string name="cluster_restart_ready">Jurnal RCC ko‘chirilganini ko‘rsatadi. Qayta ishga tushirishdan oldin yangi tekshiruvlar zarur.</string>
+    <string name="cluster_restart_unknown">Qayta ishga tushirish tayyorlandi yoki yuborildi. Natija noma’lum. Takrorlamang: BYD qaytishini kutib, ekranni tekshiring.</string>
+    <string name="cluster_restart_blocked">Qayta ishga tushirish bloklandi. Ko‘chirish yoki tekshiruv tasdiqlanmadi. Avtomatik takror yo‘q. Tafsilotlarni ko‘ring yoki hisobot yuboring.</string>
+    <string name="cluster_restart_parked">Tasdiqlayman: avtomobil P holatida to‘xtagan, to‘xtash tormozi yoqilgan.</string>
+    <string name="cluster_restart_title">Panelni tiklash uchun qayta ishga tushirilsinmi?</string>
+    <string name="cluster_restart_confirm">DashCast RCC tiklash papkasida saqlanadi. Asl nomi va boshqa DashCast yozuvlari yuklash papkasida yo‘q. Rozilikdan so‘ng tekshiruvlar takrorlanadi. fission-all ekranlar va ADB ishini uzadi. Haqiqiy tiklanishni tekshirish kerak. Mamlakat sozlamasi o‘zgarmaydi.</string>
+    <string name="cluster_restart_accept">Qayta ishga tushirishga roziman</string>
+    <string name="cluster_wizard_details_show">Tafsilotlar va oldingi sinovlarni ko‘rsatish</string>
+    <string name="cluster_wizard_details_hide">Tafsilotlar va oldingi sinovlarni yashirish</string>
+    <string name="cluster_restart_context">Bu avtomobildagi DashCast sinov resurslarini tiklayapman.</string>
 </resources>

@@ -744,7 +744,7 @@
     <string name="diag_cluster_native_seen_full">Widzę natywny widok Full BYD</string>
     <string name="diag_cluster_native_seen_normal">Znów widzę normalny widok BYD</string>
     <string name="diag_cluster_rcc_theme_button">Eksperymentalny motyw RCC — Full + noc</string>
-    <string name="diag_cluster_rcc_restore">Przywróć zasoby RCC BYD</string>
+    <string name="diag_cluster_rcc_restore">Przywróć zestaw wskaźników</string>
 
     <!-- Guided physical cluster visual observations. -->
     <string name="diag_cluster_observation_no">Nie / jeszcze nie</string>
@@ -773,21 +773,21 @@
     <string name="diag_cluster_rcc_ivi_theme_confirm">Przed testem wybierz Full i tryb nocny. RCC zachowuje kod wskaźników i ostrzeżeń, zmieniając tło. Czytelność i przywracanie sprawdź w samochodzie. Zachowaj dostęp do ekranu. Po 30 sekundach zostaną zażądane zasoby domyślne, jeśli sesja pozostanie dostępna. Potwierdź widoczny wynik. Restart nie gwarantuje przywrócenia.</string>
     <string name="diag_cluster_rcc_ivi_send">Wyślij test RCC</string>
     <string name="diag_cluster_rcc_ivi_restore_confirm">Żąda domyślnych zasobów RCC bez zmiany trybu projekcji. Odpowiedź OEM i widoczne przywrócenie sprawdzane są oddzielnie. Następnie potwierdź to, co widzisz. Bez restartu i automatycznego nowego testu.</string>
-    <string name="diag_cluster_rcc_debt">Test RCC pozostaje otwarty. Użyj „Przywróć zasoby RCC BYD” lub „Sprawdź powrót BYD”, a następnie postępuj zgodnie z wynikiem i proponowanym krokiem. Pytanie o ekran pojawi się dopiero po sprawdzeniu domyślnego wyboru BYD.</string>
+    <string name="diag_cluster_rcc_debt">Test RCC pozostaje otwarty. Użyj „Przywróć zestaw wskaźników” lub „Sprawdź powrót BYD”, a następnie postępuj zgodnie z wynikiem i proponowanym krokiem. Pytanie o ekran pojawi się dopiero po sprawdzeniu domyślnego wyboru BYD.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test odrzucony: wymagane Android 10 i potwierdzone wykrycie DiLink 3. Nie wysłano RCC.</string>
     <string name="diag_cluster_page_title">Zestaw wskaźników: projekcja i RCC</string>
     <string name="diag_cluster_page_description">Projekcja BYD z pasami i weryfikacja narożników RCC</string>
     <string name="diag_cluster_native_rcc_blocked">Test RCC blokuje projekcję BYD</string>
     <string name="diag_cluster_rcc_retire_button">Przygotuj powrót BYD po błędzie RCC</string>
-    <string name="diag_cluster_rcc_retire_confirm">Przenosi tylko nasz testowy RCC do nowego folderu, zachowując bajty. Bez ładowania i restartu OEM. Potem użyj „Sprawdź powrót BYD” do kontroli tylko do odczytu. Pytanie wizualne pojawia się tylko po potwierdzeniu domyślnego wyboru BYD. W przeciwnym razie użyj „Wyślij raport diagnostyczny”. Inne testy pozostają zablokowane do zamknięcia sesji.</string>
-    <string name="diag_cluster_rcc_retired_waiting">Powrót BYD przygotowany: nasz plik zachowano poza pierwotnym miejscem. Naciśnij teraz „Sprawdź powrót BYD”, aby odczytać wybór bez ładowania ani restartu. Po potwierdzeniu wyboru domyślnego odpowiedz na pytanie o wskaźniki i kontrolki BYD. W przeciwnym razie użyj „Wyślij raport diagnostyczny”. Nie ustalono konkretnej procedury ręcznego resetu; ponowne połączenie daemona nie dowodzi restartu zestawu wskaźników.</string>
+    <string name="diag_cluster_rcc_retire_confirm">Przenosi tylko testowy RCC DashCast i zachowuje jego bajty. Ten krok nie restartuje. Następnie sprawdza pliki i prosi o osobną zgodę, jeśli funkcja jest dostępna.</string>
+    <string name="diag_cluster_rcc_retired_waiting">Przeniesienie zapisane. Przywróć zestaw wskaźników wznawia kontrole i proponuje osobny restart, jeśli dostępny. Anulowanie nie restartuje. Należy potwierdzić fizyczne przywrócenie.</string>
     <string name="diag_cluster_rcc_verify_return">Sprawdź powrót BYD</string>
     <string name="diag_cluster_rcc_corners_button">Test ładowania RCC (znaczniki w rogach)</string>
-    <string name="diag_cluster_rcc_corners_confirm">Żąda trwałego wyboru RCC z cienkimi znacznikami cyjan i magenta w rogach, zachowując wskaźniki i kontrolki BYD. Tylko przy ON, zakończonym rozruchu, P i zerowej prędkości; nie wykrywa to bezpiecznego postoju. Full i noc nie są wymagane. Wybór nie dowodzi zastosowania Qt. Brak automatycznego powrotu po 30 sekundach. Potem użyj „Sprawdź znaczniki RCC” i odpowiedz Tak, Nie lub Nie wiem zgodnie z obrazem. Nie ustalono procedury ręcznego resetu. Aby zamknąć sesję, użyj „Przywróć zasoby RCC BYD”.</string>
+    <string name="diag_cluster_rcc_corners_confirm">Żąda trwałego wyboru RCC z cienkimi znacznikami cyjan i magenta w rogach, zachowując wskaźniki i kontrolki BYD. Tylko przy ON, zakończonym rozruchu, P i zerowej prędkości; nie wykrywa to bezpiecznego postoju. Full i noc nie są wymagane. Wybór nie dowodzi zastosowania Qt. Brak automatycznego powrotu po 30 sekundach. Potem użyj „Sprawdź znaczniki RCC” i odpowiedz Tak, Nie lub Nie wiem zgodnie z obrazem. Nie ustalono procedury ręcznego resetu. Aby zamknąć sesję, użyj „Przywróć zestaw wskaźników”.</string>
     <string name="diag_cluster_observe_corners_message">Czy widzisz turkusowe i purpurowe znaczniki w rogach fizycznego zestawu wskaźników, a przyrządy i kontrolki BYD są czytelne?</string>
     <string name="diag_cluster_rcc_load_receipts">Wysłanie: %1$s\nWybór: %2$s\nACK2 (nieskorelowana odpowiedź): %3$s\nEkran: %4$s</string>
     <string name="diag_cluster_rcc_corners_verify_button">Sprawdź znaczniki RCC</string>
-    <string name="diag_cluster_rcc_corners_verify_confirm">Sprawdza nasz plik i wybór BYD, a przy zgodności otwiera pytanie wizualne. Niczego nie ładuje ponownie ani nie uruchamia ponownie. Odpowiedz według faktycznie widocznych znaczników. Tak zapisuje tylko obserwację; sesję zamknij osobno przez „Przywróć zasoby RCC BYD”. Jeśli obraz się nie zmienia, użyj „Wyślij raport diagnostyczny”; nie żądamy konkretnego ręcznego resetu.</string>
+    <string name="diag_cluster_rcc_corners_verify_confirm">Sprawdza nasz plik i wybór BYD, a przy zgodności otwiera pytanie wizualne. Niczego nie ładuje ponownie ani nie uruchamia ponownie. Odpowiedz według faktycznie widocznych znaczników. Tak zapisuje tylko obserwację; sesję zamknij osobno przez „Przywróć zestaw wskaźników”. Jeśli obraz się nie zmienia, użyj „Wyślij raport diagnostyczny”; nie żądamy konkretnego ręcznego resetu.</string>
     <string name="diag_cluster_rcc_corners_pending">Konfiguracja RCC zapisana — obraz niepotwierdzony</string>
     <string name="diag_cluster_rcc_cohort_help">Test narożników sprawdza zainstalowaną wersję zestawu wskaźników. Zastąpienie całego ekranu jest niedostępne: najpierw trzeba potwierdzić widoczne znaczniki. Niezgodne stare testy nie są już oferowane; odzyskiwanie ich sesji pozostaje dostępne.</string>
     <string name="diag_cluster_rcc_restore_reading">Odczytywanie sesji RCC połączonego demona… Nie wysłano polecenia BYD.</string>
@@ -814,4 +814,25 @@
     <string name="startup_confirm_app_fmt">Zawsze otwierać %1$s po uruchomieniu pojazdu? Zastąpi to wznawianie ostatniej sesji.</string>
     <string name="startup_no_targets">Brak dostępnych elementów. Sprawdź zainstalowane aplikacje i zapisane układy.</string>
     <string name="startup_app_selected">Aplikacja startowa — zmień…</string>
+
+    <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
+    <string name="cluster_wizard_intro">Sprawdź stan, wykonaj następny krok i potwierdź obraz na zestawie wskaźników. Przywracanie jest dostępne u góry.</string>
+    <string name="cluster_wizard_advanced">Poprzednie testy i szczegóły techniczne</string>
+    <string name="cluster_wizard_next">Pokaż następny krok</string>
+    <string name="cluster_wizard_wait">Operacja trwa. Poczekaj na wynik przed kontynuacją.</string>
+    <string name="cluster_wizard_offline">Nowy profil pełnoekranowy jest nadal sprawdzany na komputerze. Nie można tu załadować nowego pełnoekranowego RCC.</string>
+    <string name="cluster_wizard_recovery">Sesja wymaga przywrócenia. Wybierz Przywróć zestaw wskaźników i wykonaj kroki.</string>
+    <string name="cluster_wizard_observe">Zażądano projekcji. Potwierdź obraz lub zamknij projekcję.</string>
+    <string name="cluster_wizard_choose">Wybierz aplikację, następnie otwórz projekcję.</string>
+    <string name="cluster_restart_checking">Sprawdzanie zachowanego RCC, pierwotnej lokalizacji i katalogu ładowania…</string>
+    <string name="cluster_restart_ready">Dziennik wskazuje przeniesiony RCC. Przed restartem wymagane są nowe kontrole.</string>
+    <string name="cluster_restart_unknown">Restart przygotowano lub wysłano. Wynik nieznany. Nie powtarzaj: poczekaj na BYD i sprawdź ekran.</string>
+    <string name="cluster_restart_blocked">Restart zablokowany. Przeniesienie lub kontrola niepotwierdzone. Bez automatycznej próby. Sprawdź szczegóły lub wyślij raport.</string>
+    <string name="cluster_restart_parked">Potwierdzam: pojazd stoi w P, hamulec postojowy włączony.</string>
+    <string name="cluster_restart_title">Uruchomić ponownie, aby przywrócić zestaw wskaźników?</string>
+    <string name="cluster_restart_confirm">RCC DashCast zachowano w katalogu odzyskiwania. Pierwotnej nazwy i innych wpisów DashCast nie ma w katalogu ładowania. Kontrole zostaną powtórzone po zgodzie. fission-all przerwie działanie ekranów i ADB. Fizyczne przywrócenie wymaga sprawdzenia. Kraj nie zostanie zmieniony.</string>
+    <string name="cluster_restart_accept">Zatwierdź restart</string>
+    <string name="cluster_wizard_details_show">Pokaż szczegóły i poprzednie testy</string>
+    <string name="cluster_wizard_details_hide">Ukryj szczegóły i poprzednie testy</string>
+    <string name="cluster_restart_context">Przywracam zasoby testowe DashCast tego pojazdu.</string>
 </resources>

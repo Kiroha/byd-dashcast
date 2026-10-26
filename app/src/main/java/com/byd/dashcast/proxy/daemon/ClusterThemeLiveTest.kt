@@ -122,6 +122,11 @@ internal object ClusterThemeLiveTest {
     @Volatile private var projectionValidity: android.os.IBinder? = null
     @Volatile private var retirement: ClusterThemeRetirement? = null
     @Volatile private var retirementEligibleUntil = 0L
+    private val restartLease = com.byd.dashcast.clusterlive.ClusterRestartLease(SystemClock::elapsedRealtime)
+    @Volatile private var restartDispatchPending = false
+    @Volatile private var restartBootId = ""
+    @Volatile private var restartDispatchRound = ""
+    @Volatile private var restartCompleted: com.byd.dashcast.clusterlive.ClusterRestartCompletion? = null
     @Volatile private var loadRequestReceipt = "NOT_RECORDED"
     @Volatile private var loadSelectionReceipt = "NOT_RECORDED"
     @Volatile private var loadRegistrationReceipt = "NOT_RECORDED"
@@ -207,6 +212,9 @@ internal object ClusterThemeLiveTest {
         dashboardHelperCommand = saved.dashboardHelperCommand
         dashboardHelperPid = saved.dashboardHelperPid; dashboardHelperStart = saved.dashboardHelperStart; dashboardHelperToken = saved.dashboardHelperToken
         retirement = saved.retirement; retirementEligibleUntil = 0
+        restartDispatchPending = saved.restartDispatchPending
+        restartBootId = saved.restartBootId
+        restartDispatchRound = saved.restartRound; restartCompleted = saved.restartCompleted
         iviRecoverySettled = saved.iviRecoverySettled
         if (transport == ClusterThemeTransport.ANDROID_IVI) {
             filename = saved.filename; root = saved.root; identity = saved.identity
@@ -234,6 +242,8 @@ internal object ClusterThemeLiveTest {
             .put("recoveryPending", restoring.get() >= 0 || queryActive.get() && restoreRequested.get() && active.get())
             .put("recoveredQuarantine", recoveredQuarantine)
             .put("retirement", retirement?.json()).put("retirementAvailable", retirement == null && retirementEligibleUntil > SystemClock.elapsedRealtime())
+            .put("restartDispatchPending", restartDispatchPending)
+            .apply { restartCompleted?.let { put("restartCompleted", it.json()) } }
             .put("journalSchema", if (retirement != null) "4" else if (transport == ClusterThemeTransport.ANDROID_IVI) "3" else "2")
             .put("carrierIdentity", "device=$createdDevice inode=$createdInode")
             .put("rccSafeNonce", if (transport == ClusterThemeTransport.ANDROID_IVI && journalTrusted && !active.get() &&
@@ -347,6 +357,7 @@ internal object ClusterThemeLiveTest {
         restoreRequested.set(false); observationPending.set(0)
         mutated = false; uncertain = false; loadSettled = false; iviRecoverySettled = false; defaultQueried = false
         retirement = null; retirementEligibleUntil = 0
+        resetRestartHistory()
         cornerVerification = null
         markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false; raw = ""
         loadRequestReceipt = "NOT_RECORDED"; loadSelectionReceipt = "NOT_RECORDED"; loadRegistrationReceipt = "NOT_RECORDED"
@@ -505,6 +516,7 @@ internal object ClusterThemeLiveTest {
             transport = ClusterThemeTransport.ANDROID_IVI; filename = expected; renderer = ""; root = ""; identity = ""
             mutated = false; uncertain = false; defaultQueried = false; loadSettled = false; iviRecoverySettled = false
             retirement = null; retirementEligibleUntil = 0
+            resetRestartHistory()
             markerObserved = false; themeObserved = false; oemObserved = false; carrierRemoved = false
             createdDevice = -1; createdInode = -1; variant = ClusterThemeVariant.MARKER
             state = "CLEAN"; phase = "no-admission-reconciliation"
@@ -979,6 +991,57 @@ internal object ClusterThemeLiveTest {
         return status()
     }
 
+    /** The confirmation lease excludes every other diagnostic mutation on this daemon. */
+    @Synchronized fun checkRestartOperation(operation: Int) {
+        initialize()
+        if (restartLease.held() || restartDispatchPending) check(operation in setOf(0, 27, 28, 29) ||
+            retirement?.moved == true && operation in setOf(4, 13)) {
+            "Cluster restoration owns recovery; cancel confirmation or verify the BYD return first"
+        }
+    }
+    private fun verifyRestartFiles(nonce: String) {
+        check(nonce.matches(Regex("[0-9a-f]{32}")) && filename == ClusterThemePolicy.PREFIX + nonce + ".rcc")
+        check(journalTrusted && active.get() && mutated && transport == ClusterThemeTransport.ANDROID_IVI &&
+            !queryActive.get() && restoring.get() == -1L && !helperUnreaped && helperPid == 0 && dashboardHelperPid == 0 &&
+            !dashboardPending.get() && !dashboardCloseQueued.get() && !dashboardReadProbeActive.get() &&
+            observationPending.get() == 0 && !fullAppAdasLock.isLocked && !fullAppAdasRestoring &&
+            productionModeCommands == 0 && !nativeMode.blocked() && validProjection()) { "Recovery/helper/reservation state is not settled" }
+        val retired = checkNotNull(retirement) { "Move our RCC first" }
+        hashDeadline = SystemClock.elapsedRealtime() + 60000
+        com.byd.dashcast.clusterlive.ClusterRestartCohort.verify(android.os.Build.VERSION.SDK_INT, variant) {
+            hash(File(it), ClusterThemePolicy.MAX_ARTIFACT)
+        }
+        ClusterThemeRetiredStorage.verifyForRestart(filename, identity, createdDevice, createdInode, variant.carrierSha256,
+            retired) { hash(it, ClusterThemePolicy.MAX_CARRIER) }
+    }
+    @Synchronized fun prepareRestart(nonce: String, validity: android.os.IBinder): String {
+        initialize()
+        check(!restartDispatchPending) { "A restart was already submitted; verify the physical BYD return, no replay" }
+        projectionValidity = validity
+        verifyRestartFiles(nonce)
+        val round = restartLease.issue(UUID.randomUUID().toString().replace("-", ""))
+        return JSONObject(status()).put("restartRound", round).toString()
+    }
+    @Synchronized fun confirmRestart(nonce: String, round: String): String {
+        initialize()
+        restartLease.consume(round, { verifyRestartFiles(nonce) }) {
+            restartBootId = com.byd.dashcast.clusterlive.ClusterBootIdentity.read()
+            restartDispatchRound = round
+            restartDispatchPending = true; phase = "restart-dispatch-intent"
+            // A replacement daemon recovers the retained debt; it never dispatches a restart itself.
+            persist(state)
+        }
+        return JSONObject(status()).put("restartRound", round).put("restartAuthorized", true).toString()
+    }
+    @Synchronized fun cancelRestart(round: String): String {
+        restartLease.cancel(round)
+        return status()
+    }
+    internal fun resetRestartHistory() {
+        check(!restartDispatchPending && !restartLease.held()) { "Outstanding restart intent cannot be discarded by a new session" }
+        restartCompleted = null; restartBootId = ""; restartDispatchRound = ""
+    }
+
     private fun enqueueRestore(expectedGeneration: Long = generation.get()) {
         if (generation.get() != expectedGeneration) return
         while (true) {
@@ -1193,6 +1256,7 @@ internal object ClusterThemeLiveTest {
     }
     internal fun acceptOemObservation(expectedFilename: String): Boolean {
         if (!active.get() || !(mutated || dashboardBootstrapRecoverySettled) || !defaultQueried || filename != expectedFilename || !ClusterThemePolicy.ownedName(expectedFilename)) return false
+        if (restartDispatchPending && runCatching { restartBootId == com.byd.dashcast.clusterlive.ClusterBootIdentity.read() }.getOrDefault(true)) return false
         oemObserved = true
         return true
     }
@@ -1239,6 +1303,7 @@ internal object ClusterThemeLiveTest {
 
     internal fun completeRecovery(cleanup: () -> Boolean, write: (String) -> Unit) {
         try {
+            if (restartDispatchPending && runCatching { restartBootId == com.byd.dashcast.clusterlive.ClusterBootIdentity.read() }.getOrDefault(true)) return
             if (fullAppAdasDebt || factoryApplyPending) return
             if (variant.isDashboard && (dashboardNativeDebt || dashboardHelperPid != 0)) return
             val recoveredIvi = transport == ClusterThemeTransport.ANDROID_IVI && iviRecoverySettled
@@ -1271,7 +1336,13 @@ internal object ClusterThemeLiveTest {
     }
 
     private fun persist(newState: String) = synchronized(journalWriteLock) {
+        val completion = if (newState == "CLEAN" && restartDispatchPending)
+            com.byd.dashcast.clusterlive.ClusterRestartCompletion(restartDispatchRound, restartBootId,
+                com.byd.dashcast.clusterlive.ClusterBootIdentity.read()) else restartCompleted.takeIf { newState == "CLEAN" }
         if (newState == "CLEAN") {
+            check(!restartDispatchPending || restartBootId != com.byd.dashcast.clusterlive.ClusterBootIdentity.read()) {
+                "Restart outcome unknown: current boot has not changed; retain recovery debt"
+            }
             check(!fullAppAdasDebt) { "Cannot close outstanding full-app ADAS recovery debt" }
             check(!factoryApplyPending) { "Factory selection still requires a manual application transition" }
             check(!helperUnreaped && helperPid == 0) { "Cannot close journal with an unreaped helper" }
@@ -1288,6 +1359,10 @@ internal object ClusterThemeLiveTest {
             .put("uncertain", uncertain).put("iviRecoverySettled", iviRecoverySettled).put("defaultQueried", defaultQueried)
             .put("createdDevice", createdDevice).put("createdInode", createdInode)
             .put("helperPid", helperPid).put("helperStart", helperStart).put("helperToken", helperToken)
+            .put("restartDispatchPending", restartDispatchPending && newState != "CLEAN")
+            .put("restartBootId", if (newState == "CLEAN") "" else restartBootId)
+            .put("restartRound", if (newState == "CLEAN") "" else restartDispatchRound)
+            .apply { completion?.let { put("restartCompleted", it.json()) } }
             .apply { if (variant.isDashboard) put("factoryApplyPending", factoryApplyPending).put("factoryApplyCompleted", factoryApplyCompleted) }
             .apply { if (variant.isFullApp) put("fullAppAdas", JSONObject().put("debt", fullAppAdasDebt).put("round", fullAppAdasRound)) }
             .apply { if (variant.isDashboard) put("dashboard", JSONObject().put("stage", dashboardStage)
@@ -1302,6 +1377,10 @@ internal object ClusterThemeLiveTest {
             Os.rename(temporary.path, journal.path)
             val dirFd = Os.open(directory.path, OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW, 0)
             try { check(OsConstants.S_ISDIR(Os.fstat(dirFd).st_mode)); Os.fsync(dirFd) } finally { Os.close(dirFd) }
+            if (newState == "CLEAN") {
+                restartCompleted = completion; restartDispatchPending = false; restartBootId = ""; restartDispatchRound = ""
+                restartLease.recovered()
+            }
         } finally { temporary.delete() }
     }
     private fun persistQuietly() { if (!journalTrusted) return; runCatching { persist(state) }.onFailure { uncertain = true; state = "QUARANTINE"; detail += "; journal write failed" } }
