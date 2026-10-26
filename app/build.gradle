@@ -2129,8 +2129,11 @@ android {
         // preserving the legacy DiLink 3 launch/recovery path. Protocol 44 is unchanged.
         // 719 = 1.9.79-beta: revalidate installed app UID/signers in both daemons,
         // and bound verified legacy endpoint migration. Protocol 44 is unchanged.
-        versionCode 719
-        versionName "1.9.79-beta"
+        // 720 = 1.9.80-beta: guided cluster diagnostics and verified owned RCC
+        // retirement before an explicitly accepted, single-use fission-all restart.
+        // Protocol 45 adds recovery proof/consent operations; fullscreen research stays offline.
+        versionCode 720
+        versionName "1.9.80-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 13 + base French). Strips ~58 dead AndroidX/Material locale
