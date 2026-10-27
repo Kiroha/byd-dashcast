@@ -2132,8 +2132,10 @@ android {
         // 720 = 1.9.80-beta: guided cluster diagnostics and verified owned RCC
         // retirement before an explicitly accepted, single-use fission-all restart.
         // Protocol 45 adds recovery proof/consent operations; fullscreen research stays offline.
-        versionCode 720
-        versionName "1.9.80-beta"
+        // 721 = 1.9.81-beta: manual minimal full-screen cluster test (2c); Restore moves the owned
+        // RCC without an OEM receipt so the fission-all restart returns the factory theme. Protocol 46.
+        versionCode 721
+        versionName "1.9.81-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 13 + base French). Strips ~58 dead AndroidX/Material locale
