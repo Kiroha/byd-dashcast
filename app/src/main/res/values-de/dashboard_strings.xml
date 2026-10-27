@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">DashCast-Cockpit</string>
+    <string name="diag_cluster_dashboard_title">Kombiinstrument im Vollbild</string>
     <string name="diag_cluster_dashboard_help">Manueller Test im Stand. Beim Schließen bleibt das Profil ausgewählt. Vor Installation einer älteren APK das Werksprofil wiederherstellen und prüfen.</string>
     <string name="diag_cluster_dashboard_read">1 · Status und Kompatibilität lesen</string>
     <string name="diag_cluster_dashboard_prepare">2 · Cockpit vorbereiten</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Werksauswahl anwenden</string>
     <string name="diag_cluster_factory_apply_confirm">Das Werksprofil ist konfiguriert, seine native Anwendung aber noch unbestätigt. Einmal die BYD-Projektion umschalten, schließen und erneut lesen. Kein eigener RCC und keine erneute Werksauswahl werden gesendet. Stillstand und Firmware bestätigen.</string>
     <string name="diag_cluster_full_app_observe_message">Das alte Profil kann nicht geöffnet oder als bereit bestätigt werden. Nutze Wiederherstellen und bestätige anschließend separat die Rückkehr der BYD-Instrumente und Warnungen.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Minimalen Vollbildmodus vorbereiten</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Minimaltest: Im Vollbild-Projektionsmodus wird das Kombiinstrument vollständig transparent und die Anwendung füllt alle 1920 × 720 Pixel. BYD-Instrumente, Kontrollleuchten und Warnungen sind während dieses Tests ausgeblendet. Bestätige Parken und Firmware; diese Erklärung misst keine Bewegung.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Bestätige nur, wenn du die Anwendung auf dem gesamten Kombiinstrument siehst. BYD-Instrumente, Kontrollleuchten und Warnungen sind in diesem Testprofil ausgeblendet. Eine Befehlsquittung beweist diese Anzeige nicht.</string>
 </resources>

@@ -242,6 +242,9 @@ internal object ClusterThemeLiveTest {
             .put("recoveryPending", restoring.get() >= 0 || queryActive.get() && restoreRequested.get() && active.get())
             .put("recoveredQuarantine", recoveredQuarantine)
             .put("retirement", retirement?.json()).put("retirementAvailable", retirement == null && retirementEligibleUntil > SystemClock.elapsedRealtime())
+            .put("carrierMovable", journalTrusted && active.get() && mutated && transport == ClusterThemeTransport.ANDROID_IVI &&
+                retirement?.moved != true && createdInode >= 0 && ClusterThemePolicy.ownedName(filename) &&
+                variant in com.byd.dashcast.clusterlive.ClusterRestartCohort.variants)
             .put("restartDispatchPending", restartDispatchPending)
             .apply { restartCompleted?.let { put("restartCompleted", it.json()) } }
             .put("journalSchema", if (retirement != null) "4" else if (transport == ClusterThemeTransport.ANDROID_IVI) "3" else "2")
@@ -954,8 +957,11 @@ internal object ClusterThemeLiveTest {
         initialize()
         check(parked && firmware && nonce.matches(Regex("[0-9a-f]{32}")) && journalTrusted && active.get() && mutated &&
             transport == ClusterThemeTransport.ANDROID_IVI && filename == ClusterThemePolicy.PREFIX + nonce + ".rcc")
-        check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0 && !helperUnreaped)
-        check(retirement != null || retirementEligibleUntil > SystemClock.elapsedRealtime()) { "First request Restore: a fresh ACK3 RESOURCE_IS_SAME and exact own selection are required" }
+        // No OEM receipt is required: a failed QML root can leave the OEM unable to answer. The worker reaps any stale helper first.
+        check(!queryActive.get() && !nativeMode.blocked() && productionModeCommands == 0)
+        // Outside the restart cohort no fission-all can follow, so the historical ACK3 admission remains.
+        check(variant in com.byd.dashcast.clusterlive.ClusterRestartCohort.variants || retirement != null ||
+            retirementEligibleUntil > SystemClock.elapsedRealtime()) { "First request Restore: a fresh ACK3 RESOURCE_IS_SAME and exact own selection are required" }
         check(retirement?.moved != true) { "Already retired: use Verify BYD return for a read-only check; no further move or OEM command" }
         recoveredQuarantine = false
         projectionValidity = validity; check(validProjection()) { "Projection reservation expired" }
@@ -967,11 +973,7 @@ internal object ClusterThemeLiveTest {
             try {
                 check(generation.get() == expected && validProjection())
                 reapRecoveredHelper(); hashDeadline = SystemClock.elapsedRealtime() + 60000
-                if (retirement == null || !ClusterThemeRetiredStorage.originalAbsent(filename, identity)) {
-                    if (retirement == null) check(retirementEligibleUntil > SystemClock.elapsedRealtime()) { "ACK3 eligibility expired; request Restore again" }
-                    val selection = exchange("query")
-                    check(!selection.unknown && selection.native == 0 && selection.query?.selected(filename) == true && selection.query.ints[3] == 0) { "Own persisted selection changed; no retirement" }
-                }
+                // DataSource updateTranslateRccFromXml (0x21c068) resets a missing selected RCC to factory at its next start.
                 check(validProjection())
                 retirement = ClusterThemeRetiredStorage.move(filename, identity, createdDevice, createdInode, variant.carrierSha256,
                     retirement, { hash(it, ClusterThemePolicy.MAX_CARRIER) }) { checkpoint ->
@@ -980,9 +982,11 @@ internal object ClusterThemeLiveTest {
                     persist(state); check(validProjection()) { "Projection reservation expired after durable checkpoint" }
                     step(phase, "directory=${checkpoint.directory} device=${checkpoint.device} inode=${checkpoint.inode} fsync=PASS")
                 }
+                // After the move, so a failed close can never keep the faulty RCC selectable; failure keeps the debt.
+                closeDashboardForFactoryRestore()
                 retirementEligibleUntil = 0; uncertain = true
                 state = "WAITING_OEM_REINITIALIZATION"; phase = "carrier-retired"
-                detail = "Only our RCC moved and preserved. Active graphics may remain. Use Verify BYD return for a fresh read-only check. No specific manual cluster reset procedure is established; Android/daemon reconnect does not prove native reinitialization. If the check is still pending, export a report."
+                detail = "Only our RCC moved and preserved. BYD DataSource resets a missing selected RCC to factory when it next starts; use the fission-all restart offered by Restore. Active graphics may remain until then; an Android/daemon reconnect does not restart DataSource."
                 persist(state)
             } catch (error: Throwable) {
                 uncertain = true; state = "QUARANTINE"; detail = "RCC retirement unconfirmed: ${error.message}".take(2000); persistQuietly()
@@ -1083,8 +1087,11 @@ internal object ClusterThemeLiveTest {
                     hashDeadline = SystemClock.elapsedRealtime() + 60000
                     fun verifyRetired() = ClusterThemeRetiredStorage.verify(filename, identity, createdDevice, createdInode,
                         variant.carrierSha256, retired) { hash(it, ClusterThemePolicy.MAX_CARRIER) }
+                    verifyRetired()
+                    // A dashboard mode still open (close failed before the restart) is closed; never a load, restore or restart.
+                    closeDashboardForFactoryRestore()
                     verifyRetired(); phase = "retired-read-only-query"
-                    val queried = exchange("query") // Never load, restore or restart an OEM process after retirement.
+                    val queried = exchange("query")
                     verifyRetired(); check(validProjection())
                     recordRetiredQuery(queried)
                     persist(state); maybeCleanup()
@@ -1249,6 +1256,8 @@ internal object ClusterThemeLiveTest {
         check(retirement?.moved == true && transport == ClusterThemeTransport.ANDROID_IVI)
         defaultQueried = !queried.unknown && queried.native == 0 && queried.query?.isDefault() == true
         iviRecoverySettled = defaultQueried
+        // Same rule as the manual factory application: a fresh default report settles it.
+        if (defaultQueried) factoryApplyPending = false
         state = if (defaultQueried) "DEFAULT_QUERIED" else "WAITING_OEM_REINITIALIZATION"
         detail = if (defaultQueried) "Retired inode/hash and absent original verified around fresh default query. Fresh physical OEM confirmation is still required. Preserved RCC will not be deleted."
             else "Original RCC absent and preserved; fresh default selection is not confirmed. No established manual reset procedure or automatic retry. Export a report; no additional RCC load or recovery command was sent. ${queried.error.orEmpty()}"

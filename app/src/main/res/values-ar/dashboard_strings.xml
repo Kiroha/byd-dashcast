@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">لوحة DashCast</string>
+    <string name="diag_cluster_dashboard_title">لوحة العدادات بملء الشاشة</string>
     <string name="diag_cluster_dashboard_help">اختبار يدوي أثناء التوقف. يظل الملف محدداً بعد الإغلاق. استعد ملف المصنع وتحقق من عودته قبل تثبيت APK أقدم.</string>
     <string name="diag_cluster_dashboard_read">1 · قراءة الحالة والتوافق</string>
     <string name="diag_cluster_dashboard_prepare">2 · تحضير اللوحة</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">تطبيق اختيار المصنع</string>
     <string name="diag_cluster_factory_apply_confirm">ملف المصنع محدد بالفعل لكن تطبيقه الأصلي يحتاج إلى تحقق. نفذ انتقال عرض BYD مرة واحدة ثم أغلقه واقرأ الاختيار مجددًا. لن يُرسل RCC مخصص أو اختيار مصنع متكرر. أكد التوقف والبرنامج الثابت.</string>
     <string name="diag_cluster_full_app_observe_message">لا يمكن فتح الملف القديم أو تأكيد جاهزيته. استخدم الاستعادة ثم أكد بشكل منفصل عودة عدادات BYD وتنبيهاتها.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · تحضير وضع ملء الشاشة المبسط</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">اختبار مبسط: في وضع الإسقاط بملء الشاشة تصبح لوحة العدادات شفافة بالكامل ويشغل التطبيق كامل 1920 × 720 بكسل. تُخفى عدادات BYD ومؤشراتها وتنبيهاتها أثناء هذا الاختبار. أكّد التوقف والبرنامج الثابت؛ هذا الإقرار لا يقيس الحركة.</string>
+    <string name="diag_cluster_fullscreen_observe_message">أكّد فقط إذا رأيت التطبيق على كامل لوحة العدادات. عدادات BYD ومؤشراتها وتنبيهاتها مخفية في ملف الاختبار هذا. إيصال الأمر لا يثبت هذا العرض.</string>
 </resources>

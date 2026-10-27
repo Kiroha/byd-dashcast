@@ -85,7 +85,7 @@ class ClusterNativeFullControlsTest {
         try {
             val activity = c.get(); val all = views(activity.findViewById(android.R.id.content))
             val title = activity.getString(R.string.diag_cluster_dashboard_title)
-            assertEquals("Tableau de bord DashCast", title)
+            assertEquals("Combiné plein écran", title)
             all.filterIsInstance<Button>().single { it.text.toString().startsWith(title + "\n") }.performClick()
             all.filterIsInstance<Button>().single { it.text == activity.getString(R.string.cluster_wizard_details_show) }.performClick()
             assertTrue(all.filterIsInstance<android.widget.TextView>().any { it.text == title })

@@ -767,7 +767,7 @@
     <string name="diag_cluster_rcc_debt">RCC sinovi hali yopilmagan. «Panelni tiklash» yoki «BYD qaytishini tekshirish» tugmasini bosing, keyin natija va tavsiya etilgan bosqichga amal qiling. Ekran haqidagi savol faqat BYD standart tanlovi tekshirilgandan so‘ng chiqadi.</string>
     <string name="diag_cluster_rcc_ivi_platform">Sinov rad etildi: Android 10 va aniq DiLink 3 aniqlanishi kerak. RCC yuborilmadi.</string>
     <string name="diag_cluster_page_title">Asboblar: proyeksiya va RCC</string>
-    <string name="diag_cluster_page_description">Tasmali BYD proyeksiyasi va RCC burchaklarini tekshirish</string>
+    <string name="diag_cluster_page_description">To‘liq ekran mavzusini sinash va BYD ekraniga qaytish</string>
     <string name="diag_cluster_native_rcc_blocked">RCC sinovi BYD proyeksiyasini blokladi</string>
     <string name="diag_cluster_rcc_retire_button">RCC xatosidan keyin BYD qaytishini tayyorlash</string>
     <string name="diag_cluster_rcc_retire_confirm">Faqat DashCast sinov RCC faylini ko‘chiradi va baytlarini saqlaydi. Bu qadam qayta ishga tushirmaydi. Keyin fayllarni tekshirib, mavjud bo‘lsa alohida rozilik so‘raydi.</string>
@@ -807,16 +807,30 @@
     <string name="startup_app_selected">Boshlang‘ich ilova — o‘zgartirish…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Holatni tekshiring, keyingi qadamni bajaring va paneldagi tasvirni tasdiqlang. Tiklash yuqorida mavjud.</string>
+    <string name="cluster_wizard_intro">Faqat to‘xtab turganda, P holatida foydalaning. Yuqoridagi «Panelni tiklash» har doim mavjud.</string>
     <string name="cluster_wizard_advanced">Oldingi sinovlar va texnik tafsilotlar</string>
-    <string name="cluster_wizard_next">Keyingi qadamni ko‘rsatish</string>
     <string name="cluster_wizard_wait">Amal bajarilmoqda. Natijani kuting.</string>
-    <string name="cluster_wizard_offline">Yangi to‘liq ekran profili hali kompyuterda tekshirilmoqda. Bu yerda yangi to‘liq ekran RCC yuklanmaydi.</string>
-    <string name="cluster_wizard_recovery">Seansni tiklash kerak. Panelni tiklashni tanlang va qadamlarni bajaring.</string>
-    <string name="cluster_wizard_observe">Proyeksiya so‘raldi. Tasvirni tasdiqlang yoki proyeksiyani yoping.</string>
-    <string name="cluster_wizard_choose">Ilovani tanlang, so‘ng proyeksiyani oching.</string>
+    <string name="cluster_wizard_offline">1/4-qadam · To‘liq ekran mavzusini yuklang. Ishga tushirilgunga qadar panel BYD ekranini saqlaydi.</string>
+    <string name="cluster_wizard_recovery">Panelni tiklash kerak. «BYD ekraniga qaytish» tugmasini bosing va qadamlarni bajaring.</string>
+    <string name="cluster_wizard_observe">4/4-qadam · Ilova butun panelni egallashi kerak. Ko‘rganingizni tasdiqlang yoki to‘liq ekranni to‘xtating.</string>
+    <string name="cluster_wizard_choose">2/4-qadam · Panelda ko‘rsatiladigan ilovani tanlang.</string>
+    <string name="cluster_simple_step_start">3/4-qadam · To‘liq ekranni %1$s bilan ishga tushiring. Sinov davomida BYD asboblari, indikatorlari va ogohlantirishlari yashiriladi.</string>
+    <string name="cluster_simple_step_done">Tasvir tasdiqlandi. Sinovni tugatish uchun to‘liq ekranni to‘xtating.</string>
+    <string name="cluster_simple_step_closed">To‘liq ekran to‘xtatildi. Uni qayta ishga tushiring yoki BYD ekraniga qaytish uchun «Sinovni tugatish» tugmasini bosing.</string>
+    <string name="cluster_simple_step_restart">Mavzu olib tashlandi. Panelni qayta ishga tushirish uchun «BYD ekraniga qaytish» tugmasini bosing, so‘ng qaytganini tekshiring.</string>
+    <string name="cluster_simple_other">Panelning boshqa sinovi davom etmoqda. Uni tugatish uchun «BYD ekraniga qaytish» tugmasini bosing.</string>
+    <string name="cluster_simple_unknown">Panel holati noma’lum. DashCast ulanganini tekshiring, so‘ng holatni o‘qing.</string>
+    <string name="cluster_simple_read">Panel holatini o‘qish</string>
+    <string name="cluster_simple_load">To‘liq ekran mavzusini yuklash</string>
+    <string name="cluster_simple_choose">Ilovani tanlash</string>
+    <string name="cluster_simple_change_app">Ilovani almashtirish</string>
+    <string name="cluster_simple_start">To‘liq ekranni ishga tushirish</string>
+    <string name="cluster_simple_confirm">Ko‘rganimni tasdiqlash</string>
+    <string name="cluster_simple_stop">To‘liq ekranni to‘xtatish</string>
+    <string name="cluster_simple_finish">Sinovni tugatish</string>
+    <string name="cluster_simple_recover">BYD ekraniga qaytish</string>
+    <string name="cluster_simple_wait">Kuting…</string>
     <string name="cluster_restart_checking">Saqlangan RCC, asl yo‘l va yuklash papkasi tekshirilmoqda…</string>
-    <string name="cluster_restart_ready">Jurnal RCC ko‘chirilganini ko‘rsatadi. Qayta ishga tushirishdan oldin yangi tekshiruvlar zarur.</string>
     <string name="cluster_restart_unknown">Qayta ishga tushirish tayyorlandi yoki yuborildi. Natija noma’lum. Takrorlamang: BYD qaytishini kutib, ekranni tekshiring.</string>
     <string name="cluster_restart_blocked">Qayta ishga tushirish bloklandi. Ko‘chirish yoki tekshiruv tasdiqlanmadi. Avtomatik takror yo‘q. Tafsilotlarni ko‘ring yoki hisobot yuboring.</string>
     <string name="cluster_restart_parked">Tasdiqlayman: avtomobil P holatida to‘xtagan, to‘xtash tormozi yoqilgan.</string>

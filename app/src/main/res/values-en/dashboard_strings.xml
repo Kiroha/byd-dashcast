@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">DashCast dashboard</string>
+    <string name="diag_cluster_dashboard_title">Full-screen cluster</string>
     <string name="diag_cluster_dashboard_help">Manual test while parked. Closing keeps the profile selected. Restore the factory profile and verify its return before installing an older APK.</string>
     <string name="diag_cluster_dashboard_read">1 · Read state and compatibility</string>
     <string name="diag_cluster_dashboard_prepare">2 · Prepare dashboard</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Apply factory selection</string>
     <string name="diag_cluster_factory_apply_confirm">The factory profile is already configured but its native application needs verification. Run one BYD projection transition, close it and read the selection again. No custom RCC or repeated factory selection is sent. Confirm parking and firmware.</string>
     <string name="diag_cluster_full_app_observe_message">The retired profile cannot be opened or approved as ready. Use Restore, then separately confirm that the BYD instruments and alerts have returned.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Prepare minimal full screen</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Minimal test: in full-screen projection mode the cluster becomes fully transparent and the application fills all 1920 × 720 pixels. BYD instruments, telltales and alerts are hidden during this test. Confirm parking and firmware; this statement does not measure movement.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Confirm only if you see the application across the whole cluster. BYD instruments, telltales and alerts are hidden in this test profile. A command receipt does not prove this display.</string>
 </resources>

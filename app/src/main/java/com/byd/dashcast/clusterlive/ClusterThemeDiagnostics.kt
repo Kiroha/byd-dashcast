@@ -33,7 +33,7 @@ internal object ClusterThemeDiagnostics {
         "dashboardHelperCommand")
     private val booleanFields = listOf("mutated", "uncertain", "iviRecoverySettled", "defaultQueried", "carrierRemoved",
         "markerObservedByUser", "themeObservedByUser", "oemObservedByUser", "rccDebt", "nativeModeDebt", "nativeModePending",
-        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable", "recoveryPending",
+        "nativeModeUncertain", "nativeModeNormalSettled", "nativeModeObservedByUser", "retirementAvailable", "carrierMovable", "recoveryPending",
         "dashboardNativeDebt", "dashboardPending", "dashboardSelectionReady", "dashboardBootstrapStarted",
         "dashboardBootstrapRecoverySettled", "dashboardSmallPanelSeen", "dashboardSizeAdmitted",
         "fullAppAdasDebt", "fullAppAdasRestoring", "factoryApplyPending", "factoryApplyCompleted")

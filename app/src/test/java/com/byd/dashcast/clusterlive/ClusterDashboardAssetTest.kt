@@ -35,5 +35,16 @@ class ClusterDashboardAssetTest {
             listOf("x", "y", "width", "height").map(appRect::getInt))
         assertTrue(appManifest.getBoolean("native_instruments_hidden")); assertTrue(appManifest.getBoolean("native_alerts_hidden"))
         assertEquals(44, appManifest.getInt("minimum_daemon_protocol")); assertFalse(appManifest.getBoolean("vehicle_validated"))
+        val fullscreen = ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C
+        val fullscreenManifest = JSONObject(File(assets, "cluster_live/fullscreen_minimal_21f7735c_manifest.json").readText())
+        val fullscreenViewport = ClusterDashboardProfile.viewport(fullscreen)
+        val fullscreenRect = fullscreenManifest.getJSONObject("application_rect")
+        assertEquals(fullscreen.carrierSha256, fullscreenManifest.getString("carrier_sha256"))
+        assertEquals(fullscreen.id, fullscreenManifest.getString("variant"))
+        assertEquals(listOf(fullscreenViewport.x, fullscreenViewport.y, fullscreenViewport.width, fullscreenViewport.height),
+            listOf("x", "y", "width", "height").map(fullscreenRect::getInt))
+        assertEquals(fullscreen.minimumProtocol, fullscreenManifest.getInt("minimum_daemon_protocol"))
+        assertEquals(84, fullscreenManifest.getJSONObject("resources").length())
+        assertFalse(fullscreenManifest.getBoolean("vehicle_validated"))
     }
 }

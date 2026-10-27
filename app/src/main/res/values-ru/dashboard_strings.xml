@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">Панель DashCast</string>
+    <string name="diag_cluster_dashboard_title">Панель на весь экран</string>
     <string name="diag_cluster_dashboard_help">Ручной тест на стоянке. После закрытия профиль остаётся выбранным. Перед установкой старого APK восстановите заводской профиль и проверьте результат.</string>
     <string name="diag_cluster_dashboard_read">1 · Прочитать состояние и совместимость</string>
     <string name="diag_cluster_dashboard_prepare">2 · Подготовить панель</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Применить заводской выбор</string>
     <string name="diag_cluster_factory_apply_confirm">Заводской профиль настроен, но его нативное применение не подтверждено. Один раз переключить проекцию BYD, закрыть и снова прочитать выбор. Без собственного RCC и повторного заводского выбора. Подтвердите стоянку и прошивку.</string>
     <string name="diag_cluster_full_app_observe_message">Старый профиль нельзя открыть или подтвердить как готовый. Используй Восстановить, затем отдельно подтверди возврат приборов и предупреждений BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Подготовить минимальный полноэкранный режим</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Минимальный тест: в полноэкранном режиме проекции приборная панель становится полностью прозрачной, а приложение занимает все 1920 × 720 пикселей. Приборы, индикаторы и предупреждения BYD скрыты во время этого теста. Подтвердите стоянку и прошивку; это заявление не измеряет движение.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Подтверждайте, только если видите приложение на всей приборной панели. Приборы, индикаторы и предупреждения BYD скрыты в этом тестовом профиле. Квитанция команды не доказывает это отображение.</string>
 </resources>

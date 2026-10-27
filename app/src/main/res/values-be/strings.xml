@@ -767,7 +767,7 @@
     <string name="diag_cluster_rcc_debt">Тэст RCC яшчэ не завершаны. Націсні «Аднавіць панэль» або «Праверыць вяртанне BYD», потым выканай прапанаваны крок паводле выніку. Пытанне пра экран з’явіцца толькі пасля праверкі стандартнага выбару BYD.</string>
     <string name="diag_cluster_rcc_ivi_platform">Тэст адхілены: патрэбныя Android 10 і пацверджанае выяўленне DiLink 3. RCC не адпраўлены.</string>
     <string name="diag_cluster_page_title">Панэль: праекцыя і RCC</string>
-    <string name="diag_cluster_page_description">Праекцыя BYD з палосамі і праверка вуглавых метак RCC</string>
+    <string name="diag_cluster_page_description">Праверка поўнаэкраннай тэмы і вяртанне да экрана BYD</string>
     <string name="diag_cluster_native_rcc_blocked">Праекцыя BYD заблакаваная тэстам RCC</string>
     <string name="diag_cluster_rcc_retire_button">Падрыхтаваць вяртанне BYD пасля памылкі RCC</string>
     <string name="diag_cluster_rcc_retire_confirm">Перамяшчае толькі тэставы RCC DashCast і захоўвае яго байты. На гэтым кроку няма перазапуску. Потым правярае файлы і пры даступнасці запытвае асобную згоду.</string>
@@ -807,16 +807,30 @@
     <string name="startup_app_selected">Праграма запуску — змяніць…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Праверце стан, выканайце наступны крок і пацвердзіце выяву на панэлі. Аднаўленне даступна ўверсе.</string>
+    <string name="cluster_wizard_intro">Выкарыстоўвайце толькі на стаянцы, у становішчы P. «Аднавіць панэль» уверсе даступна ў любы момант.</string>
     <string name="cluster_wizard_advanced">Папярэднія тэсты і тэхнічныя звесткі</string>
-    <string name="cluster_wizard_next">Паказаць наступны крок</string>
     <string name="cluster_wizard_wait">Аперацыя выконваецца. Дачакайцеся выніку.</string>
-    <string name="cluster_wizard_offline">Новы поўнаэкранны профіль яшчэ правяраецца на ПК. Тут нельга загрузіць новы поўнаэкранны RCC.</string>
-    <string name="cluster_wizard_recovery">Сеанс патрабуе аднаўлення. Націсніце Аднавіць панэль і выканайце крокі.</string>
-    <string name="cluster_wizard_observe">Праекцыя запытана. Пацвердзіце выяву або закрыйце праекцыю.</string>
-    <string name="cluster_wizard_choose">Выберыце праграму і адкрыйце праекцыю.</string>
+    <string name="cluster_wizard_offline">Крок 1 з 4 · Загрузіце поўнаэкранную тэму. Да запуску панэль захоўвае экран BYD.</string>
+    <string name="cluster_wizard_recovery">Панэль трэба аднавіць. Націсніце «Вярнуцца да экрана BYD» і выканайце крокі.</string>
+    <string name="cluster_wizard_observe">Крок 4 з 4 · Праграма павінна займаць усю панэль. Пацвердзіце, што вы бачыце, або спыніце поўнаэкранны рэжым.</string>
+    <string name="cluster_wizard_choose">Крок 2 з 4 · Выберыце праграму для паказу на панэлі.</string>
+    <string name="cluster_simple_step_start">Крок 3 з 4 · Запусціце поўнаэкранны рэжым з %1$s. Прыборы, індыкатары і папярэджанні BYD будуць схаваныя падчас праверкі.</string>
+    <string name="cluster_simple_step_done">Выява пацверджана. Спыніце поўнаэкранны рэжым, каб завяршыць праверку.</string>
+    <string name="cluster_simple_step_closed">Поўнаэкранны рэжым спынены. Запусціце яго зноў або націсніце «Завяршыць праверку», каб вярнуцца да экрана BYD.</string>
+    <string name="cluster_simple_step_restart">Тэма выдалена. Націсніце «Вярнуцца да экрана BYD», каб перазапусціць панэль, потым праверце яе вяртанне.</string>
+    <string name="cluster_simple_other">Ідзе іншая праверка панэлі. Націсніце «Вярнуцца да экрана BYD», каб яе завяршыць.</string>
+    <string name="cluster_simple_unknown">Стан панэлі невядомы. Праверце падключэнне DashCast, потым прачытайце стан.</string>
+    <string name="cluster_simple_read">Прачытаць стан панэлі</string>
+    <string name="cluster_simple_load">Загрузіць поўнаэкранную тэму</string>
+    <string name="cluster_simple_choose">Выбраць праграму</string>
+    <string name="cluster_simple_change_app">Змяніць праграму</string>
+    <string name="cluster_simple_start">Запусціць поўнаэкранны рэжым</string>
+    <string name="cluster_simple_confirm">Пацвердзіць, што я бачу</string>
+    <string name="cluster_simple_stop">Спыніць поўнаэкранны рэжым</string>
+    <string name="cluster_simple_finish">Завяршыць праверку</string>
+    <string name="cluster_simple_recover">Вярнуцца да экрана BYD</string>
+    <string name="cluster_simple_wait">Пачакайце…</string>
     <string name="cluster_restart_checking">Праверка захаванага RCC, зыходнага шляху і папкі загрузкі…</string>
-    <string name="cluster_restart_ready">У журнале RCC пазначаны як перамешчаны. Перад перазапускам патрэбна новая праверка.</string>
     <string name="cluster_restart_unknown">Перазапуск падрыхтаваны або адпраўлены. Вынік невядомы. Не паўтарайце: дачакайцеся BYD і праверце экран.</string>
     <string name="cluster_restart_blocked">Перазапуск заблакаваны. Перамяшчэнне або праверка не пацверджаны. Аўтапаўтору няма. Праглядзіце звесткі або адпраўце справаздачу.</string>
     <string name="cluster_restart_parked">Пацвярджаю: аўто нерухомае ў P, стаяначны тормаз уключаны.</string>

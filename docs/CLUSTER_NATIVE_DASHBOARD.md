@@ -5,8 +5,9 @@ libBydCluster / `02dfc7f5…` libBydDataSource cohort, Android 10 / positively
 identified DiLink 3. It is not enabled at boot and does not resume a projection
 after a process restart. Validation on the car remains outstanding.
 
-Open **Diag → DashCast dashboard**. The main flow reads the current connected
-daemon, prepares the dashboard, selects an application, opens it, and records
+Open **Diag → Full-screen cluster → Show details and previous tests**. The numbered
+dashboard steps read the current connected daemon, prepare the dashboard, select
+an application, open it, and record
 the user's visual observation. Every write requires an explicit parked and
 firmware assertion; the checkbox is not a movement sensor. Preparation and
 opening are separated from projection-display discovery. Preparation requires

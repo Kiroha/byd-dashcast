@@ -143,6 +143,8 @@ class ClusterThemeIviRecoveryTest {
         app.getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
     @After fun clear() {
+        awaitWorker()
+        (field("restoreRequested").get(null) as AtomicBoolean).set(false); field("projectionValidity").set(null, null)
         (field("active").get(null) as AtomicBoolean).set(false)
         app.getSharedPreferences("rcc_cluster_operational_debt", Context.MODE_PRIVATE).edit().clear().commit()
     }
@@ -281,20 +283,66 @@ class ClusterThemeIviRecoveryTest {
         assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.recordRetiredQuery(ClusterThemeLiveTest.Exchange(0, default, emptyList(), false)) }
         assertTrue(status().getBoolean("rccDebt"))
     }
-    @Test fun `retirement cannot be admitted without a sealed negative receipt or while another lane is active`() {
-        val same = ClusterThemeProtocol.Response(1005, 0, listOf(3, 0, 0x2330, 0, 0), List(5) { "" })
-        val persisted = own.copy(ints = listOf(1, 0, 0, 0, 0))
-        val invalid = ClusterThemeLiveTest.Exchange(0, persisted, listOf(same), true, "SAME and invalid callback", true)
-        ClusterThemeLiveTest.recordRestoreResult(persisted, invalid, false)
-        assertFalse(status().getBoolean("retirementAvailable"))
-        val valid = invalid.copy(retirementEligible = true)
-        ClusterThemeLiveTest.recordRestoreResult(persisted, valid, false)
-        assertTrue(status().getBoolean("retirementAvailable"))
+    private val live = object : Binder() {
+        override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+            if (code != 1) return false
+            data.enforceInterface("com.byd.dashcast.RccReservation"); reply!!.writeNoException(); reply.writeInt(1); return true
+        }
+    }
+    private fun cohort(j: JSONObject) = j.put("variant", ClusterThemeVariant.CORNER_MARKER_21F7735C.id)
+        .put("carrierSha256", ClusterThemeVariant.CORNER_MARKER_21F7735C.carrierSha256)
+    private fun awaitWorker() {
+        val restoring = field("restoring").get(null) as java.util.concurrent.atomic.AtomicLong
+        val until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+        while (restoring.get() != -1L && System.nanoTime() < until) Thread.sleep(5)
+        assertEquals(-1L, restoring.get())
+    }
+    @Test fun `retirement needs no OEM receipt but is refused while another lane is active`() {
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(cohort(journal())))
+        assertFalse(status().getBoolean("retirementAvailable")); assertTrue(status().getBoolean("carrierMovable"))
         (field("queryActive").get(null) as AtomicBoolean).set(true)
-        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, Binder()) }
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, live) }
         (field("queryActive").get(null) as AtomicBoolean).set(false)
-        set("retirementEligibleUntil", 0L)
-        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, Binder()) }
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, false, true, live) }
+        assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement("b".repeat(32), true, true, live) }
+        val admitted = JSONObject(ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, live))
+        assertTrue(admitted.getString("state") in setOf("RETIRING", "QUARANTINE"))
+        awaitWorker()
+        // This JVM has no Android media path: the move itself is the first failing step, so no OEM query preceded it.
+        val after = status()
+        assertEquals("QUARANTINE", after.getString("state")); assertTrue(after.getBoolean("rccDebt"))
+        assertTrue(after.getString("detail"), after.getString("detail").startsWith("RCC retirement unconfirmed: Only Android primary media user 0"))
+    }
+    @Test fun `historical variant outside the restart cohort keeps the ACK3 retirement admission`() {
+        assertFalse(status().getBoolean("carrierMovable"))
+        val refused = assertThrows(IllegalStateException::class.java) { ClusterThemeLiveTest.requestAndroidRetirement(nonce, true, true, live) }
+        assertTrue(refused.message.orEmpty().contains("First request Restore"))
         assertEquals("QUARANTINE", status().getString("state"))
+    }
+    @Test fun `only an untrusted unloaded or already retired session hides the movable carrier`() {
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(cohort(journal())))
+        set("mutated", false); assertFalse(status().getBoolean("carrierMovable"))
+        set("mutated", true); set("journalTrusted", false); assertFalse(status().getBoolean("carrierMovable"))
+        set("journalTrusted", true)
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(cohort(retiredJournal())))
+        assertFalse(status().getBoolean("carrierMovable"))
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(cohort(retiredJournal(false))))
+        assertTrue(status().getBoolean("carrierMovable"))
+    }
+    @Test fun `fresh default after retirement settles a pending dashboard factory application`() {
+        val dashboard = retiredJournal().put("variant", ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C.id)
+            .put("carrierSha256", ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C.carrierSha256)
+            .put("dashboard", JSONObject().put("stage", "CLOSED_RECEIVED").put("nativeDebt", false)
+                .put("helperCommand", -1).put("helperPid", 0).put("helperStart", "").put("helperToken", ""))
+            .put("factoryApplyPending", true)
+        ClusterThemeLiveTest.applyRecoveredJournal(ClusterThemeJournal.recover(dashboard))
+        assertTrue(status().getBoolean("factoryApplyPending"))
+        val (queried, mutations) = exchange(default, operation = "query")
+        assertTrue(mutations.isEmpty()); ClusterThemeLiveTest.recordRetiredQuery(queried)
+        assertFalse(status().getBoolean("factoryApplyPending")); assertEquals("DEFAULT_QUERIED", status().getString("state"))
+        assertTrue(ClusterThemeLiveTest.acceptOemObservation(name))
+        var preservationChecks = 0
+        ClusterThemeLiveTest.completeRecovery({ preservationChecks++; true }, {})
+        assertEquals(1, preservationChecks); assertEquals("CLEAN", status().getString("state"))
     }
 }

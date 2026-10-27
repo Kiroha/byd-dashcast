@@ -11,10 +11,6 @@ import java.util.UUID
 
 /** Same-filesystem rename retains the inode and any Qt mapping. No overwrite, unlink or OEM call is intended. */
 internal object ClusterThemeRetiredStorage {
-    fun originalAbsent(name: String, parentIdentity: String): Boolean = ClusterThemeAndroidStorage.withDirectory { parent, directory ->
-        check(ClusterThemePolicy.ownedName(name) && directory.identity == parentIdentity)
-        absent(File(parent, name))
-    }
     private fun absent(file: File): Boolean = try { Os.lstat(file.path); false } catch (error: ErrnoException) {
         if (error.errno == OsConstants.ENOENT) true else throw error
     }

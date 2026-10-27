@@ -258,9 +258,10 @@ class ClusterThemeLiveControlsTest {
             assertEquals(activity.get().getString(R.string.cluster_wizard_recovery), status.text.toString())
         } finally { controls.close(); activity.pause().stop().destroy(); vf.set(null, previous) }
     }
-    @Test fun `dashboard main flow keeps details folded and distinguishes preparation receipts and user observation`() {
+    @Test fun `dashboard main flow keeps details folded and guides the full-screen test with one primary action`() {
         val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
-        val previousVersion = vf.get(null); vf.set(null, "43")
+        val previousVersion = vf.get(null); vf.set(null, "46")
+        fun member(name: String) = ClusterThemeLiveControls::class.java.getDeclaredField(name).apply { isAccessible = true }
         val c = Robolectric.buildActivity(DiagActivity::class.java).setup()
         try {
             val all = views(c.get().findViewById(android.R.id.content))
@@ -270,42 +271,101 @@ class ClusterThemeLiveControlsTest {
             assertFalse(raw.isShown)
             val controls = DiagActivity::class.java.getDeclaredField("liveThemeControls").apply { isAccessible = true }.get(c.get()) as ClusterThemeLiveControls
             val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
-            val main = ClusterThemeLiveControls::class.java.getDeclaredField("dashboardStatus").apply { isAccessible = true }.get(controls) as TextView
+            val main = member("dashboardStatus").get(controls) as TextView
+            val next = member("workflowNext").get(controls) as Button
+            val changeApp = member("workflowChangeApp").get(controls) as Button
+            val stop = member("workflowStop").get(controls) as Button
+            val finish = member("workflowFinish").get(controls) as Button
             val open = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_open) }
             val observe = all.filterIsInstance<Button>().single { it.text == c.get().getString(R.string.diag_cluster_dashboard_observe) }
+            assertFalse("Previous step buttons stay folded", open.isShown)
+            fun text(id: Int, vararg args: Any) = c.get().getString(id, *args)
+            fun expect(message: String, primary: Int, enabled: Boolean, vararg secondary: Button) {
+                assertEquals(message, main.text.toString())
+                assertTrue(next.isShown); assertEquals(text(primary), next.text.toString()); assertEquals(enabled, next.isEnabled)
+                for (button in listOf(changeApp, stop, finish)) assertEquals(button.text.toString(), button in secondary, button.isShown)
+            }
             val dashboard = JSONObject().put("stage", "NONE").put("selectionReady", false).put("pending", false)
-            val receipt = JSONObject().put("variant", ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id).put("rccDebt", true)
+            val receipt = JSONObject().put("variant", ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C.id).put("rccDebt", true)
                 .put("filename", "owned-fixture").put("phase", "carrier-staging").put("dashboard", dashboard)
             render.invoke(controls, receipt)
             assertFalse(open.isEnabled); assertFalse(observe.isEnabled)
-            assertEquals(c.get().getString(R.string.cluster_wizard_wait), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.cluster_wizard_wait), R.string.cluster_simple_wait, false)
             dashboard.put("selectionReady", true); receipt.put("phase", "observation"); render.invoke(controls, receipt)
             assertTrue(open.isEnabled); assertFalse(observe.isEnabled)
+            expect(text(R.string.cluster_wizard_choose), R.string.cluster_simple_choose, true)
+            member("dashboardPackage").set(null, "com.example.maps"); member("dashboardLabel").set(null, "Maps")
+            render.invoke(controls, receipt)
+            expect(text(R.string.cluster_simple_step_start, "Maps"), R.string.cluster_simple_start, true, changeApp)
             dashboard.put("stage", "OPEN_RECEIVED").put("round", "a".repeat(32)); render.invoke(controls, receipt)
             assertFalse(open.isEnabled); assertTrue(observe.isEnabled)
-            assertEquals(c.get().getString(R.string.cluster_wizard_observe), main.text.toString().substringBefore('\n'))
-            dashboard.put("pixels", "USER_REPORTED"); receipt.put("themeObservedByUser", true); render.invoke(controls, receipt)
-            assertEquals(c.get().getString(R.string.cluster_wizard_observe), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.cluster_wizard_observe), R.string.cluster_simple_confirm, true, stop)
+            dashboard.put("pending", true); render.invoke(controls, receipt)
+            expect(text(R.string.cluster_wizard_observe), R.string.cluster_simple_wait, false, stop)
+            dashboard.put("pending", false).put("stage", "OPENING"); render.invoke(controls, receipt)
+            expect(text(R.string.cluster_wizard_wait), R.string.cluster_simple_wait, false, stop)
+            dashboard.put("stage", "OPEN_RECEIVED").put("pixels", "USER_REPORTED"); receipt.put("themeObservedByUser", true); render.invoke(controls, receipt)
+            expect(text(R.string.cluster_simple_step_done), R.string.cluster_simple_stop, true)
             dashboard.put("stage", "CLOSED_RECEIVED"); render.invoke(controls, receipt)
             assertTrue(open.isEnabled); assertFalse(observe.isEnabled)
+            expect(text(R.string.cluster_simple_step_closed), R.string.cluster_simple_start, true, changeApp, finish)
             dashboard.put("stage", "NONE").put("bootstrapStarted", true)
             receipt.put("mutated", false).put("state", "PREFLIGHT").put("phase", "dashboard-bootstrap-16")
             render.invoke(controls, receipt)
-            assertEquals(c.get().getString(R.string.cluster_wizard_wait), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.diag_cluster_dashboard_bootstrap), R.string.cluster_simple_wait, false)
             receipt.put("phase", "dashboard-display-wait"); render.invoke(controls, receipt)
-            assertEquals(c.get().getString(R.string.cluster_wizard_wait), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.diag_cluster_dashboard_display_wait), R.string.cluster_simple_wait, false)
             receipt.put("state", "QUARANTINE").put("uncertain", true); render.invoke(controls, receipt)
-            assertEquals(c.get().getString(R.string.cluster_wizard_recovery), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.cluster_wizard_recovery), R.string.cluster_simple_recover, true)
+            receipt.put("uncertain", false).put("variant", ClusterThemeVariant.FULL_DASHBOARD_21F7735C.id); render.invoke(controls, receipt)
+            expect(text(R.string.cluster_simple_other), R.string.cluster_simple_recover, true)
+            receipt.put("variant", ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C.id).put("retirement", JSONObject().put("moved", true))
             render.invoke(controls, receipt)
-            assertEquals(c.get().getString(R.string.cluster_wizard_recovery), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.cluster_simple_step_restart), R.string.cluster_simple_recover, true)
+            receipt.remove("retirement")
             dashboard.put("geometry", JSONObject().put("verdict", "SMALL"))
             receipt.put("state", "CLEAN").put("rccDebt", false); render.invoke(controls, receipt)
-            assertEquals(c.get().getString(R.string.cluster_wizard_offline), main.text.toString().substringBefore('\n'))
+            expect(text(R.string.cluster_wizard_offline), R.string.cluster_simple_load, true)
+            vf.set(null, "45"); render.invoke(controls, receipt)
+            expect(text(R.string.diag_cluster_dashboard_protocol, 46), R.string.cluster_simple_read, true)
+            vf.set(null, "46")
             val message = ClusterThemeLiveControls::class.java.getDeclaredMethod("dashboardMessage", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).apply { isAccessible = true }
             message.invoke(controls, R.string.diag_cluster_dashboard_geometry, 43)
             assertTrue(main.isShown); assertEquals(c.get().getString(R.string.diag_cluster_dashboard_geometry), main.text)
-            details.performClick(); assertTrue(raw.isShown)
-        } finally { c.pause().stop().destroy(); busy.set(false); vf.set(null, previousVersion) }
+            details.performClick(); assertTrue(raw.isShown); assertTrue(open.isShown)
+        } finally {
+            member("dashboardPackage").set(null, ""); member("dashboardLabel").set(null, "")
+            c.pause().stop().destroy(); busy.set(false); vf.set(null, previousVersion)
+        }
+    }
+    @Test fun `small cluster latch hides the full-screen action and leaves Restore as the only exit`() {
+        val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
+        val previous = vf.get(null); vf.set(null, "46")
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val panel = LinearLayout(activity.get()); val dashboard = LinearLayout(activity.get())
+        val controls = ClusterThemeLiveControls(activity.get(), LinearLayout(activity.get()), panel, { true }, {}, { false }, {}, dashboardContainer = dashboard)
+        val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
+        fun member(name: String) = ClusterThemeLiveControls::class.java.getDeclaredField(name).apply { isAccessible = true }.get(controls)
+        val main = member("dashboardStatus") as TextView
+        val next = member("workflowNext") as Button
+        try {
+            com.byd.dashcast.data.prefs.ClusterPrefs.latchSmallClusterPanel(activity.get())
+            val clean = JSONObject().put("state", "CLEAN").put("rccDebt", false).put("filename", "owned-fixture")
+            render.invoke(controls, clean)
+            assertEquals(activity.get().getString(R.string.diag_cluster_dashboard_small_panel), main.text.toString())
+            assertEquals(View.GONE, next.visibility)
+            val owned = JSONObject().put("variant", ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C.id).put("rccDebt", true)
+                .put("filename", "owned-fixture").put("phase", "observation")
+                .put("dashboard", JSONObject().put("stage", "NONE").put("selectionReady", true).put("pending", false))
+            render.invoke(controls, owned)
+            assertEquals(activity.get().getString(R.string.diag_cluster_dashboard_small_panel), main.text.toString())
+            assertEquals(View.VISIBLE, next.visibility); assertTrue(next.isEnabled)
+            assertEquals(activity.get().getString(R.string.cluster_simple_recover), next.text.toString())
+        } finally {
+            controls.close(); activity.pause().stop().destroy(); vf.set(null, previous)
+            activity.get().getSharedPreferences(com.byd.dashcast.data.prefs.ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().remove("small_cluster_panel_seen").commit()
+        }
     }
     @Test fun `foreground dashboard validity captured before queueing cannot revive after pause and a new activation`() {
         val prior = ClusterThemeLiveControls::class.java.getDeclaredField("reservation").apply { isAccessible = true }.get(null)
@@ -627,7 +687,7 @@ class ClusterThemeLiveControlsTest {
             val render = ClusterThemeLiveControls::class.java.getDeclaredMethod("renderDashboard", JSONObject::class.java).apply { isAccessible = true }
             repeat(2) {
                 render.invoke(controls, JSONObject().put("state", "IDLE").put("rccDebt", false))
-                assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol, 43) })
+                assertTrue(views(main).filterIsInstance<TextView>().any { it.text == c.get().getString(R.string.diag_cluster_dashboard_protocol, 46) })
             }
             assertFalse(ClusterThemeProjectionDebt.blocked(c.get()))
         } finally { c.get().finish.countDown(); controls.close(); c.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version) }

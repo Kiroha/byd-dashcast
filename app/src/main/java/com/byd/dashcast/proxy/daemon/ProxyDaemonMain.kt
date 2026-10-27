@@ -140,7 +140,7 @@ object ProxyDaemonMain {
      *  around a normal projection cycle). All three read-only or purely observational.
      *  v25: WHOAMI adds a per-process instance nonce for race-free hung-daemon recovery.
      *  Purely additive — old clients keep working unchanged. */
-    private const val PROTOCOL_VERSION = "45"
+    private const val PROTOCOL_VERSION = "46"
 
     /** Process name shown in `ps` after the JVM's `setArgV0` runs. */
     private const val PROC_NAME = "dashcast_proxy"
@@ -825,7 +825,7 @@ object ProxyDaemonMain {
                                 check(data.dataAvail() == 0) { "Unsupported native mode request" }
                                 ClusterThemeLiveTest.nativeModeRequest(full, nonce, parked, firmware, validity)
                             }
-                            11, 12, 15, 18, 19, 24 -> {
+                            11, 12, 15, 18, 19, 24, 30 -> {
                                 val source = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
                                 try {
                                     val parked = data.readInt() == 1; val firmware = data.readInt() == 1
@@ -839,6 +839,7 @@ object ProxyDaemonMain {
                                             15 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER
                                             18 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.CORNER_MARKER_21F7735C
                                             19 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_DASHBOARD_21F7735C
+                                            30 -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C
                                             else -> com.byd.dashcast.clusterlive.ClusterThemeVariant.FULL_APP_21F7735C
                                         })
                                 } catch (error: Throwable) { runCatching { source.close() }; throw error }

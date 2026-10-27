@@ -767,7 +767,7 @@
     <string name="diag_cluster_rcc_debt">Ein RCC-Test ist noch offen. Nutze „Kombiinstrument wiederherstellen“ oder „BYD-Rückkehr prüfen“ und folge dem Ergebnis und dem vorgeschlagenen nächsten Schritt. Die Sichtprüfung erscheint erst nach Prüfung der BYD-Standardauswahl.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test verweigert: Android 10 und eindeutige DiLink-3-Erkennung erforderlich. Kein RCC gesendet.</string>
     <string name="diag_cluster_page_title">Kombiinstrument: Projektion und RCC</string>
-    <string name="diag_cluster_page_description">BYD-Projektion mit Leisten und RCC-Eckprüfung</string>
+    <string name="diag_cluster_page_description">Vollbild-Thema testen und zur BYD-Anzeige zurückkehren</string>
     <string name="diag_cluster_native_rcc_blocked">RCC-Test blockiert die BYD-Projektion</string>
     <string name="diag_cluster_rcc_retire_button">BYD-Rückkehr nach RCC-Fehler vorbereiten</string>
     <string name="diag_cluster_rcc_retire_confirm">Verschiebt nur das DashCast-Test-RCC und bewahrt seine Bytes. Noch kein Neustart. Danach werden Dateien geprüft und gegebenenfalls eine separate Neustartzustimmung angefordert.</string>
@@ -807,16 +807,30 @@
     <string name="startup_app_selected">Start-App — ändern…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Aktuellen Zustand prüfen, dem nächsten Schritt folgen und die Anzeige im Kombiinstrument bestätigen. Wiederherstellen bleibt oben erreichbar.</string>
+    <string name="cluster_wizard_intro">Nur im Stand mit P verwenden. „Kombiinstrument wiederherstellen“ oben bleibt jederzeit verfügbar.</string>
     <string name="cluster_wizard_advanced">Frühere Tests und technische Details</string>
-    <string name="cluster_wizard_next">Nächsten Schritt anzeigen</string>
     <string name="cluster_wizard_wait">Vorgang läuft. Vor dem Fortfahren das Ergebnis abwarten.</string>
-    <string name="cluster_wizard_offline">Das neue Vollbildprofil wird noch am PC geprüft. Hier kann kein neues Vollbild-RCC geladen werden.</string>
-    <string name="cluster_wizard_recovery">Eine Sitzung muss wiederhergestellt werden. Kombiinstrument wiederherstellen wählen und den Schritten folgen.</string>
-    <string name="cluster_wizard_observe">Projektion wurde angefordert. Anzeige bestätigen oder Projektion schließen.</string>
-    <string name="cluster_wizard_choose">Eine Anwendung wählen, dann die Projektion öffnen.</string>
+    <string name="cluster_wizard_offline">Schritt 1 von 4 · Vollbild-Thema laden. Das Kombiinstrument behält die BYD-Anzeige bis zum Start.</string>
+    <string name="cluster_wizard_recovery">Das Kombiinstrument muss wiederhergestellt werden. Tippen Sie auf „Zurück zur BYD-Anzeige“ und folgen Sie den Schritten.</string>
+    <string name="cluster_wizard_observe">Schritt 4 von 4 · Die App sollte das ganze Kombiinstrument ausfüllen. Bestätigen Sie, was Sie sehen, oder beenden Sie das Vollbild.</string>
+    <string name="cluster_wizard_choose">Schritt 2 von 4 · App für das Kombiinstrument wählen.</string>
+    <string name="cluster_simple_step_start">Schritt 3 von 4 · Vollbild mit %1$s starten. BYD-Instrumente, Kontrollleuchten und Warnungen sind während des Tests ausgeblendet.</string>
+    <string name="cluster_simple_step_done">Anzeige bestätigt. Beenden Sie das Vollbild, um den Test abzuschließen.</string>
+    <string name="cluster_simple_step_closed">Vollbild beendet. Erneut starten oder „Test beenden“ tippen, um zur BYD-Anzeige zurückzukehren.</string>
+    <string name="cluster_simple_step_restart">Thema entfernt. Tippen Sie auf „Zurück zur BYD-Anzeige“, um das Kombiinstrument neu zu starten, und prüfen Sie dann die Rückkehr.</string>
+    <string name="cluster_simple_other">Ein anderer Test des Kombiinstruments läuft. Tippen Sie auf „Zurück zur BYD-Anzeige“, um ihn zu beenden.</string>
+    <string name="cluster_simple_unknown">Status des Kombiinstruments unbekannt. Prüfen Sie die Verbindung von DashCast und lesen Sie dann den Status.</string>
+    <string name="cluster_simple_read">Status des Kombiinstruments lesen</string>
+    <string name="cluster_simple_load">Vollbild-Thema laden</string>
+    <string name="cluster_simple_choose">App wählen</string>
+    <string name="cluster_simple_change_app">App wechseln</string>
+    <string name="cluster_simple_start">Vollbild starten</string>
+    <string name="cluster_simple_confirm">Anzeige bestätigen</string>
+    <string name="cluster_simple_stop">Vollbild beenden</string>
+    <string name="cluster_simple_finish">Test beenden</string>
+    <string name="cluster_simple_recover">Zurück zur BYD-Anzeige</string>
+    <string name="cluster_simple_wait">Bitte warten…</string>
     <string name="cluster_restart_checking">Gesichertes RCC, ursprünglichen Pfad und Ladeverzeichnis prüfen…</string>
-    <string name="cluster_restart_ready">Laut Protokoll wurde das RCC verschoben. Vor einem Neustart ist eine neue Prüfung nötig.</string>
     <string name="cluster_restart_unknown">Ein Neustart wurde vorbereitet oder angefordert. Ergebnis unbekannt. Nicht erneut senden: auf BYD warten und Anzeige prüfen.</string>
     <string name="cluster_restart_blocked">Neustart gesperrt. Verschieben oder Prüfung nicht bestätigt. Kein automatischer Wiederholungsversuch. Details lesen oder Bericht senden.</string>
     <string name="cluster_restart_parked">Ich bestätige: Fahrzeug steht in P, Feststellbremse angezogen.</string>

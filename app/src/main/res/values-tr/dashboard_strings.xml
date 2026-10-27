@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">DashCast gösterge paneli</string>
+    <string name="diag_cluster_dashboard_title">Tam ekran gösterge</string>
     <string name="diag_cluster_dashboard_help">Araç park halindeyken elle test edin. Kapatınca profil seçili kalır. Eski APK yüklemeden önce fabrika profilini geri yükleyip doğrulayın.</string>
     <string name="diag_cluster_dashboard_read">1 · Durum ve uyumluluğu oku</string>
     <string name="diag_cluster_dashboard_prepare">2 · Paneli hazırla</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Fabrika seçimini uygula</string>
     <string name="diag_cluster_factory_apply_confirm">Fabrika profili ayarlı ancak yerel uygulanması doğrulanmalı. BYD projeksiyonunu bir kez değiştir, kapat ve seçimi tekrar oku. Özel RCC veya tekrarlanan fabrika seçimi gönderilmez. Park ve firmware durumunu onayla.</string>
     <string name="diag_cluster_full_app_observe_message">Eski profil açılamaz veya hazır olarak onaylanamaz. Geri yükle seçeneğini kullan, ardından BYD göstergeleri ve uyarılarının geri döndüğünü ayrıca onayla.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Minimal tam ekranı hazırla</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Minimal test: tam ekran projeksiyon modunda gösterge paneli tamamen saydam olur ve uygulama 1920 × 720 pikselin tamamını kaplar. BYD göstergeleri, uyarı lambaları ve uyarılar bu test sırasında gizlenir. Park durumunu ve yazılımı onayla; bu beyan hareketi ölçmez.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Yalnızca uygulamayı tüm gösterge panelinde görüyorsan onayla. BYD göstergeleri, uyarı lambaları ve uyarılar bu test profilinde gizlidir. Komut onayı bu görüntüyü kanıtlamaz.</string>
 </resources>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">DashCast аспаптар тақтасы</string>
+    <string name="diag_cluster_dashboard_title">Толық экрандағы панель</string>
     <string name="diag_cluster_dashboard_help">Көлік тоқтап тұрғанда қолмен сынау. Жапқаннан кейін профиль таңдалған күйде қалады. Ескі APK орнатпас бұрын зауыттық профильді қалпына келтіріп, тексеріңіз.</string>
     <string name="diag_cluster_dashboard_read">1 · Күй мен үйлесімділікті оқу</string>
     <string name="diag_cluster_dashboard_prepare">2 · Тақтаны дайындау</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Зауыттық таңдауды қолдану</string>
     <string name="diag_cluster_factory_apply_confirm">Зауыт профилі таңдалған, бірақ оның қолданылуын тексеру керек. BYD проекциясын бір рет ауыстырып, жауып, таңдауды қайта оқыңыз. Өз RCC файлы не қайталама зауыт таңдауы жіберілмейді. Тұрақ пен микробағдарламаны растаңыз.</string>
     <string name="diag_cluster_full_app_observe_message">Ескі профильді ашуға немесе дайын деп растауға болмайды. Қалпына келтіруді пайдаланып, содан кейін BYD аспаптары мен ескертулерінің оралғанын бөлек растаңыз.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Минималды толық экранды дайындау</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Минималды сынақ: толық экранды проекция режимінде аспаптар тақтасы толығымен мөлдір болады, ал қолданба барлық 1920 × 720 пиксельді алады. BYD аспаптары, индикаторлары мен ескертулері осы сынақ кезінде жасырылады. Тұраққа қойылғанын және микробағдарламаны растаңыз; бұл мәлімдеме қозғалысты өлшемейді.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Қолданбаны бүкіл аспаптар тақтасында көрсеңіз ғана растаңыз. BYD аспаптары, индикаторлары мен ескертулері осы сынақ профилінде жасырылған. Команда түбіртегі бұл көріністі дәлелдемейді.</string>
 </resources>

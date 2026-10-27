@@ -710,7 +710,7 @@
     <string name="diag_cluster_rcc_debt">Um teste RCC ainda precisa ser encerrado. Use « Restaurar painel » ou « Verificar o retorno BYD » e siga o resultado e a etapa proposta. A pergunta visual só aparece após verificar a seleção BYD padrão.</string>
     <string name="diag_cluster_rcc_ivi_platform">Teste recusado: requer Android 10 e detecção positiva do DiLink 3. Nenhum RCC enviado.</string>
     <string name="diag_cluster_page_title">Painel: projeção e RCC</string>
-    <string name="diag_cluster_page_description">Projeção BYD com faixas e verificação RCC nos cantos</string>
+    <string name="diag_cluster_page_description">Teste do tema em tela cheia e retorno à tela BYD</string>
     <string name="diag_cluster_native_rcc_blocked">Projeção BYD bloqueada por um teste RCC</string>
     <string name="diag_cluster_rcc_retire_button">Preparar o retorno BYD após erro RCC</string>
     <string name="diag_cluster_rcc_retire_confirm">Move apenas o RCC de teste DashCast e preserva seus bytes. Sem reinicialização nesta etapa. Depois verifica os arquivos e solicita consentimento separado, se disponível.</string>
@@ -750,16 +750,30 @@
     <string name="startup_app_selected">Aplicativo de inicialização — alterar…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Confira o estado, siga a próxima etapa e confirme o que vê no painel. Restaurar permanece disponível no topo.</string>
+    <string name="cluster_wizard_intro">Use somente com o veículo parado em P. “Restaurar painel”, no topo, continua disponível a qualquer momento.</string>
     <string name="cluster_wizard_advanced">Testes anteriores e detalhes técnicos</string>
-    <string name="cluster_wizard_next">Mostrar próxima etapa</string>
     <string name="cluster_wizard_wait">Operação em andamento. Aguarde o resultado antes de continuar.</string>
-    <string name="cluster_wizard_offline">O novo perfil de tela inteira ainda está em validação no PC. Nenhum novo RCC de tela inteira pode ser carregado aqui.</string>
-    <string name="cluster_wizard_recovery">Uma sessão precisa de restauração. Use Restaurar painel e siga as etapas.</string>
-    <string name="cluster_wizard_observe">Projeção solicitada. Confirme o que vê ou feche a projeção.</string>
-    <string name="cluster_wizard_choose">Escolha um aplicativo e abra a projeção.</string>
+    <string name="cluster_wizard_offline">Etapa 1 de 4 · Carregue o tema em tela cheia. O painel mantém a tela BYD até o início.</string>
+    <string name="cluster_wizard_recovery">O painel precisa ser restaurado. Toque em “Voltar à tela BYD” e siga as etapas.</string>
+    <string name="cluster_wizard_observe">Etapa 4 de 4 · O aplicativo deve ocupar todo o painel. Confirme o que vê ou pare a tela cheia.</string>
+    <string name="cluster_wizard_choose">Etapa 2 de 4 · Escolha o aplicativo que será mostrado no painel.</string>
+    <string name="cluster_simple_step_start">Etapa 3 de 4 · Inicie a tela cheia com %1$s. Instrumentos, luzes de aviso e alertas BYD ficarão ocultos durante o teste.</string>
+    <string name="cluster_simple_step_done">Exibição confirmada. Pare a tela cheia para concluir o teste.</string>
+    <string name="cluster_simple_step_closed">Tela cheia parada. Inicie novamente ou toque em “Concluir teste” para voltar à tela BYD.</string>
+    <string name="cluster_simple_step_restart">Tema removido. Toque em “Voltar à tela BYD” para reiniciar o painel e depois confira o retorno.</string>
+    <string name="cluster_simple_other">Outro teste do painel está em andamento. Toque em “Voltar à tela BYD” para concluí-lo.</string>
+    <string name="cluster_simple_unknown">Estado do painel desconhecido. Verifique se o DashCast está conectado e leia o estado.</string>
+    <string name="cluster_simple_read">Ler o estado do painel</string>
+    <string name="cluster_simple_load">Carregar tema em tela cheia</string>
+    <string name="cluster_simple_choose">Escolher aplicativo</string>
+    <string name="cluster_simple_change_app">Trocar de aplicativo</string>
+    <string name="cluster_simple_start">Iniciar tela cheia</string>
+    <string name="cluster_simple_confirm">Confirmar o que vejo</string>
+    <string name="cluster_simple_stop">Parar tela cheia</string>
+    <string name="cluster_simple_finish">Concluir teste</string>
+    <string name="cluster_simple_recover">Voltar à tela BYD</string>
+    <string name="cluster_simple_wait">Aguarde…</string>
     <string name="cluster_restart_checking">Verificando o RCC preservado, o local original e a pasta de carregamento…</string>
-    <string name="cluster_restart_ready">O registro indica que o RCC foi movido. É preciso verificar novamente antes de oferecer a reinicialização.</string>
     <string name="cluster_restart_unknown">Uma reinicialização foi preparada ou enviada. Resultado desconhecido. Não repita: aguarde o retorno BYD e confira a tela.</string>
     <string name="cluster_restart_blocked">Reinicialização bloqueada. Movimentação ou verificação não confirmada. Sem nova tentativa automática. Leia os detalhes ou envie um relatório.</string>
     <string name="cluster_restart_parked">Confirmo: veículo imobilizado em P, freio de estacionamento acionado.</string>

@@ -1,28 +1,36 @@
 # Guided cluster diagnostics and explicit maintenance restart
 
-Implementation checkpoint: 2026-10-26. This change introduces a guided Android
-UI and a guarded restart request; it does not validate recovery from failed QML
-on a vehicle. The offline minimal/full-screen research artifacts remain
-unavailable for loading. The retired full-app profile remains recovery-only.
+Implementation checkpoint: 2026-10-27 (build 721). This change introduces a guided
+Android UI and a guarded restart request; it does not validate recovery from failed
+QML on a vehicle. The minimal full-screen profile (**2c**) is a manual parked test.
+The retired full-app profile remains recovery-only.
 
 ## User flow
 
-Open **Diag → DashCast dashboard**. The main page shows a concise current state,
-a read-status action and the applicable next action. Previous load tests, raw
-receipts and native diagnostic controls are under **Show details and previous
-tests**. The fixed **Restore cluster** action stays available outside the scroll
-area, including when an ordinary diagnostic is busy.
+Open **Diag → Full-screen cluster**. The main card shows the current step and
+one main button: load the full-screen theme, choose the app, start full screen,
+confirm what is seen, then stop. **Stop full screen** stays visible while the
+application is shown or opening, and **Finish test** runs Restore. When a session
+needs recovery, the main button becomes **Return to BYD display**, which is the
+same action as **Restore cluster**. Previous load tests, raw receipts and native
+diagnostic controls are under **Show details and previous tests**. The fixed
+**Restore cluster** action stays available outside the scroll area, including
+when an ordinary diagnostic is busy.
 
 1. Tap **Restore cluster**. DashCast reads the currently connected daemon and
    closes its projected resources. No reboot occurs from this tap.
-2. Complete the parked/recovery confirmation. Existing manual recovery is
-   requested. Moving a carrier still requires the existing fresh exact-own
-   selection and sealed ACK3 `RESOURCE_IS_SAME` eligibility; this change does not
-   invent permission when Qt or the helper cannot answer.
-3. If retirement is eligible, follow the separate preparation prompt. Only the
-   journal-owned DashCast RCC is moved into a new hidden recovery directory. Its
-   bytes, device/inode and hash are preserved; factory and foreign resources are
-   never removed. A failed or incomplete move blocks the restart path.
+2. Complete the parked/recovery confirmation. Since build 721 / protocol 46, a
+   loaded journal-owned carrier of the restart cohort is moved directly: no OEM
+   query, default request or ACK3 `RESOURCE_IS_SAME` receipt is required first,
+   because a failed QML root can leave the OEM unable to answer. Historical
+   profiles outside that cohort and older daemons keep the ACK3-gated preparation.
+3. Only the journal-owned DashCast RCC is moved into a new hidden recovery
+   directory. Its bytes, device/inode and hash are preserved; factory and foreign
+   resources are never removed. A failed or incomplete move blocks the restart path.
+   For dashboard profiles, the native projection mode is closed right after the
+   move; if that close fails, it is retried during the post-restart verification.
+   If the vehicle was already restarted externally, the restart prompt offers
+   **Verify BYD return** instead of a second restart.
 4. After retirement, the wizard obtains a fresh file proof. It checks the retired
    inode/hash, absent original name, pinned directory generations and a bounded,
    successfully enumerated lookup directory with no remaining DashCast-prefixed
@@ -46,6 +54,28 @@ area, including when an ordinary diagnostic is busy.
 The user assertions do not establish measured movement. Unknown movement is never
 converted to parked by the application. Setup and recovery require a suitable
 stationary test context.
+
+## Why moving the file is sufficient
+
+Static analysis of the installed `libBydDataSource.so`
+(`02dfc7f5aa046167a3d829c69ef8ee97fd301cf9081450b86366319566c10ae8`, pulled
+read-only from the vehicle on 2026-10-27; Ghidra 12.1.4 headless, because REA's
+Windows Ghidra provider refuses ARM64 ELF) shows:
+
+- `BusinessUi1::updateTranslateRccFromXml` (`0x21c068`) reads the persisted
+  translate selection (config key `0x38`), builds
+  `/data/cells/cell2-rw/data/media/0/.cluster/translate/<name>` and calls
+  `access(path, F_OK)`. A missing file logs `translate rcc file not exists`,
+  writes the default value back with `SetConfig_STRING(0x38, …)` and publishes
+  the default translation data items 5 and 7. An unmatched UI prefix does the same.
+- Its only caller is `updateThemeRcc` (`0x21bb88`), reached from
+  `callbackSelfStudyComplete` (`0x21b9f0`) and the start-up `cluSizeCheck` timer
+  (`0x21be70`), plus CAN size updates and a debug command.
+
+The host DataSource therefore returns to the factory selection at its next start
+once our file is absent. An Android-only reboot does not restart that host
+service, which matches the earlier observation that it did not recover the
+cluster. Runtime confirmation on the parked vehicle is still required.
 
 ## Authorization, lifecycle and failure behavior
 

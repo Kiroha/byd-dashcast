@@ -14,10 +14,14 @@ enum class ClusterThemeVariant(val id: String, val startOperation: Int, val asse
     FULL_DASHBOARD_21F7735C("full-dashboard-21f7735c", 19, "cluster_live/full_dashboard_21f7735c.rcc",
         "8a96299b3acc1cffd2eaf2a57cf94cd2ae26dfd90b5fb6204a0182baea6ac250", 43),
     FULL_APP_21F7735C("full-app-21f7735c", 24, "cluster_live/full_app_21f7735c.rcc",
-        "b121e6622f560a04a583c352977813ebc69047635f28cc0dee77ffeec78d007b", 44);
+        "b121e6622f560a04a583c352977813ebc69047635f28cc0dee77ffeec78d007b", 44),
+    FULLSCREEN_MINIMAL_21F7735C("fullscreen-minimal-21f7735c", 30, "cluster_live/fullscreen_minimal_21f7735c.rcc",
+        "50c989cda02fd24b7945517780f76a0b9fee2309b149f977993458fdb81a2cac", 46);
 
-    val isDashboard: Boolean get() = this == FULL_DASHBOARD_21F7735C || this == FULL_APP_21F7735C
+    val isDashboard: Boolean get() = this == FULL_DASHBOARD_21F7735C || this == FULL_APP_21F7735C ||
+        this == FULLSCREEN_MINIMAL_21F7735C
     val isFullApp: Boolean get() = this == FULL_APP_21F7735C
+    val isFullScreen: Boolean get() = this == FULL_APP_21F7735C || this == FULLSCREEN_MINIMAL_21F7735C
     // Keep the historical id/hash and debt schema readable, but never load it again.
     val isRecoveryOnly: Boolean get() = this == FULL_APP_21F7735C
     val isMarker: Boolean get() = this != FULL_SURFACE_TEST && !isDashboard

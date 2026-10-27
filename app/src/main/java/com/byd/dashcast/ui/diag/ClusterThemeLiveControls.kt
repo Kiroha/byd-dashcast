@@ -77,6 +77,14 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     private var restartWizardRequested = false
     private val restartSettlementPending = AtomicBoolean(false)
     private var workflowNext: Button? = null
+    private var workflowChangeApp: Button? = null
+    private var workflowStop: Button? = null
+    private var workflowFinish: Button? = null
+    private enum class SimpleStep(val label: Int?) {
+        READ(R.string.cluster_simple_read), LOAD(R.string.cluster_simple_load), CHOOSE(R.string.cluster_simple_choose),
+        START(R.string.cluster_simple_start), CONFIRM(R.string.cluster_simple_confirm), STOP(R.string.cluster_simple_stop),
+        RECOVER(R.string.cluster_simple_recover), WAIT(R.string.cluster_simple_wait), PROJECTING(R.string.cluster_simple_wait), NONE(null)
+    }
     private var legacyActions: LinearLayout? = null
     @Volatile private var active = false
     @Volatile private var activation = 0L
@@ -128,21 +136,37 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
     init {
         dashboardUi = java.lang.ref.WeakReference(this)
         dashboardContainer?.let { host ->
-            host.addView(TextView(activity).apply { text = activity.getString(R.string.diag_cluster_dashboard_title); textSize = 20f; isAccessibilityHeading = true })
-            host.addView(TextView(activity).apply { text = activity.getString(R.string.cluster_wizard_intro); textSize = 15f })
-            host.addView(dashboardStatus)
+            val density = activity.resources.displayMetrics.density
+            // One guided full-screen card; every other cluster test stays in the folded details.
+            host.addView(dashboardStatus.apply { textSize = 18f })
+            workflowNext = Button(activity).apply {
+                isAllCaps = false; textSize = 20f; minHeight = (72 * density).toInt()
+                setOnClickListener { nextWorkflowStep() }
+            }.also(host::addView)
+            val secondaryRow = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
+            fun secondary(label: Int, run: () -> Unit) = Button(activity).apply {
+                text = activity.getString(label); isAllCaps = false; contentDescription = text
+                minHeight = (56 * density).toInt(); visibility = android.view.View.GONE
+                setOnClickListener { run() }
+            }.also { secondaryRow.addView(it, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)) }
+            workflowChangeApp = secondary(R.string.cluster_simple_change_app) { chooseDashboardApp() }
+            workflowStop = secondary(R.string.cluster_simple_stop) { confirmDashboard(false) }
+            workflowFinish = secondary(R.string.cluster_simple_finish) { restoreButton.performClick() }
+            host.addView(secondaryRow)
+            host.addView(TextView(activity).apply { text = activity.getString(R.string.cluster_wizard_intro); textSize = 14f })
             val old = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
             legacyActions = old
             fun action(label: Int, run: () -> Unit) = Button(activity).apply {
                 text = activity.getString(label); isAllCaps = false
-                minHeight = (48 * activity.resources.displayMetrics.density).toInt()
+                minHeight = (48 * density).toInt()
                 contentDescription = text; setOnClickListener { run() }
-            }.also { if (label == R.string.diag_cluster_dashboard_read) host.addView(it) else old.addView(it) }
+            }.also(old::addView)
             action(R.string.diag_cluster_dashboard_read) {
                 submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
             }
             action(R.string.diag_cluster_dashboard_prepare) { requestStart(ClusterThemeVariant.FULL_DASHBOARD_21F7735C) }
             action(R.string.diag_cluster_full_app_prepare) { requestStart(ClusterThemeVariant.FULL_APP_21F7735C) }.apply { isEnabled = false }
+            action(R.string.diag_cluster_fullscreen_prepare) { requestStart(ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C) }
             action(R.string.diag_cluster_dashboard_choose_app) { chooseDashboardApp() }
             dashboardOpenButton = action(R.string.diag_cluster_dashboard_open) { confirmDashboard(true) }.apply { isEnabled = false }
             action(R.string.diag_cluster_dashboard_close) { confirmDashboard(false) }
@@ -162,20 +186,20 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                     dashboardMessage(R.string.diag_cluster_dashboard_waiting); return@action
                 }
                 AlertDialog.Builder(activity).setTitle(R.string.diag_cluster_dashboard_observe)
-                    .setMessage(if (displayed?.let(::dashboardVariant)?.isFullApp == true) R.string.diag_cluster_full_app_observe_message else R.string.diag_cluster_dashboard_observe_message).setNegativeButton(android.R.string.cancel, null)
+                    .setMessage(when (displayed?.let(::dashboardVariant)) {
+                        ClusterThemeVariant.FULL_APP_21F7735C -> R.string.diag_cluster_full_app_observe_message
+                        ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C -> R.string.diag_cluster_fullscreen_observe_message
+                        else -> R.string.diag_cluster_dashboard_observe_message
+                    }).setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(android.R.string.ok) { _, _ -> submit("observe-dashboard") {
                         check(active && !closed && activation == observedActivation && observedSession.isCurrent() &&
                             displayed?.optString("filename") == name && displayed?.optJSONObject("dashboard")?.optString("round") == round)
                         observedSession.observedDashboard(name, round)
                     } }.show()
             }.apply { isEnabled = false }
-            workflowNext = Button(activity).apply {
-                isAllCaps = false; minHeight = (48 * activity.resources.displayMetrics.density).toInt()
-                text = activity.getString(R.string.cluster_wizard_next)
-                setOnClickListener { nextWorkflowStep() }
-            }.also(host::addView)
             controls.addView(TextView(activity).apply { text = activity.getString(R.string.cluster_wizard_advanced); textSize = 18f; isAccessibilityHeading = true })
             controls.addView(old)
+            updateWorkflow(null)
         }
         // Keep recovery in the fixed header; detailed status can live in the cluster page.
         val headerIndex = 0
@@ -271,6 +295,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                 ClusterThemeVariant.FULL_SURFACE_TEST -> R.string.diag_cluster_rcc_ivi_theme_confirm
                 ClusterThemeVariant.FULL_DASHBOARD_21F7735C -> R.string.diag_cluster_dashboard_prepare_confirm
                 ClusterThemeVariant.FULL_APP_21F7735C -> R.string.diag_cluster_full_app_prepare_confirm
+                ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C -> R.string.diag_cluster_fullscreen_prepare_confirm
             })
             .setView(checks).setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.diag_cluster_rcc_ivi_send, null).create()
@@ -307,49 +332,72 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         }
     }
     private fun nextWorkflowStep() {
-        val j = displayed
-        when {
-            restartPreparing || restartRound.isNotEmpty() -> Unit
-            j == null -> submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
-            j.optBoolean("recoveryPending") -> recoveryMessage(activity.getString(R.string.cluster_wizard_wait))
-            j.optBoolean("restartDispatchPending") || restartIntent.pending() ||
-                j.optJSONObject("retirement")?.optBoolean("moved") == true || j.optBoolean("uncertain") -> {
-                restartWizardRequested = true; stopDashboardSlots { requestRecoveryAction() }
-            }
-            dashboardObserveButton?.isEnabled == true -> dashboardObserveButton?.performClick()
-            dashboardOpenButton?.isEnabled == true && dashboardPackage.isEmpty() -> chooseDashboardApp()
-            dashboardOpenButton?.isEnabled == true -> confirmDashboard(true)
-            j.optJSONObject("dashboard")?.optString("stage") == "OPEN_RECEIVED" -> confirmDashboard(false)
-            else -> recoveryMessage(activity.getString(R.string.cluster_wizard_offline))
+        when (simpleStep(displayed).second) {
+            SimpleStep.READ -> submit("status") { ClusterThemeSession.pin(app).also { session = it }.status() }
+            SimpleStep.LOAD -> requestStart(ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C)
+            SimpleStep.CHOOSE -> chooseDashboardApp()
+            SimpleStep.START -> confirmDashboard(true)
+            SimpleStep.CONFIRM -> dashboardObserveButton?.performClick()
+            SimpleStep.STOP -> confirmDashboard(false)
+            SimpleStep.RECOVER -> restoreButton.performClick()
+            SimpleStep.WAIT, SimpleStep.PROJECTING, SimpleStep.NONE -> Unit
         }
     }
-    private fun updateWorkflow(j: JSONObject) {
-        val message = when {
-            restartPreparing -> R.string.cluster_restart_checking
-            j.optBoolean("restartDispatchPending") || restartIntent.pending() -> R.string.cluster_restart_unknown
-            j.optBoolean("recoveryPending") -> R.string.cluster_wizard_wait
-            j.optJSONObject("retirement")?.optBoolean("moved") == true -> R.string.cluster_restart_ready
-            j.optBoolean("rccDebt") && (j.optBoolean("uncertain") || j.let(::dashboardVariant)?.isRecoveryOnly == true) -> R.string.cluster_wizard_recovery
-            j.optJSONObject("dashboard")?.optString("stage") == "OPEN_RECEIVED" -> R.string.cluster_wizard_observe
-            dashboardOpenButton?.isEnabled == true -> R.string.cluster_wizard_choose
-            j.optBoolean("rccDebt") -> R.string.cluster_wizard_wait
-            !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(43) -> R.string.diag_cluster_dashboard_protocol
-            else -> R.string.cluster_wizard_offline
+    /** The guided card serves the minimal full-screen profile only; other sessions are finished through Restore. */
+    private fun simpleStep(j: JSONObject?): Pair<String, SimpleStep> {
+        fun text(id: Int, vararg args: Any) = activity.getString(id, *args)
+        if (restartPreparing || restartRound.isNotEmpty()) return text(R.string.cluster_restart_checking) to SimpleStep.WAIT
+        if (j == null) return text(R.string.cluster_simple_unknown) to SimpleStep.READ
+        val variant = dashboardVariant(j)
+        val own = j.optBoolean("rccDebt")
+        val dashboard = j.optJSONObject("dashboard")
+        val stage = dashboard?.optString("stage").orEmpty()
+        val geometry = dashboard?.optJSONObject("geometry")?.optString("verdict").orEmpty()
+        val phase = j.optString("phase")
+        val fullScreen = ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C
+        val smallPanel = com.byd.dashcast.data.prefs.ClusterPrefs.isSmallClusterPanelLatched(app)
+        return when {
+            j.optBoolean("restartDispatchPending") || restartIntent.pending() -> text(R.string.cluster_restart_unknown) to SimpleStep.RECOVER
+            j.optBoolean("recoveryPending") -> text(R.string.cluster_wizard_wait) to SimpleStep.WAIT
+            j.optJSONObject("retirement")?.optBoolean("moved") == true -> text(R.string.cluster_simple_step_restart) to SimpleStep.RECOVER
+            own && variant?.isRecoveryOnly == true -> text(R.string.cluster_wizard_recovery) to SimpleStep.RECOVER
+            own && variant != fullScreen -> text(R.string.cluster_simple_other) to SimpleStep.RECOVER
+            own && (j.optBoolean("uncertain") || stage == "UNKNOWN" || j.optBoolean("factoryApplyPending")) ->
+                text(R.string.cluster_wizard_recovery) to SimpleStep.RECOVER
+            own && (geometry == "SMALL" || smallPanel) -> text(R.string.diag_cluster_dashboard_small_panel) to SimpleStep.RECOVER
+            own && geometry in setOf("UNAVAILABLE", "AMBIGUOUS", "OWNER_REJECTED", "STATE_REJECTED", "SIZE_REJECTED") ->
+                text(R.string.diag_cluster_dashboard_display_rejected) to SimpleStep.RECOVER
+            own && dashboard?.optBoolean("bootstrapStarted") == true && !j.optBoolean("mutated") &&
+                j.optString("state") in setOf("QUARANTINE", "DEFAULT_QUERIED") -> text(R.string.diag_cluster_dashboard_restore_required) to SimpleStep.RECOVER
+            own && stage == "OPEN_RECEIVED" && j.optBoolean("themeObservedByUser") -> text(R.string.cluster_simple_step_done) to SimpleStep.STOP
+            own && stage == "OPEN_RECEIVED" -> text(R.string.cluster_wizard_observe) to
+                if (dashboardObserveButton?.isEnabled == true) SimpleStep.CONFIRM else SimpleStep.PROJECTING
+            own && stage == "OPENING" -> text(R.string.cluster_wizard_wait) to SimpleStep.PROJECTING
+            dashboardOpenButton?.isEnabled == true && dashboardPackage.isEmpty() -> text(R.string.cluster_wizard_choose) to SimpleStep.CHOOSE
+            dashboardOpenButton?.isEnabled == true -> text(if (stage == "CLOSED_RECEIVED") R.string.cluster_simple_step_closed
+                else R.string.cluster_simple_step_start, dashboardLabel) to SimpleStep.START
+            own && phase.startsWith("dashboard-bootstrap-") -> text(R.string.diag_cluster_dashboard_bootstrap) to SimpleStep.WAIT
+            own && phase == "dashboard-display-wait" -> text(R.string.diag_cluster_dashboard_display_wait) to SimpleStep.WAIT
+            own -> text(R.string.cluster_wizard_wait) to SimpleStep.WAIT
+            !com.byd.dashcast.proxy.ProxyClient.supportsProtocol(fullScreen.minimumProtocol) ->
+                text(R.string.diag_cluster_dashboard_protocol, fullScreen.minimumProtocol) to SimpleStep.READ
+            smallPanel -> text(R.string.diag_cluster_dashboard_small_panel) to SimpleStep.NONE
+            else -> text(R.string.cluster_wizard_offline) to SimpleStep.LOAD
         }
-        dashboardStatus.text = activity.getString(message, 43) + if (dashboardLabel.isNotEmpty())
-            "\n" + activity.getString(R.string.diag_cluster_dashboard_selected_app, dashboardLabel) else ""
-        workflowNext?.text = activity.getString(when {
-            j.optBoolean("restartDispatchPending") || restartIntent.pending() -> R.string.diag_cluster_rcc_verify_return
-            j.optJSONObject("retirement")?.optBoolean("moved") == true || j.optBoolean("uncertain") -> R.string.diag_cluster_rcc_restore
-            dashboardObserveButton?.isEnabled == true -> R.string.diag_cluster_dashboard_observe
-            dashboardOpenButton?.isEnabled == true && dashboardPackage.isEmpty() -> R.string.diag_cluster_dashboard_choose_app
-            dashboardOpenButton?.isEnabled == true -> R.string.diag_cluster_dashboard_open
-            j.optJSONObject("dashboard")?.optString("stage") == "OPEN_RECEIVED" -> R.string.diag_cluster_dashboard_close
-            else -> R.string.cluster_wizard_next
-        })
-            workflowNext?.isEnabled = !restartPreparing && restartRound.isEmpty() && !j.optBoolean("recoveryPending")
-        workflowNext?.contentDescription = workflowNext?.text
-        workflowNext?.visibility = if (message == R.string.cluster_wizard_offline) android.view.View.GONE else android.view.View.VISIBLE
+    }
+    private fun updateWorkflow(j: JSONObject?) {
+        val (message, step) = simpleStep(j)
+        dashboardStatus.text = message
+        workflowNext?.apply {
+            step.label?.let { text = activity.getString(it); contentDescription = text }
+            isEnabled = step != SimpleStep.WAIT && step != SimpleStep.PROJECTING
+            visibility = if (step == SimpleStep.NONE) android.view.View.GONE else android.view.View.VISIBLE
+        }
+        val closedProjection = j?.optJSONObject("dashboard")?.optString("stage") == "CLOSED_RECEIVED"
+        fun show(visible: Boolean) = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+        workflowChangeApp?.visibility = show(step == SimpleStep.START)
+        workflowStop?.visibility = show(step == SimpleStep.CONFIRM || step == SimpleStep.PROJECTING)
+        workflowFinish?.visibility = show(step == SimpleStep.START && closedProjection)
     }
 
     private fun prepareRestartConfirmation(pinned: ClusterThemeSession) {
@@ -392,7 +440,10 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
         checks.addView(parked)
         val dialog = AlertDialog.Builder(activity).setTitle(R.string.cluster_restart_title)
             .setMessage(R.string.cluster_restart_confirm).setView(checks)
-            .setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.cluster_restart_accept, null).create()
+            .setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.cluster_restart_accept, null)
+            // After an external `adb reboot fission-all`, verify instead of restarting again.
+            .setNeutralButton(R.string.diag_cluster_rcc_verify_return) { _, _ -> handler.post { if (active && !closed) confirmIviRestore() } }
+            .create()
         confirmation = dialog
         var accepted = false
         dialog.setOnDismissListener { if (!accepted) cancelRestartConfirmation() }
@@ -667,6 +718,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
                                 } else if (current.optJSONObject("retirement")?.optBoolean("moved") == true &&
                                     com.byd.dashcast.proxy.ProxyClient.supportsProtocol(45) && !current.optBoolean("restartDispatchPending") && !restartIntent.pending())
                                     prepareRestartConfirmation(pinned)
+                                else if (current.optBoolean("carrierMovable")) confirmIviRestore(retire = true)
                                 else if (current.optBoolean("retirementAvailable")) showRecoveryGuidance(current, pinned, force = true)
                                 else confirmIviRestore()
                             }
@@ -713,7 +765,7 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             !j.optBoolean("rccDebt") || j.optBoolean("defaultQueried") || j.optString("transport") != "android-ivi") return
         val eligible = j.optBoolean("retirementAvailable")
         val retired = j.optJSONObject("retirement")?.optBoolean("moved") == true
-        val failed = j.optString("state") == "QUARANTINE" && j.optString("phase") in setOf("restore-query", "retirement-preflight", "retired-read-only-query", "carrier-retired")
+        val failed = j.optString("state") == "QUARANTINE" && j.optString("phase") in setOf("restore-query", "retirement-preflight", "retirement-intent", "retired-read-only-query", "carrier-retired")
         if (!eligible && !retired && !failed) return
         val name = j.optString("filename")
         if (!ClusterThemePolicy.ownedName(name)) return
@@ -782,7 +834,8 @@ internal class ClusterThemeLiveControls(private val activity: Activity, header: 
             send.setOnClickListener { if (parked.isChecked && firmware.isChecked) {
                 dialog.dismiss(); confirmation = null
                 if (closed || activation != expectedActivation || expectedSession != null && (!expectedSession.isCurrent() || displayedSession?.sharesConnection(expectedSession) != true || displayed?.optString("filename") != expectedFilename) ||
-                    retire && displayed?.let { it.optBoolean("retirementAvailable") || it.optJSONObject("retirement")?.optBoolean("moved") == false } != true) {
+                    retire && displayed?.let { it.optBoolean("retirementAvailable") || it.optBoolean("carrierMovable") ||
+                        it.optJSONObject("retirement")?.optBoolean("moved") == false } != true) {
                     recoveryMessage(activity.getString(R.string.diag_cluster_rcc_restore_expired))
                 } else restore(true, retire, verifyCorners, applyFactory)
             } }

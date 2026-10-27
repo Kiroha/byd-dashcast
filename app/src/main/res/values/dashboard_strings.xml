@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">Tableau de bord DashCast</string>
+    <string name="diag_cluster_dashboard_title">Combiné plein écran</string>
     <string name="diag_cluster_dashboard_help">Essai manuel à l’arrêt. Après fermeture, le profil reste sélectionné. Restaure le profil usine et vérifie son retour avant de réinstaller un ancien APK.</string>
     <string name="diag_cluster_dashboard_read">1 · Lire l’état et la compatibilité</string>
     <string name="diag_cluster_dashboard_prepare">2 · Préparer le tableau de bord</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Appliquer la sélection usine</string>
     <string name="diag_cluster_factory_apply_confirm">Le profil usine est déjà configuré mais son application native reste à confirmer. Exécuter une seule transition de projection BYD, puis la fermer et refaire une lecture. Aucun RCC personnalisé ni nouvelle sélection usine ne seront envoyés. Confirme le stationnement et le firmware.</string>
     <string name="diag_cluster_full_app_observe_message">L’ancien profil ne peut plus être ouvert ni validé comme prêt. Utilise Restaurer, puis confirme séparément le retour des instruments et alertes BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Préparer le plein écran minimal</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Test minimal : en mode projection plein écran, le combiné devient entièrement transparent et l’application occupe les 1920 × 720 pixels. Instruments, voyants et alertes BYD sont masqués pendant ce test. Confirme le stationnement et le firmware ; cette déclaration ne mesure pas le mouvement.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Confirme uniquement si tu vois l’application sur tout le combiné. Instruments, voyants et alertes BYD sont masqués dans ce profil de test. Un reçu de commande ne prouve pas cet affichage.</string>
 </resources>

@@ -767,7 +767,7 @@
     <string name="diag_cluster_rcc_debt">RCC сынағы әлі аяқталмаған. «Панельді қалпына келтіру» немесе «BYD қайтаруын тексеру» түймесін басып, нәтижеге және ұсынылған қадамға сәйкес әрекет ет. Экран туралы сұрақ BYD әдепкі таңдауы тексерілгеннен кейін ғана шығады.</string>
     <string name="diag_cluster_rcc_ivi_platform">Сынақ қабылданбады: Android 10 және нақты DiLink 3 анықталуы қажет. RCC жіберілген жоқ.</string>
     <string name="diag_cluster_page_title">Аспаптар: проекция және RCC</string>
-    <string name="diag_cluster_page_description">Жолақтары бар BYD проекциясы және RCC бұрыштарын тексеру</string>
+    <string name="diag_cluster_page_description">Толық экран тақырыбын тексеру және BYD экранына оралу</string>
     <string name="diag_cluster_native_rcc_blocked">RCC сынағы BYD проекциясын бұғаттады</string>
     <string name="diag_cluster_rcc_retire_button">RCC қатесінен кейін BYD қайтаруын дайындау</string>
     <string name="diag_cluster_rcc_retire_confirm">Тек DashCast сынақ RCC файлын жылжытады және байттарын сақтайды. Бұл қадам қайта іске қоспайды. Кейін файлдарды тексеріп, қолжетімді болса бөлек келісім сұрайды.</string>
@@ -807,16 +807,30 @@
     <string name="startup_app_selected">Іске қосу қолданбасы — өзгерту…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Күйді тексеріп, келесі қадамды орындаңыз және панельдегі көріністі растаңыз. Қалпына келтіру жоғарыда қолжетімді.</string>
+    <string name="cluster_wizard_intro">Тек тұрақта, P күйінде қолданыңыз. Жоғарыдағы «Панельді қалпына келтіру» кез келген уақытта қолжетімді.</string>
     <string name="cluster_wizard_advanced">Алдыңғы сынақтар және техникалық мәліметтер</string>
-    <string name="cluster_wizard_next">Келесі қадамды көрсету</string>
     <string name="cluster_wizard_wait">Әрекет орындалуда. Нәтижені күтіңіз.</string>
-    <string name="cluster_wizard_offline">Жаңа толық экран профилі әлі компьютерде тексерілуде. Мұнда жаңа толық экран RCC жүктелмейді.</string>
-    <string name="cluster_wizard_recovery">Сеансты қалпына келтіру қажет. Панельді қалпына келтіруді таңдап, қадамдарды орындаңыз.</string>
-    <string name="cluster_wizard_observe">Проекция сұралды. Көріністі растаңыз немесе проекцияны жабыңыз.</string>
-    <string name="cluster_wizard_choose">Қолданбаны таңдап, проекцияны ашыңыз.</string>
+    <string name="cluster_wizard_offline">1/4-қадам · Толық экран тақырыбын жүктеңіз. Іске қосылғанға дейін панель BYD экранын сақтайды.</string>
+    <string name="cluster_wizard_recovery">Панельді қалпына келтіру қажет. «BYD экранына оралу» түймесін басып, қадамдарды орындаңыз.</string>
+    <string name="cluster_wizard_observe">4/4-қадам · Қолданба бүкіл панельді алуы керек. Көргеніңізді растаңыз немесе толық экранды тоқтатыңыз.</string>
+    <string name="cluster_wizard_choose">2/4-қадам · Панельде көрсетілетін қолданбаны таңдаңыз.</string>
+    <string name="cluster_simple_step_start">3/4-қадам · %1$s қолданбасымен толық экранды іске қосыңыз. Тексеру кезінде BYD құралдары, индикаторлары мен ескертулері жасырылады.</string>
+    <string name="cluster_simple_step_done">Көрініс расталды. Тексеруді аяқтау үшін толық экранды тоқтатыңыз.</string>
+    <string name="cluster_simple_step_closed">Толық экран тоқтатылды. Оны қайта іске қосыңыз немесе BYD экранына оралу үшін «Тексеруді аяқтау» түймесін басыңыз.</string>
+    <string name="cluster_simple_step_restart">Тақырып алынды. Панельді қайта іске қосу үшін «BYD экранына оралу» түймесін басыңыз, содан кейін оның оралғанын тексеріңіз.</string>
+    <string name="cluster_simple_other">Панельдің басқа тексеруі жүріп жатыр. Оны аяқтау үшін «BYD экранына оралу» түймесін басыңыз.</string>
+    <string name="cluster_simple_unknown">Панель күйі белгісіз. DashCast қосылғанын тексеріп, күйді оқыңыз.</string>
+    <string name="cluster_simple_read">Панель күйін оқу</string>
+    <string name="cluster_simple_load">Толық экран тақырыбын жүктеу</string>
+    <string name="cluster_simple_choose">Қолданбаны таңдау</string>
+    <string name="cluster_simple_change_app">Қолданбаны ауыстыру</string>
+    <string name="cluster_simple_start">Толық экранды іске қосу</string>
+    <string name="cluster_simple_confirm">Көргенімді растау</string>
+    <string name="cluster_simple_stop">Толық экранды тоқтату</string>
+    <string name="cluster_simple_finish">Тексеруді аяқтау</string>
+    <string name="cluster_simple_recover">BYD экранына оралу</string>
+    <string name="cluster_simple_wait">Күте тұрыңыз…</string>
     <string name="cluster_restart_checking">Сақталған RCC, бастапқы жол және жүктеу қалтасы тексерілуде…</string>
-    <string name="cluster_restart_ready">Журнал RCC жылжытылғанын көрсетеді. Қайта іске қосу алдында жаңа тексерулер қажет.</string>
     <string name="cluster_restart_unknown">Қайта іске қосу дайындалды немесе жіберілді. Нәтиже белгісіз. Қайталамаңыз: BYD қайтуын күтіп, экранды тексеріңіз.</string>
     <string name="cluster_restart_blocked">Қайта іске қосу бұғатталды. Жылжыту не тексеру расталмады. Автоматты қайталау жоқ. Мәліметтерді қараңыз немесе есеп жіберіңіз.</string>
     <string name="cluster_restart_parked">Растаймын: көлік P күйінде тоқтаған, тұрақ тежегіші қосылған.</string>

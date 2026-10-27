@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">Pulpit DashCast</string>
+    <string name="diag_cluster_dashboard_title">Zestaw wskaźników na pełnym ekranie</string>
     <string name="diag_cluster_dashboard_help">Test ręczny na postoju. Zamknięcie nie wyłącza profilu. Przed instalacją starszego APK przywróć profil fabryczny i sprawdź jego powrót.</string>
     <string name="diag_cluster_dashboard_read">1 · Odczytaj stan i zgodność</string>
     <string name="diag_cluster_dashboard_prepare">2 · Przygotuj pulpit</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Zastosuj wybór fabryczny</string>
     <string name="diag_cluster_factory_apply_confirm">Profil fabryczny jest skonfigurowany, ale jego natywne zastosowanie wymaga sprawdzenia. Wykonaj jedno przełączenie projekcji BYD, zamknij ją i odczytaj wybór ponownie. Bez własnego RCC ani powtórnego wyboru fabrycznego. Potwierdź postój i firmware.</string>
     <string name="diag_cluster_full_app_observe_message">Starego profilu nie można otworzyć ani zatwierdzić jako gotowego. Użyj Przywróć, a następnie osobno potwierdź powrót przyrządów i ostrzeżeń BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Przygotuj minimalny pełny ekran</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Test minimalny: w trybie projekcji pełnoekranowej zestaw wskaźników staje się całkowicie przezroczysty, a aplikacja zajmuje wszystkie 1920 × 720 pikseli. Wskaźniki, kontrolki i ostrzeżenia BYD są ukryte podczas tego testu. Potwierdź postój i firmware; ta deklaracja nie mierzy ruchu.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Potwierdź tylko, jeśli widzisz aplikację na całym zestawie wskaźników. Wskaźniki, kontrolki i ostrzeżenia BYD są ukryte w tym profilu testowym. Potwierdzenie polecenia nie dowodzi tego wyświetlania.</string>
 </resources>

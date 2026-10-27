@@ -52,6 +52,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             ClusterThemeVariant.CORNER_MARKER_21F7735C -> 18
             ClusterThemeVariant.FULL_DASHBOARD_21F7735C -> 19
             ClusterThemeVariant.FULL_APP_21F7735C -> 24
+            ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C -> 30
         }
         val receipt = call(operation, source, {
             beforeTransaction()

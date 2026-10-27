@@ -878,7 +878,7 @@ device_adb shell am start -W \
   -n com.byd.dashcast/.ui.welcome.WelcomeActivity
 ~~~
 
-Then navigate **Settings → Diag → DashCast dashboard**, completing any initial
+Then navigate **Settings → Diag → Full-screen cluster**, completing any initial
 language selection normally.
 
 The following is **not** a supported external shortcut:

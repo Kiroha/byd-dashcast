@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">Cruscotto DashCast</string>
+    <string name="diag_cluster_dashboard_title">Quadro a schermo intero</string>
     <string name="diag_cluster_dashboard_help">Test manuale a veicolo fermo. La chiusura mantiene il profilo selezionato. Ripristina e verifica il profilo di fabbrica prima di installare un APK precedente.</string>
     <string name="diag_cluster_dashboard_read">1 · Leggi stato e compatibilità</string>
     <string name="diag_cluster_dashboard_prepare">2 · Prepara il cruscotto</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Applica selezione di fabbrica</string>
     <string name="diag_cluster_factory_apply_confirm">Il profilo di fabbrica è già configurato ma va verificata la sua applicazione nativa. Esegui una transizione di proiezione BYD, chiudila e rileggi la selezione. Non vengono inviati RCC propri né ripetuta la selezione di fabbrica. Conferma sosta e firmware.</string>
     <string name="diag_cluster_full_app_observe_message">Il vecchio profilo non può essere aperto o confermato come pronto. Usa Ripristina, poi conferma separatamente il ritorno degli strumenti e degli avvisi BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Prepara schermo intero minimo</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Test minimo: in modalità proiezione a schermo intero il quadro diventa completamente trasparente e l’applicazione occupa tutti i 1920 × 720 pixel. Strumenti, spie e avvisi BYD sono nascosti durante questo test. Conferma parcheggio e firmware; questa dichiarazione non misura il movimento.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Conferma solo se vedi l’applicazione su tutto il quadro. Strumenti, spie e avvisi BYD sono nascosti in questo profilo di test. Una ricevuta di comando non prova questa visualizzazione.</string>
 </resources>

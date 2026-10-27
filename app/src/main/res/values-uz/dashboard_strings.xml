@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">DashCast asboblar paneli</string>
+    <string name="diag_cluster_dashboard_title">To‘liq ekrandagi panel</string>
     <string name="diag_cluster_dashboard_help">Avtomobil to‘xtaganda qo‘lda sinash. Yopilganda profil tanlangan qoladi. Eski APK o‘rnatishdan oldin zavod profilini tiklab tekshiring.</string>
     <string name="diag_cluster_dashboard_read">1 · Holat va moslikni o‘qish</string>
     <string name="diag_cluster_dashboard_prepare">2 · Panelni tayyorlash</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Zavod tanlovini qo‘llash</string>
     <string name="diag_cluster_factory_apply_confirm">Zavod profili sozlangan, ammo mahalliy qo‘llanishi tekshirilishi kerak. BYD proyeksiyasini bir marta o‘zgartirib, yoping va tanlovni qayta o‘qing. Maxsus RCC yoki takroriy zavod tanlovi yuborilmaydi. To‘xtash va mikrodasturni tasdiqlang.</string>
     <string name="diag_cluster_full_app_observe_message">Eski profilni ochib yoki tayyor deb tasdiqlab bo‘lmaydi. Tiklashdan foydalaning, so‘ng BYD asboblari va ogohlantirishlari qaytganini alohida tasdiqlang.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Minimal toʻliq ekranni tayyorlash</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Minimal sinov: toʻliq ekranli proyeksiya rejimida asboblar paneli butunlay shaffof boʻladi va ilova barcha 1920 × 720 pikselni egallaydi. BYD asboblari, indikatorlari va ogohlantirishlari ushbu sinov davomida yashiriladi. Toʻxtab turganini va dasturiy taʼminotni tasdiqlang; bu bayonot harakatni oʻlchamaydi.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Ilovani butun asboblar panelida koʻrsangizgina tasdiqlang. BYD asboblari, indikatorlari va ogohlantirishlari ushbu sinov profilida yashirilgan. Buyruq kvitansiyasi bu tasvirni isbotlamaydi.</string>
 </resources>

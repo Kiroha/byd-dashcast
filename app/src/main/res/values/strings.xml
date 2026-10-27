@@ -834,7 +834,7 @@
     <string name="diag_cluster_rcc_debt">Un essai RCC reste à clôturer. Utilise « Restaurer le combiné » ou « Vérifier le retour BYD », puis suis le résultat et l’étape proposée. La question visuelle apparaît seulement après vérification de la sélection BYD par défaut.</string>
     <string name="diag_cluster_rcc_ivi_platform">Essai refusé : Android 10 et détection positive de DiLink 3 requis. Aucun RCC envoyé.</string>
     <string name="diag_cluster_page_title">Cluster : projection et RCC</string>
-    <string name="diag_cluster_page_description">Projection BYD avec bandeaux et vérification RCC aux coins</string>
+    <string name="diag_cluster_page_description">Essai du thème plein écran et retour à l’affichage BYD</string>
     <string name="diag_cluster_native_rcc_blocked">Projection BYD bloquée par un essai RCC</string>
     <string name="diag_cluster_rcc_retire_button">Préparer le retour BYD après erreur RCC</string>
     <string name="diag_cluster_rcc_retire_confirm">Déplace uniquement le RCC de test DashCast et conserve ses octets. Aucun redémarrage à cette étape. La suite vérifie les fichiers avant de demander un accord séparé pour redémarrer, si cette fonction est disponible.</string>
@@ -874,16 +874,30 @@
     <string name="startup_app_selected">Application de démarrage — modifier…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Contrôlez l’état, suivez la prochaine étape, puis confirmez ce que vous voyez sur le combiné. La restauration reste accessible en haut.</string>
+    <string name="cluster_wizard_intro">À faire véhicule à l’arrêt, en P. « Restaurer le combiné », en haut, reste disponible à tout moment.</string>
     <string name="cluster_wizard_advanced">Anciens tests et détails techniques</string>
-    <string name="cluster_wizard_next">Voir la prochaine étape</string>
     <string name="cluster_wizard_wait">Opération en cours. Attendez le résultat avant de continuer.</string>
-    <string name="cluster_wizard_offline">Le nouveau plein écran est encore en validation sur PC. Aucun nouveau RCC plein écran ne peut être chargé ici.</string>
-    <string name="cluster_wizard_recovery">Une session doit être restaurée. Utilisez « Restaurer le combiné » et suivez les étapes.</string>
-    <string name="cluster_wizard_observe">La projection a été demandée. Confirmez ce que vous voyez, ou fermez la projection.</string>
-    <string name="cluster_wizard_choose">Choisissez une application, puis ouvrez la projection.</string>
+    <string name="cluster_wizard_offline">Étape 1 sur 4 · Chargez le thème plein écran. Le combiné garde l’affichage BYD jusqu’au lancement.</string>
+    <string name="cluster_wizard_recovery">Le combiné doit être restauré. Touchez « Revenir à l’affichage BYD » et suivez les étapes.</string>
+    <string name="cluster_wizard_observe">Étape 4 sur 4 · L’application doit occuper tout le combiné. Confirmez ce que vous voyez, ou arrêtez le plein écran.</string>
+    <string name="cluster_wizard_choose">Étape 2 sur 4 · Choisissez l’application à afficher sur le combiné.</string>
+    <string name="cluster_simple_step_start">Étape 3 sur 4 · Lancez le plein écran avec %1$s. Instruments, voyants et alertes BYD seront masqués pendant l’essai.</string>
+    <string name="cluster_simple_step_done">Affichage confirmé. Arrêtez le plein écran pour terminer l’essai.</string>
+    <string name="cluster_simple_step_closed">Plein écran arrêté. Relancez-le, ou touchez « Terminer l’essai » pour revenir à l’affichage BYD.</string>
+    <string name="cluster_simple_step_restart">Thème retiré. Touchez « Revenir à l’affichage BYD » pour redémarrer le combiné, puis vérifiez son retour.</string>
+    <string name="cluster_simple_other">Un autre essai du combiné est en cours. Touchez « Revenir à l’affichage BYD » pour le terminer.</string>
+    <string name="cluster_simple_unknown">État du combiné inconnu. Vérifiez que DashCast est connecté, puis lisez l’état.</string>
+    <string name="cluster_simple_read">Lire l’état du combiné</string>
+    <string name="cluster_simple_load">Charger le thème plein écran</string>
+    <string name="cluster_simple_choose">Choisir l’application</string>
+    <string name="cluster_simple_change_app">Changer d’application</string>
+    <string name="cluster_simple_start">Lancer le plein écran</string>
+    <string name="cluster_simple_confirm">Confirmer ce que je vois</string>
+    <string name="cluster_simple_stop">Arrêter le plein écran</string>
+    <string name="cluster_simple_finish">Terminer l’essai</string>
+    <string name="cluster_simple_recover">Revenir à l’affichage BYD</string>
+    <string name="cluster_simple_wait">Patientez…</string>
     <string name="cluster_restart_checking">Vérification du RCC conservé, de son emplacement initial et du dossier de chargement…</string>
-    <string name="cluster_restart_ready">RCC déplacé selon le journal. Une nouvelle vérification est nécessaire avant de proposer le redémarrage.</string>
     <string name="cluster_restart_unknown">Un redémarrage a été préparé ou envoyé. Son résultat reste inconnu. Ne le relancez pas : attendez le retour BYD, puis vérifiez l’affichage.</string>
     <string name="cluster_restart_blocked">Redémarrage bloqué. Le déplacement ou les vérifications ne sont pas confirmés. Aucun nouvel essai automatique. Consultez les détails ou envoyez un rapport.</string>
     <string name="cluster_restart_parked">Je confirme : véhicule immobilisé en P, frein de stationnement serré.</string>

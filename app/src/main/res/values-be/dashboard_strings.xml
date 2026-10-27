@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">Панэль DashCast</string>
+    <string name="diag_cluster_dashboard_title">Панэль на ўвесь экран</string>
     <string name="diag_cluster_dashboard_help">Ручны тэст на стаянцы. Пасля закрыцця профіль застаецца выбраным. Перад усталяваннем старога APK аднавіце заводскі профіль і праверце вынік.</string>
     <string name="diag_cluster_dashboard_read">1 · Прачытаць стан і сумяшчальнасць</string>
     <string name="diag_cluster_dashboard_prepare">2 · Падрыхтаваць панэль</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Ужыць заводскі выбар</string>
     <string name="diag_cluster_factory_apply_confirm">Заводскі профіль наладжаны, але натыўнае ўжыванне не пацверджана. Адзін раз пераключыць праекцыю BYD, закрыць і зноў прачытаць выбар. Без уласнага RCC і паўторнага заводскага выбару. Пацвердзіце стаянку і прашыўку.</string>
     <string name="diag_cluster_full_app_observe_message">Стары профіль нельга адкрыць або пацвердзіць як гатовы. Выкарыстай Аднавіць, затым асобна пацвердзі вяртанне прыбораў і папярэджанняў BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Падрыхтаваць мінімальны поўнаэкранны рэжым</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Мінімальны тэст: у поўнаэкранным рэжыме праекцыі панэль прыбораў становіцца цалкам празрыстай, а праграма займае ўсе 1920 × 720 пікселяў. Прыборы, індыкатары і папярэджанні BYD схаваны падчас гэтага тэсту. Пацвердзіце стаянку і прашыўку; гэтая заява не вымярае рух.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Пацвярджайце, толькі калі бачыце праграму на ўсёй панэлі прыбораў. Прыборы, індыкатары і папярэджанні BYD схаваны ў гэтым тэставым профілі. Квітанцыя каманды не даказвае гэта адлюстраванне.</string>
 </resources>

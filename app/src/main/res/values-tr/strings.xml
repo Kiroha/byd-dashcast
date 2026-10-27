@@ -767,7 +767,7 @@
     <string name="diag_cluster_rcc_debt">Bir RCC testi açık kaldı. “Göstergeyi geri yükle” veya “BYD dönüşünü doğrula” düğmesini kullan, ardından sonucu ve önerilen adımı izle. Görsel soru yalnızca BYD varsayılan seçimi kontrol edildikten sonra görünür.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test reddedildi: Android 10 ve kesin DiLink 3 algılaması gerekir. RCC gönderilmedi.</string>
     <string name="diag_cluster_page_title">Gösterge: yansıtma ve RCC</string>
-    <string name="diag_cluster_page_description">Şeritli BYD projeksiyonu ve RCC köşe doğrulaması</string>
+    <string name="diag_cluster_page_description">Tam ekran tema testi ve BYD ekranına dönüş</string>
     <string name="diag_cluster_native_rcc_blocked">RCC testi BYD yansıtmasını engelliyor</string>
     <string name="diag_cluster_rcc_retire_button">RCC hatasından sonra BYD dönüşünü hazırla</string>
     <string name="diag_cluster_rcc_retire_confirm">Yalnızca DashCast test RCC dosyasını taşır ve baytlarını korur. Bu adımda yeniden başlatma yoktur. Sonra dosyalar denetlenir ve varsa ayrı onay istenir.</string>
@@ -807,16 +807,30 @@
     <string name="startup_app_selected">Başlangıç uygulaması — değiştir…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Durumu kontrol edin, sonraki adımı izleyin ve göstergeyi doğrulayın. Geri yükleme üstte erişilebilir kalır.</string>
+    <string name="cluster_wizard_intro">Yalnızca araç P konumunda dururken kullanın. Üstteki “Göstergeyi geri yükle” her zaman kullanılabilir.</string>
     <string name="cluster_wizard_advanced">Önceki testler ve teknik ayrıntılar</string>
-    <string name="cluster_wizard_next">Sonraki adımı göster</string>
     <string name="cluster_wizard_wait">İşlem sürüyor. Devam etmeden önce sonucu bekleyin.</string>
-    <string name="cluster_wizard_offline">Yeni tam ekran profili bilgisayarda doğrulanıyor. Burada yeni tam ekran RCC yüklenemez.</string>
-    <string name="cluster_wizard_recovery">Bir oturumun geri yüklenmesi gerekiyor. Göstergeyi geri yükle seçeneğini kullanın.</string>
-    <string name="cluster_wizard_observe">Yansıtma istendi. Gördüğünüzü doğrulayın veya yansıtmayı kapatın.</string>
-    <string name="cluster_wizard_choose">Bir uygulama seçin ve yansıtmayı açın.</string>
+    <string name="cluster_wizard_offline">Adım 1/4 · Tam ekran temayı yükleyin. Gösterge, başlatılana kadar BYD ekranını korur.</string>
+    <string name="cluster_wizard_recovery">Göstergenin geri yüklenmesi gerekiyor. “BYD ekranına dön” düğmesine dokunun ve adımları izleyin.</string>
+    <string name="cluster_wizard_observe">Adım 4/4 · Uygulama tüm göstergeyi kaplamalı. Gördüğünüzü onaylayın veya tam ekranı durdurun.</string>
+    <string name="cluster_wizard_choose">Adım 2/4 · Göstergede gösterilecek uygulamayı seçin.</string>
+    <string name="cluster_simple_step_start">Adım 3/4 · Tam ekranı %1$s ile başlatın. Test sırasında BYD göstergeleri, uyarı lambaları ve uyarılar gizlenir.</string>
+    <string name="cluster_simple_step_done">Görüntü onaylandı. Testi bitirmek için tam ekranı durdurun.</string>
+    <string name="cluster_simple_step_closed">Tam ekran durduruldu. Yeniden başlatın veya BYD ekranına dönmek için “Testi bitir” düğmesine dokunun.</string>
+    <string name="cluster_simple_step_restart">Tema kaldırıldı. Göstergeyi yeniden başlatmak için “BYD ekranına dön” düğmesine dokunun, ardından geri geldiğini kontrol edin.</string>
+    <string name="cluster_simple_other">Başka bir gösterge testi sürüyor. Bitirmek için “BYD ekranına dön” düğmesine dokunun.</string>
+    <string name="cluster_simple_unknown">Gösterge durumu bilinmiyor. DashCast bağlantısını kontrol edin, ardından durumu okuyun.</string>
+    <string name="cluster_simple_read">Gösterge durumunu oku</string>
+    <string name="cluster_simple_load">Tam ekran temayı yükle</string>
+    <string name="cluster_simple_choose">Uygulama seç</string>
+    <string name="cluster_simple_change_app">Uygulamayı değiştir</string>
+    <string name="cluster_simple_start">Tam ekranı başlat</string>
+    <string name="cluster_simple_confirm">Gördüğümü onayla</string>
+    <string name="cluster_simple_stop">Tam ekranı durdur</string>
+    <string name="cluster_simple_finish">Testi bitir</string>
+    <string name="cluster_simple_recover">BYD ekranına dön</string>
+    <string name="cluster_simple_wait">Lütfen bekleyin…</string>
     <string name="cluster_restart_checking">Korunan RCC, eski konumu ve yükleme klasörü kontrol ediliyor…</string>
-    <string name="cluster_restart_ready">Günlük RCC dosyasının taşındığını gösteriyor. Yeniden başlatmadan önce yeni kontroller gerekir.</string>
     <string name="cluster_restart_unknown">Yeniden başlatma hazırlandı veya gönderildi. Sonuç bilinmiyor. Tekrarlamayın: BYD görüntüsünü bekleyin ve kontrol edin.</string>
     <string name="cluster_restart_blocked">Yeniden başlatma engellendi. Taşıma veya doğrulama kesin değil. Otomatik tekrar yok. Ayrıntılara bakın veya rapor gönderin.</string>
     <string name="cluster_restart_parked">Onaylıyorum: araç P konumunda hareketsiz, park freni çekili.</string>

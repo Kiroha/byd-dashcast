@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Brazilian Portuguese translation adapted from Isaias Velasquez's contribution. -->
 <resources>
-    <string name="diag_cluster_dashboard_title">Painel DashCast</string>
+    <string name="diag_cluster_dashboard_title">Painel em tela cheia</string>
     <string name="diag_cluster_dashboard_help">Teste manual com o veículo parado. Após fechar, o perfil continua selecionado. Restaure o perfil de fábrica e verifique seu retorno antes de reinstalar um APK antigo.</string>
     <string name="diag_cluster_dashboard_read">1 · Ler estado e compatibilidade</string>
     <string name="diag_cluster_dashboard_prepare">2 · Preparar o painel</string>
@@ -38,4 +38,7 @@
     <string name="diag_cluster_factory_apply">Aplicar a seleção de fábrica</string>
     <string name="diag_cluster_factory_apply_confirm">O perfil de fábrica já está configurado, mas sua aplicação nativa ainda precisa ser confirmada. Execute uma única transição de projeção BYD, feche-a e faça uma nova leitura. Nenhum RCC personalizado nem nova seleção de fábrica será enviado. Confirme o estacionamento e o firmware.</string>
     <string name="diag_cluster_full_app_observe_message">O perfil antigo não pode mais ser aberto nem validado como pronto. Use Restaurar e confirme separadamente o retorno dos instrumentos e alertas BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Preparar tela cheia mínima</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Teste mínimo: no modo de projeção em tela cheia, o painel fica totalmente transparente e o aplicativo ocupa todos os 1920 × 720 pixels. Instrumentos, luzes-espia e alertas da BYD ficam ocultos durante este teste. Confirme o estacionamento e o firmware; esta declaração não mede o movimento.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Confirme somente se você vir o aplicativo em todo o painel. Instrumentos, luzes-espia e alertas da BYD ficam ocultos neste perfil de teste. Um recibo de comando não prova esta exibição.</string>
 </resources>

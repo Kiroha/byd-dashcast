@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="diag_cluster_dashboard_title">Panel DashCast</string>
+    <string name="diag_cluster_dashboard_title">Cuadro a pantalla completa</string>
     <string name="diag_cluster_dashboard_help">Prueba manual con el vehículo parado. Al cerrar, el perfil sigue seleccionado. Restaura el perfil de fábrica y compruébalo antes de instalar un APK anterior.</string>
     <string name="diag_cluster_dashboard_read">1 · Leer estado y compatibilidad</string>
     <string name="diag_cluster_dashboard_prepare">2 · Preparar el panel</string>
@@ -37,4 +37,7 @@
     <string name="diag_cluster_factory_apply">Aplicar selección de fábrica</string>
     <string name="diag_cluster_factory_apply_confirm">El perfil de fábrica ya está configurado pero falta verificar su aplicación nativa. Ejecutar una transición de proyección BYD, cerrarla y volver a leer. No se envía RCC propio ni se repite la selección de fábrica. Confirma estacionamiento y firmware.</string>
     <string name="diag_cluster_full_app_observe_message">El perfil retirado no puede abrirse ni confirmarse como listo. Usa Restaurar y confirma por separado que han vuelto los instrumentos y avisos de BYD.</string>
+    <string name="diag_cluster_fullscreen_prepare">2c · Preparar pantalla completa mínima</string>
+    <string name="diag_cluster_fullscreen_prepare_confirm">Prueba mínima: en el modo de proyección a pantalla completa, el cuadro se vuelve totalmente transparente y la aplicación ocupa los 1920 × 720 píxeles. Los instrumentos, testigos y alertas de BYD quedan ocultos durante esta prueba. Confirma el estacionamiento y el firmware; esta declaración no mide el movimiento.</string>
+    <string name="diag_cluster_fullscreen_observe_message">Confirma solo si ves la aplicación en todo el cuadro. Los instrumentos, testigos y alertas de BYD están ocultos en este perfil de prueba. Un recibo de comando no prueba esta visualización.</string>
 </resources>

@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.TextView
 import com.byd.dashcast.R
 import com.byd.dashcast.cluster.display.ProjectionCommandBus
 import com.byd.dashcast.cluster.display.ProjectionCommandSequencer
@@ -173,6 +174,13 @@ class ClusterRestartWorkflowTest {
             assertEquals(listOf("verify-before-consent", "cancel"), f.events)
         }
     }
+    @Test fun `already restarted externally cancels consent and asks for read-only BYD verification`() {
+        Fixture().use { f ->
+            f.begin(); f.dialog()!!.getButton(-3).performClick()
+            f.waitFor { "cancel" in f.events && f.dialog()?.getButton(-1)?.text == f.activity.getString(R.string.diag_cluster_native_send) }
+            assertEquals(listOf("verify-before-consent", "cancel"), f.events)
+        }
+    }
     @Test fun `unverified move never offers reboot consent`() {
         Fixture().use { f ->
             f.rejectProof = true; f.begin()
@@ -203,7 +211,12 @@ class ClusterRestartWorkflowTest {
     }
     @Test fun `primary workflow contains one next action and no old test button soup`() {
         Fixture().use { f ->
-            assertEquals(2, views(f.primary).filterIsInstance<Button>().size)
+            val buttons = views(f.primary).filterIsInstance<Button>()
+            assertEquals(4, buttons.size)
+            assertEquals(listOf(f.activity.getString(R.string.cluster_simple_recover)),
+                buttons.filter { it.visibility == View.VISIBLE }.map { it.text.toString() })
+            assertEquals(f.activity.getString(R.string.cluster_simple_step_restart),
+                views(f.primary).filterIsInstance<TextView>().first { it !is Button }.text.toString())
             assertTrue(views(f.detail).filterIsInstance<Button>().size > 2)
             assertTrue(views(f.header).filterIsInstance<Button>().single().text == f.activity.getString(R.string.diag_cluster_rcc_restore))
         }

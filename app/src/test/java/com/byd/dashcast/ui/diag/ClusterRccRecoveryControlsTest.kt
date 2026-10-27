@@ -151,12 +151,22 @@ class ClusterRccRecoveryControlsTest {
             if (adas) f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("ADAS\n") }.performClick()
             f.clickHeader()
             assertTrue(f.operations.isNotEmpty()); assertTrue(f.operations.all { it == 0 })
-            assertTrue(f.all.filterIsInstance<Button>().single { it.text == f.app.getString(R.string.diag_cluster_dashboard_read) }.isShown)
+            assertTrue((field("workflowNext").get(f.controls) as Button).isShown)
             assertFalse(f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
             f.confirm(); f.waitFor { 13 in f.operations && !flag("recoveryBusy").get() }
             assertFalse(2 in f.operations); assertFalse(14 in f.operations)
             f.checkLease()
             assertNull(RuntimeEnvironment.getApplication().getSharedPreferences("rcc_cluster_operational_debt", 0).getString("nonce", null))
+        }
+    }
+    @Test fun `Restore moves a loaded owned carrier directly without an OEM restore request`() {
+        Fixture(receipt().put("carrierMovable", true)).use { f ->
+            f.clickHeader()
+            assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_confirm),
+                f.dialog()!!.findViewById<TextView>(android.R.id.message).text.toString())
+            assertTrue(f.operations.all { it == 0 })
+            f.confirm(); f.waitFor { 14 in f.operations && !flag("recoveryBusy").get() }
+            assertEquals(listOf(14), f.operations.filter { it != 0 }); f.checkLease()
         }
     }
     @Test fun `queued recovered restore holds reservation until SAME produces automatic actionable popup`() {

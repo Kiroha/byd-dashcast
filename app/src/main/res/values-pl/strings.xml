@@ -776,7 +776,7 @@
     <string name="diag_cluster_rcc_debt">Test RCC pozostaje otwarty. Użyj „Przywróć zestaw wskaźników” lub „Sprawdź powrót BYD”, a następnie postępuj zgodnie z wynikiem i proponowanym krokiem. Pytanie o ekran pojawi się dopiero po sprawdzeniu domyślnego wyboru BYD.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test odrzucony: wymagane Android 10 i potwierdzone wykrycie DiLink 3. Nie wysłano RCC.</string>
     <string name="diag_cluster_page_title">Zestaw wskaźników: projekcja i RCC</string>
-    <string name="diag_cluster_page_description">Projekcja BYD z pasami i weryfikacja narożników RCC</string>
+    <string name="diag_cluster_page_description">Test motywu pełnoekranowego i powrót do ekranu BYD</string>
     <string name="diag_cluster_native_rcc_blocked">Test RCC blokuje projekcję BYD</string>
     <string name="diag_cluster_rcc_retire_button">Przygotuj powrót BYD po błędzie RCC</string>
     <string name="diag_cluster_rcc_retire_confirm">Przenosi tylko testowy RCC DashCast i zachowuje jego bajty. Ten krok nie restartuje. Następnie sprawdza pliki i prosi o osobną zgodę, jeśli funkcja jest dostępna.</string>
@@ -816,16 +816,30 @@
     <string name="startup_app_selected">Aplikacja startowa — zmień…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Sprawdź stan, wykonaj następny krok i potwierdź obraz na zestawie wskaźników. Przywracanie jest dostępne u góry.</string>
+    <string name="cluster_wizard_intro">Używaj tylko na postoju, w położeniu P. „Przywróć zestaw wskaźników” u góry jest zawsze dostępne.</string>
     <string name="cluster_wizard_advanced">Poprzednie testy i szczegóły techniczne</string>
-    <string name="cluster_wizard_next">Pokaż następny krok</string>
     <string name="cluster_wizard_wait">Operacja trwa. Poczekaj na wynik przed kontynuacją.</string>
-    <string name="cluster_wizard_offline">Nowy profil pełnoekranowy jest nadal sprawdzany na komputerze. Nie można tu załadować nowego pełnoekranowego RCC.</string>
-    <string name="cluster_wizard_recovery">Sesja wymaga przywrócenia. Wybierz Przywróć zestaw wskaźników i wykonaj kroki.</string>
-    <string name="cluster_wizard_observe">Zażądano projekcji. Potwierdź obraz lub zamknij projekcję.</string>
-    <string name="cluster_wizard_choose">Wybierz aplikację, następnie otwórz projekcję.</string>
+    <string name="cluster_wizard_offline">Krok 1 z 4 · Wczytaj motyw pełnoekranowy. Zestaw wskaźników zachowa ekran BYD do momentu uruchomienia.</string>
+    <string name="cluster_wizard_recovery">Zestaw wskaźników trzeba przywrócić. Dotknij „Wróć do ekranu BYD” i wykonaj kroki.</string>
+    <string name="cluster_wizard_observe">Krok 4 z 4 · Aplikacja powinna zajmować cały zestaw wskaźników. Potwierdź, co widzisz, lub zatrzymaj pełny ekran.</string>
+    <string name="cluster_wizard_choose">Krok 2 z 4 · Wybierz aplikację, która ma być wyświetlana na zestawie wskaźników.</string>
+    <string name="cluster_simple_step_start">Krok 3 z 4 · Uruchom pełny ekran z aplikacją %1$s. Wskaźniki, kontrolki i ostrzeżenia BYD będą ukryte podczas testu.</string>
+    <string name="cluster_simple_step_done">Obraz potwierdzony. Zatrzymaj pełny ekran, aby zakończyć test.</string>
+    <string name="cluster_simple_step_closed">Pełny ekran zatrzymany. Uruchom go ponownie lub dotknij „Zakończ test”, aby wrócić do ekranu BYD.</string>
+    <string name="cluster_simple_step_restart">Motyw usunięty. Dotknij „Wróć do ekranu BYD”, aby ponownie uruchomić zestaw wskaźników, a potem sprawdź jego powrót.</string>
+    <string name="cluster_simple_other">Trwa inny test zestawu wskaźników. Dotknij „Wróć do ekranu BYD”, aby go zakończyć.</string>
+    <string name="cluster_simple_unknown">Stan zestawu wskaźników nieznany. Sprawdź, czy DashCast jest połączony, a następnie odczytaj stan.</string>
+    <string name="cluster_simple_read">Odczytaj stan zestawu wskaźników</string>
+    <string name="cluster_simple_load">Wczytaj motyw pełnoekranowy</string>
+    <string name="cluster_simple_choose">Wybierz aplikację</string>
+    <string name="cluster_simple_change_app">Zmień aplikację</string>
+    <string name="cluster_simple_start">Uruchom pełny ekran</string>
+    <string name="cluster_simple_confirm">Potwierdź, co widzę</string>
+    <string name="cluster_simple_stop">Zatrzymaj pełny ekran</string>
+    <string name="cluster_simple_finish">Zakończ test</string>
+    <string name="cluster_simple_recover">Wróć do ekranu BYD</string>
+    <string name="cluster_simple_wait">Proszę czekać…</string>
     <string name="cluster_restart_checking">Sprawdzanie zachowanego RCC, pierwotnej lokalizacji i katalogu ładowania…</string>
-    <string name="cluster_restart_ready">Dziennik wskazuje przeniesiony RCC. Przed restartem wymagane są nowe kontrole.</string>
     <string name="cluster_restart_unknown">Restart przygotowano lub wysłano. Wynik nieznany. Nie powtarzaj: poczekaj na BYD i sprawdź ekran.</string>
     <string name="cluster_restart_blocked">Restart zablokowany. Przeniesienie lub kontrola niepotwierdzone. Bez automatycznej próby. Sprawdź szczegóły lub wyślij raport.</string>
     <string name="cluster_restart_parked">Potwierdzam: pojazd stoi w P, hamulec postojowy włączony.</string>

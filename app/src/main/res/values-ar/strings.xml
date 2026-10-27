@@ -772,7 +772,7 @@
     <string name="diag_cluster_rcc_debt">ما زال اختبار RCC مفتوحًا. استخدم «استرجاع لوحة العدادات» أو «التحقق من عودة BYD»، ثم اتبع النتيجة والخطوة المقترحة. لا يظهر السؤال المرئي إلا بعد التحقق من اختيار BYD الافتراضي.</string>
     <string name="diag_cluster_rcc_ivi_platform">رُفض الاختبار: يلزم Android 10 واكتشاف DiLink 3 مؤكداً. لم يُرسل أي RCC.</string>
     <string name="diag_cluster_page_title">لوحة العدادات: الإسقاط وRCC</string>
-    <string name="diag_cluster_page_description">عرض BYD مع الأشرطة والتحقق من زوايا RCC</string>
+    <string name="diag_cluster_page_description">اختبار سمة ملء الشاشة والعودة إلى شاشة BYD</string>
     <string name="diag_cluster_native_rcc_blocked">اختبار RCC يمنع إسقاط BYD</string>
     <string name="diag_cluster_rcc_retire_button">تهيئة عودة BYD بعد خطأ RCC</string>
     <string name="diag_cluster_rcc_retire_confirm">ينقل RCC التجريبي الخاص بـ DashCast فقط ويحفظ بياناته. لا إعادة تشغيل في هذه الخطوة. ثم يفحص الملفات ويطلب موافقة منفصلة إن توفرت الميزة.</string>
@@ -812,16 +812,30 @@
     <string name="startup_app_selected">تطبيق بدء التشغيل — تغيير…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">تحقق من الحالة واتبع الخطوة التالية ثم أكد ما تراه على لوحة العدادات. يبقى الاسترجاع متاحًا في الأعلى.</string>
+    <string name="cluster_wizard_intro">استخدمها فقط والسيارة متوقفة على P. يبقى «استرجاع لوحة العدادات» في الأعلى متاحًا في أي وقت.</string>
     <string name="cluster_wizard_advanced">الاختبارات السابقة والتفاصيل التقنية</string>
-    <string name="cluster_wizard_next">عرض الخطوة التالية</string>
     <string name="cluster_wizard_wait">العملية جارية. انتظر النتيجة قبل المتابعة.</string>
-    <string name="cluster_wizard_offline">ملف ملء الشاشة الجديد لا يزال قيد التحقق على الحاسوب. لا يمكن تحميل RCC جديد بملء الشاشة هنا.</string>
-    <string name="cluster_wizard_recovery">تحتاج الجلسة إلى استرجاع. اختر استرجاع لوحة العدادات واتبع الخطوات.</string>
-    <string name="cluster_wizard_observe">تم طلب العرض. أكد ما تراه أو أغلق العرض.</string>
-    <string name="cluster_wizard_choose">اختر تطبيقًا ثم افتح العرض.</string>
+    <string name="cluster_wizard_offline">الخطوة 1 من 4 · حمّل سمة ملء الشاشة. تحتفظ لوحة العدادات بشاشة BYD حتى البدء.</string>
+    <string name="cluster_wizard_recovery">يجب استرجاع لوحة العدادات. اضغط «العودة إلى شاشة BYD» واتبع الخطوات.</string>
+    <string name="cluster_wizard_observe">الخطوة 4 من 4 · يجب أن يملأ التطبيق لوحة العدادات بالكامل. أكد ما تراه أو أوقف ملء الشاشة.</string>
+    <string name="cluster_wizard_choose">الخطوة 2 من 4 · اختر التطبيق الذي سيظهر على لوحة العدادات.</string>
+    <string name="cluster_simple_step_start">الخطوة 3 من 4 · ابدأ ملء الشاشة مع %1$s. ستُخفى عدادات BYD ومؤشراتها وتنبيهاتها أثناء الاختبار.</string>
+    <string name="cluster_simple_step_done">تم تأكيد العرض. أوقف ملء الشاشة لإنهاء الاختبار.</string>
+    <string name="cluster_simple_step_closed">تم إيقاف ملء الشاشة. أعد تشغيله أو اضغط «إنهاء الاختبار» للعودة إلى شاشة BYD.</string>
+    <string name="cluster_simple_step_restart">أُزيلت السمة. اضغط «العودة إلى شاشة BYD» لإعادة تشغيل لوحة العدادات، ثم تحقق من عودتها.</string>
+    <string name="cluster_simple_other">يجري اختبار آخر للوحة العدادات. اضغط «العودة إلى شاشة BYD» لإنهائه.</string>
+    <string name="cluster_simple_unknown">حالة لوحة العدادات غير معروفة. تحقق من اتصال DashCast ثم اقرأ الحالة.</string>
+    <string name="cluster_simple_read">قراءة حالة لوحة العدادات</string>
+    <string name="cluster_simple_load">تحميل سمة ملء الشاشة</string>
+    <string name="cluster_simple_choose">اختيار التطبيق</string>
+    <string name="cluster_simple_change_app">تغيير التطبيق</string>
+    <string name="cluster_simple_start">بدء ملء الشاشة</string>
+    <string name="cluster_simple_confirm">تأكيد ما أراه</string>
+    <string name="cluster_simple_stop">إيقاف ملء الشاشة</string>
+    <string name="cluster_simple_finish">إنهاء الاختبار</string>
+    <string name="cluster_simple_recover">العودة إلى شاشة BYD</string>
+    <string name="cluster_simple_wait">يرجى الانتظار…</string>
     <string name="cluster_restart_checking">جارٍ فحص RCC المحفوظ وموقعه الأصلي ومجلد التحميل…</string>
-    <string name="cluster_restart_ready">يسجل السجل نقل RCC. يلزم فحص جديد قبل اقتراح إعادة التشغيل.</string>
     <string name="cluster_restart_unknown">تم إعداد إعادة التشغيل أو إرسالها. النتيجة غير معروفة. لا تكررها: انتظر عودة BYD ثم تحقق من الشاشة.</string>
     <string name="cluster_restart_blocked">إعادة التشغيل محظورة. النقل أو التحقق غير مؤكد. لا توجد إعادة تلقائية. راجع التفاصيل أو أرسل تقريرًا.</string>
     <string name="cluster_restart_parked">أؤكد: السيارة متوقفة في P وفرامل الوقوف مفعّلة.</string>

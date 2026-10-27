@@ -783,7 +783,7 @@
     <string name="diag_cluster_rcc_debt">An RCC test remains open. Use “Restore cluster” or “Verify BYD return”, then follow the result and proposed next step. The visual question appears only after BYD default selection has been checked.</string>
     <string name="diag_cluster_rcc_ivi_platform">Test refused: Android 10 and positive DiLink 3 detection required. No RCC sent.</string>
     <string name="diag_cluster_page_title">Cluster: projection and RCC</string>
-    <string name="diag_cluster_page_description">BYD projection with bands and RCC corner verification</string>
+    <string name="diag_cluster_page_description">Full-screen theme test and return to the BYD display</string>
     <string name="diag_cluster_native_rcc_blocked">BYD projection blocked by an RCC test</string>
     <string name="diag_cluster_rcc_retire_button">Prepare BYD return after RCC error</string>
     <string name="diag_cluster_rcc_retire_confirm">Moves only the DashCast test RCC and preserves its bytes. No restart at this step. The next step verifies files before requesting separate restart consent, if available.</string>
@@ -823,16 +823,30 @@
     <string name="startup_app_selected">Startup app — change…</string>
 
     <!-- Guided cluster restoration; fixed ADB restart requires separate explicit consent. -->
-    <string name="cluster_wizard_intro">Check the current state, follow the next step, then confirm what you see on the cluster. Restore stays available at the top.</string>
+    <string name="cluster_wizard_intro">Use only while parked in P. “Restore cluster” at the top stays available at all times.</string>
     <string name="cluster_wizard_advanced">Previous tests and technical details</string>
-    <string name="cluster_wizard_next">Show the next step</string>
     <string name="cluster_wizard_wait">Operation in progress. Wait for the result before continuing.</string>
-    <string name="cluster_wizard_offline">The new full-screen profile is still being validated on a PC. No new full-screen RCC can be loaded here.</string>
-    <string name="cluster_wizard_recovery">A session requires recovery. Use Restore cluster and follow the steps.</string>
-    <string name="cluster_wizard_observe">Projection was requested. Confirm what you see, or close the projection.</string>
-    <string name="cluster_wizard_choose">Choose an application, then open the projection.</string>
+    <string name="cluster_wizard_offline">Step 1 of 4 · Load the full-screen theme. The cluster keeps the BYD display until you start.</string>
+    <string name="cluster_wizard_recovery">The cluster needs to be restored. Tap “Return to BYD display” and follow the steps.</string>
+    <string name="cluster_wizard_observe">Step 4 of 4 · The app should fill the whole cluster. Confirm what you see, or stop full screen.</string>
+    <string name="cluster_wizard_choose">Step 2 of 4 · Choose the app to show on the cluster.</string>
+    <string name="cluster_simple_step_start">Step 3 of 4 · Start full screen with %1$s. BYD instruments, telltales and alerts will be hidden during the test.</string>
+    <string name="cluster_simple_step_done">Display confirmed. Stop full screen to finish the test.</string>
+    <string name="cluster_simple_step_closed">Full screen stopped. Start it again, or tap “Finish test” to return to the BYD display.</string>
+    <string name="cluster_simple_step_restart">Theme removed. Tap “Return to BYD display” to restart the cluster, then check that it is back.</string>
+    <string name="cluster_simple_other">Another cluster test is in progress. Tap “Return to BYD display” to finish it.</string>
+    <string name="cluster_simple_unknown">Cluster status unknown. Check that DashCast is connected, then read the status.</string>
+    <string name="cluster_simple_read">Read cluster status</string>
+    <string name="cluster_simple_load">Load full-screen theme</string>
+    <string name="cluster_simple_choose">Choose app</string>
+    <string name="cluster_simple_change_app">Change app</string>
+    <string name="cluster_simple_start">Start full screen</string>
+    <string name="cluster_simple_confirm">Confirm what I see</string>
+    <string name="cluster_simple_stop">Stop full screen</string>
+    <string name="cluster_simple_finish">Finish test</string>
+    <string name="cluster_simple_recover">Return to BYD display</string>
+    <string name="cluster_simple_wait">Please wait…</string>
     <string name="cluster_restart_checking">Checking the preserved RCC, its original location and the lookup directory…</string>
-    <string name="cluster_restart_ready">The journal records a moved RCC. Fresh checks are required before offering a restart.</string>
     <string name="cluster_restart_unknown">A restart was prepared or submitted. Its outcome is unknown. Do not resend it: wait for BYD to return, then verify the display.</string>
     <string name="cluster_restart_blocked">Restart blocked. Retirement or verification is unconfirmed. No automatic retry. Read the details or send a report.</string>
     <string name="cluster_restart_parked">I confirm: vehicle immobilized in P, parking brake applied.</string>
