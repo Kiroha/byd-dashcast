@@ -3,3 +3,7 @@ graphify-out/graph.json merge=graphify
 # Preserve byte-pinned OEM CRLF and literal patch content; source hashes depend on it.
 artifacts/cluster_*/patched/** -text -whitespace
 artifacts/cluster_*/patches/** -text -whitespace
+# SHA256SUMS pins the generated LF manifests; a CRLF checkout would break the review hashes.
+artifacts/cluster_*/manifest.json text eol=lf
+artifacts/cluster_*/SHA256SUMS text eol=lf
+app/src/main/assets/cluster_live/*.json text eol=lf
