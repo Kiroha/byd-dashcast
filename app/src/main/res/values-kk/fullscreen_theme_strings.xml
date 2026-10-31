@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Толық экранды карта + BYD аспаптары</string>
+    <string name="fs_page_subtitle">Қолданбаңыздың картасы бүкіл панельді алады. BYD индикаторлары, ADAS ескертулері, жылдамдық пен беріліс оның үстінде көрсетіліп тұрады.</string>
+    <string name="fs_safety_note">⚠ Тек көлік тұрақта тұрғанда сынап көріңіз: P күйінде, тұрақ тежегіші қосулы болсын. «BYD экранына оралу» түймесі экранның жоғарғы жағында қолжетімді болып қалады.</string>
+    <string name="fs_details">Техникалық мәліметтер</string>
+    <string name="fs_expected_label">Панельде мынаны көруіңіз керек:</string>
+    <string name="fs_waiting">Күте тұрыңыз…</string>
+    <string name="fs_step_counter">%1$d/%2$d-қадам</string>
+    <string name="fs_step_check">Тексеру</string>
+    <string name="fs_step_load">Жүктеу</string>
+    <string name="fs_step_app">Қолданба</string>
+    <string name="fs_step_start">Толық экран</string>
+    <string name="fs_step_finish">Аяқтау</string>
+    <string name="fs_chip_stock">Бастапқы BYD экраны</string>
+    <string name="fs_chip_ready">Тақырып жүктелді</string>
+    <string name="fs_chip_active">Толық экран қосулы</string>
+    <string name="fs_chip_busy">Операция орындалуда</string>
+    <string name="fs_chip_attention">Әрекет қажет</string>
+    <string name="fs_chip_unknown">Күйі белгісіз</string>
+
+    <string name="fs_check_title">Көлікті тексеріңіз</string>
+    <string name="fs_check_message">DashCast ештеңені өзгертпей, панель мен өз қызметінің күйін оқиды.</string>
+    <string name="fs_check_action">Қазір тексеру</string>
+    <string name="fs_check_failed">Панель күйін оқу мүмкін болмады: DashCast қызметі жауап бермейді. DashCast қолданбасын қайта ашып, қосылуды күтіңіз, содан кейін қайталап көріңіз.</string>
+    <string name="fs_protocol_title">DashCast қызметін жаңарту қажет</string>
+    <string name="fs_protocol_message">Қосылған DashCast қызметі тым ескі (%1$d хаттамасы қажет). Оны қайта қосу үшін DashCast қолданбасын жауып, қайта ашыңыз, содан кейін қайта тексеріңіз.</string>
+    <string name="fs_small_title">Панельге қолдау көрсетілмейді</string>
+    <string name="fs_small_message">Бұл тақырып 1920 × 720 өлшемді үлкен панельге арналған. Шағын панель анықталды, сондықтан сынақ ұсынылмайды.</string>
+    <string name="fs_platform">Бұл көлікте сынақ мүмкін емес: Android 10 негізіндегі DiLink 3 қажет. Ештеңе жіберілген жоқ.</string>
+
+    <string name="fs_load_title">Тақырыпты жүктеңіз</string>
+    <string name="fs_load_message">DashCast тақырыпты панельге орнатады. Экран әзірге өзгермейді.</string>
+    <string name="fs_load_expected">Өзгеріс жоқ: әдеттегі BYD экраны.</string>
+    <string name="fs_load_action">Тақырыпты жүктеу</string>
+    <string name="fs_loading_title">Тақырып жүктелуде…</string>
+    <string name="fs_loading_message">Бұл бір минутқа дейін созылуы мүмкін. Осы бетте қалыңыз.</string>
+    <string name="fs_bootstrap_message">BYD проекция режимі ашылуда…</string>
+    <string name="fs_display_message">Панель экраны ізделуде…</string>
+
+    <string name="fs_app_title">Қолданбаны таңдаңыз</string>
+    <string name="fs_app_message">Панельді толық алатын навигация қолданбасын таңдаңыз.</string>
+    <string name="fs_app_action">Қолданбаны таңдау</string>
+    <string name="fs_change_app">Қолданбаны ауыстыру</string>
+
+    <string name="fs_start_title">Толық экранды іске қосыңыз</string>
+    <string name="fs_start_message">Таңдалған қолданба: %1$s</string>
+    <string name="fs_start_expected">Бүкіл панельдегі карта, оның үстінде индикаторлар, ескертулер, жылдамдық пен беріліс.</string>
+    <string name="fs_start_action">Толық экранды іске қосу</string>
+    <string name="fs_opening_title">Толық экран ашылуда…</string>
+    <string name="fs_opening_message">Карта панельге шығарылуда.</string>
+    <string name="fs_observe_title">Панельге қараңыз</string>
+    <string name="fs_observe_message">Панель сұрауды қабылдады. Шын мәнінде не көріп тұрғаныңызды айтыңыз.</string>
+    <string name="fs_observe_action">Көргенімді айту</string>
+    <string name="fs_done_title">Толық экран расталды</string>
+    <string name="fs_done_message">Рақмет! Аяқтаған соң толық экранды тоқтатыңыз.</string>
+    <string name="fs_stop_action">Толық экранды тоқтату</string>
+    <string name="fs_closing_message">Толық экран жабылуда…</string>
+    <string name="fs_closed_title">Толық экран тоқтатылды</string>
+    <string name="fs_closed_message">BYD экранына оралу үшін сынақты аяқтаңыз немесе толық экранды қайтадан іске қосыңыз (%1$s).</string>
+    <string name="fs_relaunch_action">Қайтадан бастау</string>
+    <string name="fs_finish_action">Сынақты аяқтау</string>
+
+    <string name="fs_recover_title">BYD экранына оралу</string>
+    <string name="fs_recover_message">Кез келген басқа қадам алдында панель BYD экранына оралуы керек.</string>
+    <string name="fs_recover_other">Бұрынғы DashCast сынағы әлі жүктеулі тұр. Алдымен BYD экранына оралыңыз.</string>
+    <string name="fs_recover_restart">Тақырып шетке қойылды. Панельді қайта іске қосу BYD экранына оралуды аяқтайды.</string>
+    <string name="fs_recover_unknown">Қайта іске қосу пәрмені жіберілді, бірақ нәтижесі белгісіз. Оны қайта жібермеңіз: BYD экранына оралғанын тексеріңіз.</string>
+    <string name="fs_recover_display">Панель экраны танылмады. BYD экранына оралыңыз.</string>
+    <string name="fs_recover_action">BYD экранына оралу</string>
+    <string name="fs_factory_action">Бастапқы экранды қолдану</string>
+    <string name="fs_wait_title">Күте тұрыңыз…</string>
+    <string name="fs_wait_message">Панельде операция орындалуда.</string>
+    <string name="fs_state_changed">Панель күйі жаңа ғана өзгерді. Сәл күтіңіз: бет жаңартылуда.</string>
+    <string name="fs_busy">Басқа операция орындалуда. Сәлден кейін қайталап көріңіз.</string>
+    <string name="fs_failed">Операция аяқталмады. Ештеңе автоматты түрде қайталанбайды; «BYD экранына оралу» түймесі қолжетімді болып қалады. «Техникалық мәліметтер» бөлімін қараңыз.</string>
+
+    <string name="fs_dialog_happens">Не болады</string>
+    <string name="fs_dialog_expected">Не көруіңіз керек</string>
+    <string name="fs_check_parked">Көлік қозғалмай тұр, P күйінде, тұрақ тежегіші қосулы.</string>
+    <string name="fs_check_cluster">Бұл — осы сынаққа арналған панель (DashCast кез келген өзгерістен бұрын оның нақты нұсқасын тексереді).</string>
+    <string name="fs_check_restore">Осы көлікте бастапқы BYD экранын қалпына келтіремін.</string>
+
+    <string name="fs_load_dialog_title">Тақырыпты жүктеу керек пе?</string>
+    <string name="fs_load_step_copy">DashCast тақырыпты панельге көшіріп, оны таңдайды.</string>
+    <string name="fs_load_step_same">Бұл қадамда BYD экраны өзгеріссіз қалады.</string>
+    <string name="fs_load_step_return">«BYD экранына оралу» түймесі кез келген уақытта қолжетімді.</string>
+    <string name="fs_load_confirm">Жүктеу</string>
+
+    <string name="fs_choose_title">Қай қолданбаны көрсету керек?</string>
+    <string name="fs_choose_empty">Үйлесімді қолданба табылмады.</string>
+
+    <string name="fs_start_dialog_title">Толық экранды іске қосу керек пе?</string>
+    <string name="fs_start_step_projection">Панель проекция режиміне ауысады.</string>
+    <string name="fs_start_step_app">%1$s бүкіл панельде көрсетіледі.</string>
+    <string name="fs_start_step_stop">Оны осы беттен кез келген уақытта тоқтата аласыз.</string>
+    <string name="fs_start_confirm">Іске қосу</string>
+
+    <string name="fs_stop_dialog_title">Толық экранды тоқтату керек пе?</string>
+    <string name="fs_stop_step_close">Қолданба панельден кетеді.</string>
+    <string name="fs_stop_step_keep">Тақырып жүктеулі күйде қалады: қайтадан бастауға немесе сынақты аяқтауға болады.</string>
+    <string name="fs_stop_expected">Әдеттегі BYD экраны қайтады.</string>
+    <string name="fs_stop_confirm">Тоқтату</string>
+
+    <string name="fs_observe_dialog_title">Панельде не көріп тұрсыз?</string>
+    <string name="fs_observe_ok">Карта бүкіл панельді алады, индикаторлар, жылдамдық пен беріліс көрінеді</string>
+    <string name="fs_observe_stock">Ештеңе өзгерген жоқ: әдеттегі BYD экраны</string>
+    <string name="fs_observe_problem">Қара экран, «Simple mode» немесе қалыпсыз көрініс</string>
+    <string name="fs_observe_stock_help">Бірнеше секунд күтіп, қайта қараңыз. Ештеңе өзгермесе, толық экранды тоқтатыңыз.</string>
+
+    <string name="fs_info_title">BYD экранына оралу</string>
+    <string name="fs_restore_none">DashCast тақырыбы жүктелмеген. Панельде әдеттегі BYD экраны көрсетіліп тұрғанын ғана тексеріңіз.</string>
+    <string name="fs_guidance_same">Панель оралудан бас тартып, DashCast тақырыбын сақтап тұр. Тақырыпты шетке қойыңыз: содан кейін DashCast панельді қайта іске қосуға жол көрсетеді.</string>
+    <string name="fs_guidance_retired">Тақырып шетке қойылды. Жалғастыру үшін «BYD экранына оралу» түймесін басыңыз: панельді қайта іске қосу ұсынылады.</string>
+
+    <string name="fs_restore_dialog_title">BYD экранына оралу керек пе?</string>
+    <string name="fs_restore_step_close">DashCast толық экранды картаны жабады.</string>
+    <string name="fs_restore_step_default">DashCast бастапқы BYD экранын қайта сұрайды.</string>
+    <string name="fs_restore_step_restart">Қажет болса, кейін панельді қайта іске қосу ұсынылады.</string>
+    <string name="fs_bootstrap_step">DashCast уақытша BYD проекциясын жабады; ешқандай тақырып таңдалмаған еді.</string>
+    <string name="fs_restore_expected">Индикаторлары мен аспаптары бар әдеттегі BYD экраны.</string>
+    <string name="fs_restore_confirm">BYD экранына оралу</string>
+
+    <string name="fs_retire_dialog_title">Тақырыпты шетке қою керек пе?</string>
+    <string name="fs_retire_step_move">DashCast өзінің сынақ тақырыбын жылжытады; файл сақталады.</string>
+    <string name="fs_retire_step_no_restart">Бұл қадамда қайта іске қосу жоқ.</string>
+    <string name="fs_retire_expected">Панельде әзірге өзгеріс жоқ.</string>
+    <string name="fs_retire_confirm">Шетке қою</string>
+
+    <string name="fs_verify_dialog_title">BYD экранына оралуды тексеру керек пе?</string>
+    <string name="fs_verify_step">DashCast бастапқы BYD экраны таңдалғанын тексереді. Ештеңе қайталанбайды.</string>
+    <string name="fs_verify_confirm">Тексеру</string>
+
+    <string name="fs_factory_dialog_title">Бастапқы экранды қолдану керек пе?</string>
+    <string name="fs_factory_step">Бастапқы профильді қолдану үшін DashCast BYD проекциясын бір рет ашып, жабады.</string>
+    <string name="fs_factory_step_none">DashCast тақырыбы жіберілмейді.</string>
+
+    <string name="fs_restart_dialog_title">Панельді қайта іске қосу керек пе?</string>
+    <string name="fs_restart_step_check">DashCast өз тақырыбының шетке қойылғанын қайта тексереді.</string>
+    <string name="fs_restart_step_screens">Панель мен экрандар қайта іске қосылады; ADB байланысы қысқа уақытқа үзіледі.</string>
+    <string name="fs_restart_expected">Қайта іске қосылғаннан кейін: әдеттегі BYD экраны.</string>
+    <string name="fs_restart_confirm">Қайта іске қосу</string>
+    <string name="fs_restart_done">Панель қайта іске қосылып болды</string>
+
+    <string name="fs_native_step">DashCast панельден BYD проекция режимінен шығуды сұрайды.</string>
+
+    <string name="fs_oem_question_title">BYD экраны қайтты ма?</string>
+    <string name="fs_oem_question_message">Панельге қараңыз: индикаторлары мен аспаптары бар әдеттегі BYD экранын көріп тұрсыз ба? Тек қарағаннан кейін ғана жауап беріңіз.</string>
+    <string name="fs_oem_question_yes">Иә, қайтты</string>
+</resources>

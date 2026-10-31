@@ -63,12 +63,11 @@ import java.lang.ref.WeakReference
 class DiagActivity : Activity() {
 
     private var liveThemeControls: ClusterThemeLiveControls? = null
-    private var nativeFullControls: ClusterNativeFullControls? = null
+    private var nativeReturnControls: ClusterNativeReturnControls? = null
     private var observationPrompts: ClusterObservationPrompts? = null
     private var diagnosticsResumed = false
     private lateinit var logView: TextView
     private lateinit var runBtn: Button
-    private lateinit var experimentalThemeBtn: Button
     private lateinit var probeBtn: Button
     private lateinit var fissionRegistryBtn: Button
     private lateinit var armCallbackBtn: Button
@@ -114,7 +113,7 @@ class DiagActivity : Activity() {
      *  running two at once (e.g. a multi-minute APK extraction plus a 60s trace) would interleave
      *  their output with no attribution of which button produced which line. Single-shot manual
      *  diagnostics, so the correct behaviour on contention is "tell the tester to wait", not queue. */
-    private fun allDiagButtons() = listOf(runBtn, experimentalThemeBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn, adasTargetsBtn)
+    private fun allDiagButtons() = listOf(runBtn, probeBtn, fissionRegistryBtn, armCallbackBtn, traceBtn, navIconCaptureBtn, fullExportBtn, qrDiagnosticBtn, hudBenchBtn, reportingPairBtn, adasTargetsBtn)
 
     /** True (and claims [sBusy]) iff nothing else on this screen is running; otherwise logs and
      *  returns false without touching any button state. */
@@ -211,7 +210,8 @@ class DiagActivity : Activity() {
                 contentDescription = "${title}. ${description}. Open page"
                 setOnClickListener { showPage(destination) }
             })
-            body.addView(TextView(this).apply {
+            // The Cluster page opens on its own visual summary instead of a description line.
+            if (destination != Page.CLUSTER) body.addView(TextView(this).apply {
                 text = description
                 textSize = 14f
             })
@@ -225,31 +225,15 @@ class DiagActivity : Activity() {
         val reportingBody = page(Page.REPORTING)
         val activityLogBody = page(Page.LOG)
 
-        val dashboardBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        clusterBody.addView(dashboardBody)
-        val clusterTechnical = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        clusterBody.addView(Button(this).apply {
-            text = getString(R.string.cluster_wizard_details_show); isAllCaps = false
-            minHeight = (48 * density).toInt()
-            setOnClickListener {
-                val expanded = clusterTechnical.visibility != View.VISIBLE
-                clusterTechnical.visibility = if (expanded) View.VISIBLE else View.GONE
-                text = getString(if (expanded) R.string.cluster_wizard_details_hide else R.string.cluster_wizard_details_show)
-                contentDescription = text
-            }
-        })
-        clusterBody.addView(clusterTechnical)
-        addDiagnosticReportShortcut(clusterTechnical)
         observationPrompts = ClusterObservationPrompts(this)
-        nativeFullControls = ClusterNativeFullControls(this, recoveryBar, clusterTechnical,
-            claimDiag = { claimBusyOrWarn() }, releaseDiag = { releaseBusy() }, transcript = { log(it) }, prompts = observationPrompts!!)
-        clusterTechnical.addView(TextView(this).apply { text = getString(R.string.diag_cluster_rcc_ivi_title); textSize = 19f })
-        liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterTechnical,
+        nativeReturnControls = ClusterNativeReturnControls(this, recoveryBar, transcript = { log(it) }, prompts = observationPrompts!!)
+        liveThemeControls = ClusterThemeLiveControls(this, recoveryBar, clusterBody,
             claimDiag = { claimBusyOrWarn().also { claimed -> if (claimed) allDiagButtons().forEach { it.isEnabled = false } } },
             releaseDiag = { releaseBusy() }, otherBusy = { sBusy.get() }, transcript = { log(it) },
-            statusContainer = clusterTechnical, nativeStatus = { text, pinned -> nativeFullControls?.receivedStatus(text, pinned) },
-            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeFullControls?.statusUnavailable() },
-            openClusterPage = { showPage(Page.CLUSTER) }, dashboardContainer = dashboardBody)
+            reportShortcut = { addDiagnosticReportShortcut(it) },
+            nativeStatus = { text, pinned -> nativeReturnControls?.receivedStatus(text, pinned) },
+            prompts = observationPrompts!!, nativeStatusUnavailable = { nativeReturnControls?.statusUnavailable() },
+            openClusterPage = { showPage(Page.CLUSTER) })
         addDiagnosticReportShortcut(reportingBody)
         exportBody.addView(TextView(this).apply {
             text = "Local exports: use while parked. Keep DashCast open until they finish."
@@ -315,16 +299,6 @@ class DiagActivity : Activity() {
             }
         }
         navigationBody.addView(navIconCaptureBtn)
-
-        experimentalThemeBtn = Button(this).apply {
-            text = "Verify experimental theme (local only)"
-            setOnClickListener { verifyExperimentalTheme() }
-        }
-        clusterBody.addView(experimentalThemeBtn)
-        clusterBody.addView(TextView(this).apply {
-            text = "Checks bundled files only. Does not load a cluster theme."
-            textSize = 14f
-        })
 
         probeBtn = Button(this).apply {
             text = "OEM cluster probes (read-only)"
@@ -483,7 +457,7 @@ class DiagActivity : Activity() {
     private fun updateClusterVisibility() {
         val visible = diagnosticsResumed && currentPage == Page.CLUSTER
         observationPrompts?.setVisible(visible)
-        nativeFullControls?.setActive(visible)
+        nativeReturnControls?.setActive(visible)
         liveThemeControls?.setActive(visible)
     }
 
@@ -1099,40 +1073,9 @@ class DiagActivity : Activity() {
     }
 
     override fun onDestroy() {
-        nativeFullControls?.close()
+        nativeReturnControls?.close()
         liveThemeControls?.close()
         super.onDestroy()
-    }
-
-    private fun verifyExperimentalTheme() {
-        if (!claimBusyOrWarn()) return
-        allDiagButtons().forEach { it.isEnabled = false }
-        val app = applicationContext
-        val owner = WeakReference(this)
-        Thread({
-            try {
-                val result = ExperimentalThemeDiagnostics.verify { name ->
-                    app.assets.open("experimental_theme/$name")
-                }
-                val report = result.report() + "\nAndroid API: ${Build.VERSION.SDK_INT}; build: ${Build.DISPLAY}" +
-                    "\nPositive DiLink 3 detection: ${Platform.get().isAutoDetectedDiLink3()} (not proof of cluster access)." +
-                    "\n" + ExperimentalThemeDiagnostics.passiveAccessContext(app)
-                logExtraction(owner, report)
-                owner.get()?.runOnUiThread {
-                    val activity = owner.get() ?: return@runOnUiThread
-                    if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                    AlertDialog.Builder(activity)
-                        .setTitle("Experimental theme — local verification")
-                        .setMessage(report)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
-            } catch (e: Exception) {
-                logExtraction(owner, "Experimental theme local verification failed (${e.javaClass.simpleName}). No theme loaded.")
-            } finally {
-                completeThemeVerification(owner)
-            }
-        }, "experimental-theme-check").start()
     }
 
     private fun captureNavigationIcons() {
@@ -1224,18 +1167,6 @@ class DiagActivity : Activity() {
             activity.runOnUiThread {
                 if (!activity.isFinishing && !activity.isDestroyed && activity::logView.isInitialized) {
                     activity.logView.append(line + "\n")
-                }
-            }
-        }
-
-        private fun completeThemeVerification(owner: WeakReference<DiagActivity>) {
-            sBusy.set(false)
-            val activity = owner.get() ?: return
-            activity.runOnUiThread {
-                if (!activity.isFinishing && !activity.isDestroyed) {
-                    val idle = !sBusy.get()
-                    activity.allDiagButtons().forEach { it.isEnabled = idle }
-                    activity.reportingPairBtn.isEnabled = idle && !activity.reportingPairInFlight
                 }
             }
         }

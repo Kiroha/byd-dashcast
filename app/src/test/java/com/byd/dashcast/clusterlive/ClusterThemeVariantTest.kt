@@ -45,7 +45,7 @@ class ClusterThemeVariantTest {
         assertTrue(ClusterThemeVariant.CORNER_MARKER_21F7735C.isCorner)
         assertFalse(marker.isCorner); assertFalse(full.isCorner)
         assertFalse(ClusterThemeVariant.isCornerId("corner-marker-untrusted"))
-        assertEquals(7, ClusterThemeVariant.values().size)
+        assertEquals(8, ClusterThemeVariant.values().size)
         assertFalse(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isMarker)
         assertTrue(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isPersistent)
         assertFalse(ClusterThemeVariant.FULL_DASHBOARD_21F7735C.isFullScreen)
@@ -58,6 +58,12 @@ class ClusterThemeVariantTest {
         assertFalse(fullscreen.isFullApp); assertFalse(fullscreen.isRecoveryOnly); assertFalse(fullscreen.isMarker)
         assertEquals(30, fullscreen.startOperation); assertEquals(46, fullscreen.minimumProtocol)
         assertEquals(ClusterDashboardProfile.Viewport(0, 0, 1920, 720), ClusterDashboardProfile.viewport(fullscreen))
+        val instruments = ClusterThemeVariant.FULLSCREEN_INSTRUMENTS_21F7735C
+        assertTrue(instruments.isDashboard); assertTrue(instruments.isFullScreen); assertTrue(instruments.isPersistent)
+        assertFalse(instruments.isFullApp); assertFalse(instruments.isRecoveryOnly); assertFalse(instruments.isMarker)
+        assertEquals(31, instruments.startOperation); assertEquals(47, instruments.minimumProtocol)
+        assertEquals(ClusterDashboardProfile.Viewport(0, 0, 1920, 720), ClusterDashboardProfile.viewport(instruments))
+        assertTrue(instruments in ClusterRestartCohort.variants)
         assertEquals(ClusterThemeVariant.values().size, ClusterThemeVariant.values().map { it.startOperation }.toSet().size)
     }
 

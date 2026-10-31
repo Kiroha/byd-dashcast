@@ -115,7 +115,8 @@ class ClusterRccRecoveryControlsTest {
             assertTrue("Recovery condition did not settle; operations=$operations", condition())
         }
         fun header() = all.filterIsInstance<Button>().first { it.parent !is android.widget.ScrollView &&
-            it.text in listOf(app.getString(R.string.diag_cluster_rcc_restore), app.getString(R.string.diag_cluster_rcc_retire_button), app.getString(R.string.diag_cluster_rcc_verify_return)) }
+            it.text == app.getString(R.string.diag_cluster_rcc_restore) }
+        fun texts(popup: AlertDialog) = views(popup.window!!.decorView as ViewGroup).filterIsInstance<TextView>().map { it.text.toString() }
         fun clickHeader() { header().performClick(); waitFor { dialog() != null } }
         fun confirm() {
             shadowOf(Looper.getMainLooper()).idle()
@@ -151,8 +152,8 @@ class ClusterRccRecoveryControlsTest {
             if (adas) f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("ADAS\n") }.performClick()
             f.clickHeader()
             assertTrue(f.operations.isNotEmpty()); assertTrue(f.operations.all { it == 0 })
-            assertTrue((field("workflowNext").get(f.controls) as Button).isShown)
-            assertFalse(f.all.filterIsInstance<Button>().single { it.text.toString().startsWith("Read current connected daemon") }.isShown)
+            assertTrue((field("page").get(f.controls) as FullscreenThemeView).root.isShown)
+            assertTrue(f.all.filterIsInstance<Button>().none { it.text.toString().startsWith("Read current connected daemon") })
             f.confirm(); f.waitFor { 13 in f.operations && !flag("recoveryBusy").get() }
             assertFalse(2 in f.operations); assertFalse(14 in f.operations)
             f.checkLease()
@@ -162,8 +163,8 @@ class ClusterRccRecoveryControlsTest {
     @Test fun `Restore moves a loaded owned carrier directly without an OEM restore request`() {
         Fixture(receipt().put("carrierMovable", true)).use { f ->
             f.clickHeader()
-            assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_confirm),
-                f.dialog()!!.findViewById<TextView>(android.R.id.message).text.toString())
+            assertTrue(f.texts(f.dialog()!!).contains(f.app.getString(R.string.fs_retire_dialog_title)))
+            assertEquals(f.app.getString(R.string.fs_retire_confirm), f.dialog()!!.getButton(-1).text)
             assertTrue(f.operations.all { it == 0 })
             f.confirm(); f.waitFor { 14 in f.operations && !flag("recoveryBusy").get() }
             assertEquals(listOf(14), f.operations.filter { it != 0 }); f.checkLease()
@@ -175,14 +176,15 @@ class ClusterRccRecoveryControlsTest {
             f.poll(); assertNull(f.dialog()); f.checkLease()
             f.current = receipt(eligible = true); f.poll(); f.waitFor { f.dialog() != null }
             val popup = f.dialog()!!
-            assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_button), popup.getButton(-1).text)
+            assertEquals(f.app.getString(R.string.fs_retire_confirm), popup.getButton(-1).text)
             assertTrue(popup.findViewById<TextView>(android.R.id.message).text.contains("RESOURCE_IS_SAME"))
             assertEquals(f.app.getString(R.string.diag_cluster_rcc_restore), f.header().text)
             assertEquals(listOf(13), f.operations.filter { it != 0 }); f.checkLease()
             popup.getButton(-1).performClick()
-            assertTrue(f.dialog()!!.getButton(-1).text == f.app.getString(R.string.diag_cluster_native_send))
+            assertTrue(f.dialog()!!.getButton(-1).text == f.app.getString(R.string.fs_retire_confirm))
+            assertTrue(f.texts(f.dialog()!!).contains(f.app.getString(R.string.fs_retire_dialog_title)))
             assertFalse(14 in f.operations)
-            f.confirm(); f.waitFor { 14 in f.operations && f.dialog()?.findViewById<TextView>(android.R.id.message)?.text?.contains(f.app.getString(R.string.diag_cluster_rcc_retired_waiting)) == true }
+            f.confirm(); f.waitFor { 14 in f.operations && f.dialog()?.findViewById<TextView>(android.R.id.message)?.text?.contains(f.app.getString(R.string.fs_guidance_retired)) == true }
             assertEquals(listOf(13, 14), f.operations.filter { it != 0 }); assertTrue(f.current.getBoolean("rccDebt")); f.checkLease()
         }
     }
@@ -190,7 +192,7 @@ class ClusterRccRecoveryControlsTest {
         Fixture(receipt(true)).use { f ->
             f.clickHeader(); val popup = f.dialog()!!; popup.cancel()
             f.poll(); assertNull(f.dialog()); assertTrue(f.operations.all { it == 0 })
-            f.clickHeader(); assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_button), f.dialog()!!.getButton(-1).text)
+            f.clickHeader(); assertEquals(f.app.getString(R.string.fs_retire_confirm), f.dialog()!!.getButton(-1).text)
             assertTrue(f.operations.all { it == 0 })
         }
     }
@@ -267,7 +269,7 @@ class ClusterRccRecoveryControlsTest {
             f.poll(); f.waitFor { f.dialog() != null }; f.dialog()!!.cancel()
             f.clickHeader(); f.confirm(); f.waitFor { 13 in f.operations && !flag("recoveryBusy").get() }
             f.current = receipt(true); f.poll(); f.waitFor { f.dialog() != null }
-            assertEquals(f.app.getString(R.string.diag_cluster_rcc_retire_button), f.dialog()!!.getButton(-1).text)
+            assertEquals(f.app.getString(R.string.fs_retire_confirm), f.dialog()!!.getButton(-1).text)
             f.dialog()!!.cancel(); f.poll(); assertNull(f.dialog()); assertEquals(listOf(13), f.operations.filter { it != 0 })
         }
     }
@@ -275,7 +277,7 @@ class ClusterRccRecoveryControlsTest {
         Fixture(receipt().put("state", "DEFAULT_QUERIED").put("defaultQueried", true).put("iviRecoverySettled", true)).use { f ->
             f.all.filterIsInstance<Button>().single { it.text.toString().startsWith(f.app.getString(R.string.diag_cluster_dashboard_title) + "\n") }.performClick()
             f.waitFor { f.dialog() != null }
-            assertEquals(f.app.getString(R.string.diag_cluster_observation_yes), f.dialog()!!.getButton(-1).text)
+            assertEquals(f.app.getString(R.string.fs_oem_question_yes), f.dialog()!!.getButton(-1).text)
             assertTrue(f.operations.all { it == 0 }); f.dialog()!!.getButton(-1).performClick()
             f.waitFor { 4 in f.operations }; assertEquals(listOf(4), f.operations.filter { it != 0 })
         }

@@ -1,43 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">لوحة العدادات بملء الشاشة</string>
-    <string name="diag_cluster_dashboard_help">اختبار يدوي أثناء التوقف. يظل الملف محدداً بعد الإغلاق. استعد ملف المصنع وتحقق من عودته قبل تثبيت APK أقدم.</string>
-    <string name="diag_cluster_dashboard_read">1 · قراءة الحالة والتوافق</string>
-    <string name="diag_cluster_dashboard_prepare">2 · تحضير اللوحة</string>
-    <string name="diag_cluster_dashboard_choose_app">3 · اختيار التطبيق</string>
-    <string name="diag_cluster_dashboard_open">4 · فتح اللوحة</string>
-    <string name="diag_cluster_dashboard_close">إغلاق العرض</string>
-    <string name="diag_cluster_dashboard_observe">5 · تأكيد الشاشة الظاهرة</string>
-    <string name="diag_cluster_dashboard_observe_message">أكد فقط إذا رأيت اللوحة والعدادات والتنبيهات والتطبيق. استلام رد الأمر لا يثبت ظهور الشاشة.</string>
-    <string name="diag_cluster_dashboard_confirm">أكد أن السيارة ثابتة وأن إصدار النظام قد تم التحقق منه. هذا الخيار إقرار وليس قياساً للحركة. لا يزال التحقق داخل السيارة مطلوباً.</string>
-    <string name="diag_cluster_dashboard_geometry">يجب اكتشاف لوحة واحدة نشطة بدقة 1920 × 720 بكسل. الحجم المجهول أو الملتبس أو الصغير يرفض الاختبار.</string>
-    <string name="diag_cluster_dashboard_prepare_first">حضّر ملف DashCast أولاً وانتظر اكتمال الاختيار.</string>
-    <string name="diag_cluster_dashboard_idle">○ لم يتم تحضير لوحة</string>
-    <string name="diag_cluster_dashboard_restoring">↩ جارٍ الاستعادة</string>
-    <string name="diag_cluster_dashboard_unknown">⚠ الحالة غير مؤكدة: استخدم الاستعادة</string>
-    <string name="diag_cluster_dashboard_open_received">✓ تم استلام الفتح؛ أكد الشاشة</string>
-    <string name="diag_cluster_dashboard_closed_received">○ العرض مغلق؛ استعادة المصنع ما زالت مطلوبة</string>
-    <string name="diag_cluster_dashboard_waiting">◷ العملية جارية</string>
-    <string name="diag_cluster_dashboard_ready">✓ تم اختيار الملف؛ اختر تطبيقاً وافتح اللوحة</string>
-    <string name="diag_cluster_dashboard_selected_app">التطبيق: %1$s</string>
-    <string name="diag_cluster_dashboard_details">التفاصيل التقنية والاختبارات السابقة</string>
-    <string name="diag_cluster_dashboard_confirmed">✓ تم تأكيد الشاشة بواسطة المستخدم</string>
-    <string name="diag_cluster_dashboard_restore_confirm">أغلق العرض واطلب ملف المصنع. يبقى فشل الإغلاق دون حل حتى إذا عاد ملف المصنع. ثم أكد العدادات والتنبيهات الظاهرة.</string>
-    <string name="diag_cluster_dashboard_bootstrap">جارٍ تفعيل عرض BYD الأصلي مؤقتًا…</string>
-    <string name="diag_cluster_dashboard_display_wait">في انتظار شاشة عرض BYD…</string>
-    <string name="diag_cluster_dashboard_display_rejected">شاشة عرض BYD غير متاحة أو غير متوافقة. راجع التفاصيل.</string>
-    <string name="diag_cluster_dashboard_restore_required">بدأت التهيئة: يلزم استعادة BYD.</string>
-    <string name="diag_cluster_dashboard_small_panel">تم رصد لوحة عدادات صغيرة: رُفض الاختبار. تبقى استعادة BYD متاحة.</string>
-    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">أغلق عرض BYD المؤقت وتحقق من اختيار المصنع. لم يتم اختيار RCC مخصص. ثم أكد عودة العدادات والتنبيهات.</string>
-    <string name="diag_cluster_dashboard_prepare_confirm">قد يفتح التحضير عرض BYD الأصلي مؤقتًا ويتحقق من شاشته قبل اختيار ملف RCC الخاص بنا. لا يبدأ أي تطبيق قبل الضغط على فتح. أكد التوقف والبرنامج الثابت؛ هذا الإقرار لا يقيس الحركة.</string>
-    <string name="diag_cluster_dashboard_protocol">يجب أن يستخدم daemon المتصل البروتوكول %1$d. أعد توصيله في DashCast قبل إعادة التحضير أو الفتح. لم يتم إرسال أمر BYD.</string>
-    <string name="diag_cluster_full_app_prepare">2b · نموذج ملء الشاشة (للحاسوب فقط)</string>
-    <string name="diag_cluster_full_app_help">نموذج للفحوص على الحاسوب فقط. يبقى التحميل في السيارة غير متاح حتى التحقق من استعادة مستقلة. تبقى عدادات BYD وتنبيهاتها محفوظة. تظل الاستعادة متاحة للملف القديم.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">لا يمكن تحميل هذا النموذج في السيارة. الملف القديم لملء الشاشة متاح للاستعادة فقط.</string>
-    <string name="diag_cluster_factory_apply">تطبيق اختيار المصنع</string>
-    <string name="diag_cluster_factory_apply_confirm">ملف المصنع محدد بالفعل لكن تطبيقه الأصلي يحتاج إلى تحقق. نفذ انتقال عرض BYD مرة واحدة ثم أغلقه واقرأ الاختيار مجددًا. لن يُرسل RCC مخصص أو اختيار مصنع متكرر. أكد التوقف والبرنامج الثابت.</string>
-    <string name="diag_cluster_full_app_observe_message">لا يمكن فتح الملف القديم أو تأكيد جاهزيته. استخدم الاستعادة ثم أكد بشكل منفصل عودة عدادات BYD وتنبيهاتها.</string>
-    <string name="diag_cluster_fullscreen_prepare">2c · تحضير وضع ملء الشاشة المبسط</string>
-    <string name="diag_cluster_fullscreen_prepare_confirm">اختبار مبسط: في وضع الإسقاط بملء الشاشة تصبح لوحة العدادات شفافة بالكامل ويشغل التطبيق كامل 1920 × 720 بكسل. تُخفى عدادات BYD ومؤشراتها وتنبيهاتها أثناء هذا الاختبار. أكّد التوقف والبرنامج الثابت؛ هذا الإقرار لا يقيس الحركة.</string>
-    <string name="diag_cluster_fullscreen_observe_message">أكّد فقط إذا رأيت التطبيق على كامل لوحة العدادات. عدادات BYD ومؤشراتها وتنبيهاتها مخفية في ملف الاختبار هذا. إيصال الأمر لا يثبت هذا العرض.</string>
 </resources>

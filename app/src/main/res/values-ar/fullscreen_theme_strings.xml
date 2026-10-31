@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">خريطة بملء الشاشة + عدادات BYD</string>
+    <string name="fs_page_subtitle">تملأ خريطة تطبيقك لوحة العدادات بالكامل، وتبقى مؤشرات BYD التحذيرية وتنبيهات ADAS والسرعة ووضع ناقل الحركة ظاهرة فوقها.</string>
+    <string name="fs_safety_note">⚠ لا تُجرِ الاختبار إلا والسيارة متوقفة: في الوضع P مع تفعيل فرامل الوقوف. يبقى زر «العودة إلى شاشة BYD» متاحًا في أعلى الشاشة.</string>
+    <string name="fs_details">التفاصيل التقنية</string>
+    <string name="fs_expected_label">يُفترض أن ترى على لوحة العدادات:</string>
+    <string name="fs_waiting">يرجى الانتظار…</string>
+    <string name="fs_step_counter">الخطوة %1$d من %2$d</string>
+    <string name="fs_step_check">التحقق</string>
+    <string name="fs_step_load">التحميل</string>
+    <string name="fs_step_app">التطبيق</string>
+    <string name="fs_step_start">ملء الشاشة</string>
+    <string name="fs_step_finish">الإنهاء</string>
+    <string name="fs_chip_stock">شاشة BYD الأصلية</string>
+    <string name="fs_chip_ready">السمة محمّلة</string>
+    <string name="fs_chip_active">ملء الشاشة نشط</string>
+    <string name="fs_chip_busy">عملية جارية</string>
+    <string name="fs_chip_attention">إجراء مطلوب</string>
+    <string name="fs_chip_unknown">حالة غير معروفة</string>
+
+    <string name="fs_check_title">تحقّق من السيارة</string>
+    <string name="fs_check_message">يقرأ DashCast حالة لوحة العدادات وحالة خدمته دون تغيير أي شيء.</string>
+    <string name="fs_check_action">تحقّق الآن</string>
+    <string name="fs_check_failed">تعذّرت قراءة حالة لوحة العدادات: خدمة DashCast لا تستجيب. أعد فتح DashCast وانتظر الاتصال، ثم حاول مرة أخرى.</string>
+    <string name="fs_protocol_title">خدمة DashCast بحاجة إلى تحديث</string>
+    <string name="fs_protocol_message">خدمة DashCast المتصلة قديمة جدًا (يلزم البروتوكول %1$d). أغلق DashCast وأعد فتحه لإعادة توصيلها، ثم تحقّق مرة أخرى.</string>
+    <string name="fs_small_title">لوحة العدادات غير مدعومة</string>
+    <string name="fs_small_message">صُممت هذه السمة للوحة العدادات الكبيرة بدقة 1920 × 720. اكتُشفت لوحة عدادات صغيرة، لذا لا يُتاح الاختبار.</string>
+    <string name="fs_platform">يتعذّر إجراء الاختبار على هذه السيارة: يلزم DiLink 3 بنظام Android 10. لم يُرسَل أي شيء.</string>
+
+    <string name="fs_load_title">حمّل السمة</string>
+    <string name="fs_load_message">يثبّت DashCast السمة في لوحة العدادات. لن تتغير الشاشة في هذه المرحلة.</string>
+    <string name="fs_load_expected">لا تغيير: شاشة BYD المعتادة.</string>
+    <string name="fs_load_action">تحميل السمة</string>
+    <string name="fs_loading_title">جارٍ تحميل السمة…</string>
+    <string name="fs_loading_message">قد يستغرق ذلك ما يصل إلى دقيقة. ابقَ في هذه الصفحة.</string>
+    <string name="fs_bootstrap_message">جارٍ فتح وضع إسقاط BYD…</string>
+    <string name="fs_display_message">جارٍ البحث عن شاشة لوحة العدادات…</string>
+
+    <string name="fs_app_title">اختر التطبيق</string>
+    <string name="fs_app_message">اختر تطبيق الملاحة الذي سيملأ لوحة العدادات.</string>
+    <string name="fs_app_action">اختيار التطبيق</string>
+    <string name="fs_change_app">تغيير التطبيق</string>
+
+    <string name="fs_start_title">ابدأ ملء الشاشة</string>
+    <string name="fs_start_message">التطبيق المختار: %1$s</string>
+    <string name="fs_start_expected">الخريطة على كامل لوحة العدادات، وفوقها مؤشرات التحذير والتنبيهات والسرعة ووضع ناقل الحركة.</string>
+    <string name="fs_start_action">بدء ملء الشاشة</string>
+    <string name="fs_opening_title">جارٍ بدء ملء الشاشة…</string>
+    <string name="fs_opening_message">الخريطة في طريقها إلى لوحة العدادات.</string>
+    <string name="fs_observe_title">انظر إلى لوحة العدادات</string>
+    <string name="fs_observe_message">تلقّت لوحة العدادات الطلب. أخبرنا بما تراه فعلًا.</string>
+    <string name="fs_observe_action">الإبلاغ عمّا أراه</string>
+    <string name="fs_done_title">تم تأكيد ملء الشاشة</string>
+    <string name="fs_done_message">شكرًا لك! عند الانتهاء، أوقف ملء الشاشة.</string>
+    <string name="fs_stop_action">إيقاف ملء الشاشة</string>
+    <string name="fs_closing_message">جارٍ إغلاق ملء الشاشة…</string>
+    <string name="fs_closed_title">تم إيقاف ملء الشاشة</string>
+    <string name="fs_closed_message">أنهِ الاختبار للعودة إلى شاشة BYD، أو ابدأ ملء الشاشة مجددًا (%1$s).</string>
+    <string name="fs_relaunch_action">البدء مجددًا</string>
+    <string name="fs_finish_action">إنهاء الاختبار</string>
+
+    <string name="fs_recover_title">العودة إلى شاشة BYD</string>
+    <string name="fs_recover_message">يجب أن تعود لوحة العدادات إلى شاشة BYD قبل أي خطوة أخرى.</string>
+    <string name="fs_recover_other">لا يزال اختبار سابق من DashCast محمّلًا. عُد أولًا إلى شاشة BYD.</string>
+    <string name="fs_recover_restart">وُضعت السمة جانبًا. تكتمل العودة إلى شاشة BYD بإعادة تشغيل لوحة العدادات.</string>
+    <string name="fs_recover_unknown">أُرسل أمر إعادة التشغيل، لكن نتيجته غير معروفة. لا ترسله مرة أخرى: تحقّق من العودة إلى شاشة BYD.</string>
+    <string name="fs_recover_display">تعذّر التعرّف على شاشة لوحة العدادات. عُد إلى شاشة BYD.</string>
+    <string name="fs_recover_action">العودة إلى شاشة BYD</string>
+    <string name="fs_factory_action">تطبيق الشاشة الأصلية</string>
+    <string name="fs_wait_title">يرجى الانتظار…</string>
+    <string name="fs_wait_message">هناك عملية جارية على لوحة العدادات.</string>
+    <string name="fs_state_changed">تغيّرت حالة لوحة العدادات للتو. انتظر لحظة: يجري تحديث الصفحة.</string>
+    <string name="fs_busy">هناك عملية أخرى جارية. حاول مرة أخرى بعد لحظات.</string>
+    <string name="fs_failed">لم تكتمل العملية. لا تُعاد أي محاولة تلقائيًا؛ ويبقى زر «العودة إلى شاشة BYD» متاحًا. راجع «التفاصيل التقنية».</string>
+
+    <string name="fs_dialog_happens">ما الذي سيحدث</string>
+    <string name="fs_dialog_expected">ما يُفترض أن تراه</string>
+    <string name="fs_check_parked">السيارة متوقفة، في الوضع P، وفرامل الوقوف مفعّلة.</string>
+    <string name="fs_check_cluster">هذه هي لوحة العدادات المخصصة لهذا الاختبار (يتحقق DashCast من إصدارها الدقيق قبل أي تغيير).</string>
+    <string name="fs_check_restore">أستعيد شاشة BYD الأصلية على هذه السيارة.</string>
+
+    <string name="fs_load_dialog_title">تحميل السمة؟</string>
+    <string name="fs_load_step_copy">ينسخ DashCast السمة إلى لوحة العدادات ويختارها.</string>
+    <string name="fs_load_step_same">تبقى شاشة BYD معروضة في هذه الخطوة.</string>
+    <string name="fs_load_step_return">يبقى زر «العودة إلى شاشة BYD» متاحًا في أي وقت.</string>
+    <string name="fs_load_confirm">تحميل</string>
+
+    <string name="fs_choose_title">أي تطبيق تريد عرضه؟</string>
+    <string name="fs_choose_empty">لم يُعثر على أي تطبيق متوافق.</string>
+
+    <string name="fs_start_dialog_title">بدء ملء الشاشة؟</string>
+    <string name="fs_start_step_projection">تنتقل لوحة العدادات إلى وضع الإسقاط.</string>
+    <string name="fs_start_step_app">يظهر %1$s على كامل لوحة العدادات.</string>
+    <string name="fs_start_step_stop">يمكنك إيقافه في أي وقت من هذه الصفحة.</string>
+    <string name="fs_start_confirm">بدء</string>
+
+    <string name="fs_stop_dialog_title">إيقاف ملء الشاشة؟</string>
+    <string name="fs_stop_step_close">يختفي التطبيق من لوحة العدادات.</string>
+    <string name="fs_stop_step_keep">تبقى السمة محمّلة: يمكنك البدء مجددًا أو إنهاء الاختبار.</string>
+    <string name="fs_stop_expected">تعود شاشة BYD المعتادة.</string>
+    <string name="fs_stop_confirm">إيقاف</string>
+
+    <string name="fs_observe_dialog_title">ماذا ترى على لوحة العدادات؟</string>
+    <string name="fs_observe_ok">الخريطة تملأ لوحة العدادات، مع مؤشرات التحذير والسرعة ووضع ناقل الحركة</string>
+    <string name="fs_observe_stock">لم يتغير شيء: شاشة BYD المعتادة</string>
+    <string name="fs_observe_problem">شاشة سوداء أو «Simple mode» أو عرض غير طبيعي</string>
+    <string name="fs_observe_stock_help">انتظر بضع ثوانٍ ثم انظر مجددًا. إذا لم يتغير شيء، فأوقف ملء الشاشة.</string>
+
+    <string name="fs_info_title">العودة إلى شاشة BYD</string>
+    <string name="fs_restore_none">لا توجد سمة DashCast محمّلة. تحقّق فقط من أن لوحة العدادات تعرض شاشة BYD المعتادة.</string>
+    <string name="fs_guidance_same">رفضت لوحة العدادات العودة وما زالت تحتفظ بسمة DashCast. ضع السمة جانبًا: سيرشدك DashCast بعد ذلك إلى إعادة تشغيل لوحة العدادات.</string>
+    <string name="fs_guidance_retired">وُضعت السمة جانبًا. اضغط «العودة إلى شاشة BYD» للمتابعة: ستُقترح إعادة تشغيل لوحة العدادات.</string>
+
+    <string name="fs_restore_dialog_title">العودة إلى شاشة BYD؟</string>
+    <string name="fs_restore_step_close">يغلق DashCast الخريطة المعروضة بملء الشاشة.</string>
+    <string name="fs_restore_step_default">يطلب DashCast شاشة BYD الأصلية مجددًا.</string>
+    <string name="fs_restore_step_restart">عند الحاجة، ستُقترح إعادة تشغيل لوحة العدادات بعد ذلك.</string>
+    <string name="fs_bootstrap_step">يغلق DashCast إسقاط BYD المؤقت؛ لم تكن أي سمة قد اختيرت.</string>
+    <string name="fs_restore_expected">شاشة BYD المعتادة، مع مؤشرات التحذير والعدادات.</string>
+    <string name="fs_restore_confirm">العودة إلى شاشة BYD</string>
+
+    <string name="fs_retire_dialog_title">وضع السمة جانبًا؟</string>
+    <string name="fs_retire_step_move">ينقل DashCast سمة الاختبار الخاصة به؛ ويُحتفظ بالملف.</string>
+    <string name="fs_retire_step_no_restart">لا إعادة تشغيل في هذه الخطوة.</string>
+    <string name="fs_retire_expected">لا تغيير على لوحة العدادات حتى الآن.</string>
+    <string name="fs_retire_confirm">وضعها جانبًا</string>
+
+    <string name="fs_verify_dialog_title">التحقق من العودة إلى شاشة BYD؟</string>
+    <string name="fs_verify_step">يتحقق DashCast من أن شاشة BYD الأصلية هي المحددة. لا تُعاد أي محاولة.</string>
+    <string name="fs_verify_confirm">تحقّق</string>
+
+    <string name="fs_factory_dialog_title">تطبيق الشاشة الأصلية؟</string>
+    <string name="fs_factory_step">يفتح DashCast إسقاط BYD ثم يغلقه مرة واحدة لتطبيق الإعدادات الأصلية.</string>
+    <string name="fs_factory_step_none">لا تُرسَل أي سمة من DashCast.</string>
+
+    <string name="fs_restart_dialog_title">إعادة تشغيل لوحة العدادات؟</string>
+    <string name="fs_restart_step_check">يتحقق DashCast مجددًا من أن سمته قد وُضعت جانبًا.</string>
+    <string name="fs_restart_step_screens">يُعاد تشغيل لوحة العدادات والشاشات؛ وينقطع اتصال ADB لبرهة.</string>
+    <string name="fs_restart_expected">بعد إعادة التشغيل: شاشة BYD المعتادة.</string>
+    <string name="fs_restart_confirm">إعادة التشغيل</string>
+    <string name="fs_restart_done">تمت إعادة تشغيل لوحة العدادات بالفعل</string>
+
+    <string name="fs_native_step">يطلب DashCast من لوحة العدادات الخروج من وضع إسقاط BYD.</string>
+
+    <string name="fs_oem_question_title">هل عادت شاشة BYD؟</string>
+    <string name="fs_oem_question_message">انظر إلى لوحة العدادات: هل ترى شاشة BYD المعتادة مع مؤشرات التحذير والعدادات؟ لا تُجب إلا بعد النظر إليها.</string>
+    <string name="fs_oem_question_yes">نعم، لقد عادت</string>
+</resources>

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Tam ekran harita + BYD göstergeleri</string>
+    <string name="fs_page_subtitle">Uygulamanızın haritası tüm gösterge panelini kaplar. BYD uyarı lambaları, ADAS uyarıları, hız ve vites haritanın üzerinde görünmeye devam eder.</string>
+    <string name="fs_safety_note">⚠ Yalnızca araç dururken test edin: vites P konumunda ve park freni çekili olmalıdır. “BYD görünümüne dön” düğmesi ekranın üst kısmında kullanılabilir durumda kalır.</string>
+    <string name="fs_details">Teknik ayrıntılar</string>
+    <string name="fs_expected_label">Gösterge panelinde şunları görmelisiniz:</string>
+    <string name="fs_waiting">Lütfen bekleyin…</string>
+    <string name="fs_step_counter">Adım %1$d/%2$d</string>
+    <string name="fs_step_check">Kontrol</string>
+    <string name="fs_step_load">Yükleme</string>
+    <string name="fs_step_app">Uygulama</string>
+    <string name="fs_step_start">Tam ekran</string>
+    <string name="fs_step_finish">Bitiş</string>
+    <string name="fs_chip_stock">Orijinal BYD görünümü</string>
+    <string name="fs_chip_ready">Tema yüklendi</string>
+    <string name="fs_chip_active">Tam ekran etkin</string>
+    <string name="fs_chip_busy">İşlem sürüyor</string>
+    <string name="fs_chip_attention">Eylem gerekli</string>
+    <string name="fs_chip_unknown">Durum bilinmiyor</string>
+
+    <string name="fs_check_title">Aracı kontrol edin</string>
+    <string name="fs_check_message">DashCast, hiçbir şeyi değiştirmeden gösterge panelinin ve DashCast hizmetinin durumunu okur.</string>
+    <string name="fs_check_action">Şimdi kontrol et</string>
+    <string name="fs_check_failed">Gösterge panelinin durumu okunamıyor: DashCast hizmeti yanıt vermiyor. DashCast uygulamasını yeniden açın, bağlantıyı bekleyin, ardından tekrar deneyin.</string>
+    <string name="fs_protocol_title">DashCast hizmetinin güncellenmesi gerekiyor</string>
+    <string name="fs_protocol_message">Bağlı DashCast hizmeti çok eski (protokol %1$d gerekli). Hizmetin yeniden bağlanması için DashCast uygulamasını kapatıp yeniden açın, ardından tekrar kontrol edin.</string>
+    <string name="fs_small_title">Gösterge paneli desteklenmiyor</string>
+    <string name="fs_small_message">Bu tema, 1920 × 720 çözünürlüklü büyük gösterge paneli için tasarlanmıştır. Küçük bir gösterge paneli algılandığından test sunulmuyor.</string>
+    <string name="fs_platform">Bu araçta test yapılamaz: Android 10 tabanlı DiLink 3 gerekir. Hiçbir şey gönderilmedi.</string>
+
+    <string name="fs_load_title">Temayı yükleyin</string>
+    <string name="fs_load_message">DashCast temayı gösterge paneline yükler. Görünüm henüz değişmez.</string>
+    <string name="fs_load_expected">Değişiklik yok: her zamanki BYD görünümü.</string>
+    <string name="fs_load_action">Temayı yükle</string>
+    <string name="fs_loading_title">Tema yükleniyor…</string>
+    <string name="fs_loading_message">Bu işlem bir dakikaya kadar sürebilir. Bu sayfada kalın.</string>
+    <string name="fs_bootstrap_message">BYD projeksiyon modu açılıyor…</string>
+    <string name="fs_display_message">Gösterge paneli ekranı aranıyor…</string>
+
+    <string name="fs_app_title">Uygulamayı seçin</string>
+    <string name="fs_app_message">Gösterge panelini kaplayacak navigasyon uygulamasını seçin.</string>
+    <string name="fs_app_action">Uygulamayı seç</string>
+    <string name="fs_change_app">Uygulamayı değiştir</string>
+
+    <string name="fs_start_title">Tam ekranı başlatın</string>
+    <string name="fs_start_message">Seçilen uygulama: %1$s</string>
+    <string name="fs_start_expected">Tüm gösterge panelini kaplayan harita ve üzerinde uyarı lambaları, uyarılar, hız ve vites.</string>
+    <string name="fs_start_action">Tam ekranı başlat</string>
+    <string name="fs_opening_title">Tam ekran açılıyor…</string>
+    <string name="fs_opening_message">Harita gösterge paneline aktarılıyor.</string>
+    <string name="fs_observe_title">Gösterge paneline bakın</string>
+    <string name="fs_observe_message">Gösterge paneli isteği aldı. Gerçekte ne gördüğünüzü bize bildirin.</string>
+    <string name="fs_observe_action">Gördüğümü bildir</string>
+    <string name="fs_done_title">Tam ekran onaylandı</string>
+    <string name="fs_done_message">Teşekkürler! İşiniz bittiğinde tam ekranı durdurun.</string>
+    <string name="fs_stop_action">Tam ekranı durdur</string>
+    <string name="fs_closing_message">Tam ekran kapatılıyor…</string>
+    <string name="fs_closed_title">Tam ekran durduruldu</string>
+    <string name="fs_closed_message">BYD görünümüne dönmek için testi bitirin veya tam ekranı tekrar başlatın (%1$s).</string>
+    <string name="fs_relaunch_action">Tekrar başlat</string>
+    <string name="fs_finish_action">Testi bitir</string>
+
+    <string name="fs_recover_title">BYD görünümüne dönüş</string>
+    <string name="fs_recover_message">Başka bir adıma geçmeden önce gösterge panelinin BYD görünümüne dönmesi gerekir.</string>
+    <string name="fs_recover_other">Daha eski bir DashCast testi hâlâ yüklü. Önce BYD görünümüne dönün.</string>
+    <string name="fs_recover_restart">Tema kenara alındı. Gösterge panelinin yeniden başlatılması BYD görünümüne dönüşü tamamlar.</string>
+    <string name="fs_recover_unknown">Yeniden başlatma komutu gönderildi, ancak sonucu bilinmiyor. Komutu tekrar göndermeyin: BYD görünümüne dönüşü kontrol edin.</string>
+    <string name="fs_recover_display">Gösterge paneli ekranı tanınmadı. BYD görünümüne dönün.</string>
+    <string name="fs_recover_action">BYD görünümüne dön</string>
+    <string name="fs_factory_action">Orijinal görünümü uygula</string>
+    <string name="fs_wait_title">Lütfen bekleyin…</string>
+    <string name="fs_wait_message">Gösterge panelinde bir işlem sürüyor.</string>
+    <string name="fs_state_changed">Gösterge panelinin durumu az önce değişti. Biraz bekleyin: sayfa güncelleniyor.</string>
+    <string name="fs_busy">Başka bir işlem sürüyor. Birazdan tekrar deneyin.</string>
+    <string name="fs_failed">İşlem tamamlanmadı. Hiçbir şey otomatik olarak yeniden denenmez; “BYD görünümüne dön” düğmesi kullanılabilir durumda kalır. “Teknik ayrıntılar” bölümüne bakın.</string>
+
+    <string name="fs_dialog_happens">Ne olacak</string>
+    <string name="fs_dialog_expected">Ne görmelisiniz</string>
+    <string name="fs_check_parked">Araç duruyor, vites P konumunda ve park freni çekili.</string>
+    <string name="fs_check_cluster">Bu gösterge paneli, bu test için öngörülen paneldir (DashCast her değişiklikten önce tam sürümünü kontrol eder).</string>
+    <string name="fs_check_restore">Bu araçta orijinal BYD görünümünü geri yüklüyorum.</string>
+
+    <string name="fs_load_dialog_title">Tema yüklensin mi?</string>
+    <string name="fs_load_step_copy">DashCast temayı gösterge paneline kopyalar ve seçer.</string>
+    <string name="fs_load_step_same">Bu adımda BYD görünümü değişmez.</string>
+    <string name="fs_load_step_return">“BYD görünümüne dön” düğmesi her zaman kullanılabilir.</string>
+    <string name="fs_load_confirm">Yükle</string>
+
+    <string name="fs_choose_title">Hangi uygulama gösterilsin?</string>
+    <string name="fs_choose_empty">Uyumlu bir uygulama bulunamadı.</string>
+
+    <string name="fs_start_dialog_title">Tam ekran başlatılsın mı?</string>
+    <string name="fs_start_step_projection">Gösterge paneli projeksiyon moduna geçer.</string>
+    <string name="fs_start_step_app">%1$s tüm gösterge panelinde gösterilir.</string>
+    <string name="fs_start_step_stop">Tam ekranı bu sayfadan istediğiniz zaman durdurabilirsiniz.</string>
+    <string name="fs_start_confirm">Başlat</string>
+
+    <string name="fs_stop_dialog_title">Tam ekran durdurulsun mu?</string>
+    <string name="fs_stop_step_close">Uygulama gösterge panelinden kaldırılır.</string>
+    <string name="fs_stop_step_keep">Tema yüklü kalır: tekrar başlatabilir veya testi bitirebilirsiniz.</string>
+    <string name="fs_stop_expected">Her zamanki BYD görünümü geri gelir.</string>
+    <string name="fs_stop_confirm">Durdur</string>
+
+    <string name="fs_observe_dialog_title">Gösterge panelinde ne görüyorsunuz?</string>
+    <string name="fs_observe_ok">Harita gösterge panelini kaplıyor; uyarı lambaları, hız ve vites görünüyor</string>
+    <string name="fs_observe_stock">Hiçbir şey değişmedi: her zamanki BYD görünümü</string>
+    <string name="fs_observe_problem">Siyah ekran, “Simple mode” veya anormal görüntü</string>
+    <string name="fs_observe_stock_help">Birkaç saniye bekleyin, sonra tekrar bakın. Hiçbir şey değişmezse tam ekranı durdurun.</string>
+
+    <string name="fs_info_title">BYD görünümüne dönüş</string>
+    <string name="fs_restore_none">Yüklü bir DashCast teması yok. Yalnızca gösterge panelinin her zamanki BYD görünümünü gösterdiğini kontrol edin.</string>
+    <string name="fs_guidance_same">Gösterge paneli dönüşü reddetti ve DashCast temasını koruyor. Temayı kenara alın: ardından DashCast, gösterge panelini yeniden başlatmanız için size yol gösterecek.</string>
+    <string name="fs_guidance_retired">Tema kenara alındı. Devam etmek için “BYD görünümüne dön” düğmesine dokunun: gösterge panelini yeniden başlatma seçeneği sunulacak.</string>
+
+    <string name="fs_restore_dialog_title">BYD görünümüne dönülsün mü?</string>
+    <string name="fs_restore_step_close">DashCast tam ekran haritayı kapatır.</string>
+    <string name="fs_restore_step_default">DashCast orijinal BYD görünümünü yeniden ister.</string>
+    <string name="fs_restore_step_restart">Gerekirse ardından gösterge panelini yeniden başlatma seçeneği sunulur.</string>
+    <string name="fs_bootstrap_step">DashCast geçici BYD projeksiyonunu kapatır; henüz hiçbir tema seçilmemişti.</string>
+    <string name="fs_restore_expected">Uyarı lambaları ve göstergeleriyle her zamanki BYD görünümü.</string>
+    <string name="fs_restore_confirm">BYD görünümüne dön</string>
+
+    <string name="fs_retire_dialog_title">Tema kenara alınsın mı?</string>
+    <string name="fs_retire_step_move">DashCast test temasını taşır; dosya korunur.</string>
+    <string name="fs_retire_step_no_restart">Bu adımda yeniden başlatma yapılmaz.</string>
+    <string name="fs_retire_expected">Gösterge panelinde henüz değişiklik yok.</string>
+    <string name="fs_retire_confirm">Kenara al</string>
+
+    <string name="fs_verify_dialog_title">BYD görünümüne dönüş kontrol edilsin mi?</string>
+    <string name="fs_verify_step">DashCast orijinal BYD görünümünün seçili olduğunu kontrol eder. Hiçbir şey yeniden denenmez.</string>
+    <string name="fs_verify_confirm">Kontrol et</string>
+
+    <string name="fs_factory_dialog_title">Orijinal görünüm uygulansın mı?</string>
+    <string name="fs_factory_step">DashCast, orijinal profili uygulamak için BYD projeksiyonunu bir kez açıp kapatır.</string>
+    <string name="fs_factory_step_none">Hiçbir DashCast teması gönderilmez.</string>
+
+    <string name="fs_restart_dialog_title">Gösterge paneli yeniden başlatılsın mı?</string>
+    <string name="fs_restart_step_check">DashCast, kendi temasının kenara alındığını yeniden kontrol eder.</string>
+    <string name="fs_restart_step_screens">Gösterge paneli ve ekranlar yeniden başlar; ADB bağlantısı kısa bir süre kesilir.</string>
+    <string name="fs_restart_expected">Yeniden başlatmadan sonra: her zamanki BYD görünümü.</string>
+    <string name="fs_restart_confirm">Yeniden başlat</string>
+    <string name="fs_restart_done">Gösterge paneli zaten yeniden başlatıldı</string>
+
+    <string name="fs_native_step">DashCast, gösterge panelinin BYD projeksiyon modundan çıkmasını ister.</string>
+
+    <string name="fs_oem_question_title">BYD görünümü geri geldi mi?</string>
+    <string name="fs_oem_question_message">Gösterge paneline bakın: uyarı lambaları ve göstergeleriyle her zamanki BYD görünümünü görüyor musunuz? Yalnızca baktıktan sonra yanıtlayın.</string>
+    <string name="fs_oem_question_yes">Evet, geri geldi</string>
+</resources>

@@ -177,7 +177,7 @@ class ClusterRestartWorkflowTest {
     @Test fun `already restarted externally cancels consent and asks for read-only BYD verification`() {
         Fixture().use { f ->
             f.begin(); f.dialog()!!.getButton(-3).performClick()
-            f.waitFor { "cancel" in f.events && f.dialog()?.getButton(-1)?.text == f.activity.getString(R.string.diag_cluster_native_send) }
+            f.waitFor { "cancel" in f.events && f.dialog()?.getButton(-1)?.text == f.activity.getString(R.string.fs_verify_confirm) }
             assertEquals(listOf("verify-before-consent", "cancel"), f.events)
         }
     }
@@ -209,15 +209,18 @@ class ClusterRestartWorkflowTest {
             drain(); assertFalse("ADB-OPEN-reboot:fission-all" in f.events)
         }
     }
-    @Test fun `primary workflow contains one next action and no old test button soup`() {
+    @Test fun `guided page shows one recovery action and no old test buttons`() {
         Fixture().use { f ->
-            val buttons = views(f.primary).filterIsInstance<Button>()
-            assertEquals(4, buttons.size)
-            assertEquals(listOf(f.activity.getString(R.string.cluster_simple_recover)),
-                buttons.filter { it.visibility == View.VISIBLE }.map { it.text.toString() })
-            assertEquals(f.activity.getString(R.string.cluster_simple_step_restart),
-                views(f.primary).filterIsInstance<TextView>().first { it !is Button }.text.toString())
-            assertTrue(views(f.detail).filterIsInstance<Button>().size > 2)
+            fun shown(group: ViewGroup): List<View> = (0 until group.childCount).map(group::getChildAt)
+                .filter { it.visibility == View.VISIBLE }.flatMap { listOf(it) + if (it is ViewGroup) shown(it) else emptyList() }
+            val recover = f.activity.getString(R.string.fs_recover_action)
+            val buttons = shown(f.primary).filterIsInstance<Button>().map { it.text.toString() }
+            assertEquals(1, buttons.count { it == recover })
+            assertTrue(buttons.toString(), buttons.all { it == recover || it.startsWith(f.activity.getString(R.string.fs_details)) })
+            val texts = shown(f.primary).filterIsInstance<TextView>().filter { it !is Button }.map { it.text.toString() }
+            assertTrue(f.activity.getString(R.string.fs_recover_title) in texts)
+            assertTrue(f.activity.getString(R.string.fs_recover_restart) in texts)
+            assertTrue("No folded legacy controls remain", views(f.detail).isEmpty())
             assertTrue(views(f.header).filterIsInstance<Button>().single().text == f.activity.getString(R.string.diag_cluster_rcc_restore))
         }
     }

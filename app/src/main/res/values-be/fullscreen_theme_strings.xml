@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Поўнаэкранная карта + прыборы BYD</string>
+    <string name="fs_page_subtitle">Карта з вашай праграмы займае ўсю панэль прыбораў. Індыкатары BYD, папярэджанні ADAS, хуткасць і перадача па-ранейшаму адлюстроўваюцца паверх яе.</string>
+    <string name="fs_safety_note">⚠ Правярайце толькі тады, калі аўтамабіль стаіць: у становішчы P, з уключаным стаяначным тормазам. Кнопка «Вярнуцца да экрана BYD» застаецца даступнай уверсе экрана.</string>
+    <string name="fs_details">Тэхнічныя звесткі</string>
+    <string name="fs_expected_label">На панэлі прыбораў вы павінны ўбачыць:</string>
+    <string name="fs_waiting">Пачакайце…</string>
+    <string name="fs_step_counter">Крок %1$d з %2$d</string>
+    <string name="fs_step_check">Праверка</string>
+    <string name="fs_step_load">Загрузка</string>
+    <string name="fs_step_app">Праграма</string>
+    <string name="fs_step_start">Поўны экран</string>
+    <string name="fs_step_finish">Завяршэнне</string>
+    <string name="fs_chip_stock">Зыходны экран BYD</string>
+    <string name="fs_chip_ready">Тэма загружана</string>
+    <string name="fs_chip_active">Поўнаэкранны рэжым уключаны</string>
+    <string name="fs_chip_busy">Выконваецца аперацыя</string>
+    <string name="fs_chip_attention">Патрэбна дзеянне</string>
+    <string name="fs_chip_unknown">Стан невядомы</string>
+
+    <string name="fs_check_title">Праверце аўтамабіль</string>
+    <string name="fs_check_message">DashCast счытвае стан панэлі прыбораў і сваёй службы, нічога не змяняючы.</string>
+    <string name="fs_check_action">Праверыць зараз</string>
+    <string name="fs_check_failed">Не ўдаецца прачытаць стан панэлі прыбораў: служба DashCast не адказвае. Зноў адкрыйце DashCast, дачакайцеся падключэння і паўтарыце спробу.</string>
+    <string name="fs_protocol_title">Службу DashCast трэба абнавіць</string>
+    <string name="fs_protocol_message">Падключаная служба DashCast састарэла (патрэбны пратакол %1$d). Закрыйце і зноў адкрыйце DashCast, каб перападключыць яе, потым праверце яшчэ раз.</string>
+    <string name="fs_small_title">Панэль прыбораў не падтрымліваецца</string>
+    <string name="fs_small_message">Гэта тэма разлічана на вялікую панэль прыбораў 1920 × 720. Выяўлена малая панэль, таму тэст не прапануецца.</string>
+    <string name="fs_platform">Тэст немагчымы на гэтым аўтамабілі: патрэбны DiLink 3 на Android 10. Нічога не адпраўлена.</string>
+
+    <string name="fs_load_title">Загрузіце тэму</string>
+    <string name="fs_load_message">DashCast усталёўвае тэму ў панэль прыбораў. Экран пакуль не змяняецца.</string>
+    <string name="fs_load_expected">Без змен: звычайны экран BYD.</string>
+    <string name="fs_load_action">Загрузіць тэму</string>
+    <string name="fs_loading_title">Загрузка тэмы…</string>
+    <string name="fs_loading_message">Гэта можа заняць да хвіліны. Заставайцеся на гэтай старонцы.</string>
+    <string name="fs_bootstrap_message">Уключэнне рэжыму праекцыі BYD…</string>
+    <string name="fs_display_message">Пошук экрана панэлі прыбораў…</string>
+
+    <string name="fs_app_title">Выберыце праграму</string>
+    <string name="fs_app_message">Выберыце навігацыйную праграму, якая зойме ўсю панэль прыбораў.</string>
+    <string name="fs_app_action">Выбраць праграму</string>
+    <string name="fs_change_app">Змяніць праграму</string>
+
+    <string name="fs_start_title">Запусціце поўнаэкранны рэжым</string>
+    <string name="fs_start_message">Выбраная праграма: %1$s</string>
+    <string name="fs_start_expected">Карта на ўсёй панэлі прыбораў, а паверх яе — індыкатары, папярэджанні, хуткасць і перадача.</string>
+    <string name="fs_start_action">Запусціць поўнаэкранны рэжым</string>
+    <string name="fs_opening_title">Уключэнне поўнаэкраннага рэжыму…</string>
+    <string name="fs_opening_message">Карта выводзіцца на панэль прыбораў.</string>
+    <string name="fs_observe_title">Паглядзіце на панэль прыбораў</string>
+    <string name="fs_observe_message">Панэль прыбораў атрымала запыт. Паведаміце, што вы бачыце насамрэч.</string>
+    <string name="fs_observe_action">Паведаміць, што я бачу</string>
+    <string name="fs_done_title">Поўнаэкранны рэжым пацверджаны</string>
+    <string name="fs_done_message">Дзякуй! Калі скончыце, спыніце поўнаэкранны рэжым.</string>
+    <string name="fs_stop_action">Спыніць поўнаэкранны рэжым</string>
+    <string name="fs_closing_message">Выхад з поўнаэкраннага рэжыму…</string>
+    <string name="fs_closed_title">Поўнаэкранны рэжым спынены</string>
+    <string name="fs_closed_message">Завяршыце тэст, каб вярнуцца да экрана BYD, або зноў запусціце поўнаэкранны рэжым (%1$s).</string>
+    <string name="fs_relaunch_action">Запусціць зноў</string>
+    <string name="fs_finish_action">Завяршыць тэст</string>
+
+    <string name="fs_recover_title">Вяртанне да экрана BYD</string>
+    <string name="fs_recover_message">Перад любым іншым крокам панэль прыбораў павінна вярнуцца да экрана BYD.</string>
+    <string name="fs_recover_other">Яшчэ загружаны папярэдні тэст DashCast. Спачатку вярніцеся да экрана BYD.</string>
+    <string name="fs_recover_restart">Тэма адкладзена ўбок. Перазапуск панэлі прыбораў завершыць вяртанне да экрана BYD.</string>
+    <string name="fs_recover_unknown">Каманда перазапуску адпраўлена, але яе вынік невядомы. Не адпраўляйце яе паўторна: праверце вяртанне да экрана BYD.</string>
+    <string name="fs_recover_display">Экран панэлі прыбораў не распазнаны. Вярніцеся да экрана BYD.</string>
+    <string name="fs_recover_action">Вярнуцца да экрана BYD</string>
+    <string name="fs_factory_action">Ужыць зыходны экран</string>
+    <string name="fs_wait_title">Пачакайце…</string>
+    <string name="fs_wait_message">На панэлі прыбораў выконваецца аперацыя.</string>
+    <string name="fs_state_changed">Стан панэлі прыбораў толькі што змяніўся. Пачакайце крыху: старонка абнаўляецца.</string>
+    <string name="fs_busy">Выконваецца іншая аперацыя. Паўтарыце спробу крыху пазней.</string>
+    <string name="fs_failed">Аперацыя не завершана. Нічога не паўтараецца аўтаматычна; кнопка «Вярнуцца да экрана BYD» застаецца даступнай. Гл. «Тэхнічныя звесткі».</string>
+
+    <string name="fs_dialog_happens">Што адбудзецца</string>
+    <string name="fs_dialog_expected">Што вы павінны ўбачыць</string>
+    <string name="fs_check_parked">Аўтамабіль нерухомы, у становішчы P, стаяначны тормаз уключаны.</string>
+    <string name="fs_check_cluster">Гэта панэль прыбораў, для якой прызначаны гэты тэст (DashCast звярае яе дакладную версію перад любой зменай).</string>
+    <string name="fs_check_restore">Я аднаўляю зыходны экран BYD на гэтым аўтамабілі.</string>
+
+    <string name="fs_load_dialog_title">Загрузіць тэму?</string>
+    <string name="fs_load_step_copy">DashCast капіюе тэму ў панэль прыбораў і выбірае яе.</string>
+    <string name="fs_load_step_same">На гэтым кроку застаецца экран BYD.</string>
+    <string name="fs_load_step_return">Кнопка «Вярнуцца да экрана BYD» даступна ў любы момант.</string>
+    <string name="fs_load_confirm">Загрузіць</string>
+
+    <string name="fs_choose_title">Якую праграму паказаць?</string>
+    <string name="fs_choose_empty">Сумяшчальныя праграмы не знойдзены.</string>
+
+    <string name="fs_start_dialog_title">Запусціць поўнаэкранны рэжым?</string>
+    <string name="fs_start_step_projection">Панэль прыбораў пераходзіць у рэжым праекцыі.</string>
+    <string name="fs_start_step_app">Праграма %1$s адлюстроўваецца на ўсёй панэлі прыбораў.</string>
+    <string name="fs_start_step_stop">Спыніць поўнаэкранны рэжым можна ў любы момант на гэтай старонцы.</string>
+    <string name="fs_start_confirm">Запусціць</string>
+
+    <string name="fs_stop_dialog_title">Спыніць поўнаэкранны рэжым?</string>
+    <string name="fs_stop_step_close">Праграма знікае з панэлі прыбораў.</string>
+    <string name="fs_stop_step_keep">Тэма застаецца загружанай: можна запусціць зноў або завяршыць тэст.</string>
+    <string name="fs_stop_expected">Вяртаецца звычайны экран BYD.</string>
+    <string name="fs_stop_confirm">Спыніць</string>
+
+    <string name="fs_observe_dialog_title">Што вы бачыце на панэлі прыбораў?</string>
+    <string name="fs_observe_ok">Карта займае ўсю панэль, бачныя індыкатары, хуткасць і перадача</string>
+    <string name="fs_observe_stock">Нічога не змянілася: звычайны экран BYD</string>
+    <string name="fs_observe_problem">Чорны экран, «Simple mode» або няправільная выява</string>
+    <string name="fs_observe_stock_help">Пачакайце некалькі секунд і паглядзіце зноў. Калі нічога не зменіцца, спыніце поўнаэкранны рэжым.</string>
+
+    <string name="fs_info_title">Вяртанне да экрана BYD</string>
+    <string name="fs_restore_none">Тэма DashCast не загружана. Проста пераканайцеся, што на панэлі прыбораў адлюстроўваецца звычайны экран BYD.</string>
+    <string name="fs_guidance_same">Панэль прыбораў адхіліла вяртанне і захоўвае тэму DashCast. Адкладзіце тэму ўбок: потым DashCast дапаможа вам перазапусціць панэль прыбораў.</string>
+    <string name="fs_guidance_retired">Тэма адкладзена ўбок. Націсніце «Вярнуцца да экрана BYD», каб працягнуць: будзе прапанаваны перазапуск панэлі прыбораў.</string>
+
+    <string name="fs_restore_dialog_title">Вярнуцца да экрана BYD?</string>
+    <string name="fs_restore_step_close">DashCast закрывае поўнаэкранную карту.</string>
+    <string name="fs_restore_step_default">DashCast зноў запытвае зыходны экран BYD.</string>
+    <string name="fs_restore_step_restart">Пры неабходнасці далей будзе прапанаваны перазапуск панэлі прыбораў.</string>
+    <string name="fs_bootstrap_step">DashCast закрывае часовую праекцыю BYD; тэма не была выбрана.</string>
+    <string name="fs_restore_expected">Звычайны экран BYD з індыкатарамі і прыборамі.</string>
+    <string name="fs_restore_confirm">Вярнуцца да экрана BYD</string>
+
+    <string name="fs_retire_dialog_title">Адкласці тэму ўбок?</string>
+    <string name="fs_retire_step_move">DashCast перамяшчае сваю тэставую тэму; файл захоўваецца.</string>
+    <string name="fs_retire_step_no_restart">На гэтым кроку перазапуску няма.</string>
+    <string name="fs_retire_expected">На панэлі прыбораў пакуль без змен.</string>
+    <string name="fs_retire_confirm">Адкласці</string>
+
+    <string name="fs_verify_dialog_title">Праверыць вяртанне да экрана BYD?</string>
+    <string name="fs_verify_step">DashCast правярае, што выбраны зыходны экран BYD. Нічога не паўтараецца.</string>
+    <string name="fs_verify_confirm">Праверыць</string>
+
+    <string name="fs_factory_dialog_title">Ужыць зыходны экран?</string>
+    <string name="fs_factory_step">DashCast адзін раз адкрывае і закрывае праекцыю BYD, каб ужыць зыходны профіль.</string>
+    <string name="fs_factory_step_none">Тэма DashCast не адпраўляецца.</string>
+
+    <string name="fs_restart_dialog_title">Перазапусціць панэль прыбораў?</string>
+    <string name="fs_restart_step_check">DashCast яшчэ раз правярае, што яго тэма адкладзена ўбок.</string>
+    <string name="fs_restart_step_screens">Панэль прыбораў і экраны перазапускаюцца; злучэнне ADB ненадоўга перапыніцца.</string>
+    <string name="fs_restart_expected">Пасля перазапуску: звычайны экран BYD.</string>
+    <string name="fs_restart_confirm">Перазапусціць</string>
+    <string name="fs_restart_done">Панэль ужо перазапусцілася</string>
+
+    <string name="fs_native_step">DashCast просіць панэль прыбораў выйсці з рэжыму праекцыі BYD.</string>
+
+    <string name="fs_oem_question_title">Экран BYD вярнуўся?</string>
+    <string name="fs_oem_question_message">Паглядзіце на панэль прыбораў: вы бачыце звычайны экран BYD з індыкатарамі і прыборамі? Адказвайце толькі пасля таго, як паглядзіце.</string>
+    <string name="fs_oem_question_yes">Так, вярнуўся</string>
+</resources>

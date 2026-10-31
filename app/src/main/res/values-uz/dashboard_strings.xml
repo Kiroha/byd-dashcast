@@ -1,43 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">To‘liq ekrandagi panel</string>
-    <string name="diag_cluster_dashboard_help">Avtomobil to‘xtaganda qo‘lda sinash. Yopilganda profil tanlangan qoladi. Eski APK o‘rnatishdan oldin zavod profilini tiklab tekshiring.</string>
-    <string name="diag_cluster_dashboard_read">1 · Holat va moslikni o‘qish</string>
-    <string name="diag_cluster_dashboard_prepare">2 · Panelni tayyorlash</string>
-    <string name="diag_cluster_dashboard_choose_app">3 · Ilovani tanlash</string>
-    <string name="diag_cluster_dashboard_open">4 · Panelni ochish</string>
-    <string name="diag_cluster_dashboard_close">Proyeksiyani yopish</string>
-    <string name="diag_cluster_dashboard_observe">5 · Ko‘ringan ekranni tasdiqlash</string>
-    <string name="diag_cluster_dashboard_observe_message">Faqat panel, asboblar, ogohlantirishlar va ilova ko‘rinsa tasdiqlang. Buyruq javobi tasvirni isbotlamaydi.</string>
-    <string name="diag_cluster_dashboard_confirm">Avtomobil qimirlamayotganini va dasturiy ta’minot tekshirilganini tasdiqlang. Bu belgi bayonot, harakat o‘lchovi emas. Avtomobilda tekshirish hali zarur.</string>
-    <string name="diag_cluster_dashboard_geometry">Bitta faol 1920 × 720 pikselli panel aniqlanishi kerak. Noma’lum, noaniq yoki kichik o‘lcham: sinov rad etiladi.</string>
-    <string name="diag_cluster_dashboard_prepare_first">Avval DashCast profilini tayyorlang va tanlash tugashini kuting.</string>
-    <string name="diag_cluster_dashboard_idle">○ Panel tayyorlanmagan</string>
-    <string name="diag_cluster_dashboard_restoring">↩ Tiklanmoqda</string>
-    <string name="diag_cluster_dashboard_unknown">⚠ Holat noaniq: Tiklashdan foydalaning</string>
-    <string name="diag_cluster_dashboard_open_received">✓ Ochish javobi olindi; ekranni tasdiqlang</string>
-    <string name="diag_cluster_dashboard_closed_received">○ Proyeksiya yopiq; zavod profilini tiklash kerak</string>
-    <string name="diag_cluster_dashboard_waiting">◷ Amal bajarilmoqda</string>
-    <string name="diag_cluster_dashboard_ready">✓ Profil tanlandi; ilovani tanlab panelni oching</string>
-    <string name="diag_cluster_dashboard_selected_app">Ilova: %1$s</string>
-    <string name="diag_cluster_dashboard_details">Texnik tafsilotlar va oldingi sinovlar</string>
-    <string name="diag_cluster_dashboard_confirmed">✓ Ekran foydalanuvchi tomonidan tasdiqlandi</string>
-    <string name="diag_cluster_dashboard_restore_confirm">Proyeksiyani yoping va zavod profilini so‘rang. Zavod profili qaytsa ham muvaffaqiyatsiz yopish hal etilmagan qoladi. Keyin ko‘rinadigan asboblar va ogohlantirishlarni tasdiqlang.</string>
-    <string name="diag_cluster_dashboard_bootstrap">Asl BYD proyeksiyasi vaqtincha yoqilmoqda…</string>
-    <string name="diag_cluster_dashboard_display_wait">BYD proyeksiya ekrani kutilmoqda…</string>
-    <string name="diag_cluster_dashboard_display_rejected">BYD proyeksiya ekrani mavjud emas yoki mos kelmaydi. Tafsilotlarni tekshiring.</string>
-    <string name="diag_cluster_dashboard_restore_required">Boshlash bajarildi: BYD tiklanishi kerak.</string>
-    <string name="diag_cluster_dashboard_small_panel">Kichik asboblar paneli aniqlandi: sinov rad etildi. BYD tiklash mavjud.</string>
-    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Vaqtinchalik BYD proyeksiyasini yoping va zavod tanlovini tekshiring. Maxsus RCC tanlanmadi. Keyin asboblar va ogohlantirishlar qaytganini tasdiqlang.</string>
-    <string name="diag_cluster_dashboard_prepare_confirm">Tayyorlash bizning RCC tanlanishidan oldin asl BYD proyeksiyasini vaqtincha ochib, ekranini tekshirishi mumkin. Ilova faqat Ochish bosilgach ishga tushadi. To‘xtash va dasturiy ta’minotni tasdiqlang; bu bayonot harakatni o‘lchamaydi.</string>
-    <string name="diag_cluster_dashboard_protocol">Ulangan daemon %1$d-protokoldan foydalanishi kerak. Tayyorlash yoki Ochishdan oldin uni DashCast ichida qayta ulang. BYD buyrug‘i yuborilmadi.</string>
-    <string name="diag_cluster_full_app_prepare">2b · To‘liq ekran prototipi (faqat PC)</string>
-    <string name="diag_cluster_full_app_help">Faqat PC tekshiruvlari uchun prototip. Mustaqil tiklash tasdiqlanmaguncha avtomobilga yuklash mavjud emas. BYD asboblari va ogohlantirishlari saqlanadi. Eski profil uchun Tiklash mavjud.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Bu prototipni avtomobilga yuklab bo‘lmaydi. Eski to‘liq ekran profili faqat tiklash uchun mavjud.</string>
-    <string name="diag_cluster_factory_apply">Zavod tanlovini qo‘llash</string>
-    <string name="diag_cluster_factory_apply_confirm">Zavod profili sozlangan, ammo mahalliy qo‘llanishi tekshirilishi kerak. BYD proyeksiyasini bir marta o‘zgartirib, yoping va tanlovni qayta o‘qing. Maxsus RCC yoki takroriy zavod tanlovi yuborilmaydi. To‘xtash va mikrodasturni tasdiqlang.</string>
-    <string name="diag_cluster_full_app_observe_message">Eski profilni ochib yoki tayyor deb tasdiqlab bo‘lmaydi. Tiklashdan foydalaning, so‘ng BYD asboblari va ogohlantirishlari qaytganini alohida tasdiqlang.</string>
-    <string name="diag_cluster_fullscreen_prepare">2c · Minimal toʻliq ekranni tayyorlash</string>
-    <string name="diag_cluster_fullscreen_prepare_confirm">Minimal sinov: toʻliq ekranli proyeksiya rejimida asboblar paneli butunlay shaffof boʻladi va ilova barcha 1920 × 720 pikselni egallaydi. BYD asboblari, indikatorlari va ogohlantirishlari ushbu sinov davomida yashiriladi. Toʻxtab turganini va dasturiy taʼminotni tasdiqlang; bu bayonot harakatni oʻlchamaydi.</string>
-    <string name="diag_cluster_fullscreen_observe_message">Ilovani butun asboblar panelida koʻrsangizgina tasdiqlang. BYD asboblari, indikatorlari va ogohlantirishlari ushbu sinov profilida yashirilgan. Buyruq kvitansiyasi bu tasvirni isbotlamaydi.</string>
 </resources>

@@ -1,43 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">Kombiinstrument im Vollbild</string>
-    <string name="diag_cluster_dashboard_help">Manueller Test im Stand. Beim Schließen bleibt das Profil ausgewählt. Vor Installation einer älteren APK das Werksprofil wiederherstellen und prüfen.</string>
-    <string name="diag_cluster_dashboard_read">1 · Status und Kompatibilität lesen</string>
-    <string name="diag_cluster_dashboard_prepare">2 · Cockpit vorbereiten</string>
-    <string name="diag_cluster_dashboard_choose_app">3 · Anwendung auswählen</string>
-    <string name="diag_cluster_dashboard_open">4 · Cockpit öffnen</string>
-    <string name="diag_cluster_dashboard_close">Projektion schließen</string>
-    <string name="diag_cluster_dashboard_observe">5 · Sichtbare Anzeige bestätigen</string>
-    <string name="diag_cluster_dashboard_observe_message">Nur bestätigen, wenn Cockpit, Instrumente, Warnungen und Anwendung sichtbar sind. Eine Befehlsantwort beweist diese Anzeige nicht.</string>
-    <string name="diag_cluster_dashboard_confirm">Bestätige Fahrzeugstillstand und geprüfte Firmware. Dieses Kontrollkästchen ist eine Erklärung, keine Bewegungsmessung. Der Test im Fahrzeug steht noch aus.</string>
-    <string name="diag_cluster_dashboard_geometry">Ein aktives Kombiinstrument mit 1920 × 720 Pixeln muss erkannt werden. Unbekannte, mehrdeutige oder kleine Größe: Test verweigert.</string>
-    <string name="diag_cluster_dashboard_prepare_first">Zuerst das DashCast-Profil vorbereiten und die Auswahl abwarten.</string>
-    <string name="diag_cluster_dashboard_idle">○ Kein Cockpit vorbereitet</string>
-    <string name="diag_cluster_dashboard_restoring">↩ Wiederherstellung läuft</string>
-    <string name="diag_cluster_dashboard_unknown">⚠ Zustand unklar: Wiederherstellen verwenden</string>
-    <string name="diag_cluster_dashboard_open_received">✓ Öffnung empfangen; Anzeige bestätigen</string>
-    <string name="diag_cluster_dashboard_closed_received">○ Projektion geschlossen; Werksprofil noch wiederherstellen</string>
-    <string name="diag_cluster_dashboard_waiting">◷ Vorgang läuft</string>
-    <string name="diag_cluster_dashboard_ready">✓ Profil ausgewählt; Anwendung wählen und Cockpit öffnen</string>
-    <string name="diag_cluster_dashboard_selected_app">Anwendung: %1$s</string>
-    <string name="diag_cluster_dashboard_details">Technische Details und frühere Tests</string>
-    <string name="diag_cluster_dashboard_confirmed">✓ Anzeige vom Benutzer bestätigt</string>
-    <string name="diag_cluster_dashboard_restore_confirm">Projektion schließen und Werksprofil anfordern. Ein fehlgeschlagenes Schließen bleibt offen, auch wenn das Werksprofil zurückkehrt. Danach sichtbare Instrumente und Warnungen bestätigen.</string>
-    <string name="diag_cluster_dashboard_bootstrap">Originale BYD-Projektion wird vorübergehend aktiviert…</string>
-    <string name="diag_cluster_dashboard_display_wait">Warten auf das BYD-Projektionsdisplay…</string>
-    <string name="diag_cluster_dashboard_display_rejected">BYD-Projektionsdisplay fehlt oder ist inkompatibel. Details prüfen.</string>
-    <string name="diag_cluster_dashboard_restore_required">Initialisierung gestartet: BYD-Wiederherstellung erforderlich.</string>
-    <string name="diag_cluster_dashboard_small_panel">Kleines Kombiinstrument erkannt: Test abgelehnt. BYD-Wiederherstellung bleibt verfügbar.</string>
-    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Vorübergehende BYD-Projektion schließen und Werksauswahl prüfen. Kein eigenes RCC wurde ausgewählt. Danach die Rückkehr der Instrumente und Warnungen bestätigen.</string>
-    <string name="diag_cluster_dashboard_prepare_confirm">Die Vorbereitung kann die originale BYD-Projektion vorübergehend öffnen und deren Display prüfen, bevor unser RCC ausgewählt wird. Erst Öffnen startet eine Anwendung. Parkzustand und Firmware bestätigen; dies ist keine Bewegungsmessung.</string>
-    <string name="diag_cluster_dashboard_protocol">Der verbundene Daemon muss Protokoll %1$d verwenden. Vor Vorbereiten oder Öffnen in DashCast neu verbinden. Kein BYD-Befehl gesendet.</string>
-    <string name="diag_cluster_full_app_prepare">2b · Vollbild-Prototyp (nur PC)</string>
-    <string name="diag_cluster_full_app_help">Prototyp nur für Prüfungen am PC. Das Laden im Fahrzeug bleibt gesperrt, bis eine unabhängige Wiederherstellung geprüft wurde. BYD-Instrumente und Warnungen bleiben erhalten. Wiederherstellen bleibt für das alte Profil verfügbar.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Dieser Prototyp kann nicht im Fahrzeug geladen werden. Das alte Vollbildprofil steht nur zur Wiederherstellung bereit.</string>
-    <string name="diag_cluster_factory_apply">Werksauswahl anwenden</string>
-    <string name="diag_cluster_factory_apply_confirm">Das Werksprofil ist konfiguriert, seine native Anwendung aber noch unbestätigt. Einmal die BYD-Projektion umschalten, schließen und erneut lesen. Kein eigener RCC und keine erneute Werksauswahl werden gesendet. Stillstand und Firmware bestätigen.</string>
-    <string name="diag_cluster_full_app_observe_message">Das alte Profil kann nicht geöffnet oder als bereit bestätigt werden. Nutze Wiederherstellen und bestätige anschließend separat die Rückkehr der BYD-Instrumente und Warnungen.</string>
-    <string name="diag_cluster_fullscreen_prepare">2c · Minimalen Vollbildmodus vorbereiten</string>
-    <string name="diag_cluster_fullscreen_prepare_confirm">Minimaltest: Im Vollbild-Projektionsmodus wird das Kombiinstrument vollständig transparent und die Anwendung füllt alle 1920 × 720 Pixel. BYD-Instrumente, Kontrollleuchten und Warnungen sind während dieses Tests ausgeblendet. Bestätige Parken und Firmware; diese Erklärung misst keine Bewegung.</string>
-    <string name="diag_cluster_fullscreen_observe_message">Bestätige nur, wenn du die Anwendung auf dem gesamten Kombiinstrument siehst. BYD-Instrumente, Kontrollleuchten und Warnungen sind in diesem Testprofil ausgeblendet. Eine Befehlsquittung beweist diese Anzeige nicht.</string>
 </resources>

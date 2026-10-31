@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Vollbildkarte + BYD-Instrumente</string>
+    <string name="fs_page_subtitle">Die Karte Ihrer App füllt das gesamte Kombiinstrument aus. BYD-Kontrollleuchten, ADAS-Warnungen, Geschwindigkeit und Fahrstufe bleiben darüber eingeblendet.</string>
+    <string name="fs_safety_note">⚠ Testen Sie nur bei stehendem Fahrzeug: in P und mit angezogener Feststellbremse. Die Schaltfläche „Zurück zur BYD-Anzeige“ bleibt oben auf dem Bildschirm verfügbar.</string>
+    <string name="fs_details">Technische Details</string>
+    <string name="fs_expected_label">Das sollten Sie auf dem Kombiinstrument sehen:</string>
+    <string name="fs_waiting">Bitte warten…</string>
+    <string name="fs_step_counter">Schritt %1$d von %2$d</string>
+    <string name="fs_step_check">Prüfen</string>
+    <string name="fs_step_load">Laden</string>
+    <string name="fs_step_app">App</string>
+    <string name="fs_step_start">Vollbild</string>
+    <string name="fs_step_finish">Abschließen</string>
+    <string name="fs_chip_stock">BYD-Originalanzeige</string>
+    <string name="fs_chip_ready">Design geladen</string>
+    <string name="fs_chip_active">Vollbild aktiv</string>
+    <string name="fs_chip_busy">Vorgang läuft</string>
+    <string name="fs_chip_attention">Aktion erforderlich</string>
+    <string name="fs_chip_unknown">Zustand unbekannt</string>
+
+    <string name="fs_check_title">Fahrzeug prüfen</string>
+    <string name="fs_check_message">DashCast liest den Zustand des Kombiinstruments und des DashCast-Dienstes aus, ohne etwas zu ändern.</string>
+    <string name="fs_check_action">Jetzt prüfen</string>
+    <string name="fs_check_failed">Der Zustand des Kombiinstruments kann nicht gelesen werden: Der DashCast-Dienst antwortet nicht. Öffnen Sie DashCast erneut, warten Sie auf die Verbindung und versuchen Sie es dann noch einmal.</string>
+    <string name="fs_protocol_title">DashCast-Dienst muss aktualisiert werden</string>
+    <string name="fs_protocol_message">Der verbundene DashCast-Dienst ist zu alt (Protokoll %1$d erforderlich). Schließen Sie DashCast und öffnen Sie es wieder, damit sich der Dienst neu verbindet. Prüfen Sie anschließend erneut.</string>
+    <string name="fs_small_title">Kombiinstrument nicht unterstützt</string>
+    <string name="fs_small_message">Dieses Design ist für das große Kombiinstrument mit 1920 × 720 ausgelegt. Es wurde ein kleines Kombiinstrument erkannt, daher wird der Test nicht angeboten.</string>
+    <string name="fs_platform">Test auf diesem Fahrzeug nicht möglich: DiLink 3 mit Android 10 ist erforderlich. Es wurde nichts gesendet.</string>
+
+    <string name="fs_load_title">Design laden</string>
+    <string name="fs_load_message">DashCast installiert das Design im Kombiinstrument. Die Anzeige ändert sich noch nicht.</string>
+    <string name="fs_load_expected">Keine Änderung: die gewohnte BYD-Anzeige.</string>
+    <string name="fs_load_action">Design laden</string>
+    <string name="fs_loading_title">Design wird geladen…</string>
+    <string name="fs_loading_message">Das kann bis zu einer Minute dauern. Bleiben Sie auf dieser Seite.</string>
+    <string name="fs_bootstrap_message">BYD-Projektionsmodus wird geöffnet…</string>
+    <string name="fs_display_message">Bildschirm des Kombiinstruments wird gesucht…</string>
+
+    <string name="fs_app_title">App auswählen</string>
+    <string name="fs_app_message">Wählen Sie die Navigations-App, die das Kombiinstrument ausfüllen soll.</string>
+    <string name="fs_app_action">App auswählen</string>
+    <string name="fs_change_app">App wechseln</string>
+
+    <string name="fs_start_title">Vollbild starten</string>
+    <string name="fs_start_message">Ausgewählte App: %1$s</string>
+    <string name="fs_start_expected">Die Karte auf dem gesamten Kombiinstrument, darüber Kontrollleuchten, Warnungen, Geschwindigkeit und Fahrstufe.</string>
+    <string name="fs_start_action">Vollbild starten</string>
+    <string name="fs_opening_title">Vollbild wird geöffnet…</string>
+    <string name="fs_opening_message">Die Karte wird auf das Kombiinstrument übertragen.</string>
+    <string name="fs_observe_title">Kombiinstrument ansehen</string>
+    <string name="fs_observe_message">Das Kombiinstrument hat die Anfrage erhalten. Geben Sie an, was Sie tatsächlich sehen.</string>
+    <string name="fs_observe_action">Angeben, was ich sehe</string>
+    <string name="fs_done_title">Vollbild bestätigt</string>
+    <string name="fs_done_message">Vielen Dank! Wenn Sie fertig sind, beenden Sie das Vollbild.</string>
+    <string name="fs_stop_action">Vollbild beenden</string>
+    <string name="fs_closing_message">Vollbild wird geschlossen…</string>
+    <string name="fs_closed_title">Vollbild beendet</string>
+    <string name="fs_closed_message">Schließen Sie den Test ab, um zur BYD-Anzeige zurückzukehren, oder starten Sie das Vollbild erneut (%1$s).</string>
+    <string name="fs_relaunch_action">Erneut starten</string>
+    <string name="fs_finish_action">Test abschließen</string>
+
+    <string name="fs_recover_title">Zurück zur BYD-Anzeige</string>
+    <string name="fs_recover_message">Das Kombiinstrument muss vor jedem weiteren Schritt zur BYD-Anzeige zurückkehren.</string>
+    <string name="fs_recover_other">Ein älterer DashCast-Test ist noch geladen. Kehren Sie zuerst zur BYD-Anzeige zurück.</string>
+    <string name="fs_recover_restart">Das Design wurde beiseitegelegt. Ein Neustart des Kombiinstruments schließt die Rückkehr zur BYD-Anzeige ab.</string>
+    <string name="fs_recover_unknown">Ein Neustart wurde gesendet, das Ergebnis ist jedoch unbekannt. Senden Sie ihn nicht erneut: Prüfen Sie die Rückkehr zur BYD-Anzeige.</string>
+    <string name="fs_recover_display">Der Bildschirm des Kombiinstruments wurde nicht erkannt. Kehren Sie zur BYD-Anzeige zurück.</string>
+    <string name="fs_recover_action">Zurück zur BYD-Anzeige</string>
+    <string name="fs_factory_action">Originalanzeige anwenden</string>
+    <string name="fs_wait_title">Bitte warten…</string>
+    <string name="fs_wait_message">Am Kombiinstrument läuft gerade ein Vorgang.</string>
+    <string name="fs_state_changed">Der Zustand des Kombiinstruments hat sich gerade geändert. Warten Sie einen Moment: Die Seite wird aktualisiert.</string>
+    <string name="fs_busy">Ein anderer Vorgang läuft. Versuchen Sie es gleich noch einmal.</string>
+    <string name="fs_failed">Der Vorgang wurde nicht abgeschlossen. Es wird nichts automatisch wiederholt; „Zurück zur BYD-Anzeige“ bleibt verfügbar. Siehe „Technische Details“.</string>
+
+    <string name="fs_dialog_happens">Was jetzt passiert</string>
+    <string name="fs_dialog_expected">Was Sie sehen sollten</string>
+    <string name="fs_check_parked">Das Fahrzeug steht still in P, die Feststellbremse ist angezogen.</string>
+    <string name="fs_check_cluster">Dies ist das für diesen Test vorgesehene Kombiinstrument (DashCast prüft vor jeder Änderung dessen genaue Version).</string>
+    <string name="fs_check_restore">Ich stelle an diesem Fahrzeug die BYD-Originalanzeige wieder her.</string>
+
+    <string name="fs_load_dialog_title">Design laden?</string>
+    <string name="fs_load_step_copy">DashCast kopiert das Design auf das Kombiinstrument und wählt es aus.</string>
+    <string name="fs_load_step_same">In diesem Schritt bleibt die BYD-Anzeige unverändert.</string>
+    <string name="fs_load_step_return">Die Schaltfläche „Zurück zur BYD-Anzeige“ bleibt jederzeit verfügbar.</string>
+    <string name="fs_load_confirm">Laden</string>
+
+    <string name="fs_choose_title">Welche App soll angezeigt werden?</string>
+    <string name="fs_choose_empty">Es wurde keine kompatible App gefunden.</string>
+
+    <string name="fs_start_dialog_title">Vollbild starten?</string>
+    <string name="fs_start_step_projection">Das Kombiinstrument wechselt in den Projektionsmodus.</string>
+    <string name="fs_start_step_app">%1$s wird auf dem gesamten Kombiinstrument angezeigt.</string>
+    <string name="fs_start_step_stop">Sie können das Vollbild jederzeit auf dieser Seite beenden.</string>
+    <string name="fs_start_confirm">Starten</string>
+
+    <string name="fs_stop_dialog_title">Vollbild beenden?</string>
+    <string name="fs_stop_step_close">Die App verschwindet vom Kombiinstrument.</string>
+    <string name="fs_stop_step_keep">Das Design bleibt geladen: Sie können erneut starten oder den Test abschließen.</string>
+    <string name="fs_stop_expected">Die gewohnte BYD-Anzeige kehrt zurück.</string>
+    <string name="fs_stop_confirm">Beenden</string>
+
+    <string name="fs_observe_dialog_title">Was sehen Sie auf dem Kombiinstrument?</string>
+    <string name="fs_observe_ok">Die Karte füllt das Kombiinstrument aus, mit Kontrollleuchten, Geschwindigkeit und Fahrstufe</string>
+    <string name="fs_observe_stock">Nichts hat sich geändert: die gewohnte BYD-Anzeige</string>
+    <string name="fs_observe_problem">Schwarzer Bildschirm, „Simple mode“ oder fehlerhafte Anzeige</string>
+    <string name="fs_observe_stock_help">Warten Sie einige Sekunden und sehen Sie dann noch einmal hin. Wenn sich nichts ändert, beenden Sie das Vollbild.</string>
+
+    <string name="fs_info_title">Zurück zur BYD-Anzeige</string>
+    <string name="fs_restore_none">Es ist kein DashCast-Design geladen. Prüfen Sie nur, ob auf dem Kombiinstrument die gewohnte BYD-Anzeige erscheint.</string>
+    <string name="fs_guidance_same">Das Kombiinstrument hat die Rückkehr abgelehnt und behält das DashCast-Design. Legen Sie das Design beiseite: DashCast führt Sie anschließend durch den Neustart des Kombiinstruments.</string>
+    <string name="fs_guidance_retired">Das Design wurde beiseitegelegt. Tippen Sie auf „Zurück zur BYD-Anzeige“, um fortzufahren: Ein Neustart des Kombiinstruments wird Ihnen angeboten.</string>
+
+    <string name="fs_restore_dialog_title">Zurück zur BYD-Anzeige?</string>
+    <string name="fs_restore_step_close">DashCast schließt die Vollbildkarte.</string>
+    <string name="fs_restore_step_default">DashCast fordert erneut die BYD-Originalanzeige an.</string>
+    <string name="fs_restore_step_restart">Falls nötig, wird Ihnen anschließend ein Neustart des Kombiinstruments angeboten.</string>
+    <string name="fs_bootstrap_step">DashCast schließt die vorübergehende BYD-Projektion; es war noch kein Design ausgewählt.</string>
+    <string name="fs_restore_expected">Die gewohnte BYD-Anzeige mit ihren Kontrollleuchten und Instrumenten.</string>
+    <string name="fs_restore_confirm">Zurück zur BYD-Anzeige</string>
+
+    <string name="fs_retire_dialog_title">Design beiseitelegen?</string>
+    <string name="fs_retire_step_move">DashCast verschiebt sein Testdesign; die Datei bleibt erhalten.</string>
+    <string name="fs_retire_step_no_restart">In diesem Schritt erfolgt kein Neustart.</string>
+    <string name="fs_retire_expected">Noch keine Änderung am Kombiinstrument.</string>
+    <string name="fs_retire_confirm">Beiseitelegen</string>
+
+    <string name="fs_verify_dialog_title">Rückkehr zur BYD-Anzeige prüfen?</string>
+    <string name="fs_verify_step">DashCast prüft, ob die BYD-Originalanzeige ausgewählt ist. Es wird nichts wiederholt.</string>
+    <string name="fs_verify_confirm">Prüfen</string>
+
+    <string name="fs_factory_dialog_title">Originalanzeige anwenden?</string>
+    <string name="fs_factory_step">DashCast öffnet und schließt die BYD-Projektion ein einziges Mal, um das Originalprofil anzuwenden.</string>
+    <string name="fs_factory_step_none">Es wird kein DashCast-Design gesendet.</string>
+
+    <string name="fs_restart_dialog_title">Kombiinstrument neu starten?</string>
+    <string name="fs_restart_step_check">DashCast prüft erneut, ob sein Design beiseitegelegt wurde.</string>
+    <string name="fs_restart_step_screens">Kombiinstrument und Bildschirme starten neu; ADB wird kurz unterbrochen.</string>
+    <string name="fs_restart_expected">Nach dem Neustart: die gewohnte BYD-Anzeige.</string>
+    <string name="fs_restart_confirm">Neu starten</string>
+    <string name="fs_restart_done">Kombiinstrument bereits neu gestartet</string>
+
+    <string name="fs_native_step">DashCast fordert das Kombiinstrument auf, den BYD-Projektionsmodus zu verlassen.</string>
+
+    <string name="fs_oem_question_title">Ist die BYD-Anzeige zurück?</string>
+    <string name="fs_oem_question_message">Schauen Sie auf das Kombiinstrument: Sehen Sie die gewohnte BYD-Anzeige mit ihren Kontrollleuchten und Instrumenten? Antworten Sie erst, nachdem Sie hingesehen haben.</string>
+    <string name="fs_oem_question_yes">Ja, sie ist zurück</string>
+</resources>

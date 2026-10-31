@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Mappa a schermo intero + strumenti BYD</string>
+    <string name="fs_page_subtitle">La mappa della sua app occupa l’intero quadro strumenti. Spie BYD, avvisi ADAS, velocità e marcia restano visibili in sovrimpressione.</string>
+    <string name="fs_safety_note">⚠ Eseguire la prova solo a veicolo fermo: in P, con il freno di stazionamento inserito. Il pulsante «Torna alla schermata BYD» resta disponibile in alto sullo schermo.</string>
+    <string name="fs_details">Dettagli tecnici</string>
+    <string name="fs_expected_label">Sul quadro strumenti dovrebbe vedere:</string>
+    <string name="fs_waiting">Attendere…</string>
+    <string name="fs_step_counter">Passaggio %1$d di %2$d</string>
+    <string name="fs_step_check">Verifica</string>
+    <string name="fs_step_load">Caricamento</string>
+    <string name="fs_step_app">App</string>
+    <string name="fs_step_start">Schermo intero</string>
+    <string name="fs_step_finish">Fine</string>
+    <string name="fs_chip_stock">Schermata BYD originale</string>
+    <string name="fs_chip_ready">Tema caricato</string>
+    <string name="fs_chip_active">Schermo intero attivo</string>
+    <string name="fs_chip_busy">Operazione in corso</string>
+    <string name="fs_chip_attention">Azione richiesta</string>
+    <string name="fs_chip_unknown">Stato sconosciuto</string>
+
+    <string name="fs_check_title">Verificare l’auto</string>
+    <string name="fs_check_message">DashCast legge lo stato del quadro strumenti e del servizio DashCast senza modificare nulla.</string>
+    <string name="fs_check_action">Verifica ora</string>
+    <string name="fs_check_failed">Impossibile leggere lo stato del quadro: il servizio DashCast non risponde. Riapra DashCast, attenda la connessione, quindi riprovi.</string>
+    <string name="fs_protocol_title">Servizio DashCast da aggiornare</string>
+    <string name="fs_protocol_message">Il servizio DashCast connesso è troppo vecchio (è richiesto il protocollo %1$d). Chiuda e riapra DashCast per riconnetterlo, quindi verifichi di nuovo.</string>
+    <string name="fs_small_title">Quadro strumenti non compatibile</string>
+    <string name="fs_small_message">Questo tema è pensato per il quadro strumenti grande da 1920 × 720. È stato rilevato un quadro piccolo, quindi la prova non viene proposta.</string>
+    <string name="fs_platform">Prova non possibile su questa auto: è richiesto DiLink 3 con Android 10. Non è stato inviato nulla.</string>
+
+    <string name="fs_load_title">Caricare il tema</string>
+    <string name="fs_load_message">DashCast installa il tema nel quadro strumenti. La schermata non cambia ancora.</string>
+    <string name="fs_load_expected">Nessun cambiamento: la schermata BYD abituale.</string>
+    <string name="fs_load_action">Carica il tema</string>
+    <string name="fs_loading_title">Caricamento del tema…</string>
+    <string name="fs_loading_message">Può richiedere fino a un minuto. Rimanga su questa pagina.</string>
+    <string name="fs_bootstrap_message">Apertura della modalità proiezione BYD…</string>
+    <string name="fs_display_message">Ricerca dello schermo del quadro strumenti…</string>
+
+    <string name="fs_app_title">Scegliere l’app</string>
+    <string name="fs_app_message">Scelga l’app di navigazione che occuperà il quadro strumenti.</string>
+    <string name="fs_app_action">Scegli l’app</string>
+    <string name="fs_change_app">Cambia app</string>
+
+    <string name="fs_start_title">Avviare lo schermo intero</string>
+    <string name="fs_start_message">App scelta: %1$s</string>
+    <string name="fs_start_expected">La mappa su tutto il quadro strumenti, con spie, avvisi, velocità e marcia in sovrimpressione.</string>
+    <string name="fs_start_action">Avvia lo schermo intero</string>
+    <string name="fs_opening_title">Apertura dello schermo intero…</string>
+    <string name="fs_opening_message">La mappa sta arrivando sul quadro strumenti.</string>
+    <string name="fs_observe_title">Osservare il quadro strumenti</string>
+    <string name="fs_observe_message">Il quadro ha ricevuto la richiesta. Indichi ciò che vede realmente.</string>
+    <string name="fs_observe_action">Indica ciò che vedo</string>
+    <string name="fs_done_title">Schermo intero confermato</string>
+    <string name="fs_done_message">Grazie! Al termine, interrompa lo schermo intero.</string>
+    <string name="fs_stop_action">Interrompi lo schermo intero</string>
+    <string name="fs_closing_message">Chiusura dello schermo intero…</string>
+    <string name="fs_closed_title">Schermo intero interrotto</string>
+    <string name="fs_closed_message">Termini la prova per tornare alla schermata BYD, oppure avvii di nuovo lo schermo intero (%1$s).</string>
+    <string name="fs_relaunch_action">Avvia di nuovo</string>
+    <string name="fs_finish_action">Termina la prova</string>
+
+    <string name="fs_recover_title">Ritorno alla schermata BYD</string>
+    <string name="fs_recover_message">Il quadro strumenti deve tornare alla schermata BYD prima di qualsiasi altro passaggio.</string>
+    <string name="fs_recover_other">È ancora caricata una vecchia prova DashCast. Torni prima alla schermata BYD.</string>
+    <string name="fs_recover_restart">Il tema è stato messo da parte. Un riavvio del quadro strumenti completa il ritorno alla schermata BYD.</string>
+    <string name="fs_recover_unknown">È stato inviato un riavvio, ma l’esito è sconosciuto. Non lo invii di nuovo: verifichi il ritorno alla schermata BYD.</string>
+    <string name="fs_recover_display">Lo schermo del quadro strumenti non è stato riconosciuto. Torni alla schermata BYD.</string>
+    <string name="fs_recover_action">Torna alla schermata BYD</string>
+    <string name="fs_factory_action">Applica la schermata originale</string>
+    <string name="fs_wait_title">Attendere…</string>
+    <string name="fs_wait_message">È in corso un’operazione sul quadro strumenti.</string>
+    <string name="fs_state_changed">Lo stato del quadro è appena cambiato. Attenda un istante: la pagina si sta aggiornando.</string>
+    <string name="fs_busy">È in corso un’altra operazione. Riprovi tra un istante.</string>
+    <string name="fs_failed">L’operazione non è stata completata. Nulla viene ripetuto automaticamente; «Torna alla schermata BYD» resta disponibile. Consulti «Dettagli tecnici».</string>
+
+    <string name="fs_dialog_happens">Cosa succederà</string>
+    <string name="fs_dialog_expected">Cosa dovrebbe vedere</string>
+    <string name="fs_check_parked">L’auto è ferma, in P, con il freno di stazionamento inserito.</string>
+    <string name="fs_check_cluster">È il quadro strumenti previsto per questa prova (DashCast ne verifica la versione esatta prima di qualsiasi modifica).</string>
+    <string name="fs_check_restore">Ripristino la schermata BYD originale su questo veicolo.</string>
+
+    <string name="fs_load_dialog_title">Caricare il tema?</string>
+    <string name="fs_load_step_copy">DashCast copia il tema nel quadro strumenti e lo seleziona.</string>
+    <string name="fs_load_step_same">In questo passaggio la schermata resta quella BYD.</string>
+    <string name="fs_load_step_return">Il pulsante «Torna alla schermata BYD» resta sempre disponibile.</string>
+    <string name="fs_load_confirm">Carica</string>
+
+    <string name="fs_choose_title">Quale app visualizzare?</string>
+    <string name="fs_choose_empty">Non è stata trovata nessuna app compatibile.</string>
+
+    <string name="fs_start_dialog_title">Avviare lo schermo intero?</string>
+    <string name="fs_start_step_projection">Il quadro strumenti passa in modalità proiezione.</string>
+    <string name="fs_start_step_app">%1$s appare su tutto il quadro strumenti.</string>
+    <string name="fs_start_step_stop">Potrà interrompere lo schermo intero in qualsiasi momento da questa pagina.</string>
+    <string name="fs_start_confirm">Avvia</string>
+
+    <string name="fs_stop_dialog_title">Interrompere lo schermo intero?</string>
+    <string name="fs_stop_step_close">L’app scompare dal quadro strumenti.</string>
+    <string name="fs_stop_step_keep">Il tema resta caricato: potrà avviare di nuovo lo schermo intero o terminare la prova.</string>
+    <string name="fs_stop_expected">Torna la schermata BYD abituale.</string>
+    <string name="fs_stop_confirm">Interrompi</string>
+
+    <string name="fs_observe_dialog_title">Cosa vede sul quadro strumenti?</string>
+    <string name="fs_observe_ok">La mappa occupa il quadro, con spie, velocità e marcia</string>
+    <string name="fs_observe_stock">Nessun cambiamento: la schermata BYD abituale</string>
+    <string name="fs_observe_problem">Schermo nero, «Simple mode» o visualizzazione anomala</string>
+    <string name="fs_observe_stock_help">Attenda qualche secondo, poi guardi di nuovo. Se non cambia nulla, interrompa lo schermo intero.</string>
+
+    <string name="fs_info_title">Ritorno alla schermata BYD</string>
+    <string name="fs_restore_none">Non è caricato alcun tema DashCast. Verifichi semplicemente che il quadro strumenti mostri la schermata BYD abituale.</string>
+    <string name="fs_guidance_same">Il quadro strumenti ha rifiutato il ritorno e mantiene il tema DashCast. Metta da parte il tema: DashCast la guiderà poi nel riavvio del quadro.</string>
+    <string name="fs_guidance_retired">Il tema è stato messo da parte. Tocchi «Torna alla schermata BYD» per continuare: le verrà proposto un riavvio del quadro strumenti.</string>
+
+    <string name="fs_restore_dialog_title">Tornare alla schermata BYD?</string>
+    <string name="fs_restore_step_close">DashCast chiude la mappa a schermo intero.</string>
+    <string name="fs_restore_step_default">DashCast richiede di nuovo la schermata BYD originale.</string>
+    <string name="fs_restore_step_restart">Se necessario, le verrà poi proposto un riavvio del quadro strumenti.</string>
+    <string name="fs_bootstrap_step">DashCast chiude la proiezione BYD temporanea; non era stato selezionato alcun tema.</string>
+    <string name="fs_restore_expected">La schermata BYD abituale, con spie e strumenti.</string>
+    <string name="fs_restore_confirm">Torna alla schermata BYD</string>
+
+    <string name="fs_retire_dialog_title">Mettere da parte il tema?</string>
+    <string name="fs_retire_step_move">DashCast sposta il tema di prova; il file viene conservato.</string>
+    <string name="fs_retire_step_no_restart">Nessun riavvio in questo passaggio.</string>
+    <string name="fs_retire_expected">Ancora nessun cambiamento sul quadro strumenti.</string>
+    <string name="fs_retire_confirm">Metti da parte</string>
+
+    <string name="fs_verify_dialog_title">Verificare il ritorno alla schermata BYD?</string>
+    <string name="fs_verify_step">DashCast verifica che sia selezionata la schermata BYD originale. Nulla viene ripetuto.</string>
+    <string name="fs_verify_confirm">Verifica</string>
+
+    <string name="fs_factory_dialog_title">Applicare la schermata originale?</string>
+    <string name="fs_factory_step">DashCast apre e chiude una sola volta la proiezione BYD per applicare il profilo originale.</string>
+    <string name="fs_factory_step_none">Non viene inviato alcun tema DashCast.</string>
+
+    <string name="fs_restart_dialog_title">Riavviare il quadro strumenti?</string>
+    <string name="fs_restart_step_check">DashCast verifica di nuovo che il tema di prova sia stato messo da parte.</string>
+    <string name="fs_restart_step_screens">Il quadro strumenti e gli schermi si riavviano; ADB viene interrotto per qualche istante.</string>
+    <string name="fs_restart_expected">Dopo il riavvio: la schermata BYD abituale.</string>
+    <string name="fs_restart_confirm">Riavvia</string>
+    <string name="fs_restart_done">Il quadro è già stato riavviato</string>
+
+    <string name="fs_native_step">DashCast chiede al quadro strumenti di uscire dalla modalità proiezione BYD.</string>
+
+    <string name="fs_oem_question_title">La schermata BYD è tornata?</string>
+    <string name="fs_oem_question_message">Guardi il quadro strumenti: vede la schermata BYD abituale con spie e strumenti? Risponda solo dopo aver guardato.</string>
+    <string name="fs_oem_question_yes">Sì, è tornata</string>
+</resources>

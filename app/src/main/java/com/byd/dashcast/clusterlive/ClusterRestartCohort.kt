@@ -3,7 +3,8 @@ package com.byd.dashcast.clusterlive
 /** Positive identity for the single researched external maintenance reason, independent of DL3 fallback. */
 internal object ClusterRestartCohort {
     val variants = setOf(ClusterThemeVariant.CORNER_MARKER_21F7735C, ClusterThemeVariant.FULL_DASHBOARD_21F7735C,
-        ClusterThemeVariant.FULL_APP_21F7735C, ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C)
+        ClusterThemeVariant.FULL_APP_21F7735C, ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C,
+        ClusterThemeVariant.FULLSCREEN_INSTRUMENTS_21F7735C)
     fun verify(api: Int, variant: ClusterThemeVariant, hash: (String) -> String) {
         check(api == 29 && variant in variants) {
             "Maintenance restart is restricted to the researched Android 10 cohort"

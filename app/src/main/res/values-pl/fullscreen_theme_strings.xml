@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Mapa na pełnym ekranie + wskaźniki BYD</string>
+    <string name="fs_page_subtitle">Mapa z Twojej aplikacji wypełnia cały zestaw wskaźników. Kontrolki BYD, ostrzeżenia ADAS, prędkość i bieg pozostają widoczne nad mapą.</string>
+    <string name="fs_safety_note">⚠ Testuj tylko na postoju: w położeniu P, z włączonym hamulcem postojowym. Przycisk „Wróć do widoku BYD” pozostaje dostępny u góry ekranu.</string>
+    <string name="fs_details">Szczegóły techniczne</string>
+    <string name="fs_expected_label">Na zestawie wskaźników powinno być widać:</string>
+    <string name="fs_waiting">Proszę czekać…</string>
+    <string name="fs_step_counter">Krok %1$d z %2$d</string>
+    <string name="fs_step_check">Sprawdzenie</string>
+    <string name="fs_step_load">Wczytanie</string>
+    <string name="fs_step_app">Aplikacja</string>
+    <string name="fs_step_start">Pełny ekran</string>
+    <string name="fs_step_finish">Zakończenie</string>
+    <string name="fs_chip_stock">Oryginalny widok BYD</string>
+    <string name="fs_chip_ready">Motyw wczytany</string>
+    <string name="fs_chip_active">Pełny ekran aktywny</string>
+    <string name="fs_chip_busy">Operacja w toku</string>
+    <string name="fs_chip_attention">Wymagane działanie</string>
+    <string name="fs_chip_unknown">Stan nieznany</string>
+
+    <string name="fs_check_title">Sprawdź samochód</string>
+    <string name="fs_check_message">DashCast odczytuje stan zestawu wskaźników i usługi DashCast, niczego nie zmieniając.</string>
+    <string name="fs_check_action">Sprawdź teraz</string>
+    <string name="fs_check_failed">Nie można odczytać stanu zestawu wskaźników: usługa DashCast nie odpowiada. Otwórz DashCast jeszcze raz, poczekaj na połączenie, a potem spróbuj ponownie.</string>
+    <string name="fs_protocol_title">Usługa DashCast wymaga aktualizacji</string>
+    <string name="fs_protocol_message">Połączona usługa DashCast jest zbyt stara (wymagany protokół %1$d). Zamknij DashCast i otwórz go ponownie, aby usługa połączyła się na nowo, a następnie sprawdź jeszcze raz.</string>
+    <string name="fs_small_title">Nieobsługiwany zestaw wskaźników</string>
+    <string name="fs_small_message">Ten motyw jest przeznaczony dla dużego zestawu wskaźników o rozdzielczości 1920 × 720. Wykryto mały zestaw wskaźników, dlatego test nie jest dostępny.</string>
+    <string name="fs_platform">Test niemożliwy w tym samochodzie: wymagany jest DiLink 3 z systemem Android 10. Niczego nie wysłano.</string>
+
+    <string name="fs_load_title">Wczytaj motyw</string>
+    <string name="fs_load_message">DashCast instaluje motyw w zestawie wskaźników. Widok jeszcze się nie zmienia.</string>
+    <string name="fs_load_expected">Brak zmian: zwykły widok BYD.</string>
+    <string name="fs_load_action">Wczytaj motyw</string>
+    <string name="fs_loading_title">Wczytywanie motywu…</string>
+    <string name="fs_loading_message">Może to potrwać do minuty. Pozostań na tej stronie.</string>
+    <string name="fs_bootstrap_message">Otwieranie trybu projekcji BYD…</string>
+    <string name="fs_display_message">Wyszukiwanie ekranu zestawu wskaźników…</string>
+
+    <string name="fs_app_title">Wybierz aplikację</string>
+    <string name="fs_app_message">Wybierz aplikację nawigacyjną, która wypełni zestaw wskaźników.</string>
+    <string name="fs_app_action">Wybierz aplikację</string>
+    <string name="fs_change_app">Zmień aplikację</string>
+
+    <string name="fs_start_title">Uruchom pełny ekran</string>
+    <string name="fs_start_message">Wybrana aplikacja: %1$s</string>
+    <string name="fs_start_expected">Mapa na całym zestawie wskaźników, a nad nią kontrolki, ostrzeżenia, prędkość i bieg.</string>
+    <string name="fs_start_action">Uruchom pełny ekran</string>
+    <string name="fs_opening_title">Otwieranie pełnego ekranu…</string>
+    <string name="fs_opening_message">Mapa pojawia się na zestawie wskaźników.</string>
+    <string name="fs_observe_title">Spójrz na zestaw wskaźników</string>
+    <string name="fs_observe_message">Zestaw wskaźników otrzymał żądanie. Daj znać, co faktycznie widzisz.</string>
+    <string name="fs_observe_action">Zgłoś, co widzę</string>
+    <string name="fs_done_title">Pełny ekran potwierdzony</string>
+    <string name="fs_done_message">Dziękujemy! Gdy skończysz, zatrzymaj pełny ekran.</string>
+    <string name="fs_stop_action">Zatrzymaj pełny ekran</string>
+    <string name="fs_closing_message">Zamykanie pełnego ekranu…</string>
+    <string name="fs_closed_title">Pełny ekran zatrzymany</string>
+    <string name="fs_closed_message">Zakończ test, aby wrócić do widoku BYD, lub ponownie uruchom pełny ekran (%1$s).</string>
+    <string name="fs_relaunch_action">Uruchom jeszcze raz</string>
+    <string name="fs_finish_action">Zakończ test</string>
+
+    <string name="fs_recover_title">Powrót do widoku BYD</string>
+    <string name="fs_recover_message">Zestaw wskaźników musi wrócić do widoku BYD przed jakimkolwiek innym krokiem.</string>
+    <string name="fs_recover_other">Nadal wczytany jest starszy test DashCast. Najpierw wróć do widoku BYD.</string>
+    <string name="fs_recover_restart">Motyw został odłożony na bok. Restart zestawu wskaźników dokończy powrót do widoku BYD.</string>
+    <string name="fs_recover_unknown">Wysłano polecenie restartu, ale jego wynik jest nieznany. Nie wysyłaj go ponownie: sprawdź powrót do widoku BYD.</string>
+    <string name="fs_recover_display">Nie rozpoznano ekranu zestawu wskaźników. Wróć do widoku BYD.</string>
+    <string name="fs_recover_action">Wróć do widoku BYD</string>
+    <string name="fs_factory_action">Zastosuj oryginalny widok</string>
+    <string name="fs_wait_title">Proszę czekać…</string>
+    <string name="fs_wait_message">Na zestawie wskaźników trwa operacja.</string>
+    <string name="fs_state_changed">Stan zestawu wskaźników właśnie się zmienił. Poczekaj chwilę: strona się aktualizuje.</string>
+    <string name="fs_busy">Trwa inna operacja. Spróbuj ponownie za chwilę.</string>
+    <string name="fs_failed">Operacja nie została ukończona. Nic nie jest ponawiane automatycznie; przycisk „Wróć do widoku BYD” pozostaje dostępny. Zobacz „Szczegóły techniczne”.</string>
+
+    <string name="fs_dialog_happens">Co się stanie</string>
+    <string name="fs_dialog_expected">Co powinno być widać</string>
+    <string name="fs_check_parked">Samochód stoi w położeniu P, a hamulec postojowy jest włączony.</string>
+    <string name="fs_check_cluster">To jest zestaw wskaźników przewidziany do tego testu (DashCast sprawdza jego dokładną wersję przed każdą zmianą).</string>
+    <string name="fs_check_restore">Przywracam oryginalny widok BYD w tym pojeździe.</string>
+
+    <string name="fs_load_dialog_title">Wczytać motyw?</string>
+    <string name="fs_load_step_copy">DashCast kopiuje motyw do zestawu wskaźników i go wybiera.</string>
+    <string name="fs_load_step_same">Na tym etapie widok BYD się nie zmienia.</string>
+    <string name="fs_load_step_return">Przycisk „Wróć do widoku BYD” pozostaje dostępny przez cały czas.</string>
+    <string name="fs_load_confirm">Wczytaj</string>
+
+    <string name="fs_choose_title">Którą aplikację wyświetlić?</string>
+    <string name="fs_choose_empty">Nie znaleziono zgodnej aplikacji.</string>
+
+    <string name="fs_start_dialog_title">Uruchomić pełny ekran?</string>
+    <string name="fs_start_step_projection">Zestaw wskaźników przełącza się w tryb projekcji.</string>
+    <string name="fs_start_step_app">Aplikacja %1$s jest wyświetlana na całym zestawie wskaźników.</string>
+    <string name="fs_start_step_stop">Pełny ekran możesz zatrzymać w dowolnej chwili na tej stronie.</string>
+    <string name="fs_start_confirm">Uruchom</string>
+
+    <string name="fs_stop_dialog_title">Zatrzymać pełny ekran?</string>
+    <string name="fs_stop_step_close">Aplikacja znika z zestawu wskaźników.</string>
+    <string name="fs_stop_step_keep">Motyw pozostaje wczytany: możesz uruchomić pełny ekran jeszcze raz lub zakończyć test.</string>
+    <string name="fs_stop_expected">Wraca zwykły widok BYD.</string>
+    <string name="fs_stop_confirm">Zatrzymaj</string>
+
+    <string name="fs_observe_dialog_title">Co widzisz na zestawie wskaźników?</string>
+    <string name="fs_observe_ok">Mapa wypełnia zestaw wskaźników, widać kontrolki, prędkość i bieg</string>
+    <string name="fs_observe_stock">Nic się nie zmieniło: zwykły widok BYD</string>
+    <string name="fs_observe_problem">Czarny ekran, „Simple mode” lub nieprawidłowy obraz</string>
+    <string name="fs_observe_stock_help">Poczekaj kilka sekund i spójrz ponownie. Jeśli nic się nie zmieni, zatrzymaj pełny ekran.</string>
+
+    <string name="fs_info_title">Powrót do widoku BYD</string>
+    <string name="fs_restore_none">Żaden motyw DashCast nie jest wczytany. Sprawdź tylko, czy zestaw wskaźników pokazuje zwykły widok BYD.</string>
+    <string name="fs_guidance_same">Zestaw wskaźników odrzucił powrót i zachowuje motyw DashCast. Odłóż motyw na bok: DashCast poprowadzi Cię następnie przez restart zestawu wskaźników.</string>
+    <string name="fs_guidance_retired">Motyw został odłożony na bok. Dotknij „Wróć do widoku BYD”, aby kontynuować: zostanie zaproponowany restart zestawu wskaźników.</string>
+
+    <string name="fs_restore_dialog_title">Wrócić do widoku BYD?</string>
+    <string name="fs_restore_step_close">DashCast zamyka mapę na pełnym ekranie.</string>
+    <string name="fs_restore_step_default">DashCast ponownie żąda oryginalnego widoku BYD.</string>
+    <string name="fs_restore_step_restart">W razie potrzeby zostanie następnie zaproponowany restart zestawu wskaźników.</string>
+    <string name="fs_bootstrap_step">DashCast zamyka tymczasową projekcję BYD; żaden motyw nie został wybrany.</string>
+    <string name="fs_restore_expected">Zwykły widok BYD z kontrolkami i wskaźnikami.</string>
+    <string name="fs_restore_confirm">Wróć do widoku BYD</string>
+
+    <string name="fs_retire_dialog_title">Odłożyć motyw na bok?</string>
+    <string name="fs_retire_step_move">DashCast przenosi swój motyw testowy; plik zostaje zachowany.</string>
+    <string name="fs_retire_step_no_restart">Na tym etapie nie ma restartu.</string>
+    <string name="fs_retire_expected">Na zestawie wskaźników jeszcze nic się nie zmienia.</string>
+    <string name="fs_retire_confirm">Odłóż na bok</string>
+
+    <string name="fs_verify_dialog_title">Sprawdzić powrót do widoku BYD?</string>
+    <string name="fs_verify_step">DashCast sprawdza, czy wybrany jest oryginalny widok BYD. Nic nie jest ponawiane.</string>
+    <string name="fs_verify_confirm">Sprawdź</string>
+
+    <string name="fs_factory_dialog_title">Zastosować oryginalny widok?</string>
+    <string name="fs_factory_step">DashCast jeden raz otwiera i zamyka projekcję BYD, aby zastosować oryginalny profil.</string>
+    <string name="fs_factory_step_none">Żaden motyw DashCast nie jest wysyłany.</string>
+
+    <string name="fs_restart_dialog_title">Uruchomić ponownie zestaw wskaźników?</string>
+    <string name="fs_restart_step_check">DashCast ponownie sprawdza, czy jego motyw został odłożony na bok.</string>
+    <string name="fs_restart_step_screens">Zestaw wskaźników i ekrany uruchamiają się ponownie; połączenie ADB zostaje na chwilę przerwane.</string>
+    <string name="fs_restart_expected">Po restarcie: zwykły widok BYD.</string>
+    <string name="fs_restart_confirm">Uruchom ponownie</string>
+    <string name="fs_restart_done">Zestaw wskaźników został już uruchomiony ponownie</string>
+
+    <string name="fs_native_step">DashCast prosi zestaw wskaźników o wyjście z trybu projekcji BYD.</string>
+
+    <string name="fs_oem_question_title">Czy widok BYD wrócił?</string>
+    <string name="fs_oem_question_message">Spójrz na zestaw wskaźników: czy wyświetla zwykły widok BYD z kontrolkami i wskaźnikami? Odpowiedz dopiero wtedy, gdy spojrzysz.</string>
+    <string name="fs_oem_question_yes">Tak, wrócił</string>
+</resources>

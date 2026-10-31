@@ -1,0 +1,26 @@
+--- original/qml/cluster.qml
++++ patched/qml/cluster.qml
+@@ -682,6 +682,7 @@
+     //背景
+     Item{
+         id: bgImageContainerId
++        opacity: DataSource.naviType === 0x04 && DataSource.screenSize === 0x02 && DataSource.powerGear === 0x03 && DataSource.playAnim === true && rootItemId.width === 1920 && rootItemId.height === 720 ? 0 : 1
+         //visible: DataSource.presentationTestMode === 0?true:false
+         anchors.fill: parent
+         z:CustomStyle.bgZ
+@@ -793,6 +794,7 @@
+         }
+         Image {
+             id: headLineId
++            opacity: DataSource.naviType === 0x04 && DataSource.screenSize === 0x02 && DataSource.powerGear === 0x03 && DataSource.playAnim === true && rootItemId.width === 1920 && rootItemId.height === 720 ? 0 : 1
+             y:124
+             anchors.horizontalCenter: parent.horizontalCenter
+             source: "qrc:/images/display_always/headLine.png"
+@@ -1279,6 +1281,7 @@
+ 
+             Image {
+                 id:driveRangeInfoBgId
++                opacity: DataSource.naviType === 0x04 && DataSource.screenSize === 0x02 && DataSource.powerGear === 0x03 && DataSource.playAnim === true && rootItemId.width === 1920 && rootItemId.height === 720 ? 0 : 1
+                 anchors.horizontalCenter: parent.horizontalCenter
+                 cache: false
+                 y:DataSource.themeIndex === 0x02 ?-12:0

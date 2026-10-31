@@ -37,8 +37,8 @@ class ClusterObservationPromptsTest {
         }
     }
     private fun question(key: String, session: ClusterThemeSession, current: () -> Boolean = { true }, answer: () -> Unit = {}) =
-        ClusterObservationPrompts.Question(key, 90, session, R.string.diag_cluster_observe_oem_title,
-            R.string.diag_cluster_observe_oem_message, R.string.diag_cluster_observation_yes, current, answer)
+        ClusterObservationPrompts.Question(key, 90, session, R.string.fs_oem_question_title,
+            R.string.fs_oem_question_message, R.string.fs_oem_question_yes, current, answer)
     private fun popup(): AlertDialog? = ShadowAlertDialog.getLatestAlertDialog()?.takeIf { it.isShowing }
 
     @Test fun `yes detaches before callback invalidates lane so same intermediate receipt does not ask twice`() = fixture { _, prompts, session ->

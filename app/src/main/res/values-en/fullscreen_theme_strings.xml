@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Full-screen map + BYD instruments</string>
+    <string name="fs_page_subtitle">Your app’s map fills the whole cluster. BYD warning lights, ADAS alerts, speed and gear stay displayed on top.</string>
+    <string name="fs_safety_note">⚠ Test only while stationary: in P with the parking brake applied. The « Back to the BYD display » button stays available at the top of the screen.</string>
+    <string name="fs_details">Technical details</string>
+    <string name="fs_expected_label">On the cluster you should see:</string>
+    <string name="fs_waiting">Please wait…</string>
+    <string name="fs_step_counter">Step %1$d of %2$d</string>
+    <string name="fs_step_check">Check</string>
+    <string name="fs_step_load">Load</string>
+    <string name="fs_step_app">App</string>
+    <string name="fs_step_start">Full screen</string>
+    <string name="fs_step_finish">Finish</string>
+    <string name="fs_chip_stock">Original BYD display</string>
+    <string name="fs_chip_ready">Theme loaded</string>
+    <string name="fs_chip_active">Full screen active</string>
+    <string name="fs_chip_busy">Operation in progress</string>
+    <string name="fs_chip_attention">Action required</string>
+    <string name="fs_chip_unknown">Unknown state</string>
+
+    <string name="fs_check_title">Check the car</string>
+    <string name="fs_check_message">DashCast reads the state of the cluster and of its service without changing anything.</string>
+    <string name="fs_check_action">Check now</string>
+    <string name="fs_check_failed">Cannot read the cluster state: the DashCast service does not answer. Reopen DashCast, wait for the connection, then try again.</string>
+    <string name="fs_protocol_title">DashCast service needs an update</string>
+    <string name="fs_protocol_message">The connected DashCast service is too old (protocol %1$d required). Close and reopen DashCast to reconnect it, then check again.</string>
+    <string name="fs_small_title">Cluster not supported</string>
+    <string name="fs_small_message">This theme is designed for the large 1920 × 720 cluster. A small cluster was detected, so the test is not offered.</string>
+    <string name="fs_platform">Test not possible on this car: DiLink 3 on Android 10 is required. Nothing was sent.</string>
+
+    <string name="fs_load_title">Load the theme</string>
+    <string name="fs_load_message">DashCast installs the theme in the cluster. The display does not change yet.</string>
+    <string name="fs_load_expected">No change: the usual BYD display.</string>
+    <string name="fs_load_action">Load the theme</string>
+    <string name="fs_loading_title">Loading the theme…</string>
+    <string name="fs_loading_message">This can take up to a minute. Stay on this page.</string>
+    <string name="fs_bootstrap_message">Opening the BYD projection mode…</string>
+    <string name="fs_display_message">Looking for the cluster screen…</string>
+
+    <string name="fs_app_title">Choose the app</string>
+    <string name="fs_app_message">Choose the navigation app that will fill the cluster.</string>
+    <string name="fs_app_action">Choose the app</string>
+    <string name="fs_change_app">Change app</string>
+
+    <string name="fs_start_title">Start full screen</string>
+    <string name="fs_start_message">Selected app: %1$s</string>
+    <string name="fs_start_expected">The map over the whole cluster, with warning lights, alerts, speed and gear on top.</string>
+    <string name="fs_start_action">Start full screen</string>
+    <string name="fs_opening_title">Opening full screen…</string>
+    <string name="fs_opening_message">The map is coming to the cluster.</string>
+    <string name="fs_observe_title">Look at the cluster</string>
+    <string name="fs_observe_message">The cluster received the request. Tell us what you actually see.</string>
+    <string name="fs_observe_action">Tell what I see</string>
+    <string name="fs_done_title">Full screen confirmed</string>
+    <string name="fs_done_message">Thank you! When you are done, stop the full screen.</string>
+    <string name="fs_stop_action">Stop full screen</string>
+    <string name="fs_closing_message">Closing full screen…</string>
+    <string name="fs_closed_title">Full screen stopped</string>
+    <string name="fs_closed_message">Finish the test to return to the BYD display, or start full screen again (%1$s).</string>
+    <string name="fs_relaunch_action">Start again</string>
+    <string name="fs_finish_action">Finish the test</string>
+
+    <string name="fs_recover_title">Back to the BYD display</string>
+    <string name="fs_recover_message">The cluster must return to the BYD display before any other step.</string>
+    <string name="fs_recover_other">An older DashCast test is still loaded. Return to the BYD display first.</string>
+    <string name="fs_recover_restart">The theme has been set aside. A cluster restart completes the return to the BYD display.</string>
+    <string name="fs_recover_unknown">A restart was sent but its result is unknown. Do not send it again: check the return to the BYD display.</string>
+    <string name="fs_recover_display">The cluster screen was not recognised. Return to the BYD display.</string>
+    <string name="fs_recover_action">Back to the BYD display</string>
+    <string name="fs_factory_action">Apply the original display</string>
+    <string name="fs_wait_title">Please wait…</string>
+    <string name="fs_wait_message">An operation is in progress on the cluster.</string>
+    <string name="fs_state_changed">The cluster state just changed. Wait a moment: the page is updating.</string>
+    <string name="fs_busy">Another operation is in progress. Try again in a moment.</string>
+    <string name="fs_failed">The operation did not complete. Nothing is retried automatically; « Back to the BYD display » stays available. See « Technical details ».</string>
+
+    <string name="fs_dialog_happens">What will happen</string>
+    <string name="fs_dialog_expected">What you should see</string>
+    <string name="fs_check_parked">The car is stationary, in P, with the parking brake applied.</string>
+    <string name="fs_check_cluster">This is the cluster intended for this test (DashCast checks its exact version before any change).</string>
+    <string name="fs_check_restore">I am restoring the original BYD display on this vehicle.</string>
+
+    <string name="fs_load_dialog_title">Load the theme?</string>
+    <string name="fs_load_step_copy">DashCast copies the theme to the cluster and selects it.</string>
+    <string name="fs_load_step_same">The display stays the BYD one at this step.</string>
+    <string name="fs_load_step_return">The « Back to the BYD display » button stays available at all times.</string>
+    <string name="fs_load_confirm">Load</string>
+
+    <string name="fs_choose_title">Which app should be displayed?</string>
+    <string name="fs_choose_empty">No compatible app was found.</string>
+
+    <string name="fs_start_dialog_title">Start full screen?</string>
+    <string name="fs_start_step_projection">The cluster switches to projection mode.</string>
+    <string name="fs_start_step_app">%1$s is shown over the whole cluster.</string>
+    <string name="fs_start_step_stop">You can stop it at any time from this page.</string>
+    <string name="fs_start_confirm">Start</string>
+
+    <string name="fs_stop_dialog_title">Stop full screen?</string>
+    <string name="fs_stop_step_close">The app leaves the cluster.</string>
+    <string name="fs_stop_step_keep">The theme stays loaded: you can start again or finish the test.</string>
+    <string name="fs_stop_expected">The usual BYD display comes back.</string>
+    <string name="fs_stop_confirm">Stop</string>
+
+    <string name="fs_observe_dialog_title">What do you see on the cluster?</string>
+    <string name="fs_observe_ok">The map fills the cluster, with warning lights, speed and gear</string>
+    <string name="fs_observe_stock">Nothing changed: the usual BYD display</string>
+    <string name="fs_observe_problem">Black screen, « Simple mode » or abnormal display</string>
+    <string name="fs_observe_stock_help">Wait a few seconds, then look again. If nothing changes, stop the full screen.</string>
+
+    <string name="fs_info_title">Back to the BYD display</string>
+    <string name="fs_restore_none">No DashCast theme is loaded. Just check that the cluster shows the usual BYD screen.</string>
+    <string name="fs_guidance_same">The cluster refused the return and keeps the DashCast theme. Set the theme aside: DashCast will then guide you to restart the cluster.</string>
+    <string name="fs_guidance_retired">The theme has been set aside. Press « Back to the BYD display » to continue: a cluster restart will be offered.</string>
+
+    <string name="fs_restore_dialog_title">Back to the BYD display?</string>
+    <string name="fs_restore_step_close">DashCast closes the full-screen map.</string>
+    <string name="fs_restore_step_default">DashCast requests the original BYD display again.</string>
+    <string name="fs_restore_step_restart">If needed, a cluster restart will be offered next.</string>
+    <string name="fs_bootstrap_step">DashCast closes the temporary BYD projection; no theme had been selected.</string>
+    <string name="fs_restore_expected">The usual BYD display, with its warning lights and instruments.</string>
+    <string name="fs_restore_confirm">Back to the BYD display</string>
+
+    <string name="fs_retire_dialog_title">Set the theme aside?</string>
+    <string name="fs_retire_step_move">DashCast moves its test theme; the file is kept.</string>
+    <string name="fs_retire_step_no_restart">No restart at this step.</string>
+    <string name="fs_retire_expected">No change on the cluster yet.</string>
+    <string name="fs_retire_confirm">Set aside</string>
+
+    <string name="fs_verify_dialog_title">Check the return to the BYD display?</string>
+    <string name="fs_verify_step">DashCast checks that the original BYD display is selected. Nothing is retried.</string>
+    <string name="fs_verify_confirm">Check</string>
+
+    <string name="fs_factory_dialog_title">Apply the original display?</string>
+    <string name="fs_factory_step">DashCast opens and closes the BYD projection once to apply the original profile.</string>
+    <string name="fs_factory_step_none">No DashCast theme is sent.</string>
+
+    <string name="fs_restart_dialog_title">Restart the cluster?</string>
+    <string name="fs_restart_step_check">DashCast checks again that its theme has been set aside.</string>
+    <string name="fs_restart_step_screens">The cluster and screens restart; ADB is interrupted for a moment.</string>
+    <string name="fs_restart_expected">After the restart: the usual BYD display.</string>
+    <string name="fs_restart_confirm">Restart</string>
+    <string name="fs_restart_done">The cluster has already restarted</string>
+
+    <string name="fs_native_step">DashCast asks the cluster to leave the BYD projection mode.</string>
+
+    <string name="fs_oem_question_title">Is the BYD display back?</string>
+    <string name="fs_oem_question_message">Look at the cluster: do you see the usual BYD display with its warning lights and instruments? Answer only after looking.</string>
+    <string name="fs_oem_question_yes">Yes, it is back</string>
+</resources>

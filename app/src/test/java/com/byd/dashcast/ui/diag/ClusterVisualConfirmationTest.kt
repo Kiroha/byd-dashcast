@@ -5,11 +5,8 @@ import android.app.AlertDialog
 import android.os.Binder
 import android.os.Parcel
 import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.TextView
 import com.byd.dashcast.R
 import com.byd.dashcast.clusterlive.ClusterNativeProjectionDebt
 import com.byd.dashcast.clusterlive.ClusterThemeDiagnostics
@@ -25,7 +22,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlertDialog
-import java.time.Duration
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -44,7 +40,7 @@ class ClusterVisualConfirmationTest {
         .put("nativeMode", JSONObject().put("nonce", nonce).put("state", if (native) "RETURNED" else "IDLE")
             .put("command", if (native) 18 else 0).put("pending", false).put("debt", native).put("normalSettled", native).put("admittedElapsedMs", if (native) 10 else 0))
 
-    private class Fixture(initial: JSONObject) : AutoCloseable {
+    private class Fixture(initial: JSONObject, protocol: String = "41") : AutoCloseable {
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val app = activity.get()
         val header = LinearLayout(app)
@@ -56,7 +52,6 @@ class ClusterVisualConfirmationTest {
         val filenames: List<String> get() = synchronized(recordedFilenames) { recordedFilenames.toList() }
         @Volatile var receipt = initial
         @Volatile var holdStatus: CountDownLatch? = null
-        val statusEntered = CountDownLatch(1)
         private val bf = ProxyClient::class.java.getDeclaredField("sBinder").apply { isAccessible = true }
         private val vf = ProxyClient::class.java.getDeclaredField("sDaemonVer").apply { isAccessible = true }
         private val previous = bf.get(null)
@@ -66,27 +61,26 @@ class ClusterVisualConfirmationTest {
                 check(code == ProxyDaemonContract.TXN_CLUSTER_LIVE_TEST)
                 data.enforceInterface(ProxyDaemonContract.DESCRIPTOR)
                 val op = data.readInt(); recordedOps.add(op)
-                if (op == 0) { statusEntered.countDown(); holdStatus?.await(5, TimeUnit.SECONDS) }
+                if (op == 0) holdStatus?.await(5, TimeUnit.SECONDS)
                 else if (op == 10) {
                     check(data.readString() == receipt.getJSONObject("nativeMode").getString("nonce"))
                     receipt = JSONObject(receipt.toString()).apply {
                         getJSONObject("nativeMode").put("state", "CLOSED").put("debt", false).put("pending", false)
                     }
-                } else if (op in listOf(3, 4, 6, 16)) {
+                } else if (op == 4) {
                     recordedFilenames.add(data.readString().orEmpty())
-                    if (op == 16) assertEquals(receipt.getJSONObject("cornerVerification").getString("round"), data.readString())
-                    receipt = JSONObject(receipt.toString()).apply { put(when (op) { 3, 16 -> "markerObservedByUser"; 4 -> "oemObservedByUser"; else -> "themeObservedByUser" }, true) }
+                    receipt = JSONObject(receipt.toString()).put("oemObservedByUser", true)
                 } else error("Unexpected effect $op")
                 check(data.dataAvail() == 0)
                 reply!!.writeNoException(); reply.writeString(receipt.toString()); return true
             }
         }
-        val native: ClusterNativeFullControls
+        val native: ClusterNativeReturnControls
         val rcc: ClusterThemeLiveControls
         init {
-            bf.set(null, binder); vf.set(null, "41")
+            bf.set(null, binder); vf.set(null, protocol)
             app.getSharedPreferences("native_cluster_operational_debt", 0).edit().clear().commit()
-            native = ClusterNativeFullControls(app, header, body, { true }, {}, {}, prompts)
+            native = ClusterNativeReturnControls(app, header, {}, prompts)
             rcc = ClusterThemeLiveControls(app, header, body, { true }, {}, { false }, {}, nativeStatus = { text, s -> native.receivedStatus(text, s) }, prompts = prompts)
         }
         fun activate() { prompts.setVisible(true); native.setActive(true); rcc.setActive(true) }
@@ -97,22 +91,21 @@ class ClusterVisualConfirmationTest {
             do { shadowOf(Looper.getMainLooper()).idle(); if (test()) return; Thread.sleep(5) } while (System.nanoTime() < until)
             assertTrue("Condition did not settle; ops=$ops", test())
         }
+        fun idleLanes() = waitFor { !(ClusterThemeLiveControls::class.java.getDeclaredField("busy").apply { isAccessible = true }.get(null) as AtomicBoolean).get() }
         fun poll() {
-            waitFor { !(ClusterThemeLiveControls::class.java.getDeclaredField("busy").apply { isAccessible = true }.get(null) as AtomicBoolean).get() }
+            idleLanes()
             val field = ClusterThemeLiveControls::class.java.getDeclaredField("poll").apply { isAccessible = true }
             (field.get(rcc) as Runnable).run()
         }
+        fun primary(): Button = (ClusterThemeLiveControls::class.java.getDeclaredField("page").apply { isAccessible = true }.get(rcc) as FullscreenThemeView)
+            .let { page -> FullscreenThemeView::class.java.getDeclaredField("primary").apply { isAccessible = true }.get(page) as Button }
         fun replaceBinder() { bf.set(null, Binder()) }
         override fun close() {
             holdStatus?.countDown(); pause(); native.close(); rcc.close()
-            waitFor { !(ClusterThemeLiveControls::class.java.getDeclaredField("busy").apply { isAccessible = true }.get(null) as AtomicBoolean).get() }
+            idleLanes()
             (ClusterThemeLiveControls::class.java.getDeclaredField("diagClaimed").apply { isAccessible = true }.get(null) as AtomicBoolean).set(false)
             activity.pause().stop().destroy(); bf.set(null, previous); vf.set(null, version)
         }
-    }
-    private fun buttons(root: ViewGroup): List<Button> = (0 until root.childCount).flatMap {
-        val view = root.getChildAt(it)
-        (if (view is Button) listOf(view) else emptyList()) + (if (view is ViewGroup) buttons(view) else emptyList())
     }
     @Test fun `normal return automatically asks and yes sends only local nonce bound observation`() {
         Fixture(status(native = true)).use { f ->
@@ -130,17 +123,16 @@ class ClusterVisualConfirmationTest {
             f.currentDialog()!!.getButton(-2).performClick()
             f.poll(); f.waitFor { f.ops.count { it == 0 } >= 2 }
             assertNull(f.currentDialog()); assertTrue(f.receipt.getJSONObject("nativeMode").getBoolean("debt"))
-            buttons(f.body).first { it.text == f.app.getString(R.string.diag_cluster_observation_again) }.performClick()
+            f.prompts.reopen()
             assertNotNull(f.currentDialog()); f.currentDialog()!!.getButton(-3).performClick()
             f.poll(); f.waitFor { f.ops.count { it == 0 } >= 3 }
             assertNull(f.currentDialog()); assertEquals(0, f.ops.count { it == 10 })
         }
     }
-    @Test fun `native Full observation describes projection with bands and never closes debt`() {
+    @Test fun `native Full receipt left by an older build asks nothing and never closes debt`() {
         Fixture(status(native = true).apply { getJSONObject("nativeMode").put("command", 16).put("normalSettled", false) }).use { f ->
-            f.activate(); f.waitFor { f.currentDialog() != null }
-            assertEquals(f.app.getString(R.string.diag_cluster_observe_full_yes), f.currentDialog()!!.getButton(-1).text)
-            f.currentDialog()!!.getButton(-1).performClick()
+            f.activate(); f.waitFor { f.ops.isNotEmpty() }; f.idleLanes()
+            assertNull(f.currentDialog())
             assertTrue(f.receipt.getJSONObject("nativeMode").getBoolean("debt")); assertTrue(f.ops.all { it == 0 })
         }
     }
@@ -170,72 +162,54 @@ class ClusterVisualConfirmationTest {
             shadowOf(Looper.getMainLooper()).idle(); assertNull(f.currentDialog()); assertEquals(0, f.ops.count { it != 0 })
         }
     }
-    @Test fun `RCC theme observation is automatic and survives repeated passive polling`() {
-        Fixture(status(rcc = true)).use { f ->
-            f.activate(); f.waitFor { f.currentDialog() != null }; val popup = f.currentDialog()!!
-            f.poll(); f.waitFor { f.ops.count { it == 0 } >= 2 }
-            assertSame(popup, f.currentDialog()); assertTrue(popup.isShowing)
-            popup.getButton(-1).performClick(); f.waitFor { f.ops.contains(6) }
-            assertEquals(listOf(filename), f.filenames); assertEquals(listOf(6), f.ops.filter { it != 0 })
+    @Test fun `retired legacy test receipts never ask a loading question or send an observation`() {
+        val legacy = listOf(
+            status(rcc = true),
+            status(rcc = true, variant = "marker"),
+            status(rcc = true, variant = "corner-marker").put("state", "SELECTION_PENDING_OEM_APPLY"),
+            status(rcc = true, variant = "corner-marker").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true)))
+        for (receipt in legacy) Fixture(receipt).use { f ->
+            f.activate(); f.waitFor { f.ops.isNotEmpty() }; f.idleLanes(); f.poll(); f.idleLanes()
+            assertNull(f.currentDialog()); assertTrue(f.ops.all { it == 0 })
+            assertFalse(f.receipt.getBoolean("markerObservedByUser")); assertFalse(f.receipt.getBoolean("themeObservedByUser"))
         }
     }
-    @Test fun `RCC original observation is not offered before restore selection and never sends restore`() {
+    @Test fun `factory display question is asked after restore selection and yes sends only the OEM observation`() {
         Fixture(status(rcc = true, restore = true)).use { f ->
             f.activate(); f.waitFor { f.currentDialog() != null }
+            assertEquals(f.app.getString(R.string.fs_oem_question_yes), f.currentDialog()!!.getButton(-1).text)
             f.currentDialog()!!.getButton(-1).performClick(); f.waitFor { f.ops.contains(4) }
             assertEquals(listOf(4), f.ops.filter { it != 0 }); assertEquals(listOf(filename), f.filenames)
         }
     }
-    @Test fun `RCC marker observation uses marker operation and changed file expires positive`() {
-        Fixture(status(rcc = true, variant = "marker")).use { f ->
+    @Test fun `factory display question answered not yet can be asked again from the page`() {
+        Fixture(status(rcc = true, restore = true)).use { f ->
             f.activate(); f.waitFor { f.currentDialog() != null }
-            f.receipt = status(rcc = true, variant = "marker").put("filename", filename.replace("cccc", "dddd"))
+            f.currentDialog()!!.getButton(-2).performClick()
+            f.poll(); f.idleLanes(); assertNull(f.currentDialog())
+            assertEquals(f.app.getString(R.string.fs_observe_action), f.primary().text)
+            f.primary().performClick(); f.waitFor { f.currentDialog() != null }
+            f.currentDialog()!!.getButton(-1).performClick(); f.waitFor { f.ops.contains(4) }
+            assertEquals(listOf(4), f.ops.filter { it != 0 })
+        }
+    }
+    @Test fun `factory display observation with a changed file expires the positive answer`() {
+        Fixture(status(rcc = true, restore = true)).use { f ->
+            f.activate(); f.waitFor { f.currentDialog() != null }
+            f.receipt = status(rcc = true, restore = true).put("filename", filename.replace("cccc", "dddd"))
             f.currentDialog()!!.getButton(-1).performClick()
             f.waitFor { ClusterThemeDiagnostics.snapshot(f.app).contains("Visual confirmation expired") }
             assertTrue(f.ops.all { it == 0 })
         }
     }
-    @Test fun `source1 corner round without ACK2 asks visual question and sends only local observation without closing debt`() {
-        Fixture(status(rcc = true, variant = "corner-marker-21f7735c").put("transport", "android-ivi")
-            .put("rccDebt", true).put("uncertain", true).put("iviRecoverySettled", false)
-            .put("detail", "Fresh owned IVI selection; source=1; nativePropertyEmpty=true")
-            .put("loadEvidence", JSONObject().put("selection", "OWN_PATH_REPORTED").put("ack2", "NOT_RECEIVED"))
-            .put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
-            f.activate(); f.waitFor { f.currentDialog() != null }
-            assertEquals(f.app.getString(R.string.diag_cluster_observe_corners_message),
-                f.currentDialog()!!.findViewById<TextView>(android.R.id.message).text)
-            f.currentDialog()!!.getButton(-1).performClick(); f.waitFor { f.ops.contains(16) }
-            assertEquals(listOf(16), f.ops.filter { it != 0 }); assertEquals(listOf(filename), f.filenames)
-            assertTrue(f.receipt.getBoolean("markerObservedByUser")); assertFalse(f.receipt.getBoolean("themeObservedByUser"))
-            assertTrue(f.receipt.getBoolean("rccDebt")); assertTrue(f.receipt.getBoolean("uncertain"))
-            assertFalse(f.receipt.getBoolean("iviRecoverySettled")); assertFalse(f.receipt.getBoolean("defaultQueried"))
-        }
-    }
-    @Test fun `initial corner selection alone never opens a visual popup or sends a new operation`() {
-        Fixture(status(rcc = true, variant = "corner-marker").put("state", "SELECTION_PENDING_OEM_APPLY")).use { f ->
-            f.activate(); f.waitFor { f.ops.isNotEmpty() }; shadowOf(Looper.getMainLooper()).idle()
-            assertNull(f.currentDialog()); assertTrue(f.ops.all { it == 0 })
-            assertFalse(f.receipt.getBoolean("markerObservedByUser"))
-        }
-    }
-    @Test fun `corner no unknown and stale filename never send an observation or load`() {
-        for (answer in listOf(-2, -3, -1)) Fixture(status(rcc = true, variant = "corner-marker").put("cornerVerification", JSONObject().put("round", "b".repeat(32)).put("available", true))).use { f ->
-            f.activate(); f.waitFor { f.currentDialog() != null }
-            if (answer == -1) f.receipt = status(rcc = true, variant = "corner-marker").put("filename", filename.replace("cccc", "dddd"))
-            f.currentDialog()!!.getButton(answer).performClick()
-            if (answer == -1) f.waitFor { ClusterThemeDiagnostics.snapshot(f.app).contains("Visual confirmation expired") }
-            else shadowOf(Looper.getMainLooper()).idle()
-            assertTrue(f.ops.all { it == 0 }); assertFalse(f.receipt.getBoolean("markerObservedByUser"))
-        }
-    }
-    @Test fun `local native debt explains blocked RCC click even without a status receipt`() {
-        Fixture(status()).use { f ->
-            f.prompts.setVisible(true)
+    @Test fun `local native debt explains a blocked theme load and sends nothing`() {
+        Fixture(status(), protocol = "47").use { f ->
+            f.activate(); f.waitFor { f.primary().text == f.app.getString(R.string.fs_load_action) }
             ClusterNativeProjectionDebt.begin(f.app, nonce)
-            buttons(f.body).single { it.text == f.app.getString(R.string.diag_cluster_rcc_corners_button) }.performClick()
+            f.primary().performClick(); shadowOf(Looper.getMainLooper()).idle()
             assertNotNull(f.currentDialog()); assertEquals(f.app.getString(android.R.string.ok), f.currentDialog()!!.getButton(-1).text)
             f.currentDialog()!!.getButton(-1).performClick()
-            assertTrue(f.ops.isEmpty()); assertTrue(ClusterNativeProjectionDebt.blocked(f.app))
+            assertTrue(f.ops.all { it == 0 }); assertTrue(ClusterNativeProjectionDebt.blocked(f.app))
             ClusterNativeProjectionDebt.clear(f.app, nonce)
         }
     }
@@ -256,7 +230,7 @@ class ClusterVisualConfirmationTest {
             shadowOf(Looper.getMainLooper()).idle(); assertNull(f.currentDialog())
             f.receipt = status(rcc = true, restore = true)
             f.poll(); f.waitFor { f.currentDialog() != null }
-            assertEquals(f.app.getString(R.string.diag_cluster_observation_yes), f.currentDialog()!!.getButton(-1).text)
+            assertEquals(f.app.getString(R.string.fs_oem_question_yes), f.currentDialog()!!.getButton(-1).text)
             assertTrue(f.ops.all { it == 0 })
         }
     }
@@ -279,5 +253,4 @@ class ClusterVisualConfirmationTest {
             assertEquals(listOf(10), f.ops.filter { it != 0 })
         }
     }
-
 }

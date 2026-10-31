@@ -1,43 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diag_cluster_dashboard_title">Панель на весь экран</string>
-    <string name="diag_cluster_dashboard_help">Ручной тест на стоянке. После закрытия профиль остаётся выбранным. Перед установкой старого APK восстановите заводской профиль и проверьте результат.</string>
-    <string name="diag_cluster_dashboard_read">1 · Прочитать состояние и совместимость</string>
-    <string name="diag_cluster_dashboard_prepare">2 · Подготовить панель</string>
-    <string name="diag_cluster_dashboard_choose_app">3 · Выбрать приложение</string>
-    <string name="diag_cluster_dashboard_open">4 · Открыть панель</string>
-    <string name="diag_cluster_dashboard_close">Закрыть проекцию</string>
-    <string name="diag_cluster_dashboard_observe">5 · Подтвердить видимый экран</string>
-    <string name="diag_cluster_dashboard_observe_message">Подтверждайте только если видны панель, приборы, предупреждения и приложение. Ответ команды не доказывает отображение.</string>
-    <string name="diag_cluster_dashboard_confirm">Подтвердите неподвижность автомобиля и проверку прошивки. Этот флажок — заявление, а не измерение движения. Проверка в автомобиле ещё необходима.</string>
-    <string name="diag_cluster_dashboard_geometry">Должна определяться одна активная панель 1920 × 720 пикселей. Неизвестный, неоднозначный или малый размер: тест отклонён.</string>
-    <string name="diag_cluster_dashboard_prepare_first">Сначала подготовьте профиль DashCast и дождитесь завершения выбора.</string>
-    <string name="diag_cluster_dashboard_idle">○ Панель не подготовлена</string>
-    <string name="diag_cluster_dashboard_restoring">↩ Восстановление</string>
-    <string name="diag_cluster_dashboard_unknown">⚠ Состояние неизвестно: используйте восстановление</string>
-    <string name="diag_cluster_dashboard_open_received">✓ Открытие принято; подтвердите экран</string>
-    <string name="diag_cluster_dashboard_closed_received">○ Проекция закрыта; восстановите заводской профиль</string>
-    <string name="diag_cluster_dashboard_waiting">◷ Выполняется операция</string>
-    <string name="diag_cluster_dashboard_ready">✓ Профиль выбран; выберите приложение и откройте панель</string>
-    <string name="diag_cluster_dashboard_selected_app">Приложение: %1$s</string>
-    <string name="diag_cluster_dashboard_details">Технические сведения и предыдущие тесты</string>
-    <string name="diag_cluster_dashboard_confirmed">✓ Экран подтверждён пользователем</string>
-    <string name="diag_cluster_dashboard_restore_confirm">Закройте проекцию и запросите заводской профиль. Неудачное закрытие остаётся нерешённым даже после возврата заводского профиля. Затем подтвердите видимые приборы и предупреждения.</string>
-    <string name="diag_cluster_dashboard_bootstrap">Временное включение штатной проекции BYD…</string>
-    <string name="diag_cluster_dashboard_display_wait">Ожидание экрана проекции BYD…</string>
-    <string name="diag_cluster_dashboard_display_rejected">Экран проекции BYD недоступен или несовместим. Проверьте подробности.</string>
-    <string name="diag_cluster_dashboard_restore_required">Инициализация начата: требуется восстановление BYD.</string>
-    <string name="diag_cluster_dashboard_small_panel">Обнаружена малая приборная панель: тест отклонён. Восстановление BYD доступно.</string>
-    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Закройте временную проекцию BYD и проверьте заводской выбор. Пользовательский RCC не выбирался. Затем подтвердите возвращение приборов и предупреждений.</string>
-    <string name="diag_cluster_dashboard_prepare_confirm">Подготовка может временно открыть штатную проекцию BYD и проверить её экран перед выбором нашего RCC. Приложение запускается только после Открыть. Подтвердите стоянку и прошивку; это заявление не измеряет движение.</string>
-    <string name="diag_cluster_dashboard_protocol">Подключённый daemon должен использовать протокол %1$d. Переподключите его в DashCast перед Подготовить или Открыть. Команда BYD не отправлена.</string>
-    <string name="diag_cluster_full_app_prepare">2b · Полноэкранный прототип (только ПК)</string>
-    <string name="diag_cluster_full_app_help">Прототип только для проверок на ПК. Загрузка в автомобиль заблокирована до проверки независимого восстановления. Приборы и предупреждения BYD сохраняются. Восстановление старого профиля остаётся доступным.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Этот прототип нельзя загрузить в автомобиль. Старый полноэкранный профиль доступен только для восстановления.</string>
-    <string name="diag_cluster_factory_apply">Применить заводской выбор</string>
-    <string name="diag_cluster_factory_apply_confirm">Заводской профиль настроен, но его нативное применение не подтверждено. Один раз переключить проекцию BYD, закрыть и снова прочитать выбор. Без собственного RCC и повторного заводского выбора. Подтвердите стоянку и прошивку.</string>
-    <string name="diag_cluster_full_app_observe_message">Старый профиль нельзя открыть или подтвердить как готовый. Используй Восстановить, затем отдельно подтверди возврат приборов и предупреждений BYD.</string>
-    <string name="diag_cluster_fullscreen_prepare">2c · Подготовить минимальный полноэкранный режим</string>
-    <string name="diag_cluster_fullscreen_prepare_confirm">Минимальный тест: в полноэкранном режиме проекции приборная панель становится полностью прозрачной, а приложение занимает все 1920 × 720 пикселей. Приборы, индикаторы и предупреждения BYD скрыты во время этого теста. Подтвердите стоянку и прошивку; это заявление не измеряет движение.</string>
-    <string name="diag_cluster_fullscreen_observe_message">Подтверждайте, только если видите приложение на всей приборной панели. Приборы, индикаторы и предупреждения BYD скрыты в этом тестовом профиле. Квитанция команды не доказывает это отображение.</string>
 </resources>

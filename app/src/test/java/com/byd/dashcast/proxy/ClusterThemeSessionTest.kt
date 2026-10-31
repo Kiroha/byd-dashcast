@@ -195,6 +195,35 @@ class ClusterThemeSessionTest {
             assertEquals(1, calls); assertTrue(ClusterThemeProjectionDebt.blocked(app))
         } } finally { file.delete() }
     }
+    @Test fun `full screen profiles send operations 30 and 31 after debt and track the owned filename`() {
+        val app = RuntimeEnvironment.getApplication(); val operations = ArrayList<Int>()
+        binderField.set(null, object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                data.enforceInterface(ProxyDaemonContract.DESCRIPTOR); val op = data.readInt(); operations.add(op)
+                ParcelFileDescriptor.CREATOR.createFromParcel(data).close()
+                assertEquals(1, data.readInt()); assertEquals(1, data.readInt())
+                val nonce = data.readString(); assertEquals(ClusterThemeProjectionDebt.nonce(app), nonce)
+                assertNotNull(data.readStrongBinder()); assertEquals(0, data.dataAvail())
+                val variant = if (op == 30) "fullscreen-minimal-21f7735c" else "fullscreen-instruments-21f7735c"
+                reply!!.writeNoException(); reply.writeString("""{"state":"PREFLIGHT","filename":"${com.byd.dashcast.clusterlive.ClusterThemePolicy.PREFIX}$nonce.rcc","transport":"android-ivi","variant":"$variant","rccDebt":true}""")
+                return true
+            }
+        }); versionField.set(null, "46")
+        val file = File.createTempFile("rcc-fullscreen", ".rcc").apply { writeText("fixture") }
+        try { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { source ->
+            val session = ClusterThemeSession.pin(app)
+            assertThrows(IllegalStateException::class.java) {
+                session.startIvi(source, ClusterThemeVariant.FULLSCREEN_INSTRUMENTS_21F7735C, Binder()) {}
+            }
+            assertTrue(operations.isEmpty()); assertFalse(ClusterThemeProjectionDebt.blocked(app))
+            session.startIvi(source, ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C, Binder()) {}
+            assertEquals(listOf(30), operations)
+            ClusterThemeProjectionDebt.clear(app, checkNotNull(ClusterThemeProjectionDebt.nonce(app)))
+            versionField.set(null, "47")
+            session.startIvi(source, ClusterThemeVariant.FULLSCREEN_INSTRUMENTS_21F7735C, Binder()) {}
+            assertEquals(listOf(30, 31), operations); assertTrue(ClusterThemeProjectionDebt.blocked(app))
+        } } finally { file.delete() }
+    }
     @Test fun `corner read only verification sends original nonce operation17 and preserves debt`() {
         val app = RuntimeEnvironment.getApplication(); val nonce = "a".repeat(32); var calls = 0
         ClusterThemeProjectionDebt.begin(app, nonce)

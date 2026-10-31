@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Guided Diag page « Carte plein écran + instruments BYD » (ClusterThemeLiveControls, FullscreenThemeView,
+     GuidedDialog, ClusterNativeReturnControls). Every locale keeps the same keys and format arguments. -->
+<resources>
+    <string name="fs_page_title">Carte plein écran + instruments BYD</string>
+    <string name="fs_page_subtitle">La carte de votre application remplit tout le combiné. Les témoins, les alertes ADAS, la vitesse et le rapport BYD restent affichés par-dessus.</string>
+    <string name="fs_safety_note">⚠ À tester uniquement à l’arrêt : rapport P engagé, frein de parking serré. Le bouton « Revenir à l’affichage BYD » reste disponible en haut de l’écran.</string>
+    <string name="fs_details">Détails techniques</string>
+    <string name="fs_expected_label">Sur le combiné, vous devriez voir :</string>
+    <string name="fs_waiting">Patientez…</string>
+    <string name="fs_step_counter">Étape %1$d sur %2$d</string>
+    <string name="fs_step_check">Vérifier</string>
+    <string name="fs_step_load">Charger</string>
+    <string name="fs_step_app">Application</string>
+    <string name="fs_step_start">Plein écran</string>
+    <string name="fs_step_finish">Terminer</string>
+    <string name="fs_chip_stock">Affichage BYD d’origine</string>
+    <string name="fs_chip_ready">Thème chargé</string>
+    <string name="fs_chip_active">Plein écran actif</string>
+    <string name="fs_chip_busy">Opération en cours</string>
+    <string name="fs_chip_attention">Action requise</string>
+    <string name="fs_chip_unknown">État inconnu</string>
+
+    <string name="fs_check_title">Vérifier la voiture</string>
+    <string name="fs_check_message">DashCast lit l’état du combiné et de son service, sans rien modifier.</string>
+    <string name="fs_check_action">Vérifier maintenant</string>
+    <string name="fs_check_failed">Impossible de lire l’état du combiné : le service DashCast ne répond pas. Rouvrez DashCast, attendez la connexion, puis réessayez.</string>
+    <string name="fs_protocol_title">Service DashCast à mettre à jour</string>
+    <string name="fs_protocol_message">Le service DashCast connecté est trop ancien (protocole %1$d requis). Fermez puis rouvrez DashCast pour le reconnecter, puis vérifiez à nouveau.</string>
+    <string name="fs_small_title">Combiné non compatible</string>
+    <string name="fs_small_message">Ce thème est prévu pour le grand combiné 1920 × 720. Un petit combiné a été détecté : l’essai n’est pas proposé.</string>
+    <string name="fs_platform">Essai impossible sur cette voiture : DiLink 3 sous Android 10 requis. Rien n’a été envoyé.</string>
+
+    <string name="fs_load_title">Charger le thème</string>
+    <string name="fs_load_message">DashCast installe le thème dans le combiné. L’affichage ne change pas encore.</string>
+    <string name="fs_load_expected">Aucun changement : l’affichage BYD habituel.</string>
+    <string name="fs_load_action">Charger le thème</string>
+    <string name="fs_loading_title">Chargement du thème…</string>
+    <string name="fs_loading_message">Cela peut prendre jusqu’à une minute. Restez sur cette page.</string>
+    <string name="fs_bootstrap_message">Ouverture du mode projection BYD…</string>
+    <string name="fs_display_message">Recherche de l’écran du combiné…</string>
+
+    <string name="fs_app_title">Choisir l’application</string>
+    <string name="fs_app_message">Choisissez l’application de navigation qui remplira le combiné.</string>
+    <string name="fs_app_action">Choisir l’application</string>
+    <string name="fs_change_app">Changer d’application</string>
+
+    <string name="fs_start_title">Démarrer le plein écran</string>
+    <string name="fs_start_message">Application choisie : %1$s</string>
+    <string name="fs_start_expected">La carte sur tout le combiné, avec les témoins, les alertes, la vitesse et le rapport par-dessus.</string>
+    <string name="fs_start_action">Démarrer le plein écran</string>
+    <string name="fs_opening_title">Ouverture du plein écran…</string>
+    <string name="fs_opening_message">La carte arrive sur le combiné.</string>
+    <string name="fs_observe_title">Regardez le combiné</string>
+    <string name="fs_observe_message">Le combiné a reçu la demande. Indiquez ce que vous voyez réellement.</string>
+    <string name="fs_observe_action">Indiquer ce que je vois</string>
+    <string name="fs_done_title">Plein écran confirmé</string>
+    <string name="fs_done_message">Merci ! Quand vous avez terminé, arrêtez le plein écran.</string>
+    <string name="fs_stop_action">Arrêter le plein écran</string>
+    <string name="fs_closing_message">Fermeture du plein écran…</string>
+    <string name="fs_closed_title">Plein écran arrêté</string>
+    <string name="fs_closed_message">Terminez l’essai pour revenir à l’affichage BYD, ou relancez le plein écran (%1$s).</string>
+    <string name="fs_relaunch_action">Relancer</string>
+    <string name="fs_finish_action">Terminer l’essai</string>
+
+    <string name="fs_recover_title">Retour à l’affichage BYD</string>
+    <string name="fs_recover_message">Le combiné doit revenir à l’affichage BYD avant toute autre étape.</string>
+    <string name="fs_recover_other">Un ancien essai DashCast est encore chargé. Revenez d’abord à l’affichage BYD.</string>
+    <string name="fs_recover_restart">Le thème a été mis de côté. Un redémarrage du combiné termine le retour à l’affichage BYD.</string>
+    <string name="fs_recover_unknown">Un redémarrage a été envoyé, mais son résultat est inconnu. Ne le relancez pas : vérifiez le retour à l’affichage BYD.</string>
+    <string name="fs_recover_display">L’écran du combiné n’a pas été reconnu. Revenez à l’affichage BYD.</string>
+    <string name="fs_recover_action">Revenir à l’affichage BYD</string>
+    <string name="fs_factory_action">Appliquer l’affichage d’origine</string>
+    <string name="fs_wait_title">Patientez…</string>
+    <string name="fs_wait_message">Une opération est en cours sur le combiné.</string>
+    <string name="fs_state_changed">L’état du combiné vient de changer. Patientez un instant : la page se met à jour.</string>
+    <string name="fs_busy">Une autre opération est en cours. Réessayez dans un instant.</string>
+    <string name="fs_failed">L’opération n’a pas abouti. Rien n’est relancé automatiquement ; « Revenir à l’affichage BYD » reste disponible. Voir « Détails techniques ».</string>
+
+    <string name="fs_dialog_happens">Ce qui va se passer</string>
+    <string name="fs_dialog_expected">Ce que vous devriez voir</string>
+    <string name="fs_check_parked">La voiture est à l’arrêt, en P, frein de parking serré.</string>
+    <string name="fs_check_cluster">C’est bien le combiné prévu pour cet essai (DashCast vérifie sa version exacte avant tout changement).</string>
+    <string name="fs_check_restore">Je remets l’affichage BYD d’origine sur ce véhicule.</string>
+
+    <string name="fs_load_dialog_title">Charger le thème ?</string>
+    <string name="fs_load_step_copy">DashCast copie le thème dans le combiné et le sélectionne.</string>
+    <string name="fs_load_step_same">L’affichage reste celui de BYD à cette étape.</string>
+    <string name="fs_load_step_return">Le bouton « Revenir à l’affichage BYD » reste disponible à tout moment.</string>
+    <string name="fs_load_confirm">Charger</string>
+
+    <string name="fs_choose_title">Quelle application afficher ?</string>
+    <string name="fs_choose_empty">Aucune application compatible n’a été trouvée.</string>
+
+    <string name="fs_start_dialog_title">Démarrer le plein écran ?</string>
+    <string name="fs_start_step_projection">Le combiné passe en mode projection.</string>
+    <string name="fs_start_step_app">%1$s s’affiche sur tout le combiné.</string>
+    <string name="fs_start_step_stop">Vous pourrez l’arrêter à tout moment depuis cette page.</string>
+    <string name="fs_start_confirm">Démarrer</string>
+
+    <string name="fs_stop_dialog_title">Arrêter le plein écran ?</string>
+    <string name="fs_stop_step_close">L’application quitte le combiné.</string>
+    <string name="fs_stop_step_keep">Le thème reste chargé : vous pourrez relancer ou terminer l’essai.</string>
+    <string name="fs_stop_expected">L’affichage BYD habituel revient.</string>
+    <string name="fs_stop_confirm">Arrêter</string>
+
+    <string name="fs_observe_dialog_title">Que voyez-vous sur le combiné ?</string>
+    <string name="fs_observe_ok">La carte remplit le combiné, avec les témoins, la vitesse et le rapport</string>
+    <string name="fs_observe_stock">Rien n’a changé : l’affichage BYD habituel</string>
+    <string name="fs_observe_problem">Écran noir, « Simple mode » ou affichage anormal</string>
+    <string name="fs_observe_stock_help">Attendez quelques secondes, puis regardez à nouveau. Si rien ne change, arrêtez le plein écran.</string>
+
+    <string name="fs_info_title">Retour à l’affichage BYD</string>
+    <string name="fs_restore_none">Aucun thème DashCast n’est chargé. Vérifiez simplement que le combiné affiche l’écran BYD habituel.</string>
+    <string name="fs_guidance_same">Le combiné a refusé le retour et garde le thème DashCast. Mettez le thème de côté : DashCast vous guidera ensuite pour redémarrer le combiné.</string>
+    <string name="fs_guidance_retired">Le thème est mis de côté. Appuyez sur « Revenir à l’affichage BYD » pour continuer : un redémarrage du combiné vous sera proposé.</string>
+
+    <string name="fs_restore_dialog_title">Revenir à l’affichage BYD ?</string>
+    <string name="fs_restore_step_close">DashCast ferme la carte plein écran.</string>
+    <string name="fs_restore_step_default">DashCast redemande l’affichage BYD d’origine.</string>
+    <string name="fs_restore_step_restart">Si nécessaire, un redémarrage du combiné vous sera proposé ensuite.</string>
+    <string name="fs_bootstrap_step">DashCast ferme la projection BYD temporaire ; aucun thème n’avait été sélectionné.</string>
+    <string name="fs_restore_expected">L’affichage BYD habituel, avec ses témoins et ses instruments.</string>
+    <string name="fs_restore_confirm">Revenir à l’affichage BYD</string>
+
+    <string name="fs_retire_dialog_title">Mettre le thème de côté ?</string>
+    <string name="fs_retire_step_move">DashCast déplace son thème de test ; le fichier est conservé.</string>
+    <string name="fs_retire_step_no_restart">Aucun redémarrage à cette étape.</string>
+    <string name="fs_retire_expected">Pas encore de changement sur le combiné.</string>
+    <string name="fs_retire_confirm">Mettre de côté</string>
+
+    <string name="fs_verify_dialog_title">Vérifier le retour à l’affichage BYD ?</string>
+    <string name="fs_verify_step">DashCast vérifie que l’affichage BYD d’origine est sélectionné. Rien n’est relancé.</string>
+    <string name="fs_verify_confirm">Vérifier</string>
+
+    <string name="fs_factory_dialog_title">Appliquer l’affichage d’origine ?</string>
+    <string name="fs_factory_step">DashCast ouvre puis ferme une seule fois la projection BYD pour appliquer le profil d’origine.</string>
+    <string name="fs_factory_step_none">Aucun thème DashCast n’est envoyé.</string>
+
+    <string name="fs_restart_dialog_title">Redémarrer le combiné ?</string>
+    <string name="fs_restart_step_check">DashCast revérifie que son thème est bien mis de côté.</string>
+    <string name="fs_restart_step_screens">Le combiné et les écrans redémarrent ; ADB est interrompu quelques instants.</string>
+    <string name="fs_restart_expected">Après le redémarrage : l’affichage BYD habituel.</string>
+    <string name="fs_restart_confirm">Redémarrer</string>
+    <string name="fs_restart_done">Le combiné a déjà redémarré</string>
+
+    <string name="fs_native_step">DashCast demande au combiné de quitter le mode projection BYD.</string>
+
+    <string name="fs_oem_question_title">L’affichage BYD est-il revenu ?</string>
+    <string name="fs_oem_question_message">Regardez le combiné : voyez-vous l’affichage BYD habituel, avec ses témoins et ses instruments ? Répondez seulement après avoir regardé.</string>
+    <string name="fs_oem_question_yes">Oui, il est revenu</string>
+</resources>

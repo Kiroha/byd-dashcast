@@ -53,6 +53,7 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             ClusterThemeVariant.FULL_DASHBOARD_21F7735C -> 19
             ClusterThemeVariant.FULL_APP_21F7735C -> 24
             ClusterThemeVariant.FULLSCREEN_MINIMAL_21F7735C -> 30
+            ClusterThemeVariant.FULLSCREEN_INSTRUMENTS_21F7735C -> 31
         }
         val receipt = call(operation, source, {
             beforeTransaction()
@@ -199,7 +200,8 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             "android-ivi-marker", "android-ivi-full-surface", "android-ivi-restore", "android-ivi-retire-carrier",
             "android-ivi-corner-marker", "observe-corner-marker", "verify-corner-marker-read-only", "android-ivi-corner-marker-21f7735c",
             "android-ivi-full-dashboard-21f7735c", "dashboard-open", "dashboard-close", "observe-dashboard", "dashboard-display-read",
-            "android-ivi-full-app-21f7735c", "full-app-adas-step", "factory-apply-manual", "restart-prepare", "restart-confirm", "restart-cancel")[operation]
+            "android-ivi-full-app-21f7735c", "full-app-adas-step", "factory-apply-manual", "restart-prepare", "restart-confirm", "restart-cancel",
+            "android-ivi-fullscreen-minimal-21f7735c", "android-ivi-fullscreen-instruments-21f7735c")[operation]
         var attempted = false
         val d = Parcel.obtain(); val r = Parcel.obtain()
         try {
@@ -217,7 +219,8 @@ class ClusterThemeSession private constructor(private val binder: IBinder, priva
             check(text.length <= 32768 && r.dataAvail() == 0) { "Oversized/malformed live-test status" }
             ClusterThemeDiagnostics.received(app, name, connectionToken, text)
             check(ProxyClient.getProxyDaemonBinder() === binder && binder.isBinderAlive) { "Daemon lost after call; remote completion UNKNOWN. No replay." }
-            if (operation in 0..1 || operation == 5 || operation in 11..15 || operation == 18 || operation == 19 || operation == 24) filename = JSONObject(text).getString("filename")
+            if (operation in 0..1 || operation == 5 || operation in 11..15 || operation == 18 || operation == 19 || operation == 24 ||
+                operation == 30 || operation == 31) filename = JSONObject(text).getString("filename")
             val state = JSONObject(text)
             val safe = state.optString("rccSafeNonce")
             if (safe.matches(Regex("[0-9a-f]{32}")) && app != null && ClusterThemeProjectionDebt.nonce(app) == safe &&

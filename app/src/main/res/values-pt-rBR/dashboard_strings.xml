@@ -2,43 +2,4 @@
 <!-- Brazilian Portuguese translation adapted from Isaias Velasquez's contribution. -->
 <resources>
     <string name="diag_cluster_dashboard_title">Painel em tela cheia</string>
-    <string name="diag_cluster_dashboard_help">Teste manual com o veículo parado. Após fechar, o perfil continua selecionado. Restaure o perfil de fábrica e verifique seu retorno antes de reinstalar um APK antigo.</string>
-    <string name="diag_cluster_dashboard_read">1 · Ler estado e compatibilidade</string>
-    <string name="diag_cluster_dashboard_prepare">2 · Preparar o painel</string>
-    <string name="diag_cluster_dashboard_choose_app">3 · Escolher aplicativo</string>
-    <string name="diag_cluster_dashboard_open">4 · Abrir o painel</string>
-    <string name="diag_cluster_dashboard_close">Fechar projeção</string>
-    <string name="diag_cluster_dashboard_observe">5 · Confirmar a exibição observada</string>
-    <string name="diag_cluster_dashboard_observe_message">Confirme apenas se você vê o painel DashCast, os instrumentos, os alertas e o aplicativo. Um recibo de comando não comprova essa exibição.</string>
-    <string name="diag_cluster_dashboard_confirm">Confirme que o veículo está imobilizado e que o contexto do firmware foi verificado. Esta caixa é uma declaração, não uma medição do movimento. A validação real ainda precisa ser feita no carro.</string>
-    <string name="diag_cluster_dashboard_geometry">É necessário detectar um painel ativo de 1920 × 720 pixels. Tamanho desconhecido, ambíguo ou painel pequeno: teste recusado.</string>
-    <string name="diag_cluster_dashboard_prepare_first">Primeiro prepare o perfil DashCast e aguarde o término da seleção.</string>
-    <string name="diag_cluster_dashboard_idle">○ Nenhum painel preparado</string>
-    <string name="diag_cluster_dashboard_restoring">↩ Restauração em andamento</string>
-    <string name="diag_cluster_dashboard_unknown">⚠ Estado incerto: use Restaurar</string>
-    <string name="diag_cluster_dashboard_open_received">✓ Abertura recebida; exibição a confirmar</string>
-    <string name="diag_cluster_dashboard_closed_received">○ Projeção fechada; restauração de fábrica ainda necessária</string>
-    <string name="diag_cluster_dashboard_waiting">◷ Operação em andamento</string>
-    <string name="diag_cluster_dashboard_ready">✓ Perfil selecionado; escolha um aplicativo e abra o painel</string>
-    <string name="diag_cluster_dashboard_selected_app">Aplicativo: %1$s</string>
-    <string name="diag_cluster_dashboard_details">Detalhes técnicos e testes antigos</string>
-    <string name="diag_cluster_dashboard_confirmed">✓ Exibição confirmada pelo usuário</string>
-    <string name="diag_cluster_dashboard_restore_confirm">Fecha a projeção e solicita o perfil de fábrica. Uma falha ao fechar ainda precisa ser resolvida, mesmo que o perfil de fábrica retorne. Confirme depois os instrumentos e alertas visíveis.</string>
-    <string name="diag_cluster_dashboard_bootstrap">Ativação temporária da projeção BYD original…</string>
-    <string name="diag_cluster_dashboard_display_wait">Aguardando a tela de projeção BYD…</string>
-    <string name="diag_cluster_dashboard_display_rejected">Tela de projeção BYD indisponível ou incompatível. Consulte os detalhes.</string>
-    <string name="diag_cluster_dashboard_restore_required">Inicialização iniciada: restauração BYD necessária.</string>
-    <string name="diag_cluster_dashboard_small_panel">Painel pequeno detectado: teste recusado. A restauração BYD continua disponível.</string>
-    <string name="diag_cluster_dashboard_bootstrap_restore_confirm">Fecha a projeção BYD temporária e verifica a seleção de fábrica. Nenhum RCC personalizado foi selecionado. Confirme depois o retorno dos instrumentos e alertas.</string>
-    <string name="diag_cluster_dashboard_prepare_confirm">A preparação pode abrir temporariamente a projeção BYD original e verificar sua tela antes de selecionar nosso RCC. Nenhum aplicativo será aberto antes de Abrir. Confirme o estacionamento e o firmware; essa declaração não mede o movimento.</string>
-    <string name="diag_cluster_dashboard_protocol">O daemon conectado deve usar o protocolo %1$d. Reconecte-o no DashCast antes de tentar Preparar ou Abrir novamente. Nenhuma ordem BYD enviada.</string>
-    <string name="diag_cluster_full_app_prepare">2b · Protótipo em tela cheia (fora do carro)</string>
-    <string name="diag_cluster_full_app_help">Protótipo destinado a verificações no PC. O carregamento no carro continua indisponível até que uma recuperação independente seja validada. Os instrumentos e alertas BYD são mantidos. Restaurar continua disponível para o perfil antigo.</string>
-    <string name="diag_cluster_full_app_prepare_confirm">Este protótipo não pode ser carregado no carro. O perfil antigo de tela cheia fica reservado à sua restauração.</string>
-    <string name="diag_cluster_factory_apply">Aplicar a seleção de fábrica</string>
-    <string name="diag_cluster_factory_apply_confirm">O perfil de fábrica já está configurado, mas sua aplicação nativa ainda precisa ser confirmada. Execute uma única transição de projeção BYD, feche-a e faça uma nova leitura. Nenhum RCC personalizado nem nova seleção de fábrica será enviado. Confirme o estacionamento e o firmware.</string>
-    <string name="diag_cluster_full_app_observe_message">O perfil antigo não pode mais ser aberto nem validado como pronto. Use Restaurar e confirme separadamente o retorno dos instrumentos e alertas BYD.</string>
-    <string name="diag_cluster_fullscreen_prepare">2c · Preparar tela cheia mínima</string>
-    <string name="diag_cluster_fullscreen_prepare_confirm">Teste mínimo: no modo de projeção em tela cheia, o painel fica totalmente transparente e o aplicativo ocupa todos os 1920 × 720 pixels. Instrumentos, luzes-espia e alertas da BYD ficam ocultos durante este teste. Confirme o estacionamento e o firmware; esta declaração não mede o movimento.</string>
-    <string name="diag_cluster_fullscreen_observe_message">Confirme somente se você vir o aplicativo em todo o painel. Instrumentos, luzes-espia e alertas da BYD ficam ocultos neste perfil de teste. Um recibo de comando não prova esta exibição.</string>
 </resources>

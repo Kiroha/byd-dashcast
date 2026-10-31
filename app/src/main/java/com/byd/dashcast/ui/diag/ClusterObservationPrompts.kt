@@ -10,7 +10,7 @@ import com.byd.dashcast.proxy.ClusterThemeSession
 internal class ClusterObservationPrompts(private val activity: Activity) {
     internal class Question(val key: String, val priority: Int, val session: ClusterThemeSession,
         val title: Int, val message: Int, val positive: Int,
-        val current: () -> Boolean, val answer: () -> Unit)
+        val current: () -> Boolean, val answer: () -> Unit, val preview: ClusterPreviewView.Mode? = null)
     private val questions = linkedMapOf<String, Question>()
     private val shown = linkedSetOf<String>()
     private var visible = false
@@ -63,7 +63,15 @@ internal class ClusterObservationPrompts(private val activity: Activity) {
         shown.add(q.key)
         while (shown.size > 32) shown.remove(shown.first())
         active = q
-        val popup = AlertDialog.Builder(activity).setTitle(q.title).setMessage(q.message)
+        val builder = AlertDialog.Builder(activity).setTitle(q.title).setMessage(q.message)
+        q.preview?.let { mode ->
+            val padding = (24 * activity.resources.displayMetrics.density).toInt()
+            builder.setView(android.widget.FrameLayout(activity).apply {
+                setPadding(padding, padding / 3, padding, 0)
+                addView(ClusterPreviewView(activity).apply { this.mode = mode; maxHeightDp = 120 })
+            })
+        }
+        val popup = builder
             .setPositiveButton(q.positive, null)
             .setNegativeButton(R.string.diag_cluster_observation_no) { _, _ -> log(q, "no-not-yet") }
             .setNeutralButton(R.string.diag_cluster_observation_unknown) { _, _ -> log(q, "unknown") }.create()

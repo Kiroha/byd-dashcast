@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Повноекранна карта + прилади BYD</string>
+    <string name="fs_page_subtitle">Карта з вашого застосунку займає всю панель приладів. Індикатори BYD, попередження ADAS, швидкість і передача й надалі відображаються поверх неї.</string>
+    <string name="fs_safety_note">⚠ Перевіряйте лише тоді, коли автомобіль стоїть: у положенні P, з увімкненим стоянковим гальмом. Кнопка «Повернутися до екрана BYD» залишається доступною вгорі екрана.</string>
+    <string name="fs_details">Технічні відомості</string>
+    <string name="fs_expected_label">На панелі приладів ви маєте побачити:</string>
+    <string name="fs_waiting">Зачекайте…</string>
+    <string name="fs_step_counter">Крок %1$d з %2$d</string>
+    <string name="fs_step_check">Перевірка</string>
+    <string name="fs_step_load">Завантаження</string>
+    <string name="fs_step_app">Застосунок</string>
+    <string name="fs_step_start">На весь екран</string>
+    <string name="fs_step_finish">Завершення</string>
+    <string name="fs_chip_stock">Оригінальний екран BYD</string>
+    <string name="fs_chip_ready">Тему завантажено</string>
+    <string name="fs_chip_active">Повноекранний режим увімкнено</string>
+    <string name="fs_chip_busy">Триває операція</string>
+    <string name="fs_chip_attention">Потрібна дія</string>
+    <string name="fs_chip_unknown">Стан невідомий</string>
+
+    <string name="fs_check_title">Перевірте автомобіль</string>
+    <string name="fs_check_message">DashCast зчитує стан панелі приладів і своєї служби, нічого не змінюючи.</string>
+    <string name="fs_check_action">Перевірити зараз</string>
+    <string name="fs_check_failed">Не вдається прочитати стан панелі приладів: служба DashCast не відповідає. Знову відкрийте DashCast, дочекайтеся підключення й повторіть спробу.</string>
+    <string name="fs_protocol_title">Службу DashCast потрібно оновити</string>
+    <string name="fs_protocol_message">Підключена служба DashCast застаріла (потрібен протокол %1$d). Закрийте й знову відкрийте DashCast, щоб перепідключити її, потім перевірте ще раз.</string>
+    <string name="fs_small_title">Панель приладів не підтримується</string>
+    <string name="fs_small_message">Ця тема розрахована на велику панель приладів 1920 × 720. Виявлено малу панель, тому тест не пропонується.</string>
+    <string name="fs_platform">Тест неможливий на цьому автомобілі: потрібен DiLink 3 на Android 10. Нічого не надіслано.</string>
+
+    <string name="fs_load_title">Завантажте тему</string>
+    <string name="fs_load_message">DashCast встановлює тему в панель приладів. Екран поки не змінюється.</string>
+    <string name="fs_load_expected">Без змін: звичайний екран BYD.</string>
+    <string name="fs_load_action">Завантажити тему</string>
+    <string name="fs_loading_title">Завантаження теми…</string>
+    <string name="fs_loading_message">Це може тривати до хвилини. Залишайтеся на цій сторінці.</string>
+    <string name="fs_bootstrap_message">Увімкнення режиму проєкції BYD…</string>
+    <string name="fs_display_message">Пошук екрана панелі приладів…</string>
+
+    <string name="fs_app_title">Виберіть застосунок</string>
+    <string name="fs_app_message">Виберіть навігаційний застосунок, який займе всю панель приладів.</string>
+    <string name="fs_app_action">Вибрати застосунок</string>
+    <string name="fs_change_app">Змінити застосунок</string>
+
+    <string name="fs_start_title">Запустіть повноекранний режим</string>
+    <string name="fs_start_message">Вибраний застосунок: %1$s</string>
+    <string name="fs_start_expected">Карта на всій панелі приладів, а поверх неї — індикатори, попередження, швидкість і передача.</string>
+    <string name="fs_start_action">Запустити повноекранний режим</string>
+    <string name="fs_opening_title">Увімкнення повноекранного режиму…</string>
+    <string name="fs_opening_message">Карта виводиться на панель приладів.</string>
+    <string name="fs_observe_title">Подивіться на панель приладів</string>
+    <string name="fs_observe_message">Панель приладів отримала запит. Повідомте, що ви бачите насправді.</string>
+    <string name="fs_observe_action">Повідомити, що я бачу</string>
+    <string name="fs_done_title">Повноекранний режим підтверджено</string>
+    <string name="fs_done_message">Дякуємо! Коли закінчите, зупиніть повноекранний режим.</string>
+    <string name="fs_stop_action">Зупинити повноекранний режим</string>
+    <string name="fs_closing_message">Вихід із повноекранного режиму…</string>
+    <string name="fs_closed_title">Повноекранний режим зупинено</string>
+    <string name="fs_closed_message">Завершіть тест, щоб повернутися до екрана BYD, або знову запустіть повноекранний режим (%1$s).</string>
+    <string name="fs_relaunch_action">Запустити знову</string>
+    <string name="fs_finish_action">Завершити тест</string>
+
+    <string name="fs_recover_title">Повернення до екрана BYD</string>
+    <string name="fs_recover_message">Перед будь-яким іншим кроком панель приладів має повернутися до екрана BYD.</string>
+    <string name="fs_recover_other">Досі завантажено попередній тест DashCast. Спершу поверніться до екрана BYD.</string>
+    <string name="fs_recover_restart">Тему відкладено вбік. Перезапуск панелі приладів завершить повернення до екрана BYD.</string>
+    <string name="fs_recover_unknown">Команду перезапуску надіслано, але її результат невідомий. Не надсилайте її повторно: перевірте повернення до екрана BYD.</string>
+    <string name="fs_recover_display">Екран панелі приладів не розпізнано. Поверніться до екрана BYD.</string>
+    <string name="fs_recover_action">Повернутися до екрана BYD</string>
+    <string name="fs_factory_action">Застосувати оригінальний екран</string>
+    <string name="fs_wait_title">Зачекайте…</string>
+    <string name="fs_wait_message">На панелі приладів триває операція.</string>
+    <string name="fs_state_changed">Стан панелі приладів щойно змінився. Зачекайте трохи: сторінка оновлюється.</string>
+    <string name="fs_busy">Триває інша операція. Повторіть спробу трохи згодом.</string>
+    <string name="fs_failed">Операцію не завершено. Нічого не повторюється автоматично; кнопка «Повернутися до екрана BYD» залишається доступною. Див. «Технічні відомості».</string>
+
+    <string name="fs_dialog_happens">Що відбудеться</string>
+    <string name="fs_dialog_expected">Що ви маєте побачити</string>
+    <string name="fs_check_parked">Автомобіль нерухомий, у положенні P, стоянкове гальмо ввімкнено.</string>
+    <string name="fs_check_cluster">Це панель приладів, для якої призначено цей тест (DashCast звіряє її точну версію перед будь-якою зміною).</string>
+    <string name="fs_check_restore">Я відновлюю оригінальний екран BYD на цьому автомобілі.</string>
+
+    <string name="fs_load_dialog_title">Завантажити тему?</string>
+    <string name="fs_load_step_copy">DashCast копіює тему в панель приладів і вибирає її.</string>
+    <string name="fs_load_step_same">На цьому кроці залишається екран BYD.</string>
+    <string name="fs_load_step_return">Кнопка «Повернутися до екрана BYD» доступна будь-коли.</string>
+    <string name="fs_load_confirm">Завантажити</string>
+
+    <string name="fs_choose_title">Який застосунок показати?</string>
+    <string name="fs_choose_empty">Сумісних застосунків не знайдено.</string>
+
+    <string name="fs_start_dialog_title">Запустити повноекранний режим?</string>
+    <string name="fs_start_step_projection">Панель приладів переходить у режим проєкції.</string>
+    <string name="fs_start_step_app">Застосунок %1$s відображається на всій панелі приладів.</string>
+    <string name="fs_start_step_stop">Зупинити повноекранний режим можна будь-коли на цій сторінці.</string>
+    <string name="fs_start_confirm">Запустити</string>
+
+    <string name="fs_stop_dialog_title">Зупинити повноекранний режим?</string>
+    <string name="fs_stop_step_close">Застосунок зникає з панелі приладів.</string>
+    <string name="fs_stop_step_keep">Тема залишається завантаженою: можна запустити знову або завершити тест.</string>
+    <string name="fs_stop_expected">Повертається звичайний екран BYD.</string>
+    <string name="fs_stop_confirm">Зупинити</string>
+
+    <string name="fs_observe_dialog_title">Що ви бачите на панелі приладів?</string>
+    <string name="fs_observe_ok">Карта займає всю панель, видно індикатори, швидкість і передачу</string>
+    <string name="fs_observe_stock">Нічого не змінилося: звичайний екран BYD</string>
+    <string name="fs_observe_problem">Чорний екран, «Simple mode» або неправильне зображення</string>
+    <string name="fs_observe_stock_help">Зачекайте кілька секунд і подивіться знову. Якщо нічого не зміниться, зупиніть повноекранний режим.</string>
+
+    <string name="fs_info_title">Повернення до екрана BYD</string>
+    <string name="fs_restore_none">Тему DashCast не завантажено. Просто переконайтеся, що на панелі приладів відображається звичайний екран BYD.</string>
+    <string name="fs_guidance_same">Панель приладів відхилила повернення й зберігає тему DashCast. Відкладіть тему вбік: потім DashCast допоможе вам перезапустити панель приладів.</string>
+    <string name="fs_guidance_retired">Тему відкладено вбік. Натисніть «Повернутися до екрана BYD», щоб продовжити: буде запропоновано перезапуск панелі приладів.</string>
+
+    <string name="fs_restore_dialog_title">Повернутися до екрана BYD?</string>
+    <string name="fs_restore_step_close">DashCast закриває повноекранну карту.</string>
+    <string name="fs_restore_step_default">DashCast знову запитує оригінальний екран BYD.</string>
+    <string name="fs_restore_step_restart">За потреби далі буде запропоновано перезапуск панелі приладів.</string>
+    <string name="fs_bootstrap_step">DashCast закриває тимчасову проєкцію BYD; тему не було вибрано.</string>
+    <string name="fs_restore_expected">Звичайний екран BYD з індикаторами та приладами.</string>
+    <string name="fs_restore_confirm">Повернутися до екрана BYD</string>
+
+    <string name="fs_retire_dialog_title">Відкласти тему вбік?</string>
+    <string name="fs_retire_step_move">DashCast переміщує свою тестову тему; файл зберігається.</string>
+    <string name="fs_retire_step_no_restart">На цьому кроці перезапуску немає.</string>
+    <string name="fs_retire_expected">На панелі приладів поки без змін.</string>
+    <string name="fs_retire_confirm">Відкласти</string>
+
+    <string name="fs_verify_dialog_title">Перевірити повернення до екрана BYD?</string>
+    <string name="fs_verify_step">DashCast перевіряє, що вибрано оригінальний екран BYD. Нічого не повторюється.</string>
+    <string name="fs_verify_confirm">Перевірити</string>
+
+    <string name="fs_factory_dialog_title">Застосувати оригінальний екран?</string>
+    <string name="fs_factory_step">DashCast один раз відкриває й закриває проєкцію BYD, щоб застосувати оригінальний профіль.</string>
+    <string name="fs_factory_step_none">Тема DashCast не надсилається.</string>
+
+    <string name="fs_restart_dialog_title">Перезапустити панель приладів?</string>
+    <string name="fs_restart_step_check">DashCast ще раз перевіряє, що його тему відкладено вбік.</string>
+    <string name="fs_restart_step_screens">Панель приладів і екрани перезапускаються; з’єднання ADB ненадовго перерветься.</string>
+    <string name="fs_restart_expected">Після перезапуску: звичайний екран BYD.</string>
+    <string name="fs_restart_confirm">Перезапустити</string>
+    <string name="fs_restart_done">Панель уже перезапустилася</string>
+
+    <string name="fs_native_step">DashCast просить панель приладів вийти з режиму проєкції BYD.</string>
+
+    <string name="fs_oem_question_title">Екран BYD повернувся?</string>
+    <string name="fs_oem_question_message">Подивіться на панель приладів: ви бачите звичайний екран BYD з індикаторами та приладами? Відповідайте лише після того, як подивитеся.</string>
+    <string name="fs_oem_question_yes">Так, повернувся</string>
+</resources>

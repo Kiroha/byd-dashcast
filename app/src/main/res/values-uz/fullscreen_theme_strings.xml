@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">To‘liq ekranli xarita + BYD asboblari</string>
+    <string name="fs_page_subtitle">Ilovangiz xaritasi butun panelni egallaydi. BYD indikatorlari, ADAS ogohlantirishlari, tezlik va uzatma uning ustida ko‘rinib turadi.</string>
+    <string name="fs_safety_note">⚠ Faqat avtomobil to‘xtab turganda sinab ko‘ring: P holatida, to‘xtash tormozi yoqilgan holda. «BYD ekraniga qaytish» tugmasi ekranning yuqori qismida doim mavjud bo‘ladi.</string>
+    <string name="fs_details">Texnik tafsilotlar</string>
+    <string name="fs_expected_label">Panelda quyidagilarni ko‘rishingiz kerak:</string>
+    <string name="fs_waiting">Iltimos, kuting…</string>
+    <string name="fs_step_counter">%1$d/%2$d-qadam</string>
+    <string name="fs_step_check">Tekshirish</string>
+    <string name="fs_step_load">Yuklash</string>
+    <string name="fs_step_app">Ilova</string>
+    <string name="fs_step_start">To‘liq ekran</string>
+    <string name="fs_step_finish">Yakunlash</string>
+    <string name="fs_chip_stock">Asl BYD ekrani</string>
+    <string name="fs_chip_ready">Mavzu yuklandi</string>
+    <string name="fs_chip_active">To‘liq ekran faol</string>
+    <string name="fs_chip_busy">Amal bajarilmoqda</string>
+    <string name="fs_chip_attention">Amalingiz kerak</string>
+    <string name="fs_chip_unknown">Holat noma’lum</string>
+
+    <string name="fs_check_title">Avtomobilni tekshiring</string>
+    <string name="fs_check_message">DashCast hech narsani o‘zgartirmasdan panel va o‘z xizmatining holatini o‘qiydi.</string>
+    <string name="fs_check_action">Hozir tekshirish</string>
+    <string name="fs_check_failed">Panel holatini o‘qib bo‘lmadi: DashCast xizmati javob bermayapti. DashCast ilovasini qayta oching, ulanishni kuting va qayta urinib ko‘ring.</string>
+    <string name="fs_protocol_title">DashCast xizmatini yangilash kerak</string>
+    <string name="fs_protocol_message">Ulangan DashCast xizmati juda eski (%1$d-protokol kerak). Uni qayta ulash uchun DashCast ilovasini yoping va qayta oching, so‘ng yana tekshiring.</string>
+    <string name="fs_small_title">Panel qo‘llab-quvvatlanmaydi</string>
+    <string name="fs_small_message">Bu mavzu 1920 × 720 o‘lchamli katta panel uchun mo‘ljallangan. Kichik panel aniqlandi, shuning uchun sinov taklif qilinmaydi.</string>
+    <string name="fs_platform">Bu avtomobilda sinov imkonsiz: Android 10 asosidagi DiLink 3 kerak. Hech narsa yuborilmadi.</string>
+
+    <string name="fs_load_title">Mavzuni yuklang</string>
+    <string name="fs_load_message">DashCast mavzuni panelga o‘rnatadi. Ekran hozircha o‘zgarmaydi.</string>
+    <string name="fs_load_expected">O‘zgarish yo‘q: odatiy BYD ekrani.</string>
+    <string name="fs_load_action">Mavzuni yuklash</string>
+    <string name="fs_loading_title">Mavzu yuklanmoqda…</string>
+    <string name="fs_loading_message">Bu bir daqiqagacha davom etishi mumkin. Shu sahifada qoling.</string>
+    <string name="fs_bootstrap_message">BYD proyeksiya rejimi ochilmoqda…</string>
+    <string name="fs_display_message">Panel ekrani qidirilmoqda…</string>
+
+    <string name="fs_app_title">Ilovani tanlang</string>
+    <string name="fs_app_message">Panelni to‘liq egallaydigan navigatsiya ilovasini tanlang.</string>
+    <string name="fs_app_action">Ilovani tanlash</string>
+    <string name="fs_change_app">Ilovani almashtirish</string>
+
+    <string name="fs_start_title">To‘liq ekranni ishga tushiring</string>
+    <string name="fs_start_message">Tanlangan ilova: %1$s</string>
+    <string name="fs_start_expected">Butun panel bo‘ylab xarita, ustida esa indikatorlar, ogohlantirishlar, tezlik va uzatma.</string>
+    <string name="fs_start_action">To‘liq ekranni ishga tushirish</string>
+    <string name="fs_opening_title">To‘liq ekran ochilmoqda…</string>
+    <string name="fs_opening_message">Xarita panelga chiqarilmoqda.</string>
+    <string name="fs_observe_title">Panelga qarang</string>
+    <string name="fs_observe_message">Panel so‘rovni qabul qildi. Aslida nimani ko‘rayotganingizni ayting.</string>
+    <string name="fs_observe_action">Ko‘rganimni aytish</string>
+    <string name="fs_done_title">To‘liq ekran tasdiqlandi</string>
+    <string name="fs_done_message">Rahmat! Tugatgach, to‘liq ekranni to‘xtating.</string>
+    <string name="fs_stop_action">To‘liq ekranni to‘xtatish</string>
+    <string name="fs_closing_message">To‘liq ekran yopilmoqda…</string>
+    <string name="fs_closed_title">To‘liq ekran to‘xtatildi</string>
+    <string name="fs_closed_message">BYD ekraniga qaytish uchun sinovni yakunlang yoki to‘liq ekranni yana ishga tushiring (%1$s).</string>
+    <string name="fs_relaunch_action">Yana boshlash</string>
+    <string name="fs_finish_action">Sinovni yakunlash</string>
+
+    <string name="fs_recover_title">BYD ekraniga qaytish</string>
+    <string name="fs_recover_message">Boshqa har qanday qadamdan oldin panel BYD ekraniga qaytishi kerak.</string>
+    <string name="fs_recover_other">Oldingi DashCast sinovi hali ham yuklangan. Avval BYD ekraniga qayting.</string>
+    <string name="fs_recover_restart">Mavzu chetga olib qo‘yildi. Panelni qayta ishga tushirish BYD ekraniga qaytishni yakunlaydi.</string>
+    <string name="fs_recover_unknown">Qayta ishga tushirish buyrug‘i yuborildi, ammo natijasi noma’lum. Uni qayta yubormang: BYD ekraniga qaytganini tekshiring.</string>
+    <string name="fs_recover_display">Panel ekrani aniqlanmadi. BYD ekraniga qayting.</string>
+    <string name="fs_recover_action">BYD ekraniga qaytish</string>
+    <string name="fs_factory_action">Asl ekranni qo‘llash</string>
+    <string name="fs_wait_title">Iltimos, kuting…</string>
+    <string name="fs_wait_message">Panelda amal bajarilmoqda.</string>
+    <string name="fs_state_changed">Panel holati hozirgina o‘zgardi. Biroz kuting: sahifa yangilanmoqda.</string>
+    <string name="fs_busy">Boshqa amal bajarilmoqda. Birozdan so‘ng qayta urinib ko‘ring.</string>
+    <string name="fs_failed">Amal yakunlanmadi. Hech narsa avtomatik takrorlanmaydi; «BYD ekraniga qaytish» tugmasi mavjud bo‘lib qoladi. «Texnik tafsilotlar» bo‘limiga qarang.</string>
+
+    <string name="fs_dialog_happens">Nima sodir bo‘ladi</string>
+    <string name="fs_dialog_expected">Nimani ko‘rishingiz kerak</string>
+    <string name="fs_check_parked">Avtomobil to‘xtab turibdi, P holatida, to‘xtash tormozi yoqilgan.</string>
+    <string name="fs_check_cluster">Bu aynan shu sinov uchun mo‘ljallangan panel (DashCast har qanday o‘zgarishdan oldin uning aniq versiyasini tekshiradi).</string>
+    <string name="fs_check_restore">Bu avtomobilda asl BYD ekranini tiklayapman.</string>
+
+    <string name="fs_load_dialog_title">Mavzu yuklansinmi?</string>
+    <string name="fs_load_step_copy">DashCast mavzuni panelga nusxalaydi va uni tanlaydi.</string>
+    <string name="fs_load_step_same">Bu bosqichda BYD ekrani o‘zgarmaydi.</string>
+    <string name="fs_load_step_return">«BYD ekraniga qaytish» tugmasi istalgan vaqtda mavjud.</string>
+    <string name="fs_load_confirm">Yuklash</string>
+
+    <string name="fs_choose_title">Qaysi ilova ko‘rsatilsin?</string>
+    <string name="fs_choose_empty">Mos ilova topilmadi.</string>
+
+    <string name="fs_start_dialog_title">To‘liq ekran ishga tushirilsinmi?</string>
+    <string name="fs_start_step_projection">Panel proyeksiya rejimiga o‘tadi.</string>
+    <string name="fs_start_step_app">%1$s butun panelda ko‘rsatiladi.</string>
+    <string name="fs_start_step_stop">Uni istalgan vaqtda shu sahifadan to‘xtatishingiz mumkin.</string>
+    <string name="fs_start_confirm">Boshlash</string>
+
+    <string name="fs_stop_dialog_title">To‘liq ekran to‘xtatilsinmi?</string>
+    <string name="fs_stop_step_close">Ilova paneldan chiqadi.</string>
+    <string name="fs_stop_step_keep">Mavzu yuklangan holda qoladi: yana boshlashingiz yoki sinovni yakunlashingiz mumkin.</string>
+    <string name="fs_stop_expected">Odatiy BYD ekrani qaytadi.</string>
+    <string name="fs_stop_confirm">To‘xtatish</string>
+
+    <string name="fs_observe_dialog_title">Panelda nimani ko‘ryapsiz?</string>
+    <string name="fs_observe_ok">Xarita panelni to‘liq egallagan, indikatorlar, tezlik va uzatma ko‘rinadi</string>
+    <string name="fs_observe_stock">Hech narsa o‘zgarmadi: odatiy BYD ekrani</string>
+    <string name="fs_observe_problem">Qora ekran, «Simple mode» yoki noto‘g‘ri tasvir</string>
+    <string name="fs_observe_stock_help">Bir necha soniya kuting, so‘ng yana qarang. Hech narsa o‘zgarmasa, to‘liq ekranni to‘xtating.</string>
+
+    <string name="fs_info_title">BYD ekraniga qaytish</string>
+    <string name="fs_restore_none">Hech qanday DashCast mavzusi yuklanmagan. Faqat panelda odatiy BYD ekrani ko‘rsatilayotganini tekshiring.</string>
+    <string name="fs_guidance_same">Panel qaytishni rad etdi va DashCast mavzusini saqlab turibdi. Mavzuni chetga olib qo‘ying: so‘ng DashCast panelni qayta ishga tushirishda sizga yo‘l ko‘rsatadi.</string>
+    <string name="fs_guidance_retired">Mavzu chetga olib qo‘yildi. Davom etish uchun «BYD ekraniga qaytish» tugmasini bosing: panelni qayta ishga tushirish taklif qilinadi.</string>
+
+    <string name="fs_restore_dialog_title">BYD ekraniga qaytilsinmi?</string>
+    <string name="fs_restore_step_close">DashCast to‘liq ekranli xaritani yopadi.</string>
+    <string name="fs_restore_step_default">DashCast asl BYD ekranini qayta so‘raydi.</string>
+    <string name="fs_restore_step_restart">Zarur bo‘lsa, keyin panelni qayta ishga tushirish taklif qilinadi.</string>
+    <string name="fs_bootstrap_step">DashCast vaqtinchalik BYD proyeksiyasini yopadi; hech qanday mavzu tanlanmagan edi.</string>
+    <string name="fs_restore_expected">Indikatorlari va asboblari bilan odatiy BYD ekrani.</string>
+    <string name="fs_restore_confirm">BYD ekraniga qaytish</string>
+
+    <string name="fs_retire_dialog_title">Mavzu chetga olib qo‘yilsinmi?</string>
+    <string name="fs_retire_step_move">DashCast o‘zining sinov mavzusini ko‘chiradi; fayl saqlanadi.</string>
+    <string name="fs_retire_step_no_restart">Bu bosqichda qayta ishga tushirish yo‘q.</string>
+    <string name="fs_retire_expected">Panelda hozircha o‘zgarish yo‘q.</string>
+    <string name="fs_retire_confirm">Chetga olib qo‘yish</string>
+
+    <string name="fs_verify_dialog_title">BYD ekraniga qaytish tekshirilsinmi?</string>
+    <string name="fs_verify_step">DashCast asl BYD ekrani tanlanganini tekshiradi. Hech narsa takrorlanmaydi.</string>
+    <string name="fs_verify_confirm">Tekshirish</string>
+
+    <string name="fs_factory_dialog_title">Asl ekran qo‘llansinmi?</string>
+    <string name="fs_factory_step">Asl profilni qo‘llash uchun DashCast BYD proyeksiyasini bir marta ochib yopadi.</string>
+    <string name="fs_factory_step_none">Hech qanday DashCast mavzusi yuborilmaydi.</string>
+
+    <string name="fs_restart_dialog_title">Panel qayta ishga tushirilsinmi?</string>
+    <string name="fs_restart_step_check">DashCast o‘z mavzusi chetga olib qo‘yilganini yana bir bor tekshiradi.</string>
+    <string name="fs_restart_step_screens">Panel va ekranlar qayta ishga tushadi; ADB ulanishi qisqa vaqtga uziladi.</string>
+    <string name="fs_restart_expected">Qayta ishga tushgandan so‘ng: odatiy BYD ekrani.</string>
+    <string name="fs_restart_confirm">Qayta ishga tushirish</string>
+    <string name="fs_restart_done">Panel allaqachon qayta ishga tushdi</string>
+
+    <string name="fs_native_step">DashCast paneldan BYD proyeksiya rejimidan chiqishni so‘raydi.</string>
+
+    <string name="fs_oem_question_title">BYD ekrani qaytdimi?</string>
+    <string name="fs_oem_question_message">Panelga qarang: indikatorlari va asboblari bilan odatiy BYD ekranini ko‘ryapsizmi? Faqat qaragandan keyin javob bering.</string>
+    <string name="fs_oem_question_yes">Ha, qaytdi</string>
+</resources>

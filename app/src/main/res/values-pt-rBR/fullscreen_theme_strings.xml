@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fs_page_title">Mapa em tela cheia + instrumentos BYD</string>
+    <string name="fs_page_subtitle">O mapa do seu aplicativo ocupa todo o painel de instrumentos. As luzes de aviso BYD, os alertas ADAS, a velocidade e a marcha continuam visíveis sobre o mapa.</string>
+    <string name="fs_safety_note">⚠ Faça o teste somente com o veículo parado: em P e com o freio de estacionamento acionado. O botão “Voltar à exibição BYD” continua disponível no topo da tela.</string>
+    <string name="fs_details">Detalhes técnicos</string>
+    <string name="fs_expected_label">No painel de instrumentos, você deve ver:</string>
+    <string name="fs_waiting">Aguarde…</string>
+    <string name="fs_step_counter">Etapa %1$d de %2$d</string>
+    <string name="fs_step_check">Verificar</string>
+    <string name="fs_step_load">Carregar</string>
+    <string name="fs_step_app">Aplicativo</string>
+    <string name="fs_step_start">Tela cheia</string>
+    <string name="fs_step_finish">Concluir</string>
+    <string name="fs_chip_stock">Exibição BYD original</string>
+    <string name="fs_chip_ready">Tema carregado</string>
+    <string name="fs_chip_active">Tela cheia ativa</string>
+    <string name="fs_chip_busy">Operação em andamento</string>
+    <string name="fs_chip_attention">Ação necessária</string>
+    <string name="fs_chip_unknown">Estado desconhecido</string>
+
+    <string name="fs_check_title">Verificar o carro</string>
+    <string name="fs_check_message">O DashCast lê o estado do painel de instrumentos e do serviço DashCast, sem alterar nada.</string>
+    <string name="fs_check_action">Verificar agora</string>
+    <string name="fs_check_failed">Não foi possível ler o estado do painel: o serviço DashCast não está respondendo. Reabra o DashCast, aguarde a conexão e tente novamente.</string>
+    <string name="fs_protocol_title">O serviço DashCast precisa ser atualizado</string>
+    <string name="fs_protocol_message">O serviço DashCast conectado é antigo demais (é necessário o protocolo %1$d). Feche e reabra o DashCast para reconectá-lo e, depois, verifique novamente.</string>
+    <string name="fs_small_title">Painel de instrumentos não compatível</string>
+    <string name="fs_small_message">Este tema foi feito para o painel de instrumentos grande de 1920 × 720. Foi detectado um painel pequeno, por isso o teste não é oferecido.</string>
+    <string name="fs_platform">Não é possível testar neste carro: é necessário o DiLink 3 com Android 10. Nada foi enviado.</string>
+
+    <string name="fs_load_title">Carregar o tema</string>
+    <string name="fs_load_message">O DashCast instala o tema no painel de instrumentos. A exibição ainda não muda.</string>
+    <string name="fs_load_expected">Nenhuma mudança: a exibição BYD habitual.</string>
+    <string name="fs_load_action">Carregar o tema</string>
+    <string name="fs_loading_title">Carregando o tema…</string>
+    <string name="fs_loading_message">Isso pode levar até um minuto. Permaneça nesta página.</string>
+    <string name="fs_bootstrap_message">Abrindo o modo de projeção BYD…</string>
+    <string name="fs_display_message">Procurando a tela do painel…</string>
+
+    <string name="fs_app_title">Escolher o aplicativo</string>
+    <string name="fs_app_message">Escolha o aplicativo de navegação que vai ocupar o painel de instrumentos.</string>
+    <string name="fs_app_action">Escolher o aplicativo</string>
+    <string name="fs_change_app">Trocar de aplicativo</string>
+
+    <string name="fs_start_title">Iniciar a tela cheia</string>
+    <string name="fs_start_message">Aplicativo selecionado: %1$s</string>
+    <string name="fs_start_expected">O mapa em todo o painel, com as luzes de aviso, os alertas, a velocidade e a marcha por cima.</string>
+    <string name="fs_start_action">Iniciar a tela cheia</string>
+    <string name="fs_opening_title">Abrindo a tela cheia…</string>
+    <string name="fs_opening_message">O mapa está sendo enviado ao painel.</string>
+    <string name="fs_observe_title">Olhe o painel de instrumentos</string>
+    <string name="fs_observe_message">O painel recebeu a solicitação. Informe o que você realmente vê.</string>
+    <string name="fs_observe_action">Informar o que vejo</string>
+    <string name="fs_done_title">Tela cheia confirmada</string>
+    <string name="fs_done_message">Obrigado! Quando terminar, pare a tela cheia.</string>
+    <string name="fs_stop_action">Parar a tela cheia</string>
+    <string name="fs_closing_message">Fechando a tela cheia…</string>
+    <string name="fs_closed_title">Tela cheia encerrada</string>
+    <string name="fs_closed_message">Conclua o teste para voltar à exibição BYD ou inicie a tela cheia novamente (%1$s).</string>
+    <string name="fs_relaunch_action">Iniciar novamente</string>
+    <string name="fs_finish_action">Concluir o teste</string>
+
+    <string name="fs_recover_title">Retorno à exibição BYD</string>
+    <string name="fs_recover_message">O painel precisa voltar à exibição BYD antes de qualquer outra etapa.</string>
+    <string name="fs_recover_other">Um teste DashCast anterior ainda está carregado. Primeiro, volte à exibição BYD.</string>
+    <string name="fs_recover_restart">O tema foi colocado de lado. Uma reinicialização do painel conclui o retorno à exibição BYD.</string>
+    <string name="fs_recover_unknown">Uma reinicialização foi enviada, mas o resultado é desconhecido. Não envie novamente: verifique o retorno à exibição BYD.</string>
+    <string name="fs_recover_display">A tela do painel não foi reconhecida. Volte à exibição BYD.</string>
+    <string name="fs_recover_action">Voltar à exibição BYD</string>
+    <string name="fs_factory_action">Aplicar a exibição original</string>
+    <string name="fs_wait_title">Aguarde…</string>
+    <string name="fs_wait_message">Há uma operação em andamento no painel.</string>
+    <string name="fs_state_changed">O estado do painel acabou de mudar. Aguarde um instante: a página está sendo atualizada.</string>
+    <string name="fs_busy">Outra operação está em andamento. Tente novamente em instantes.</string>
+    <string name="fs_failed">A operação não foi concluída. Nada é repetido automaticamente; o botão “Voltar à exibição BYD” continua disponível. Consulte “Detalhes técnicos”.</string>
+
+    <string name="fs_dialog_happens">O que vai acontecer</string>
+    <string name="fs_dialog_expected">O que você deve ver</string>
+    <string name="fs_check_parked">O carro está parado, em P, com o freio de estacionamento acionado.</string>
+    <string name="fs_check_cluster">Este é o painel previsto para este teste (o DashCast verifica a versão exata do painel antes de qualquer alteração).</string>
+    <string name="fs_check_restore">Estou restaurando a exibição BYD original neste veículo.</string>
+
+    <string name="fs_load_dialog_title">Carregar o tema?</string>
+    <string name="fs_load_step_copy">O DashCast copia o tema para o painel e o seleciona.</string>
+    <string name="fs_load_step_same">Nesta etapa, a exibição continua sendo a da BYD.</string>
+    <string name="fs_load_step_return">O botão “Voltar à exibição BYD” continua disponível a qualquer momento.</string>
+    <string name="fs_load_confirm">Carregar</string>
+
+    <string name="fs_choose_title">Qual aplicativo exibir?</string>
+    <string name="fs_choose_empty">Nenhum aplicativo compatível foi encontrado.</string>
+
+    <string name="fs_start_dialog_title">Iniciar a tela cheia?</string>
+    <string name="fs_start_step_projection">O painel entra no modo de projeção.</string>
+    <string name="fs_start_step_app">%1$s aparece em todo o painel.</string>
+    <string name="fs_start_step_stop">Você pode parar a tela cheia a qualquer momento nesta página.</string>
+    <string name="fs_start_confirm">Iniciar</string>
+
+    <string name="fs_stop_dialog_title">Parar a tela cheia?</string>
+    <string name="fs_stop_step_close">O aplicativo sai do painel.</string>
+    <string name="fs_stop_step_keep">O tema continua carregado: você pode iniciar novamente ou concluir o teste.</string>
+    <string name="fs_stop_expected">A exibição BYD habitual volta a aparecer.</string>
+    <string name="fs_stop_confirm">Parar</string>
+
+    <string name="fs_observe_dialog_title">O que você vê no painel?</string>
+    <string name="fs_observe_ok">O mapa ocupa o painel, com luzes de aviso, velocidade e marcha</string>
+    <string name="fs_observe_stock">Nada mudou: a exibição BYD habitual</string>
+    <string name="fs_observe_problem">Tela preta, “Simple mode” ou exibição anormal</string>
+    <string name="fs_observe_stock_help">Aguarde alguns segundos e olhe novamente. Se nada mudar, pare a tela cheia.</string>
+
+    <string name="fs_info_title">Retorno à exibição BYD</string>
+    <string name="fs_restore_none">Nenhum tema DashCast está carregado. Basta verificar se o painel mostra a exibição BYD habitual.</string>
+    <string name="fs_guidance_same">O painel recusou o retorno e mantém o tema DashCast. Coloque o tema de lado: em seguida, o DashCast vai guiar você na reinicialização do painel.</string>
+    <string name="fs_guidance_retired">O tema foi colocado de lado. Toque em “Voltar à exibição BYD” para continuar: uma reinicialização do painel será oferecida.</string>
+
+    <string name="fs_restore_dialog_title">Voltar à exibição BYD?</string>
+    <string name="fs_restore_step_close">O DashCast fecha o mapa em tela cheia.</string>
+    <string name="fs_restore_step_default">O DashCast solicita novamente a exibição BYD original.</string>
+    <string name="fs_restore_step_restart">Se necessário, uma reinicialização do painel será oferecida em seguida.</string>
+    <string name="fs_bootstrap_step">O DashCast fecha a projeção BYD temporária; nenhum tema tinha sido selecionado.</string>
+    <string name="fs_restore_expected">A exibição BYD habitual, com suas luzes de aviso e instrumentos.</string>
+    <string name="fs_restore_confirm">Voltar à exibição BYD</string>
+
+    <string name="fs_retire_dialog_title">Colocar o tema de lado?</string>
+    <string name="fs_retire_step_move">O DashCast move o tema de teste; o arquivo é mantido.</string>
+    <string name="fs_retire_step_no_restart">Nenhuma reinicialização nesta etapa.</string>
+    <string name="fs_retire_expected">Nenhuma mudança no painel por enquanto.</string>
+    <string name="fs_retire_confirm">Colocar de lado</string>
+
+    <string name="fs_verify_dialog_title">Verificar o retorno à exibição BYD?</string>
+    <string name="fs_verify_step">O DashCast verifica se a exibição BYD original está selecionada. Nada é repetido.</string>
+    <string name="fs_verify_confirm">Verificar</string>
+
+    <string name="fs_factory_dialog_title">Aplicar a exibição original?</string>
+    <string name="fs_factory_step">O DashCast abre e fecha a projeção BYD uma única vez para aplicar o perfil original.</string>
+    <string name="fs_factory_step_none">Nenhum tema DashCast é enviado.</string>
+
+    <string name="fs_restart_dialog_title">Reiniciar o painel?</string>
+    <string name="fs_restart_step_check">O DashCast verifica novamente se o tema de teste foi colocado de lado.</string>
+    <string name="fs_restart_step_screens">O painel e as telas reiniciam; o ADB é interrompido por um momento.</string>
+    <string name="fs_restart_expected">Após a reinicialização: a exibição BYD habitual.</string>
+    <string name="fs_restart_confirm">Reiniciar</string>
+    <string name="fs_restart_done">O painel já foi reiniciado</string>
+
+    <string name="fs_native_step">O DashCast pede ao painel que saia do modo de projeção BYD.</string>
+
+    <string name="fs_oem_question_title">A exibição BYD voltou?</string>
+    <string name="fs_oem_question_message">Olhe o painel: você vê a exibição BYD habitual, com suas luzes de aviso e instrumentos? Responda somente depois de olhar.</string>
+    <string name="fs_oem_question_yes">Sim, voltou</string>
+</resources>
