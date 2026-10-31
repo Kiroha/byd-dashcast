@@ -1,0 +1,58 @@
+--- original/qml10_25/cluster.qml
++++ patched/qml10_25/cluster.qml
+@@ -11,6 +11,55 @@
+ import "./adas3d"
+ Item {
+     id:rootItemId
++
++    // DASHCAST_AMBIENT_BEGIN
++    Item {
++        id: dashCastAmbientId
++        anchors.fill: parent
++        z: CustomStyle.bgZ + 0.5
++        enabled: false
++        visible: DataSource.powerGear === 3 && DataSource.playAnim === true && bgImageId.visible && String(bgImageId.source) === "qrc:/images10_25/display_always/night/bg.png"
++        Image {
++            id: dashCastAmbientGlowId
++            x: 360; y: 90; width: 1200; height: 280
++            source: "qrc:/dashcast/ambient/horizon_glow.png"
++            smooth: true
++            opacity: 0.3
++            SequentialAnimation on opacity {
++                objectName: "dashCastAmbientBreathAnim"
++                running: dashCastAmbientId.visible
++                loops: Animation.Infinite
++                NumberAnimation { from: 0.3; to: 0.75; duration: 3500; easing.type: Easing.InOutSine }
++                NumberAnimation { from: 0.75; to: 0.3; duration: 3500; easing.type: Easing.InOutSine }
++            }
++        }
++        Rectangle {
++            id: dashCastAmbientStreakId
++            x: 480; y: 254; width: 240; height: 3
++            opacity: 0
++            gradient: Gradient {
++                orientation: Gradient.Horizontal
++                GradientStop { position: 0.0; color: "#008fe8ff" }
++                GradientStop { position: 0.5; color: "#ff8fe8ff" }
++                GradientStop { position: 1.0; color: "#008fe8ff" }
++            }
++        }
++        SequentialAnimation {
++            objectName: "dashCastAmbientStreakAnim"
++            running: dashCastAmbientId.visible
++            loops: Animation.Infinite
++            ParallelAnimation {
++                NumberAnimation { target: dashCastAmbientStreakId; property: "x"; from: 480; to: 1200; duration: 6000; easing.type: Easing.InOutSine }
++                SequentialAnimation {
++                    NumberAnimation { target: dashCastAmbientStreakId; property: "opacity"; from: 0; to: 0.6; duration: 1500; easing.type: Easing.InOutSine }
++                    PauseAnimation { duration: 3000 }
++                    NumberAnimation { target: dashCastAmbientStreakId; property: "opacity"; from: 0.6; to: 0; duration: 1500; easing.type: Easing.InOutSine }
++                }
++            }
++            PauseAnimation { duration: 4000 }
++        }
++    }
++    // DASHCAST_AMBIENT_END
+     width: 1920
+     height: 720
+     scale: DataSource.screenSize === 0x01 ? 2/3:1
