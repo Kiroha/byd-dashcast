@@ -51,6 +51,7 @@ VARIABLE_BEFORE = re.compile(r'([A-Za-z_][\w.]*)\s*\+\s*$')
 ELEMENT = re.compile(r'([A-Za-z_][\w.]*)\s*(?:on\s+[\w.]+\s*)?\{\s*$')
 SEQUENCE = re.compile(r'^(?P<pre>.*?)(?P<num>\d+)(?P<ext>\.[^.]+)$')
 UNSAFE_NAME = re.compile(r'[\x00-\x1f<>:"|?*\\]|^(?:con|prn|aux|nul|com\d|lpt\d)(?:\..*)?$|[. ]$', re.I)
+REGEX_SYNTAX = re.compile(r'[()*?\[\]\\^$|+{}]')
 KTX1 = b'\xabKTX 11\xbb\r\n\x1a\n'
 ASTC_BLOCKS = [(4, 4), (5, 4), (5, 5), (6, 5), (6, 6), (8, 5), (8, 6), (8, 8), (10, 5), (10, 6), (10, 8), (10, 10),
                (12, 10), (12, 12)]
@@ -985,7 +986,7 @@ def md_code(text: str) -> str:
     return '<code>' + html.escape(text).replace('|', '&#124;') + '</code>'
 
 
-def build_documents(resources, sources, out: Path, title: str, missing=(), cited_rcc=(), remark=''):
+def build_documents(resources, sources, out: Path, title: str, missing=(), cited_rcc=(), remark='', listing_note=''):
     by_rcc = defaultdict(list)
     for res in resources:
         by_rcc[res.rcc].append(res)
@@ -1024,12 +1025,16 @@ def build_documents(resources, sources, out: Path, title: str, missing=(), cited
              f'<td>{l}</td><td>{u}</td><td>{c["code"]}</td><td>{c["other"]}</td></tr>' for r, c, l, u in stats]
     body.append('</table>')
     if cited_rcc:
-        md += ['', '## Fichiers RCC cités par le code natif', '', '| Chaîne native | Fourni à l’atlas |', '| --- | --- |']
-        md += [f'| {md_code(text)} | {"oui" if given else "non"} |' for text, given in cited_rcc]
-        body.append('<h2>Fichiers RCC cités par le code natif</h2><table><tr><th>Chaîne native</th>'
-                    '<th style="width:120px">Fourni à l’atlas</th></tr>' +
-                    ''.join(f'<tr><td><code>{html.escape(text)}</code></td><td>{"oui" if given else "<b>non</b>"}</td></tr>'
-                            for text, given in cited_rcc) + '</table>')
+        note = ('« fourni » : fichier analysé par cet atlas. ' +
+                (f'Présence sur le véhicule : {listing_note}' if listing_note else
+                 'Présence sur le véhicule non vérifiée (aucun relevé fourni).'))
+        md += ['', '## Fichiers RCC cités par le code natif', '', note, '', '| Chaîne native | État |', '| --- | --- |']
+        md += [f'| {md_code(text)} | {status} |' for text, status in cited_rcc]
+        body.append(f'<h2>Fichiers RCC cités par le code natif</h2><p>{html.escape(note)}</p><table><tr><th>Chaîne native</th>'
+                    '<th style="width:260px">État</th></tr>' +
+                    ''.join(f'<tr><td><code>{html.escape(text)}</code></td><td>'
+                            f'{status if status == "fourni" else "<b>" + html.escape(status) + "</b>"}</td></tr>'
+                            for text, status in cited_rcc) + '</table>')
     if missing:
         rows = sorted({(f'{code.rcc}:{code.path}:{index + 1}', raw) for code, index, _, raw in missing})
         note = ('Chemins d’images cités par du code actif (non commenté) qui ne désignent aucune ressource des sources '
@@ -1114,6 +1119,32 @@ def print_pdf(out: Path, browser: Path) -> Path:
     return pdf
 
 
+def read_listing(path: Path | None):
+    """Absolute paths from a read-only vehicle listing (`ls -1` or `ls -l` output); `#` lines describe its provenance."""
+    if path is None:
+        return None, ''
+    paths, notes = set(), []
+    for line in path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if line.startswith('#'):
+            notes.append(line.lstrip('#').strip())
+        elif line and line.split()[-1].startswith('/'):
+            paths.add(line.split()[-1])
+    return paths, ' '.join(notes) or path.name
+
+
+def rcc_status(text: str, given: set[str], listing: set[str] | None) -> str:
+    if posixpath.basename(text) in given:
+        return 'fourni'
+    if REGEX_SYNTAX.search(text):
+        return 'motif de nom, pas un fichier'
+    folder = posixpath.dirname(text)
+    # A listing only proves absence for folders it actually covered.
+    if listing and text.startswith('/') and any(posixpath.dirname(p) == folder for p in listing):
+        return 'présent sur le véhicule, non fourni' if text in listing else 'absent du véhicule'
+    return 'non fourni, présence sur le véhicule non vérifiée'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('rcc', nargs='+', type=Path, help='Factory RCC files, in display order')
@@ -1123,15 +1154,18 @@ def main():
     parser.add_argument('--native', type=Path, nargs='*', default=[],
                         help='Extra native binaries whose ASCII/UTF-16 strings count as code references')
     parser.add_argument('--remark', default='', help='Sentence appended to the introduction (e.g. a verified limit)')
+    parser.add_argument('--vehicle-listing', type=Path,
+                        help='Read-only listing of the vehicle .rcc files (e.g. `adb shell ls -l /system/lib64/*.rcc`)')
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     resources, sources, natives = load(args.rcc, args.out, args.native)
     shared = [Path(s['file']).stem for s in sources if s['kind'] != 'RCC']
     missing = link_references(resources, shared, natives)
     given = {s['file'] for s in sources}
-    cited_rcc = sorted({(text, posixpath.basename(text) in given) for _, strings in natives for text in strings
+    listing, listing_note = read_listing(args.vehicle_listing)
+    cited_rcc = sorted({(text, rcc_status(text, given, listing)) for _, strings in natives for text in strings
                         if re.search(r'\.rcc\b', text) and len(text) < 200})
-    build_documents(resources, sources, args.out, args.title, missing, cited_rcc, args.remark)
+    build_documents(resources, sources, args.out, args.title, missing, cited_rcc, args.remark, listing_note)
     visuals = [r for r in resources if r.kind in VISUAL_KINDS]
     summary = {'sources': sources, 'native_strings_scanned': [name for name, _ in natives],
                'resources': len(resources), 'visual_elements': len(visuals),
@@ -1143,7 +1177,9 @@ def main():
                'links_by_kind': dict(Counter(r.refs[0][4] for r in visuals if r.refs)),
                'code_files': sum(1 for r in resources if r.kind == 'code'),
                'active_citations_without_resource': len({(c.rcc, c.path, i, raw) for c, i, _, raw in missing}),
-               'rcc_cited_by_native_not_provided': [text for text, given in cited_rcc if not given]}
+               'rcc_cited_by_native_not_provided': [text for text, status in cited_rcc if status != 'fourni'],
+               'rcc_cited_by_native_status': dict(cited_rcc),
+               'vehicle_listing': listing_note or None}
     (args.out / 'manifest.json').write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding='utf-8')
     if args.pdf:
         summary['pdf'] = str(print_pdf(args.out, args.pdf))
